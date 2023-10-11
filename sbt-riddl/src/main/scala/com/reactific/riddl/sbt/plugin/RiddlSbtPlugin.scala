@@ -69,7 +69,8 @@ object RiddlSbtPlugin extends AutoPlugin {
     findRiddlcTask := {
       val found: File = riddlcPath.value match {
         case Some(path) =>
-          if (path.getAbsolutePath.endsWith("riddlc")) path else {
+          if (path.getAbsolutePath.endsWith("riddlc")) path
+          else {
             throw new IllegalStateException(s"Your riddlcPath setting is not the full path to the riddlc program ")
           }
         case None =>
@@ -78,8 +79,8 @@ object RiddlSbtPlugin extends AutoPlugin {
             new File(riddlc_path)
           } else {
             val user_path = System.getenv("PATH")
-            // FIXME: Won't work on Windoze, make it work
-            val parts = user_path.split(":")
+            val path_separator = sys.env("path.separator")
+            val parts = user_path.split(path_separator)
             val with_riddlc = parts.map { part: String =>
               if (part.contains("riddlc")) part else part + "/riddlc"
             }
@@ -104,13 +105,16 @@ object RiddlSbtPlugin extends AutoPlugin {
     commands ++= Seq(riddlcCommand, infoCommand, hugoCommand, validateCommand, statsCommand)
   )
 
-  private def runRiddlcAction(state: State, args: Seq[String]): (State, Int) = {
+  private def runRiddlcAction(state: State, args: Seq[String]): State = {
     val project = Project.extract(state)
     val riddlcPath = project.runTask(findRiddlcTask, state)
     val minimumVersion: String = project.get(riddlcMinVersion)
     val options: Seq[String] = project.get(riddlcOptions)
-    val rc = runRiddlc(riddlcPath._2, minimumVersion, options, args)
-    state -> rc
+    val rc = Def.task[Int] {
+      val streams: TaskStreams = project.get(Keys.streams).value
+      runRiddlc(streams, riddlcPath._2, minimumVersion, options, args)
+    }
+    state
   }
 
   // Allow riddlc to be run from inside an sbt shell
@@ -119,37 +123,37 @@ object RiddlSbtPlugin extends AutoPlugin {
       name = "riddlc",
       display = "<options> <command> <args...> ; `riddlc help` for details"
     ) { (state: State, args: Seq[String]) =>
-      runRiddlcAction(state, args)._1
+      runRiddlcAction(state, args)
     }
   }
 
-  def infoCommand: Command = {
+  private def infoCommand: Command = {
     Command.command("info") { (state: State) =>
-      runRiddlcAction(state, Seq("info"))._1
+      runRiddlcAction(state, Seq("info"))
     }
   }
 
-  def hugoCommand: Command = {
+  private def hugoCommand: Command = {
     Command.command("hugo") { (state: State) =>
       val project = Project.extract(state)
       val conf = project.get(riddlcConf).getAbsoluteFile.toString
-      runRiddlcAction(state, Seq("from", conf, "hugo"))._1
+      runRiddlcAction(state, Seq("from", conf, "hugo"))
     }
   }
 
-  def validateCommand: Command = {
+  private def validateCommand: Command = {
     Command.command("validate") { (state: State) =>
       val project = Project.extract(state)
       val conf = project.get(riddlcConf).getAbsoluteFile.toString
-      runRiddlcAction(state, Seq("from", conf, "validate"))._1
+      runRiddlcAction(state, Seq("from", conf, "validate"))
     }
   }
 
-  def statsCommand: Command = {
+  private def statsCommand: Command = {
     Command.command("stats") { (state: State) =>
       val project = Project.extract(state)
       val conf = project.get(riddlcConf).getAbsoluteFile.toString
-      runRiddlcAction(state, Seq("from", conf, "stats"))._1
+      runRiddlcAction(state, Seq("from", conf, "stats"))
     }
   }
 
@@ -190,17 +194,15 @@ object RiddlSbtPlugin extends AutoPlugin {
   }
 
   private def runRiddlc(
-    // streams: TaskStreams,
+    streams: TaskStreams,
     riddlcPath: File,
     minimumVersion: String,
     options: Seq[String],
     args: Seq[String]
   ): Int = {
     checkVersion(riddlcPath, minimumVersion)
-    // streams.log.info(s"Running: riddlc ${args.mkString(" ")}\n")
-    // println(s"Running: riddlc ${args.mkString(" ")}\n")
-    // FIXME: use sbt I/O
-    val logger = ProcessLogger(println(_))
+    streams.log.info(s"Running: riddlc ${args.mkString(" ")}\n")
+    val logger = ProcessLogger{ str => println(str) ; streams.log(str) }
     val process = Process(riddlcPath.getAbsolutePath, options ++ args)
     process.!(logger)
   }
