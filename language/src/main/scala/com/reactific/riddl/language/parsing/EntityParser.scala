@@ -52,7 +52,7 @@ private[parsing] trait EntityParser {
   }
 
   private def stateDefinitions[u: P]: P[Seq[StateDefinition]] = {
-    P(typeDef | handler(StatementsSet.EntityStatements) | invariant).rep(0)
+    P(handler(StatementsSet.EntityStatements) | invariant).rep(0)
   }
 
   private def stateBody[u: P]: P[Seq[StateDefinition]] = {
@@ -68,10 +68,9 @@ private[parsing] trait EntityParser {
       body match {
         case Some(defs) =>
           val groups = defs.groupBy(_.getClass)
-          val types = mapTo[Type](groups.get(classOf[Type]))
           val handlers = mapTo[Handler](groups.get(classOf[Handler]))
           val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-          State(loc, id, typRef, types, handlers, invariants, brief, desc)
+          State(loc, id, typRef, handlers, invariants, brief, desc)
         case None =>
           State(loc, id, typRef, brief = brief, description = desc)
       }

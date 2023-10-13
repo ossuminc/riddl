@@ -29,7 +29,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         fail(errors.map(_.format).mkString("\n"))
       case Right(model) =>
-        Pass.apply(model, options, shouldFailOnErrors = false) match {
+        Pass.runStandardPasses(model, options, shouldFailOnErrors = false) match {
           case Left(messages) =>
             fail(messages.format)
           case Right(ao: PassesResult) =>
@@ -50,7 +50,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Right((model: Domain, _)) =>
         val clazz = classTag[D].runtimeClass
         val root = RootContainer(Seq(model), Seq(rpi))
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(messages) =>
             fail(messages.format)
           case Right(ao) =>
@@ -76,7 +76,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
         val root = RootContainer(Seq(model), Seq(rpi))
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) => fail(errors.format)
           case Right(ao) =>
             val reducedMessages = ao.messages.filterNot(_.loc.line == 1)
@@ -100,7 +100,7 @@ abstract class ValidatingTest extends ParsingTest {
         }
       case Right((model: Domain, rpi)) =>
         val root = RootContainer(Seq(model), Seq(rpi))
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -122,12 +122,15 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $origin:\n$msgs")
       case Right(root) =>
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
-            fail(errors.format)
-          case Right(ao) =>
-            ao.root.inputs mustNot be(empty)
-            validation(root, root.inputs.head, ao.messages)
+            if shouldFailOnErrors then
+              fail(errors.format)
+            else
+              validation(root, root.inputs.head, errors)
+          case Right(pr: PassesResult) =>
+            pr.root.inputs mustNot be(empty)
+            validation(root, root.inputs.head, pr.messages)
         }
     }
   }
@@ -143,7 +146,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) =>
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(passesResult: PassesResult) =>
@@ -185,7 +188,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -202,7 +205,7 @@ abstract class ValidatingTest extends ParsingTest {
     TopLevelParser.parse(file) match {
       case Left(errors) => fail(errors.format)
       case Right(root) =>
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>

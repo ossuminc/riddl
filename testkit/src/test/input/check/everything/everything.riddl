@@ -90,7 +90,7 @@ domain Everything is {
       state otherThingState of type Everything.StateType is { ??? }
       handler fee is {
         on event ItHappened {
-          set field SomeOtherThing.otherThingState.nameField1 to "field ItHappened.when"
+          set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"
         }
       }
     }

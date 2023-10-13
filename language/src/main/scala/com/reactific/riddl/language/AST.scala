@@ -391,6 +391,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
       (other.getClass == classOf[Abstract]) ||
       (this.getClass == classOf[Abstract])
     }
+    def hasCardinality: Boolean = false
   }
 
   sealed trait NumericType extends TypeExpression {
@@ -480,6 +481,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   /** Base trait of the cardinality type expressions */
   sealed trait Cardinality extends TypeExpression {
     def typeExp: TypeExpression
+    final override def hasCardinality: Boolean = true
   }
 
   /** A cardinality type expression that indicates another type expression as being optional; that is with a cardinality
@@ -1747,7 +1749,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Definition
-      with StateDefinition
       with ProcessorDefinition
       with ProjectorDefinition
       with FunctionDefinition
@@ -1934,16 +1935,16 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   The location of the tell action
     * @param msg
     *   A constructed message value to send to the entity, probably a command
-    * @param entityRef
-    *   The entity to which the message is directed
+    * @param processorRef
+    *   The processor to which the message is directed
     */
   case class TellStatement(
     loc: At,
     msg: MessageRef,
-    entityRef: ProcessorRef[Processor[?, ?]]
+    processorRef: ProcessorRef[Processor[?, ?]]
   ) extends Statement {
     override def kind: String = "Tell Statement"
-    def format: String = s"tell ${msg.format} to ${entityRef.format}"
+    def format: String = s"tell ${msg.format} to ${processorRef.format}"
   }
 
   case class CallStatement(
@@ -2286,8 +2287,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     *   The name of the state definition
     * @param typ
     *   A reference to a type definition that provides the range of values that the state may assume.
-    * @param types
-    *   Types defined within the body of the state
     * @param handlers
     *   The handler definitions that may occur when this state is active
     * @param invariants
@@ -2302,15 +2301,13 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     loc: At,
     id: Identifier,
     typ: TypeRef,
-    types: Seq[Type] = Seq.empty[Type],
     handlers: Seq[Handler] = Seq.empty[Handler],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends EntityDefinition {
 
-    override def contents: Seq[StateDefinition] = types ++
-      handlers ++ invariants
+    override def contents: Seq[StateDefinition] = handlers ++ invariants
 
     def format: String = s"${Keywords.state} ${id.format}"
 

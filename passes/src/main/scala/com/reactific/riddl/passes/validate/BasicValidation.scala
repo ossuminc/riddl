@@ -269,6 +269,22 @@ trait BasicValidation {
     )
   }
 
+  def checkNonEmptyValue(
+    value: RiddlValue,
+    name: String,
+    thing: Definition,
+    loc: At,
+    kind: KindOfMessage,
+    required: Boolean
+  ): this.type = {
+    check(
+      value.nonEmpty,
+      message = s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
+      kind,
+      thing.loc
+    )
+  }
+
   def checkNonEmpty(
     list: Seq[?],
     name: String,
@@ -282,5 +298,43 @@ trait BasicValidation {
       kind,
       thing.loc
     )
+  }
+
+  def checkNonEmpty(
+    list: Seq[?],
+    name: String,
+    thing: Definition,
+    loc: At,
+    kind: KindOfMessage,
+    required: Boolean
+  ): this.type = {
+    check(
+      list.nonEmpty,
+      s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
+      kind,
+      thing.loc
+    )
+  }
+
+  def checkCrossContextReference(ref: PathIdentifier, definition: Definition, container: Definition): Unit = {
+    println(s"Checking CrossContext References for ${ref.format} in ${definition.identify} with ${container.identify}")
+    symbols.contextOf(definition) match {
+      case Some(definitionContext) =>
+        symbols.contextOf(container) match {
+          case Some(containerContext) =>
+            if definitionContext != containerContext then
+              messages.add(
+                style(
+                  s"Path Identifier ${ref.format} at ${ref.loc} references ${definition.identify} in " +
+                    s"${definitionContext.identify} but occurs in ${container.identify} in ${containerContext.identify}." +
+                    " Cross-context references are ill-advised as they lead to model confusion and violate " +
+                    "the 'bounded' aspect of bounded contexts"
+                )
+              )
+            else ()
+          case None => ()
+        }
+      case None => ()
+    }
   }
 }

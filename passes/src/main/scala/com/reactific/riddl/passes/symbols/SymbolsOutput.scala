@@ -65,8 +65,15 @@ case class SymbolsOutput(
   }
 
   def contextOf(definition: Definition): Option[Context] = {
-    val tail = parentsOf(definition).dropWhile(_.getClass != classOf[Context])
-    tail.headOption.asInstanceOf[Option[Context]]
+    definition match {
+      case c: Context =>
+        Some(c)
+      case _ =>
+        val parents = parentsOf(definition)
+        val tail = parents.dropWhile(_.getClass != classOf[Context])
+        val result = tail.headOption.asInstanceOf[Option[Context]]
+        result
+    }
   }
 
   /** Get the full path of a definition

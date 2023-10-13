@@ -10,7 +10,7 @@ domain Example is {
 	    state FooExample of FooExampleState is {
 	      handler HandleFoo is {
 	        on command ToBar {
-		        morph entity FooEntity to state BarExampleState with record BarExampleState
+		        morph entity FooEntity to state BarExample with record BarExampleState
           }
         }
 	    }

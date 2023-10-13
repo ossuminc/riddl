@@ -130,7 +130,6 @@ class HandlerValidatorTest extends ValidatingTest {
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
           msgs.justErrors mustBe empty
-
       }
     }
     "produce a warning for commands with no events sent" in {

@@ -189,10 +189,11 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case None => ()
       case Some(reference) =>
         resolveARef[Definition](reference, parents)
+    resolveStatements(mc.statements, parents)
   }
 
   private def resolveOnClauses(oc: OnClause, parents: Seq[Definition]): Unit = {
-    resolveStatements(oc.statements, oc +: parents)
+    resolveStatements(oc.statements, parents)
   }
 
   private def resolveStatements(statements: Seq[Statement], parents: Seq[Definition]): Unit = {
@@ -365,7 +366,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.Var", "org.wartremover.warts.IterableOps"))
-  def resolvePathFromAnchor[T <: Definition: ClassTag](
+  private def resolvePathFromAnchor[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition],
     anchor: Definition,
@@ -373,7 +374,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   ): Seq[Definition] = {
     val stack: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
     val parents_to_add = anchor_parents.reverse
-    if anchor_parents.last.isRootContainer then
+    if anchor_parents.nonEmpty && anchor_parents.last.isRootContainer then
       stack.pushAll(parents_to_add.drop(1))
     else
       stack.pushAll(parents_to_add)
@@ -420,38 +421,8 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
     else Seq.empty[Definition]
   }
 
-  /*
-  def resolvePathFromAnchor(
-    pathId: PathIdentifier,
-    parents: Seq[Definition],
-    anchor: Definition,
-    anchor_parents: Seq[Definition]
-  ): Seq[Definition] = {
-    val maybeFound: Seq[Definition] = Seq.empty
-    // Capture the first name we're looking for
-    val topName = pathId.value.head
-    // Define a function to identify the starting point in the parents
-    def startingPoint(defn: Definition): Boolean = {
-      defn.id.value == topName || defn.resolveNameTo(topName).nonEmpty
-    }
-    // Drop parents until starting point found
-    val newParents = parents.dropUntil(startingPoint)
-
-    // If we dropped all the parents then the path isn't valid
-    // we found the starting point, and adjusted the parent stack correspondingly
-      // use resolveRelativePath to descend through names
-      val maybeFound = resolveRelativePath(pathId, newParents)
-      if newParents.isEmpty then
-      // Signal not found
-      Seq.empty[Definition]
-    else
-
-    checkResultingPath(pathId, parents, maybeFound)
-  }
-   */
-
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
-  def checkResultingPath[T <: Definition: ClassTag](
+  private def checkResultingPath[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition],
     maybeFound: Seq[Definition]
@@ -482,6 +453,7 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
 
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def checkThatPathIdMatchesFoundParentStack[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition],
@@ -489,18 +461,22 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
   ): Boolean = {
     pathId.value.headOption match {
       case Some(topName) =>
-        val maybeNames = maybeResult.map(_.id.value) // drop "Root"
-        val matchingPathPortion = maybeNames.take(pathId.value.length).reverse
-        val zipped = matchingPathPortion.zip[String](pathId.value)
-        val allMatch = (for { (path: String, pid: String) <- zipped } yield {
-          path == pid
-        }).forall(_ == true)
-        if !allMatch then
+        val foundDefinition = maybeResult.head
+        val foundName = foundDefinition.id.value
+        val soughtName = pathId.value.last
+        val foundClass = foundDefinition.getClass
+        val soughtClass = classTag[T].runtimeClass
+        if foundName != soughtName then
           notResolved[T](
             pathId,
             parents,
-            s"the search through the parents ended at:\n  ${maybeNames.mkString(".")}\n" +
-              s"and there was no match to the elements of the PathId:\n  ${pathId.format}"
+            s"the found name, '$foundName', is not the same as the sought name, '$soughtName'"
+          )
+          false
+        else if !soughtClass.isAssignableFrom(foundClass) then
+          notResolved[T](
+            pathId, parents, s"the found class ${foundClass.getSimpleName} is not compatible with the sough class, " +
+              s"'${soughtClass.getSimpleName}"
           )
           false
         else true
@@ -764,104 +740,5 @@ case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolu
       case other: Definition =>
         other.id.value == soughtName
     }
-  }
-
-  /** Resolve a Relative PathIdentifier. If the path is already resolved or it has no empty components then we can
-    * resolve it from the map or the symbol table.
-    *
-    * @param pid
-    *   The path to consider
-    * @param parents
-    *   The parent stack to provide the context from which the search starts
-    * @return
-    *   Either an error or a definition
-    */
-  private def resolveRelativePath(
-    pid: PathIdentifier,
-    parents: Seq[Definition]
-  ): Seq[Definition] = {
-    // Initialize the visited stack. This is used to detect looping. We
-    // should never visit the same definition twice but if we do we will
-    // catch it below.
-    val visitedStack = mutable.Stack.empty[Definition]
-
-    // Implicit definitions don't have names so they don't count in the stack
-    val namedParents = parents.filterNot(_.isImplicit).reverse
-
-    // Build the parent stack from the named parents
-    val parentStack = mutable.Stack.empty[Definition]
-    parentStack.pushAll(namedParents)
-
-    // Build the name stack from the PathIdentifier provided
-    val nameStack = mutable.Stack.empty[String]
-    nameStack.pushAll(pid.value.reverse)
-
-    // Loop over the names in the stack. Note that mutable stacks are used
-    // here because the algorithm can adjust them as it finds intermediary
-    // definitions. If the name stack becomes empty, we're done searching.
-    while nameStack.nonEmpty do {
-      // Pop the name we're currently looking for and save it
-      val soughtName = nameStack.pop()
-
-      parentStack.headOption match
-        case None =>
-          messages.addError(
-            pid.loc,
-            s"To many names in path identifier for parents"
-          )
-        case Some(definition) =>
-          // We have a name to search for if the parent stack is not empty
-
-          // If we have already visited this definition, its a looping error
-          if visitedStack.contains(definition) then {
-            // Generate the error message
-            messages.addError(
-              pid.loc,
-              msg = s"""Path resolution encountered a loop at ${definition.identify}
-                   |  for name '$soughtName' when resolving ${pid.format}
-                   |  in definition context: ${parents.map(_.identify).mkString("\n    ", "\n    ", "\n")}
-                   |""".stripMargin
-            )
-            // Signal we're done searching with no result
-            parentStack.clear()
-          } else {
-            // Look where we are and find the candidates that could
-            // possibly match soughtName
-            val candidates = findCandidates(parentStack)
-
-            // Now find the match, if any, and handle appropriately
-            val found = candidates.find(candidate => findResolution(soughtName, candidate))
-            found match {
-              case Some(q: Definition) =>
-                // found the named item, and it is a Container, so put it on
-                // the stack in case there are more things to resolve
-                parentStack.push(q)
-
-                // Push the definition on the visited stack because we
-                // already resolved this one and looked for candidates, no
-                // point looping through here again.
-                visitedStack.push(definition)
-
-              case None =>
-              // No search result, there may be more things to find in
-              // the next iteration
-            }
-          }
-    }
-
-    // if there is a single thing left on the stack and that things is
-    // a RootContainer
-    parentStack.headOption match
-      case Some(head: RootContainer) if parentStack.size == 1 =>
-        // then pop it off because RootContainers don't count and we want to
-        // rightfully return an empty sequence for "not found"
-        parentStack.pop()
-        // Convert parent stack to immutable sequence
-        parentStack.toSeq
-      case Some(head) =>
-        // Not the root, just convert the result to immutable Seq
-        parentStack.toSeq
-      case None =>
-        parentStack.toSeq // empty == fail
   }
 }

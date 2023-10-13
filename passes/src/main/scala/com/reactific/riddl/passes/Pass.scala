@@ -251,7 +251,7 @@ object Pass {
     }
   }
 
-  def apply(
+  def runStandardPasses(
     model: RootContainer,
     options: CommonOptions,
     shouldFailOnErrors: Boolean

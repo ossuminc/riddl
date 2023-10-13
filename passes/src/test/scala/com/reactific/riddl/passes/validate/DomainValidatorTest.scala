@@ -27,7 +27,7 @@ class DomainValidatorTest extends ValidatingTest {
         Seq(rpi)
       )
 
-      Pass(root, CommonOptions(), true) match {
+      Pass.runStandardPasses(root, CommonOptions(), true) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
           val theErrors: Messages = result.messages.justErrors
