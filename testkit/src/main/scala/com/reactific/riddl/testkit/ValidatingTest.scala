@@ -34,7 +34,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $origin:\n$msgs")
       case Right(root) =>
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -55,7 +55,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) =>
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(passesResult: PassesResult) =>
@@ -97,7 +97,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        Pass(root, options, shouldFailOnErrors) match {
+        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>

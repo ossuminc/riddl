@@ -246,7 +246,6 @@ class ParserTest extends ParsingTest {
                 (3, 3, rpi),
                 Identifier((3, 9, rpi), "BurgerState"),
                 TypeRef((3, 24, rpi), PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
-                List(),
                 Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
               )
             ),

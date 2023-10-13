@@ -73,3 +73,9 @@ Missing: testkit/src/test/input/check/references/bad-pids.riddl(13:11):
  Processing for commands should result in sending an event:
            on command DooFoo {
            ^
+Error: testkit/src/test/input/check/references/bad-pids.riddl(14:23):
+ Path 'FooExamplexxxx.garbage' was not resolved, in OnMessageClause 'On command DooFoo' because
+ the PathId is invalid since it's first element, FooExamplexxxx, does not exist in the model
+ and it should refer to a Field:
+             set field FooExamplexxxx.garbage to "record Foo"
+                       ^

@@ -35,7 +35,7 @@ class ValidationPassTest extends ValidatingTest {
           case Left(errors) => fail(errors.format)
           case Right(root) =>
             sharedRoot = root
-            Pass(root, CommonOptions(showMissingWarnings = false, showStyleWarnings = false), true) match {
+            Pass.runStandardPasses(root, CommonOptions(showMissingWarnings = false, showStyleWarnings = false), true) match {
               case Left(errors) =>
                 fail(errors.format)
               case Right(ao) =>

@@ -13,7 +13,6 @@ import com.reactific.riddl.passes.{Pass, PassInfo, PassInput}
 import com.reactific.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
-import com.sun.nio.file.SensitivityWatchEventModifier
 
 import scala.collection.mutable
 
@@ -71,12 +70,16 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         validateUser(sa, parentsAsSeq)
       case omc: OnMessageClause =>
         validateOnMessageClause(omc, parentsAsSeq)
+        validateStatements(omc.statements, omc, parentsAsSeq)
       case oic: OnInitClause =>
         checkDefinition(parentsAsSeq, oic)
+        validateStatements(oic.statements, oic, parentsAsSeq)
       case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
+        validateStatements(otc.statements, otc, parentsAsSeq)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
+        validateStatements(ooc.statements, ooc, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
@@ -135,7 +138,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
   }
 
   @SuppressWarnings(Array("org.wartremover.wart.IsInstanceOf"))
-  def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
+  private def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, omc)
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, omc, parents, Seq(omc.msg.messageKind))
@@ -158,11 +161,81 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
             )
         case _ =>
       }
+    } else {
+
     }
     omc.from.foreach { (ref: Reference[Definition]) =>
       checkRef[Definition](ref, omc, parents)
     }
     checkDescription(omc)
+  }
+
+  private def validateStatements(statements: Seq[Statement], onClause: OnClause, parents: Seq[Definition]): Unit = {
+    if statements.isEmpty then
+      messages.add(
+        missing(s"${onClause.identify} should have statements")
+      )
+    else
+      for { statement <- statements } do {
+        statement match {
+          case ArbitraryStatement(loc, what) =>
+            checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
+          case ErrorStatement(loc, message) =>
+            checkNonEmptyValue(message, "error description", onClause, loc, MissingWarning, required = true)
+          case SetStatement(loc, field, value) =>
+            checkRef[Field](field, onClause, parents)
+            checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
+          case ReturnStatement(loc, value) =>
+            checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
+          case SendStatement(loc, msg, portlet) =>
+            checkRef[Type](msg, onClause, parents)
+            checkRef[Portlet](portlet, onClause, parents)
+          case ReplyStatement(loc, message) =>
+            checkRef[Type](message, onClause, parents)
+          case MorphStatement(loc, entity, state, value) =>
+            checkRef[Entity](entity, onClause, parents)
+            checkRef[State](state, onClause, parents)
+            checkRef[Type](value, onClause, parents)
+          case BecomeStatement(loc, entityRef, handlerRef) =>
+            checkRef[Entity](entityRef, onClause, parents).foreach { entity =>
+              checkCrossContextReference(entityRef.pathId, entity, onClause)
+            }
+            checkRef[Handler](handlerRef, onClause, parents).foreach { handler =>
+              checkCrossContextReference(handlerRef.pathId, handler, onClause)
+            }
+          case TellStatement(loc, msg, processorRef) =>
+            val maybeProc = checkRef[Processor[?, ?]](processorRef, onClause, parents)
+            maybeProc.foreach { entity =>
+              checkCrossContextReference(processorRef.pathId, entity, onClause)
+            }
+            val maybeType = checkRef[Type](msg, onClause, parents)
+            maybeType.foreach { typ =>
+              checkCrossContextReference(msg.pathId, typ, onClause)
+            }
+
+          case CallStatement(loc, funcRef) =>
+            checkRef[Function](funcRef, onClause, parents).foreach { function =>
+              checkCrossContextReference(funcRef.pathId, function, onClause)
+            }
+
+          case ForEachStatement(loc, pid, do_) =>
+            checkPathRef[Type](pid, onClause, parents).foreach { typ =>
+              checkCrossContextReference(pid, typ, onClause)
+              check(
+                typ.typ.hasCardinality,
+                s"The foreach statement requires a type with cardinality but ${pid.format} does not",
+                Messages.Error,
+                loc
+              )
+            }
+            checkNonEmpty(do_, "statement list", onClause, MissingWarning, required = false)
+          case IfThenElseStatement(loc, cond, thens, elses) =>
+            checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
+            checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
+            checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
+          case StopStatement(loc) => ()
+        }
+      }
   }
 
   private def validateTerm(
@@ -527,14 +600,11 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
     checkDefinition(parents, replica)
     checkTypeExpression(replica.typeExp, replica, parents)
     replica.typeExp match {
-      case Mapping(loc, from, to)                =>
-      case Sequence(loc, of)                     =>
-      case Set(loc, of)                          =>
-      case Optional(loc, typeExp)                =>
-      case ZeroOrMore(loc, typeExp)              =>
-      case OneOrMore(loc, typeExp)               =>
-      case SpecificRange(loc, typeExp, min, max) =>
-      case t: TypeExpression =>
+      case Mapping(loc, from, to) =>
+      case Sequence(loc, of)      =>
+      case Set(loc, of)           =>
+      case typeEx: Cardinality    =>
+      case t: TypeExpression      =>
         messages.addError(t.loc, s"Type expression in Replica ${replica.identify} is not a replicable type")
     }
     checkDescription(replica)
@@ -742,9 +812,9 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
       case _: VagueInteraction =>
-        // Nothing else to validate
+      // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>
-        // These are all just containers of other interactions, not needing further validation
+      // These are all just containers of other interactions, not needing further validation
     }
   }
 

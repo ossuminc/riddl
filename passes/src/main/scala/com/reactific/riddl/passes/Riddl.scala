@@ -24,7 +24,7 @@ object Riddl {
     options: CommonOptions = CommonOptions.empty,
     shouldFailOnError: Boolean = true,
   ): Either[Messages, PassesResult] = {
-    Pass(root, options, shouldFailOnError)
+    Pass.runStandardPasses(root, options, shouldFailOnError)
   }
 
   def parseAndValidate(

@@ -11,8 +11,6 @@ import com.reactific.riddl.language.{At, Messages}
 
 trait StreamingValidation extends TypeValidation {
 
-  // TODO: Validate Stream usage from statements
-
   def checkStreaming(root: RootContainer): Unit = {
     val start = root.domains.headOption.map(_.id.loc).getOrElse(At.empty)
     checkStreamingUsage(start)
@@ -101,6 +99,5 @@ trait StreamingValidation extends TypeValidation {
       val message = s"${inlet.identify} is not connected"
       messages.addWarning(inlet.loc, message)
     }
-
   }
 }
