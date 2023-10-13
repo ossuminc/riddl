@@ -229,7 +229,19 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def groupAliases[u: P]: P[String] = {
     P(
-      StringIn(Keywords.group, "page", "pane", "dialog", "popup", "frame", "column", "window", "section", "tab").!
+      StringIn(
+        Keywords.group,
+        "page",
+        "pane",
+        "dialog",
+        "popup",
+        "frame",
+        "column",
+        "window",
+        "section",
+        "tab",
+        "flow"
+      ).!
     )
   }
 
