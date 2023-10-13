@@ -2667,7 +2667,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   }
 
   /** A sealed trait for Inlets and Outlets */
-  sealed trait Portlet extends Definition
+  sealed trait Portlet extends LeafDefinition with ProcessorDefinition with AlwaysEmpty
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -2688,10 +2688,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     type_ : Reference[Type],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Portlet
-      with LeafDefinition
-      with ProcessorDefinition
-      with AlwaysEmpty {
+  ) extends Portlet {
     def format: String =
       s"${Keywords.inlet} ${id.format} is ${type_.format}"
 
@@ -2717,10 +2714,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     type_ : Reference[Type],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Portlet
-      with LeafDefinition
-      with ProcessorDefinition
-      with AlwaysEmpty {
+  ) extends Portlet {
     def format: String = s"${Keywords.outlet} ${id.format} is ${type_.format}"
 
     final val kind: String = "Outlet"
