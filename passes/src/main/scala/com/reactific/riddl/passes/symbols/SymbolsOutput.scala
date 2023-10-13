@@ -11,7 +11,6 @@ import com.reactific.riddl.language.Messages
 import com.reactific.riddl.passes.PassOutput
 import com.reactific.riddl.passes.symbols.Symbols.{Parentage, SymTab}
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
