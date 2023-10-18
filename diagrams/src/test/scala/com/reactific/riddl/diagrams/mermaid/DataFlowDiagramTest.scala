@@ -34,16 +34,10 @@ class DataFlowDiagramTest extends ValidatingTest {
           val context = domain.contexts.head
           val connectors = context.connections
           val dfd = DataFlowDiagram(result)
-          for { connector <- connectors } do {
-            println(connector.identifyWithLoc + ":")
-            val participants = dfd.participants(connector)
-            println(participants.map(_.identify).mkString("\n"))
-          }
           val diagram = dfd.generate(context)
           println(diagram)
           succeed
       }
-
     }
   }
 }
