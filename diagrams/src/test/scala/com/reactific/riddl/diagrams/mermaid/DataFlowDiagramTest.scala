@@ -20,11 +20,19 @@ class DataFlowDiagramTest extends ValidatingTest {
         |    flow Transformer is {
         |      inlet In is FlowTheData.TypeA
         |      outlet Out is FlowTheData.TypeB
+        |      handler Transform is {
+        |        on record TypeA from inlet Transformer.In {
+        |          "transform TypeA to TypeB"
+        |          send record TypeB to outlet Transformer.Out
+        |        }
+        |      }
         |    }
         |    connector Source is { flows FlowTheData.TypeA from outlet Origination.Out
         |      to inlet Transformer.In }
         |    connector Transform is { flows FlowTheData.TypeB from outlet Transformer.Out
         |      to inlet Origination.In }
+        |    handler OriginationHandler is { ??? }
+        |
         |  }
         |}
         |""".stripMargin

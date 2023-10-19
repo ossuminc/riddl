@@ -1,5 +1,5 @@
 package com.reactific.riddl.diagrams.mermaid
-import com.reactific.riddl.language.AST.{Connector, Context, Definition, Inlet, Outlet, Processor, Streamlet, Type}
+import com.reactific.riddl.language.AST._
 import com.reactific.riddl.passes.PassesResult
 
 /** Generate a data flow diagram Like this:
@@ -65,7 +65,11 @@ case class DataFlowDiagram(pr: PassesResult) {
       toDef <- pr.refMap.definitionOf[Inlet](to, connector)
       fromDef <- pr.refMap.definitionOf[Outlet](from, connector)
     } yield {
-      val to_users = pr.usage.getUsers(toDef)
+      val to_users: Seq[Definition] = pr.usage.getUsers(toDef).flatMap {
+        case oc: OnClause => pr.symbols.parentOf(oc).flatMap(pr.symbols.parentOf)
+        case e: Entity => Seq.empty
+        case _ => Seq.empty // FIXME: unfinished cases here
+      }
       val from_users = pr.usage.getUsers(fromDef)
       (Seq(fromDef, toDef) ++ to_users ++ from_users).distinct.filterNot(_.isInstanceOf[Connector])
     }
