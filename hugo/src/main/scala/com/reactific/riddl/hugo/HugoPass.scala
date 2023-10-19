@@ -23,7 +23,7 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo {
   val name: String = "hugo"
-  val geekDoc_version = "v0.40.1"
+  val geekDoc_version = "v0.41.2"
   val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = java.net.URI
     .create(
@@ -94,12 +94,10 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
       case container: Definition =>
         // Everything else is a container and definitely needs its own page
         // and glossary entry.
+        state.addToGlossary(container, stack)
         val (mkd, parents) = setUpContainer(container, state, stack)
         container match {
           case a: Application => mkd.emitApplication(a, stack)
-          case out: Output    => state.addToGlossary(out, stack)
-          case in: Input      => state.addToGlossary(in, stack)
-          case grp: Group     => state.addToGlossary(grp, stack)
           case t: Type        => mkd.emitType(t, stack)
           case s: State =>
             val maybeType = refMap.definitionOf[Type](s.typ.pathId, s)
@@ -125,13 +123,16 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
           case s: Saga       => mkd.emitSaga(s, parents)
           case e: Epic       => mkd.emitEpic(e, stack)
           case uc: UseCase   => mkd.emitUseCase(uc, stack)
+
+          // All of the bleow are handled above in the outer match statement, and within their
+          // respective containers
           case _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
               _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
               _: Include[Definition] @unchecked =>
-          // All these are handled above in the outer match statement, and within their
-          // respective containers
+          case out: Output =>
+          case in: Input   =>
+          case grp: Group  =>
         }
-        state.addToGlossary(container, stack)
     }
   }
 

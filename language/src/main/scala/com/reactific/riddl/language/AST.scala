@@ -663,7 +663,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
       with FunctionDefinition
       with ProjectorDefinition {
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
-    final val kind: String = "Field"
+    final val kind: String = "Method"
   }
 
   /** A type expression that contains an aggregation of fields
