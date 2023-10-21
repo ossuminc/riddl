@@ -7,7 +7,7 @@
 package com.reactific.riddl
 
 import com.reactific.riddl.testkit.RunCommandSpecBase
-import org.scalatest.{Assertion, Sequential}
+import org.scalatest.Assertion
 
 import java.nio.file.Files
 import java.nio.file.Path

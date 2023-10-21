@@ -30,7 +30,7 @@ class HugoPassTest
   val passing_test_cases = Seq(
     "ToDoodles",
     "FooBarSuccess/FooBar",
-    // FIXME: "ReactiveBBQ/ReactiveBBQ",
+    // FIXME: re-enable when this case code is corrected "ReactiveBBQ/ReactiveBBQ",
     "dokn"
   )
   override def validateTestName(name: String): Boolean =
