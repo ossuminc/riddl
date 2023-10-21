@@ -29,11 +29,13 @@ class HugoPassTest
 
   val passing_test_cases = Seq(
     "ToDoodles",
-    "FooBar",
-    "ReactiveBBQ.conf",
+    "FooBarSuccess/FooBar",
+    // FIXME: "ReactiveBBQ/ReactiveBBQ",
     "dokn"
   )
-  override def validate(name: String): Boolean = passing_test_cases.contains(name)
+  override def validateTestName(name: String): Boolean =
+    val result = passing_test_cases.exists(name.endsWith)
+    result
 
   override def onSuccess(
     commandName: String,

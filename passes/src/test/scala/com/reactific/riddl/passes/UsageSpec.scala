@@ -102,7 +102,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
           result.messages.hasErrors mustBe (false)
           val warnings = result.messages.justUsage
           warnings.size mustBe (2)
-          val warnMessage = warnings.head.format
+          val warnMessage = warnings.head.format()
           warnMessage must include("Entity 'fooBar' is unused")
       }
 
