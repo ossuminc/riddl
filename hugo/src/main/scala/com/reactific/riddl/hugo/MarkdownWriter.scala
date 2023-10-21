@@ -969,10 +969,10 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   }
 
   private def emitTermRow(entry: GlossaryEntry): Unit = {
-    val source_link = makeIconLink("gdoc_github", "GitHub Link", entry.sourceLink)
+    val source_link = makeIconLink("gdoc_github", "Source Link", entry.sourceLink)
     val term = s"[${mono(entry.term)}](${entry.link})$source_link"
     val concept_link =
-      s"[${entry.typ}](https://riddl.tech/concepts/${entry.typ.toLowerCase}/)"
+      s"[<small>${entry.kind.toLowerCase}</small>](https://riddl.tech/concepts/${entry.kind.toLowerCase}/)"
     emitTableRow(term, concept_link, entry.brief)
   }
 
@@ -1041,7 +1041,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
 
 case class GlossaryEntry(
   term: String,
-  typ: String,
+  kind: String,
   brief: String,
   path: Seq[String],
   link: String = "",
