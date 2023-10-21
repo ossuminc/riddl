@@ -15,7 +15,7 @@ import scala.annotation.unused
 import scala.collection.mutable
 
 object SymbolsPass extends PassInfo {
-  val name: String = "symbols"
+  val name: String = "Symbols"
 }
 
 /** Symbol Table for Validation and other purposes. This symbol table is built from the AST model after syntactic

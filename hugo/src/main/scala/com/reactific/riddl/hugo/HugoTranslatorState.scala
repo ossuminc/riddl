@@ -20,14 +20,14 @@ import com.reactific.riddl.utils.{Logger, SysLogger}
 import java.nio.file.Path
 
 /** The processing state for the Hugo Translator
-  * @param root
-  *   RootContainer that was parsed
-  * @param symbolTable
-  *   A symbolTable for the names of things
+  * @param passesResult
+  *   The result of running the passes
   * @param options
   *   The options specific to Hugo Translator
   * @param commonOptions
   *   The common options all commands use
+  * @param logger
+  *   The logger to log messages to
   */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class HugoTranslatorState(
@@ -35,7 +35,9 @@ case class HugoTranslatorState(
   options: HugoCommand.Options = HugoCommand.Options(),
   commonOptions: CommonOptions = CommonOptions(),
   logger: Logger = SysLogger()
-) extends TranslatingState[MarkdownWriter] with PassUtilities with SequenceDiagramSupport {
+) extends TranslatingState[MarkdownWriter]
+    with PassUtilities
+    with SequenceDiagramSupport {
   final def symbolTable: SymbolsOutput = passesResult.symbols
   final def refMap: ReferenceMap = passesResult.refMap
   final def root: RootContainer = passesResult.root // base class compliance
@@ -51,23 +53,6 @@ case class HugoTranslatorState(
     val mdw = MarkdownWriter(path, this)
     addFile(mdw)
     mdw
-  }
-
-  def makeLinkFor(definition: Definition): String = makeDocLink(definition)
-
-  def makeDocAndParentsLinks(definition: Definition): String = {
-    val parents = symbolTable.parentsOf(definition)
-    val docLink = makeDocLink(definition, makeParents(parents))
-    if parents.isEmpty then { s"[${definition.identify}]($docLink)" }
-    else {
-      parents.headOption match
-        case None =>
-          logger.error(s"No parents found for definition '${definition.identify}")
-          ""
-        case Some(parent: Definition) =>
-          val parentLink = makeDocLink(parent, makeParents(parents.drop(1)))
-          s"[${definition.identify}]($docLink) in [${parent.identify}]($parentLink)"
-    }
   }
 
   def makeIndex(root: RootContainer): Unit = {
@@ -103,18 +88,19 @@ case class HugoTranslatorState(
   val glossaryWeight = 970
   val toDoWeight = 980
   val statsWeight = 990
+  val messagesWeight = 975
 
-  def makeStatistics(): Unit = {
+  private def makeStatistics(): Unit = {
     if options.withStatistics then {
       val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
       mdw.emitStatistics(statsWeight)
     }
   }
 
-  def makeGlossary(): Unit = {
+  private def makeGlossary(): Unit = {
     if options.withGlossary then {
       val mdw = addFile(Seq.empty[String], "glossary.md")
-      passesResult.outputs.outputOf[GlossaryOutput](GlossaryPass.name) match {
+      outputs.outputOf[GlossaryOutput](GlossaryPass.name) match {
         case Some(go) =>
           mdw.emitGlossary(glossaryWeight, go.entries)
         case None =>
@@ -123,49 +109,37 @@ case class HugoTranslatorState(
     }
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-  private def mkAuthor(authors: Seq[AuthorRef], parents: Seq[Definition]): String = {
-    if authors.isEmpty then "Unspecified Author"
-    else
-      parents.headOption match {
-        case None => "Unspecified Author"
-        case Some(parent: Definition) =>
-          authors
-            .map { (ref: AuthorRef) =>
-              refMap.definitionOf[Author](ref.pathId, parent)
-            }
-            .filterNot(_.isEmpty)
-            .map(_.get)
-            .map(x => s"${x.name.s} &lt;${x.email.s}&gt;")
-            .mkString(", ")
-      }
-  }
 
   def makeToDoList(root: RootContainer): Unit = {
     if options.withTODOList then
-      val finder: Finder = Finder(root)
-      val items: Seq[(String, String, String, String)] = {
-        for {
-          (defn: Definition, pars: Seq[Definition]) <- finder.findEmpty
-          item = defn.identify
-          authors = AST.findAuthors(defn, pars)
-          author = mkAuthor(authors, pars)
-          parents = makeParents(pars)
-          path = parents.mkString(".")
-          link = makeDocLink(defn, parents)
-        } yield (item, author, path, link)
+      outputs.outputOf[ToDoListOutput](ToDoListPass.name) match {
+        case Some(tdlo) =>
+          val mdw = addFile(Seq.empty[String], "todolist.md")
+          mdw.emitToDoList(toDoWeight, tdlo.map)
+        case None =>
+          // do nothing
       }
-
-      val map = items
-        .groupBy(_._2)
-        .view
-        .mapValues(_.map { case (item, _, path, link) =>
-          s"[$item In $path]($link)"
-        })
-        .toMap
-      val mdw = addFile(Seq.empty[String], "todolist.md")
-      mdw.emitToDoList(toDoWeight, map)
   }
+
+  def emitMessageSummary(weight: Int, forDomain: Domain): Unit = {
+    if options.withMessageSummary then {
+      outputs.outputOf[MessageOutput](MessagesPass.name) match {
+        case Some(mo) =>
+          for {
+            messageInfo <- mo.collected.filter(_.definedIn.contains(forDomain))
+            fname = forDomain.id.value + "-" + messageInfo.message.id.value + ".md"
+            parents = messageInfo.definedIn.dropWhile(_ != forDomain.id.value).dropRight(1).drop(1) if parents.nonEmpty
+          } do {
+            val mdw = addFile(parents, fname)
+            mdw.emitMessageSummary(weight, forDomain, mo.collected)
+          }
+        case None =>
+        // just skip
+      }
+    }
+  }
+
+
 
   def close(root: RootContainer): Seq[Path] = {
     makeIndex(root)
