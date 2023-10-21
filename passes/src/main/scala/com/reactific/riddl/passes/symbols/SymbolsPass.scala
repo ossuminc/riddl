@@ -8,7 +8,7 @@ package com.reactific.riddl.passes.symbols
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
 import com.reactific.riddl.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
 
 import scala.annotation.unused
@@ -28,7 +28,7 @@ object SymbolsPass extends PassInfo {
   * @param input
   *   The output of the parser pass is the input to SymbolPass
   */
-case class SymbolsPass(input: PassInput) extends Pass(input) {
+case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   override def name: String = SymbolsPass.name
 

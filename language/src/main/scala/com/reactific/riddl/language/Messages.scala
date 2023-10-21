@@ -99,6 +99,18 @@ object Messages {
 
   val nl: String = System.lineSeparator()
 
+  private def highlight(kind: KindOfMessage, s: String): String = {
+    s"${kind match {
+        case Info           => s"$BLUE"
+        case StyleWarning   => s"$YELLOW"
+        case MissingWarning => s"$YELLOW$UNDERLINED"
+        case UsageWarning   => s"$YELLOW$BOLD"
+        case Warning        => s"$YELLOW$BOLD$UNDERLINED"
+        case Error          => s"$RED$BOLD"
+        case SevereError    => s"$RED_B$BLACK$BOLD"
+      }}$s$RESET"
+  }
+
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
 
@@ -118,19 +130,10 @@ object Messages {
 
     private def highlight(s: String, noHighlighting: Boolean = false): String = {
       if noHighlighting then s
-      else
-        s"${kind match {
-            case Info           => s"${BLUE}"
-            case StyleWarning   => s"${YELLOW}"
-            case MissingWarning => s"${YELLOW}${UNDERLINED}"
-            case UsageWarning   => s"${YELLOW}${BOLD}"
-            case Warning        => s"${YELLOW}${BOLD}${UNDERLINED}"
-            case Error          => s"${RED}${BOLD}"
-            case SevereError    => s"${RED_B}${BLACK}${BOLD}"
-          }}$s${RESET}"
+      else Messages.highlight(kind, s)
     }
 
-    def format: String = { format(false) }
+    def format: String = { format(noHighlighting = false) }
 
     def format(noHighlighting: Boolean = false): String = {
       val ctxt =
@@ -207,6 +210,7 @@ object Messages {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
+    def hasWarnings: Boolean = { msgs.nonEmpty && msgs.exists(_.kind < Error) }
     def justInfo: Messages = msgs.filter(_.isInfo)
     def justMissing: Messages = msgs.filter(_.isMissing)
     def justStyle: Messages = msgs.filter(_.isStyle)
@@ -235,13 +239,13 @@ object Messages {
   def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
     list.foreach { msg =>
       msg.kind match {
-        case Info           => log.info(msg.format)
-        case StyleWarning   => log.warn(msg.format)
-        case MissingWarning => log.warn(msg.format)
-        case UsageWarning   => log.warn(msg.format)
-        case Warning        => log.warn(msg.format)
-        case Error          => log.error(msg.format)
-        case SevereError    => log.severe(msg.format)
+        case Info           => log.info(msg.format())
+        case StyleWarning   => log.warn(msg.format())
+        case MissingWarning => log.warn(msg.format())
+        case UsageWarning   => log.warn(msg.format())
+        case Warning        => log.warn(msg.format())
+        case Error          => log.error(msg.format())
+        case SevereError    => log.severe(msg.format())
       }
     }
   }
@@ -254,13 +258,22 @@ object Messages {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])
       if messages.nonEmpty then {
-        log.info(s"""$kind Message Count: ${messages.length}""")
-        messages.map(_.format).foreach { message =>
+        kind match {
+          case Error =>
+            log.error(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
+          case SevereError =>
+            log.severe(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
+          case Info =>
+            log.info(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
+          case _ =>
+            log.warn(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
+        }
+        messages.map(_.format()).foreach { (msg: String) =>
           kind match {
-            case Info        => log.info(message)
-            case SevereError => log.severe(message)
-            case Error       => log.error(message)
-            case _           => log.warn(message)
+            case Info        => log.info(msg)
+            case SevereError => log.severe(msg)
+            case Error       => log.error(msg)
+            case _           => log.warn(msg)
           }
         }
       }
@@ -297,21 +310,16 @@ object Messages {
 
     def add(msg: Message): this.type = {
       msg.kind match {
-        case Warning => 
-          if commonOptions.showWarnings then
-            msgs.append(msg)
+        case Warning =>
+          if commonOptions.showWarnings then msgs.append(msg)
         case StyleWarning =>
-          if commonOptions.showStyleWarnings && commonOptions.showWarnings then
-            msgs.append(msg)
+          if commonOptions.showStyleWarnings && commonOptions.showWarnings then msgs.append(msg)
         case MissingWarning =>
-          if commonOptions.showMissingWarnings && commonOptions.showWarnings then
-            msgs.append(msg)
+          if commonOptions.showMissingWarnings && commonOptions.showWarnings then msgs.append(msg)
         case UsageWarning =>
-          if commonOptions.showUsageWarnings && commonOptions.showWarnings then
-            msgs.append(msg)
+          if commonOptions.showUsageWarnings && commonOptions.showWarnings then msgs.append(msg)
         case Info =>
-          if commonOptions.showInfoMessages then
-            msgs.append(msg)
+          if commonOptions.showInfoMessages then msgs.append(msg)
         case Error | SevereError => msgs.append(msg)
       }
       this

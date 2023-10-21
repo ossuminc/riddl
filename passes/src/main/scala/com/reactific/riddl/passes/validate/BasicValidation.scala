@@ -21,7 +21,7 @@ trait BasicValidation {
 
   def symbols: SymbolsOutput
   def resolution: ResolutionOutput
-  def messages: Messages.Accumulator
+  protected def messages: Messages.Accumulator
 
   def parentOf(definition: Definition): Container[Definition] = {
     symbols.parentOf(definition).getOrElse(RootContainer.empty)

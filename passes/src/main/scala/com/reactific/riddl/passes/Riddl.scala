@@ -24,7 +24,11 @@ object Riddl {
     options: CommonOptions = CommonOptions.empty,
     shouldFailOnError: Boolean = true,
   ): Either[Messages, PassesResult] = {
-    Pass.runStandardPasses(root, options, shouldFailOnError)
+    val result = Pass.runStandardPasses(root, options)
+    if shouldFailOnError && result.messages.hasErrors then
+      Left(result.messages)
+    else
+      Right(result)
   }
 
   def parseAndValidate(
@@ -38,7 +42,11 @@ object Riddl {
       case Left(messages) => Left(messages)
       case Right(root) =>
        val input = PassInput(root, commonOptions)
-       Pass(input, shouldFailOnError, passes, logger)
+       val result = Pass.runThesePasses(input, passes, logger)
+       if shouldFailOnError && result.messages.hasErrors then
+         Left(result.messages)
+       else
+         Right(result)
     }
   }
 

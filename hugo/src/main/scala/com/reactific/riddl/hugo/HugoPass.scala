@@ -9,7 +9,7 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.language.*
 import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.reactific.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.passes.symbols.SymbolsPass
 import com.reactific.riddl.passes.validate.ValidationPass
@@ -37,30 +37,30 @@ case class HugoOutput(
   state: HugoTranslatorState
 ) extends PassOutput
 
-case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(input) {
+@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
+case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslatorState) extends Pass(input, outputs) {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
   requires(ValidationPass)
   requires(StatsPass)
 
-  lazy val commonOptions: CommonOptions = state.commonOptions
-  lazy val options: HugoCommand.Options = state.options
-  lazy val refMap: ReferenceMap = input.outputOf[ResolutionOutput](ResolutionPass.name).refMap
-
   require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
   require(
     options.outputRoot.getFileName.toString.nonEmpty,
     "Output path is empty"
   )
-  if options.inputFile.nonEmpty then makeDirectoryStructure(options.inputFile, state.logger, options, commonOptions)
 
+  lazy val commonOptions: CommonOptions = state.commonOptions
+  lazy val options: HugoCommand.Options = state.options
+  lazy val refMap: ReferenceMap = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get.refMap
   val root: RootContainer = input.root
+  val name: String = HugoPass.name
+
+  if options.inputFile.nonEmpty then makeDirectoryStructure(options.inputFile, state.logger, options, commonOptions)
 
   private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
   writeConfigToml(options, maybeAuthor)
-
-  val name: String = HugoPass.name
 
   override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
@@ -143,10 +143,17 @@ case class HugoPass(input: PassInput, state: HugoTranslatorState) extends Pass(i
   override def result: HugoOutput = HugoOutput(state = state)
 
   private def deleteAll(directory: File): Boolean = {
-    for file <- directory.listFiles do {
-      deleteAll(file)
-    }
-    directory.delete
+    if !directory.isDirectory then false
+    else
+      Option(directory.listFiles) match {
+        case Some(files) =>
+          for file <- files do {
+            deleteAll(file)
+          }
+          directory.delete
+        case None =>
+          false
+      }
   }
 
   private def loadATheme(from: URL, destDir: Path): Unit = {

@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.parsing.Terminals.*
-import com.reactific.riddl.passes.{HierarchyPass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{HierarchyPass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.reactific.riddl.passes.resolve.ResolutionPass
 import com.reactific.riddl.passes.symbols.SymbolsPass
 import com.reactific.riddl.passes.validate.ValidationPass
@@ -61,7 +61,8 @@ case class PrettifyOutput(
 ) extends PassOutput
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
-case class PrettifyPass(input: PassInput, state: PrettifyState) extends HierarchyPass(input) {
+case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState) extends HierarchyPass(input,
+  outputs) {
 
   requires(SymbolsPass)
   requires(ResolutionPass)

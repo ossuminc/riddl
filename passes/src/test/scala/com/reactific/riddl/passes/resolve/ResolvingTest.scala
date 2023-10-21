@@ -4,7 +4,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.reactific.riddl.passes.{Pass, PassInput}
+import com.reactific.riddl.passes.{Pass, PassInput, PassesOutput}
 import org.scalatest.*
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -17,26 +17,27 @@ class ResolvingTest extends AnyWordSpec with Matchers {
     showMissingWarnings = false,
     showUsageWarnings = false,
     showStyleWarnings = false
-  )): PassInput = {
+  )): (PassInput, PassesOutput) = {
     val input = PassInput(root, commonOptions)
-    Pass.runSymbols(input)
-    Pass.runResolution(input)
-    input
+    val outputs = PassesOutput()
+    Pass.runSymbols(input, outputs)
+    Pass.runResolution(input, outputs)
+    input -> outputs
   }
 
   def parseAndResolve(
     input: RiddlParserInput
   )(
-    onSuccess: PassInput => Assertion = _  => succeed
+    onSuccess: (PassInput, PassesOutput) => Assertion = (_, _)  => succeed
   )(onFailure: Messages => Assertion = messages => fail(messages.format)): Assertion = {
     TopLevelParser.parse(input) match {
       case Left(errors) =>
         fail(errors.map(_.format).mkString("\n"))
       case Right(model) =>
-        val input = resolve(model)
-        val messages = input.getMessages
+        val (input, outputs) = resolve(model)
+        val messages = outputs.getAllMessages
         if messages.isEmpty then
-          onSuccess(input)
+          onSuccess(input, outputs)
         else onFailure(messages)
     }
   }

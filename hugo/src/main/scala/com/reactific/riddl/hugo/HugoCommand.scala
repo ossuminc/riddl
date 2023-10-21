@@ -9,9 +9,10 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.{CommandOptions, PassCommand, TranslatingOptions}
 import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.passes.Pass.{PassesCreator, standardPasses}
-import com.reactific.riddl.passes.{PassInput, PassesResult}
+import com.reactific.riddl.passes.{PassInput, PassesOutput, PassesResult}
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.stats.StatsPass
 import pureconfig.ConfigCursor
@@ -64,11 +65,11 @@ object HugoCommand {
     options: Options
   ): PassesCreator = {
     standardPasses ++ Seq(
-      { (input: PassInput) => StatsPass(input) },
-      { (input: PassInput) =>
-        val result = PassesResult(input)
+      { (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) },
+      { (input: PassInput, outputs: PassesOutput) =>
+        val result = PassesResult(input, outputs, Messages.empty)
         val state = HugoTranslatorState(result, options, commonOptions, log)
-        HugoPass(input, state)
+        HugoPass(input, outputs, state)
       }
     )
   }

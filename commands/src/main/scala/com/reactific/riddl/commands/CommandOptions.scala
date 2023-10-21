@@ -144,6 +144,9 @@ object CommandOptions {
         maxParallel <- optional(objCur, "max-parallel-parsing", Some(4)) { cc =>
           cc.asInt.map(Option(_))
         }
+        warnsAreFatal <- optional(objCur, "warnings-are-fatal", Option.empty[Boolean]) { cc =>
+          cc.asBoolean.map(Option(_))
+        }
       yield {
         val default = CommonOptions()
         val shouldShowWarnings = suppressWarnings
@@ -196,7 +199,8 @@ object CommandOptions {
           debug,
           pluginsDir,
           sortMessagesByLocation = sortMessages.getOrElse(false),
-          maxParallelParsing = maxParallel.getOrElse(4)
+          maxParallelParsing = maxParallel.getOrElse(4),
+          warningsAreFatal = warnsAreFatal.getOrElse(false)
         )
       }
     }

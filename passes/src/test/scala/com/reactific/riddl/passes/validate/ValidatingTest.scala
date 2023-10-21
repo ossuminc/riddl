@@ -19,6 +19,18 @@ import scala.reflect.*
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
+  protected def runStandardPasses(
+    model: RootContainer,
+    options: CommonOptions,
+    shouldFailOnErrors: Boolean = false
+  ): Either[Messages, PassesResult] = {
+    val result = Pass.runStandardPasses(model, options)
+    if shouldFailOnErrors && result.messages.hasErrors then
+      Left(result.messages)
+    else
+      Right(result)
+  }
+  
   def parseAndValidateAggregate(
     input: RiddlParserInput,
     options: CommonOptions = CommonOptions()
@@ -29,11 +41,11 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         fail(errors.map(_.format).mkString("\n"))
       case Right(model) =>
-        Pass.runStandardPasses(model, options, shouldFailOnErrors = false) match {
+        runStandardPasses(model, options) match {
           case Left(messages) =>
             fail(messages.format)
-          case Right(ao: PassesResult) =>
-            onSuccess(ao)
+          case Right(result: PassesResult) =>
+            onSuccess(result)
         }
     }
   }
@@ -50,11 +62,11 @@ abstract class ValidatingTest extends ParsingTest {
       case Right((model: Domain, _)) =>
         val clazz = classTag[D].runtimeClass
         val root = RootContainer(Seq(model), Seq(rpi))
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(messages) =>
             fail(messages.format)
-          case Right(ao) =>
-            val msgs = ao.messages
+          case Right(result) =>
+            val msgs = result.messages
             model.contexts.head.contents.filter(_.getClass == clazz).map { (d: ContextDefinition) =>
               val reducedMessages = msgs.filterNot(_.loc.line == 1)
               validator(d.asInstanceOf[D], rpi, reducedMessages)
@@ -76,7 +88,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
         val root = RootContainer(Seq(model), Seq(rpi))
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) => fail(errors.format)
           case Right(ao) =>
             val reducedMessages = ao.messages.filterNot(_.loc.line == 1)
@@ -100,7 +112,7 @@ abstract class ValidatingTest extends ParsingTest {
         }
       case Right((model: Domain, rpi)) =>
         val root = RootContainer(Seq(model), Seq(rpi))
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -122,12 +134,10 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $origin:\n$msgs")
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
-            if shouldFailOnErrors then
-              fail(errors.format)
-            else
-              validation(root, root.inputs.head, errors)
+            if shouldFailOnErrors then fail(errors.format)
+            else validation(root, root.inputs.head, errors)
           case Right(pr: PassesResult) =>
             pr.root.inputs mustNot be(empty)
             validation(root, root.inputs.head, pr.messages)
@@ -146,7 +156,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(passesResult: PassesResult) =>
@@ -162,7 +172,7 @@ abstract class ValidatingTest extends ParsingTest {
   )(
     validation: (PassesResult, RootContainer, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    parseValidateAndThen[Assertion](rpi,commonOptions, shouldFailOnErrors) {
+    parseValidateAndThen[Assertion](rpi, commonOptions, shouldFailOnErrors) {
       (passesResult: PassesResult, root: RootContainer, rpi: RiddlParserInput, messages: Messages) =>
         passesResult.root.inputs mustNot be(empty)
         validation(passesResult, root, rpi, messages)
@@ -188,7 +198,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -205,7 +215,7 @@ abstract class ValidatingTest extends ParsingTest {
     TopLevelParser.parse(file) match {
       case Left(errors) => fail(errors.format)
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>

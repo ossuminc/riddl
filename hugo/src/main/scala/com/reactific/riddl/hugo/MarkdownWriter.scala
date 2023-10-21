@@ -269,12 +269,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   }
 
   private def emitUsage(definition: Definition): this.type = {
-    state.result.usage.getUsers(definition) match {
+    state.usage.getUsers(definition) match {
       case users: Seq[Definition] if users.nonEmpty =>
         listOf("Used By", users)
       case _ => h2("Used By None")
     }
-    state.result.usage.getUses(definition) match {
+    state.usage.getUses(definition) match {
       case usages: Seq[Definition] if usages.nonEmpty => listOf("Uses", usages)
       case _                                          => h2("Uses Nothing")
     }
@@ -1009,7 +1009,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       Some("Statistical information about the RIDDL model documented")
     )
 
-    val stats = state.result.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
+    val stats = state.passesResult.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
     emitTableHead(
       Seq(
         "Category" -> 'L',
