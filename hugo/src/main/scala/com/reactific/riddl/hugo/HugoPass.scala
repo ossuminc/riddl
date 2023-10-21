@@ -65,37 +65,21 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
   override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
     definition match {
-      case f: Field       => state.addToGlossary(f, stack)
-      case m: Method      => state.addToGlossary(m, stack)
-      case i: Invariant   => state.addToGlossary(i, stack)
-      case e: Enumerator  => state.addToGlossary(e, stack)
-      case a: Author      => state.addToGlossary(a, stack)
-      case ss: SagaStep   => state.addToGlossary(ss, stack)
-      case c: Constant    => state.addToGlossary(c, stack)
-      case t: Term        => state.addToGlossary(t, stack)
-      case i: Interaction => state.addToGlossary(i, stack)
-      case _: OnMessageClause | _: OnOtherClause | _: OnInitClause | _: OnTerminationClause |
-          _: Include[Definition] @unchecked =>
-      // All these cases do not generate a file as their content contributes
-      // to the content of their parent container so we don't do anything here
       case c: Connector =>
         val (mkd, parents) = setUpLeaf(c, state, stack)
         mkd.emitConnector(c, parents)
-        state.addToGlossary(c, stack)
       case u: User =>
         val (mkd, parents) = setUpLeaf(u, state, stack)
         mkd.emitUser(u, parents)
-        state.addToGlossary(u, stack)
       case r: Replica =>
         val (mkd, parents) = setUpLeaf(r, state, stack)
         val parStrings = state.makeParents(stack)
         mkd.emitReplica(r, stack, parStrings)
-        state.addToGlossary(r, stack)
       case container: Definition =>
         // Everything else is a container and definitely needs its own page
         // and glossary entry.
-        state.addToGlossary(container, stack)
         val (mkd, parents) = setUpContainer(container, state, stack)
+        
         container match {
           case a: Application => mkd.emitApplication(a, stack)
           case t: Type        => mkd.emitType(t, stack)
@@ -110,7 +94,6 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
                 mkd.emitState(s, Seq.empty[Field], stack)
             }
           case h: Handler => mkd.emitHandler(h, parents)
-          case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause =>
           // These are all handled in emitHandler
           case f: Function   => mkd.emitFunction(f, parents)
           case e: Entity     => mkd.emitEntity(e, parents)
@@ -124,14 +107,11 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
           case e: Epic       => mkd.emitEpic(e, stack)
           case uc: UseCase   => mkd.emitUseCase(uc, stack)
 
-          // All of the bleow are handled above in the outer match statement, and within their
-          // respective containers
-          case _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
-              _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
-              _: Include[Definition] @unchecked =>
-          case out: Output =>
-          case in: Input   =>
-          case grp: Group  =>
+          case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause |
+               _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
+               _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
+               _: Include[Definition] @unchecked | _: Output | _: Input | _: Group =>
+            // All of these are handled above in their containers content contribution
         }
     }
   }

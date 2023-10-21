@@ -3,15 +3,7 @@ package com.reactific.riddl.stats
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.passes.{
-  CollectingPass,
-  CollectingPassOutput,
-  Pass,
-  PassInfo,
-  PassInput,
-  PassOutput,
-  PassesOutput
-}
+import com.reactific.riddl.passes.{CollectingPass, CollectingPassOutput, PassInfo, PassInput, PassesOutput}
 import com.reactific.riddl.passes.resolve.ResolutionPass
 import com.reactific.riddl.passes.symbols.SymbolsPass
 
@@ -123,7 +115,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       .sum[Long]
   }
 
-  protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): DefinitionStats = {
+  protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Option[DefinitionStats] = {
     if parents.size >= maximum_depth then maximum_depth = parents.size + 1
 
     val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
@@ -133,20 +125,24 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     }
     val specs: Int = specificationsFor(definition)
     val completes: Int = completedCount(definition)
-    DefinitionStats(
-      kind = definition.kind,
-      isEmpty = definition.isEmpty,
-      descriptionLines = {
-        definition.description.getOrElse(Description.empty).lines.size + { if definition.brief.nonEmpty then 1 else 0 }
-      },
-      numSpecifications = specs,
-      numCompleted = completes,
-      numContained = definition.contents.size,
-      numOptions = options,
-      numAuthors = authors,
-      numTerms = terms,
-      numIncludes = includes,
-      numStatements = computeNumStatements(definition)
+    Some(
+      DefinitionStats(
+        kind = definition.kind,
+        isEmpty = definition.isEmpty,
+        descriptionLines = {
+          definition.description.getOrElse(Description.empty).lines.size + {
+            if definition.brief.nonEmpty then 1 else 0
+          }
+        },
+        numSpecifications = specs,
+        numCompleted = completes,
+        numContained = definition.contents.size,
+        numOptions = options,
+        numAuthors = authors,
+        numTerms = terms,
+        numIncludes = includes,
+        numStatements = computeNumStatements(definition)
+      )
     )
   }
 
@@ -206,7 +202,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     * @return
     *   an instance of the output type
     */
-  override def result: PassOutput = {
+  override def result: StatsOutput = {
     val totals = total_stats.getOrElse(KindStats())
     StatsOutput(
       Messages.empty,

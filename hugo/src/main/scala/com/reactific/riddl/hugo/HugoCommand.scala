@@ -12,7 +12,7 @@ import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.passes.Pass.{PassesCreator, standardPasses}
-import com.reactific.riddl.passes.{PassInput, PassesOutput, PassesResult}
+import com.reactific.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult}
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.stats.StatsPass
 import pureconfig.ConfigCursor
@@ -43,7 +43,8 @@ object HugoCommand {
     withGlossary: Boolean = true,
     withTODOList: Boolean = true,
     withGraphicalTOC: Boolean = false,
-    withStatistics: Boolean = true
+    withStatistics: Boolean = true,
+    withMessageSummary: Boolean = true
   ) extends CommandOptions
       with TranslatingOptions {
     def command: String = "hugo"
@@ -64,8 +65,20 @@ object HugoCommand {
     commonOptions: CommonOptions,
     options: Options
   ): PassesCreator = {
-    standardPasses ++ Seq(
-      { (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) },
+    val glossary: PassesCreator =
+      if options.withGlossary then
+        Seq({ (input: PassInput, outputs: PassesOutput) => GlossaryPass(input, outputs, options) })
+      else Seq.empty
+    val messages: PassesCreator =
+      if options.withMessageSummary then
+        Seq({ (input: PassInput, outputs: PassesOutput) => MessagesPass(input, outputs) })
+      else Seq.empty
+
+    val stats: PassesCreator =
+      if options.withStatistics then Seq({ (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) })
+      else Seq.empty
+
+    standardPasses ++ glossary ++ messages ++ stats ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         val result = PassesResult(input, outputs, Messages.empty)
         val state = HugoTranslatorState(result, options, commonOptions, log)
