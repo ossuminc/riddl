@@ -31,6 +31,14 @@ object PassOutput {
   def empty: PassOutput = new PassOutput { val messages: Messages.Messages = Messages.empty }
 }
 
+case class PassInput(
+  root: RootContainer,
+  commonOptions: CommonOptions = CommonOptions.empty
+)
+object PassInput {
+  val empty: PassInput = PassInput(RootContainer.empty)
+}
+
 case class PassesOutput() {
 
   private val outputs: mutable.HashMap[String, PassOutput] = mutable.HashMap.empty
@@ -57,21 +65,25 @@ case class PassesOutput() {
     outputs.toMap.filterNot(Pass.standardPassNames.contains(_))
 }
 
-case class PassInput(
-  root: RootContainer,
-  commonOptions: CommonOptions = CommonOptions.empty,
-  outputs: PassesOutput = PassesOutput()
-)
-
 case class PassesResult(
-  root: RootContainer = RootContainer.empty,
-  commonOptions: CommonOptions = CommonOptions.empty,
-  messages: Messages.Messages = Messages.empty,
-  symbols: SymbolsOutput = SymbolsOutput(),
-  refMap: ReferenceMap = ReferenceMap.empty,
-  usage: Usages = Usages.empty,
-  outputs: PassesOutput = PassesOutput()
-) extends PassOutput {
+  input: PassInput = PassInput.empty, outputs: PassesOutput = PassesOutput(), additionalMessages: Messages = Messages
+  .empty
+) {
+  def root: RootContainer = input.root
+  def commonOptions: CommonOptions = input.commonOptions
+  lazy val messages: Messages = {
+    outputs.getAllMessages ++ additionalMessages
+  }
+  lazy val symbols: SymbolsOutput = 
+    outputs.outputOf[SymbolsOutput](SymbolsPass.name).getOrElse(SymbolsOutput())
+  lazy val resolution: ResolutionOutput = 
+    outputs.outputOf[ResolutionOutput](ResolutionPass.name).getOrElse(ResolutionOutput())
+  lazy val validation: ValidationOutput = 
+    outputs.outputOf[ValidationOutput](ValidationPass.name).getOrElse(ValidationOutput())
+
+  def refMap: ReferenceMap = resolution.refMap
+  def usage: Usages = resolution.usage
+
   def outputOf[T <: PassOutput](passName: String): Option[T] = {
     outputs.outputOf[T](passName)
   }
@@ -83,27 +95,6 @@ case class PassesResult(
 
 object PassesResult {
   val empty: PassesResult = PassesResult()
-  def apply(input: PassInput, outputs: PassesOutput, messages: Messages): PassesResult = {
-    val maybeResult = for {
-      symbols <- outputs.outputOf[SymbolsOutput](SymbolsPass.name)
-      resolution <- outputs.outputOf[ResolutionOutput](ResolutionPass.name)
-      validation <- outputs.outputOf[ValidationOutput](ValidationPass.name)
-    } yield {
-      PassesResult(
-        input.root,
-        input.commonOptions,
-        outputs.getAllMessages ++ messages,
-        symbols,
-        resolution.refMap,
-        resolution.usage,
-        outputs
-      )
-    }
-    maybeResult match {
-      case Some(result) => result
-      case None => PassesResult()
-    }
-  }
 }
 
 /** Abstract Pass definition */
@@ -242,6 +233,18 @@ object Pass {
 
   val standardPassNames: Seq[String] = Seq(SymbolsPass.name, ResolutionPass.name, ValidationPass.name)
 
+  /** Run a set of passes against some input to obtain a result
+   *
+   * @param input
+   * The post-parsing input to the passes as a PassInput containing a RootContainer and CommonOptions
+   * @param passes
+   *   The list of Pass construction functions to use to instantiate the passes and run them. The type
+   *   @see [[PassesCreator]] type
+   * @param logger
+   *   The logger to which messages are logged
+   * @return
+   *   A PassesResult which provides the individual
+   */
   def runThesePasses(
     input: PassInput,
     passes: PassesCreator = standardPasses,

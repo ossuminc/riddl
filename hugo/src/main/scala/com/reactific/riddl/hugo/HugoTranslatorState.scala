@@ -13,7 +13,7 @@ import com.reactific.riddl.language.Messages.Accumulator
 import com.reactific.riddl.language.{AST, CommonOptions}
 import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.passes.PassesResult
-import com.reactific.riddl.passes.resolve.ReferenceMap
+import com.reactific.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.reactific.riddl.passes.symbols.SymbolsOutput
 import com.reactific.riddl.passes.Finder
 import com.reactific.riddl.utils.{Logger, SysLogger}
@@ -37,11 +37,11 @@ case class HugoTranslatorState(
   commonOptions: CommonOptions = CommonOptions(),
   logger: Logger = SysLogger()
 ) extends TranslatingState[MarkdownWriter] with SequenceDiagramSupport {
-  val  result: PassesResult = passesResult
-  final val symbolTable: SymbolsOutput = result.symbols
-  final val refMap: ReferenceMap = result.refMap
-  final val root: RootContainer = result.root // base class compliance
-  final val messages: Accumulator = Accumulator(commonOptions)
+  final def symbolTable: SymbolsOutput = passesResult.symbols
+  final def refMap: ReferenceMap = passesResult.refMap
+  final def root: RootContainer = passesResult.root // base class compliance
+  final def usage: Usages = passesResult.usage
+  final def messages: Accumulator = Accumulator(commonOptions)
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
