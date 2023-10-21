@@ -1038,12 +1038,3 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 }
-
-case class GlossaryEntry(
-  term: String,
-  kind: String,
-  brief: String,
-  path: Seq[String],
-  link: String = "",
-  sourceLink: String = ""
-)
