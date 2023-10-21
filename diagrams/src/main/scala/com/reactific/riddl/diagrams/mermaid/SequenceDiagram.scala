@@ -20,7 +20,7 @@ trait SequenceDiagramSupport {
   def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition): Option[T] = {
     passesResult.refMap.definitionOf[T](pathId, parent)
   }
-  def makeLinkFor(definition: Definition): String
+  def makeDocLink(definition: Definition): String
 }
 
 /** A class to generate the sequence diagrams for an Epic
@@ -93,7 +93,7 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
     }
     parts.foreach { (part: Definition) =>
       val name = part.id.value
-      val link = sds.makeLinkFor(part)
+      val link = sds.makeDocLink(part)
       part match
         case _: User       => sb.append(s"${ndnt()}link $name: User @ $link")
         case i: Input      => sb.append(s"${ndnt()}link $name: ${i.alias} @ $link")

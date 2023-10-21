@@ -102,7 +102,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
           result.messages.hasErrors mustBe (false)
           val warnings = result.messages.justUsage
           warnings.size mustBe (2)
-          val warnMessage = warnings.head.format()
+          val warnMessage = warnings.last.format()
           warnMessage must include("Entity 'fooBar' is unused")
       }
 
@@ -119,7 +119,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
           result.messages.isOnlyIgnorable mustBe (true)
           val warnings = result.messages.justWarnings
           warnings.size mustBe (2)
-          val warnMessage = warnings.head.format
+          val warnMessage = warnings.last.format
           warnMessage must include("Type 'Bar' is unused")
       }
     }

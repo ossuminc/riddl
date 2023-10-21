@@ -5,6 +5,7 @@ import com.reactific.riddl.language.parsing.FileParserInput
 import com.reactific.riddl.passes.{PassInput, PassesOutput, PassesResult}
 
 import java.nio.file.Path
+import scala.collection.mutable
 
 trait PassUtilities {
   def outputs: PassesOutput
@@ -12,22 +13,34 @@ trait PassUtilities {
   val inputFile: Option[Path] = options.inputFile
   protected val messages: Messages.Accumulator
 
+  lazy val newline: String = System.getProperty("line.separator")
 
   def makeFullName(definition: Definition): String = {
     val defs = outputs.symbols.parentsOf(definition).reverse :+ definition
     defs.map(_.id.format).mkString(".")
   }
 
-  def makeParents(stack: Seq[Definition]): Seq[String] = {
+  def makeParents(stack: Seq[Definition]): Seq[Definition] = {
     // The stack goes from most nested to highest. We don't want to change the
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then
     // drop all the root containers (file includes) to finally end up at a domin
     // and then map to just the name of that domain.
-    stack.reverse.dropWhile(_.isRootContainer).map(_.id.format)
+    stack.toSeq.reverse.dropWhile(_.isRootContainer)
+  }
+
+  def makeStringParents(stack: Seq[Definition]): Seq[String] = {
+    makeParents(stack).map(_.id.format)
+  }
+
+  def makeBreadCrumbs(parents: Seq[Definition]): String = {
+    parents.map { defn =>
+      val link = makeDocLink(defn, parents.map(_.id.value))
+      s"[${defn.id.value}]($link)"
+    }.mkString("/")
   }
 
   def makeDocLink(definition: Definition): String = {
-    val parents = makeParents(outputs.symbols.parentsOf(definition))
+    val parents = makeStringParents(outputs.symbols.parentsOf(definition))
     makeDocLink(definition, parents)
   }
 
@@ -45,6 +58,21 @@ trait PassUtilities {
     }
     // deal with Geekdoc's url processor
     result.replace(" ", "-")
+  }
+
+  def makeDocAndParentsLinks(definition: Definition): String = {
+    val parents = outputs.symbols.parentsOf(definition)
+    val docLink = makeDocLink(definition, makeStringParents(parents))
+    if parents.isEmpty then { s"[${definition.identify}]($docLink)" }
+    else {
+      parents.headOption match
+        case None =>
+          messages.addError(definition.loc, s"No parents found for definition '${definition.identify}")
+          ""
+        case Some(parent: Definition) =>
+          val parentLink = makeDocLink(parent, makeStringParents(parents.drop(1)))
+          s"[${definition.identify}]($docLink) in [${parent.identify}]($parentLink)"
+    }
   }
 
   /** Generate a string that is the file path portion of a url including the line number.
@@ -79,7 +107,6 @@ trait PassUtilities {
     }
   }
 
-
   /** Generate a string that contains the name of a definition that is markdown linked to the definition in its source.
     * For example, given sourceURL option of https://github.com/a/b and for an editPath option of src/main/riddl and for
     * a Location that has Org/org.riddl at line 30, we would generate this URL:
@@ -108,5 +135,4 @@ trait PassUtilities {
       case None => ""
     }
   }
-
 }

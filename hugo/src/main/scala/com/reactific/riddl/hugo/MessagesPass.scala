@@ -29,9 +29,10 @@ import scala.collection.mutable
 case class MessageInfo(
   kind: AggregateUseCase,
   message: Type,
-  definedIn: Seq[Definition],
-  users: Seq[Definition],
-  description: Option[Description]
+  definedIn: Seq[String],
+  breadcrumbs: String,
+  users: String,
+  description: String
 )
 
 case class MessageOutput(
@@ -50,7 +51,9 @@ case class MessageOutput(
 // a set of tabs:
 //
 
-class MessagesPass(input: PassInput, outputs: PassesOutput) extends CollectingPass[MessageInfo](input, outputs) {
+case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCommand.Options)
+    extends CollectingPass[MessageInfo](input, outputs)
+    with PassUtilities {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -64,8 +67,21 @@ class MessagesPass(input: PassInput, outputs: PassesOutput) extends CollectingPa
       case t: Type =>
         t.typ match {
           case aucte: AggregateUseCaseTypeExpression =>
+            val pars = makeParents(parents.toSeq)
+            val definedIn = makeStringParents(parents.toSeq)
+            val breadcrumbs = makeBreadCrumbs(pars)
+            val location = pars.map(_.id.value).mkString(".")
             val users = usages.getUsers(t)
-            Some(MessageInfo(aucte.usecase, t, parents.toSeq, users, t.description))
+            val userLinks = users
+              .map { defn =>
+                val link = makeDocLink(defn, pars.map(_.id.value))
+                s"[${defn.id.value}]($link)"
+              }
+              .mkString(", ")
+            val lines: Option[Seq[String]] = t.description.map(_.lines.map(_.s))
+            val description = lines.getOrElse(Seq("No description provided.")).mkString(newline)
+            val mi = MessageInfo(aucte.usecase, t, definedIn, breadcrumbs, userLinks, description)
+            Some(mi)
           case _ => None
         }
       case _ =>

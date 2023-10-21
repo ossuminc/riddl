@@ -17,7 +17,7 @@ import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 import scala.collection.mutable
 
 object ValidationPass extends PassInfo {
-  val name: String = "validation"
+  val name: String = "Validation"
 }
 
 /** The ValidationPass
@@ -29,7 +29,8 @@ object ValidationPass extends PassInfo {
 case class ValidationPass(
   input: PassInput,
   outputs: PassesOutput
-) extends Pass(input, outputs) with StreamingValidation {
+) extends Pass(input, outputs)
+    with StreamingValidation {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -164,9 +165,7 @@ case class ValidationPass(
             )
         case _ =>
       }
-    } else {
-
-    }
+    } else {}
     omc.from.foreach { (ref: Reference[Definition]) =>
       checkRef[Definition](ref, omc, parents)
     }
@@ -607,7 +606,7 @@ case class ValidationPass(
       case Sequence(loc, of)      =>
       case Set(loc, of)           =>
       case typeEx: Cardinality    =>
-      case t: TypeExpression      =>
+      case t: TypeExpression =>
         messages.addError(t.loc, s"Type expression in Replica ${replica.identify} is not a replicable type")
     }
     checkDescription(replica)

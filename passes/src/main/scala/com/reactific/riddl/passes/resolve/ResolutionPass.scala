@@ -23,7 +23,7 @@ case class ResolutionOutput(
 ) extends PassOutput {}
 
 object ResolutionPass extends PassInfo {
-  val name: String = "resolution"
+  val name: String = "Resolution"
 }
 
 /** The Reference Resolution Pass */

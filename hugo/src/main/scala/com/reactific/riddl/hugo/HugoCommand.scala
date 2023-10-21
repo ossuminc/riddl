@@ -69,16 +69,21 @@ object HugoCommand {
       if options.withGlossary then
         Seq({ (input: PassInput, outputs: PassesOutput) => GlossaryPass(input, outputs, options) })
       else Seq.empty
+
     val messages: PassesCreator =
       if options.withMessageSummary then
-        Seq({ (input: PassInput, outputs: PassesOutput) => MessagesPass(input, outputs) })
+        Seq({ (input: PassInput, outputs: PassesOutput) => MessagesPass(input, outputs, options) })
       else Seq.empty
 
     val stats: PassesCreator =
       if options.withStatistics then Seq({ (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) })
       else Seq.empty
 
-    standardPasses ++ glossary ++ messages ++ stats ++ Seq(
+    val toDo: PassesCreator =
+      if options.withTODOList then Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options)})
+      else Seq.empty
+
+    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         val result = PassesResult(input, outputs, Messages.empty)
         val state = HugoTranslatorState(result, options, commonOptions, log)

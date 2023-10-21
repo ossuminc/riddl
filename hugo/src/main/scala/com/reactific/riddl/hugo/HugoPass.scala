@@ -73,13 +73,13 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
         mkd.emitUser(u, parents)
       case r: Replica =>
         val (mkd, parents) = setUpLeaf(r, state, stack)
-        val parStrings = state.makeParents(stack)
+        val parStrings = state.makeStringParents(stack)
         mkd.emitReplica(r, stack, parStrings)
       case container: Definition =>
         // Everything else is a container and definitely needs its own page
         // and glossary entry.
         val (mkd, parents) = setUpContainer(container, state, stack)
-        
+
         container match {
           case a: Application => mkd.emitApplication(a, stack)
           case t: Type        => mkd.emitType(t, stack)
@@ -262,7 +262,7 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
     stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
     state.addDir(c.id.format)
-    val pars = state.makeParents(stack)
+    val pars = state.makeStringParents(stack)
     state.addFile(pars :+ c.id.format, "_index.md") -> pars
   }
 
@@ -271,7 +271,7 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
     state: HugoTranslatorState,
     stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
-    val pars = state.makeParents(stack)
+    val pars = state.makeStringParents(stack)
     state.addFile(pars, d.id.format + ".md") -> pars
   }
 
