@@ -22,7 +22,8 @@ case class CommonOptions(
   sortMessagesByLocation: Boolean = false,
   groupMessagesByKind: Boolean = true,
   noANSIMessages: Boolean = false,
-  maxParallelParsing: Int = 4
+  maxParallelParsing: Int = 4,
+  warningsAreFatal: Boolean = false
 )
 
 object CommonOptions {

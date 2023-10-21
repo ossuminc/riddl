@@ -10,7 +10,7 @@ import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.TranslationCommand
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.passes.Pass.{PassesCreator, standardPasses}
-import com.reactific.riddl.passes.PassInput
+import com.reactific.riddl.passes.{PassInput, PassesOutput}
 import com.reactific.riddl.prettify.PrettifyCommand.cmdName
 import com.reactific.riddl.utils.Logger
 import pureconfig.ConfigCursor
@@ -87,9 +87,9 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](cmdNam
 
   override def getPasses(log: Logger, commonOptions: CommonOptions, options: Options): PassesCreator = {
     standardPasses ++ Seq(
-      { (input: PassInput) =>
+      { (input: PassInput, outputs: PassesOutput) =>
         val state = PrettifyState(commonOptions, options)
-        PrettifyPass(input, state)
+        PrettifyPass(input, outputs, state)
       }
     )
   }
