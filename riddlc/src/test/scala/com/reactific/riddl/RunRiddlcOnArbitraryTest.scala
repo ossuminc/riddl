@@ -37,16 +37,22 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
   }
 
   "riddlc" should {
+    "validate FooBarTwoDomains" in {
+      val cwd = "/Users/reid/Code/reactific/reactific-examples"
+      val config = "src/riddl/FooBarSuccess/FooBar.conf"
+      validateLocalProject(cwd, config)
+    }
     "validate OffTheTop" in {
       val cwd = "/Users/reid/Code/Improving/OffTheTop"
       val config = "design/src/main/riddl/OffTheTop.conf"
       validateLocalProject(cwd, config)
     }
-    "validate Improving.app" in {
-      //val cwd = "/Users/reid/Code/improving.app/riddl"
-      //val config = "src/main/riddl/ImprovingApp.conf"
-      //validateLocalProject(cwd, config)
-      pending
-    }
+    // FIXME: Fix Improving.app syntax and renable
+    // "validate Improving.app" in {
+    //   val cwd = "/Users/reid/Code/improving.app/riddl"
+    //   val config = "src/main/riddl/ImprovingApp.conf"
+    //   validateLocalProject(cwd, config)
+    //   pending
+    // }
   }
 }
