@@ -20,6 +20,16 @@ import java.io.File
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
 
+  protected def runStandardPasses(
+    model: RootContainer,
+    options: CommonOptions,
+    shouldFailOnErrors: Boolean = false
+  ): Either[Messages, PassesResult] = {
+    val result = Pass.runStandardPasses(model, options)
+    if shouldFailOnErrors && result.messages.hasErrors then Left(result.messages)
+    else Right(result)
+  }
+
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   def parseAndValidate(
     input: String,
@@ -34,7 +44,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $origin:\n$msgs")
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -55,7 +65,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(passesResult: PassesResult) =>
@@ -97,7 +107,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>

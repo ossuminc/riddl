@@ -83,7 +83,7 @@ case class PassesResult(
 
 object PassesResult {
   val empty: PassesResult = PassesResult()
-  def apply(input: PassInput, outputs: PassesOutput): PassesResult = {
+  def apply(input: PassInput, outputs: PassesOutput, messages: Messages): PassesResult = {
     val maybeResult = for {
       symbols <- outputs.outputOf[SymbolsOutput](SymbolsPass.name)
       resolution <- outputs.outputOf[ResolutionOutput](ResolutionPass.name)
@@ -92,7 +92,7 @@ object PassesResult {
       PassesResult(
         input.root,
         input.commonOptions,
-        outputs.getAllMessages,
+        outputs.getAllMessages ++ messages,
         symbols,
         resolution.refMap,
         resolution.usage,
@@ -244,10 +244,9 @@ object Pass {
 
   def runThesePasses(
     input: PassInput,
-    shouldFailOnErrors: Boolean = true,
     passes: PassesCreator = standardPasses,
     logger: Logger = SysLogger()
-  ): Either[Messages.Messages, PassesResult] = {
+  ): PassesResult = {
     val outputs = PassesOutput()
     try {
       for pass <- passes yield {
@@ -255,34 +254,27 @@ object Pass {
         val output = runOnePass(input, outputs, aPass, logger)
         outputs.outputIs(aPass.name, output)
       }
-      val messages = outputs.getAllMessages
-      if messages.hasErrors && shouldFailOnErrors then {
-        Left(messages)
-      } else {
-        Right(PassesResult(input, outputs))
-      }
+      PassesResult(input, outputs, Messages.empty)
     } catch {
       case NonFatal(xcptn) =>
         val message = ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
         val messages: Messages.Messages = List(Messages.severe(message, At.empty))
-        Left(messages)
+        PassesResult(input,outputs, messages)
     }
   }
 
   def runStandardPasses(
     input: PassInput,
-    shouldFailOnErrors: Boolean
-  ): Either[Messages.Messages, PassesResult] = {
-    runThesePasses(input, shouldFailOnErrors, standardPasses, SysLogger())
+  ): PassesResult = {
+    runThesePasses(input, standardPasses, SysLogger())
   }
 
   def runStandardPasses(
     model: RootContainer,
     options: CommonOptions,
-    shouldFailOnErrors: Boolean
-  ): Either[Messages.Messages, PassesResult] = {
+  ): PassesResult = {
     val input: PassInput = PassInput(model, options)
-    runStandardPasses(input, shouldFailOnErrors)
+    runStandardPasses(input)
   }
 
   def runSymbols(input: PassInput, outputs: PassesOutput): SymbolsOutput = {

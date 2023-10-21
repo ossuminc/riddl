@@ -35,13 +35,14 @@ class ValidationPassTest extends ValidatingTest {
           case Left(errors) => fail(errors.format)
           case Right(root) =>
             sharedRoot = root
-            Pass.runStandardPasses(root, CommonOptions(showMissingWarnings = false, showStyleWarnings = false), true) match {
-              case Left(errors) =>
-                fail(errors.format)
-              case Right(ao) =>
-                ao.root mustBe (sharedRoot)
-            }
-            succeed
+            val result = Pass.runStandardPasses(
+              root, 
+              CommonOptions(showMissingWarnings = false, showStyleWarnings = true)
+            )
+            if result.messages.hasErrors then
+              fail(result.messages.format)
+            else   
+              result.root mustBe (sharedRoot)
         }
       }
       "handle includes" in {
