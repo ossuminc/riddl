@@ -25,7 +25,7 @@ class HugoTestBase extends ValidatingTest {
         fail(errors.format)
       case Right(root) =>
         val passInput = PassInput(root, commonOptions)
-        Pass(passInput, shouldFailOnErrors = true, passes, logger).map { passesResult =>
+        Pass.runThesePasses(passInput, shouldFailOnErrors = true, passes, logger).map { passesResult =>
           (passesResult, root, rpi)
         }
     }

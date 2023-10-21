@@ -38,7 +38,7 @@ object Riddl {
       case Left(messages) => Left(messages)
       case Right(root) =>
        val input = PassInput(root, commonOptions)
-       Pass(input, shouldFailOnError, passes, logger)
+       Pass.runThesePasses(input, shouldFailOnError, passes, logger)
     }
   }
 

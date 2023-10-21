@@ -3,7 +3,15 @@ package com.reactific.riddl.stats
 import com.reactific.riddl.language.{AST, Messages}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.passes.{CollectingPass, CollectingPassOutput, Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{
+  CollectingPass,
+  CollectingPassOutput,
+  Pass,
+  PassInfo,
+  PassInput,
+  PassOutput,
+  PassesOutput
+}
 import com.reactific.riddl.passes.resolve.ResolutionPass
 import com.reactific.riddl.passes.symbols.SymbolsPass
 
@@ -71,7 +79,7 @@ case class StatsOutput(
 
 /** Unit Tests For StatsPass */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
-case class StatsPass(input: PassInput) extends CollectingPass[DefinitionStats](input) {
+case class StatsPass(input: PassInput, outputs: PassesOutput) extends CollectingPass[DefinitionStats](input, outputs) {
 
   def name: String = StatsPass.name
 
@@ -84,28 +92,35 @@ case class StatsPass(input: PassInput) extends CollectingPass[DefinitionStats](i
 
   private def computeNumStatements(definition: Definition): Long = {
     def handlerStatements(handlers: Seq[Handler]): Long = {
-      val sizes : Seq[Long] = for {
+      val sizes: Seq[Long] = for {
         handler <- handlers
         clause <- handler.clauses
       } yield {
         clause.statements.size.toLong
       }
-      sizes.foldLeft(0L)( (a,b) => a+b )
+      sizes.foldLeft(0L)((a, b) => a + b)
     }
 
     definition.contents
       .filter(_.isVital)
       .map { (vd: Definition) =>
         vd match {
-          case p: Processor[_, _] => handlerStatements(p.handlers)
-          case s: Saga            =>
+          case a: Adaptor     => handlerStatements(a.handlers)
+          case a: Application => handlerStatements(a.handlers)
+          case c: Context     => handlerStatements(c.handlers)
+          case e: Entity      => handlerStatements(e.handlers)
+          case p: Projector   => handlerStatements(p.handlers)
+          case r: Repository  => handlerStatements(r.handlers)
+          case s: Streamlet   => handlerStatements(s.handlers)
+          case s: Saga =>
             s.sagaSteps.map(step => step.doStatements.size.toLong + step.undoStatements.size).sum[Long]
-          case f: Function        => f.statements.size.toLong
-          case _: Epic            => 0L
-          case _: Domain          => 0L
-          case _: Definition      => 0L // Non Vital, ignore
+          case f: Function   => f.statements.size.toLong
+          case _: Epic       => 0L
+          case _: Domain     => 0L
+          case _: Definition => 0L // Non Vital, ignore
         }
-      }.sum[Long]
+      }
+      .sum[Long]
   }
 
   protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): DefinitionStats = {

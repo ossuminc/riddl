@@ -132,6 +132,12 @@ object CommonOptionsHelper {
         .action((v,c) => c.copy(maxParallelParsing = v))
         .text(
           "Controls the maximum number of include files that will be parsed in parallel"
+        ),
+      opt[Boolean]("warnings-are-fatal")
+        .optional()
+        .action((v,c) => c.copy(warningsAreFatal = true))
+        .text(
+          "Makes validation warnings fatal to encourage code perfection"
         )
     )
   }

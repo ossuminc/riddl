@@ -23,40 +23,45 @@ trait PassInfo {
   def name: String
 }
 
-/** An abstract notion of the minimum notion
-  */
-case class PassInput(root: RootContainer, commonOptions: CommonOptions = CommonOptions.empty) {
-
-  private[passes] val priorOutputs: mutable.HashMap[String, PassOutput] = mutable.HashMap.empty
-
-  @SuppressWarnings(Array("org.wartremover.warts.Var"))
-  private var messages: Messages = Messages.empty
-
-  def getMessages: Messages = messages
-  def addMessages(addOn: Messages): Unit = { messages = messages ++ addOn }
-
-  def outputOf[T <: PassOutput](passName: String): T = {
-    priorOutputs(passName).asInstanceOf[T]
-  }
-
-  def outputIs(passName: String, output: PassOutput): Unit = {
-    priorOutputs.put(passName, output)
-  }
-
-  def hasPassOutput(passName: String): Boolean = {
-    priorOutputs.contains(passName)
-  }
-}
-
-abstract class PassOutput {
+trait PassOutput {
   def messages: Messages.Messages
 }
 
 object PassOutput {
-  def empty: PassOutput = new PassOutput {
-    def messages: Messages.Messages = Messages.empty
-  }
+  def empty: PassOutput = new PassOutput { val messages: Messages.Messages = Messages.empty }
 }
+
+case class PassesOutput() {
+
+  private val outputs: mutable.HashMap[String, PassOutput] = mutable.HashMap.empty
+
+  def getAllMessages: Messages = {
+    outputs.values.foldLeft(Messages.empty) { case (prior, current) =>
+      prior.appendedAll(current.messages)
+    }
+  }
+
+  def outputOf[T <: PassOutput](passName: String): Option[T] = {
+    outputs.get(passName).map(_.asInstanceOf[T])
+  }
+
+  def outputIs(passName: String, output: PassOutput): Unit = {
+    outputs.put(passName, output)
+  }
+
+  def hasPassOutput(passName: String): Boolean = {
+    outputs.contains(passName)
+  }
+
+  def getNonStandardOutputs: Map[String, PassOutput] =
+    outputs.toMap.filterNot(Pass.standardPassNames.contains(_))
+}
+
+case class PassInput(
+  root: RootContainer,
+  commonOptions: CommonOptions = CommonOptions.empty,
+  outputs: PassesOutput = PassesOutput()
+)
 
 case class PassesResult(
   root: RootContainer = RootContainer.empty,
@@ -65,34 +70,44 @@ case class PassesResult(
   symbols: SymbolsOutput = SymbolsOutput(),
   refMap: ReferenceMap = ReferenceMap.empty,
   usage: Usages = Usages.empty,
-  others: Map[String, PassOutput] = Map.empty
+  outputs: PassesOutput = PassesOutput()
 ) extends PassOutput {
   def outputOf[T <: PassOutput](passName: String): Option[T] = {
-    others.get(passName).map(_.asInstanceOf[T])
+    outputs.outputOf[T](passName)
+  }
+
+  def hasWarnings: Boolean = {
+    messages.hasWarnings
   }
 }
 
 object PassesResult {
   val empty: PassesResult = PassesResult()
-  def apply(input: PassInput): PassesResult = {
-    val symbols = input.outputOf[SymbolsOutput](SymbolsPass.name)
-    val resolution = input.outputOf[ResolutionOutput](ResolutionPass.name)
-    // val validation = input.outputOf[ValidationOutput](ValidationPass.name)
-    val others = input.priorOutputs.toMap.filterNot(Pass.standardPassNames.contains(_))
-    PassesResult(
-      input.root,
-      input.commonOptions,
-      input.getMessages,
-      symbols,
-      resolution.refMap,
-      resolution.usage,
-      others
-    )
+  def apply(input: PassInput, outputs: PassesOutput): PassesResult = {
+    val maybeResult = for {
+      symbols <- outputs.outputOf[SymbolsOutput](SymbolsPass.name)
+      resolution <- outputs.outputOf[ResolutionOutput](ResolutionPass.name)
+      validation <- outputs.outputOf[ValidationOutput](ValidationPass.name)
+    } yield {
+      PassesResult(
+        input.root,
+        input.commonOptions,
+        outputs.getAllMessages,
+        symbols,
+        resolution.refMap,
+        resolution.usage,
+        outputs
+      )
+    }
+    maybeResult match {
+      case Some(result) => result
+      case None => PassesResult()
+    }
   }
 }
 
 /** Abstract Pass definition */
-abstract class Pass(@unused in: PassInput) {
+abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
 
   /** THe name of the pass for inclusion in messages it produces
     * @return
@@ -106,7 +121,7 @@ abstract class Pass(@unused in: PassInput) {
     *   The pass's companion object from which this function will obtain the pass's name
     */
   protected final def requires(passInfo: PassInfo): Unit = {
-    require(in.hasPassOutput(passInfo.name), s"Required pass '${passInfo.name}' was not run prior to $name'")
+    require(out.hasPassOutput(passInfo.name), s"Required pass '${passInfo.name}' was not run prior to $name'")
   }
 
   protected def process(
@@ -134,6 +149,8 @@ abstract class Pass(@unused in: PassInput) {
       parents.pop()
     }
   }
+
+  protected val messages: Messages.Accumulator = Messages.Accumulator(in.commonOptions)
 }
 
 /** A pass base class that allows the node processing to be done in a depth first hierarchical order by calling:
@@ -147,7 +164,7 @@ abstract class Pass(@unused in: PassInput) {
   * @param input
   *   The PassInput to process
   */
-abstract class HierarchyPass(input: PassInput) extends Pass(input) {
+abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   // not required in this kind of pass, final override it
   override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
@@ -191,7 +208,7 @@ abstract class CollectingPassOutput[T](
   * @param input
   *   The PassInput to process
   */
-abstract class CollectingPass[F](input: PassInput) extends Pass(input) {
+abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   // not required in this kind of pass, final override it
   override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
@@ -214,34 +231,35 @@ abstract class CollectingPass[F](input: PassInput) extends Pass(input) {
 
 object Pass {
 
-  type PassCreator = PassInput => Pass
+  type PassCreator = (PassInput, PassesOutput) => Pass
   type PassesCreator = Seq[PassCreator]
 
   val standardPasses: PassesCreator = Seq(
-    { (input: PassInput) => SymbolsPass(input) },
-    { (input: PassInput) => ResolutionPass(input) },
-    { (input: PassInput) => ValidationPass(input) }
+    { (input: PassInput, outputs: PassesOutput) => SymbolsPass(input, outputs) },
+    { (input: PassInput, outputs: PassesOutput) => ResolutionPass(input, outputs) },
+    { (input: PassInput, outputs: PassesOutput) => ValidationPass(input, outputs) }
   )
 
   val standardPassNames: Seq[String] = Seq(SymbolsPass.name, ResolutionPass.name, ValidationPass.name)
 
-  def apply(
+  def runThesePasses(
     input: PassInput,
     shouldFailOnErrors: Boolean = true,
     passes: PassesCreator = standardPasses,
     logger: Logger = SysLogger()
   ): Either[Messages.Messages, PassesResult] = {
+    val outputs = PassesOutput()
     try {
       for pass <- passes yield {
-        val aPass = pass(input)
-        val output = runOnePass(input, aPass, logger)
-        input.outputIs(aPass.name, output)
+        val aPass = pass(input, outputs)
+        val output = runOnePass(input, outputs, aPass, logger)
+        outputs.outputIs(aPass.name, output)
       }
-      val messages = input.getMessages
+      val messages = outputs.getAllMessages
       if messages.hasErrors && shouldFailOnErrors then {
         Left(messages)
       } else {
-        Right(PassesResult(input))
+        Right(PassesResult(input, outputs))
       }
     } catch {
       case NonFatal(xcptn) =>
@@ -252,32 +270,40 @@ object Pass {
   }
 
   def runStandardPasses(
+    input: PassInput,
+    shouldFailOnErrors: Boolean
+  ): Either[Messages.Messages, PassesResult] = {
+    runThesePasses(input, shouldFailOnErrors, standardPasses, SysLogger())
+  }
+
+  def runStandardPasses(
     model: RootContainer,
     options: CommonOptions,
     shouldFailOnErrors: Boolean
   ): Either[Messages.Messages, PassesResult] = {
     val input: PassInput = PassInput(model, options)
-    apply(input, shouldFailOnErrors, standardPasses, SysLogger())
+    runStandardPasses(input, shouldFailOnErrors)
   }
 
-  def runSymbols(input: PassInput): SymbolsOutput = {
-    runPass[SymbolsOutput](input, SymbolsPass(input))
+  def runSymbols(input: PassInput, outputs: PassesOutput): SymbolsOutput = {
+    runPass[SymbolsOutput](input, outputs, SymbolsPass(input, outputs))
   }
 
-  def runResolution(input: PassInput): ResolutionOutput = {
-    runPass[ResolutionOutput](input, ResolutionPass(input))
+  def runResolution(input: PassInput, outputs: PassesOutput): ResolutionOutput = {
+    runPass[ResolutionOutput](input, outputs, ResolutionPass(input, outputs))
   }
 
-  def runValidation(input: PassInput): ValidationOutput = {
-    runPass[ValidationOutput](input, ValidationPass(input))
+  def runValidation(input: PassInput, outputs: PassesOutput): ValidationOutput = {
+    runPass[ValidationOutput](input, outputs, ValidationPass(input, outputs))
   }
 
-  def runPass[OUT <: PassOutput](input: PassInput, pass: Pass): OUT = {
-    Pass.runOnePass(input, pass).asInstanceOf[OUT]
+  private def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass): OUT = {
+    Pass.runOnePass(input, outputs, pass).asInstanceOf[OUT]
   }
 
   private def runOnePass(
     in: PassInput,
+    outs: PassesOutput,
     mkPass: => Pass,
     logger: Logger = SysLogger()
   ): PassOutput = {
@@ -287,8 +313,7 @@ object Pass {
       pass.traverse(in.root, parents)
       pass.postProcess(in.root)
       val output = pass.result
-      in.outputIs(pass.name, output)
-      in.addMessages(output.messages)
+      outs.outputIs(pass.name, output)
       output
     }
   }

@@ -30,7 +30,7 @@ trait UsageResolution extends UsageBase {
 
   def commonOptions: CommonOptions
 
-  def messages: Messages.Accumulator
+  protected def messages: Messages.Accumulator
 
   def usesAsMap: Map[Definition, Seq[Definition]] = uses.toMap
 

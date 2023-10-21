@@ -166,7 +166,8 @@ object CommandPlugin {
         } else {
           Messages.logMessages(passesResult.messages, log, commonOptions)
         }
-        0
+        if commonOptions.warningsAreFatal && passesResult.messages.hasWarnings then 1
+        else 0
       case Left(messages) =>
         if commonOptions.quiet then { highestSeverity(messages) + 1 }
         else { Messages.logMessages(messages, log, commonOptions) + 1 }
@@ -181,17 +182,18 @@ object CommandPlugin {
       if commonOptions.quiet then StringLogger()
       else SysLogger()
 
-    if remaining.isEmpty then {
+    if remaining.isEmpty then
       log.error("No command argument was provided")
       1
-    } else {
+    else
       val name = remaining.head
-      if commonOptions.dryRun then log.info(s"Would have executed: ${remaining.mkString(" ")}")
-
-      val result = CommandPlugin
-        .runCommandWithArgs(name, remaining, log, commonOptions)
-      handleCommandResult(result, commonOptions, log)
-    }
+      if commonOptions.dryRun then
+        log.info(s"Would have executed: ${remaining.mkString(" ")}")
+        0
+      else
+        val result = CommandPlugin
+          .runCommandWithArgs(name, remaining, log, commonOptions)
+        handleCommandResult(result, commonOptions, log)
   }
 
   def runMain(args: Array[String], log: Logger = SysLogger()): Int = {

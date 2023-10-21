@@ -207,6 +207,7 @@ object Messages {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
+    def hasWarnings: Boolean = { msgs.nonEmpty && msgs.exists(_.kind < Error) }
     def justInfo: Messages = msgs.filter(_.isInfo)
     def justMissing: Messages = msgs.filter(_.isMissing)
     def justStyle: Messages = msgs.filter(_.isStyle)
@@ -297,7 +298,7 @@ object Messages {
 
     def add(msg: Message): this.type = {
       msg.kind match {
-        case Warning => 
+        case Warning =>
           if commonOptions.showWarnings then
             msgs.append(msg)
         case StyleWarning =>
