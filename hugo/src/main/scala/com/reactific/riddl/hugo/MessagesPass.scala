@@ -65,7 +65,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
   protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Option[MessageInfo] = {
     definition match {
       case t: Type =>
-        t.typ match {
+        val result = t.typ match {
           case aucte: AggregateUseCaseTypeExpression =>
             val pars = makeParents(parents.toSeq)
             val definedIn = makeStringParents(parents.toSeq)
@@ -82,8 +82,10 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
             val description = lines.getOrElse(Seq("No description provided.")).mkString(newline)
             val mi = MessageInfo(aucte.usecase, t, definedIn, breadcrumbs, userLinks, description)
             Some(mi)
-          case _ => None
+          case _ =>
+            Option.empty[MessageInfo]
         }
+        result
       case _ =>
         None
     }
@@ -91,7 +93,9 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
   def postProcess(root: com.reactific.riddl.language.AST.RootContainer): Unit = ()
 
-  override def result: MessageOutput = MessageOutput(messages.toMessages, collectedValues)
+  override def result: MessageOutput = {
+    MessageOutput(messages.toMessages, collectedValues)
+  }
 
 }
 
