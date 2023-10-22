@@ -37,7 +37,7 @@ trait TranslatingState[OF <: OutputFile] {
     path.resolve(nm)
   }
 
-  def close: Seq[Path] = {
+  def writeFiles: Seq[Path] = {
     files.foreach(_.write())
     files.map(_.filePath).toSeq
   }

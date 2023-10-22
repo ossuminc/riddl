@@ -46,12 +46,8 @@ class UsageSpec extends AnyWordSpec with Matchers {
           usage.verifyReflective must be(true)
 
           // print it out for debugging
-          info(
-            "Uses:\n" + result.usage.usesAsString
-          )
-          info(
-            "Used By:\n" + result.usage.usedByAsString
-          )
+          // info("Uses:\n" + result.usage.usesAsString)
+          // info("Used By:\n" + result.usage.usedByAsString)
 
           // Now let's make sure we get the right results, first extract
           // all the definitions
@@ -98,7 +94,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
       Riddl.parseAndValidate(RiddlParserInput(input), shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
         case Right(result) =>
-          info(result.messages.format)
+          // info(result.messages.format)
           result.messages.hasErrors mustBe (false)
           val warnings = result.messages.justUsage
           warnings.size mustBe (2)

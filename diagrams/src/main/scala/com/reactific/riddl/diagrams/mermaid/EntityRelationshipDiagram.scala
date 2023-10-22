@@ -2,8 +2,9 @@ package com.reactific.riddl.diagrams.mermaid
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.passes.PassesResult
+import com.reactific.riddl.passes.resolve.ReferenceMap
 
-class EntityRelationshipDiagram(passesResult: PassesResult ) {
+class EntityRelationshipDiagram(refMap: ReferenceMap ) {
 
   private def makeTypeName(
     pid: PathIdentifier,
@@ -12,7 +13,7 @@ class EntityRelationshipDiagram(passesResult: PassesResult ) {
     parents.headOption match
       case None => s"unresolved path: ${pid.format}"
       case Some(parent) =>
-        passesResult.refMap.definitionOf[Definition](pid, parent) match {
+        refMap.definitionOf[Definition](pid, parent) match {
           case None                   => s"unresolved path: ${pid.format}"
           case Some(defn: Definition) => defn.id.format
         }

@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.hugo.{GlossaryEntry, HugoCommand, HugoOutput, HugoTranslatorState, MarkdownWriter}
+import com.reactific.riddl.hugo.{GlossaryEntry, HugoCommand, HugoOutput, MarkdownWriter}
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.RiddlParserInput
@@ -39,10 +39,7 @@ class MarkdownWriterTest extends HugoTestBase {
         case Right(root) =>
           root.contents mustNot be(empty)
           val domain = root.domains.head
-          val result = PassesResult.empty
-          val state =
-            HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
-          val mkd = MarkdownWriter(output, state)
+          val mkd = makeMDW(output, PassesResult.empty)
           mkd.emitDomain(domain, paths.dropRight(1))
           val emitted = mkd.toString
           val expected =
@@ -105,9 +102,7 @@ class MarkdownWriterTest extends HugoTestBase {
           "https://example.com/blob/main/src/main/riddl/two"
         )
       }
-      val result = PassesResult.empty
-      val state = HugoTranslatorState(result, HugoCommand.Options(), CommonOptions())
-      val mdw = MarkdownWriter(Path.of("foo.md"), state)
+      val mdw = makeMDW(Path.of("foo.md"), PassesResult.empty)
       mdw.emitGlossary(10, Seq(term1, term2))
       val strw = new StringWriter()
       val pw = new PrintWriter(strw)

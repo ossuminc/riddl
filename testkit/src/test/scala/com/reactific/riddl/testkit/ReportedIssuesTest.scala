@@ -33,7 +33,7 @@ class ReportedIssuesTest extends ValidatingTest {
     "375" in {
       checkOne("375.riddl") {
         case Left(messages) =>
-          info(messages.format)
+          // info(messages.format)
           val errors = messages.justErrors
           errors.length must be(3)
           val f = errors.map(_.format)
@@ -48,13 +48,13 @@ class ReportedIssuesTest extends ValidatingTest {
           u contains ("Command 'DoFoo' is unused")
           u contains ("Record 'OtherState' is unused:")
           u contains ("Models without any streaming data will exhibit minimal effect:")
-          info(messages.format)
+          // info(messages.format)
           succeed
         case Right(result) =>
           val messages = result.messages
           val errors = messages.justErrors
           if errors.isEmpty then
-            info(messages.format)
+            // info(messages.format)
             fail("Expected 3 errors")
           else
             errors mustBe empty
@@ -64,13 +64,13 @@ class ReportedIssuesTest extends ValidatingTest {
     "435" in {
       checkOne("435.riddl") {
         case Left(messages) =>
-          info(messages.format)
+          // info(messages.format)
           messages.size must be(1)
           val message = messages.head.format
           message must include("Expected")
 
         case Right(result) =>
-          info(result.messages.format)
+          // info(result.messages.format)
           fail("Should have produced a syntax error on 'contest'")
       }
     }

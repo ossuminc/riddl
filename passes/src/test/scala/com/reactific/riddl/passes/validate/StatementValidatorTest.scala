@@ -30,7 +30,7 @@ class StatementValidatorTest extends ValidatingTest {
           |""".stripMargin
       parseAndValidate(input, "test case",CommonOptions(), shouldFailOnErrors = false) {
         (root: RootContainer, _: RiddlParserInput, messages: Messages ) =>
-          info(messages.format)
+          // info(messages.format)
           root.isEmpty mustBe false
           messages.hasErrors mustBe false
           val warnings = messages.justWarnings

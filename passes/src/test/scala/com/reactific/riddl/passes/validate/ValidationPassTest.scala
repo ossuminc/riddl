@@ -13,7 +13,7 @@ class ValidationPassTest extends ValidatingTest {
     "parse and validation rbbq.riddl" in {
       val input = RiddlParserInput(Path.of("language/src/test/input/domains/rbbq.riddl"))
       parseAndValidateAggregate(input, CommonOptions.noMinorWarnings) { (vo: PassesResult) =>
-        info(vo.messages.format)
+        // info(vo.messages.format)
         vo.messages.justErrors.size mustBe (0)
         if vo.refMap.size != 24 then info(vo.refMap.toString)
 

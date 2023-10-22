@@ -5,16 +5,28 @@
  */
 
 package com.reactific.riddl.hugo
-import com.reactific.riddl.diagrams.mermaid.{EntityRelationshipDiagram, SequenceDiagram}
+import com.reactific.riddl.diagrams.mermaid.{EntityRelationshipDiagram, SequenceDiagram, SequenceDiagramSupport}
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.stats.{KindStats, StatsOutput, StatsPass}
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
 import scala.annotation.unused
 import com.reactific.riddl.language.parsing.Terminals
+import com.reactific.riddl.passes.PassesResult
+import com.reactific.riddl.passes.resolve.{ReferenceMap, Usages}
+import com.reactific.riddl.passes.symbols.SymbolsOutput
+import com.sun.org.apache.xerces.internal.util.SymbolTable
 
-case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends TextFileWriter {
+case class MarkdownWriter(
+  filePath: Path,
+  commonOptions: CommonOptions,
+  symbolsOutput: SymbolsOutput,
+  refMap: ReferenceMap,
+  usage: Usages,
+  passUtilities: PassUtilities
+) extends TextFileWriter {
 
   def fileHead(
     title: String,
@@ -60,7 +72,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       Map(
         "geekdocCollapseSection" -> "true",
         "geekdocFilePath" ->
-          s"${state.makeFilePath(cont).getOrElse("no-such-file")}"
+          s"${passUtilities.makeFilePath(cont).getOrElse("no-such-file")}"
       )
     )
   }
@@ -138,7 +150,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   ): this.type = {
     heading(kind, level)
     val refs = items.map { definition =>
-      state.makeDocAndParentsLinks(definition)
+      passUtilities.makeDocAndParentsLinks(definition)
     }
     list(refs)
   }
@@ -242,7 +254,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     p("{{< mermaid class=\"text-center\">}}")
     lines.foreach(p)
     p("{{< /mermaid >}}")
-    if state.commonOptions.debug then {
+    if commonOptions.debug then {
       p("```")
       lines.foreach(p)
       p("```")
@@ -258,7 +270,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   private def makeData(container: Definition, parents: Seq[String]): Level = {
     Level(
       container.identify,
-      this.state.makeDocLink(container, parents),
+      passUtilities.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
         container.contents
@@ -269,12 +281,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   }
 
   private def emitUsage(definition: Definition): this.type = {
-    state.usage.getUsers(definition) match {
+    usage.getUsers(definition) match {
       case users: Seq[Definition] if users.nonEmpty =>
         listOf("Used By", users)
       case _ => h2("Used By None")
     }
-    state.usage.getUses(definition) match {
+    usage.getUses(definition) match {
       case usages: Seq[Definition] if usages.nonEmpty => listOf("Uses", usages)
       case _                                          => h2("Uses Nothing")
     }
@@ -286,7 +298,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     top: Definition,
     parents: Seq[String]
   ): this.type = {
-    if state.options.withGraphicalTOC then {
+    if passUtilities.options.withGraphicalTOC then {
       h2(s"Graphical $kind Index")
       val json = makeData(top, parents).toString
       val resourceName = "js/tree-map-hierarchy2.js"
@@ -373,7 +385,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     }
     val path = (parents :+ d.id.format).mkString(".")
     emitTableRow(italic("Definition Path"), path)
-    val link = state.makeSourceLink(d)
+    val link = passUtilities.makeSourceLink(d)
     emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
@@ -388,18 +400,18 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       val pathId = rMatch.group(3)
 
       def doSub(line: String, definition: Definition, isAmbiguous: Boolean = false): String = {
-        val docLink = state.makeDocLink(definition)
+        val docLink = passUtilities.makeDocLink(definition)
         val substitution =
           if isAmbiguous then s"($kind $pathId (ambiguous))[$docLink]"
           else s" ($kind $pathId)[$docLink]"
         line.substring(0, rMatch.start) + substitution + line.substring(rMatch.end)
       }
 
-      state.refMap.definitionOf[Definition](pathId) match {
+      refMap.definitionOf[Definition](pathId) match {
         case Some(definition) => doSub(line, definition)
         case None =>
           val names = pathId.split('.').toSeq
-          state.symbolTable.lookupSymbol[Definition](names) match
+          symbolsOutput.lookupSymbol[Definition](names) match
             case Nil                => line
             case ::((head, _), Nil) => doSub(line, definition = head)
             case ::((head, _), _)   => doSub(line, definition = head, isAmbiguous = true)
@@ -456,16 +468,16 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     parents.headOption match
       case None => ""
       case Some(parent) =>
-        val resolved = state.refMap.definitionOf[Definition](pid, parent)
+        val resolved = refMap.definitionOf[Definition](pid, parent)
         resolved match
           case None => s"unresolved path: ${pid.format}"
           case Some(res) =>
-            val slink = state.makeSourceLink(res)
+            val slink = passUtilities.makeSourceLink(res)
             resolved match
               case None => s"unresolved path: ${pid.format}"
               case Some(definition) =>
-                val pars = state.makeStringParents(parents.drop(1))
-                val link = state.makeDocLink(definition, pars)
+                val pars = passUtilities.makeStringParents(parents.drop(1))
+                val link = passUtilities.makeDocLink(definition, pars)
                 s"[${resolved.head.identify}]($link) [{{< icon \"gdoc_code\" >}}]($slink)"
   }
 
@@ -476,7 +488,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     parents.headOption match
       case None => s"unresolved path: ${pid.format}"
       case Some(parent) =>
-        state.refMap.definitionOf[Definition](pid, parent) match {
+        refMap.definitionOf[Definition](pid, parent) match {
           case None                   => s"unresolved path: ${pid.format}"
           case Some(defn: Definition) => defn.id.format
         }
@@ -596,7 +608,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       case _                                  => "Type"
     }
     containerHead(typ, suffix)
-    emitDefDoc(typ, state.makeStringParents(stack))
+    emitDefDoc(typ, passUtilities.makeStringParents(stack))
     emitTypeExpression(typ.typ, typ +: stack)
     emitUsage(typ)
   }
@@ -657,7 +669,6 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitTerms(domain.terms)
     emitAuthorInfo(domain.authorDefs)
     emitIndex("Domain", domain, parents)
-    state.emitMessageSummary(containerWeight + 5, domain)
     this
   }
 
@@ -696,7 +707,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
 
   def emitContext(context: Context, stack: Seq[Definition]): this.type = {
     containerHead(context, "Context")
-    val parents = state.makeStringParents(stack)
+    val parents = passUtilities.makeStringParents(stack)
     emitDefDoc(context, parents)
     emitContextMap(context, stack)
     emitOptions(context.options)
@@ -718,7 +729,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     parents: Seq[Definition]
   ): this.type = {
     containerHead(state, "State")
-    emitDefDoc(state, this.state.makeStringParents(parents))
+    emitDefDoc(state, passUtilities.makeStringParents(parents))
     emitERD(state.id.format, fields, parents)
     h2("Fields")
     emitFields(fields)
@@ -731,7 +742,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     parents: Seq[Definition]
   ): this.type = {
     h2("Entity Relationships")
-    val erd = EntityRelationshipDiagram(state.passesResult)
+    val erd = EntityRelationshipDiagram(refMap)
     val lines = erd.generate(name, fields, parents)
     emitMermaidDiagram(lines)
     this
@@ -815,7 +826,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     stack: Seq[Definition]
   ): this.type = {
     containerHead(application, "Application")
-    val parents = state.makeStringParents(stack)
+    val parents = passUtilities.makeStringParents(stack)
     emitDefDoc(application, parents)
     for group <- application.groups do {
       h2(group.identify)
@@ -828,12 +839,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
   @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
   def emitEpic(epic: Epic, stack: Seq[Definition]): this.type = {
     containerHead(epic, "Epic")
-    val parents = state.makeStringParents(stack)
+    val parents = passUtilities.makeStringParents(stack)
     emitBriefly(epic, parents)
     if epic.userStory.nonEmpty then {
       val userPid = epic.userStory.getOrElse(UserStory()).user.pathId
       val parent = stack.head
-      val maybeUser = state.refMap.definitionOf[User](userPid, parent)
+      val maybeUser = refMap.definitionOf[User](userPid, parent)
       h2("User Story")
       maybeUser match {
         case None => p(s"Unresolvable User id: ${userPid.format}")
@@ -861,12 +872,12 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     emitDefDoc(u, parents)
   }
 
-  def emitUseCase(uc: UseCase, parents: Seq[Definition]): this.type = {
+  def emitUseCase(uc: UseCase, parents: Seq[Definition], sds: SequenceDiagramSupport): this.type = {
     leafHead(uc, weight = 20)
-    val parList = state.makeStringParents(parents)
+    val parList = passUtilities.makeStringParents(parents)
     emitDefDoc(uc, parList)
     h2("Sequence Diagram")
-    val sd = SequenceDiagram(state, uc)
+    val sd = SequenceDiagram(sds, uc)
     val lines = sd.generate
     emitMermaidDiagram(lines)
   }
@@ -886,7 +897,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
 
   def emitStreamlet(proc: Streamlet, parents: Seq[Definition]): this.type = {
     leafHead(proc, weight = 30)
-    val parList = state.makeStringParents(parents)
+    val parList = passUtilities.makeStringParents(parents)
     emitDefDoc(proc, parList)
     h2("Inlets")
     proc.inlets.foreach { inlet =>
@@ -1009,7 +1020,7 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
       Some("Statistical information about the RIDDL model documented")
     )
 
-    val stats = state.passesResult.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
+    val stats = passUtilities.outputs.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
     emitTableHead(
       Seq(
         "Category" -> 'L',
@@ -1038,10 +1049,10 @@ case class MarkdownWriter(filePath: Path, state: HugoTranslatorState) extends Te
     this
   }
 
-  def emitMessageSummary(weight: Int, domain: Domain, messages: Seq[MessageInfo]): Unit = {
+  def emitMessageSummary(domain: Domain, messages: Seq[MessageInfo]): Unit = {
     fileHead(
       s"${domain.identify} Message Summary",
-      weight,
+      containerWeight + 5,
       Some(s"Message Summaryfor ${domain.identify}")
     )
     emitTableHead(

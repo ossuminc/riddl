@@ -1,8 +1,9 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.testkit.RunCommandSpecBase
+import org.scalatest.wordspec.AnyWordSpec
 
-class HugoCommandTest extends RunCommandSpecBase {
+class HugoCommandTest extends RunCommandSpecBase  {
 
   val inputFile = "testkit/src/test/input/rbbq.riddl"
   val hugoConfig = "testkit/src/test/input/hugo.conf"

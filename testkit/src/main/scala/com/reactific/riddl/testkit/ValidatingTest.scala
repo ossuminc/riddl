@@ -135,7 +135,7 @@ abstract class ValidatingTest extends ParsingTest {
     file: File,
     options: CommonOptions = CommonOptions()
   ): Assertion = {
-    Riddl.parseAndValidate(file, options) match {
+    Riddl.parseAndValidate(file, options, shouldFailOnError = false) match {
       case Left(errors) =>
         fail(errors.format)
       case Right(result) =>
