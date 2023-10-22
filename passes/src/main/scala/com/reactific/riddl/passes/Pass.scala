@@ -17,6 +17,8 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.annotation.unused
 import scala.collection.mutable
+import scala.reflect.ClassTag
+import scala.reflect.classTag
 import scala.util.control.NonFatal
 
 /** Information a pass must provide, basically its name
@@ -266,7 +268,7 @@ abstract class CollectingPassOutput[T](
   * @tparam F
   *   The element type of the collected values
   */
-abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
+abstract class CollectingPass[F : ClassTag](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   // not required in this kind of pass, final override it
   override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
@@ -287,9 +289,20 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
 
   override def result: CollectingPassOutput[F]
 
+  private val coc = classTag[F].runtimeClass
+
   override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    collect(definition, parents).foreach { collected =>
-        collectedValues = collectedValues :+ collected
+    val collectable = collect(definition, parents)
+    collectable match {
+      case Some(collected)  =>
+        if coc == collected.getClass then
+          collectedValues = collectedValues.appended(collected.asInstanceOf[F])
+        else
+          val thisName = this.getClass.getSimpleName
+          messages.addSevere(At.empty,
+            s"$thisName.collect returned a ${collected.getClass.getSimpleName} instead ${coc.getSimpleName}"
+          )
+      case _ => ()
     }
 
     if definition.hasDefinitions then {
