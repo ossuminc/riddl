@@ -88,7 +88,7 @@ abstract class RiddlParserInput extends ParserInput {
   }
 }
 
-private case class EmptyParserInput() extends RiddlParserInput {
+case class EmptyParserInput() extends RiddlParserInput {
   override def origin: String = "empty"
 
   override def data: String = ""

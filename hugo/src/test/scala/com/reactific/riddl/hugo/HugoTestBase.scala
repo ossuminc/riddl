@@ -1,31 +1,29 @@
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.hugo.HugoTranslatorState
-import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.{RiddlParserInput, StringParserInput, TopLevelParser}
-import com.reactific.riddl.passes.symbols.SymbolsPass
-import com.reactific.riddl.passes.{Pass, PassInput, PassesResult}
+import com.reactific.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult}
 import com.reactific.riddl.passes.validate.ValidatingTest
-import com.reactific.riddl.utils.SysLogger
 import org.scalatest.Assertion
+
+import java.nio.file.Path
 
 class HugoTestBase extends ValidatingTest {
 
   def runHugoOn(input: String): Either[Messages, (PassesResult, RootContainer, RiddlParserInput)] = {
     val rpi = StringParserInput(input, "hugo Test")
-    val logger = SysLogger()
     val commonOptions = CommonOptions.noMinorWarnings
-    val options = HugoCommand.Options()
-    val passes = HugoCommand.getPasses(logger, commonOptions, options)
+    val options = HugoCommand.Options(Some(Path.of(".")), Some(Path.of("target/hugo-test")))
+    val passes = HugoCommand.getPasses(commonOptions, options)
 
     TopLevelParser.parse(input) match {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) =>
         val passInput = PassInput(root, commonOptions)
-        val result = Pass.runThesePasses(passInput, passes, logger)
+        val result = Pass.runThesePasses(passInput, passes)
         if result.messages.hasErrors then Left(result.messages)
         else Right((result, root, rpi))
     }
@@ -42,6 +40,18 @@ class HugoTestBase extends ValidatingTest {
     }
   }
 
+  def makeMDW(filePath: Path, passesResult: PassesResult): MarkdownWriter = {
+    val symbols = passesResult.symbols
+    val refMap = passesResult.refMap
+    val usages = passesResult.usage
+    val commonOptions = CommonOptions()
+    val pu = new PassUtilities:
+      def outputs: PassesOutput = passesResult.outputs
+      def options: HugoCommand.Options = HugoCommand.Options()
+      protected val messages: Messages.Accumulator = Messages.Accumulator(commonOptions)
+    MarkdownWriter(filePath, commonOptions, symbols, refMap, usages, pu)
+  }
+
   def makeMDWFor(input: String): (PassesResult, RootContainer, MarkdownWriter) = {
     runHugoOn(input) match {
       case Left(messages) =>
@@ -51,8 +61,7 @@ class HugoTestBase extends ValidatingTest {
         passesResult.outputOf[HugoOutput](HugoPass.name) match
           case None => fail("No output from hugo pass")
           case Some(output) =>
-            val state = output.state
-            val mdw = MarkdownWriter(filePath, state)
+            val mdw = makeMDW(filePath, passesResult)
             (passesResult, root, mdw)
     }
   }

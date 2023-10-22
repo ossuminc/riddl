@@ -6,12 +6,14 @@
 
 package com.reactific.riddl.hugo
 
+import com.reactific.riddl.commands.TranslatingState
+import com.reactific.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, SequenceDiagramSupport}
 import com.reactific.riddl.language.*
 import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
-import com.reactific.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass}
-import com.reactific.riddl.passes.symbols.SymbolsPass
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput, PassesResult}
+import com.reactific.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
+import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.passes.validate.ValidationPass
 import com.reactific.riddl.stats.StatsPass
 import com.reactific.riddl.utils.*
@@ -23,8 +25,8 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo {
   val name: String = "hugo"
-  val geekDoc_version = "v0.41.2"
-  val geekDoc_file = "hugo-geekdoc.tar.gz"
+  private val geekDoc_version = "v0.41.2"
+  private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url = java.net.URI
     .create(
       s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
@@ -33,12 +35,16 @@ object HugoPass extends PassInfo {
 }
 
 case class HugoOutput(
-  messages: Messages = Messages.empty,
-  state: HugoTranslatorState
+  messages: Messages = Messages.empty
 ) extends PassOutput
 
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslatorState) extends Pass(input, outputs) {
+case class HugoPass(
+  input: PassInput,
+  outputs: PassesOutput,
+  options: HugoCommand.Options
+) extends Pass(input, outputs)
+ with PassUtilities with TranslatingState[MarkdownWriter] with SequenceDiagramSupport{
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -51,34 +57,59 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
     "Output path is empty"
   )
 
-  lazy val commonOptions: CommonOptions = state.commonOptions
-  lazy val options: HugoCommand.Options = state.options
-  lazy val refMap: ReferenceMap = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get.refMap
   val root: RootContainer = input.root
   val name: String = HugoPass.name
 
-  if options.inputFile.nonEmpty then makeDirectoryStructure(options.inputFile, state.logger, options, commonOptions)
+  lazy val commonOptions: CommonOptions = input.commonOptions
+  lazy val refMap: ReferenceMap = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get.refMap
+
+  lazy val  symbolsOutput: SymbolsOutput = outputs.symbols
+  lazy val  usage: Usages = outputs.usage
+  lazy val passesResult = PassesResult(input,outputs)
+
+  options.inputFile match {
+    case Some(inFile) =>
+      if Files.exists(inFile) then
+        makeDirectoryStructure(options.inputFile)
+        options
+      else
+        messages.addError((0,0), "The input-file does not exist")
+    case None =>
+      messages.addWarning((0,0),"The input-file option was not provided")
+  }
 
   private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
   writeConfigToml(options, maybeAuthor)
+
+
+  def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
+    val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
+      next.resolve(par)
+    }
+    val path = parDir.resolve(fileName)
+    val mdw = MarkdownWriter(path, commonOptions, symbolsOutput, refMap, usage, this)
+    addFile(mdw)
+    mdw
+  }
+
 
   override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
     definition match {
       case c: Connector =>
-        val (mkd, parents) = setUpLeaf(c, state, stack)
-        mkd.emitConnector(c, parents)
+        val (md: MarkdownWriter, parents) = setUpLeaf(c, stack)
+        md.emitConnector(c, parents)
       case u: User =>
-        val (mkd, parents) = setUpLeaf(u, state, stack)
-        mkd.emitUser(u, parents)
+        val (md: MarkdownWriter, parents) = setUpLeaf(u, stack)
+        md.emitUser(u, parents)
       case r: Replica =>
-        val (mkd, parents) = setUpLeaf(r, state, stack)
-        val parStrings = state.makeStringParents(stack)
-        mkd.emitReplica(r, stack, parStrings)
+        val (md: MarkdownWriter, parents) = setUpLeaf(r, stack)
+        val parStrings = makeStringParents(stack)
+        md.emitReplica(r, stack, parStrings)
       case container: Definition =>
         // Everything else is a container and definitely needs its own page
         // and glossary entry.
-        val (mkd, parents) = setUpContainer(container, state, stack)
+        val (mkd: MarkdownWriter, parents) = setUpContainer(container, stack)
 
         container match {
           case a: Application => mkd.emitApplication(a, stack)
@@ -98,14 +129,18 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
           case f: Function   => mkd.emitFunction(f, parents)
           case e: Entity     => mkd.emitEntity(e, parents)
           case c: Context    => mkd.emitContext(c, stack)
-          case d: Domain     => mkd.emitDomain(d, parents)
+          case d: Domain     =>
+            mkd.emitDomain(d, parents)
+            makeMessageSummary(d)
+
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
           case p: Projector  => mkd.emitProjector(p, parents)
           case r: Repository => mkd.emitRepository(r, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
           case e: Epic       => mkd.emitEpic(e, stack)
-          case uc: UseCase   => mkd.emitUseCase(uc, stack)
+          case uc: UseCase   =>
+            mkd.emitUseCase(uc, stack, this)
 
           case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause |
                _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
@@ -117,10 +152,10 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
   }
 
   override def postProcess(root: AST.RootContainer): Unit = {
-    state.close(root)
+    close(root)
   }
 
-  override def result: HugoOutput = HugoOutput(state = state)
+  override def result: HugoOutput = HugoOutput(messages.toMessages)
 
   private def deleteAll(directory: File): Boolean = {
     if !directory.isDirectory then false
@@ -166,7 +201,6 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
 
   private def loadStaticAssets(
     inputPath: Option[Path],
-    log: Logger,
     options: HugoCommand.Options
   ): Unit = {
     inputPath match {
@@ -184,7 +218,7 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
             copyResource(img, "hugo/static/images/RIDDL-Logo.ico")
           }
           // copy source to target using Files Class
-          val visitor = TreeCopyFileVisitor(log, sourceDir, targetDir)
+          val visitor = TreeCopyFileVisitor(sourceDir, targetDir)
           Files.walkFileTree(sourceDir, visitor)
         }
       case None => ()
@@ -225,10 +259,7 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
   }
 
   private def makeDirectoryStructure(
-    inputPath: Option[Path],
-    log: Logger,
-    options: HugoCommand.Options,
-    commonOptions: CommonOptions
+    inputPath: Option[Path]
   ): Unit = {
     val outDir = options.outputRoot.toFile
     if outDir.exists() then { if options.eraseOutput then { deleteAll(outDir) } }
@@ -242,7 +273,109 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
     if commonOptions.verbose then { println(s"Generating output to: $outDir") }
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
-    loadStaticAssets(inputPath, log, options)
+    loadStaticAssets(inputPath, options)
+  }
+
+  def makeIndex(root: RootContainer): Unit = {
+    val mdw = addFile(Seq.empty[String], "_index.md")
+    mdw.fileHead("Index", 10, Option("The main index to the content"))
+    makeSystemLandscapeView match {
+      case Some(view) =>
+        mdw.h2("Landscape View")
+        mdw.emitMermaidDiagram(view.split(System.lineSeparator()).toIndexedSeq)
+      case None => // nothing
+    }
+    mdw.h2("Domains")
+    val domains = root.contents
+      .sortBy(_.id.value)
+      .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
+    mdw.list(domains)
+    mdw.h2("Indices")
+    val glossary =
+      if options.withGlossary then { Seq("[Glossary](glossary)") }
+      else { Seq.empty[String] }
+    val todoList = {
+      if options.withTODOList then { Seq("[To Do List](todolist)") }
+      else { Seq.empty[String] }
+    }
+    val statistics = {
+      if options.withStatistics then { Seq("[Statistics](statistics)") }
+      else { Seq.empty[String] }
+    }
+    mdw.list(glossary ++ todoList ++ statistics)
+    mdw.emitIndex("Full", root, Seq.empty[String])
+  }
+
+  val glossaryWeight = 970
+  val toDoWeight = 980
+  val statsWeight = 990
+  val messagesWeight = 975
+
+  private def makeStatistics(): Unit = {
+    if options.withStatistics then {
+      val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
+      mdw.emitStatistics(statsWeight)
+    }
+  }
+
+  private def makeGlossary(): Unit = {
+    if options.withGlossary then {
+      val mdw = addFile(Seq.empty[String], "glossary.md")
+      outputs.outputOf[GlossaryOutput](GlossaryPass.name) match {
+        case Some(go) =>
+          mdw.emitGlossary(glossaryWeight, go.entries)
+        case None =>
+          mdw.emitGlossary(glossaryWeight, Seq.empty)
+      }
+    }
+  }
+
+  def makeToDoList(root: RootContainer): Unit = {
+    if options.withTODOList then
+      outputs.outputOf[ToDoListOutput](ToDoListPass.name) match {
+        case Some(tdlo) =>
+          val mdw = addFile(Seq.empty[String], "todolist.md")
+          mdw.emitToDoList(toDoWeight, tdlo.map)
+        case None =>
+        // do nothing
+      }
+  }
+
+  def makeMessageSummary(forDomain: Domain): Unit = {
+    if options.withMessageSummary then {
+      outputs.outputOf[MessageOutput](MessagesPass.name) match {
+        case Some(mo) =>
+          for {
+            messageInfo <- mo.collected.filter(_.definedIn.contains(forDomain))
+            fname = forDomain.id.value + "-" + messageInfo.message.id.value + ".md"
+            parents = messageInfo.definedIn.dropWhile(_ != forDomain.id.value).dropRight(1).drop(1) if parents.nonEmpty
+          } do {
+            val mdw = addFile(parents, fname)
+            mdw.emitMessageSummary(forDomain, mo.collected)
+          }
+        case None =>
+        // just skip
+      }
+    }
+  }
+
+
+  def makeSystemLandscapeView: Option[String] = {
+    val mdp = new MermaidDiagramsPlugin
+    val diagram = mdp.makeRootOverview(root)
+    Some(diagram)
+  }
+
+
+  def close(root: RootContainer): Unit = {
+    makeIndex(root)
+    makeGlossary()
+    makeToDoList(root)
+    makeStatistics()
+    val files = writeFiles
+    if commonOptions.verbose || commonOptions.debug then
+      for file <- files do
+        messages.info(s"Wrote file: ${file.getFileName}")
   }
 
   private def writeConfigToml(
@@ -258,25 +391,23 @@ case class HugoPass(input: PassInput, outputs: PassesOutput, state: HugoTranslat
 
   private def setUpContainer(
     c: Definition,
-    state: HugoTranslatorState,
     stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
-    state.addDir(c.id.format)
-    val pars = state.makeStringParents(stack)
-    state.addFile(pars :+ c.id.format, "_index.md") -> pars
+    addDir(c.id.format)
+    val pars = makeStringParents(stack)
+    addFile(pars :+ c.id.format, "_index.md") -> pars
   }
 
   private def setUpLeaf(
     d: Definition,
-    state: HugoTranslatorState,
     stack: Seq[Definition]
   ): (MarkdownWriter, Seq[String]) = {
-    val pars = state.makeStringParents(stack)
-    state.addFile(pars, d.id.format + ".md") -> pars
+    val pars = makeStringParents(stack)
+    addFile(pars, d.id.format + ".md") -> pars
   }
 
   // scalastyle:off method.length
-  def configTemplate(
+  private def configTemplate(
     options: HugoCommand.Options,
     author: Option[Author]
   ): String = {

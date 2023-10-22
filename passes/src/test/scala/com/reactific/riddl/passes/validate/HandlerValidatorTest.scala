@@ -152,7 +152,7 @@ class HandlerValidatorTest extends ValidatingTest {
       parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) {
         case (root, rpi, messages: Messages) =>
           val warnings = messages.justWarnings.format
-          info(warnings)
+          // info(warnings)
           warnings mustNot be(empty)
           warnings must include("commands should result in sending an event")
       }

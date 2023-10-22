@@ -18,7 +18,7 @@ class StreamValidatorTest extends ValidatingTest {
                     |} """.stripMargin
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (domain, _, messages) =>
-          info(messages.format)
+          // info(messages.format)
           domain.isEmpty mustBe false
           messages.isEmpty mustBe false
           messages.hasErrors mustBe true

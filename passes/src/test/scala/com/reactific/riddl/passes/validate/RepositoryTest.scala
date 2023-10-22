@@ -38,7 +38,7 @@ class RepositoryTest extends ValidatingTest {
           domain.contexts.headOption match {
             case Some(context) =>
               context.repositories mustNot be(empty)
-              if msgs.nonEmpty then { info(msgs.format) }
+              // info(msgs.format)
               val errors = msgs.justErrors
               errors.size mustBe 0
               msgs.isOnlyWarnings

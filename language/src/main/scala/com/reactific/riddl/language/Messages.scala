@@ -5,7 +5,7 @@
  */
 
 package com.reactific.riddl.language
-import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput, StringParserInput, URLParserInput}
+import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput, StringParserInput, URLParserInput, EmptyParserInput}
 import com.reactific.riddl.utils.Logger
 
 import scala.collection.mutable
@@ -136,18 +136,16 @@ object Messages {
     def format: String = { format(noHighlighting = false) }
 
     def format(noHighlighting: Boolean = false): String = {
-      val ctxt =
-        if context.nonEmpty then { s"${nl}Context: $context" }
-        else ""
+      val ctxt = if context.nonEmpty then { s"${nl}Context: $context" } else ""
       val source = loc.source match {
-        case FileParserInput(file) =>
-          val path = file.getAbsolutePath
+        case fpi: FileParserInput =>
+          val path = fpi.file.getAbsolutePath
           val index = path.lastIndexOf("riddl/")
           path.substring(index + 6)
-        case SourceParserInput(source, _) => source.descr
-        case StringParserInput(_, origin) => origin
-        case URLParserInput(url)          => url.toString
-        case _                            => "unknown"
+        case spi: SourceParserInput => spi.source.descr
+        case spi: StringParserInput => spi.origin
+        case upi: URLParserInput    => upi.url.toString
+        case epi: EmptyParserInput  => epi.origin
       }
       val sourceLine = loc.toShort
       val headLine = s"${highlight(s"$kind: $source$sourceLine:", noHighlighting)}$nl"

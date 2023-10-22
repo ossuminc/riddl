@@ -15,7 +15,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 
 /** Unit Tests For TreeCopyFileVisitor */
-case class TreeCopyFileVisitor(log: Logger, source: Path, target: Path)
+case class TreeCopyFileVisitor(source: Path, target: Path, log: Logger = SysLogger())
     extends SimpleFileVisitor[Path] {
 
   @throws[IOException]

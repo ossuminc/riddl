@@ -61,7 +61,6 @@ object HugoCommand {
   }
 
   def getPasses(
-    log: Logger,
     commonOptions: CommonOptions,
     options: Options
   ): PassesCreator = {
@@ -86,8 +85,7 @@ object HugoCommand {
     standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         val result = PassesResult(input, outputs, Messages.empty)
-        val state = HugoTranslatorState(result, options, commonOptions, log)
-        HugoPass(input, outputs, state)
+        HugoPass(input, outputs, options)
       }
     )
   }
@@ -286,7 +284,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
     commonOptions: CommonOptions,
     options: Options
   ): PassesCreator = {
-    HugoCommand.getPasses(log, commonOptions, options)
+    HugoCommand.getPasses(commonOptions, options)
   }
 
   override def replaceInputFile(

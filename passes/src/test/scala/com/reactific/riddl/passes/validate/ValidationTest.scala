@@ -20,7 +20,7 @@ class ValidationTest extends ParsingTest {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
       val content = msg.format
-      val expected = """[33m[1m[4mWarning: unknown(1:2):[0m
+      val expected = """[33m[1m[4mWarning: empty(1:2):[0m
                        |the_message""".stripMargin
       content mustBe expected
     }
