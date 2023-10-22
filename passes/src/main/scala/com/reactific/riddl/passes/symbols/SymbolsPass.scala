@@ -61,7 +61,9 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
     }
   }
 
-  override def result: SymbolsOutput = SymbolsOutput(Messages.empty, symTab, parentage)
+  override def result: SymbolsOutput = {
+    SymbolsOutput(Messages.empty, symTab, parentage)
+  }
 
   override def close(): Unit = ()
 

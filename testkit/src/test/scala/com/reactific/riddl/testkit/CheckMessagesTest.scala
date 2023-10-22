@@ -50,7 +50,7 @@ class CheckMessagesTest extends ValidatingTest {
   def runForFile(file: File, readMessages: Set[String]): Unit = {
     val expectedMessages = readMessages.map(_.trim)
     validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
-      val msgSet = msgs.map(_.format(true)).map(_.trim).toSet
+      val msgSet = msgs.map(_.format).map(_.trim).toSet
       if msgSet == expectedMessages then { succeed }
       else {
         val missingMessages = expectedMessages.diff(msgSet).toSeq.sorted

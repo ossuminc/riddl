@@ -93,12 +93,12 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |""".stripMargin
       Riddl.parseAndValidate(RiddlParserInput(input), shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
-        case Right(result) =>
+        case Right(result)  =>
           // info(result.messages.format)
           result.messages.hasErrors mustBe (false)
           val warnings = result.messages.justUsage
           warnings.size mustBe (2)
-          val warnMessage = warnings.last.format()
+          val warnMessage = warnings.last.format
           warnMessage must include("Entity 'fooBar' is unused")
       }
 

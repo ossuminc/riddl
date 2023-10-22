@@ -5,7 +5,13 @@
  */
 
 package com.reactific.riddl.language
-import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput, StringParserInput, URLParserInput, EmptyParserInput}
+import com.reactific.riddl.language.parsing.{
+  FileParserInput,
+  SourceParserInput,
+  StringParserInput,
+  URLParserInput,
+  EmptyParserInput
+}
 import com.reactific.riddl.utils.Logger
 
 import scala.collection.mutable
@@ -99,18 +105,6 @@ object Messages {
 
   val nl: String = System.lineSeparator()
 
-  private def highlight(kind: KindOfMessage, s: String): String = {
-    s"${kind match {
-        case Info           => s"$BLUE"
-        case StyleWarning   => s"$YELLOW"
-        case MissingWarning => s"$YELLOW$UNDERLINED"
-        case UsageWarning   => s"$YELLOW$BOLD"
-        case Warning        => s"$YELLOW$BOLD$UNDERLINED"
-        case Error          => s"$RED$BOLD"
-        case SevereError    => s"$RED_B$BLACK$BOLD"
-      }}$s$RESET"
-  }
-
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
 
@@ -128,15 +122,9 @@ object Messages {
       else comparison
     }
 
-    private def highlight(s: String, noHighlighting: Boolean = false): String = {
-      if noHighlighting then s
-      else Messages.highlight(kind, s)
-    }
-
-    def format: String = { format(noHighlighting = false) }
-
-    def format(noHighlighting: Boolean = false): String = {
-      val ctxt = if context.nonEmpty then { s"${nl}Context: $context" } else ""
+    def format: String = {
+      val ctxt = if context.nonEmpty then { s"${nl}Context: $context" }
+      else ""
       val source = loc.source match {
         case fpi: FileParserInput =>
           val path = fpi.file.getAbsolutePath
@@ -148,7 +136,7 @@ object Messages {
         case epi: EmptyParserInput  => epi.origin
       }
       val sourceLine = loc.toShort
-      val headLine = s"${highlight(s"$kind: $source$sourceLine:", noHighlighting)}$nl"
+      val headLine = s"$kind: $source$sourceLine:$nl"
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
       if loc.isEmpty || source.isEmpty || errorLine.isEmpty then {
         s"$headLine$message$ctxt"
@@ -234,18 +222,20 @@ object Messages {
     highestSeverity(list)
   }
 
-  def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
-    list.foreach { msg =>
-      msg.kind match {
-        case Info           => log.info(msg.format())
-        case StyleWarning   => log.warn(msg.format())
-        case MissingWarning => log.warn(msg.format())
-        case UsageWarning   => log.warn(msg.format())
-        case Warning        => log.warn(msg.format())
-        case Error          => log.error(msg.format())
-        case SevereError    => log.severe(msg.format())
-      }
+  def logMessage(message: Message, log: Logger): Unit = {
+    message.kind match {
+      case Info           => log.info(message.format)
+      case StyleWarning   => log.warn(message.format)
+      case MissingWarning => log.warn(message.format)
+      case UsageWarning   => log.warn(message.format)
+      case Warning        => log.warn(message.format)
+      case Error          => log.error(message.format)
+      case SevereError    => log.severe(message.format)
     }
+  }
+
+  def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
+    list.foreach { msg => logMessage(msg, log) }
   }
 
   def logMessagesByGroup(
@@ -258,22 +248,15 @@ object Messages {
       if messages.nonEmpty then {
         kind match {
           case Error =>
-            log.error(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
+            log.error(s"""$kind Message Count: ${messages.length}""")
           case SevereError =>
-            log.severe(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
+            log.severe(s"""$kind Message Count: ${messages.length}""")
           case Info =>
-            log.info(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
-          case _ =>
-            log.warn(highlight(kind, s"""$kind Message Count: ${messages.length}"""))
+            log.info(s"""$kind Message Count: ${messages.length}""")
+          case _ => // everything else is a warning
+            log.warn(s"""$kind Message Count: ${messages.length}""")
         }
-        messages.map(_.format()).foreach { (msg: String) =>
-          kind match {
-            case Info        => log.info(msg)
-            case SevereError => log.severe(msg)
-            case Error       => log.error(msg)
-            case _           => log.warn(msg)
-          }
-        }
+        messages.foreach { (msg: Message) => logMessage(msg, log) }
       }
     }
     if messages.nonEmpty then {

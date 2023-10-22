@@ -3,6 +3,7 @@ package com.reactific.riddl.utils
 import org.scalatest._
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
+import scala.io.AnsiColor.*
 
 /** Unit Tests For SysLogger */
 class SysLoggerTest extends AnyWordSpec with Matchers {
@@ -59,10 +60,11 @@ class SysLoggerTest extends AnyWordSpec with Matchers {
 
   "SysLogger" should {
     "print error message" in {
-      val expected = "[error] asdf\n"
+      val expected = s"[error] asdf\n"
       val sl = SysLogger(false)
       val captured = capturingStdOut(() => sl.error("asdf"))
-      captured._2 mustBe expected
+      if captured._2 != expected then fail(s"Expected: $expected, Received: ${captured._2}")
+      succeed
     }
     "print severe message" in {
       val expected = "[severe] asdf\n"
@@ -80,7 +82,7 @@ class SysLoggerTest extends AnyWordSpec with Matchers {
       val expected = "[info] asdf\n"
       val sl = SysLogger(false)
       val captured = capturingStdOut(() => sl.info("asdf"))
-      if captured._2 != expected then fail(s"Expected: $expected, Received: $captured._2")
+      if captured._2 != expected then fail(s"Expected: $expected, Received: ${captured._2}")
       succeed
     }
     "print many message" in {

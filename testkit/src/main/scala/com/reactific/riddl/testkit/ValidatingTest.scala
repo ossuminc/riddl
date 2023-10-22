@@ -12,7 +12,7 @@ import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.testkit.ParsingTest
-import com.reactific.riddl.passes.{Pass, PassesResult, Riddl}
+import com.reactific.riddl.passes.{Pass, PassInput, PassesResult, Riddl}
 import org.scalatest.*
 
 import java.io.File
@@ -88,8 +88,8 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  private def defaultFail(msgs: Messages): Assertion = {
-    fail(msgs.map(_.format).mkString("\n"))
+  private def defaultFail(passesResult: PassesResult): Assertion = {
+    fail(passesResult.messages.format)
   }
 
   def parseAndValidateTestInput(
@@ -99,7 +99,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (RootContainer, Messages) => Assertion = (_, msgs) => defaultFail(msgs)
+    validation: (RootContainer, PassesResult) => Assertion = (_, pr) => defaultFail(pr)
   ): Assertion = {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
@@ -107,12 +107,9 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        runStandardPasses(root, options, shouldFailOnErrors) match {
-          case Left(errors) =>
-            fail(errors.format)
-          case Right(ao) =>
-            validation(root, ao.messages)
-        }
+        val input = PassInput(root, options)
+        val passesResult = Pass.runStandardPasses(input)
+        validation(root, passesResult)
     }
   }
   def validateFile(

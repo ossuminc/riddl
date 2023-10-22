@@ -285,7 +285,7 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
   @SuppressWarnings(Array("org.wartremover.warts.Var"))
   protected var collectedValues: Seq[F] = Seq.empty[F]
 
-  override def result: CollectingPassOutput[F]  
+  override def result: CollectingPassOutput[F]
 
   override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     collect(definition, parents).foreach { collected =>
@@ -343,7 +343,7 @@ object Pass {
     try {
       for pass <- passes yield {
         val aPass = pass(input, outputs)
-        val output = runOnePass(input, outputs, aPass, logger)
+        val output: PassOutput = runOnePass(input.root, input.commonOptions, aPass, logger)
         outputs.outputIs(aPass.name, output)
       }
       PassesResult(input, outputs, Messages.empty)
@@ -381,24 +381,25 @@ object Pass {
     runPass[ValidationOutput](input, outputs, ValidationPass(input, outputs))
   }
 
-  private def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass): OUT = {
-    Pass.runOnePass(input, outputs, pass).asInstanceOf[OUT]
+  def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass): OUT = {
+    val output: OUT = Pass.runOnePass(input.root, input.commonOptions,pass).asInstanceOf[OUT]
+    outputs.outputIs(pass.name, output)
+    output
   }
 
   private def runOnePass(
-    in: PassInput,
-    outs: PassesOutput,
+    root: RootContainer,
+    commonOptions: CommonOptions,
     mkPass: => Pass,
     logger: Logger = SysLogger()
   ): PassOutput = {
     val pass: Pass = mkPass
-    Timer.time[PassOutput](pass.name, in.commonOptions.showTimes, logger) {
+    Timer.time[PassOutput](pass.name, commonOptions.showTimes, logger) {
       val parents: mutable.Stack[Definition] = mutable.Stack.empty
-      pass.traverse(in.root, parents)
-      pass.postProcess(in.root)
+      pass.traverse(root, parents)
+      pass.postProcess(root)
       pass.close()
       val output = pass.result
-      outs.outputIs(pass.name, output)
       output
     }
   }
