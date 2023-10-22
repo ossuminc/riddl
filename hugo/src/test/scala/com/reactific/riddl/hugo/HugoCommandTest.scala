@@ -1,7 +1,6 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.testkit.RunCommandSpecBase
-import org.scalatest.wordspec.AnyWordSpec
 
 class HugoCommandTest extends RunCommandSpecBase  {
 

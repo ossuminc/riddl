@@ -10,7 +10,7 @@ import org.scalatest.Assertion
 
 import java.nio.file.Path
 
-class HugoTestBase extends ValidatingTest {
+abstract class HugoTestBase extends ValidatingTest {
 
   def runHugoOn(input: String): Either[Messages, (PassesResult, RootContainer, RiddlParserInput)] = {
     val rpi = StringParserInput(input, "hugo Test")

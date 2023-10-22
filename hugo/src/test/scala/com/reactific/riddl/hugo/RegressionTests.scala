@@ -14,6 +14,7 @@ class RegressionTests extends ParsingTest {
 
   val regressionsFolder = "hugo/src/test/input/regressions/"
   val output = "hugo/target/regressions/"
+  
   "Regressions" should {
     "not produce a MatchError" in {
       val source = "match-error.riddl"
