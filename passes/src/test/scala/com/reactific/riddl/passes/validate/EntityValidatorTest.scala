@@ -21,7 +21,7 @@ class EntityValidatorTest extends ValidatingTest {
                     |""".stripMargin
       parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
         case (entity: Entity, rpi, msgs: Messages) =>
-          info(msgs.format)
+          // info(msgs.format)
           msgs.count(_.kind.isError) mustBe 1
           // msgs.count(_.kind.isWarning) mustBe 1
           val numMissing =

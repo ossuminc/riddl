@@ -8,14 +8,14 @@ package com.reactific.riddl.passes.symbols
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
 import com.reactific.riddl.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
 
 import scala.annotation.unused
 import scala.collection.mutable
 
 object SymbolsPass extends PassInfo {
-  val name: String = "symbols"
+  val name: String = "Symbols"
 }
 
 /** Symbol Table for Validation and other purposes. This symbol table is built from the AST model after syntactic
@@ -28,7 +28,7 @@ object SymbolsPass extends PassInfo {
   * @param input
   *   The output of the parser pass is the input to SymbolPass
   */
-case class SymbolsPass(input: PassInput) extends Pass(input) {
+case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   override def name: String = SymbolsPass.name
 
@@ -61,7 +61,9 @@ case class SymbolsPass(input: PassInput) extends Pass(input) {
     }
   }
 
-  override def result: SymbolsOutput = SymbolsOutput(Messages.empty, symTab, parentage)
+  override def result: SymbolsOutput = {
+    SymbolsOutput(Messages.empty, symTab, parentage)
+  }
 
   override def close(): Unit = ()
 

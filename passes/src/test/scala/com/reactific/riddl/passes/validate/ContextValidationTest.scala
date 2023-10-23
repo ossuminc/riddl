@@ -63,7 +63,7 @@ class ContextValidationTest extends ValidatingTest {
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
           val errors = msgs.justErrors
-          info(errors.format)
+          // info(errors.format)
           errors mustBe empty
           context.functions.size mustBe 1
           val expected = Function(
@@ -103,7 +103,7 @@ class ContextValidationTest extends ValidatingTest {
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
           val errors = msgs.justErrors
-          info(errors.format)
+          // info(errors.format)
           errors must be(empty)
           val expected = Entity((2, 2, rpi), Identifier((2, 9, rpi), "bar"))
           context.entities.size mustBe 1
@@ -117,7 +117,7 @@ class ContextValidationTest extends ValidatingTest {
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
           val errors = msgs.justErrors
-          info(errors.format)
+          // info(errors.format)
           errors must be(empty)
           val expected = Term(
             (2, 2, rpi),
@@ -134,7 +134,7 @@ class ContextValidationTest extends ValidatingTest {
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
           val errors = msgs.justErrors
-          info(errors.format)
+          // info(errors.format)
           errors must be(empty)
           val expected = Streamlet(
             (2, 2, rpi),
@@ -154,7 +154,7 @@ class ContextValidationTest extends ValidatingTest {
       parseAndValidateContext(input) {
         case (context: Context, rpi, msgs: Messages) =>
           val errors = msgs.justErrors
-          info(errors.format)
+          // info(errors.format)
           errors must be(empty)
           context.projectors.size mustBe 1
           val actual = context.projectors.head

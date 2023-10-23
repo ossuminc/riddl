@@ -113,7 +113,7 @@ class EpicTest extends ValidatingTest {
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           val errors = msgs.justErrors
-          info(errors.format)
+          // info(errors.format)
           if errors.isEmpty then
             domain mustNot be(empty)
             domain.epics mustNot be(empty)
@@ -185,7 +185,7 @@ class EpicTest extends ValidatingTest {
             msgs.hasErrors mustBe false
             succeed
           else
-            info(msgs.format)
+            //info(msgs.format)
             fail("Shouldn't have errors")
       }
     }
@@ -246,7 +246,7 @@ class EpicTest extends ValidatingTest {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           val errors = msgs.justErrors
           if errors.nonEmpty then
-            info(msgs.format)
+            // info(msgs.format)
             fail("Shouldn't have errors")
           else
             domain mustNot be(empty)

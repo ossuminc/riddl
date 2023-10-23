@@ -12,13 +12,23 @@ import com.reactific.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.testkit.ParsingTest
-import com.reactific.riddl.passes.{Pass, PassesResult, Riddl}
+import com.reactific.riddl.passes.{Pass, PassInput, PassesResult, Riddl}
 import org.scalatest.*
 
 import java.io.File
 
 /** Convenience functions for tests that do validation */
 abstract class ValidatingTest extends ParsingTest {
+
+  protected def runStandardPasses(
+    model: RootContainer,
+    options: CommonOptions,
+    shouldFailOnErrors: Boolean = false
+  ): Either[Messages, PassesResult] = {
+    val result = Pass.runStandardPasses(model, options)
+    if shouldFailOnErrors && result.messages.hasErrors then Left(result.messages)
+    else Right(result)
+  }
 
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   def parseAndValidate(
@@ -34,7 +44,7 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $origin:\n$msgs")
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -55,7 +65,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(passesResult: PassesResult) =>
@@ -78,8 +88,8 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  private def defaultFail(msgs: Messages): Assertion = {
-    fail(msgs.map(_.format).mkString("\n"))
+  private def defaultFail(passesResult: PassesResult): Assertion = {
+    fail(passesResult.messages.format)
   }
 
   def parseAndValidateTestInput(
@@ -89,7 +99,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (RootContainer, Messages) => Assertion = (_, msgs) => defaultFail(msgs)
+    validation: (RootContainer, PassesResult) => Assertion = (_, pr) => defaultFail(pr)
   ): Assertion = {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
@@ -97,12 +107,9 @@ abstract class ValidatingTest extends ParsingTest {
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(root) =>
-        Pass.runStandardPasses(root, options, shouldFailOnErrors) match {
-          case Left(errors) =>
-            fail(errors.format)
-          case Right(ao) =>
-            validation(root, ao.messages)
-        }
+        val input = PassInput(root, options)
+        val passesResult = Pass.runStandardPasses(input)
+        validation(root, passesResult)
     }
   }
   def validateFile(
@@ -125,7 +132,7 @@ abstract class ValidatingTest extends ParsingTest {
     file: File,
     options: CommonOptions = CommonOptions()
   ): Assertion = {
-    Riddl.parseAndValidate(file, options) match {
+    Riddl.parseAndValidate(file, options, shouldFailOnError = false) match {
       case Left(errors) =>
         fail(errors.format)
       case Right(result) =>

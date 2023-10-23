@@ -20,11 +20,11 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |  type APrime = A.B.C.D
           |}""".stripMargin
-      parseAndResolve(RiddlParserInput(rpi)) { input =>
+      parseAndResolve(RiddlParserInput(rpi)) { (input, outputs) =>
         val target: Type = input.root.domains.head.domains.head.domains.head.types.head
         val pid: Type = input.root.domains.head.types.head
         val parent = input.root.domains.head
-        val resolution = input.outputOf[ResolutionOutput](ResolutionPass.name)
+        val resolution = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid.typ.asInstanceOf[AliasedTypeExpression].pathId, parent) match {
           case Some(definition) =>
             definition must be(target)
@@ -45,11 +45,11 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |
           |}""".stripMargin
-      parseAndResolve(RiddlParserInput(rpi)) { in =>
+      parseAndResolve(RiddlParserInput(rpi)) { (in, outs) =>
         val target = in.root.domains.head.domains.head.domains.head.types.head
         val parent = in.root.domains.head.domains.head.types.head
         val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
-        val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
+        val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolved) =>
             resolved mustBe (target)
@@ -65,11 +65,11 @@ class ResolutionPassTest extends ResolvingTest {
           |  type aTop = type A.Top
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { in =>
+      parseAndResolve(RiddlParserInput(input)) { (in, outs) =>
         val target = in.root.domains.head.types.find(_.id.value == "Top").get
         val parent = in.root.domains.head.types.find(_.id.value == "aTop").get
         val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
-        val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
+        val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolvedDef) =>
             resolvedDef mustBe (target)
@@ -90,7 +90,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
+      parseAndResolve(RiddlParserInput(input)) { (_,_) => succeed }
     }
 
     "resolve entity field" in {
@@ -108,7 +108,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
+      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
     }
 
     "resolve nested fields - old " in {
@@ -130,7 +130,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
+      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
     }
 
     "resolve nested fields - new" in {
@@ -152,7 +152,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
+      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
     }
 
     "resolve complicated paths" in {
@@ -186,13 +186,13 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { in =>
-        in.getMessages mustBe (Messages.empty)
+      parseAndResolve(RiddlParserInput(input)) { (in, outs) =>
+        outs.getAllMessages mustBe (Messages.empty)
         val Top = in.root.domains.head.types.head
         val D = in.root.domains.head.domains.head.contexts.find(_.id.value == "D").get
         val ATop = D.types.find(_.id.value == "ATop").get
         val pid = ATop.typ.asInstanceOf[AliasedTypeExpression].pathId
-        val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
+        val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, ATop) match {
           case Some(resolved) => resolved mustBe (Top)
           case None           => fail(s"${pid} not resolved")
@@ -219,7 +219,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
+      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
     }
     "deal with cyclic references" in {
       val input =
@@ -243,7 +243,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { _ => succeed } { messages =>
+      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed } { messages =>
         val errors = messages.justErrors
         errors must be(empty)
         fail(errors.format)
@@ -269,7 +269,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { _ => succeed }
+      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
     }
     "resolve simple path through an include" in {
       val eL = At.empty
@@ -311,8 +311,8 @@ class ResolutionPassTest extends ResolvingTest {
       )
       root.contents.head.contents.length mustBe 2
       root.contents.head.contents.forall(_.kind == "Context")
-      val in = resolve(root, CommonOptions())
-      val messages = in.getMessages
+      val (in, outs) = resolve(root, CommonOptions())
+      val messages = outs.getAllMessages
       val errors = messages.justErrors
       if errors.nonEmpty then fail(errors.format) else succeed
     }
@@ -328,7 +328,7 @@ class ResolutionPassTest extends ResolvingTest {
           |}
           |""".stripMargin
       )
-      parseAndResolve(input) { in =>
+      parseAndResolve(input) { (in, outs) =>
         val entity = in.root.domains.head.contexts.head.entities.head
         entity.getClass mustBe (classOf[Entity])
         val cid = in.root.domains.head.types.head
@@ -336,7 +336,7 @@ class ResolutionPassTest extends ResolvingTest {
         cid.typ.getClass mustBe (classOf[UniqueId])
         val pid = cid.typ.asInstanceOf[UniqueId].entityPath
         pid.value mustBe (Seq("ReactiveBBQ", "Customer", "Customer"))
-        val resolution = in.outputOf[ResolutionOutput](ResolutionPass.name)
+        val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Entity](pid, cid) match {
           case Some(definition) =>
             if definition == entity then {
@@ -351,7 +351,7 @@ class ResolutionPassTest extends ResolvingTest {
     }
     "resolve rbbq.riddl" in {
       val input = RiddlParserInput(Path.of("language/src/test/input/domains/rbbq.riddl"))
-      parseAndResolve(input) { _ => succeed }
+      parseAndResolve(input) { (_, _) => succeed }
     }
     "resolve references in morph action" in {
       val input = RiddlParserInput("""domain Ignore is {
@@ -372,7 +372,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin)
-      parseAndResolve(input) { _ => succeed }
+      parseAndResolve(input) { (_,_) => succeed }
     }
     "resolve a path identifier" in {
       val rpi = RiddlParserInput(data = """domain d is {

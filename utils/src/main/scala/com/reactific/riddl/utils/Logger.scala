@@ -22,6 +22,8 @@ object Logger {
   case object Error extends Lvl
   case object Warning extends Lvl
   case object Info extends Lvl
+
+  val nl = System.getProperty("line.separator")
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
@@ -60,7 +62,13 @@ trait Logger {
         case Logger.Warning => s"${YELLOW}"
         case Logger.Info    => s"${BLUE}"
       }
-      s"$prefix[$level] ${RESET}$s"
+      val lines = s.split(nl)
+      val head = s"$prefix$BOLD[$level] ${lines.head}$RESET"
+      val tail = lines.tail.mkString(nl)
+      if tail.nonEmpty then
+        head + s"$nl$prefix$tail$RESET"
+      else
+        head
   }
 
   protected def write(level: Lvl, @unused s: String): Unit

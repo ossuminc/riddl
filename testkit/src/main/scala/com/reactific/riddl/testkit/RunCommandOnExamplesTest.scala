@@ -83,7 +83,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
 
   private final val suffix = "conf"
 
-  def validate(@unused name: String): Boolean = true
+  def validateTestName(@unused name: String): Boolean = true
 
   def forEachConfigFile[T](
     f: (String, Path) => T
@@ -94,9 +94,9 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
       .toSeq
     for
       config <- configs
-      name = config.getName.dropRight(suffix.length + 1)
+      name = config.getAbsolutePath.dropRight(suffix.length + 1)
     yield {
-      if validate(name) then {
+      if validateTestName(name) then {
         CommandPlugin.loadCandidateCommands(config.toPath) match {
           case Right(commands) =>
             if commands.contains(commandName) then {

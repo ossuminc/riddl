@@ -9,7 +9,7 @@ package com.reactific.riddl.passes.validate
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
 import com.reactific.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
@@ -17,7 +17,7 @@ import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 import scala.collection.mutable
 
 object ValidationPass extends PassInfo {
-  val name: String = "validation"
+  val name: String = "Validation"
 }
 
 /** The ValidationPass
@@ -25,16 +25,20 @@ object ValidationPass extends PassInfo {
   * @param input
   *   Input from previous passes
   */
-case class ValidationPass(input: PassInput) extends Pass(input) with StreamingValidation {
+@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
+case class ValidationPass(
+  input: PassInput,
+  outputs: PassesOutput
+) extends Pass(input, outputs)
+    with StreamingValidation {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
 
   override def name: String = ValidationPass.name
 
-  lazy val resolution: ResolutionOutput = input.outputOf[ResolutionOutput](ResolutionPass.name)
-  lazy val symbols: SymbolsOutput = input.outputOf[SymbolsOutput](SymbolsPass.name)
-  lazy val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
+  lazy val resolution: ResolutionOutput = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
+  lazy val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
   /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
     *
@@ -161,9 +165,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
             )
         case _ =>
       }
-    } else {
-
-    }
+    } else {}
     omc.from.foreach { (ref: Reference[Definition]) =>
       checkRef[Definition](ref, omc, parents)
     }
@@ -604,7 +606,7 @@ case class ValidationPass(input: PassInput) extends Pass(input) with StreamingVa
       case Sequence(loc, of)      =>
       case Set(loc, of)           =>
       case typeEx: Cardinality    =>
-      case t: TypeExpression      =>
+      case t: TypeExpression =>
         messages.addError(t.loc, s"Type expression in Replica ${replica.identify} is not a replicable type")
     }
     checkDescription(replica)

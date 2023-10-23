@@ -2,7 +2,7 @@ package com.reactific.riddl.hugo
 
 import com.reactific.riddl.testkit.RunCommandSpecBase
 
-class HugoCommandTest extends RunCommandSpecBase {
+class HugoCommandTest extends RunCommandSpecBase  {
 
   val inputFile = "testkit/src/test/input/rbbq.riddl"
   val hugoConfig = "testkit/src/test/input/hugo.conf"
@@ -14,8 +14,8 @@ class HugoCommandTest extends RunCommandSpecBase {
     "handle hugo" in {
       val args = Seq(
         "--quiet",
-        "--suppress-missing-warnings",
-        "--suppress-style-warnings",
+        "--hide-missing-warnings",
+        "--hide-style-warnings",
         "hugo",
         inputFile,
         "-o",
@@ -26,8 +26,8 @@ class HugoCommandTest extends RunCommandSpecBase {
     "handle hugo from config" in {
       val args = Seq(
         "--verbose",
-        "--suppress-missing-warnings",
-        "--suppress-style-warnings",
+        "--hide-missing-warnings",
+        "--hide-style-warnings",
         "from",
         hugoConfig,
         "hugo"

@@ -5,7 +5,13 @@
  */
 
 package com.reactific.riddl.language
-import com.reactific.riddl.language.parsing.{FileParserInput, SourceParserInput, StringParserInput, URLParserInput}
+import com.reactific.riddl.language.parsing.{
+  FileParserInput,
+  SourceParserInput,
+  StringParserInput,
+  URLParserInput,
+  EmptyParserInput
+}
 import com.reactific.riddl.utils.Logger
 
 import scala.collection.mutable
@@ -116,38 +122,21 @@ object Messages {
       else comparison
     }
 
-    private def highlight(s: String, noHighlighting: Boolean = false): String = {
-      if noHighlighting then s
-      else
-        s"${kind match {
-            case Info           => s"${BLUE}"
-            case StyleWarning   => s"${YELLOW}"
-            case MissingWarning => s"${YELLOW}${UNDERLINED}"
-            case UsageWarning   => s"${YELLOW}${BOLD}"
-            case Warning        => s"${YELLOW}${BOLD}${UNDERLINED}"
-            case Error          => s"${RED}${BOLD}"
-            case SevereError    => s"${RED_B}${BLACK}${BOLD}"
-          }}$s${RESET}"
-    }
-
-    def format: String = { format(false) }
-
-    def format(noHighlighting: Boolean = false): String = {
-      val ctxt =
-        if context.nonEmpty then { s"${nl}Context: $context" }
-        else ""
+    def format: String = {
+      val ctxt = if context.nonEmpty then { s"${nl}Context: $context" }
+      else ""
       val source = loc.source match {
-        case FileParserInput(file) =>
-          val path = file.getAbsolutePath
+        case fpi: FileParserInput =>
+          val path = fpi.file.getAbsolutePath
           val index = path.lastIndexOf("riddl/")
           path.substring(index + 6)
-        case SourceParserInput(source, _) => source.descr
-        case StringParserInput(_, origin) => origin
-        case URLParserInput(url)          => url.toString
-        case _                            => "unknown"
+        case spi: SourceParserInput => spi.source.descr
+        case spi: StringParserInput => spi.origin
+        case upi: URLParserInput    => upi.url.toString
+        case epi: EmptyParserInput  => epi.origin
       }
       val sourceLine = loc.toShort
-      val headLine = s"${highlight(s"$kind: $source$sourceLine:", noHighlighting)}$nl"
+      val headLine = s"$kind: $source$sourceLine:$nl"
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
       if loc.isEmpty || source.isEmpty || errorLine.isEmpty then {
         s"$headLine$message$ctxt"
@@ -207,6 +196,7 @@ object Messages {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
     def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
+    def hasWarnings: Boolean = { msgs.nonEmpty && msgs.exists(_.kind < Error) }
     def justInfo: Messages = msgs.filter(_.isInfo)
     def justMissing: Messages = msgs.filter(_.isMissing)
     def justStyle: Messages = msgs.filter(_.isStyle)
@@ -232,18 +222,20 @@ object Messages {
     highestSeverity(list)
   }
 
-  def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
-    list.foreach { msg =>
-      msg.kind match {
-        case Info           => log.info(msg.format)
-        case StyleWarning   => log.warn(msg.format)
-        case MissingWarning => log.warn(msg.format)
-        case UsageWarning   => log.warn(msg.format)
-        case Warning        => log.warn(msg.format)
-        case Error          => log.error(msg.format)
-        case SevereError    => log.severe(msg.format)
-      }
+  def logMessage(message: Message, log: Logger): Unit = {
+    message.kind match {
+      case Info           => log.info(message.format)
+      case StyleWarning   => log.warn(message.format)
+      case MissingWarning => log.warn(message.format)
+      case UsageWarning   => log.warn(message.format)
+      case Warning        => log.warn(message.format)
+      case Error          => log.error(message.format)
+      case SevereError    => log.severe(message.format)
     }
+  }
+
+  def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
+    list.foreach { msg => logMessage(msg, log) }
   }
 
   def logMessagesByGroup(
@@ -254,15 +246,17 @@ object Messages {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])
       if messages.nonEmpty then {
-        log.info(s"""$kind Message Count: ${messages.length}""")
-        messages.map(_.format).foreach { message =>
-          kind match {
-            case Info        => log.info(message)
-            case SevereError => log.severe(message)
-            case Error       => log.error(message)
-            case _           => log.warn(message)
-          }
+        kind match {
+          case Error =>
+            log.error(s"""$kind Message Count: ${messages.length}""")
+          case SevereError =>
+            log.severe(s"""$kind Message Count: ${messages.length}""")
+          case Info =>
+            log.info(s"""$kind Message Count: ${messages.length}""")
+          case _ => // everything else is a warning
+            log.warn(s"""$kind Message Count: ${messages.length}""")
         }
+        messages.foreach { (msg: Message) => logMessage(msg, log) }
       }
     }
     if messages.nonEmpty then {
@@ -297,21 +291,16 @@ object Messages {
 
     def add(msg: Message): this.type = {
       msg.kind match {
-        case Warning => 
-          if commonOptions.showWarnings then
-            msgs.append(msg)
+        case Warning =>
+          if commonOptions.showWarnings then msgs.append(msg)
         case StyleWarning =>
-          if commonOptions.showStyleWarnings && commonOptions.showWarnings then
-            msgs.append(msg)
+          if commonOptions.showStyleWarnings && commonOptions.showWarnings then msgs.append(msg)
         case MissingWarning =>
-          if commonOptions.showMissingWarnings && commonOptions.showWarnings then
-            msgs.append(msg)
+          if commonOptions.showMissingWarnings && commonOptions.showWarnings then msgs.append(msg)
         case UsageWarning =>
-          if commonOptions.showUsageWarnings && commonOptions.showWarnings then
-            msgs.append(msg)
+          if commonOptions.showUsageWarnings && commonOptions.showWarnings then msgs.append(msg)
         case Info =>
-          if commonOptions.showInfoMessages then
-            msgs.append(msg)
+          if commonOptions.showInfoMessages then msgs.append(msg)
         case Error | SevereError => msgs.append(msg)
       }
       this

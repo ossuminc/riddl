@@ -149,20 +149,20 @@ class MessagesSpec extends AnyWordSpec with Matchers {
       val log = StringLogger()
       Messages.logMessages(mix, log, commonOptions)
       val content = log.toString()
-      val expected = """[34m[info] [0m[34mInfo: unknown(1:1):[0m
-                       |info
-                       |[33m[warning] [0m[33mStyle: unknown(1:1):[0m
-                       |style
-                       |[33m[warning] [0m[33m[4mMissing: unknown(1:1):[0m
-                       |missing
-                       |[33m[warning] [0m[33m[1mUsage: unknown(1:1):[0m
-                       |usage
-                       |[33m[warning] [0m[33m[1m[4mWarning: unknown(1:1):[0m
-                       |warning
-                       |[31m[error] [0m[31m[1mError: unknown(1:1):[0m
-                       |error
-                       |[41m[30m[severe] [0m[41m[30m[1mSevere: unknown(1:1):[0m
-                       |severe
+      val expected = """[34m[1m[info] Info: empty(1:1):[0m
+                       |[34minfo[0m
+                       |[33m[1m[warning] Style: empty(1:1):[0m
+                       |[33mstyle[0m
+                       |[33m[1m[warning] Missing: empty(1:1):[0m
+                       |[33mmissing[0m
+                       |[33m[1m[warning] Usage: empty(1:1):[0m
+                       |[33musage[0m
+                       |[33m[1m[warning] Warning: empty(1:1):[0m
+                       |[33mwarning[0m
+                       |[31m[1m[error] Error: empty(1:1):[0m
+                       |[31merror[0m
+                       |[41m[30m[1m[severe] Severe: empty(1:1):[0m
+                       |[41m[30msevere[0m
                        |""".stripMargin
       content mustBe expected
     }
@@ -172,24 +172,24 @@ class MessagesSpec extends AnyWordSpec with Matchers {
       Messages.logMessages(mix, log, commonOptions)
       val content = log.toString
       val expected =
-        """[34m[info] [0mSevere Message Count: 1
-          |[41m[30m[severe] [0m[41m[30m[1mSevere: unknown(1:1):[0m
-          |severe
-          |[34m[info] [0mError Message Count: 1
-          |[31m[error] [0m[31m[1mError: unknown(1:1):[0m
-          |error
-          |[34m[info] [0mUsage Message Count: 1
-          |[33m[warning] [0m[33m[1mUsage: unknown(1:1):[0m
-          |usage
-          |[34m[info] [0mMissing Message Count: 1
-          |[33m[warning] [0m[33m[4mMissing: unknown(1:1):[0m
-          |missing
-          |[34m[info] [0mStyle Message Count: 1
-          |[33m[warning] [0m[33mStyle: unknown(1:1):[0m
-          |style
-          |[34m[info] [0mInfo Message Count: 1
-          |[34m[info] [0m[34mInfo: unknown(1:1):[0m
-          |info
+        """[41m[30m[1m[severe] Severe Message Count: 1[0m
+          |[41m[30m[1m[severe] Severe: empty(1:1):[0m
+          |[41m[30msevere[0m
+          |[31m[1m[error] Error Message Count: 1[0m
+          |[31m[1m[error] Error: empty(1:1):[0m
+          |[31merror[0m
+          |[33m[1m[warning] Usage Message Count: 1[0m
+          |[33m[1m[warning] Usage: empty(1:1):[0m
+          |[33musage[0m
+          |[33m[1m[warning] Missing Message Count: 1[0m
+          |[33m[1m[warning] Missing: empty(1:1):[0m
+          |[33mmissing[0m
+          |[33m[1m[warning] Style Message Count: 1[0m
+          |[33m[1m[warning] Style: empty(1:1):[0m
+          |[33mstyle[0m
+          |[34m[1m[info] Info Message Count: 1[0m
+          |[34m[1m[info] Info: empty(1:1):[0m
+          |[34minfo[0m
           |""".stripMargin
       content mustBe expected
     }
@@ -198,7 +198,7 @@ class MessagesSpec extends AnyWordSpec with Matchers {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
       val content = msg.format
-      val expected = """[33m[1m[4mWarning: unknown(1:2):[0m
+      val expected = """Warning: empty(1:2):
                        |the_message""".stripMargin
       content mustBe expected
     }

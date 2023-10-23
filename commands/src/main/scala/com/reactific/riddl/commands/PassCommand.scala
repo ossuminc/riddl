@@ -49,16 +49,14 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
         case Right(root) =>
           val input: PassInput = PassInput(root, commonOptions)
           val passes = getPasses(log, commonOptions, options)
-          Pass(input, true, passes, log) match {
-            case Left(messages) => Left(messages)
-            case Right(result) =>
-              if commonOptions.debug then {
-                println("Errors after running validation:")
-                println(result.messages.format)
-              }
-          }
-          val output = PassesResult(input)
-          Right(output)
+          val result = Pass.runThesePasses(input, passes, log)
+          if result.messages.hasErrors then
+            Left(result.messages)
+          else
+            if commonOptions.debug then
+              println(s"Errors after running ${this.name}:")
+              println(result.messages.format)
+            Right(result)
       }
     }
   }

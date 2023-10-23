@@ -8,7 +8,7 @@ package com.reactific.riddl.passes.resolve
 
 import com.reactific.riddl.language.AST.{Entity, *}
 import com.reactific.riddl.language.{CommonOptions, Messages}
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 
@@ -23,21 +23,21 @@ case class ResolutionOutput(
 ) extends PassOutput {}
 
 object ResolutionPass extends PassInfo {
-  val name: String = "resolution"
+  val name: String = "Resolution"
 }
 
 /** The Reference Resolution Pass */
-case class ResolutionPass(input: PassInput) extends Pass(input) with UsageResolution {
+@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
+case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) with UsageResolution {
 
   override def name: String = ResolutionPass.name
 
   requires(SymbolsPass)
 
   val commonOptions: CommonOptions = input.commonOptions
-  val messages: Messages.Accumulator = Messages.Accumulator(input.commonOptions)
   val refMap: ReferenceMap = ReferenceMap(messages)
   val kindMap: KindMap = KindMap()
-  val symbols: SymbolsOutput = input.outputOf[SymbolsOutput](SymbolsPass.name)
+  val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
   override def result: ResolutionOutput =
     ResolutionOutput(messages.toMessages, refMap, kindMap, Usages(uses, usedBy))

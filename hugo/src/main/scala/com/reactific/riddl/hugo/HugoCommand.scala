@@ -9,9 +9,10 @@ package com.reactific.riddl.hugo
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.{CommandOptions, PassCommand, TranslatingOptions}
 import com.reactific.riddl.language.CommonOptions
+import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.Messages
 import com.reactific.riddl.passes.Pass.{PassesCreator, standardPasses}
-import com.reactific.riddl.passes.{PassInput, PassesResult}
+import com.reactific.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult}
 import com.reactific.riddl.utils.Logger
 import com.reactific.riddl.stats.StatsPass
 import pureconfig.ConfigCursor
@@ -42,7 +43,8 @@ object HugoCommand {
     withGlossary: Boolean = true,
     withTODOList: Boolean = true,
     withGraphicalTOC: Boolean = false,
-    withStatistics: Boolean = true
+    withStatistics: Boolean = true,
+    withMessageSummary: Boolean = true
   ) extends CommandOptions
       with TranslatingOptions {
     def command: String = "hugo"
@@ -59,16 +61,31 @@ object HugoCommand {
   }
 
   def getPasses(
-    log: Logger,
     commonOptions: CommonOptions,
     options: Options
   ): PassesCreator = {
-    standardPasses ++ Seq(
-      { (input: PassInput) => StatsPass(input) },
-      { (input: PassInput) =>
-        val result = PassesResult(input)
-        val state = HugoTranslatorState(result, options, commonOptions, log)
-        HugoPass(input, state)
+    val glossary: PassesCreator =
+      if options.withGlossary then
+        Seq({ (input: PassInput, outputs: PassesOutput) => GlossaryPass(input, outputs, options) })
+      else Seq.empty
+
+    val messages: PassesCreator =
+      if options.withMessageSummary then
+        Seq({ (input: PassInput, outputs: PassesOutput) => MessagesPass(input, outputs, options) })
+      else Seq.empty
+
+    val stats: PassesCreator =
+      if options.withStatistics then Seq({ (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) })
+      else Seq.empty
+
+    val toDo: PassesCreator =
+      if options.withTODOList then Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options)})
+      else Seq.empty
+
+    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ Seq(
+      { (input: PassInput, outputs: PassesOutput) =>
+        val result = PassesResult(input, outputs, Messages.empty)
+        HugoPass(input, outputs, options)
       }
     )
   }
@@ -267,7 +284,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
     commonOptions: CommonOptions,
     options: Options
   ): PassesCreator = {
-    HugoCommand.getPasses(log, commonOptions, options)
+    HugoCommand.getPasses(commonOptions, options)
   }
 
   override def replaceInputFile(

@@ -10,7 +10,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.{At, ParsingTest}
-import com.reactific.riddl.passes.{Pass, PassInput, Riddl}
+import com.reactific.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
 
 import java.nio.file.Path
 
@@ -20,7 +20,7 @@ class ValidationTest extends ParsingTest {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
       val content = msg.format
-      val expected = """[33m[1m[4mWarning: unknown(1:2):[0m
+      val expected = """Warning: empty(1:2):
                        |the_message""".stripMargin
       content mustBe expected
     }
@@ -38,14 +38,16 @@ class ValidationTest extends ParsingTest {
         val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
         val domain = Domain(At(), Identifier(At(), "foo"), types = aType :: Nil)
         val root = RootContainer(Seq(domain), Seq.empty)
-        val output = Pass.runSymbols(PassInput(root))
+        val outputs = PassesOutput()
+        val output = Pass.runSymbols(PassInput(root), outputs)
         output.parentOf(aType) mustBe Some(domain)
       }
       "not find the parent of a non-existent child" in {
         val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
         val domain = Domain(At(), Identifier(At(), "foo"), types = Nil)
         val root = RootContainer(Seq(domain), Seq.empty)
-        val output = Pass.runSymbols(PassInput(root))
+        val outputs = PassesOutput()
+        val output = Pass.runSymbols(PassInput(root), outputs)
         output.parentOf(aType) mustBe None
       }
     }
