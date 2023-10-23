@@ -8,6 +8,7 @@ package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.CommandOptions.optional
 import com.reactific.riddl.commands.{CommandOptions, PassCommand, TranslatingOptions}
+import com.reactific.riddl.diagrams.DiagramsPass
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.Messages
@@ -79,10 +80,14 @@ object HugoCommand {
       else Seq.empty
 
     val toDo: PassesCreator =
-      if options.withTODOList then Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options)})
+      if options.withTODOList then
+        Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options) })
       else Seq.empty
 
-    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ Seq(
+    val diagrams: PassesCreator =
+      Seq({ (input: PassInput, outputs: PassesOutput) => DiagramsPass(input, outputs) })
+
+    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ diagrams ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         val result = PassesResult(input, outputs, Messages.empty)
         HugoPass(input, outputs, options)
