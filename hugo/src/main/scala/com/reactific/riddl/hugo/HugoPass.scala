@@ -7,6 +7,7 @@
 package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.TranslatingState
+import com.reactific.riddl.diagrams.{DiagramsPass, DiagramsPassOutput}
 import com.reactific.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, SequenceDiagramSupport}
 import com.reactific.riddl.language.*
 import com.reactific.riddl.language.AST.{Include, *}
@@ -44,7 +45,9 @@ case class HugoPass(
   outputs: PassesOutput,
   options: HugoCommand.Options
 ) extends Pass(input, outputs)
- with PassUtilities with TranslatingState[MarkdownWriter] with SequenceDiagramSupport{
+    with PassUtilities
+    with TranslatingState[MarkdownWriter]
+    with SequenceDiagramSupport {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -63,24 +66,24 @@ case class HugoPass(
   lazy val commonOptions: CommonOptions = input.commonOptions
   lazy val refMap: ReferenceMap = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get.refMap
 
-  lazy val  symbolsOutput: SymbolsOutput = outputs.symbols
-  lazy val  usage: Usages = outputs.usage
-  lazy val passesResult = PassesResult(input,outputs)
+  lazy val symbolsOutput: SymbolsOutput = outputs.symbols
+  lazy val usage: Usages = outputs.usage
+  lazy val diagrams: DiagramsPassOutput =
+    outputs.outputOf[DiagramsPassOutput](DiagramsPass.name).getOrElse(DiagramsPassOutput())
+  lazy val passesResult: PassesResult = PassesResult(input, outputs)
 
   options.inputFile match {
     case Some(inFile) =>
       if Files.exists(inFile) then
         makeDirectoryStructure(options.inputFile)
         options
-      else
-        messages.addError((0,0), "The input-file does not exist")
+      else messages.addError((0, 0), "The input-file does not exist")
     case None =>
-      messages.addWarning((0,0),"The input-file option was not provided")
+      messages.addWarning((0, 0), "The input-file option was not provided")
   }
 
   private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
   writeConfigToml(options, maybeAuthor)
-
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -91,7 +94,6 @@ case class HugoPass(
     addFile(mdw)
     mdw
   }
-
 
   override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
@@ -126,10 +128,10 @@ case class HugoPass(
             }
           case h: Handler => mkd.emitHandler(h, parents)
           // These are all handled in emitHandler
-          case f: Function   => mkd.emitFunction(f, parents)
-          case e: Entity     => mkd.emitEntity(e, parents)
-          case c: Context    => mkd.emitContext(c, stack)
-          case d: Domain     =>
+          case f: Function => mkd.emitFunction(f, parents)
+          case e: Entity   => mkd.emitEntity(e, parents)
+          case c: Context  => mkd.emitContext(c, stack)
+          case d: Domain =>
             mkd.emitDomain(d, parents)
             makeMessageSummary(d)
 
@@ -139,14 +141,14 @@ case class HugoPass(
           case r: Repository => mkd.emitRepository(r, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
           case e: Epic       => mkd.emitEpic(e, stack)
-          case uc: UseCase   =>
+          case uc: UseCase =>
             mkd.emitUseCase(uc, stack, this)
 
-          case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause |
-               _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
-               _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
-               _: Include[Definition] @unchecked | _: Output | _: Input | _: Group =>
-            // All of these are handled above in their containers content contribution
+          case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Author |
+              _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica | _: Inlet |
+              _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
+              _: Include[Definition] @unchecked | _: Output | _: Input | _: Group =>
+          // All of these are handled above in their containers content contribution
         }
     }
   }
@@ -359,13 +361,11 @@ case class HugoPass(
     }
   }
 
-
   def makeSystemLandscapeView: Option[String] = {
     val mdp = new MermaidDiagramsPlugin
     val diagram = mdp.makeRootOverview(root)
     Some(diagram)
   }
-
 
   def close(root: RootContainer): Unit = {
     makeIndex(root)
@@ -374,8 +374,7 @@ case class HugoPass(
     makeStatistics()
     val files = writeFiles
     if commonOptions.verbose || commonOptions.debug then
-      for file <- files do
-        messages.info(s"Wrote file: ${file.getFileName}")
+      for file <- files do messages.info(s"Wrote file: ${file.getFileName}")
   }
 
   private def writeConfigToml(
