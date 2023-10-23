@@ -14,8 +14,8 @@ class HugoCommandTest extends RunCommandSpecBase  {
     "handle hugo" in {
       val args = Seq(
         "--quiet",
-        "--suppress-missing-warnings",
-        "--suppress-style-warnings",
+        "--hide-missing-warnings",
+        "--hide-style-warnings",
         "hugo",
         inputFile,
         "-o",
@@ -26,8 +26,8 @@ class HugoCommandTest extends RunCommandSpecBase  {
     "handle hugo from config" in {
       val args = Seq(
         "--verbose",
-        "--suppress-missing-warnings",
-        "--suppress-style-warnings",
+        "--hide-missing-warnings",
+        "--hide-style-warnings",
         "from",
         hugoConfig,
         "hugo"
