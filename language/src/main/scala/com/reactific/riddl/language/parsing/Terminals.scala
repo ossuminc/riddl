@@ -54,6 +54,7 @@ object Terminals {
     final val aggregate = "aggregate"
     final val async = "async"
     final val available = "available"
+    final val color = "color"
     final val concept = "concept"
     final val consistent = "consistent"
     final val device = "device"

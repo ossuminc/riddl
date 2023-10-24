@@ -9,6 +9,7 @@ package com.reactific.riddl.passes.validate
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
+import com.reactific.riddl.language.parsing.Terminals.Options
 import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
 import com.reactific.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -592,6 +593,17 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, c)
     checkOptions[ContextOption](c.options, c.loc)
+    c.options.find(_.name == Options.color) match
+      case Some(option) =>
+        check(option.args.size == 1, "The 'color' option must have a single value", Messages.Error, option.loc)
+        option.args.headOption match
+          case Some(value) =>
+            val regex = "^([a-z]+)|(#\\p{XDigit}{6})$".r
+            if !regex.matches(value.s) then
+              messages.addError(value.loc, "The value of the color option must be a valid HTML color")
+          case None =>
+            messages.addError(option.loc, "The color option requires a single value but none provided")
+      case None =>
     checkDescription(c)
   }
 

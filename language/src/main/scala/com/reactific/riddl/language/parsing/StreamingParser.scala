@@ -123,7 +123,7 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int = 0
   ): P[Streamlet] = {
     P(
-      location  ~ identifier ~ authorRefs ~ is ~ open ~
+      location ~ keyword ~ identifier ~ authorRefs ~ is ~ open ~
         streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
         close ~ briefly ~ description
     )./.map { case (loc, id, authors, options, definitions, brief, description) =>
@@ -162,15 +162,14 @@ private[parsing] trait StreamingParser {
   private val MaxStreamlets = 100
 
   def source[u: P]: P[Streamlet] = {
-    Keywords.source ~/ streamletTemplate(Keywords.source, minOutlets = 1, maxOutlets = 1)
+    streamletTemplate(Keywords.source, minOutlets = 1, maxOutlets = 1)
   }
 
   def sink[u: P]: P[Streamlet] = {
-    Keywords.sink ~/ streamletTemplate(Keywords.sink, minInlets = 1, maxInlets = 1)
+    streamletTemplate(Keywords.sink, minInlets = 1, maxInlets = 1)
   }
 
   def flow[u: P]: P[Streamlet] = {
-    Keywords.flow ~/
     streamletTemplate(
       Keywords.flow,
       minInlets = 1,
@@ -181,8 +180,7 @@ private[parsing] trait StreamingParser {
   }
 
   def split[u: P]: P[Streamlet] = {
-    Keywords.split ~/
-      streamletTemplate(
+    streamletTemplate(
       Keywords.split,
       minInlets = 1,
       maxInlets = 1,
@@ -192,8 +190,7 @@ private[parsing] trait StreamingParser {
   }
 
   def merge[u: P]: P[Streamlet] = {
-    Keywords.merge ~/
-      streamletTemplate(
+    streamletTemplate(
       Keywords.merge,
       minInlets = 2,
       maxInlets = MaxStreamlets,
@@ -203,8 +200,7 @@ private[parsing] trait StreamingParser {
   }
 
   def router[u: P]: P[Streamlet] = {
-    Keywords.router ~/
-      streamletTemplate(
+    streamletTemplate(
       Keywords.router,
       minInlets = 2,
       maxInlets = MaxStreamlets,
@@ -213,7 +209,7 @@ private[parsing] trait StreamingParser {
     )
   }
 
-  def void[u: P]: P[Streamlet] = { Keywords.void ~/ streamletTemplate(Keywords.void) }
+  def void[u: P]: P[Streamlet] = { streamletTemplate(Keywords.void) }
 
   def streamlet[u: P]: P[Streamlet] =
     P(source | flow | sink | merge | split | router | void)

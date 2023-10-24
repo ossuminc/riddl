@@ -32,7 +32,8 @@ private[parsing] trait ContextParser {
         Options.gateway,
         Options.service,
         Options.package_,
-        Options.technology
+        Options.technology,
+        Options.color
       ).!
     ) {
       case (loc, Options.wrapper, _)       => WrapperOption(loc)
@@ -40,6 +41,7 @@ private[parsing] trait ContextParser {
       case (loc, Options.service, _)       => ServiceOption(loc)
       case (loc, Options.package_, args)   => ContextPackageOption(loc, args)
       case (loc, Options.technology, args) => ContextTechnologyOption(loc, args)
+      case (loc, Options.color, args)      => ContextColorOption(loc, args)
     }
   }
 

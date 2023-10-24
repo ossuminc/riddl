@@ -1335,6 +1335,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
   case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
 
+  case class ContextColorOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("color")
+
   //////////////////////////////////////////////////////////////////// PROCESSOR
 
   sealed abstract class StreamletOption(val name: String) extends OptionValue

@@ -162,7 +162,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   ): P[(At, String, Seq[LiteralString])] = {
     P(
       location ~ validOptions ~
-        (Punctuation.roundOpen ~ literalString.rep(0, P(Punctuation.comma)) ~
+        (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~
           Punctuation.roundClose).?
     ).map {
       case (loc, opt, Some(maybeArgs)) => (loc, opt, maybeArgs)
