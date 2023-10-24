@@ -17,8 +17,6 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.annotation.unused
 import scala.collection.mutable
-import scala.reflect.ClassTag
-import scala.reflect.classTag
 import scala.util.control.NonFatal
 
 /** Information a pass must provide, basically its name
@@ -268,10 +266,10 @@ abstract class CollectingPassOutput[T](
   * @tparam F
   *   The element type of the collected values
   */
-abstract class CollectingPass[F : ClassTag](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
+abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   // not required in this kind of pass, final override it
-  override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
+  override final def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = ()
 
   /** The processing method called at each node, similar to [[Pass.process]] but modified to return an
     *
@@ -282,28 +280,16 @@ abstract class CollectingPass[F : ClassTag](input: PassInput, outputs: PassesOut
     * @return
     *   One of the collected values, an [[F]]
     */
-  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Option[F]
+  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Seq[F]
 
   @SuppressWarnings(Array("org.wartremover.warts.Var"))
   protected var collectedValues: Seq[F] = Seq.empty[F]
 
   override def result: CollectingPassOutput[F]
 
-  private val coc = classTag[F].runtimeClass
-
   override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    val collectable = collect(definition, parents)
-    collectable match {
-      case Some(collected)  =>
-        if coc == collected.getClass then
-          collectedValues = collectedValues.appended(collected.asInstanceOf[F])
-        else
-          val thisName = this.getClass.getSimpleName
-          messages.addSevere(At.empty,
-            s"$thisName.collect returned a ${collected.getClass.getSimpleName} instead ${coc.getSimpleName}"
-          )
-      case _ => ()
-    }
+    val collected = collect(definition, parents)
+    collectedValues = collectedValues ++ collected 
 
     if definition.hasDefinitions then {
       parents.push(definition)
@@ -395,7 +381,7 @@ object Pass {
   }
 
   def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass): OUT = {
-    val output: OUT = Pass.runOnePass(input.root, input.commonOptions,pass).asInstanceOf[OUT]
+    val output: OUT = Pass.runOnePass(input.root, input.commonOptions, pass).asInstanceOf[OUT]
     outputs.outputIs(pass.name, output)
     output
   }

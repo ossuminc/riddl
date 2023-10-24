@@ -16,8 +16,7 @@ class ToDoPassListTest extends ValidatingTest {
         else
           val pass = new ToDoListPass(pr.input, pr.outputs, HugoCommand.Options())
           val output: ToDoListOutput = Pass.runPass[ToDoListOutput](pr.input, pr.outputs, pass)
-          output.map.size must be(1)
-          output.map.head._2.size must be(63)
+          output.collected.size must be(37)
       }
     }
   }

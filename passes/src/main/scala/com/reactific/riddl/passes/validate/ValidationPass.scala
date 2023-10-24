@@ -10,12 +10,23 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import com.reactific.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
 import com.reactific.riddl.language.parsing.Terminals.Options
-import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
+import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.reactific.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 
 import scala.collection.mutable
+
+
+/** The output of the Validation Pass */
+case class ValidationOutput(
+  messages: Messages.Messages = Messages.empty,
+  inlets: Seq[Inlet] = Seq.empty[Inlet],
+  outlets: Seq[Outlet] = Seq.empty[Outlet],
+  connectors: Seq[Connector] = Seq.empty[Connector],
+  streamlets: Seq[Streamlet] = Seq.empty[Streamlet],
+  processors: Seq[Processor[?,?]] = Seq.empty[Processor[?,?]]
+) extends PassOutput
 
 object ValidationPass extends PassInfo {
   val name: String = "Validation"
@@ -47,7 +58,7 @@ case class ValidationPass(
     *   an instance of the output type
     */
   override def result: ValidationOutput = {
-    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets)
+    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets, resolution.kindMap.definitionsOfKind[Processor[?,?]])
   }
 
   def postProcess(root: RootContainer): Unit = {

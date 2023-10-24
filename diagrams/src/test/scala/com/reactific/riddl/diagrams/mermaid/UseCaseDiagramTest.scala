@@ -6,15 +6,15 @@ import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.testkit.ValidatingTest
 
-class SequenceDiagramTest extends ValidatingTest {
+class UseCaseDiagramTest extends ValidatingTest {
 
-  case class SDS(passesResult: PassesResult) extends SequenceDiagramSupport {
+  case class SDS(passesResult: PassesResult) extends UseCaseeDiagramSupport {
     def makeLinkFor(definition: Definition): String = {
       s"https://example.com/${definition.kind}/${definition.id.value}"
     }
   }
 
-  "SequenceDiagram" must {
+  "UseCaseDiagram" must {
     "handle a simple use case" in {
       val input = RiddlParserInput(
         """
@@ -40,7 +40,7 @@ class SequenceDiagramTest extends ValidatingTest {
           val domain = root.domains.head
           val epic = domain.epics.head
           val useCase = epic.cases.head
-          val sd = SequenceDiagram(new SDS(result), useCase)
+          val sd = UseCaseDiagram(new SDS(result), useCase)
           val diagram = sd.generate
           println(diagram.mkString("\n"))
           diagram mustNot be(empty)

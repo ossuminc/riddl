@@ -1,3 +1,9 @@
+/*
+ * Copyright 2023 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.diagrams
 
 import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
@@ -5,7 +11,17 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages
 import scala.collection.mutable
 
+/** The information needed to generate a Data Flow Diagram. DFDs are generated
+  * for each [[Context]] and consist of the streaming components that that
+  * are connected.
+  *
+  */
 case class DataFlowDiagramData()
+
+/** The information needed to generate a Use Case Diagram. The diagram for a
+  * use case is very similar to a Sequence Diagram showing the interactions
+  * between involved components of the model.
+  */
 case class UseCaseDiagramData()
 case class ContextDiagramData()
 

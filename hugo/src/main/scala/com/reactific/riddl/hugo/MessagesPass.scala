@@ -62,7 +62,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
   def name: String = MessagesPass.name
 
-  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Option[MessageInfo] = {
+  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Seq[MessageInfo] = {
     definition match {
       case t: Type =>
         val result = t.typ match {
@@ -81,13 +81,13 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
             val lines: Option[Seq[String]] = t.description.map(_.lines.map(_.s))
             val description = lines.getOrElse(Seq("No description provided.")).mkString(newline)
             val mi = MessageInfo(aucte.usecase, t, definedIn, breadcrumbs, userLinks, description)
-            Some(mi)
+            Seq(mi)
           case _ =>
-            Option.empty[MessageInfo]
+            Seq.empty[MessageInfo]
         }
         result
       case _ =>
-        None
+        Seq.empty[MessageInfo]
     }
   }
 

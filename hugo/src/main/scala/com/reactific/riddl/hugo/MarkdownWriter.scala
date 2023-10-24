@@ -5,7 +5,7 @@
  */
 
 package com.reactific.riddl.hugo
-import com.reactific.riddl.diagrams.mermaid.{EntityRelationshipDiagram, SequenceDiagram, SequenceDiagramSupport}
+import com.reactific.riddl.diagrams.mermaid.{EntityRelationshipDiagram, UseCaseDiagram, UseCaseeDiagramSupport}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.stats.{KindStats, StatsOutput, StatsPass}
@@ -173,6 +173,8 @@ case class MarkdownWriter(
 
     for item <- items do {
       item match {
+        case body: String    => sb.append(s"* $body\n")
+        case rnod: RiddlNode => sb.append(s"* ${rnod.format}")
         case (
               prefix: String,
               description: String,
@@ -203,8 +205,6 @@ case class MarkdownWriter(
         case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
           docBlock.foreach(s => sb.append(s"    * $s\n"))
-        case body: String    => sb.append(s"* $body\n")
-        case rnod: RiddlNode => sb.append(s"* ${rnod.format}")
         case x: Any          => sb.append(s"* ${x.toString}\n")
       }
     }
@@ -872,12 +872,12 @@ case class MarkdownWriter(
     emitDefDoc(u, parents)
   }
 
-  def emitUseCase(uc: UseCase, parents: Seq[Definition], sds: SequenceDiagramSupport): this.type = {
+  def emitUseCase(uc: UseCase, parents: Seq[Definition], sds: UseCaseeDiagramSupport): this.type = {
     leafHead(uc, weight = 20)
     val parList = passUtilities.makeStringParents(parents)
     emitDefDoc(uc, parList)
     h2("Sequence Diagram")
-    val sd = SequenceDiagram(sds, uc)
+    val sd = UseCaseDiagram(sds, uc)
     val lines = sd.generate
     emitMermaidDiagram(lines)
   }
@@ -984,7 +984,7 @@ case class MarkdownWriter(
     val source_link = makeIconLink("gdoc_github", "Source Link", entry.sourceLink)
     val term = s"[${mono(entry.term)}](${entry.link})$source_link"
     val concept_link =
-      s"[<small>${entry.kind.toLowerCase}</small>](https://riddl.tech/concepts/${entry.kind.toLowerCase}/)"
+      s"<small>[${entry.kind.toLowerCase}](https://riddl.tech/concepts/${entry.kind.toLowerCase}/)</small>"
     emitTableRow(term, concept_link, entry.brief)
   }
 
@@ -1000,16 +1000,21 @@ case class MarkdownWriter(
     this
   }
 
-  def emitToDoList(weight: Int, map: Map[String, Seq[ToDoItem]]): Unit = {
+  def emitToDoList(weight: Int, items:  Seq[ToDoItem]): Unit = {
     fileHead(
       "To Do List",
       weight,
       Option("A list of definitions needing more work")
     )
     h2("Definitions With Missing Content")
-    for (key, items) <- map do {
-      h3(key)
-      list(items.toSeq)
+    for { (author, info) <- items.groupBy(_.author) } do {
+      h3(author)
+      emitTableHead(Seq(
+        "Item Name" -> 'C',
+        "Path To Item" -> 'C'
+      ))
+      for { item <- info.map{ item => item.item ->  s"[${item.path}](${item.link})" } } do
+        emitTableRow(item._1, item._2)
     }
   }
 
@@ -1035,15 +1040,16 @@ case class MarkdownWriter(
     )
     val total_stats: KindStats = stats.categories.getOrElse("All", KindStats())
     stats.categories.foreach { case (key, s) =>
+      val percentOfAll = s.percent_of_all(total_stats.count)
       emitTableRow(
         key,
         s.count.toString,
-        s.percent_of_all(total_stats.count).toString,
-        s.percent_documented.toString,
-        s.numEmpty.toString,
-        s.completeness.toString,
-        s.complexity.toString,
-        s.averageContainment.toString
+        f"$percentOfAll%3.1f",
+        f"${s.percent_documented}%3.1f",
+        f"${s.numEmpty}%d",
+        f"${s.completeness}%3.1f",
+        f"${s.complexity}%3.1f",
+        f"${s.averageContainment}%3.1f"
       )
     }
     this

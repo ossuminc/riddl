@@ -1,3 +1,9 @@
+/*
+ * Copyright 2023 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.reactific.riddl.stats
 
 import com.reactific.riddl.language.{AST, Messages}
@@ -115,7 +121,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       .sum[Long]
   }
 
-  protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Option[DefinitionStats] = {
+  protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Seq[DefinitionStats] = {
     if parents.size >= maximum_depth then maximum_depth = parents.size + 1
 
     val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
@@ -125,7 +131,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     }
     val specs: Int = specificationsFor(definition)
     val completes: Int = completedCount(definition)
-    Some(
+    Seq(
       DefinitionStats(
         kind = definition.kind,
         isEmpty = definition.isEmpty,

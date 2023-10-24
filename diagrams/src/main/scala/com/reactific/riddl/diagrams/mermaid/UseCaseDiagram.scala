@@ -12,10 +12,10 @@ import com.reactific.riddl.utils.FileBuilder
 
 import scala.reflect.ClassTag
 
-/** A trait to be implemented by the user of SequenceDiagram that provides information that can only be provided from
-  * outside SequenceDiagram itself. Note that the PassesResult from running the standard passes is required.
+/** A trait to be implemented by the user of UseCaseDiagram that provides information that can only be provided from
+  * outside UseCaseDiagram itself. Note that the PassesResult from running the standard passes is required.
   */
-trait SequenceDiagramSupport {
+trait UseCaseeDiagramSupport {
   def passesResult: PassesResult
   def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition): Option[T] = {
     passesResult.refMap.definitionOf[T](pathId, parent)
@@ -23,18 +23,16 @@ trait SequenceDiagramSupport {
   def makeDocLink(definition: Definition): String
 }
 
-/** A class to generate the sequence diagrams for an Epic
+/** A class to generate the sequence diagrams for an Epic's Use Case
   * @param sds
-  *   The SequenceDiagramSupport implementation that provides information for the SequenceDiagram
-  * @param epic
-  *   The epic from which to draw use cases instances and convert into sequence diagrams
-  * @param parents
-  *   The parents of the epic within the model
+  *   The UseCaseeDiagramSupport implementation that provides information for the UseCaseDiagram
+  * @param useCase
+  *   The UseCase from the AST to which this diagram applies
   */
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extends FileBuilder {
+case class UseCaseDiagram(sds: UseCaseeDiagramSupport, useCase: UseCase) extends FileBuilder {
 
-  final val indent_per_level = 4
+  private final val indent_per_level = 4
 
   def generate: Seq[String] = {
     sb.append("sequenceDiagram"); nl
@@ -46,7 +44,7 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
     sb.toString().split('\n').toSeq
   }
 
-  def actorsFirst(a: (String, Definition), b: (String, Definition)): Boolean = {
+  private def actorsFirst(a: (String, Definition), b: (String, Definition)): Boolean = {
     a._2 match
       case _: User if b._2.isInstanceOf[User]       => a._1 < b._1
       case _: User                                  => true
@@ -76,7 +74,7 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       .toMap
   }
 
-  def ndnt(width: Int = indent_per_level): String = {
+  private def ndnt(width: Int = indent_per_level): String = {
     " ".repeat(width)
   }
 
