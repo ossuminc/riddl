@@ -362,9 +362,11 @@ case class HugoPass(
       Timer.time("Make Messages Summary") {
         outputs.outputOf[MessageOutput](MessagesPass.name) match {
           case Some(mo) =>
-            val fname = forDomain.id.value + "-messages.md"
-            val infos = mo.collected.filter(_.definedIn.contains(forDomain.id.value))
-            val mdw = addFile(Seq(forDomain.id.value), fname)
+            val fileName = s"${forDomain.id.value}-messages.md"
+            val infos = mo.collected.filter(_.link.contains(forDomain.id.value.toLowerCase))
+            val mdw = {
+              addFile(Seq(forDomain.id.value), fileName)
+            }
             mdw.emitMessageSummary(forDomain, infos)
             Some(mdw)
           case None =>

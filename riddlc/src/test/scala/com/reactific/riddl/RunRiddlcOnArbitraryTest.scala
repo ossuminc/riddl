@@ -38,11 +38,11 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
 
   "riddlc" should {
     "validate FooBarTwoDomains" in {
-      val cwd = "/Users/reid/Code/reactific/reactific-examples"
+      val cwd = "/Users/reid/Code/reactific/riddl-examples"
       val config = "src/riddl/FooBarSuccess/FooBar.conf"
       validateLocalProject(cwd, config, "validate")
     }
-    "validate OffTheTop" in {
+    "run hugo on OffTheTop" in {
       val cwd = "/Users/reid/Code/Improving/OffTheTop"
       val config = "design/src/main/riddl/OffTheTop.conf"
       validateLocalProject(cwd, config, "hugo")

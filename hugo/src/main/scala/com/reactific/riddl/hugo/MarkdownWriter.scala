@@ -1068,9 +1068,7 @@ case class MarkdownWriter(
     )
     emitTableHead(
       Seq(
-        "Kind" -> 'L',
         "Name" -> 'C',
-        "Breadcrumb" -> 'L',
         "Users" -> 'C',
         "Description" -> 'L'
       )
@@ -1080,9 +1078,7 @@ case class MarkdownWriter(
       message <- messages
     } do {
       emitTableRow(
-        message.kind.kind,
-        message.message.id.value,
-        message.breadcrumbs,
+        message.message,
         message.users,
         message.description
       )
