@@ -19,12 +19,12 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
   //  it to pass when run from GitHub workflow. Beware of false positives
   //  when using it to test locally.
 
-  def validateLocalProject(cwd: String, config: String): Assertion = {
+  def validateLocalProject(cwd: String, config: String, cmd: String): Assertion = {
     if Files.isDirectory(Path.of(cwd)) then {
       val fullPath = Path.of(cwd, config)
       info(s"config path is: ${fullPath.toAbsolutePath.toString}")
       if Files.isReadable(fullPath) then {
-        val args = Seq("--show-times", "from", fullPath.toString, "validate")
+        val args = Seq("--show-times", "from", fullPath.toString, cmd)
         runWith(args)
       } else {
         info(s"Skipping unreadable $fullPath")
@@ -40,18 +40,18 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
     "validate FooBarTwoDomains" in {
       val cwd = "/Users/reid/Code/reactific/reactific-examples"
       val config = "src/riddl/FooBarSuccess/FooBar.conf"
-      validateLocalProject(cwd, config)
+      validateLocalProject(cwd, config, "validate")
     }
     "validate OffTheTop" in {
       val cwd = "/Users/reid/Code/Improving/OffTheTop"
       val config = "design/src/main/riddl/OffTheTop.conf"
-      validateLocalProject(cwd, config)
+      validateLocalProject(cwd, config, "hugo")
     }
     // FIXME: Fix Improving.app syntax and renable
     // "validate Improving.app" in {
     //   val cwd = "/Users/reid/Code/improving.app/riddl"
     //   val config = "src/main/riddl/ImprovingApp.conf"
-    //   validateLocalProject(cwd, config)
+    //   validateLocalProject(cwd, config, "hugo)
     //   pending
     // }
   }

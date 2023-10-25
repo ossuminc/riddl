@@ -657,7 +657,7 @@ case class MarkdownWriter(
     this
   }
 
-  def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
+  def emitDomain(domain: Domain, parents: Seq[String], summary: Option[String]): this.type = {
     containerHead(domain, "Domain")
     emitDefDoc(domain, parents)
     toc("Subdomains", mkTocSeq(domain.domains))
@@ -665,6 +665,11 @@ case class MarkdownWriter(
     toc("Applications", mkTocSeq(domain.applications))
     toc("Epics", mkTocSeq(domain.epics))
     emitTypesToc(domain)
+    summary match {
+      case Some(link) =>
+        h3(s"[Message Summary]($link)")
+      case None =>
+    }
     emitUsage(domain)
     emitTerms(domain.terms)
     emitAuthorInfo(domain.authorDefs)

@@ -7,7 +7,7 @@
 package com.reactific.riddl.commands
 
 import com.reactific.riddl.language.AST.*
-import com.reactific.riddl.utils.OutputFile
+import com.reactific.riddl.utils.{OutputFile, Timer}
 
 import java.nio.file.Path
 import scala.collection.mutable
@@ -37,12 +37,15 @@ trait TranslatingState[OF <: OutputFile] {
     path.resolve(nm)
   }
 
-  def writeFiles: Seq[Path] = {
-    files.foreach(_.write())
-    files.map(_.filePath).toSeq
+  def writeFiles(timeEach: Boolean): Unit = {
+    files.foreach { (file: OF) =>
+      Timer.time(s"Writing file: ${file.filePath}", timeEach) {
+        file.write()
+      }
+    }
   }
 
-  def addFile(file: OF): this.type = {files.append(file); this}
+  def addFile(file: OF): this.type = { files.append(file); this }
 
   def makeDefPath(
     definition: Definition,
@@ -63,16 +66,13 @@ object TranslationCommand {
   }
 }
 
-/** An abstract base class for translation style commands. That is, they
- * translate an input file into an output directory of files.
- *
- * @param name
- * The name of the command to pass to [[CommandPlugin]]
- * @tparam OPT
- * The option type for the command
- */
-abstract class TranslationCommand[OPT <: TranslationCommand.Options : ClassTag](name: String)
-  extends PassCommand[OPT](name) {
-
-
-}
+/** An abstract base class for translation style commands. That is, they translate an input file into an output
+  * directory of files.
+  *
+  * @param name
+  *   The name of the command to pass to [[CommandPlugin]]
+  * @tparam OPT
+  *   The option type for the command
+  */
+abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](name: String)
+    extends PassCommand[OPT](name) {}
