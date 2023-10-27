@@ -1,0 +1,10 @@
+domain foo {
+  context A { ??? }
+  context B { ??? }
+}
+
+domain bar {
+  context C { ??? }
+  context D { ??? }
+  context E { ??? }
+}

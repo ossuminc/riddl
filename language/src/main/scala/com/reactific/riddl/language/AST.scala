@@ -373,9 +373,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
-  // We need "Expression" sealed trait from Expression.scala but it
-  // depends on TypeExpression.scala so we make Expression derive from
-  // this forward declaration so we can use it here.
+  /** ANy definition that is part of a Type's Definition */
   sealed trait TypeDefinition extends Definition
 
   sealed trait AggregateDefinition extends TypeDefinition {
