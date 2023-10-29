@@ -6,12 +6,9 @@
 
 package com.reactific.riddl.hugo
 
-import com.reactific.riddl.hugo.{GlossaryEntry, HugoCommand, HugoOutput, MarkdownWriter}
-import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.AST.RootContainer
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.passes.{Pass, PassInput, PassesResult}
-import com.reactific.riddl.passes.validate.ValidatingTest
+import com.reactific.riddl.passes.PassesResult
 
 import java.io.PrintWriter
 import java.io.StringWriter
