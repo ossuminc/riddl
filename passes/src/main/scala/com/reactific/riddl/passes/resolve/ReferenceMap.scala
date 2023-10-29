@@ -53,7 +53,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
       case None => Option.empty[T]
       case Some((key, definition)) =>
         val klass = classTag[T].runtimeClass
-        if key.in.getClass == klass then Some(key.in.asInstanceOf[T]) else Option.empty[T]
+        if definition.getClass == klass then Some(definition.asInstanceOf[T]) else Option.empty[T]
   }
 
   def definitionOf[T <: Definition: ClassTag](pid: PathIdentifier, parent: Definition): Option[T] = {

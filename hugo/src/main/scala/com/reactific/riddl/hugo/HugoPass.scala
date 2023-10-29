@@ -145,7 +145,7 @@ case class HugoPass(
           case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause |
                _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
                _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
-               _: Include[Definition] @unchecked | _: Output | _: Input | _: Group =>
+               _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup =>
             // All of these are handled above in their containers content contribution
         }
     }

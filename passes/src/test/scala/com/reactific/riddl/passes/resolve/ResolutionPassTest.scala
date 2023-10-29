@@ -404,9 +404,12 @@ class ResolutionPassTest extends ResolvingTest {
       )
       parseAndResolve(rpi) {
         (pi: PassInput, po: PassesOutput) =>
+          val app: Application = pi.root.domains.head.applications.head
+          val contained: Group = app.groups.head
+          val container: Group = app.groups(1)
           po.refMap.definitionOf[Group]("contained") match
-            case Some(grp: Group) =>
-              grp.elements.exists(_.isInstanceOf[ContainedGroup]) mustBe true
+            case Some(group: Group) =>
+              group mustBe contained
             case _ =>
               fail("contained group not found")
       }()
