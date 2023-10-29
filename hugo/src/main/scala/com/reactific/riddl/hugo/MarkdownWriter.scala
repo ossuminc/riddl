@@ -1014,11 +1014,13 @@ case class MarkdownWriter(
     h2("Definitions With Missing Content")
     for { (author, info) <- items.groupBy(_.author) } do {
       h3(author)
-      emitTableHead(Seq(
-        "Item Name" -> 'C',
-        "Path To Item" -> 'C'
-      ))
-      for { item <- info.map{ item => item.item ->  s"[${item.path}](${item.link})" } } do
+      emitTableHead(
+        Seq(
+          "Item Name" -> 'C',
+          "Path To Item" -> 'C'
+        )
+      )
+      for { item <- info.map { item => item.item -> s"[${item.path}](${item.link})" } } do
         emitTableRow(item._1, item._2)
     }
   }
@@ -1064,7 +1066,7 @@ case class MarkdownWriter(
     fileHead(
       s"${domain.identify} Message Summary",
       containerWeight + 5,
-      Some(s"Message Summaryfor ${domain.identify}")
+      Some(s"Message Summary for ${domain.identify}")
     )
     emitTableHead(
       Seq(
