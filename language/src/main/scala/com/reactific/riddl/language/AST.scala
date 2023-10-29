@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.parsing.Terminals.{Keywords, Options, Predefined}
+import com.reactific.riddl.language.parsing.Terminals.{Keywords, Options, Predefined, Readability}
 
 import java.net.URL
 import java.nio.file.Path
@@ -3347,6 +3347,27 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
 
     /** Format the node to a string */
     override def format: String = s"group ${id.value}"
+  }
+
+  /** A Group contained within a group
+   *
+   * @param loc
+   * Location of the contained group
+   * @param id
+   * The name of the group contained
+   * @param group
+   * The contained group as a reference to that group
+   */
+  case class ContainedGroup(
+    loc: At,
+    id: Identifier,
+    group: GroupRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
+  ) extends LeafDefinition with GroupDefinition {
+    def kind: String = "ContainedGroup"
+
+    def format: String = s"contains ${id.format} ${Readability.as} ${group.format}"
   }
 
   /** A Reference to a Group
