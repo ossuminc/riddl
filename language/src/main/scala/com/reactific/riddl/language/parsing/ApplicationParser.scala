@@ -25,12 +25,26 @@ private[parsing] trait ApplicationParser {
       ApplicationTechnologyOption(loc, args)
     }
   }
+  //loc: At,
+  //    id: Identifier,
+  //    group: GroupRef,
+  //    brief: Option[LiteralString] = None,
+  //    description: Option[Description] = None
 
-  private def groupDefinitions[u: P]: P[Seq[GroupDefinition]] = {
-    P {
-      undefined(Seq.empty[GroupDefinition]) | (group | appOutput | appInput).rep(0)
+  private def containedGroup[u: P]: P[ContainedGroup] = {
+    P(
+      location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description
+    ).map {
+      case (at, identifier, ref, brief, description) =>
+        ContainedGroup(at, identifier, ref, brief, description)
     }
   }
+
+  private def groupDefinitions[u: P]: P[Seq[GroupDefinition]] =
+    P(
+      undefined(Seq.empty[GroupDefinition]) |
+        (group | containedGroup | appOutput | appInput).rep(0)
+    )
 
   private def group[u: P]: P[Group] = {
     P(

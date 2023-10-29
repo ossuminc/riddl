@@ -108,6 +108,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Type](in.putIn, parentsAsSeq)
       case out: Output =>
         resolveARef[Type](out.putOut, parentsAsSeq)
+      case cg: ContainedGroup =>
+        resolveARef[Group](cg.group, parentsAsSeq)
       case gi: GenericInteraction =>
         gi match {
           case ArbitraryInteraction(_, _, from, _, to, _, _) =>

@@ -134,6 +134,8 @@ case class ValidationPass(
         validateInput(in, parentsAsSeq)
       case out: Output =>
         validateOutput(out, parentsAsSeq)
+      case cg: ContainedGroup =>
+        validateContainedGroup(cg, parentsAsSeq)
       case i: Interaction   => validateInteraction(i, parentsAsSeq)
       case _: RootContainer => ()
 
@@ -658,6 +660,15 @@ case class ValidationPass(
     checkDefinition(parents, out)
     checkTypeRef(out.putOut, out, parents)
     checkDescription(out)
+  }
+
+  private def validateContainedGroup(
+    containedGroup: ContainedGroup,
+    parents: Seq[Definition]
+  ): Unit = {
+    checkDefinition(parents, containedGroup)
+    checkRef[Group](containedGroup.group, containedGroup, parents)
+    checkDescription(containedGroup)
   }
 
   private def validateUser(

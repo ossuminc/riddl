@@ -3,6 +3,7 @@ package com.reactific.riddl.passes.resolve
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.parsing.RiddlParserInput
 import com.reactific.riddl.language.{At, CommonOptions, Messages}
+import com.reactific.riddl.passes.{PassInput, PassesOutput}
 
 import java.nio.file.Path
 
@@ -390,6 +391,25 @@ class ResolutionPassTest extends ResolvingTest {
                                           |}
                                           |""".stripMargin)
       parseAndResolve(rpi)()()
+    }
+    "groups contain groups" in {
+      val rpi = RiddlParserInput(
+        """domain foo {
+          |  application app {
+          |    group contained { ??? }
+          |    group container { contains member as group contained }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      parseAndResolve(rpi) {
+        (pi: PassInput, po: PassesOutput) =>
+          po.refMap.definitionOf[Group]("contained") match
+            case Some(grp: Group) =>
+              grp.elements.exists(_.isInstanceOf[ContainedGroup]) mustBe true
+            case _ =>
+              fail("contained group not found")
+      }()
     }
   }
 }
