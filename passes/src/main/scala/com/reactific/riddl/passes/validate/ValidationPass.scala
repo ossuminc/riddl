@@ -749,7 +749,7 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isAppRelated =>
             d match {
-              case output @ Output(loc, alias, id, putOut, _, _, _) =>
+              case output@Output(loc, _, id, _, putOut, _, _, _) =>
                 checkTypeRef(putOut, parents.head, parents.tail) match {
                   case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
                     typEx match {
@@ -775,7 +775,7 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isVital =>
             o match {
-              case input @ Input(loc, alias, id, putIn, _, _, _) =>
+              case input@Input(loc, _, id, _, putIn, _, _, _) =>
                 checkTypeRef(putIn, parents.head, parents.tail) match {
                   case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
                     typEx match {

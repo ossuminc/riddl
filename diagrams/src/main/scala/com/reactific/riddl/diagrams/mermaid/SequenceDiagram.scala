@@ -85,8 +85,8 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       val name = part.id.value
       part match
         case u: User       => sb.append(s"${ndnt()}actor $name as ${u.is_a.s}")
-        case i: Input      => sb.append(s"${ndnt()}participant $name as ${i.alias} ${i.id.value}")
-        case o: Output     => sb.append(s"${ndnt()}participant $name as ${o.alias} ${o.id.value}")
+        case i: Input => sb.append(s"${ndnt()}participant $name as ${i.nounAlias} ${i.id.value}")
+        case o: Output => sb.append(s"${ndnt()}participant $name as ${o.nounAlias} ${o.id.value}")
         case g: Group      => sb.append(s"${ndnt()}participant $name as ${g.alias} ${g.id.value}")
         case d: Definition => sb.append(s"${ndnt()}participant $name as ${d.identify}")
       nl
@@ -96,8 +96,8 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       val link = sds.makeDocLink(part)
       part match
         case _: User       => sb.append(s"${ndnt()}link $name: User @ $link")
-        case i: Input      => sb.append(s"${ndnt()}link $name: ${i.alias} @ $link")
-        case o: Output     => sb.append(s"${ndnt()}link $name: ${o.alias} @ $link")
+        case i: Input => sb.append(s"${ndnt()}link $name: ${i.nounAlias} @ $link")
+        case o: Output => sb.append(s"${ndnt()}link $name: ${o.nounAlias} @ $link")
         case g: Group      => sb.append(s"${ndnt()}link $name: ${g.alias} @ $link")
         case d: Definition => sb.append(s"${ndnt()}link $name: ${d.kind} @ $link")
       nl
