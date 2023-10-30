@@ -25,12 +25,26 @@ private[parsing] trait ApplicationParser {
       ApplicationTechnologyOption(loc, args)
     }
   }
+  //loc: At,
+  //    id: Identifier,
+  //    group: GroupRef,
+  //    brief: Option[LiteralString] = None,
+  //    description: Option[Description] = None
 
-  private def groupDefinitions[u: P]: P[Seq[GroupDefinition]] = {
-    P {
-      undefined(Seq.empty[GroupDefinition]) | (group | appOutput | appInput).rep(0)
+  private def containedGroup[u: P]: P[ContainedGroup] = {
+    P(
+      location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description
+    ).map {
+      case (at, identifier, ref, brief, description) =>
+        ContainedGroup(at, identifier, ref, brief, description)
     }
   }
+
+  private def groupDefinitions[u: P]: P[Seq[GroupDefinition]] =
+    P(
+      undefined(Seq.empty[GroupDefinition]) |
+        (group | containedGroup | appOutput | appInput).rep(0)
+    )
 
   private def group[u: P]: P[Group] = {
     P(
@@ -42,8 +56,8 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-  private def presentationAliases[u: P]: P[Unit] = {
-    StringIn(Keywords.presents, "shows", "displays", "writes", "emits")
+  private def presentationAliases[u: P]: P[String] = {
+    StringIn("presents", "shows", "displays", "writes", "emits").!
   }
 
   private def outputDefinitions[u: P]: P[Seq[OutputDefinition]] = {
@@ -55,12 +69,13 @@ private[parsing] trait ApplicationParser {
     }
   }
 
+
   private def appOutput[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/ typeRef ~
         outputDefinitions ~ briefly ~ description
-    ).map { case (loc, alias, id, putOut, outputs, brief, description) =>
-      Output(loc, alias, id, putOut, outputs, brief, description)
+    ).map { case (loc, nounAlias, id, verbAlias, putOut, outputs, brief, description) =>
+      Output(loc, nounAlias, id, verbAlias, putOut, outputs, brief, description)
     }
   }
 
@@ -75,16 +90,17 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-  private def acquisitionAliases[u: P]: P[Unit] = {
-    StringIn(Keywords.acquires, "reads", "takes", "accepts", "admits")
+  private def acquisitionAliases[u: P]: P[String] = {
+    StringIn("acquires", "reads", "takes", "accepts", "admits",
+      "initiates", "submits", "triggers", "activates", "starts").!
   }
 
   private def appInput[u: P]: P[Input] = {
     P(
       location ~ inputAliases ~/ identifier ~ acquisitionAliases ~ typeRef ~
         inputDefinitions ~ briefly ~ description
-    ).map { case (loc, alias, id, putIn, inputs, brief, description) =>
-      Input(loc, alias, id, putIn, inputs, brief, description)
+    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description) =>
+      Input(loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description)
     }
   }
 

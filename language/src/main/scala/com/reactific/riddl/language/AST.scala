@@ -7,7 +7,7 @@
 package com.reactific.riddl.language
 
 import com.reactific.riddl.language.parsing.RiddlParserInput
-import com.reactific.riddl.language.parsing.Terminals.{Keywords, Options, Predefined}
+import com.reactific.riddl.language.parsing.Terminals.{Keywords, Options, Predefined, Readability}
 
 import java.net.URL
 import java.nio.file.Path
@@ -3343,6 +3343,27 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     override def format: String = s"group ${id.value}"
   }
 
+  /** A Group contained within a group
+   *
+   * @param loc
+   * Location of the contained group
+   * @param id
+   * The name of the group contained
+   * @param group
+   * The contained group as a reference to that group
+   */
+  case class ContainedGroup(
+    loc: At,
+    id: Identifier,
+    group: GroupRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
+  ) extends LeafDefinition with GroupDefinition {
+    def kind: String = "ContainedGroup"
+
+    def format: String = s"contains ${id.format} ${Readability.as} ${group.format}"
+  }
+
   /** A Reference to a Group
     * @param loc
     *   The At locator of the group reference
@@ -3370,8 +3391,9 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     */
   case class Output(
     loc: At,
-    alias: String,
+    nounAlias: String,
     id: Identifier,
+    verbAlias: String,
     putOut: TypeRef,
     outputs: Seq[OutputDefinition] = Seq.empty[OutputDefinition],
     brief: Option[LiteralString] = None,
@@ -3379,13 +3401,13 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   ) extends ApplicationDefinition
       with OutputDefinition
       with GroupDefinition {
-    override def kind: String = "Output"
+    override def kind: String = if nounAlias.nonEmpty then nounAlias else "output"
     override def isAppRelated: Boolean = true
 
     override lazy val contents: Seq[OutputDefinition] = outputs
 
     /** Format the node to a string */
-    override def format: String = s"${if id.isEmpty then "inoutputput" else id.format} presents ${putOut.format}"
+    override def format: String = s"$kind $verbAlias ${putOut.format}"
   }
 
   /** A reference to an View using a path identifier
@@ -3414,8 +3436,9 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
     */
   case class Input(
     loc: At,
-    alias: String,
+    nounAlias: String,
     id: Identifier,
+    verbAlias: String,
     putIn: TypeRef,
     inputs: Seq[InputDefinition] = Seq.empty[InputDefinition],
     brief: Option[LiteralString] = None,
@@ -3423,13 +3446,15 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Op
   ) extends ApplicationDefinition
       with GroupDefinition
       with InputDefinition {
-    override def kind: String = "Input"
+    override def kind: String = if nounAlias.nonEmpty then nounAlias else "input"
     override def isAppRelated: Boolean = true
 
     override lazy val contents: Seq[Definition] = inputs
 
     /** Format the node to a string */
-    override def format: String = s"${if id.isEmpty then "input" else id.format} acquires ${putIn.format}"
+    override def format: String = {
+      s"$kind $verbAlias ${putIn.format}"
+    }
   }
 
   /** A reference to an Input using a path identifier

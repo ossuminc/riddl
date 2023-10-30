@@ -35,12 +35,13 @@ lazy val riddl = (project in file("."))
     language,
     passes,
     commands,
+    diagrams,
     testkit,
     prettify,
-    hugo,
-    doc,
     stats,
+    hugo,
     riddlc,
+    doc,
     plugin
   )
 
@@ -57,7 +58,7 @@ lazy val utils = project
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
 
-val Language: Configuration = config("language")
+val Language = config("language")
 lazy val language: Project = project
   .in(file("language"))
   .configure(C.withCoverage(65))
@@ -84,7 +85,6 @@ lazy val passes = project
   .dependsOn(language % "compile->compile;test->test")
 
 val Commands = config("commands")
-
 lazy val commands: Project = project
   .in(file("commands"))
   .configure(C.withScala3)
@@ -108,7 +108,7 @@ lazy val testkit: Project = project
   .settings(name := "riddl-testkit", libraryDependencies ++= Dep.testKitDeps)
   .dependsOn(commands % "compile->compile;test->test")
 
-val StatsTrans = config("stats")
+val Stats = config("stats")
 lazy val stats: Project = project
   .in(file("stats"))
   .configure(C.withCoverage(50))
@@ -117,7 +117,7 @@ lazy val stats: Project = project
   .settings(name := "riddl-stats", libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing)
   .dependsOn(commands % "compile->compile;test->test", testkit % "test->compile")
 
-val DiagramsTrans = config("diagrams")
+val Diagrams = config("diagrams")
 lazy val diagrams: Project = project
   .in(file("diagrams"))
   .configure(C.withCoverage(50))
@@ -136,7 +136,7 @@ lazy val prettify = project
   .dependsOn(commands, testkit % "test->compile")
   .dependsOn(utils)
 
-val HugoTrans = config("hugo")
+val Hugo = config("hugo")
 lazy val hugo: Project = project
   .in(file("hugo"))
   .configure(C.withCoverage(50))
@@ -159,7 +159,9 @@ lazy val scaladocSiteProjects = List(
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
-  (hugo, HugoTrans),
+  (diagrams, Diagrams),
+  (stats, Stats),
+  (hugo, Hugo),
   (riddlc, Riddlc)
 )
 

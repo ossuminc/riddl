@@ -61,8 +61,8 @@ case class PrettifyOutput(
 ) extends PassOutput
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
-case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState) extends HierarchyPass(input,
-  outputs) {
+case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState)
+    extends HierarchyPass(input, outputs) {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -112,6 +112,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(_.openDef(output))
       case input: Input =>
         state.withCurrent(_.openDef(input))
+      case cg: ContainedGroup =>
+        state.withCurrent(_.openDef(cg))
       case _: RootContainer => () // ignore
       case _: Enumerator    => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |

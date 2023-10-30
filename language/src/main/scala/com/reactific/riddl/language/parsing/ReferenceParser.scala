@@ -23,7 +23,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
     P((identifier ~ Punctuation.colon).?)
   }
 
-  private def commandRef[u: P]: P[CommandRef] = {
+  def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~ maybeName ~ pathIdentifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))
   }

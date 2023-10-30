@@ -8,7 +8,7 @@ import com.reactific.riddl.testkit.ValidatingTest
 
 class UseCaseDiagramTest extends ValidatingTest {
 
-  case class SDS(passesResult: PassesResult) extends UseCaseeDiagramSupport {
+  case class SDS(passesResult: PassesResult) extends SequenceDiagramSupport {
     def makeDocLink(definition: Definition): String = {
       s"https://example.com/${definition.kind}/${definition.id.value}"
     }
