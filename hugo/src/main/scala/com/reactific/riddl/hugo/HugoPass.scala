@@ -8,7 +8,7 @@ package com.reactific.riddl.hugo
 
 import com.reactific.riddl.commands.TranslatingState
 import com.reactific.riddl.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.reactific.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, UseCaseeDiagramSupport}
+import com.reactific.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, UseCaseDiagramSupport}
 import com.reactific.riddl.language.*
 import com.reactific.riddl.language.AST.{Include, *}
 import com.reactific.riddl.language.Messages.Messages
@@ -47,7 +47,7 @@ case class HugoPass(
 ) extends Pass(input, outputs)
     with PassUtilities
     with TranslatingState[MarkdownWriter]
-    with UseCaseeDiagramSupport {
+    with UseCaseDiagramSupport {
 
   requires(SymbolsPass)
   requires(ResolutionPass)

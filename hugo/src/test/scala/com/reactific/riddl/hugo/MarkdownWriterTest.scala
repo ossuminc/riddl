@@ -37,7 +37,7 @@ class MarkdownWriterTest extends HugoTestBase {
           root.contents mustNot be(empty)
           val domain = root.domains.head
           val mkd = makeMDW(output, PassesResult.empty)
-          mkd.emitDomain(domain, paths.dropRight(1))
+          mkd.emitDomain(domain, paths.dropRight(1), None)
           val emitted = mkd.toString
           val expected =
             """---

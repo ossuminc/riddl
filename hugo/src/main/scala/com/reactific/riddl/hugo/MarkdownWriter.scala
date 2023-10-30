@@ -5,7 +5,7 @@
  */
 
 package com.reactific.riddl.hugo
-import com.reactific.riddl.diagrams.mermaid.{EntityRelationshipDiagram, UseCaseDiagram, UseCaseeDiagramSupport}
+import com.reactific.riddl.diagrams.mermaid.{EntityRelationshipDiagram, UseCaseDiagram, UseCaseDiagramSupport}
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.stats.{KindStats, StatsOutput, StatsPass}
@@ -877,7 +877,7 @@ case class MarkdownWriter(
     emitDefDoc(u, parents)
   }
 
-  def emitUseCase(uc: UseCase, parents: Seq[Definition], sds: UseCaseeDiagramSupport): this.type = {
+  def emitUseCase(uc: UseCase, parents: Seq[Definition], sds: UseCaseDiagramSupport): this.type = {
     leafHead(uc, weight = 20)
     val parList = passUtilities.makeStringParents(parents)
     emitDefDoc(uc, parList)

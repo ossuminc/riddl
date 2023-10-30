@@ -15,7 +15,7 @@ import scala.reflect.ClassTag
 /** A trait to be implemented by the user of UseCaseDiagram that provides information that can only be provided from
   * outside UseCaseDiagram itself. Note that the PassesResult from running the standard passes is required.
   */
-trait UseCaseeDiagramSupport {
+trait UseCaseDiagramSupport {
   def passesResult: PassesResult
   def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition): Option[T] = {
     passesResult.refMap.definitionOf[T](pathId, parent)
@@ -30,7 +30,7 @@ trait UseCaseeDiagramSupport {
   *   The UseCase from the AST to which this diagram applies
   */
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-case class UseCaseDiagram(sds: UseCaseeDiagramSupport, useCase: UseCase) extends FileBuilder {
+case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends FileBuilder {
 
   private final val indent_per_level = 4
 

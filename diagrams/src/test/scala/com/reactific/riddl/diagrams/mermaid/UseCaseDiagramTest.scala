@@ -1,4 +1,5 @@
 package com.reactific.riddl.diagrams.mermaid
+
 import com.reactific.riddl.language.AST.{Definition, RootContainer}
 import com.reactific.riddl.language.CommonOptions
 import com.reactific.riddl.language.Messages.Messages
@@ -8,7 +9,7 @@ import com.reactific.riddl.testkit.ValidatingTest
 
 class UseCaseDiagramTest extends ValidatingTest {
 
-  case class SDS(passesResult: PassesResult) extends SequenceDiagramSupport {
+  case class UCDS(passesResult: PassesResult) extends UseCaseDiagramSupport {
     def makeDocLink(definition: Definition): String = {
       s"https://example.com/${definition.kind}/${definition.id.value}"
     }
@@ -40,7 +41,7 @@ class UseCaseDiagramTest extends ValidatingTest {
           val domain = root.domains.head
           val epic = domain.epics.head
           val useCase = epic.cases.head
-          val sd = UseCaseDiagram(new SDS(result), useCase)
+          val sd = UseCaseDiagram(new UCDS(result), useCase)
           val diagram = sd.generate
           println(diagram.mkString("\n"))
           diagram mustNot be(empty)
