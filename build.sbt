@@ -35,12 +35,13 @@ lazy val riddl = (project in file("."))
     language,
     passes,
     commands,
+    diagrams,
     testkit,
     prettify,
-    hugo,
-    doc,
     stats,
+    hugo,
     riddlc,
+    doc,
     plugin
   )
 
