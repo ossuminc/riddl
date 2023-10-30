@@ -9,7 +9,7 @@ import com.reactific.riddl.testkit.ValidatingTest
 class SequenceDiagramTest extends ValidatingTest {
 
   case class SDS(passesResult: PassesResult) extends SequenceDiagramSupport {
-    def makeLinkFor(definition: Definition): String = {
+    def makeDocLink(definition: Definition): String = {
       s"https://example.com/${definition.kind}/${definition.id.value}"
     }
   }
