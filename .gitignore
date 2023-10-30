@@ -17,3 +17,4 @@ target
 /.riddl-timestamp
 doc/src/main/hugo/public/
 *.lock
+/hugo-input/
