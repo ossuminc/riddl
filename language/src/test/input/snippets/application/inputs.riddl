@@ -1,0 +1,8 @@
+domain foo {
+  command DoIt is { what_to_do: String }
+  application input_tests is {
+    page top is {
+      button pressMe initiates command DoIt
+    }
+  }
+}

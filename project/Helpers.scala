@@ -93,8 +93,7 @@ object C {
       // "-explain",
       // "-explain-types",
       "-Werror",
-      "-pagewidth",
-      "120"
+      "-pagewidth", "120"
     )
 
   def scala_3_doc_options(version: String): Seq[String] = {
