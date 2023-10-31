@@ -13,7 +13,7 @@ min_version = "0.94.2"
 # googleAnalytics = "" # example : UA-123-45
 #disableLanguages = [] # disable language from here
 
-[author]
+[params.author]
 name = "Reid Spencer"
 email = "reid@reactific.com"
 homepage = "https://reactific.com/"
