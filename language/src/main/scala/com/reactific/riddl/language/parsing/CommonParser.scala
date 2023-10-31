@@ -119,7 +119,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   private def simpleIdentifier[u: P]: P[String] = {
-    P((CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_").?).!)
+    P(CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9_\\-").?).!
   }
 
   private def quotedIdentifier[u: P]: P[String] = {
@@ -261,11 +261,8 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def inputAliases[u: P]: P[String] = {
     P(
-      StringIn(Keywords.input,
-        "form", "text", "button", "picklist", "selector", "menu"
-      ).!
+      StringIn(Keywords.input, "form", "text", "button", "picklist", "selector", "menu").!
     )
   }
-
 
 }
