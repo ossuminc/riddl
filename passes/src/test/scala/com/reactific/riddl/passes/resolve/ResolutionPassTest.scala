@@ -91,7 +91,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_,_) => succeed }
+      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
     }
 
     "resolve entity field" in {
@@ -373,7 +373,7 @@ class ResolutionPassTest extends ResolvingTest {
           |  }
           |}
           |""".stripMargin)
-      parseAndResolve(input) { (_,_) => succeed }
+      parseAndResolve(input) { (_, _) => succeed }
     }
     "resolve a path identifier" in {
       val rpi = RiddlParserInput(data = """domain d is {
@@ -402,16 +402,60 @@ class ResolutionPassTest extends ResolvingTest {
           |}
           |""".stripMargin
       )
-      parseAndResolve(rpi) {
-        (pi: PassInput, po: PassesOutput) =>
-          val app: Application = pi.root.domains.head.applications.head
-          val contained: Group = app.groups.head
-          val container: Group = app.groups(1)
-          po.refMap.definitionOf[Group]("contained") match
-            case Some(group: Group) =>
-              group mustBe contained
-            case _ =>
-              fail("contained group not found")
+      parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
+        val app: Application = pi.root.domains.head.applications.head
+        val contained: Group = app.groups.head
+        val container: Group = app.groups(1)
+        po.refMap.definitionOf[Group]("contained") match
+          case Some(group: Group) =>
+            group mustBe contained
+          case _ =>
+            fail("contained group not found")
+      }()
+    }
+
+    "issue #480" in {
+      val rpi = RiddlParserInput(
+        """domain ksoTemplateAppDomain {
+          |  type EmailAddress = String(1,255)
+          |  application ksoTemplateApp {
+          |    type FirstName: String(2,64)
+          |    type LastName: String(2,64)
+          |    type Password: String(8,128)
+          |
+          |    type SignupParameters is {
+          |      firstName: FirstName,
+          |      lastName: LastName,
+          |      emailAddress: ksoTemplateAppDomain.EmailAddress,
+          |      password: Password
+          |    }
+          |
+          |    command CreateUser is {user: ksoTemplateAppDomain.ksoTemplateApp.SignupParameters }
+          |    command CreateUserUsingFacebook is {???}
+          |    command CreateUserUsingGitHub is {???}
+          |    command CreateUserUsingGmail is {???}
+          |    command RedirectUserToSigninPage is {???}
+          |
+          |   page SignupPage {
+          |
+          |     form NewUserForm accepts ksoTemplateApp.SignupParameters {
+          |        input firstName accepts ksoTemplateApp.FirstName
+          |        input lastName accepts ksoTemplateApp.LastName
+          |        input emailAddress accepts ksoTemplateAppDomain.EmailAddress
+          |        input password accepts ksoTemplateApp.Password
+          |      }
+          |      button SignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUser
+          |      button FacebookSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingFacebook
+          |      button GitHubSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGitHub
+          |      button GmailSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGmail
+          |      text SigninLink takes command ksoTemplateAppDomain.ksoTemplateApp.RedirectUserToSigninPage
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
+        po.messages.justErrors mustBe(empty)
       }()
     }
   }
