@@ -87,17 +87,17 @@ private[parsing] trait ApplicationParser {
     ).?.map {
       case Some(definitions) => definitions
       case None              => Seq.empty[InputDefinition]
-    }
+    }.log
   }
 
   private def acquisitionAliases[u: P]: P[String] = {
     StringIn("acquires", "reads", "takes", "accepts", "admits",
-      "initiates", "submits", "triggers", "activates", "starts").!
+      "initiates", "submits", "triggers", "activates", "starts").!.log
   }
 
   private def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~ acquisitionAliases ~ typeRef ~
+      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~
         inputDefinitions ~ briefly ~ description
     ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description) =>
       Input(loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description)
