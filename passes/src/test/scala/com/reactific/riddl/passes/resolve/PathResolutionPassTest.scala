@@ -414,5 +414,51 @@ class PathResolutionPassTest extends ResolvingTest {
       }()
     }
 
+    "handle issue #480" in {
+      pending
+      val rpi = RiddlParserInput(
+        """domain ksoTemplateAppDomain {
+          |  type EmailAddress = String(1,255)
+          |  application ksoTemplateApp {
+          |    type FirstName: String(2,64)
+          |    type LastName: String(2,64)
+          |    type Password: String(8,128)
+          |
+          |    type SignupParameters is {
+          |      firstName: FirstName,
+          |      lastName: LastName,
+          |      emailAddress: ksoTemplateAppDomain.EmailAddress,
+          |      password: Password
+          |    }
+          |
+          |    command CreateUser is {user: ksoTemplateAppDomain.ksoTemplateApp.SignupParameters }
+          |    command CreateUserUsingFacebook is {???}
+          |    command CreateUserUsingGitHub is {???}
+          |    command CreateUserUsingGmail is {???}
+          |    command RedirectUserToSigninPage is {???}
+          |
+          |   page SignupPage {
+          |
+          |     form NewUserForm accepts ksoTemplateApp.SignupParameters {
+          |        input firstName accepts ksoTemplateApp.FirstName
+          |        input lastName accepts ksoTemplateApp.LastName
+          |        input emailAddress accepts ksoTemplateAppDomain.EmailAddress
+          |        input password accepts ksoTemplateApp.Password
+          |      }
+          |      button SignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUser
+          |      button FacebookSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingFacebook
+          |      button GitHubSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGitHub
+          |      button GmailSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGmail
+          |      text SigninLink takes command ksoTemplateAppDomain.ksoTemplateApp.RedirectUserToSigninPage
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      )
+      parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
+        po.messages.justErrors mustBe(empty)
+      }()
+    }
+
   }
 }
