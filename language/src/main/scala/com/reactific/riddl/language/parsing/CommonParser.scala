@@ -240,8 +240,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
         "window",
         "section",
         "tab",
-        "flow",
-        "form"
+        "flow"
       ).!
     )
   }
@@ -262,7 +261,15 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def inputAliases[u: P]: P[String] = {
     P(
-      StringIn(Keywords.input, "form", "text", "button", "picklist", "selector", "menu").!
+      StringIn(
+        Keywords.input,
+        "form",
+        "text",
+        "button",
+        "picklist",
+        "selector",
+        "menu"
+      ).!
     )
   }
 
