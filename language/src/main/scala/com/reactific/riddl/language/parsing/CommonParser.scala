@@ -240,7 +240,8 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
         "window",
         "section",
         "tab",
-        "flow"
+        "flow",
+        "form"
       ).!
     )
   }
