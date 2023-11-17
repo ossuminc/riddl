@@ -15,6 +15,15 @@ class ReportedIssuesTest extends ValidatingTest {
     showWarnings = false
   )
 
+  def checkOne(fileName: String): Assertion = {
+    checkOne(fileName){
+      case Left(messages) =>
+        fail(messages.format)
+      case Right(result) =>
+        succeed
+    }
+  }
+
   def checkOne(fileName: String)(checkResult: Either[Messages.Messages, PassesResult] => Assertion): Assertion = {
     val file = Path.of(dir, fileName).toFile
     val either = Riddl.parseAndValidate(file, options)
@@ -75,28 +84,16 @@ class ReportedIssuesTest extends ValidatingTest {
       }
     }
     "406" in {
-      checkOne("406.riddl") {
-        case Left(messages) =>
-          fail(messages.format)
-        case Right(result) =>
-          succeed
-      }
+      checkOne("406.riddl")
     }
     "445" in {
-      checkOne("445.riddl") {
-        case Left(messages) =>
-          fail(messages.format)
-        case Right(result) =>
-          succeed
-      }
+      checkOne("445.riddl")
     }
     "447" in {
-      checkOne("447.riddl") {
-        case Left(messages) =>
-          fail(messages.format)
-        case Right(result) =>
-          succeed
-      }
+      checkOne("447.riddl")
+    }
+    "480" in {
+      checkOne("480.riddl")
     }
   }
 }

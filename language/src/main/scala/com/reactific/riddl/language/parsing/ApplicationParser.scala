@@ -97,7 +97,7 @@ private[parsing] trait ApplicationParser {
 
   private def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~ acquisitionAliases ~ typeRef ~
+      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~
         inputDefinitions ~ briefly ~ description
     ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description) =>
       Input(loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description)
