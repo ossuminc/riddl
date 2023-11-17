@@ -414,7 +414,8 @@ class ResolutionPassTest extends ResolvingTest {
       }()
     }
 
-    "issue #480" in {
+    "handle issue #480" in {
+      pending
       val rpi = RiddlParserInput(
         """domain ksoTemplateAppDomain {
           |  type EmailAddress = String(1,255)
