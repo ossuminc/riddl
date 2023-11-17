@@ -47,14 +47,14 @@ class PathResolutionPassTest extends ResolvingTest {
           |
           |}""".stripMargin
       parseAndResolve(RiddlParserInput(rpi)) { (in, outs) =>
-        val target = in.root.domains.head.domains.head.domains.head.types.head
+        val target: Type = in.root.domains.head.domains.head.domains.head.types.head
         val parent = in.root.domains.head.domains.head.types.head
         val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolved) =>
-            resolved mustBe (target)
-          case None => fail(s"${pid} not resolved")
+            resolved mustBe target
+          case None => fail(s"$pid not resolved")
         }
       }
     }
@@ -67,13 +67,13 @@ class PathResolutionPassTest extends ResolvingTest {
           |}
           |""".stripMargin
       parseAndResolve(RiddlParserInput(input)) { (in, outs) =>
-        val target = in.root.domains.head.types.find(_.id.value == "Top").get
-        val parent = in.root.domains.head.types.find(_.id.value == "aTop").get
+        val target: Type = in.root.domains.head.types.find(_.id.value == "Top").get
+        val parent: Type = in.root.domains.head.types.find(_.id.value == "aTop").get
         val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolvedDef) =>
-            resolvedDef mustBe (target)
+            resolvedDef mustBe target
           case None =>
             fail(s"${pid.format} not resolved")
         }
@@ -188,15 +188,15 @@ class PathResolutionPassTest extends ResolvingTest {
           |}
           |""".stripMargin
       parseAndResolve(RiddlParserInput(input)) { (in, outs) =>
-        outs.getAllMessages mustBe (Messages.empty)
+        outs.getAllMessages mustBe Messages.empty
         val Top = in.root.domains.head.types.head
         val D = in.root.domains.head.domains.head.contexts.find(_.id.value == "D").get
         val ATop = D.types.find(_.id.value == "ATop").get
         val pid = ATop.typ.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, ATop) match {
-          case Some(resolved) => resolved mustBe (Top)
-          case None           => fail(s"${pid} not resolved")
+          case Some(resolved) => resolved mustBe Top
+          case None           => fail(s"$pid not resolved")
         }
       }
     }
@@ -331,12 +331,12 @@ class PathResolutionPassTest extends ResolvingTest {
       )
       parseAndResolve(input) { (in, outs) =>
         val entity = in.root.domains.head.contexts.head.entities.head
-        entity.getClass mustBe (classOf[Entity])
+        entity.getClass mustBe classOf[Entity]
         val cid = in.root.domains.head.types.head
-        cid.getClass mustBe (classOf[Type])
-        cid.typ.getClass mustBe (classOf[UniqueId])
+        cid.getClass mustBe classOf[Type]
+        cid.typ.getClass mustBe classOf[UniqueId]
         val pid = cid.typ.asInstanceOf[UniqueId].entityPath
-        pid.value mustBe (Seq("ReactiveBBQ", "Customer", "Customer"))
+        pid.value mustBe Seq("ReactiveBBQ", "Customer", "Customer")
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Entity](pid, cid) match {
           case Some(definition) =>
@@ -413,52 +413,5 @@ class PathResolutionPassTest extends ResolvingTest {
             fail("contained group not found")
       }()
     }
-
-    "handle issue #480" in {
-      pending
-      val rpi = RiddlParserInput(
-        """domain ksoTemplateAppDomain {
-          |  type EmailAddress = String(1,255)
-          |  application ksoTemplateApp {
-          |    type FirstName: String(2,64)
-          |    type LastName: String(2,64)
-          |    type Password: String(8,128)
-          |
-          |    type SignupParameters is {
-          |      firstName: FirstName,
-          |      lastName: LastName,
-          |      emailAddress: ksoTemplateAppDomain.EmailAddress,
-          |      password: Password
-          |    }
-          |
-          |    command CreateUser is {user: ksoTemplateAppDomain.ksoTemplateApp.SignupParameters }
-          |    command CreateUserUsingFacebook is {???}
-          |    command CreateUserUsingGitHub is {???}
-          |    command CreateUserUsingGmail is {???}
-          |    command RedirectUserToSigninPage is {???}
-          |
-          |   page SignupPage {
-          |
-          |     form NewUserForm accepts ksoTemplateApp.SignupParameters {
-          |        input firstName accepts ksoTemplateApp.FirstName
-          |        input lastName accepts ksoTemplateApp.LastName
-          |        input emailAddress accepts ksoTemplateAppDomain.EmailAddress
-          |        input password accepts ksoTemplateApp.Password
-          |      }
-          |      button SignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUser
-          |      button FacebookSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingFacebook
-          |      button GitHubSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGitHub
-          |      button GmailSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGmail
-          |      text SigninLink takes command ksoTemplateAppDomain.ksoTemplateApp.RedirectUserToSigninPage
-          |    }
-          |  }
-          |}
-          |""".stripMargin
-      )
-      parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
-        po.messages.justErrors mustBe(empty)
-      }()
-    }
-
   }
 }
