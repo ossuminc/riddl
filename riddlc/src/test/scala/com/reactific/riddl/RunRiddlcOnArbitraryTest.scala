@@ -52,7 +52,7 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
       val config = "design/src/main/riddl/ksoapp.conf"
       validateLocalProject(cwd, config)
     }
-    // FIXME: Fix Improving.app syntax and renable
+    // FIXME: Fix Improving.app syntax and re-enable
     // "validate Improving.app" in {
     //   val cwd = "/Users/reid/Code/improving.app/riddl"
     //   val config = "src/main/riddl/ImprovingApp.conf"
