@@ -10,7 +10,6 @@ import com.reactific.riddl.language.AST.{Entity, *}
 import com.reactific.riddl.language.{CommonOptions, Messages}
 import com.reactific.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.reactific.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
-import com.reactific.riddl.utils.SeqHelpers.SeqHelpers
 
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
@@ -276,6 +275,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           case (d, _) :: Nil =>
             wrongType[T](pathId, parent, d)
             Seq.empty
+          case (d, pars) :: tail if tail.map(_._1).forall(x => x == d && isSameKind[T](x)) =>
+            resolved[T](pathId, parent, d)
+            d +: pars
           case list =>
             ambiguous[T](pathId, list)
             Seq.empty
@@ -351,7 +353,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         findAnchorInParents(topName, parents) match
           case afip: AnchorFoundInParents => afip
           case _: AnchorNotFoundInParents =>
-            // Its not an ancestor so le'ts try the symbol table
+            // Its not an ancestor so let's try the symbol table
             findAnchorInSymTab(topName) match
               case afis: AnchorFoundInSymTab     => afis
               case anfis: AnchorNotFoundInSymTab => anfis

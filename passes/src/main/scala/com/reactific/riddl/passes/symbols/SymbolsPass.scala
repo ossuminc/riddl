@@ -57,6 +57,8 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
           val included: Seq[SymTabItem] = existing :+ (definition -> copy)
           symTab.update(name, included)
           parentage.update(definition, copy)
+        } else {
+          messages.addError(definition.loc, "Non implicit value with empty name should not happen")
         }
     }
   }
