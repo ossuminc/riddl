@@ -40,16 +40,14 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-  private def groupDefinitions[u: P]: P[Seq[GroupDefinition]] =
-    P(
-      undefined(Seq.empty[GroupDefinition]) |
-        (group | containedGroup | appOutput | appInput).rep(0)
-    )
+  private def groupDefinitions[u: P]: P[Seq[GroupDefinition]] = {
+    P(group | containedGroup | appOutput | appInput).rep(1)
+  }
 
   private def group[u: P]: P[Group] = {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
-        groupDefinitions ~
+        (undefined(Seq.empty[GroupDefinition]) | groupDefinitions) ~
         close ~ briefly ~ description
     ).map { case (loc, alias, id, elements, brief, description) =>
       Group(loc, alias, id, elements, brief, description)
@@ -62,7 +60,9 @@ private[parsing] trait ApplicationParser {
 
   private def outputDefinitions[u: P]: P[Seq[OutputDefinition]] = {
     P(
-      is ~ open ~ appOutput.rep(1) ~ close
+      is ~ open ~
+        (undefined(Seq.empty[OutputDefinition]) | appOutput.rep(1)) ~
+        close
     ).?.map {
       case Some(definitions) => definitions
       case None              => Seq.empty[OutputDefinition]
