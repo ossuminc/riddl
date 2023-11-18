@@ -8,25 +8,24 @@ import org.scalatest.matchers.must.Matchers
 class ApplicationParsingTest extends ParsingTest with Matchers {
 
   "Application Components" must {
-    "empty definitions should fail" in {
+    "nested empty definitions should fail" in {
       val input =
         """
           |domain foo {
           |application foo2 {
-          |  group {}
+          |  group g1 is { ??? }
+          |  group g2 is {
+          |    group g3 is { ??? }
+          |    input i1 acquires String is { ??? }
+          |    output o1 displays String is { ??? }
+          |  }
           |}
           |}""".stripMargin
       parseDefinition[Domain](input) match {
         case Left(messages: Messages) =>
-          val errors = messages.justErrors
-          errors.size mustBe 1
-          val msg = errors.head
-          msg.message contains "Expected one of"
-          msg.message contains "???"
-          msg.loc.line mustBe 4
-
+          fail(messages.format)
         case Right((dom: Domain, _)) =>
-          fail("should have required ??? syntax")
+          succeed
       }
     }
   }
