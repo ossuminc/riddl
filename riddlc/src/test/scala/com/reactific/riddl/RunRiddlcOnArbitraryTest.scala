@@ -24,7 +24,7 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
       val fullPath = Path.of(cwd, config)
       info(s"config path is: ${fullPath.toAbsolutePath.toString}")
       if Files.isReadable(fullPath) then {
-        val args = Seq("--show-times", "from", fullPath.toString, "validate")
+        val args = Seq("--show-times", "--verbose", "from", fullPath.toString, "validate")
         runWith(args)
       } else {
         info(s"Skipping unreadable $fullPath")
@@ -45,6 +45,11 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
     "validate OffTheTop" in {
       val cwd = "/Users/reid/Code/Improving/OffTheTop"
       val config = "design/src/main/riddl/OffTheTop.conf"
+      validateLocalProject(cwd, config)
+    }
+    "validate kalix template" in {
+      val cwd = "/Users/reid/Code/Improving/kalix-improving-template"
+      val config = "design/src/main/riddl/ksoapp.conf"
       validateLocalProject(cwd, config)
     }
     // FIXME: Fix Improving.app syntax and renable
