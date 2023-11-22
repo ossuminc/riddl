@@ -95,5 +95,8 @@ class ReportedIssuesTest extends ValidatingTest {
     "480" in {
       checkOne("480.riddl")
     }
+    "486" in {
+      checkOne("486.riddl")
+    }
   }
 }

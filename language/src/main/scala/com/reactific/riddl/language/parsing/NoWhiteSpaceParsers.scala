@@ -26,6 +26,12 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
       location ~ Punctuation.verticalBar ~~ line
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }
+  
+  def commentLine[u:P]: P[LiteralString] = {
+    P(
+      location ~ "//" ~~ line 
+    ).map(tpl => (LiteralString.apply _).tupled(tpl))
+  }
 
   // \\	The backslash character
   // \0n	The character with octal value 0n (0 <= n <= 7)

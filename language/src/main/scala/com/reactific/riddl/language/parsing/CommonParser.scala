@@ -10,7 +10,7 @@ import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.At
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
 
 import java.net.URI
 import java.nio.file.Files
@@ -62,7 +62,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
-  def markdownLines[u: P]: P[Seq[LiteralString]] = {
+  private def markdownLines[u: P]: P[Seq[LiteralString]] = {
     P(markdownLine.rep(1))
   }
 
@@ -76,6 +76,12 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
         (markdownLines | literalStrings | undefined(Seq.empty[LiteralString])) ~
         close) | literalString.map(Seq(_))
     )
+  }
+
+  def comment[u: P]: P[Comment] = {
+    P(
+      location ~ commentLine.rep(1)
+    ).map { case (loc, lines) => Comment(loc, lines) }
   }
 
   private def blockDescription[u: P]: P[BlockDescription] = {
