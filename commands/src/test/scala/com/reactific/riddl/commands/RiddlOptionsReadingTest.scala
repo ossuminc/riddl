@@ -12,9 +12,9 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
-class OptionsReadingTest extends AnyWordSpec with Matchers {
+class RiddlOptionsReadingTest extends AnyWordSpec with Matchers {
 
-  "Options Reading" must {
+  "RiddlOptions Reading" must {
     "load repeat options from a file" in {
       val optionFile = Path.of("commands/src/test/input/repeat-options.conf")
       CommandOptions.loadCommonOptions(optionFile) match {

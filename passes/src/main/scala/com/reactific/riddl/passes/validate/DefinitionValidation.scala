@@ -21,7 +21,7 @@ trait DefinitionValidation extends BasicValidation  {
   def checkOptions[T <: OptionValue](options: Seq[T], loc: At): this.type = {
     check(
       options.sizeIs == options.distinct.size,
-      "Options should not be repeated",
+      "RiddlOptions should not be repeated",
       Error,
       loc
     )

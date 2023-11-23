@@ -212,7 +212,7 @@ object Folding {
                 case a: AggregateUseCaseTypeExpression =>
                   // Message types have fields too, those fields are what we seek
                   a.contents
-                case AliasedTypeExpression(_, pid) =>
+                case AliasedTypeExpression(_, _, pid) =>
                   // if we're at a field that references another type then we
                   // need to push that types path on the name stack
                   adjustStacksForPid(searchFor, pid, parentStack, nameStack)
@@ -225,7 +225,7 @@ object Folding {
                 case a: Aggregation                    => a.contents
                 case a: AggregateUseCaseTypeExpression => a.contents
                 case Enumeration(_, enumerators)       => enumerators
-                case AliasedTypeExpression(_, pid)     =>
+                case AliasedTypeExpression(_, _, pid)     =>
                   // if we're at a type definition that references another type then
                   // we need to push that type's path on the name stack
                   adjustStacksForPid(searchFor, pid, parentStack, nameStack)

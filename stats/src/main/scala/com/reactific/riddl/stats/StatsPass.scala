@@ -221,7 +221,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     val specsForDefinition: Int = 0
       + 1 // Brief Description
       + 1 // Description
-      + 1 // Options
+      + 1 // RiddlOptions
       + 1 // Authors
       + 1 // Terms
 

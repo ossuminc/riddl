@@ -297,6 +297,7 @@ class PathResolutionPassTest extends ResolvingTest {
                         Identifier(eL, "C2_T"),
                         AliasedTypeExpression(
                           eL,
+                          "type",
                           PathIdentifier(eL, Seq("D", "C1", "C1_T"))
                         )
                       )

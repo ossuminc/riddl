@@ -13,7 +13,7 @@ import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.file.Path
 import scala.annotation.unused
-import com.reactific.riddl.language.parsing.Terminals
+import com.reactific.riddl.language.parsing.Keywords
 import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.reactific.riddl.passes.symbols.SymbolsOutput
@@ -391,7 +391,7 @@ case class MarkdownWriter(
 
   // This substitutions domain contains context referenced
 
-  private val keywords: String = Terminals.definition_keywords.mkString("(", "|", ")")
+  private val keywords: String = Keywords.definition_keywords.mkString("(", "|", ")")
   private val pathIdRegex = s" ($keywords) (\\w+(\\.\\w+)*)".r
   private def substituteIn(lineToReplace: String): String = {
     val matches = pathIdRegex.findAllMatchIn(lineToReplace).toSeq.reverse
@@ -440,7 +440,7 @@ case class MarkdownWriter(
     options: Seq[OT],
     level: Int = 2
   ): this.type = {
-    list("Options", options.map(_.format), level)
+    list("RiddlOptions", options.map(_.format), level)
     this
   }
 

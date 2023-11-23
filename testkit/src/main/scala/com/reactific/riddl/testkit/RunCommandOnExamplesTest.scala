@@ -38,7 +38,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   * temporary directory, and the output is compared to the expected output in the example.
   *
   * @tparam OPT
-  *   The class for the Options of the command
+  *   The class for the RiddlOptions of the command
   * @tparam CMD
   *   The class for the Command
   * @param commandName

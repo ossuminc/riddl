@@ -95,5 +95,13 @@ class ReportedIssuesTest extends ValidatingTest {
     "480" in {
       checkOne("480.riddl")
     }
+    "486" in {
+      checkOne("486.riddl") {
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(result) =>
+          fail("Should not have parsed correctly")
+      }
+    }
   }
 }

@@ -235,7 +235,7 @@ object CommandOptions {
       case Right(cmd) =>
         cmd.parseOptions(args) match {
           case Some(options) => Right(options)
-          case None          => Left(errors("Option parsing failed"))
+          case None          => Left(errors("RiddlOption parsing failed"))
         }
       case Left(messages) => Left(messages)
     }

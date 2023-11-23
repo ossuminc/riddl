@@ -4,7 +4,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.Path
 
-class OptionsReadingTest extends AnyWordSpec with Matchers {
+class RiddlOptionsReadingTest extends AnyWordSpec with Matchers {
 
   val confFile = "riddlc/src/test/input/cmdoptions.conf"
 

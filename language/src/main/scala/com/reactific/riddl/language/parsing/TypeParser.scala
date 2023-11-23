@@ -8,7 +8,6 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.{AST, At}
-import com.reactific.riddl.language.Messages
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import Readability.*
@@ -349,7 +348,7 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       cardinality(
         predefinedTypes | patternType | uniqueIdType |
-          enumeration | setType | mappingType | sequenceType | rangeType |
+          enumeration | aliasedTypeExpression | aliasedTypeExpression | sequenceType | rangeType |
           alternation | entityReferenceType | aliasedTypeExpression
       )
     )
@@ -376,7 +375,7 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map(tpl => (Method.apply _).tupled(tpl))
   }
 
-  def aggregateDefinitions[u: P]: P[Seq[AggregateDefinition]] = {
+  private def aggregateDefinitions[u: P]: P[Seq[AggregateDefinition]] = {
     P(
       undefined(Seq.empty[AggregateDefinition]) |
         (field | method).rep(min = 1, Punctuation.comma)
@@ -426,7 +425,7 @@ private[parsing] trait TypeParser extends CommonParser {
     *   mapping from Integer to String
     * }}}
     */
-  private def mappingType[u: P]: P[Mapping] = {
+  private def mappingFromTo[u: P]: P[Mapping] = {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
         Readability.to ~ typeExpression
@@ -437,16 +436,18 @@ private[parsing] trait TypeParser extends CommonParser {
     * {{{
     *   set of String
     * }}}
-    *
-    * @tparam u
-    * @return
     */
-  private def setType[u: P]: P[Set] = {
+  private def set[u: P]: P[Set] = {
     P(
       location ~ Keywords.set ~ Readability.of ~ typeExpression
     )./.map { tpl => (Set.apply _).tupled(tpl) }
   }
 
+  /** Parses sequences, i.e.
+    * {{{
+    *     sequence of String
+    * }}}
+    */
   private def sequenceType[u: P]: P[Sequence] = {
     P(
       location ~ Keywords.sequence ~ Readability.of ~ typeExpression
@@ -490,11 +491,11 @@ private[parsing] trait TypeParser extends CommonParser {
     }
   }
 
-  def typeExpression[u: P]: P[TypeExpression] = {
+  private def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        predefinedTypes | patternType | uniqueIdType | enumeration |
-          sequenceType | setType | mappingType | rangeType |
+        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType |
+          aggregateUseCaseTypeExpression | mappingFromTo | rangeType |
           decimalType | alternation | entityReferenceType |
           aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
       )
@@ -502,7 +503,7 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   def replicaTypeExpression[u: P]: P[TypeExpression] = {
-    P(integerPredefTypes | mappingType | setType)
+    P(integerPredefTypes | mappingFromTo | set)
   }
 
   private def defOfTypeKindType[u: P]: P[Type] = {
