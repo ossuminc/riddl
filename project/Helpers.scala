@@ -29,7 +29,7 @@ object V {
   val config = "1.4.2"
   val fastparse = "3.0.2"
   val jgit = "6.5.0"
-  val lang3 = "3.13.0"
+  val lang3 = "3.14.0"
   val pureconfig = "0.17.4"
   val scalacheck = "1.17.0"
   val scalatest = "3.2.17"
@@ -93,7 +93,8 @@ object C {
       // "-explain",
       // "-explain-types",
       "-Werror",
-      "-pagewidth", "120"
+      "-pagewidth",
+      "120"
     )
 
   def scala_3_doc_options(version: String): Seq[String] = {
