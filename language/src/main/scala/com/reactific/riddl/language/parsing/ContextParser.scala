@@ -41,9 +41,9 @@ private[parsing] trait ContextParser {
 
   private def replica[x: P]: P[Replica] = {
     P(
-      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description
-    ).map { case (loc, id, typeExp, brief, description) =>
-      Replica(loc, id, typeExp, brief, description)
+      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description ~ endOfLineComment
+    ).map { case (loc, id, typeExp, brief, description, comment) =>
+      Replica(loc, id, typeExp, brief, description, comment)
     }
   }
   private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
@@ -63,8 +63,8 @@ private[parsing] trait ContextParser {
   def context[u: P]: P[Context] = {
     P(
       location ~ Keywords.context ~/ identifier ~ authorRefs ~ is ~ open ~
-        contextOptions ~ contextBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, authors, options, definitions, brief, description) =>
+        contextOptions ~ contextBody ~ close ~ briefly ~ description  ~ endOfLineComment
+    ).map { case (loc, id, authors, options, definitions, brief, description, comment) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
@@ -110,7 +110,8 @@ private[parsing] trait ContextParser {
         replicas,
         authors,
         brief,
-        description
+        description,
+        comment
       )
     }
   }

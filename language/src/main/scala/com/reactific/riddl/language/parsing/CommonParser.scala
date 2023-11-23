@@ -5,11 +5,9 @@
  */
 
 package com.reactific.riddl.language.parsing
-
-import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.At
-import fastparse.{P, *}
+import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 import java.lang.Character.{isLetter, isLetterOrDigit}
@@ -36,9 +34,9 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
           (Keywords.name ~ Readability.is ~ literalString ~ Keywords.email ~ Readability.is ~
             literalString ~ (Keywords.organization ~ Readability.is ~ literalString).? ~
             (Keywords.title ~ Readability.is ~ literalString).? ~
-            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
-      Author(loc, id, name, email, org, title, url, brief, desc)
+            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description ~ endOfLineComment
+    ).map { case (loc, id, (name, email, org, title, url), brief, description, comment) =>
+      Author(loc, id, name, email, org, title, url, brief, description, comment)
     }
   }
 
@@ -78,12 +76,6 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
         (markdownLines | literalStrings | undefined(Seq.empty[LiteralString])) ~
         close) | literalString.map(Seq(_))
     )
-  }
-
-  def comment[u: P]: P[Comment] = {
-    P(
-      location ~ commentLine.rep(1)
-    ).map { case (loc, lines) => Comment(loc, lines) }
   }
 
   private def blockDescription[u: P]: P[BlockDescription] = {
@@ -219,7 +211,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description)./.map(tpl =>
+    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description ~ endOfLineComment)./.map(tpl =>
       (Term.apply _).tupled(tpl)
     )
   }

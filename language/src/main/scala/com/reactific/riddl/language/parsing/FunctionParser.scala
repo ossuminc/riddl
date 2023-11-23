@@ -17,8 +17,8 @@ private[parsing] trait FunctionParser {
   this: ReferenceParser with TypeParser with StatementParser with CommonParser =>
 
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
-    options[X, FunctionOption](StringIn(RiddlOption.tail_recursive).!) { 
-      case (loc, RiddlOption.tail_recursive, _) => TailRecursive(loc)
+    options[X, FunctionOption](StringIn(RiddlOption.tail_recursive).!) { case (loc, RiddlOption.tail_recursive, _) =>
+      TailRecursive(loc)
     }
   }
 
@@ -72,7 +72,7 @@ private[parsing] trait FunctionParser {
   def function[u: P]: P[Function] = {
     P(
       location ~ Keywords.function ~/ identifier ~ authorRefs ~ is ~ open ~
-        functionOptions ~ functionBody ~ close ~ briefly ~ description
+        functionOptions ~ functionBody ~ close ~ briefly ~ description ~ endOfLineComment
     )./.map {
       case (
             loc,
@@ -81,7 +81,8 @@ private[parsing] trait FunctionParser {
             options,
             (input, output, definitions, statements),
             briefly,
-            description
+            description,
+            comment
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
@@ -105,7 +106,8 @@ private[parsing] trait FunctionParser {
           options,
           terms,
           briefly,
-          description
+          description,
+          comment
         )
     }
   }

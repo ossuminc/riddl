@@ -21,15 +21,15 @@ private[parsing] trait SagaParser {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
-        briefly ~ description
+        briefly ~ description ~ endOfLineComment
     ).map(x => (SagaStep.apply _).tupled(x))
   }
 
   private def sagaOptions[u: P]: P[Seq[SagaOption]] = {
     options[u, SagaOption](StringIn(RiddlOption.parallel, RiddlOption.sequential).!) {
-      case (loc, option, _) if option == RiddlOption.parallel => ParallelOption(loc)
+      case (loc, option, _) if option == RiddlOption.parallel   => ParallelOption(loc)
       case (loc, option, _) if option == RiddlOption.sequential => SequentialOption(loc)
-      case (loc, RiddlOption.technology, args) => SagaTechnologyOption(loc, args)
+      case (loc, RiddlOption.technology, args)                  => SagaTechnologyOption(loc, args)
     }
   }
 
@@ -57,7 +57,7 @@ private[parsing] trait SagaParser {
   def saga[u: P]: P[Saga] = {
     P(
       location ~ Keywords.saga ~ identifier ~ authorRefs ~ is ~ open ~
-        sagaOptions ~ sagaBody ~ close ~ briefly ~ description
+        sagaOptions ~ sagaBody ~ close ~ briefly ~ description ~ endOfLineComment
     ).map {
       case (
             location,
@@ -66,7 +66,8 @@ private[parsing] trait SagaParser {
             options,
             (input, output, definitions),
             briefly,
-            description
+            description,
+            comment
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val functions = mapTo[Function](groups.get(classOf[Function]))
@@ -93,7 +94,8 @@ private[parsing] trait SagaParser {
           includes,
           terms,
           briefly,
-          description
+          description,
+          comment
         )
     }
   }

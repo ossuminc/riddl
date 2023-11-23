@@ -314,7 +314,7 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def enumerator[u: P]: P[Enumerator] = {
-    P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
+    P(location ~ identifier ~ enumValue ~ briefly ~ description ~ endOfLineComment).map { tpl =>
       (Enumerator.apply _).tupled(tpl)
     }
   }
@@ -356,7 +356,7 @@ private[parsing] trait TypeParser extends CommonParser {
 
   def field[u: P]: P[Field] = {
     P(
-      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description
+      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description ~ endOfLineComment
     ).map(tpl => (Field.apply _).tupled(tpl))
   }
 
@@ -371,7 +371,7 @@ private[parsing] trait TypeParser extends CommonParser {
   def method[u: P]: P[Method] = {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
-        is ~ fieldTypeExpression ~ briefly ~ description
+        is ~ fieldTypeExpression ~ briefly ~ description ~ endOfLineComment
     ).map(tpl => (Method.apply _).tupled(tpl))
   }
 
@@ -509,18 +509,18 @@ private[parsing] trait TypeParser extends CommonParser {
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
       location ~ aggregateUseCase ~/ identifier ~ is ~ (aliasedTypeExpression | aggregation) ~ briefly ~
-        description
-    ).map { case (loc, useCase, id, ateOrAgg, b, d) =>
+        description ~ endOfLineComment
+    ).map { case (loc, useCase, id, ateOrAgg, brief, description, comment) =>
       ateOrAgg match {
         case agg: Aggregation =>
           val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.fields, agg.methods)
-          Type(loc, id, mt, b, d)
+          Type(loc, id, mt, brief, description, comment)
         case ate: AliasedTypeExpression =>
-          Type(loc, id, ate, b, d)
+          Type(loc, id, ate, brief, description, comment)
         case _ =>
           require(false, "Oops! Impossible case")
           // Type just to satisfy compiler because it doesn't know require(false...) will throw
-          Type(loc, id, Nothing(loc), b, d)
+          Type(loc, id, Nothing(loc), brief, description, comment)
       }
     }
   }
@@ -528,8 +528,10 @@ private[parsing] trait TypeParser extends CommonParser {
   private def defOfType[u: P]: P[Type] = {
     P(
       location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ briefly ~
-        description
-    ).map { case (loc, id, typEx, b, d) => Type(loc, id, typEx, b, d) }
+        description ~ endOfLineComment
+    ).map { case (loc, id, typ, brief, description, comment) =>
+      Type(loc, id, typ, brief, description, comment)
+    }
   }
 
   def typeDef[u: P]: P[Type] = { defOfType | defOfTypeKindType }
@@ -539,7 +541,7 @@ private[parsing] trait TypeParser extends CommonParser {
   def constant[u: P]: P[Constant] = {
     P(
       location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ briefly ~ description
+        Punctuation.equalsSign ~ literalString ~ briefly ~ description ~ endOfLineComment
     ).map { tpl => (Constant.apply _).tupled(tpl) }
   }
 

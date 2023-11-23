@@ -164,13 +164,21 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     def hasDescription: Boolean = description.nonEmpty
   }
 
-  /** The
-    *
+  sealed trait CommentedValue extends RiddlValue {
+    def comment: Option[Comment]
+    def commentText: String = comment.map(_.text).getOrElse("")
+    def hasComment: Boolean = comment.nonEmpty
+  }
+
+  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
+    * definition. The comment is stored within the [[Definition]]
     * @param loc
-    * @param lines
+    *   Location in the input of the // comment introducer
+    * @param text
+    *   The text of the comment, everything after the // to the end of line
     */
-  case class Comment(loc: At, lines: Seq[LiteralString] = Seq.empty[LiteralString]) extends RiddlValue {
-    def format: String = lines.map("//" + _.s).mkString("", "\n", "\n")
+  case class Comment(loc: At, text: String = "") extends RiddlValue {
+    def format: String = "//" + text
   }
 
   /** Base trait of any definition that is also a ContainerValue
@@ -191,7 +199,11 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
     * yield a string that provides the kind and name
     */
-  sealed trait Definition extends DescribedValue with BrieflyDescribedValue with Container[Definition] {
+  sealed trait Definition
+      extends DescribedValue
+      with BrieflyDescribedValue
+      with CommentedValue
+      with Container[Definition] {
     def id: Identifier
 
     def kind: String
@@ -565,7 +577,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     enumVal: Option[Long] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with TypeDefinition {
     override def format: String = id.format
@@ -619,7 +632,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with AggregateDefinition
       with AlwaysEmpty
@@ -664,7 +678,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     args: Seq[MethodArgument] = Seq.empty[MethodArgument],
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with AggregateDefinition
       with AlwaysEmpty
@@ -1423,7 +1438,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     loc: At,
     id: Identifier,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with VitalDefinitionDefinition {
     override def isEmpty: Boolean = description.isEmpty
@@ -1452,7 +1468,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   case class Include[T <: Definition](
     loc: At = At(RiddlParserInput.empty),
     contents: Seq[T] = Seq.empty[T],
-    source: Option[String] = None
+    source: Option[String] = None,
+    comment: Option[Comment] = None
   ) extends Definition
       with VitalDefinitionDefinition
       with RootDefinition {
@@ -1503,7 +1520,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     title: Option[LiteralString] = None,
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with RootDefinition
       with DomainDefinition {
@@ -1583,6 +1601,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   ) extends Definition {
     lazy val domains: Seq[Domain] = contents.filter(_.getClass == classOf[Domain]).asInstanceOf[Seq[Domain]]
     lazy val authors: Seq[Author] = contents.filter(_.getClass == classOf[Author]).asInstanceOf[Seq[Author]]
+    def comment: Option[Comment] = None
 
     override def isRootContainer: Boolean = true
 
@@ -1723,7 +1742,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     typeEx: TypeExpression,
     value: LiteralString,
     brief: Option[LiteralString],
-    description: Option[Description]
+    description: Option[Description],
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with ProcessorDefinition
       with DomainDefinition {
@@ -1759,7 +1779,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Definition
       with ProcessorDefinition
       with ProjectorDefinition
@@ -2065,7 +2086,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     options: Seq[FunctionOption] = Seq.empty[FunctionOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends VitalDefinition[FunctionOption, FunctionDefinition]
       with WithTypes
       with AdaptorDefinition
@@ -2108,7 +2130,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     condition: Option[LiteralString] = Option.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with ProcessorDefinition
       with StateDefinition {
@@ -2141,7 +2164,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     loc: At,
     statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Other")
 
@@ -2167,7 +2191,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     loc: At,
     statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Init")
 
@@ -2200,7 +2225,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     from: Option[Reference[Definition]],
     statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
 
@@ -2230,7 +2256,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     loc: At,
     statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"Term")
 
@@ -2262,7 +2289,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Container[HandlerDefinition]
       with AdaptorDefinition
       with ApplicationDefinition
@@ -2317,7 +2345,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     handlers: Seq[Handler] = Seq.empty[Handler],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends EntityDefinition {
 
     override def contents: Seq[StateDefinition] = handlers ++ invariants
@@ -2378,7 +2407,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Processor[EntityOption, EntityDefinition]
       with ContextDefinition {
 
@@ -2440,7 +2470,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     options: Seq[AdaptorOption] = Seq.empty[AdaptorOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Processor[AdaptorOption, AdaptorDefinition]
       with ContextDefinition {
     override lazy val contents: Seq[AdaptorDefinition] = {
@@ -2499,7 +2530,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Processor[RepositoryOption, RepositoryDefinition]
       with ContextDefinition {
     override def kind: String = "Repository"
@@ -2562,7 +2594,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Processor[ProjectorOption, ProjectorDefinition]
       with ContextDefinition
       with WithTypes {
@@ -2584,7 +2617,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     typeExp: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with ContextDefinition {
     final val kind: String = "Replica"
@@ -2651,7 +2685,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     replicas: Seq[Replica] = Seq.empty[Replica],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Processor[ContextOption, ContextDefinition]
       with DomainDefinition {
     override lazy val contents: Seq[ContextDefinition] = super.contents ++
@@ -2700,7 +2735,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     type_ : Reference[Type],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Portlet
       with LeafDefinition
       with ProcessorDefinition
@@ -2727,7 +2763,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     type_ : Reference[Type],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Portlet
       with LeafDefinition
       with ProcessorDefinition
@@ -2744,7 +2781,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     from: Option[OutletRef] = Option.empty[OutletRef],
     to: Option[InletRef] = Option.empty[InletRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = Option.empty[Description]
+    description: Option[Description] = Option.empty[Description],
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with ContextDefinition
       with WithOptions[ConnectorOption] {
@@ -2839,7 +2877,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     options: Seq[StreamletOption] = Seq.empty[StreamletOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Processor[StreamletOption, StreamletDefinition]
       with ContextDefinition {
     override def contents: Seq[StreamletDefinition] = super.contents ++
@@ -2948,7 +2987,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     doStatements: Seq[Statement] = Seq.empty[Statement],
     undoStatements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with SagaDefinition {
     def format: String = s"step ${id.format}"
@@ -2991,7 +3031,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     includes: Seq[Include[SagaDefinition]] = Seq.empty[Include[SagaDefinition]],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends VitalDefinition[SagaOption, SagaDefinition]
       with ContextDefinition
       with DomainDefinition {
@@ -3028,7 +3069,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     is_a: LiteralString,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with DomainDefinition {
     def format: String = s"user ${id.format} is ${is_a.format}"
@@ -3067,7 +3109,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier = Identifier.empty,
     contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Interaction {
     override def kind: String = "Parallel Interaction"
   }
@@ -3091,7 +3134,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier = Identifier.empty,
     contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Interaction {
     override def kind: String = "Sequential Interaction"
   }
@@ -3110,7 +3154,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier = Identifier.empty,
     contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Interaction {
     override def kind: String = "Optional Interaction"
   }
@@ -3121,7 +3166,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier = Identifier.empty,
     relationship: LiteralString,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Interaction {
     override def kind: String = "Vague Interaction"
 
@@ -3159,7 +3205,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     relationship: LiteralString,
     to: Reference[Definition],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends GenericInteraction {
     override def kind: String = "Arbitrary Interaction"
   }
@@ -3170,7 +3217,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     from: Reference[Definition],
     relationship: LiteralString,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends GenericInteraction {
     override def kind: String = "Self Interaction"
     override def to: Reference[Definition] = from
@@ -3195,7 +3243,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     relationship: LiteralString,
     to: UserRef,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends GenericInteraction {
     override def kind: String = "Show Output Interaction"
   }
@@ -3220,7 +3269,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     relationship: LiteralString,
     to: InputRef,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends GenericInteraction {
     override def kind: String = "Take Input Interaction"
   }
@@ -3244,7 +3294,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     userStory: Option[UserStory] = None,
     contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends EpicDefinition
       with Container[Interaction] {
     override def kind: String = "UseCase"
@@ -3303,7 +3354,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     options: Seq[EpicOption] = Seq.empty[EpicOption],
     terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends VitalDefinition[EpicOption, EpicDefinition]
       with DomainDefinition {
     override def contents: Seq[EpicDefinition] = {
@@ -3347,7 +3399,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     elements: Seq[GroupDefinition] = Seq.empty[GroupDefinition],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends ApplicationDefinition
       with GroupDefinition {
     override def kind: String = "Group"
@@ -3373,7 +3426,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     id: Identifier,
     group: GroupRef,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends LeafDefinition
       with GroupDefinition {
     def kind: String = "ContainedGroup"
@@ -3414,7 +3468,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     putOut: TypeRef,
     outputs: Seq[OutputDefinition] = Seq.empty[OutputDefinition],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends ApplicationDefinition
       with OutputDefinition
       with GroupDefinition {
@@ -3459,7 +3514,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     putIn: TypeRef,
     inputs: Seq[InputDefinition] = Seq.empty[InputDefinition],
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends ApplicationDefinition
       with GroupDefinition
       with InputDefinition {
@@ -3530,7 +3586,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     terms: Seq[Term] = Seq.empty[Term],
     includes: Seq[Include[ApplicationDefinition]] = Seq.empty,
     brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends Processor[ApplicationOption, ApplicationDefinition]
       with DomainDefinition {
     override def kind: String = "Application"
@@ -3598,7 +3655,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     includes: Seq[Include[DomainDefinition]] = Seq
       .empty[Include[DomainDefinition]],
     brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    description: Option[Description] = None,
+    comment: Option[Comment] = None
   ) extends VitalDefinition[DomainOption, DomainDefinition]
       with RootDefinition
       with WithTypes

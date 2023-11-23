@@ -77,18 +77,18 @@ private[parsing] trait EpicParser {
   private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
       location ~ Keywords.optional./ ~ identifier.? ~/ open ~ interactions ~ close ~
-        briefly ~ description
-    )./.map { case (loc, id, steps, brief, desc) =>
-      OptionalInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
+        briefly ~ description ~ endOfLineComment
+    )./.map { case (loc, id, steps, brief, desc, comment) =>
+      OptionalInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc, comment)
     }
   }
 
   private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
       location ~ Keywords.parallel./ ~ identifier.? ~/ open ~
-        interactions ~ close ~ briefly ~ description
-    )./.map { case (loc, id, steps, brief, desc) =>
-      ParallelInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
+        interactions ~ close ~ briefly ~ description ~ endOfLineComment
+    )./.map { case (loc, id, steps, brief, desc, comment) =>
+      ParallelInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc, comment)
     }
   }
 
@@ -106,9 +106,9 @@ private[parsing] trait EpicParser {
           Option.empty[UserStory],
           Seq.empty[GenericInteraction]
         ) | (userStory.? ~ interactions)) ~
-        close ~ briefly ~ description
-    ).map { case (loc, id, (userStory, steps), brief, description) =>
-      UseCase(loc, id, userStory, steps, brief, description)
+        close ~ briefly ~ description ~ endOfLineComment
+    ).map { case (loc, id, (userStory, steps), brief, description, comment) =>
+      UseCase(loc, id, userStory, steps, brief, description, comment)
     }
   }
 
@@ -130,7 +130,7 @@ private[parsing] trait EpicParser {
 
   private def epicOptions[u: P]: P[Seq[EpicOption]] = {
     options[u, EpicOption](StringIn(RiddlOption.technology, RiddlOption.sync).!) {
-      case (loc, RiddlOption.sync, _) => EpicSynchronousOption(loc)
+      case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
       case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
     }
   }
@@ -166,7 +166,7 @@ private[parsing] trait EpicParser {
     P(
       location ~ Keywords.epic ~/ identifier ~ authorRefs ~ is ~ open ~
         epicOptions ~ epicBody ~ close ~
-        briefly ~ description
+        briefly ~ description ~ endOfLineComment
     ).map {
       case (
             loc,
@@ -175,7 +175,8 @@ private[parsing] trait EpicParser {
             options,
             (userStory, shownBy, definitions),
             briefly,
-            description
+            description,
+            comment
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val terms = mapTo[Term](groups.get(classOf[Term]))
@@ -197,7 +198,8 @@ private[parsing] trait EpicParser {
           options,
           terms,
           briefly,
-          description
+          description,
+          comment
         )
     }
   }

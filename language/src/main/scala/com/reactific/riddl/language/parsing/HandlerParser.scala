@@ -17,21 +17,21 @@ private[parsing] trait HandlerParser {
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
       location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
-        description
+        description ~ endOfLineComment
     ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
   private def onInitClause[u: P](set: StatementsSet): P[OnInitClause] = {
     P(
       location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
-        description
+        description ~ endOfLineComment
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
   private def onTermClause[u: P](set: StatementsSet): P[OnTerminationClause] = {
     P(
       location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~
-        briefly ~ description
+        briefly ~ description ~ endOfLineComment
     ).map(t => (OnTerminationClause.apply _).tupled(t))
   }
 
@@ -42,7 +42,7 @@ private[parsing] trait HandlerParser {
   private def onMessageClause[u: P](set: StatementsSet): P[OnMessageClause] = {
     location ~ Keywords.on ~ messageRef ~
       (Readability.from ~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
-      briefly ~ description
+      briefly ~ description ~ endOfLineComment
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
   private def onClauses[u: P](set: StatementsSet): P[Seq[OnClause]] = {
@@ -57,15 +57,16 @@ private[parsing] trait HandlerParser {
     P(
       Keywords.handler ~/ location ~ identifier ~ authorRefs ~ is ~ open ~
         handlerBody(set) ~
-        close ~ briefly ~ description
-    )./.map { case (loc, id, authors, clauses, briefly, desc) =>
+        close ~ briefly ~ description ~ endOfLineComment
+    )./.map { case (loc, id, authors, clauses, briefly, desc, comment) =>
       Handler(
         loc,
         id,
         clauses,
         authors,
         briefly,
-        desc
+        desc,
+        comment
       )
     }
   }

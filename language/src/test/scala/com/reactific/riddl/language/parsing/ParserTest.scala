@@ -271,13 +271,9 @@ class ParserTest extends ParsingTest {
                       (2, 50, rpi),
                       Identifier((2, 50, rpi), "x"),
                       Strng((2, 53, rpi), None, None),
-                      None,
-                      None
                     )
                   )
-                ),
-                None,
-                None
+                )
               )
             )
           )
@@ -326,14 +322,14 @@ class ParserTest extends ParsingTest {
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)),
+                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _, _)),
                       _
                     )
                   ),
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)),
+                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _, _)),
                       _
                     )
                   ),
@@ -345,7 +341,8 @@ class ParserTest extends ParsingTest {
                   _,
                   _,
                   None,
-                  None
+                  None,
+              None
                 ) =>
           }
       }

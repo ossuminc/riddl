@@ -5,32 +5,31 @@
  */
 
 package com.reactific.riddl.language.parsing
-
-import com.reactific.riddl.language.parsing.Terminals.*
-import com.reactific.riddl.language.AST.{LiteralString}
+import com.reactific.riddl.language.AST.{Comment, LiteralString}
 import fastparse.*
 import fastparse.NoWhitespace.*
+
 import java.lang.Character.isISOControl
 
 /** Parser rules that should not collect white space */
 private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
 
-  def line[u:P]: P[String] = {
+  def toEndOfLine[u:P]: P[String] = {
     P(
-      CharsWhile(ch => ch != '\n' && ch != '\r').! ~~ ("\n" | "\r" ~~ "\n").rep(min = 1, max = 2)
+      CharsWhile(ch => ch != '\n' && ch != '\r').! ~~ ("\n" | "\r" ~~ "\n")
     )
   }
 
   def markdownLine[u: P]: P[LiteralString] = {
     P(
-      location ~ Punctuation.verticalBar ~~ line
+      location ~ Punctuation.verticalBar ~~ toEndOfLine
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
   }
-  
-  def commentLine[u:P]: P[LiteralString] = {
+
+  def endOfLineComment[u:P]: P[Option[Comment]] = {
     P(
-      location ~ "//" ~~ line 
-    ).map(tpl => (LiteralString.apply _).tupled(tpl))
+      location ~~ "//" ~~ toEndOfLine
+    ).?./.map{ _.map( c => Comment(c._1, c._2))}
   }
 
   // \\	The backslash character

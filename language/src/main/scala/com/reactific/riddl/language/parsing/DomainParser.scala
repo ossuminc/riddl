@@ -60,8 +60,8 @@ private[parsing] trait DomainParser {
     P(
       location ~ Keywords.domain ~/ identifier ~/ authorRefs ~  is ~ open ~/
         domainOptions ~/ domainBody ~ close ~/
-        briefly ~ description
-    ).map { case (loc, id, authorRefs, options, defs, briefly, description) =>
+        briefly ~ description ~ endOfLineComment
+    ).map { case (loc, id, authorRefs, options, defs, brief, description, comment) =>
       val groups = defs.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val subdomains = mapTo[Domain](groups.get(classOf[Domain]))
@@ -94,8 +94,9 @@ private[parsing] trait DomainParser {
         subdomains,
         terms,
         includes,
-        briefly,
-        description
+        brief,
+        description,
+        comment
       )
     }
   }
