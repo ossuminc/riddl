@@ -6,7 +6,7 @@
 
 package com.reactific.riddl.language
 
-import com.reactific.riddl.language.parsing.Terminals.Keywords
+import com.reactific.riddl.language.parsing.Keyword
 import com.reactific.riddl.language.AST.*
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -20,35 +20,27 @@ class ASTTest extends AnyWordSpec with Matchers {
       Domain((0, 0), Identifier((1, 1), "foo"))
     }
     "support all type constructs" in {
-      AliasedTypeExpression(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo"))) mustBe
-        AliasedTypeExpression(0 -> 0, PathIdentifier(0 -> 0, Seq("Foo")))
-
-      Enumeration((0, 0), Seq.empty[Enumerator]) mustBe
-        Enumeration((0, 0), Seq.empty[Enumerator])
-      Alternation((0, 0), Seq.empty[AliasedTypeExpression]) mustBe
-        Alternation((0, 0), Seq.empty[AliasedTypeExpression])
-      Aggregation((0, 0), Seq.empty[Field]) mustBe
-        Aggregation((0, 0), Seq.empty[Field])
+      AliasedTypeExpression(0 -> 0, "record", PathIdentifier(0 -> 0, Seq("Foo"))).format mustBe "record Foo"
+      Enumeration((0, 0), Seq.empty[Enumerator]).format mustBe "{  }"
+      Alternation((0, 0), Seq.empty[AliasedTypeExpression]).format mustBe "one of {  }"
+      Aggregation((0, 0), Seq.empty[Field]).format mustBe "{  }"
       Optional(
         (0, 0),
-        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("String")))
-      ) mustBe Optional(
-        (0, 0),
-        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("String")))
-      )
+        AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("String")))
+      ).format mustBe "record String?"
       ZeroOrMore(
         (0, 0),
-        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("Time")))
+        AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("Time")))
       ) mustBe ZeroOrMore(
         (0, 0),
-        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("Time")))
+        AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("Time")))
       )
       OneOrMore(
         (0, 0),
-        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("URL")))
+        AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("URL")))
       ) mustBe OneOrMore(
         (0, 0),
-        AliasedTypeExpression((0, 0), PathIdentifier((0, 0), Seq("URL")))
+        AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("URL")))
       )
     }
   }
@@ -70,7 +62,7 @@ class ASTTest extends AnyWordSpec with Matchers {
     "have kind 'Boolean'" in { Bool(At()).kind mustBe "Boolean" }
   }
 
-  "Entity Options" should {
+  "Entity RiddlOptions" should {
     "have correct names" in {
       EntityIsAggregate(At()).name mustBe "aggregate"
       EntityTransient(At()).name mustBe "transient"
@@ -284,7 +276,7 @@ class ASTTest extends AnyWordSpec with Matchers {
 
   "Term" should {
     "format correctly" in {
-      term.format mustBe s"${Keywords.term} ${term.id.format}"
+      term.format mustBe s"${Keyword.term} ${term.id.format}"
     }
   }
 }

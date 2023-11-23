@@ -6,12 +6,12 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.At
-import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.{P, *}
+import fastparse.MultiLineWhitespace.*
 
+import java.lang.Character.{isLetter, isLetterOrDigit}
 import java.net.URI
 import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
@@ -22,7 +22,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def author[u: P]: P[Author] = {
     P(
-      location ~ Keywords.author ~/ identifier ~ is ~ open ~
+      location ~ Keywords.author ~/ identifier ~ Readability.is ~ open ~
         (undefined(
           (
             LiteralString(At(), ""),
@@ -32,10 +32,10 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
             Option.empty[java.net.URL]
           )
         ) |
-          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
-            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
-            (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+          (Keywords.name ~ Readability.is ~ literalString ~ Keywords.email ~ Readability.is ~
+            literalString ~ (Keywords.organization ~ Readability.is ~ literalString).? ~
+            (Keywords.title ~ Readability.is ~ literalString).? ~
+            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description
     ).map { case (loc, id, (name, email, org, title, url), brief, desc) =>
       Author(loc, id, name, email, org, title, url, brief, desc)
     }
@@ -51,8 +51,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def importDef[u: P]: P[DomainDefinition] = {
     P(
-      location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~
-        Readability.from ~ literalString
+      location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ Readability.from ~ literalString
     ).map { tuple => doImport(tuple._1, tuple._2, tuple._3) }
   }
 
@@ -60,13 +59,15 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     P(Punctuation.undefinedMark./).map(_ => f)
   }
 
-  def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
-
-  def markdownLines[u: P]: P[Seq[LiteralString]] = {
-    P(markdownLine.rep(1))
+  def whiteSpaceChar[u: P]: P[Unit] = {
+    CharIn(" \t\n")
   }
 
-  def as[u: P]: P[Unit] = { P(StringIn(Readability.as, Readability.by).?) }
+  def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
+
+  private def markdownLines[u: P]: P[Seq[LiteralString]] = {
+    P(markdownLine.rep(1))
+  }
 
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
@@ -101,12 +102,12 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
-    P(StringIn(Keywords.brief, Keywords.briefly) ~ literalString).?
+    (Keywords.briefly ~/ literalString).?
   }
 
   def description[u: P]: P[Option[Description]] = P(
-    StringIn(Keywords.described, Keywords.explained) ~/
-      ((as ~ blockDescription) | (Readability.in ~ fileDescription) |
+    Keywords.described ~/
+      ((Readability.byAs ~ blockDescription) | (Readability.in ~ fileDescription) |
         (Readability.at ~ urlDescription))
   ).?
 
@@ -115,7 +116,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def integer[u: P]: P[Long] = {
-    StringIn(Operators.plus, Operators.minus).? ~ wholeNumber
+    CharIn("+\\-").? ~~ wholeNumber
   }
 
   private def simpleIdentifier[u: P]: P[String] = {
@@ -123,7 +124,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   private def quotedIdentifier[u: P]: P[String] = {
-    P("'" ~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
+    P("'" ~~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
   }
 
   private def anyIdentifier[u: P]: P[String] = {
@@ -131,27 +132,14 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def identifier[u: P]: P[Identifier] = {
-    P(location ~ anyIdentifier).map(tpl => (Identifier.apply _).tupled(tpl))
+    P(location ~ anyIdentifier).map { case (loc, value) => Identifier(loc, value) }
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(location ~ anyIdentifier ~ (Punctuation.dot ~ anyIdentifier).repX(0)).map { case (loc, first, strings) =>
+    P(location ~ anyIdentifier ~~ (Punctuation.dot ~~ anyIdentifier).repX(0)).map { case (loc, first, strings) =>
       PathIdentifier(loc, first +: strings)
     }
   }
-
-  def is[u: P]: P[Unit] = {
-    P(
-      StringIn(
-        Readability.is,
-        Readability.are,
-        Punctuation.colon,
-        Punctuation.equalsSign
-      )
-    ).?
-  }
-
-  def by[u: P]: P[Unit] = { P(StringIn(Readability.by, Readability.from)).? }
 
   def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
@@ -224,52 +212,60 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl => (Term.apply _).tupled(tpl))
+    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description)./.map(tpl =>
+      (Term.apply _).tupled(tpl)
+    )
   }
 
   def groupAliases[u: P]: P[String] = {
     P(
-      StringIn(
-        Keywords.group,
-        "page",
-        "pane",
-        "dialog",
-        "popup",
-        "frame",
-        "column",
-        "window",
-        "section",
-        "tab",
-        "flow"
-      ).!
+      Keywords.keywords(
+        StringIn(
+          Keyword.group,
+          "page",
+          "pane",
+          "dialog",
+          "popup",
+          "frame",
+          "column",
+          "window",
+          "section",
+          "tab",
+          "flow"
+        ).!
+      )
     )
   }
 
   def outputAliases[u: P]: P[String] = {
     P(
-      StringIn(
-        Keywords.output,
-        "document",
-        "list",
-        "table",
-        "graph",
-        "animation",
-        "picture"
-      ).!
+      Keywords.keywords(
+        StringIn(
+          Keyword.output,
+          "document",
+          "list",
+          "table",
+          "graph",
+          "animation",
+          "picture"
+        ).!
+      )
     )
   }
 
   def inputAliases[u: P]: P[String] = {
     P(
-      StringIn(
-        Keywords.input,
-        "form",
-        "text",
-        "button",
-        "picklist",
-        "selector",
-        "menu"
-      ).!
+      Keywords.keywords(
+        StringIn(
+          Keyword.input,
+          "form",
+          "text",
+          "button",
+          "picklist",
+          "selector",
+          "menu"
+        ).!
+      )
     )
   }
 

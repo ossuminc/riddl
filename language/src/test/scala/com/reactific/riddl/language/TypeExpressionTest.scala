@@ -8,16 +8,17 @@ package com.reactific.riddl.language
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.parsing.PredefType
+
 /** Unit Tests For TypeExpressions */
 class TypeExpressionTest extends AnyWordSpec with Matchers {
 
   val abstract_ = Abstract(At.empty)
-  val bool = Bool(At.empty)
-  val current = Current(At.empty)
-  val currency = Currency(At.empty, "CA")
-  val date = Date(At.empty)
+  val bool: Bool = Bool(At.empty)
+  val current: Current = Current(At.empty)
+  val currency: Currency = Currency(At.empty, "CA")
+  val date: Date = Date(At.empty)
   val dateTime = DateTime(At.empty)
   val decimal = Decimal(At.empty, 8, 3)
   val duration = Duration(At.empty)
@@ -43,150 +44,150 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
 
   "Simple Predefined Types" must {
     "support Abstract" in {
-      abstract_.kind mustBe Predefined.Abstract
-      AST.errorDescription(abstract_) mustBe Predefined.Abstract
+      abstract_.kind mustBe PredefType.Abstract
+      AST.errorDescription(abstract_) mustBe PredefType.Abstract
     }
     "support Boolean" in {
-      bool.kind mustBe Predefined.Boolean
-      AST.errorDescription(bool) mustBe Predefined.Boolean
+      bool.kind mustBe PredefType.Boolean
+      AST.errorDescription(bool) mustBe PredefType.Boolean
       bool.isEmpty mustBe true
       bool.isContainer mustBe false
     }
     "support Current" in {
-      current.kind mustBe Predefined.Current
-      AST.errorDescription(current) mustBe Predefined.Current
+      current.kind mustBe PredefType.Current
+      AST.errorDescription(current) mustBe PredefType.Current
       current.isEmpty mustBe true
       current.isContainer mustBe false
     }
     "support Currency" in {
-      currency.kind mustBe Predefined.Currency
-      AST.errorDescription(currency) mustBe Predefined.Currency
+      currency.kind mustBe PredefType.Currency
+      AST.errorDescription(currency) mustBe PredefType.Currency
       currency.isEmpty mustBe true
       currency.isContainer mustBe false
     }
     "support Date" in {
-      date.kind mustBe Predefined.Date
-      AST.errorDescription(date) mustBe Predefined.Date
+      date.kind mustBe PredefType.Date
+      AST.errorDescription(date) mustBe PredefType.Date
       date.isEmpty mustBe true
       date.isContainer mustBe false
     }
     "support DateTime" in {
-      dateTime.kind mustBe Predefined.DateTime
-      AST.errorDescription(dateTime) mustBe Predefined.DateTime
+      dateTime.kind mustBe PredefType.DateTime
+      AST.errorDescription(dateTime) mustBe PredefType.DateTime
       dateTime.isEmpty mustBe true
       dateTime.isContainer mustBe false
     }
     "support Decimal" in {
-      decimal.kind mustBe Predefined.Decimal
+      decimal.kind mustBe PredefType.Decimal
       AST.errorDescription(decimal) mustBe s"Decimal(8,3)"
       decimal.isEmpty mustBe true
       decimal.isContainer mustBe false
       decimal.format mustBe s"Decimal(8,3)"
     }
     "support Duration" in {
-      duration.kind mustBe Predefined.Duration
-      AST.errorDescription(duration) mustBe Predefined.Duration
+      duration.kind mustBe PredefType.Duration
+      AST.errorDescription(duration) mustBe PredefType.Duration
       duration.isEmpty mustBe true
       duration.isContainer mustBe false
-      duration.format mustBe Predefined.Duration
+      duration.format mustBe PredefType.Duration
     }
     "support Integer" in {
-      integer.kind mustBe Predefined.Integer
-      AST.errorDescription(integer) mustBe Predefined.Integer
+      integer.kind mustBe PredefType.Integer
+      AST.errorDescription(integer) mustBe PredefType.Integer
       integer.isEmpty mustBe true
       integer.isContainer mustBe false
-      integer.format mustBe Predefined.Integer
+      integer.format mustBe PredefType.Integer
     }
     "support Length" in {
-      length_.kind mustBe Predefined.Length
-      AST.errorDescription(length_) mustBe Predefined.Length
+      length_.kind mustBe PredefType.Length
+      AST.errorDescription(length_) mustBe PredefType.Length
       length_.isEmpty mustBe true
       length_.isContainer mustBe false
-      length_.format mustBe Predefined.Length
+      length_.format mustBe PredefType.Length
     }
     "support Location" in {
-      location.kind mustBe Predefined.Location
-      AST.errorDescription(location) mustBe Predefined.Location
+      location.kind mustBe PredefType.Location
+      AST.errorDescription(location) mustBe PredefType.Location
       location.isEmpty mustBe true
       location.isContainer mustBe false
-      location.format mustBe Predefined.Location
+      location.format mustBe PredefType.Location
     }
     "support Luminosity" in {
-      luminosity.kind mustBe Predefined.Luminosity
-      AST.errorDescription(luminosity) mustBe Predefined.Luminosity
+      luminosity.kind mustBe PredefType.Luminosity
+      AST.errorDescription(luminosity) mustBe PredefType.Luminosity
       luminosity.isEmpty mustBe true
       luminosity.isContainer mustBe false
-      luminosity.format mustBe Predefined.Luminosity
+      luminosity.format mustBe PredefType.Luminosity
     }
     "support Mass" in {
-      mass.kind mustBe Predefined.Mass
-      AST.errorDescription(mass) mustBe Predefined.Mass
+      mass.kind mustBe PredefType.Mass
+      AST.errorDescription(mass) mustBe PredefType.Mass
       mass.isEmpty mustBe true
       mass.isContainer mustBe false
-      mass.format mustBe Predefined.Mass
+      mass.format mustBe PredefType.Mass
     }
     "support Mole" in {
-      mole.kind mustBe Predefined.Mole
-      AST.errorDescription(mole) mustBe Predefined.Mole
+      mole.kind mustBe PredefType.Mole
+      AST.errorDescription(mole) mustBe PredefType.Mole
       mole.isEmpty mustBe true
       mole.isContainer mustBe false
-      mole.format mustBe Predefined.Mole
+      mole.format mustBe PredefType.Mole
     }
     "support Nothing" in {
-      nothing.kind mustBe Predefined.Nothing
-      AST.errorDescription(nothing) mustBe Predefined.Nothing
+      nothing.kind mustBe PredefType.Nothing
+      AST.errorDescription(nothing) mustBe PredefType.Nothing
       nothing.isEmpty mustBe true
       nothing.isContainer mustBe false
-      nothing.format mustBe Predefined.Nothing
+      nothing.format mustBe PredefType.Nothing
     }
     "support Number" in {
-      number.kind mustBe Predefined.Number
-      AST.errorDescription(number) mustBe Predefined.Number
+      number.kind mustBe PredefType.Number
+      AST.errorDescription(number) mustBe PredefType.Number
       number.isEmpty mustBe true
       number.isContainer mustBe false
-      number.format mustBe Predefined.Number
+      number.format mustBe PredefType.Number
     }
     "support Real" in {
-      real.kind mustBe Predefined.Real
-      AST.errorDescription(real) mustBe Predefined.Real
+      real.kind mustBe PredefType.Real
+      AST.errorDescription(real) mustBe PredefType.Real
       real.isEmpty mustBe true
       real.isContainer mustBe false
-      real.format mustBe Predefined.Real
+      real.format mustBe PredefType.Real
     }
     "support Temperature" in {
-      temperature.kind mustBe Predefined.Temperature
-      AST.errorDescription(temperature) mustBe Predefined.Temperature
+      temperature.kind mustBe PredefType.Temperature
+      AST.errorDescription(temperature) mustBe PredefType.Temperature
       temperature.isEmpty mustBe true
       temperature.isContainer mustBe false
-      temperature.format mustBe Predefined.Temperature
+      temperature.format mustBe PredefType.Temperature
     }
     "support Time" in {
-      time.kind mustBe Predefined.Time
-      AST.errorDescription(time) mustBe Predefined.Time
+      time.kind mustBe PredefType.Time
+      AST.errorDescription(time) mustBe PredefType.Time
       time.isEmpty mustBe true
       time.isContainer mustBe false
-      time.format mustBe Predefined.Time
+      time.format mustBe PredefType.Time
     }
     "support TimeStamp" in {
-      timestamp.kind mustBe Predefined.TimeStamp
-      AST.errorDescription(timestamp) mustBe Predefined.TimeStamp
+      timestamp.kind mustBe PredefType.TimeStamp
+      AST.errorDescription(timestamp) mustBe PredefType.TimeStamp
       timestamp.isEmpty mustBe true
       timestamp.isContainer mustBe false
-      timestamp.format mustBe Predefined.TimeStamp
+      timestamp.format mustBe PredefType.TimeStamp
     }
     "support URL" in {
-      url.kind mustBe Predefined.URL
-      AST.errorDescription(url) mustBe Predefined.URL
+      url.kind mustBe PredefType.URL
+      AST.errorDescription(url) mustBe PredefType.URL
       url.isEmpty mustBe true
       url.isContainer mustBe false
-      url.format mustBe Predefined.URL
+      url.format mustBe PredefType.URL
     }
     "support UUID" in {
-      uuid.kind mustBe Predefined.UUID
-      AST.errorDescription(uuid) mustBe Predefined.UUID
+      uuid.kind mustBe PredefType.UUID
+      AST.errorDescription(uuid) mustBe PredefType.UUID
       uuid.isEmpty mustBe true
       uuid.isContainer mustBe false
-      uuid.format mustBe Predefined.UUID
+      uuid.format mustBe PredefType.UUID
     }
   }
 
@@ -194,20 +195,20 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     "support Pattern" in {
       pattern.isEmpty mustBe true
       pattern.isContainer mustBe false
-      pattern.kind mustBe Predefined.Pattern
-      AST.errorDescription(pattern) mustBe Predefined.Pattern
+      pattern.kind mustBe PredefType.Pattern
+      AST.errorDescription(pattern) mustBe "Pattern(\"^$\")"
       pattern.format mustBe "Pattern(\"^$\")"
     }
     "support Range" in {
       range.isEmpty mustBe true
       range.isContainer mustBe false
-      range.kind mustBe Predefined.Range
+      range.kind mustBe PredefType.Range
       AST.errorDescription(range) mustBe "Range(2,4)"
       range.format mustBe "Range(2,4)"
     }
     "support String" in {
-      string.kind mustBe Predefined.String
-      AST.errorDescription(string) mustBe Predefined.String
+      string.kind mustBe PredefType.String
+      AST.errorDescription(string) mustBe PredefType.String
       string.format mustBe "String(42,)"
       string.isEmpty mustBe true
       string.isContainer mustBe false
@@ -215,13 +216,13 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
 
     "support UniqueId" in {
       id.format mustBe "Id(a.b)"
-      id.kind mustBe Predefined.Id
+      id.kind mustBe PredefType.Id
       id.isEmpty mustBe true
       id.isContainer mustBe false
     }
   }
 
-  val enumeration = Enumeration(
+  val enumeration: Enumeration = Enumeration(
     At.empty,
     Seq(
       Enumerator(At.empty, Identifier(At.empty, "one")),
@@ -230,7 +231,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     )
   )
 
-  val aggregation = Aggregation(
+  val aggregation: Aggregation = Aggregation(
     At.empty,
     Seq(
       Field(At.empty, Identifier(At.empty, "integer"), integer),
@@ -263,28 +264,26 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     )
   )
 
-  val alternation = Alternation(
+  val alternation: Alternation = Alternation(
     At.empty,
     Seq(
-      AliasedTypeExpression(At.empty, PathIdentifier(At.empty, Seq("a", "b"))),
-      AliasedTypeExpression(At.empty, PathIdentifier(At.empty, Seq("z", "y")))
+      AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a", "b"))),
+      AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("z", "y")))
     )
   )
 
-  val mapping = Mapping(At.empty, string, integer)
+  val mapping: Mapping = Mapping(At.empty, string, integer)
 
-  val reference = EntityReferenceTypeExpression(
+  val reference: EntityReferenceTypeExpression = EntityReferenceTypeExpression(
     At.empty,
     PathIdentifier(At.empty, Seq("a", "b", "c", "d", "entity"))
   )
 
-  val message =
+  val message: AggregateUseCaseTypeExpression =
     AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields)
 
-  val alias = AliasedTypeExpression(
-    At.empty,
-    PathIdentifier(At.empty, Seq("a", "b", "foo"))
-  )
+  val alias: AliasedTypeExpression = AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a",
+    "b", "foo")))
 
   "Complex Expression Types" must {
     "Support Aggregation" in {
@@ -310,7 +309,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     }
     "Support Alternation" in {
       AST.errorDescription(alternation) mustBe "Alternation of 2 types"
-      alternation.format mustBe "one of { a.b, z.y }"
+      alternation.format mustBe "one of { message a.b, message z.y }"
       alternation.isEmpty mustBe true
       alternation.isContainer mustBe false
     }
@@ -343,8 +342,8 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       message.isContainer mustBe true
     }
     "Support type aliases" in {
-      AST.errorDescription(alias) mustBe "a.b.foo"
-      alias.format mustBe "a.b.foo"
+      AST.errorDescription(alias) mustBe "message a.b.foo"
+      alias.format mustBe "message a.b.foo"
       alias.isEmpty mustBe true
       alias.isContainer mustBe false
     }

@@ -9,8 +9,8 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 private[parsing] trait RepositoryParser {
 
@@ -22,9 +22,8 @@ private[parsing] trait RepositoryParser {
     with TypeParser =>
 
   private def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
-    options[u, RepositoryOption](StringIn(Options.technology).!) {
-      case (loc, Options.technology, args) =>
-        RepositoryTechnologyOption(loc, args)
+    options[u, RepositoryOption](StringIn(RiddlOption.technology).!) {
+      case (loc, RiddlOption.technology, args) => RepositoryTechnologyOption(loc, args)
     }
   }
 
@@ -35,7 +34,7 @@ private[parsing] trait RepositoryParser {
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
     P(
       typeDef | handler(StatementsSet.RepositoryStatements) |
-        function | term | repositoryInclude | inlet | outlet | constant 
+        function | term | repositoryInclude | inlet | outlet | constant
     ).rep(0)
   }
 

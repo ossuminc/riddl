@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** SagaParser Implements the parsing of saga definitions in context definitions.
   */
@@ -26,11 +26,10 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaOptions[u: P]: P[Seq[SagaOption]] = {
-    options[u, SagaOption](StringIn(Options.parallel, Options.sequential).!) {
-      case (loc, option, _) if option == Options.parallel => ParallelOption(loc)
-      case (loc, option, _) if option == Options.sequential =>
-        SequentialOption(loc)
-      case (loc, Options.technology, args) => SagaTechnologyOption(loc, args)
+    options[u, SagaOption](StringIn(RiddlOption.parallel, RiddlOption.sequential).!) {
+      case (loc, option, _) if option == RiddlOption.parallel => ParallelOption(loc)
+      case (loc, option, _) if option == RiddlOption.sequential => SequentialOption(loc)
+      case (loc, RiddlOption.technology, args) => SagaTechnologyOption(loc, args)
     }
   }
 

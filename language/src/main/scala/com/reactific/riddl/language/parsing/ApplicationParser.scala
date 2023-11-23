@@ -7,9 +7,9 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import Terminals.{Keywords, *}
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 private[parsing] trait ApplicationParser {
   this: StreamingParser
@@ -21,15 +21,10 @@ private[parsing] trait ApplicationParser {
     with CommonParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
-    options[u, ApplicationOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
-      ApplicationTechnologyOption(loc, args)
+    options[u, ApplicationOption](StringIn(RiddlOption.technology).!) {
+      case (loc, RiddlOption.technology, args) =>  ApplicationTechnologyOption(loc, args)
     }
   }
-  //loc: At,
-  //    id: Identifier,
-  //    group: GroupRef,
-  //    brief: Option[LiteralString] = None,
-  //    description: Option[Description] = None
 
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
@@ -46,7 +41,7 @@ private[parsing] trait ApplicationParser {
 
   private def group[u: P]: P[Group] = {
     P(
-      location ~ groupAliases ~ identifier ~/ is ~ open ~
+      location ~ groupAliases.log ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[GroupDefinition]) | groupDefinitions) ~
         close ~ briefly ~ description
     ).map { case (loc, alias, id, elements, brief, description) =>

@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 import com.reactific.riddl.language.At
 
 /** Unit Tests For StreamingParser */
@@ -32,11 +32,10 @@ private[parsing] trait StreamingParser {
 
   private def connectorOptions[X: P]: P[Seq[ConnectorOption]] = {
     options[X, ConnectorOption](
-      StringIn(Options.persistent, Options.technology).!
+      StringIn(RiddlOption.persistent, RiddlOption.technology).!
     ) {
-      case (loc, Options.persistent, _) => ConnectorPersistentOption(loc)
-      case (loc, Options.technology, args) =>
-        ConnectorTechnologyOption(loc, args)
+      case (loc, RiddlOption.persistent, _) => ConnectorPersistentOption(loc)
+      case (loc, RiddlOption.technology, args) => ConnectorTechnologyOption(loc, args)
     }
   }
 
@@ -86,7 +85,7 @@ private[parsing] trait StreamingParser {
   }
 
   private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
-    options[u, StreamletOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
+    options[u, StreamletOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
       StreamletTechnologyOption(loc, args)
     }
   }
@@ -162,16 +161,16 @@ private[parsing] trait StreamingParser {
   private val MaxStreamlets = 1000
 
   def source[u: P]: P[Streamlet] = {
-    streamletTemplate(Keywords.source, minOutlets = 1, maxOutlets = 1)
+    streamletTemplate(Keyword.source, minOutlets = 1, maxOutlets = 1)
   }
 
   def sink[u: P]: P[Streamlet] = {
-    streamletTemplate(Keywords.sink, minInlets = 1, maxInlets = 1)
+    streamletTemplate(Keyword.sink, minInlets = 1, maxInlets = 1)
   }
 
   def flow[u: P]: P[Streamlet] = {
     streamletTemplate(
-      Keywords.flow,
+      Keyword.flow,
       minInlets = 1,
       maxInlets = 1,
       minOutlets = 1,
@@ -181,7 +180,7 @@ private[parsing] trait StreamingParser {
 
   def split[u: P]: P[Streamlet] = {
     streamletTemplate(
-      Keywords.split,
+      Keyword.split,
       minInlets = 1,
       maxInlets = 1,
       minOutlets = 2,
@@ -191,7 +190,7 @@ private[parsing] trait StreamingParser {
 
   def merge[u: P]: P[Streamlet] = {
     streamletTemplate(
-      Keywords.merge,
+      Keyword.merge,
       minInlets = 2,
       maxInlets = MaxStreamlets,
       minOutlets = 1,
@@ -201,7 +200,7 @@ private[parsing] trait StreamingParser {
 
   def router[u: P]: P[Streamlet] = {
     streamletTemplate(
-      Keywords.router,
+      Keyword.router,
       minInlets = 2,
       maxInlets = MaxStreamlets,
       minOutlets = 2,
@@ -209,7 +208,7 @@ private[parsing] trait StreamingParser {
     )
   }
 
-  def void[u: P]: P[Streamlet] = { streamletTemplate(Keywords.void) }
+  def void[u: P]: P[Streamlet] = { streamletTemplate(Keyword.void) }
 
   def streamlet[u: P]: P[Streamlet] =
     P(source | flow | sink | merge | split | router | void)

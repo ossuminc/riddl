@@ -116,6 +116,7 @@ trait ParsingContext {
       .map {
         case s: String if s.startsWith("char-pred")  => "pattern"
         case s: String if s.startsWith("chars-with") => "pattern"
+        case s: String if s == "fail"                => "whitespace after keyword"
         case s: String                               => s
       }
       .distinct
@@ -140,11 +141,12 @@ trait ParsingContext {
   }
 
   def expect[T <: RiddlNode](
-    parser: P[?] => P[T]
+    parser: P[?] => P[T],
+    withVerboseFailures: Boolean = false
   ): Either[Messages, (T, RiddlParserInput)] = {
     val input = current
     try {
-      fastparse.parse[T](input, parser(_)) match {
+      fastparse.parse[T](input, parser(_), withVerboseFailures) match {
         case Success(content, _) =>
           if errors.nonEmpty then Left(errors.toList)
           else Right(content -> input)
@@ -161,11 +163,12 @@ trait ParsingContext {
 
   def expectMultiple[T <: Definition](
     source: String,
-    parser: P[?] => P[Seq[T]]
+    parser: P[?] => P[Seq[T]],
+    withVerboseFailures: Boolean = false
   ): Either[Messages, (Seq[T], RiddlParserInput)] = {
     val input = current
     try {
-      fastparse.parse[Seq[T]](input, parser(_)) match {
+      fastparse.parse[Seq[T]](input, parser(_), withVerboseFailures) match {
         case Success(content, index) =>
           if errors.nonEmpty then Left(errors.toList)
           else if content.isEmpty then

@@ -6,11 +6,10 @@
 
 package com.reactific.riddl.language.parsing
 
-import Terminals.*
-
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {
@@ -23,7 +22,7 @@ private[parsing] trait AdaptorParser {
     with CommonParser =>
 
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
-    options[u, AdaptorOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
+    options[u, AdaptorOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
       AdaptorTechnologyOption(loc, args)
     }
   }

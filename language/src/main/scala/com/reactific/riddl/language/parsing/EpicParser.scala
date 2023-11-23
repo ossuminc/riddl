@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 import java.net.URL
 
 private[parsing] trait EpicParser {
@@ -31,7 +31,7 @@ private[parsing] trait EpicParser {
 
   private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Readability.from) ~/ anyInteractionRef ~
+      location ~ Keywords.step ~ optionalIdentifier("from") ~/ anyInteractionRef ~
         literalString ~ Readability.to.? ~ anyInteractionRef ~/ briefly ~ description
     )./.map { case (loc, id, from, ls, to, brief, desc) =>
       ArbitraryInteraction(loc, id, from, ls, to, brief, desc)
@@ -40,7 +40,7 @@ private[parsing] trait EpicParser {
 
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Readability.for_) ~/
+      location ~ Keywords.step ~ optionalIdentifier("for") ~/
         anyInteractionRef ~ is ~ literalString ~/ briefly ~ description
     )./.map { case (loc, id, fromTo, proc, brief, desc) =>
       SelfInteraction(loc, id, fromTo, proc, brief, desc)
@@ -49,7 +49,7 @@ private[parsing] trait EpicParser {
 
   private def showOutputStep[u: P]: P[ShowOutputInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Keywords.show) ~/
+      location ~ Keywords.step ~ optionalIdentifier(Keyword.show) ~/
         outputRef ~ Readability.to ~ userRef ~/ briefly ~ description
     )./.map { case (loc, id, outRef, userRef, brief, desc) =>
       ShowOutputInteraction(loc, id, outRef, LiteralString.empty, userRef, brief, desc)
@@ -58,7 +58,7 @@ private[parsing] trait EpicParser {
 
   private def takeInputStep[u: P]: P[TakeInputInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Keywords.take) ~/
+      location ~ Keywords.step ~ optionalIdentifier(Keyword.take) ~/
         inputRef ~ Readability.from ~ userRef ~/ briefly ~ description
     )./.map { case (loc, id, input, user, brief, desc) =>
       TakeInputInteraction(loc, id, from = user, relationship = LiteralString.empty, to = input, brief, desc)
@@ -129,9 +129,9 @@ private[parsing] trait EpicParser {
   }
 
   private def epicOptions[u: P]: P[Seq[EpicOption]] = {
-    options[u, EpicOption](StringIn(Options.technology, Options.sync).!) {
-      case (loc, Options.sync, _)          => EpicSynchronousOption(loc)
-      case (loc, Options.technology, args) => EpicTechnologyOption(loc, args)
+    options[u, EpicOption](StringIn(RiddlOption.technology, RiddlOption.sync).!) {
+      case (loc, RiddlOption.sync, _) => EpicSynchronousOption(loc)
+      case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
     }
   }
 

@@ -9,7 +9,7 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
 
 import java.io.File
 import java.net.URL

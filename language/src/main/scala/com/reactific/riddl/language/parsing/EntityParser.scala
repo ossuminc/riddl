@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Parsing rules for entity definitions */
 private[parsing] trait EntityParser {
@@ -22,32 +22,19 @@ private[parsing] trait EntityParser {
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
-      StringIn(
-        Options.eventSourced,
-        Options.value,
-        Options.aggregate,
-        Options.transient,
-        Options.consistent,
-        Options.available,
-        Options.finiteStateMachine,
-        Options.kind,
-        Options.messageQueue,
-        Options.device,
-        Options.technology
-      ).!
+    RiddlOptions.entityOptions
     ) {
-      case (loc, Options.eventSourced, _) => EntityEventSourced(loc)
-      case (loc, Options.value, _)        => EntityValueOption(loc)
-      case (loc, Options.aggregate, _)    => EntityIsAggregate(loc)
-      case (loc, Options.transient, _)    => EntityTransient(loc)
-      case (loc, Options.consistent, _)   => EntityIsConsistent(loc)
-      case (loc, Options.available, _)    => EntityIsAvailable(loc)
-      case (loc, Options.`finiteStateMachine`, _) =>
-        EntityIsFiniteStateMachine(loc)
-      case (loc, Options.kind, args)       => EntityKind(loc, args)
-      case (loc, Options.messageQueue, _)  => EntityMessageQueue(loc)
-      case (loc, Options.device, _)        => EntityIsDevice(loc)
-      case (loc, Options.technology, args) => EntityTechnologyOption(loc, args)
+      case (loc, RiddlOption.event_sourced, _)        => EntityEventSourced(loc)
+      case (loc, RiddlOption.value, _)                => EntityValueOption(loc)
+      case (loc, RiddlOption.aggregate, _)            => EntityIsAggregate(loc)
+      case (loc, RiddlOption.transient, _)            => EntityTransient(loc)
+      case (loc, RiddlOption.consistent, _)           => EntityIsConsistent(loc)
+      case (loc, RiddlOption.available, _)            => EntityIsAvailable(loc)
+      case (loc, RiddlOption.finite_state_machine, _) => EntityIsFiniteStateMachine(loc)
+      case (loc, RiddlOption.kind, args)              => EntityKind(loc, args)
+      case (loc, RiddlOption.message_queue, _)        => EntityMessageQueue(loc)
+      case (loc, RiddlOption.device, _)               => EntityIsDevice(loc)
+      case (loc, RiddlOption.technology, args)        => EntityTechnologyOption(loc, args)
     }
   }
 

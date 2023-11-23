@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait FunctionParser {
@@ -17,8 +17,8 @@ private[parsing] trait FunctionParser {
   this: ReferenceParser with TypeParser with StatementParser with CommonParser =>
 
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
-    options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
-      case (loc, Options.tail_recursive, _) => TailRecursive(loc)
+    options[X, FunctionOption](StringIn(RiddlOption.tail_recursive).!) { 
+      case (loc, RiddlOption.tail_recursive, _) => TailRecursive(loc)
     }
   }
 
@@ -45,7 +45,6 @@ private[parsing] trait FunctionParser {
       typeDef | function | term | functionInclude
     )./.rep(0)
   }
-
 
   private def functionBody[u: P]: P[
     (

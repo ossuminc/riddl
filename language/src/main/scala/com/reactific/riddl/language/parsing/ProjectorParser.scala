@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait ProjectorParser {
@@ -21,9 +21,8 @@ private[parsing] trait ProjectorParser {
     with TypeParser =>
 
   private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
-    options[u, ProjectorOption](StringIn(Options.technology).!) {
-      case (loc, Options.technology, args) =>
-        ProjectorTechnologyOption(loc, args)
+    options[u, ProjectorOption](StringIn(RiddlOption.technology).!) {
+      case (loc, RiddlOption.technology, args) => ProjectorTechnologyOption(loc, args)
     }
   }
 

@@ -8,29 +8,29 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 private[parsing] trait HandlerParser {
   this: ReferenceParser with StatementParser with CommonParser =>
 
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
-      location ~ Keywords.on ~ Keywords.other ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
+      location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
         description
     ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
   private def onInitClause[u: P](set: StatementsSet): P[OnInitClause] = {
     P(
-      location ~ Keywords.on ~ Keywords.init ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
+      location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
         description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
   private def onTermClause[u: P](set: StatementsSet): P[OnTerminationClause] = {
     P(
-      location ~ Keywords.on ~ Keywords.term ~ is ~/ pseudoCodeBlock(set) ~
+      location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~
         briefly ~ description
     ).map(t => (OnTerminationClause.apply _).tupled(t))
   }
@@ -40,8 +40,8 @@ private[parsing] trait HandlerParser {
   }
 
   private def onMessageClause[u: P](set: StatementsSet): P[OnMessageClause] = {
-    location ~ Keywords.on ~/ messageRef ~
-      (Readability.from./ ~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
+    location ~ Keywords.on ~ messageRef ~
+      (Readability.from ~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
       briefly ~ description
   }.map(t => (OnMessageClause.apply _).tupled(t))
 
