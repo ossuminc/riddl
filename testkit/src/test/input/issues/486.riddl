@@ -6,6 +6,6 @@ domain test {
     // Third, there should not be a space between  ksoTemplateApp. and ProductOfferingText.
     // The correct syntax is expected to be:
     // page PricingPage{ output PricingPageText shows record ksoTempateApp.ProductOfferingText }
-    page PricingPage is { output PricingPageText showsksoTemplateApp. ProductOfferingText }
+    page PricingPage { output PricingPageText showsksoTemplateApp. ProductOfferingText }
   }
 }

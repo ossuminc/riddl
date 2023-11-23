@@ -6,6 +6,7 @@
 
 package com.reactific.riddl.language.parsing
 
+import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.At
 import fastparse.{P, *}
@@ -79,6 +80,12 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     )
   }
 
+  def comment[u: P]: P[Comment] = {
+    P(
+      location ~ commentLine.rep(1)
+    ).map { case (loc, lines) => Comment(loc, lines) }
+  }
+
   private def blockDescription[u: P]: P[BlockDescription] = {
     P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
   }
@@ -124,7 +131,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   private def quotedIdentifier[u: P]: P[String] = {
-    P("'" ~~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~ "'")
+    P("'" ~~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :", 1).! ~~ "'")
   }
 
   private def anyIdentifier[u: P]: P[String] = {

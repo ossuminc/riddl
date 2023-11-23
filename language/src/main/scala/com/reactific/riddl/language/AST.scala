@@ -164,6 +164,15 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     def hasDescription: Boolean = description.nonEmpty
   }
 
+  /** The
+    *
+    * @param loc
+    * @param lines
+    */
+  case class Comment(loc: At, lines: Seq[LiteralString] = Seq.empty[LiteralString]) extends RiddlValue {
+    def format: String = lines.map("//" + _.s).mkString("", "\n", "\n")
+  }
+
   /** Base trait of any definition that is also a ContainerValue
     *
     * @tparam D
