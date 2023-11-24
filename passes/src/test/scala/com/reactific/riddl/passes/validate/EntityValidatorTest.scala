@@ -15,7 +15,7 @@ class EntityValidatorTest extends ValidatingTest {
   "EntityValidator" should {
     "handle a variety of options" in {
       val input = """entity WithOptions is {
-                    | options(fsm, mq, aggregate, transient, available)
+                    | options(finite-state-machine, message-queue, aggregate, transient, available)
                     | ???
                     |}
                     |""".stripMargin
@@ -28,17 +28,17 @@ class EntityValidatorTest extends ValidatingTest {
             msgs.count(_.kind.isMissing)
           numMissing mustBe 3
           entity.options must contain(EntityIsFiniteStateMachine((3, 10, rpi)))
-          entity.options must contain(EntityMessageQueue((3, 15, rpi)))
-          entity.options must contain(EntityIsAggregate((3, 19, rpi)))
-          entity.options must contain(EntityTransient((3, 30, rpi)))
-          entity.options must contain(EntityIsAvailable((3, 41, rpi)))
+          entity.options must contain(EntityMessageQueue((3, 32, rpi)))
+          entity.options must contain(EntityIsAggregate((3, 47, rpi)))
+          entity.options must contain(EntityTransient((3, 58, rpi)))
+          entity.options must contain(EntityIsAvailable((3, 69, rpi)))
       }
     }
 
     "handle entity with multiple states" in {
       val input =
         """entity MultiState is {
-          |  options(fsm)
+          |  options(finite-state-machine)
           |  record fields is { field: String  }
           |  state foo of MultiState.fields is { handler x is {???} }
           |  state bar of MultiState.fields is { handler x is {???} }
@@ -53,7 +53,7 @@ class EntityValidatorTest extends ValidatingTest {
     "error for finite-state-machine entities without at least two states" in {
       val input =
         """entity MultiState is {
-          |  options(fsm)
+          |  options(finite-state-machine)
           |  record fields is { field: String }
           |  state foo of MultiState.fields is {  handler x is {???}  }
           |}""".stripMargin

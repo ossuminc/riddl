@@ -16,7 +16,7 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
 
   def toEndOfLine[u:P]: P[String] = {
     P(
-      CharsWhile(ch => ch != '\n' && ch != '\r').! ~~ ("\n" | "\r" ~~ "\n")
+      CharsWhile(ch => ch != '\n' && ch != '\r').!
     )
   }
 
@@ -24,12 +24,6 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
     P(
       location ~ Punctuation.verticalBar ~~ toEndOfLine
     ).map(tpl => (LiteralString.apply _).tupled(tpl))
-  }
-
-  def endOfLineComment[u:P]: P[Option[Comment]] = {
-    P(
-      location ~~ "//" ~~ toEndOfLine
-    ).?./.map{ _.map( c => Comment(c._1, c._2))}
   }
 
   // \\	The backslash character

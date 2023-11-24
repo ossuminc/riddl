@@ -21,7 +21,7 @@ private[parsing] trait SagaParser {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
-        briefly ~ description ~ endOfLineComment
+        briefly ~ description ~ comments
     ).map(x => (SagaStep.apply _).tupled(x))
   }
 
@@ -57,7 +57,7 @@ private[parsing] trait SagaParser {
   def saga[u: P]: P[Saga] = {
     P(
       location ~ Keywords.saga ~ identifier ~ authorRefs ~ is ~ open ~
-        sagaOptions ~ sagaBody ~ close ~ briefly ~ description ~ endOfLineComment
+        sagaOptions ~ sagaBody ~ close ~ briefly ~ description ~ comments
     ).map {
       case (
             location,
@@ -67,7 +67,7 @@ private[parsing] trait SagaParser {
             (input, output, definitions),
             briefly,
             description,
-            comment
+            comments
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val functions = mapTo[Function](groups.get(classOf[Function]))
@@ -95,7 +95,7 @@ private[parsing] trait SagaParser {
           terms,
           briefly,
           description,
-          comment
+          comments
         )
     }
   }

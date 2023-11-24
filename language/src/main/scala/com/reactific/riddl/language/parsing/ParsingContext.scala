@@ -123,7 +123,7 @@ trait ParsingContext {
       .mkString("(", " | ", ")")
   }
 
-  private def makeParseFailureError(failure: Failure): Unit = {
+  def makeParseFailureError(failure: Failure): Unit = {
     val location = current.location(failure.index)
     val trace = failure.trace()
     val msg = trace.terminals.value.size match {
@@ -135,7 +135,7 @@ trait ParsingContext {
     error(location, msg, context)
   }
 
-  private def makeParseFailureError(exception: Throwable): Unit = {
+  def makeParseFailureError(exception: Throwable): Unit = {
     val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
     error(At.empty, message)
   }

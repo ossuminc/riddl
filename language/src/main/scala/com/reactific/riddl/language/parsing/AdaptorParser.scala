@@ -56,7 +56,7 @@ private[parsing] trait AdaptorParser {
     P(
       location ~ Keywords.adaptor ~/ identifier ~ authorRefs ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorOptions ~
-        adaptorBody ~ close ~ briefly ~ description
+        adaptorBody ~ close ~ briefly ~ description ~ comments
     ).map {
       case (
             loc,
@@ -67,7 +67,8 @@ private[parsing] trait AdaptorParser {
             options,
             defs,
             brief,
-            description
+            description,
+            comments
           ) =>
         val groups = defs.groupBy(_.getClass)
         val includes = mapTo[Include[AdaptorDefinition]](
@@ -100,7 +101,8 @@ private[parsing] trait AdaptorParser {
           options,
           terms,
           brief,
-          description
+          description,
+          comments
         )
     }
   }

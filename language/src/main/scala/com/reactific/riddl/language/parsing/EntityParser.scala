@@ -50,16 +50,16 @@ private[parsing] trait EntityParser {
     P(
       location ~ Keywords.state ~ identifier ~/ Readability.of ~
         typeRef ~/ is ~ (open ~ stateBody ~ close).? ~/
-        briefly ~ description ~ endOfLineComment
-    )./.map { case (loc, id, typRef, body, brief, description, comment) =>
+        briefly ~ description ~ comments
+    )./.map { case (loc, id, typRef, body, brief, description, comments) =>
       body match {
         case Some(defs) =>
           val groups = defs.groupBy(_.getClass)
           val handlers = mapTo[Handler](groups.get(classOf[Handler]))
           val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-          State(loc, id, typRef, handlers, invariants, brief, description, comment)
+          State(loc, id, typRef, handlers, invariants, brief, description, comments)
         case None =>
-          State(loc, id, typRef, brief = brief, description, comment)
+          State(loc, id, typRef, brief = brief, description, comments)
       }
     }
   }
@@ -84,8 +84,8 @@ private[parsing] trait EntityParser {
   def entity[u: P]: P[Entity] = {
     P(
       location ~ Keywords.entity ~/ identifier ~ authorRefs ~ is ~ open ~/
-        entityOptions ~ entityBody ~ close ~ briefly ~ description ~ endOfLineComment
-    ).map { case (loc, id, authors, options, entityDefs, brief, description, comment) =>
+        entityOptions ~ entityBody ~ close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, authors, options, entityDefs, brief, description, comments) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
@@ -118,7 +118,7 @@ private[parsing] trait EntityParser {
         terms,
         brief,
         description,
-        comment
+        comments
       )
     }
   }

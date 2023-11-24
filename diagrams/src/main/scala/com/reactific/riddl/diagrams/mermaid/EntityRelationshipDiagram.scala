@@ -4,7 +4,7 @@ import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.passes.PassesResult
 import com.reactific.riddl.passes.resolve.ReferenceMap
 
-class EntityRelationshipDiagram(refMap: ReferenceMap ) {
+class EntityRelationshipDiagram(refMap: ReferenceMap) {
 
   private def makeTypeName(
     pid: PathIdentifier,
@@ -24,7 +24,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap ) {
     parents: Seq[Definition]
   ): String = {
     val name = typeEx match {
-      case AliasedTypeExpression(_, pid)         => makeTypeName(pid, parents)
+      case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parents)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
       case UniqueId(_, pid)                      => makeTypeName(pid, parents)
       case Alternation(_, of) =>
@@ -37,7 +37,6 @@ class EntityRelationshipDiagram(refMap: ReferenceMap ) {
     }
     name.replace(" ", "-")
   }
-
 
   private def makeERDRelationship(
     from: String,
@@ -76,11 +75,11 @@ class EntityRelationshipDiagram(refMap: ReferenceMap ) {
       val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
       s"  $typeName $fieldName $comment"
     } :+ "}"
-    
+
     val relationships: Seq[String] = fields
       .map(makeERDRelationship(name, _, parents))
       .filter(_.nonEmpty)
-    
+
     Seq("erDiagram") ++ typ ++ relationships
   }
 }

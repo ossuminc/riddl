@@ -43,8 +43,8 @@ private[parsing] trait RepositoryParser {
       location ~ Keywords.repository ~/ identifier ~ authorRefs ~ is ~ open ~
         repositoryOptions ~
         (undefined(Seq.empty[RepositoryDefinition]) | repositoryDefinitions) ~
-        close ~ briefly ~ description ~ endOfLineComment
-    ).map { case (loc, id, authors, options, defs, brief, description, comment) =>
+        close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, authors, options, defs, brief, description, comments) =>
       val groups = defs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val handlers = mapTo[Handler](groups.get(classOf[Handler]))
@@ -76,7 +76,7 @@ private[parsing] trait RepositoryParser {
         terms,
         brief,
         description,
-        comment
+        comments
       )
     }
   }

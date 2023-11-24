@@ -9,12 +9,11 @@ package com.reactific.riddl.prettify
 import java.nio.file.Files
 import java.nio.file.Path
 import com.reactific.riddl.language.AST.*
+import com.reactific.riddl.language.parsing.Keyword
 import com.reactific.riddl.prettify.PrettifyPass.keyword
 import com.reactific.riddl.utils.TextFileWriter
 
 import java.nio.charset.StandardCharsets
-import com.reactific.riddl.language.parsing.Terminals.*
-
 /** Unit Tests For RiddlFileEmitter */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
@@ -220,7 +219,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitTypeExpression(typEx: TypeExpression): this.type = {
     typEx match {
       case string: Strng                => emitString(string)
-      case AliasedTypeExpression(_, id) => this.add(id.format)
+      case AliasedTypeExpression(_, _, id) => this.add(id.format)
       case URL(_, scheme) =>
         this
           .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
@@ -233,7 +232,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
       case EntityReferenceTypeExpression(_, er) =>
         this
-          .add(s"${Keywords.reference} to ${er.format}")
+          .add(s"${Keyword.reference} to ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
       case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
       case Optional(_, typex)   => this.emitTypeExpression(typex).add("?")

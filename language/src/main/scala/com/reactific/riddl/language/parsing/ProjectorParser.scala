@@ -55,7 +55,7 @@ private[parsing] trait ProjectorParser {
   def projector[u: P]: P[Projector] = {
     P(
       location ~ Keywords.projector ~/ identifier ~ authorRefs ~ is ~ open ~
-        projectionOptions ~ projectionBody ~ close ~ briefly ~ description ~ endOfLineComment
+        projectionOptions ~ projectionBody ~ close ~ briefly ~ description ~ comments
     ).map {
       case (
             loc,
@@ -65,7 +65,7 @@ private[parsing] trait ProjectorParser {
             definitions,
             brief,
             description,
-            comment
+            comments
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
@@ -97,7 +97,7 @@ private[parsing] trait ProjectorParser {
           terms,
           brief,
           description,
-          comment
+          comments
         )
     }
   }

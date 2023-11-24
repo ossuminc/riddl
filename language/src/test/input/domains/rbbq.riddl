@@ -1,9 +1,5 @@
-// #everything
-// #domains
 domain ReactiveBBQ is {
-// #domains
 
-  // Create some types with better names than just "Id"
   type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
     "Unique identifier for a customer"
   }
@@ -24,24 +20,18 @@ domain ReactiveBBQ is {
     }
   }
 
-
-  // #Kitchen
-  // The Kitchen context pertains to
   context Kitchen is {
     type IP4Address is { a: Number, b: Number, c: Number, d: Number}
     type OrderViewType is {
       address:  type Kitchen.IP4Address
-    }
+    } // Should we support IP4Address?
     entity OrderViewer is {
      option is kind("device")
      record fields is { field: type Kitchen.OrderViewType }
      state OrderState of OrderViewer.fields is {
        handler input is { ??? }
      }
-    } explained as {
-      |# brief
-      |This is an OrderViewer
-      |# details
+    } briefly "This is an OrderViewer" explained as {
       |The OrderViewer is the device in the kitchen, probably a touch screen,
       |that the cooks use to view the sequence of orders to cook
       |# see
@@ -63,10 +53,8 @@ domain ReactiveBBQ is {
     |1. Order sends order status changes to Kitchen
     |1. Kitchen ignores drink items on order
     |1.
-  }
-  // #Kitchen
+  } // test end of definition comments
 
-  // #Loyalty
   context Loyalty is {
     type AccrualEvent is {
       when is TimeStamp,
@@ -96,9 +84,7 @@ domain ReactiveBBQ is {
       ???
     }
   }
-  // #Loyalty
 
-  // #Order
   context Order is {
     entity Order is {
       option is aggregate
@@ -111,9 +97,7 @@ domain ReactiveBBQ is {
       }
     }
   }
-  // #Order
 
-  // #Payment
   context Payment is {
     entity Payment is {
       option is aggregate
@@ -127,9 +111,7 @@ domain ReactiveBBQ is {
       }
     }
   }
-  // #Payment
 
-  // #Menu
   context Menu is {
     entity MenuItem is {
       record fields is { something: String }
@@ -146,9 +128,7 @@ domain ReactiveBBQ is {
       }
     }
   }
-  // #Menu
 
-  // #Reservation
   context Reservation is {
     type ReservationValue is {
       partyName is String,
@@ -171,8 +151,7 @@ domain ReactiveBBQ is {
        handler ofInputs is {}
      }
     }
-  }
-  // #Reservation
+  } // end of context
 } explained as {
   |# brief
   | Reactive BBQ Domain Definition
@@ -182,5 +161,4 @@ domain ReactiveBBQ is {
   |the basis for defining the domain. The course uses a set of interviews with
   |Reactive BBQ employees to define the requirements. This domain specification
   |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
-}
-// #everything
+} // end of domain

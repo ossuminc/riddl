@@ -34,9 +34,9 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
           (Keywords.name ~ Readability.is ~ literalString ~ Keywords.email ~ Readability.is ~
             literalString ~ (Keywords.organization ~ Readability.is ~ literalString).? ~
             (Keywords.title ~ Readability.is ~ literalString).? ~
-            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description ~ endOfLineComment
-    ).map { case (loc, id, (name, email, org, title, url), brief, description, comment) =>
-      Author(loc, id, name, email, org, title, url, brief, description, comment)
+            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, (name, email, org, title, url), brief, description, comments) =>
+      Author(loc, id, name, email, org, title, url, brief, description, comments)
     }
   }
 
@@ -101,14 +101,20 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def briefly[u: P]: P[Option[LiteralString]] = {
-    (Keywords.briefly ~/ literalString).?
-  }
+    P(Keywords.briefly ~/ literalString)
+  }.?
 
   def description[u: P]: P[Option[Description]] = P(
-    Keywords.described ~/
+    P(Keywords.described ~/
       ((Readability.byAs ~ blockDescription) | (Readability.in ~ fileDescription) |
         (Readability.at ~ urlDescription))
-  ).?
+  )).?
+  
+  def comments[u: P]: P[Seq[Comment]] = {
+    P(
+      location ~ "//" ~ toEndOfLine
+    ).rep(0).map { _.map(c => Comment(c._1, c._2)) }
+  }
 
   private def wholeNumber[u: P]: P[Long] = {
     CharIn("0-9").rep(1).!.map(_.toLong)
@@ -211,7 +217,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description ~ endOfLineComment)./.map(tpl =>
+    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description ~ comments)./.map(tpl =>
       (Term.apply _).tupled(tpl)
     )
   }

@@ -29,7 +29,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           errors must not be empty
           errors.head.message mustBe
-            "Expected one of (\"author\" | \"domain\")"
+            "Expected one of (\"author\" | \"domain\" | \"//\")"
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
@@ -342,7 +342,7 @@ class ParserTest extends ParsingTest {
                   _,
                   None,
                   None,
-              None
+                  List()
                 ) =>
           }
       }

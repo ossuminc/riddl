@@ -1,6 +1,4 @@
-// domain name should be capitalized
-// domain is lacking description
 
 domain test is {
     type a is any of { B, C, D }
-}
+} // domain name should be capitalized and lacking a description

@@ -241,7 +241,7 @@ object Folding {
               input.contents ++ output.contents
             case d: Definition =>
               d.contents.flatMap {
-                case Include(_, contents, _) => contents
+                case Include(_, contents, _, _) => contents
                 case d: Definition           => Seq(d)
               }
           }

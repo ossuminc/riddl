@@ -499,7 +499,7 @@ case class MarkdownWriter(
     parents: Seq[Definition]
   ): String = {
     val name = typeEx match {
-      case AliasedTypeExpression(_, pid)         => makeTypeName(pid, parents)
+      case AliasedTypeExpression(_, _, pid)         => makeTypeName(pid, parents)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
       case UniqueId(_, pid)                      => makeTypeName(pid, parents)
       case Alternation(_, of) =>

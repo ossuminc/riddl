@@ -19,14 +19,14 @@ private[parsing] trait StreamingParser {
   def inlet[u: P]: P[Inlet] = {
     P(
       location ~ Keywords.inlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description ~ endOfLineComment
+        typeRef ~/ briefly ~ description ~ comments
     )./.map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
       location ~ Keywords.outlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description ~ endOfLineComment
+        typeRef ~/ briefly ~ description ~ comments
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
   }
 
@@ -50,9 +50,9 @@ private[parsing] trait StreamingParser {
               Readability.to ~ inletRef
           ).map { case (typ, out, in) =>
             (typ, Some(out), Some(in))
-          }) ~ close ~/ briefly ~ description ~ endOfLineComment
-    )./.map { case (loc, id, opts, (typ, out, in), brief, desc, comment) =>
-      Connector(loc, id, opts, typ, out, in, brief, desc, comment)
+          }) ~ close ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, opts, (typ, out, in), brief, description, comments) =>
+      Connector(loc, id, opts, typ, out, in, brief, description, comments)
     }
   }
 
@@ -124,8 +124,8 @@ private[parsing] trait StreamingParser {
     P(
       location ~ keyword ~/ identifier ~ authorRefs ~ is ~ open ~
         streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ briefly ~ description ~ endOfLineComment
-    )./.map { case (loc, id, authors, options, definitions, brief, description, comment) =>
+        close ~ briefly ~ description ~ comments
+    )./.map { case (loc, id, authors, options, definitions, brief, description, comments) =>
       val shape = keywordToKind(keyword, loc)
       val groups = definitions.groupBy(_.getClass)
       val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
@@ -154,7 +154,7 @@ private[parsing] trait StreamingParser {
         terms,
         brief,
         description,
-        comment
+        comments
       )
     }
   }

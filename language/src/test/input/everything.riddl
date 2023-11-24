@@ -1,14 +1,9 @@
-// #everything
-// RIDDL is about defining domains so ...
 domain Everything by author Reid is {
 
   author Reid is { name: "Reid" email: "reid@ossum.biz" }
 
   type SomeType is String
   command DoAThing is { thingField: Integer }
-
-  // Channels are defined to flow messages between entities. They are defined
-  // in domain scope because they can cross contexts too.
 
   context APlant is {
     source Source is { outlet Commands is type DoAThing } described by "Data Source"
@@ -27,11 +22,7 @@ domain Everything by author Reid is {
     case primary is { ??? }
   } described as "A simple authoring epic"
 
-  // Domains are composed of bounded contexts so ...
   context full is {
-    // Contexts can contain many kinds of definitions
-
-    // 8 pre-defined types, shown as re-names
     type str is String             // Define str as a String
     type num is Number             // Define num as a Number
     type boo is Boolean            // Define boo as a Boolean
@@ -39,34 +30,28 @@ domain Everything by author Reid is {
     type dat is Date               // Define dat as a Date
     type tim is Time               // Define tim as a Time
     type stamp is TimeStamp        // Define stamp as a TimeStamp
-    type url is URL
+    type url is URL                // Define url as a Uniform Resource Locator
 
-    // Enumerations have a value chosen from a list of identifiers
     type PeachType is { a: Integer }
     type enum is any of { Apple Pear Peach(23)  Persimmon(24) }
 
-    // Alternations select one type from a list of types
-    type alt is one of { enum or stamp or url }
+    type alt is one of { enum or stamp or url } described as {
+      | Alternations select one type from a list of types
+    }
 
-    // Aggregations combine several types and give each a field name identifier
+
     type agg is {
       key: num,
       id: ident,
       time is TimeStamp
     }
 
-    // Types can have cardinality requirements similar to regular expressions
     type oneOrMore is many agg
     type zeroOrMore is agg*
     type optional is agg?
 
-    // Commands, Events, Queries and Results are defined in terms of some
-    // type, previously defined. Commands yield events. Queries yield results.
-
     command ACommand is { ??? }
 
-    // Entities are the main objects that contexts define. They can be
-    // transient (memory only) or aggregate (they consume commands and queries)
     entity Something is {
       options (aggregate, transient)
       function misc is {
@@ -90,8 +75,8 @@ domain Everything by author Reid is {
       }
 
       function whenUnderTheInfluence is {
-        requires {  n:Nothing }
-        returns { b: Boolean }
+        requires { n: Nothing }
+        returns  { b: Boolean }
         body ???
       }
     } briefly "Something is nothing interesting"
@@ -110,5 +95,3 @@ domain Everything by author Reid is {
     }
   }
 }
-
-// #everything

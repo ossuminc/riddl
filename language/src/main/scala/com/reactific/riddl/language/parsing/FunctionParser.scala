@@ -72,7 +72,7 @@ private[parsing] trait FunctionParser {
   def function[u: P]: P[Function] = {
     P(
       location ~ Keywords.function ~/ identifier ~ authorRefs ~ is ~ open ~
-        functionOptions ~ functionBody ~ close ~ briefly ~ description ~ endOfLineComment
+        functionOptions ~ functionBody ~ close ~ briefly ~ description ~ comments
     )./.map {
       case (
             loc,
@@ -80,9 +80,9 @@ private[parsing] trait FunctionParser {
             authors,
             options,
             (input, output, definitions, statements),
-            briefly,
+            brief,
             description,
-            comment
+            comments
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
@@ -105,9 +105,9 @@ private[parsing] trait FunctionParser {
           includes,
           options,
           terms,
-          briefly,
+          brief,
           description,
-          comment
+          comments
         )
     }
   }

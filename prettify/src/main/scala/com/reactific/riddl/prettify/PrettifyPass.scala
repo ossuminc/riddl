@@ -8,8 +8,8 @@ package com.reactific.riddl.prettify
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.Messages.Messages
+import com.reactific.riddl.language.parsing.{Keyword,Readability}
 import com.reactific.riddl.language.{AST, Messages}
-import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.passes.{HierarchyPass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.reactific.riddl.passes.resolve.ResolutionPass
 import com.reactific.riddl.passes.symbols.SymbolsPass
@@ -30,26 +30,26 @@ object PrettifyPass extends PassInfo {
     */
   def keyword(definition: Definition): String = {
     definition match {
-      case _: Adaptor       => Keywords.adaptor
-      case _: Context       => Keywords.context
-      case _: Connector     => Keywords.connector
-      case _: Domain        => Keywords.domain
-      case _: Entity        => Keywords.entity
+      case _: Adaptor       => Keyword.adaptor
+      case _: Context       => Keyword.context
+      case _: Connector     => Keyword.connector
+      case _: Domain        => Keyword.domain
+      case _: Entity        => Keyword.entity
       case _: Enumerator    => ""
       case _: Field         => ""
-      case _: Function      => Keywords.function
-      case _: Handler       => Keywords.handler
-      case _: Inlet         => Keywords.inlet
-      case _: Invariant     => Keywords.invariant
-      case _: Outlet        => Keywords.outlet
+      case _: Function      => Keyword.function
+      case _: Handler       => Keyword.handler
+      case _: Inlet         => Keyword.inlet
+      case _: Invariant     => Keyword.invariant
+      case _: Outlet        => Keyword.outlet
       case s: Streamlet     => s.shape.keyword
       case _: RootContainer => "root"
-      case _: Saga          => Keywords.saga
-      case _: SagaStep      => Keywords.step
-      case _: State         => Keywords.state
-      case _: Epic          => Keywords.epic
-      case _: Term          => Keywords.term
-      case _: Type          => Keywords.`type`
+      case _: Saga          => Keyword.saga
+      case _: SagaStep      => Keyword.step
+      case _: State         => Keyword.state
+      case _: Epic          => Keyword.epic
+      case _: Term          => Keyword.term
+      case _: Type          => Keyword.type_
       case _                => "unknown"
     }
   }
@@ -197,12 +197,9 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         val us = epic.userStory.getOrElse(UserStory())
         val user = us.user.pathId
         st.openDef(epic)
-          .addIndent("user")
+          .addIndent("user ")
           .add(user.format)
-          .add(" ")
-          .add(Readability.wants)
-          .add(" ")
-          .add(Readability.to)
+          .add(" wants to ")
           .add(s"\"${us.capability.s}\" so that \"${us.benefit.s}\"")
           .nl
       }

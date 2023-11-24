@@ -111,7 +111,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Group](cg.group, parentsAsSeq)
       case gi: GenericInteraction =>
         gi match {
-          case ArbitraryInteraction(_, _, from, _, to, _, _) =>
+          case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
             resolveARef[Definition](from, parentsAsSeq)
             resolveARef[Definition](to, parentsAsSeq)
           case ti: ShowOutputInteraction =>
@@ -728,7 +728,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
               inputs.contents ++ outputs.contents
             case d: Definition =>
               d.contents.flatMap {
-                case Include(_, contents, _) =>
+                case Include(_, contents, _, _) =>
                   contents
                 case d: Definition =>
                   Seq(d)
