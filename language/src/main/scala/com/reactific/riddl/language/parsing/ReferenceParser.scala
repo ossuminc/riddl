@@ -9,8 +9,8 @@ package com.reactific.riddl.language.parsing
 import com.reactific.riddl.language.AST.*
 import fastparse.*
 import fastparse.StringIn
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 private[parsing] trait ReferenceParser extends CommonParser {
 
@@ -74,18 +74,11 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   def typeRef[u: P]: P[TypeRef] = {
     P(
-      location ~
-        StringIn(
-          Keywords.`type`,
-          Keywords.command,
-          Keywords.query,
-          Keywords.event,
-          Keywords.result,
-          Keywords.record,
-          Keywords.other
-        ).? ~ pathIdentifier
-    )
-      .map(tpl => (TypeRef.apply _).tupled(tpl))
+      location ~ Keywords.aggregateTypes.? ~ pathIdentifier
+    ).map {
+      case (loc, Some(key), pid) => TypeRef(loc, key, pid)
+      case (loc, None, pid)      => TypeRef(loc, "type", pid)
+    }
   }
 
   def fieldRef[u: P]: P[FieldRef] = {
@@ -94,7 +87,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
   }
 
   def constantRef[u: P]: P[ConstantRef] = {
-    P(location ~ Keywords.const ~ pathIdentifier)
+    P(location ~ Keywords.constant ~ pathIdentifier)
       .map(tpl => (ConstantRef.apply _).tupled(tpl))
   }
 
@@ -115,13 +108,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   private def streamletRef[u: P]: P[StreamletRef] = {
     P(
-      location ~ StringIn(
-        Keywords.source,
-        Keywords.sink,
-        Keywords.merge,
-        Keywords.split,
-        Keywords.void
-      ) ~ pathIdentifier
+      location ~ Keywords.streamlets ~ pathIdentifier
     ).map(tpl => (StreamletRef.apply _).tupled(tpl))
   }
 

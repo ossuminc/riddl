@@ -95,5 +95,15 @@ class ReportedIssuesTest extends ValidatingTest {
     "480" in {
       checkOne("480.riddl")
     }
+    "486" in {
+      checkOne("486.riddl") {
+        case Left(messages) =>
+          val errors = messages.justErrors
+          errors.size mustBe 1
+          errors.head.message must include("whitespace after keyword")
+        case Right(result) =>
+          fail("Should not have parsed correctly")
+      }
+    }
   }
 }

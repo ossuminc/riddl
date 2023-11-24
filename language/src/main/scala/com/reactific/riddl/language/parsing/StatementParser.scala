@@ -6,11 +6,11 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.parsing.Terminals.*
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.At
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** StatementParser Define actions that various constructs can take for modelling behavior in a message-passing system
   */
@@ -149,9 +149,9 @@ private[parsing] trait StatementParser {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ briefly ~ description
-    ).map { case (loc, id, cond, brief, desc) =>
-      Invariant(loc, id, cond, brief, desc)
+      ) ~ briefly ~ description ~ comments
+    ).map { case (loc, id, condition, brief, description, comments) =>
+      Invariant(loc, id, condition, brief, description, comments)
     }
   }
 

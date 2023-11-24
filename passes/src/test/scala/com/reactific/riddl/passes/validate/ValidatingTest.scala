@@ -111,7 +111,7 @@ abstract class ValidatingTest extends ParsingTest {
           validator(Domain(loc, Identifier(loc, "stand-in")), input, errors)
         }
       case Right((model: Domain, rpi)) =>
-        val root = RootContainer(Seq(model), Seq(rpi))
+        val root = RootContainer(List(),Seq(model), List(), Seq(rpi))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)

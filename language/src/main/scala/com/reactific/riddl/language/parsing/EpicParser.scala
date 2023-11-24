@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 import java.net.URL
 
 private[parsing] trait EpicParser {
@@ -23,79 +23,91 @@ private[parsing] trait EpicParser {
 
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier("") ~ is ~ literalString ~/ briefly ~ description
-    )./.map { case (loc, id, ls, brief, desc) =>
-      VagueInteraction(loc, id, ls, brief, desc)
+      location ~ optionalIdentifier("") ~ is ~ literalString ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, relationship, brief, description, comments) =>
+      VagueInteraction(loc, id, relationship, brief, description, comments)
     }
   }
 
   private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Readability.from) ~/ anyInteractionRef ~
-        literalString ~ Readability.to.? ~ anyInteractionRef ~/ briefly ~ description
-    )./.map { case (loc, id, from, ls, to, brief, desc) =>
-      ArbitraryInteraction(loc, id, from, ls, to, brief, desc)
+      location ~ optionalIdentifier(Keyword.from) ~/ anyInteractionRef ~
+        literalString ~ Readability.to.? ~ anyInteractionRef ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, from, ls, to, brief, desc, comments) =>
+      ArbitraryInteraction(loc, id, from, ls, to, brief, desc, comments)
     }
   }
 
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Readability.for_) ~/
-        anyInteractionRef ~ is ~ literalString ~/ briefly ~ description
-    )./.map { case (loc, id, fromTo, proc, brief, desc) =>
-      SelfInteraction(loc, id, fromTo, proc, brief, desc)
+      location ~ optionalIdentifier(Keyword.for_) ~/
+        anyInteractionRef ~ is ~ literalString ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, fromTo, proc, brief, description, comments) =>
+      SelfInteraction(loc, id, fromTo, proc, brief, description, comments)
     }
   }
 
   private def showOutputStep[u: P]: P[ShowOutputInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Keywords.show) ~/
-        outputRef ~ Readability.to ~ userRef ~/ briefly ~ description
-    )./.map { case (loc, id, outRef, userRef, brief, desc) =>
-      ShowOutputInteraction(loc, id, outRef, LiteralString.empty, userRef, brief, desc)
+      location ~ optionalIdentifier(Keyword.show) ~/
+        outputRef ~ Readability.to ~ userRef ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, from, to, brief, description, comments) =>
+      ShowOutputInteraction(loc, id, from, LiteralString.empty, to, brief, description, comments)
     }
   }
 
   private def takeInputStep[u: P]: P[TakeInputInteraction] = {
     P(
-      location ~ Keywords.step ~ optionalIdentifier(Keywords.take) ~/
-        inputRef ~ Readability.from ~ userRef ~/ briefly ~ description
-    )./.map { case (loc, id, input, user, brief, desc) =>
-      TakeInputInteraction(loc, id, from = user, relationship = LiteralString.empty, to = input, brief, desc)
+      location ~ optionalIdentifier(Keyword.take) ~/
+        inputRef ~ Readability.from ~ userRef ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, input, user, brief, description, comments) =>
+      TakeInputInteraction(
+        loc,
+        id,
+        from = user,
+        relationship = LiteralString.empty,
+        to = input,
+        brief,
+        description,
+        comments
+      )
     }
+  }
+
+  private def stepInteractions[u: P]: P[Interaction] = {
+    P(Keywords.step ~ (takeInputStep | showOutputStep | selfProcessingStep | arbitraryStep | vagueStep))
   }
 
   private def sequentialInteractions[u: P]: P[SequentialInteractions] = {
     P(
-      location ~ Keywords.sequence./ ~ identifier.? ~ open ~ interactions ~ close ~
-        briefly ~ description
-    )./.map { case (loc, id, steps, brief, desc) =>
-      SequentialInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
+      location ~ Keywords.sequence ~ identifier.? ~ open ~ interactions ~ close ~
+        briefly ~ description ~ comments
+    )./.map { case (loc, id, steps, brief, description, comments) =>
+      SequentialInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description, comments)
     }
   }
 
   private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
-      location ~ Keywords.optional./ ~ identifier.? ~/ open ~ interactions ~ close ~
-        briefly ~ description
-    )./.map { case (loc, id, steps, brief, desc) =>
-      OptionalInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
+      location ~ Keywords.optional ~ identifier.? ~/ open ~ interactions ~ close ~
+        briefly ~ description ~ comments
+    )./.map { case (loc, id, steps, brief, description, comments) =>
+      OptionalInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description, comments)
     }
   }
 
   private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
-      location ~ Keywords.parallel./ ~ identifier.? ~/ open ~
-        interactions ~ close ~ briefly ~ description
-    )./.map { case (loc, id, steps, brief, desc) =>
-      ParallelInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, desc)
+      location ~ Keywords.parallel ~ identifier.? ~/ open ~
+        interactions ~ close ~ briefly ~ description ~ comments
+    )./.map { case (loc, id, steps, brief, description, comments) =>
+      ParallelInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description, comments)
     }
   }
 
   private def interactions[u: P]: P[Seq[Interaction]] = {
     P(
-      parallelInteractions | optionalInteractions | sequentialInteractions |
-        takeInputStep | showOutputStep | selfProcessingStep | arbitraryStep | vagueStep
+      parallelInteractions | optionalInteractions | sequentialInteractions | stepInteractions
     ).rep(0, Punctuation.comma./)
   }
 
@@ -106,9 +118,9 @@ private[parsing] trait EpicParser {
           Option.empty[UserStory],
           Seq.empty[GenericInteraction]
         ) | (userStory.? ~ interactions)) ~
-        close ~ briefly ~ description
-    ).map { case (loc, id, (userStory, steps), brief, description) =>
-      UseCase(loc, id, userStory, steps, brief, description)
+        close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, (userStory, contents), brief, description, comments) =>
+      UseCase(loc, id, userStory, contents, brief, description, comments)
     }
   }
 
@@ -129,9 +141,9 @@ private[parsing] trait EpicParser {
   }
 
   private def epicOptions[u: P]: P[Seq[EpicOption]] = {
-    options[u, EpicOption](StringIn(Options.technology, Options.sync).!) {
-      case (loc, Options.sync, _)          => EpicSynchronousOption(loc)
-      case (loc, Options.technology, args) => EpicTechnologyOption(loc, args)
+    options[u, EpicOption](StringIn(RiddlOption.technology, RiddlOption.sync).!) {
+      case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
+      case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
     }
   }
 
@@ -166,7 +178,7 @@ private[parsing] trait EpicParser {
     P(
       location ~ Keywords.epic ~/ identifier ~ authorRefs ~ is ~ open ~
         epicOptions ~ epicBody ~ close ~
-        briefly ~ description
+        briefly ~ description ~ comments
     ).map {
       case (
             loc,
@@ -175,7 +187,8 @@ private[parsing] trait EpicParser {
             options,
             (userStory, shownBy, definitions),
             briefly,
-            description
+            description,
+            comments
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val terms = mapTo[Term](groups.get(classOf[Term]))
@@ -197,7 +210,8 @@ private[parsing] trait EpicParser {
           options,
           terms,
           briefly,
-          description
+          description,
+          comments
         )
     }
   }

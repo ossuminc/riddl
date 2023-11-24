@@ -161,7 +161,7 @@ trait TypeValidation extends DefinitionValidation {
     parents: Seq[Definition]
   ): this.type = {
     typ match {
-      case AliasedTypeExpression(_, id: PathIdentifier) =>
+      case AliasedTypeExpression(_, _, id: PathIdentifier) =>
         checkPathRef[Type](id, defn, parents)
       case mt: AggregateUseCaseTypeExpression =>
         checkAggregateUseCase(mt, defn, parents)

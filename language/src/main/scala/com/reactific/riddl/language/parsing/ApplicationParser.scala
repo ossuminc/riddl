@@ -7,9 +7,9 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import Terminals.{Keywords, *}
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 private[parsing] trait ApplicationParser {
   this: StreamingParser
@@ -21,22 +21,16 @@ private[parsing] trait ApplicationParser {
     with CommonParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
-    options[u, ApplicationOption](StringIn(Options.technology).!) { case (loc, Options.technology, args) =>
+    options[u, ApplicationOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
       ApplicationTechnologyOption(loc, args)
     }
   }
-  //loc: At,
-  //    id: Identifier,
-  //    group: GroupRef,
-  //    brief: Option[LiteralString] = None,
-  //    description: Option[Description] = None
 
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
-      location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description
-    ).map {
-      case (at, identifier, ref, brief, description) =>
-        ContainedGroup(at, identifier, ref, brief, description)
+      location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description ~ comments
+    ).map { case (loc, id, group, brief, description, comments) =>
+      ContainedGroup(loc, id, group, brief, description, comments)
     }
   }
 
@@ -48,14 +42,18 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[GroupDefinition]) | groupDefinitions) ~
-        close ~ briefly ~ description
-    ).map { case (loc, alias, id, elements, brief, description) =>
+        close ~ briefly ~ description ~ comments
+    ).map { case (loc, alias, id, elements, brief, description, comments) =>
       Group(loc, alias, id, elements, brief, description)
     }
   }
 
   private def presentationAliases[u: P]: P[String] = {
-    StringIn("presents", "shows", "displays", "writes", "emits").!
+    Keywords
+      .keywords(
+        StringIn("presents", "shows", "displays", "writes", "emits")
+      )
+      .!
   }
 
   private def outputDefinitions[u: P]: P[Seq[OutputDefinition]] = {
@@ -69,13 +67,12 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-
   private def appOutput[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/ typeRef ~
-        outputDefinitions ~ briefly ~ description
-    ).map { case (loc, nounAlias, id, verbAlias, putOut, outputs, brief, description) =>
-      Output(loc, nounAlias, id, verbAlias, putOut, outputs, brief, description)
+        outputDefinitions ~ briefly ~ description ~ comments
+    ).map { case (loc, nounAlias, id, verbAlias, putOut, outputs, brief, description, comments) =>
+      Output(loc, nounAlias, id, verbAlias, putOut, outputs, brief, description, comments)
     }
   }
 
@@ -91,15 +88,25 @@ private[parsing] trait ApplicationParser {
   }
 
   private def acquisitionAliases[u: P]: P[String] = {
-    StringIn("acquires", "reads", "takes", "accepts", "admits",
-      "initiates", "submits", "triggers", "activates", "starts").!
+    StringIn(
+      "acquires",
+      "reads",
+      "takes",
+      "accepts",
+      "admits",
+      "initiates",
+      "submits",
+      "triggers",
+      "activates",
+      "starts"
+    ).!
   }
 
   private def appInput[u: P]: P[Input] = {
     P(
       location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~
-        inputDefinitions ~ briefly ~ description
-    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description) =>
+        inputDefinitions ~ briefly ~ description ~ comments
+    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description, comments) =>
       Input(loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description)
     }
   }
@@ -131,8 +138,8 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ Keywords.application ~/ identifier ~ authorRefs ~ is ~ open ~
         (emptyApplication | (applicationOptions ~ applicationDefinitions)) ~
-        close ~ briefly ~ description
-    ).map { case (loc, id, authors, (options, content), brief, description) =>
+        close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, authors, (options, content), brief, description, comments) =>
       val groups = content.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
@@ -165,7 +172,8 @@ private[parsing] trait ApplicationParser {
         terms,
         includes,
         brief,
-        description
+        description,
+        comments
       )
 
     }

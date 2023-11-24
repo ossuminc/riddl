@@ -127,7 +127,7 @@ trait BasicValidation {
     } else {
       checkRefAndExamine[Type](ref, topDef, parents) { (definition: Definition) =>
         definition match {
-          case Type(_, _, typ, _, _) =>
+          case Type(_, _, typ, _, _, _) =>
             typ match {
               case AggregateUseCaseTypeExpression(_, mk, _, _) =>
                 check(
@@ -155,7 +155,7 @@ trait BasicValidation {
     }
   }
 
-  @tailrec final def getPathIdType(
+  @tailrec private final def getPathIdType(
     pid: PathIdentifier,
     parents: Seq[Definition]
   ): Option[TypeExpression] = {
@@ -170,14 +170,14 @@ trait BasicValidation {
         case Some(f: Field)    => Some(f.typeEx)
         case Some(c: Constant) => Some(c.typeEx)
         case Some(s: State) =>
-          Some(AliasedTypeExpression(s.typ.loc, s.typ.pathId))
-        case Some(Inlet(_, _, typ, _, _)) =>
-          Some(AliasedTypeExpression(typ.loc, typ.pathId))
-        case Some(Outlet(_, _, typ, _, _)) =>
-          Some(AliasedTypeExpression(typ.loc, typ.pathId))
+          Some(AliasedTypeExpression(s.typ.loc, "state", s.typ.pathId))
+        case Some(Inlet(_, _, typ, _, _, _)) =>
+          Some(AliasedTypeExpression(typ.loc, "inlet", typ.pathId))
+        case Some(Outlet(_, _, typ, _, _, _)) =>
+          Some(AliasedTypeExpression(typ.loc, "outlet", typ.pathId))
         case Some(connector: Connector) =>
           connector.flows
-            .map(typeRef => AliasedTypeExpression(typeRef.loc, typeRef.pathId))
+            .map(typeRef => AliasedTypeExpression(typeRef.loc, "connector", typeRef.pathId))
             .orElse(Option.empty[TypeExpression])
         case Some(streamlet: Streamlet) =>
           streamlet.outlets.headOption match
@@ -186,7 +186,7 @@ trait BasicValidation {
         case Some(_) => Option.empty[TypeExpression]
       }
       candidate match {
-        case Some(AliasedTypeExpression(_, pid)) =>
+        case Some(AliasedTypeExpression(_, _, pid)) =>
           getPathIdType(pid, maybeDef.toSeq)
         case Some(other: TypeExpression) => Some(other)
         case None                        => None

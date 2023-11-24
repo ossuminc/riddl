@@ -10,7 +10,7 @@ domain dokn is {
         postalCode: String
     }
     type MobileNumber = Pattern("\\(([0-9]{3})\\)([0-9]{3})-([0-9]{4})")
-    //https:emailregex.com RFC 5322 Official Standard
+
     type EmailAddress = Pattern(
        "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
     )
@@ -98,8 +98,8 @@ domain dokn is {
             options(event-sourced, available)
             record fields is {
               noteId: NoteId,
-              locationId: LocationId,
-              companyId: CompanyId,
+              locationId: type LocationId,
+              companyId: type CompanyId,
               text: String,
               upvoteCount: Integer,
               downvoteCount: Integer,
@@ -152,13 +152,13 @@ domain dokn is {
             type LocationNotes is result { notes: NoteList }
 
             record fields is {
-              locationId: LocationId,
-              geohash: Location,
+              locationId: type LocationId,
+              geohash:  Location,
               label: String ,
-              address: Address,
-              notes: NoteList,
+              address: type Address,
+              notes: type NoteList,
               ticketCount: Integer,
-              loadingMethod: LoadingMethod
+              loadingMethod: type LoadingMethod
             }
             state LocationBase of Location.fields is {
               handler Base is {

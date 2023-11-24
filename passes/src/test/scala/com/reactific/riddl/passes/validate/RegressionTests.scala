@@ -70,25 +70,28 @@ class RegressionTests extends ValidatingTest {
     }
     "catch types with predefined expression with a suffix" in {
       val input = """domain foo {
-                    |  type Bug is IntegerRange
+                    |  type Bug: IntegerRange
                     |}""".stripMargin
 
       def extract(root: RootContainer): Type = {
         root.domains.head.types.head
       }
       parseTopLevelDomain[Type](input, extract) match {
-        case Left(messages) => fail(messages.format)
+        case Left(messages) =>
+          val errors = messages.justErrors
+          errors.size mustBe 1
+          errors.head.message contains ("whitespace after keyword")
         case Right((typ, rpi)) =>
           val expected: Type = Type(
             (2, 3, rpi),
             Identifier((2, 8, rpi), "Bug"),
             AliasedTypeExpression(
               (2, 15, rpi),
-              PathIdentifier((2, 15, rpi), List("IntegerRange"))
+              "type",
+              PathIdentifier((2, 20, rpi), List("IntegerRange"))
             )
           )
           typ mustBe expected
-
       }
     }
 
@@ -97,8 +100,8 @@ class RegressionTests extends ValidatingTest {
                     |  type DateRange = Duration
                     |  type SomePlace = Location
                     |  type Thing is {
-                    |    locationId: SomePlace,
-                    |    schedule: DateRange+
+                    |    locationId: type SomePlace,
+                    |    schedule: type DateRange+
                     |  }
                     |}
                     |""".stripMargin
@@ -119,7 +122,8 @@ class RegressionTests extends ValidatingTest {
                   Identifier((5, 5, rpi), "locationId"),
                   AliasedTypeExpression(
                     (5, 17, rpi),
-                    PathIdentifier((5, 17, rpi), List("SomePlace"))
+                    "type",
+                    PathIdentifier((5, 22, rpi), List("SomePlace"))
                   ),
                   None,
                   None
@@ -131,7 +135,8 @@ class RegressionTests extends ValidatingTest {
                     (6, 15, rpi),
                     AliasedTypeExpression(
                       (6, 15, rpi),
-                      PathIdentifier((6, 15, rpi), List("DateRange"))
+                      "type",
+                      PathIdentifier((6, 20, rpi), List("DateRange"))
                     )
                   ),
                   None,

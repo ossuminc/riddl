@@ -111,7 +111,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Group](cg.group, parentsAsSeq)
       case gi: GenericInteraction =>
         gi match {
-          case ArbitraryInteraction(_, _, from, _, to, _, _) =>
+          case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
             resolveARef[Definition](from, parentsAsSeq)
             resolveARef[Definition](to, parentsAsSeq)
           case ti: ShowOutputInteraction =>
@@ -162,7 +162,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     typ match {
       case UniqueId(_, entityPath) =>
         resolveAPathId[Entity](entityPath, parents)
-      case AliasedTypeExpression(_, pathId) =>
+      case AliasedTypeExpression(_, _, pathId) =>
         resolveAPathId[Type](pathId, parents)
       case agg: AggregateTypeExpression =>
         agg.fields.foreach { (fld: Field) =>
@@ -680,7 +680,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case a: AggregateUseCaseTypeExpression =>
         // Any kind of Aggregate's fields are candidates for resolution
         a.contents
-      case AliasedTypeExpression(_, pid) =>
+      case AliasedTypeExpression(_, _, pid) =>
         // if we're at a field that references another type then the candidates
         // are that type's fields. To solve this we need to push
         // that type's path on the name stack to be resolved
@@ -728,7 +728,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
               inputs.contents ++ outputs.contents
             case d: Definition =>
               d.contents.flatMap {
-                case Include(_, contents, _) =>
+                case Include(_, contents, _, _) =>
                   contents
                 case d: Definition =>
                   Seq(d)

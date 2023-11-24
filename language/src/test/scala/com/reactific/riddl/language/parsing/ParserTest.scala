@@ -29,16 +29,26 @@ class ParserTest extends ParsingTest {
         case Left(errors) =>
           errors must not be empty
           errors.head.message mustBe
-            "Expected one of (\"author\" | \"domain\")"
+            "Expected one of (\"author\" | \"domain\" | \"//\")"
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
-    "handle missing }" in {
-      val input = "domain foo is { author nobody is { ??? }\n"
+    "ensure keywords are distinct" in {
+      val input = "domainfoois { author nobody is { ??? } } \n"
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.message.contains("Expected one of (") must be(true)
+          errors.head.message must include("whitespace after keyword")
+        case Right(_) => fail("'domainfoois' should be flagged as needing whitespace after a keyword")
+      }
+    }
+    "handle missing }" in {
+      val input = "domain foo is { author nobody is { ??? } \n"
+      parseTopLevelDomain(input, _.contents.head) match {
+        case Left(errors) =>
+          errors must not be empty
+          if errors.head.message.startsWith("Expected one of (") && errors.head.message.contains("context") then succeed
+          else fail(errors.format)
         case Right(_) => fail("Missing closing brace should make an error")
       }
     }
@@ -220,8 +230,9 @@ class ParserTest extends ParsingTest {
           content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            Option(LiteralString((1,20,rpi), "x is greater or equal to 10")),
-            None, None
+            Option(LiteralString((1, 20, rpi), "x is greater or equal to 10")),
+            None,
+            None
           )
       }
     }
@@ -245,7 +256,7 @@ class ParserTest extends ParsingTest {
               State(
                 (3, 3, rpi),
                 Identifier((3, 9, rpi), "BurgerState"),
-                TypeRef((3, 24, rpi), PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
+                TypeRef((3, 24, rpi), "type", PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
                 Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
               )
             ),
@@ -260,13 +271,9 @@ class ParserTest extends ParsingTest {
                       (2, 50, rpi),
                       Identifier((2, 50, rpi), "x"),
                       Strng((2, 53, rpi), None, None),
-                      None,
-                      None
                     )
                   )
-                ),
-                None,
-                None
+                )
               )
             )
           )
@@ -297,8 +304,8 @@ class ParserTest extends ParsingTest {
     "allow functions" in {
       val input = """
                     |function foo is {
-                    |  requires {b:Boolean}
-                    |  returns {i:Integer}
+                    |  requires { b : Boolean}
+                    |  returns { i : Integer}
                     |  body { ??? }
                     |}
                     |""".stripMargin
@@ -315,13 +322,15 @@ class ParserTest extends ParsingTest {
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)), _
+                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _, _)),
+                      _
                     )
                   ),
                   Some(
                     Aggregation(
                       _,
-                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)), _
+                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _, _)),
+                      _
                     )
                   ),
                   _,
@@ -332,7 +341,8 @@ class ParserTest extends ParsingTest {
                   _,
                   _,
                   None,
-                  None
+                  None,
+                  List()
                 ) =>
           }
       }

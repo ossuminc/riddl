@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait ProjectorParser {
@@ -21,9 +21,8 @@ private[parsing] trait ProjectorParser {
     with TypeParser =>
 
   private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
-    options[u, ProjectorOption](StringIn(Options.technology).!) {
-      case (loc, Options.technology, args) =>
-        ProjectorTechnologyOption(loc, args)
+    options[u, ProjectorOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
+      ProjectorTechnologyOption(loc, args)
     }
   }
 
@@ -33,8 +32,8 @@ private[parsing] trait ProjectorParser {
 
   private def projectionDefinitions[u: P]: P[Seq[ProjectorDefinition]] = {
     P(
-      typeDef | term | projectionInclude | handler(StatementsSet.ProjectorStatements) | 
-        function | inlet | outlet | invariant | constant | typeDef 
+      typeDef | term | projectionInclude | handler(StatementsSet.ProjectorStatements) |
+        function | inlet | outlet | invariant | constant | typeDef
     )./.rep(1)
   }
 
@@ -56,7 +55,7 @@ private[parsing] trait ProjectorParser {
   def projector[u: P]: P[Projector] = {
     P(
       location ~ Keywords.projector ~/ identifier ~ authorRefs ~ is ~ open ~
-        projectionOptions ~ projectionBody ~ close ~ briefly ~ description
+        projectionOptions ~ projectionBody ~ close ~ briefly ~ description ~ comments
     ).map {
       case (
             loc,
@@ -65,7 +64,8 @@ private[parsing] trait ProjectorParser {
             options,
             definitions,
             brief,
-            description
+            description,
+            comments
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
@@ -96,7 +96,8 @@ private[parsing] trait ProjectorParser {
           invariants,
           terms,
           brief,
-          description
+          description,
+          comments
         )
     }
   }

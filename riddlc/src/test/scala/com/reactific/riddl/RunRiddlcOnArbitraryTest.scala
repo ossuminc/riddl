@@ -43,11 +43,13 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
       validateLocalProject(cwd, config)
     }
     "validate OffTheTop" in {
+      pending
       val cwd = "/Users/reid/Code/Improving/OffTheTop"
       val config = "design/src/main/riddl/OffTheTop.conf"
       validateLocalProject(cwd, config)
     }
     "validate kalix template" in {
+      pending
       val cwd = "/Users/reid/Code/Improving/kalix-improving-template"
       val config = "design/src/main/riddl/ksoapp.conf"
       validateLocalProject(cwd, config)

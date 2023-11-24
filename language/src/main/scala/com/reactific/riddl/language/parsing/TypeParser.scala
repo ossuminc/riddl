@@ -8,10 +8,9 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.{AST, At}
-import com.reactific.riddl.language.Messages
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Parsing rules for Type definitions */
 private[parsing] trait TypeParser extends CommonParser {
@@ -19,13 +18,13 @@ private[parsing] trait TypeParser extends CommonParser {
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
       location ~ Keywords.reference ~ Readability.to.? ~/
-        maybe(Keywords.entity) ~ pathIdentifier
+        maybe(Keyword.entity) ~ pathIdentifier
     ).map { tpl => (EntityReferenceTypeExpression.apply _).tupled(tpl) }
   }
 
   private def stringType[u: P]: P[Strng] = {
     P(
-      location ~ Predefined.String ~/
+      location ~ PredefTypes.String_ ~/
         (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~ integer.? ~
           Punctuation.roundClose).?
     ).map {
@@ -208,28 +207,26 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def currencyType[u: P]: P[Currency] = {
     P(
-      location ~ Predefined.Currency ~/
+      location ~ PredefTypes.Currency ~/
         (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose)
     ).map { tpl => (Currency.apply _).tupled(tpl) }
   }
 
   private def urlType[u: P]: P[URL] = {
     P(
-      location ~ Predefined.URL ~/
+      location ~ PredefTypes.URL ~/
         (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
     ).map { tpl => (URL.apply _).tupled(tpl) }
   }
 
   private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
     P(
-      location ~ (StringIn(Predefined.Boolean, Predefined.Integer, Predefined.Whole, Predefined.Natural).! ~~ !CharPred(
-        _.isLetterOrDigit
-      )) | rangeType
+      location ~ PredefTypes.integerTypes | rangeType
     ).map {
-      case (at, Predefined.Boolean) => AST.Bool(at)
-      case (at, Predefined.Integer) => AST.Integer(at)
-      case (at, Predefined.Natural) => AST.Natural(at)
-      case (at, Predefined.Whole)   => AST.Whole(at)
+      case (at, PredefType.Boolean) => AST.Bool(at)
+      case (at, PredefType.Integer) => AST.Integer(at)
+      case (at, PredefType.Natural) => AST.Natural(at)
+      case (at, PredefType.Whole)   => AST.Whole(at)
       case (at, _: String) =>
         assert(true) // shouldn't happen
         AST.Integer(at)
@@ -239,82 +236,58 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def realPredefTypes[u: P]: P[RealTypeExpression] = {
     P(
-      location ~ (StringIn(
-        Predefined.Current,
-        Predefined.Length,
-        Predefined.Luminosity,
-        Predefined.Mass,
-        Predefined.Mole,
-        Predefined.Number,
-        Predefined.Real,
-        Predefined.Temperature
-      ).! ~~ !CharPred(_.isLetterOrDigit))
+      location ~ PredefTypes.realTypes
     ).map {
-      case (at: At, Predefined.Current)     => Current(at)
-      case (at: At, Predefined.Length)      => Length(at)
-      case (at: At, Predefined.Luminosity)  => Luminosity(at)
-      case (at: At, Predefined.Mass)        => Mass(at)
-      case (at: At, Predefined.Mole)        => Mole(at)
-      case (at: At, Predefined.Number)      => Number(at)
-      case (at: At, Predefined.Real)        => Real(at)
-      case (at: At, Predefined.Temperature) => Temperature(at)
+      case (at: At, PredefType.Current)     => Current(at)
+      case (at: At, PredefType.Length)      => Length(at)
+      case (at: At, PredefType.Luminosity)  => Luminosity(at)
+      case (at: At, PredefType.Mass)        => Mass(at)
+      case (at: At, PredefType.Mole)        => Mole(at)
+      case (at: At, PredefType.Number)      => Number(at)
+      case (at: At, PredefType.Real)        => Real(at)
+      case (at: At, PredefType.Temperature) => Temperature(at)
     }
   }
 
   private def timePredefTypes[u: P]: P[TypeExpression] = {
     P(
-      location ~ StringIn(
-        Predefined.Duration,
-        Predefined.DateTime,
-        Predefined.Date,
-        Predefined.TimeStamp,
-        Predefined.Time
-      ).! ~~ !CharPred(_.isLetterOrDigit)
+      location ~ PredefTypes.timeTypes
     ).map {
-      case (at: At, Predefined.Duration) => Duration(at)
-      case (at, Predefined.DateTime)     => DateTime(at)
-      case (at, Predefined.Date)         => Date(at)
-      case (at, Predefined.TimeStamp)    => TimeStamp(at)
-      case (at, Predefined.Time)         => Time(at)
+      case (at: At, PredefType.Duration) => Duration(at)
+      case (at, PredefType.DateTime)     => DateTime(at)
+      case (at, PredefType.Date)         => Date(at)
+      case (at, PredefType.TimeStamp)    => TimeStamp(at)
+      case (at, PredefType.Time)         => Time(at)
     }
   }
 
-  private def otherTypes[u: P]: P[TypeExpression] = {
+  private def otherPredefTypes[u: P]: P[TypeExpression] = {
     P(
-      location ~ StringIn(
-        // order matters in this list, because of common prefixes
-        Predefined.Abstract,
-        Predefined.Length,
-        Predefined.Location,
-        Predefined.Nothing,
-        Predefined.Number,
-        Predefined.UUID,
-        Predefined.UserId
-      ).! ~~ !CharPred(_.isLetterOrDigit)
+      location ~ PredefTypes.otherTypes
     ).map {
-      case (at, Predefined.Abstract) => AST.Abstract(at)
-      case (at, Predefined.Location) => AST.Location(at)
-      case (at, Predefined.Nothing)  => AST.Nothing(at)
-      case (at, Predefined.Natural)  => AST.Natural(at)
-      case (at, Predefined.Number)   => AST.Number(at)
-      case (at, Predefined.UUID)     => AST.UUID(at)
-      case (at, Predefined.UserId)   => AST.UserId(at)
+      case (at, PredefType.Abstract) => AST.Abstract(at)
+      case (at, PredefType.Location) => AST.Location(at)
+      case (at, PredefType.Nothing)  => AST.Nothing(at)
+      case (at, PredefType.Natural)  => AST.Natural(at)
+      case (at, PredefType.Number)   => AST.Number(at)
+      case (at, PredefType.UUID)     => AST.UUID(at)
+      case (at, PredefType.UserId)   => AST.UserId(at)
       case (at, _) =>
         error("Unrecognized predefined type")
         AST.Abstract(at)
     }
   }
 
-  private def simplePredefinedTypes[u: P]: P[TypeExpression] = {
+  private def predefinedTypes[u: P]: P[TypeExpression] = {
     P(
       stringType | currencyType | urlType | integerPredefTypes | realPredefTypes | timePredefTypes |
-        decimalType | otherTypes
+        decimalType | otherPredefTypes
     )./
   }
 
   private def decimalType[u: P]: P[Decimal] = {
     P(
-      location ~ Predefined.Decimal ~/ Punctuation.roundOpen ~
+      location ~ PredefType.Decimal ~/ Punctuation.roundOpen ~
         integer ~ Punctuation.comma ~ integer ~
         Punctuation.roundClose
     )./.map(tpl => (Decimal.apply _).tupled(tpl))
@@ -322,7 +295,7 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def patternType[u: P]: P[Pattern] = {
     P(
-      location ~ Predefined.Pattern ~/ Punctuation.roundOpen ~
+      location ~ PredefType.Pattern ~/ Punctuation.roundOpen ~
         (literalStrings |
           Punctuation.undefinedMark.!.map(_ => Seq.empty[LiteralString])) ~
         Punctuation.roundClose./
@@ -330,8 +303,8 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def uniqueIdType[u: P]: P[UniqueId] = {
-    (location ~ Predefined.Id ~ Punctuation.roundOpen ~/
-      maybe(Keywords.entity) ~ pathIdentifier ~ Punctuation.roundClose./) map { case (loc, pid) =>
+    (location ~ PredefType.Id ~ Punctuation.roundOpen ~/
+      maybe(Keyword.entity) ~ pathIdentifier ~ Punctuation.roundClose./) map { case (loc, pid) =>
       UniqueId(loc, pid)
     }
   }
@@ -341,7 +314,7 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def enumerator[u: P]: P[Enumerator] = {
-    P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
+    P(location ~ identifier ~ enumValue ~ briefly ~ description ~ comments).map { tpl =>
       (Enumerator.apply _).tupled(tpl)
     }
   }
@@ -364,23 +337,18 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
     P(
-      location ~
-        StringIn(
-          Keywords.command,
-          Keywords.event,
-          Keywords.query,
-          Keywords.result,
-          Keywords.record,
-          Keywords.`type`
-        ).? ~ pathIdentifier
-    )./.map(tpl => (AliasedTypeExpression.apply _).tupled(tpl))
+      location ~ Keywords.aggregateTypes.? ~ pathIdentifier
+    )./.map {
+      case (loc, Some(key), pid) => AliasedTypeExpression(loc, key, pid)
+      case (loc, None, pid)      => AliasedTypeExpression(loc, "type", pid)
+    }
   }
 
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        simplePredefinedTypes./ | patternType | uniqueIdType |
-          enumeration | setType | mappingType | sequenceType | rangeType |
+        predefinedTypes | patternType | uniqueIdType |
+          enumeration | aliasedTypeExpression | aliasedTypeExpression | sequenceType | rangeType |
           alternation | entityReferenceType | aliasedTypeExpression
       )
     )
@@ -388,7 +356,7 @@ private[parsing] trait TypeParser extends CommonParser {
 
   def field[u: P]: P[Field] = {
     P(
-      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description
+      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description ~ comments
     ).map(tpl => (Field.apply _).tupled(tpl))
   }
 
@@ -403,11 +371,11 @@ private[parsing] trait TypeParser extends CommonParser {
   def method[u: P]: P[Method] = {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
-        is ~ fieldTypeExpression ~ briefly ~ description
+        is ~ fieldTypeExpression ~ briefly ~ description ~ comments
     ).map(tpl => (Method.apply _).tupled(tpl))
   }
 
-  def aggregateDefinitions[u: P]: P[Seq[AggregateDefinition]] = {
+  private def aggregateDefinitions[u: P]: P[Seq[AggregateDefinition]] = {
     P(
       undefined(Seq.empty[AggregateDefinition]) |
         (field | method).rep(min = 1, Punctuation.comma)
@@ -425,20 +393,15 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def aggregateUseCase[u: P]: P[AggregateUseCase] = {
     P(
-      StringIn(
-        Keywords.command,
-        Keywords.event,
-        Keywords.query,
-        Keywords.result,
-        Keywords.record
-      ).!
+      Keywords.aggregateTypes
     ).map { mk =>
       mk.toLowerCase() match {
-        case kind if kind == Keywords.command => CommandCase
-        case kind if kind == Keywords.event   => EventCase
-        case kind if kind == Keywords.query   => QueryCase
-        case kind if kind == Keywords.result  => ResultCase
-        case kind if kind == Keywords.record  => RecordCase
+        case kind if kind == Keyword.type_   => TypeCase
+        case kind if kind == Keyword.command => CommandCase
+        case kind if kind == Keyword.event   => EventCase
+        case kind if kind == Keyword.query   => QueryCase
+        case kind if kind == Keyword.result  => ResultCase
+        case kind if kind == Keyword.record  => RecordCase
       }
     }
   }
@@ -462,7 +425,7 @@ private[parsing] trait TypeParser extends CommonParser {
     *   mapping from Integer to String
     * }}}
     */
-  private def mappingType[u: P]: P[Mapping] = {
+  private def mappingFromTo[u: P]: P[Mapping] = {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
         Readability.to ~ typeExpression
@@ -473,16 +436,18 @@ private[parsing] trait TypeParser extends CommonParser {
     * {{{
     *   set of String
     * }}}
-    *
-    * @tparam u
-    * @return
     */
-  private def setType[u: P]: P[Set] = {
+  private def set[u: P]: P[Set] = {
     P(
       location ~ Keywords.set ~ Readability.of ~ typeExpression
     )./.map { tpl => (Set.apply _).tupled(tpl) }
   }
 
+  /** Parses sequences, i.e.
+    * {{{
+    *     sequence of String
+    * }}}
+    */
   private def sequenceType[u: P]: P[Sequence] = {
     P(
       location ~ Keywords.sequence ~ Readability.of ~ typeExpression
@@ -507,32 +472,30 @@ private[parsing] trait TypeParser extends CommonParser {
       Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~ StringIn(
         Punctuation.question,
         Punctuation.asterisk,
-        Punctuation.plus,
-        Punctuation.ellipsisQuestion,
-        Punctuation.ellipsis
+        Punctuation.plus
       ).!.?
     ).map {
-      case (None, None, loc, typ, Some("?"))       => Optional(loc, typ)
-      case (None, None, loc, typ, Some("+"))       => OneOrMore(loc, typ)
-      case (None, None, loc, typ, Some("*"))       => ZeroOrMore(loc, typ)
-      case (Some(_), None, loc, typ, None)         => OneOrMore(loc, typ)
-      case (None, Some(_), loc, typ, None)         => Optional(loc, typ)
-      case (Some(_), Some(_), loc, typ, None)      => ZeroOrMore(loc, typ)
-      case (None, Some(_), loc, typ, Some("?"))    => Optional(loc, typ)
-      case (Some(_), None, loc, typ, Some("+"))    => OneOrMore(loc, typ)
-      case (Some(_), Some(_), loc, typ, Some("*")) => ZeroOrMore(loc, typ)
-      case (None, None, _, typ, None)              => typ
+      case (None, None, loc, typ, Some("?"))                     => Optional(loc, typ)
+      case (None, None, loc, typ, Some("+"))                     => OneOrMore(loc, typ)
+      case (None, None, loc, typ, Some("*"))                     => ZeroOrMore(loc, typ)
+      case (Some("many"), None, loc, typ, None)                  => OneOrMore(loc, typ)
+      case (None, Some("optional"), loc, typ, None)              => Optional(loc, typ)
+      case (Some("many"), Some("optional"), loc, typ, None)      => ZeroOrMore(loc, typ)
+      case (None, Some("optional"), loc, typ, Some("?"))         => Optional(loc, typ)
+      case (Some("many"), None, loc, typ, Some("+"))             => OneOrMore(loc, typ)
+      case (Some("many"), Some("optional"), loc, typ, Some("*")) => ZeroOrMore(loc, typ)
+      case (None, None, _, typ, None)                            => typ
       case (_, _, loc, typ, _) =>
         error(loc, s"Cannot determine cardinality for $typ")
         typ
     }
   }
 
-  def typeExpression[u: P]: P[TypeExpression] = {
+  private def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        simplePredefinedTypes | patternType | uniqueIdType | enumeration |
-          sequenceType | setType | mappingType | rangeType |
+        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType |
+          aggregateUseCaseTypeExpression | mappingFromTo | rangeType |
           decimalType | alternation | entityReferenceType |
           aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
       )
@@ -540,33 +503,35 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   def replicaTypeExpression[u: P]: P[TypeExpression] = {
-    P(integerPredefTypes | mappingType | setType)
+    P(integerPredefTypes | mappingFromTo | set)
   }
 
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
       location ~ aggregateUseCase ~/ identifier ~ is ~ (aliasedTypeExpression | aggregation) ~ briefly ~
-        description
-    ).map { case (loc, useCase, id, ateOrAgg, b, d) =>
+        description ~ comments
+    ).map { case (loc, useCase, id, ateOrAgg, brief, description, comments) =>
       ateOrAgg match {
         case agg: Aggregation =>
           val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.fields, agg.methods)
-          Type(loc, id, mt, b, d)
+          Type(loc, id, mt, brief, description, comments)
         case ate: AliasedTypeExpression =>
-          Type(loc, id, ate, b, d)
+          Type(loc, id, ate, brief, description, comments)
         case _ =>
           require(false, "Oops! Impossible case")
           // Type just to satisfy compiler because it doesn't know require(false...) will throw
-          Type(loc, id, Nothing(loc), b, d)
+          Type(loc, id, Nothing(loc), brief, description, comments)
       }
     }
   }
 
   private def defOfType[u: P]: P[Type] = {
     P(
-      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ briefly ~
-        description
-    ).map { case (loc, id, typEx, b, d) => Type(loc, id, typEx, b, d) }
+      location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ briefly ~
+        description ~ comments
+    ).map { case (loc, id, typ, brief, description, comments) =>
+      Type(loc, id, typ, brief, description, comments)
+    }
   }
 
   def typeDef[u: P]: P[Type] = { defOfType | defOfTypeKindType }
@@ -575,8 +540,8 @@ private[parsing] trait TypeParser extends CommonParser {
 
   def constant[u: P]: P[Constant] = {
     P(
-      location ~ Keywords.const ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ briefly ~ description
+      location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
+        Punctuation.equalsSign ~ literalString ~ briefly ~ description ~ comments
     ).map { tpl => (Constant.apply _).tupled(tpl) }
   }
 

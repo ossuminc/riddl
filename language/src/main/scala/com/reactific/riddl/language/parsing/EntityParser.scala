@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Parsing rules for entity definitions */
 private[parsing] trait EntityParser {
@@ -22,32 +22,19 @@ private[parsing] trait EntityParser {
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
-      StringIn(
-        Options.eventSourced,
-        Options.value,
-        Options.aggregate,
-        Options.transient,
-        Options.consistent,
-        Options.available,
-        Options.finiteStateMachine,
-        Options.kind,
-        Options.messageQueue,
-        Options.device,
-        Options.technology
-      ).!
+    RiddlOptions.entityOptions
     ) {
-      case (loc, Options.eventSourced, _) => EntityEventSourced(loc)
-      case (loc, Options.value, _)        => EntityValueOption(loc)
-      case (loc, Options.aggregate, _)    => EntityIsAggregate(loc)
-      case (loc, Options.transient, _)    => EntityTransient(loc)
-      case (loc, Options.consistent, _)   => EntityIsConsistent(loc)
-      case (loc, Options.available, _)    => EntityIsAvailable(loc)
-      case (loc, Options.`finiteStateMachine`, _) =>
-        EntityIsFiniteStateMachine(loc)
-      case (loc, Options.kind, args)       => EntityKind(loc, args)
-      case (loc, Options.messageQueue, _)  => EntityMessageQueue(loc)
-      case (loc, Options.device, _)        => EntityIsDevice(loc)
-      case (loc, Options.technology, args) => EntityTechnologyOption(loc, args)
+      case (loc, RiddlOption.event_sourced, _)        => EntityEventSourced(loc)
+      case (loc, RiddlOption.value, _)                => EntityValueOption(loc)
+      case (loc, RiddlOption.aggregate, _)            => EntityIsAggregate(loc)
+      case (loc, RiddlOption.transient, _)            => EntityTransient(loc)
+      case (loc, RiddlOption.consistent, _)           => EntityIsConsistent(loc)
+      case (loc, RiddlOption.available, _)            => EntityIsAvailable(loc)
+      case (loc, RiddlOption.finite_state_machine, _) => EntityIsFiniteStateMachine(loc)
+      case (loc, RiddlOption.kind, args)              => EntityKind(loc, args)
+      case (loc, RiddlOption.message_queue, _)        => EntityMessageQueue(loc)
+      case (loc, RiddlOption.device, _)               => EntityIsDevice(loc)
+      case (loc, RiddlOption.technology, args)        => EntityTechnologyOption(loc, args)
     }
   }
 
@@ -63,16 +50,16 @@ private[parsing] trait EntityParser {
     P(
       location ~ Keywords.state ~ identifier ~/ Readability.of ~
         typeRef ~/ is ~ (open ~ stateBody ~ close).? ~/
-        briefly ~ description
-    )./.map { case (loc, id, typRef, body, brief, desc) =>
+        briefly ~ description ~ comments
+    )./.map { case (loc, id, typRef, body, brief, description, comments) =>
       body match {
         case Some(defs) =>
           val groups = defs.groupBy(_.getClass)
           val handlers = mapTo[Handler](groups.get(classOf[Handler]))
           val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-          State(loc, id, typRef, handlers, invariants, brief, desc)
+          State(loc, id, typRef, handlers, invariants, brief, description, comments)
         case None =>
-          State(loc, id, typRef, brief = brief, description = desc)
+          State(loc, id, typRef, brief = brief, description, comments)
       }
     }
   }
@@ -97,8 +84,8 @@ private[parsing] trait EntityParser {
   def entity[u: P]: P[Entity] = {
     P(
       location ~ Keywords.entity ~/ identifier ~ authorRefs ~ is ~ open ~/
-        entityOptions ~ entityBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, authors, options, entityDefs, brief, description) =>
+        entityOptions ~ entityBody ~ close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, authors, options, entityDefs, brief, description, comments) =>
       val groups = entityDefs.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
@@ -130,7 +117,8 @@ private[parsing] trait EntityParser {
         authors,
         terms,
         brief,
-        description
+        description,
+        comments
       )
     }
   }

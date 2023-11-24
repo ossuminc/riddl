@@ -19,13 +19,8 @@ import java.nio.file.Path
 /** Test The PrettifyPass's ability to generate consistent output */
 class PrettifyTest extends RiddlFilesTestBase {
 
-  def checkAFile(rootDir: Path, file: File): Assertion = {checkAFile(file)}
-
-  def outputWithLineNos(output: String): String = {
-    output.split('\n').zipWithIndex.map { case (str, n) => f"$n%3d $str" }
-      .mkString("\n")
-  }
-
+  def checkAFile(rootDir: Path, file: File): Assertion = { checkAFile(file) }
+  
   def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
@@ -48,7 +43,7 @@ class PrettifyTest extends RiddlFilesTestBase {
 
   /** Parse and prettify a file twice and compare the original with the third version. */
   def checkAFile(
-    file: File,
+    file: File
   ): Assertion = {
     val input1 = RiddlParserInput(file.toPath)
     val output1 = runPrettify(input1, "first")
@@ -60,14 +55,19 @@ class PrettifyTest extends RiddlFilesTestBase {
   }
 
   "PrettifyTranslator" should {
-    "check domains" in { processADirectory("testkit/src/test/input/domains") }
+    "check domains" in {
+      processADirectory("testkit/src/test/input/domains")
+    }
     "check enumerations" in {
       processADirectory("testkit/src/test/input/enumerations")
     }
-
-    "check mappings" in { processADirectory("testkit/src/test/input/mappings") }
-    "check ranges" in { processADirectory("testkit/src/test/input/ranges") }
-      "check everything.riddl" in {
+    "check mappings" in {
+      processADirectory("testkit/src/test/input/mappings")
+    }
+    "check ranges" in {
+      processADirectory("testkit/src/test/input/ranges")
+    }
+    "check everything.riddl" in {
       processAFile("testkit/src/test/input/everything.riddl")
     }
     "check petstore.riddl" in {

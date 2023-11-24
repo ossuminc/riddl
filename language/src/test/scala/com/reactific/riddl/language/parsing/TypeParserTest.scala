@@ -118,7 +118,7 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](input, expected, identity)
     }
     "allow alternation" in {
-      val input = "type alt = one of { enum or stamp or url }"
+      val input = "type alt = one of { type enum or type stamp or type url }"
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "alt"),
@@ -127,13 +127,15 @@ class TypeParserTest extends ParsingTest {
           List(
             AliasedTypeExpression(
               1 -> 21,
-              PathIdentifier(1 -> 21, Seq("enum"))
+              "type",
+              PathIdentifier(1 -> 26, Seq("enum"))
             ),
             AliasedTypeExpression(
-              1 -> 29,
-              PathIdentifier(1 -> 29, Seq("stamp"))
+              1 -> 34,
+              "type",
+              PathIdentifier(1 -> 39, Seq("stamp"))
             ),
-            AliasedTypeExpression(1 -> 38, PathIdentifier(1 -> 38, Seq("url")))
+            AliasedTypeExpression(1 -> 48, "type", PathIdentifier(1 -> 53, Seq("url")))
           )
         )
       )
@@ -150,6 +152,7 @@ class TypeParserTest extends ParsingTest {
         List(
           AliasedTypeExpression(
             (3, 21, rpi),
+            "type",
             PathIdentifier((3, 26, rpi), Seq("Foo"))
           )
         )
@@ -158,7 +161,7 @@ class TypeParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((Type(_, _, typeExp, _, _), _)) => typeExp mustBe expected
+        case Right((Type(_, _, typeExp, _, _, _), _)) => typeExp mustBe expected
       }
     }
     "allow aggregation" in {
@@ -290,22 +293,6 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
 
-    "allow one or more in word style" in {
-      val rip = RiddlParserInput("type oneOrMoreA = many agg")
-      val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "oneOrMoreA"),
-        OneOrMore(
-          (1, 24, rip),
-          AliasedTypeExpression(
-            (1, 24, rip),
-            PathIdentifier((1, 24, rip), Seq("agg"))
-          )
-        )
-      )
-      checkDefinition[Type, Type](rip, expected, identity)
-    }
-
     "allow one or more in regex style" in {
       val rip = RiddlParserInput("type oneOrMoreB = agg+")
       val expected = Type(
@@ -314,7 +301,7 @@ class TypeParserTest extends ParsingTest {
         OneOrMore(
           (1, 19, rip),
           AliasedTypeExpression(
-            (1, 19, rip),
+            (1, 19, rip), "type",
             PathIdentifier((1, 19, rip), Seq("agg"))
           )
         )
@@ -331,6 +318,7 @@ class TypeParserTest extends ParsingTest {
           (1, 33, rip),
           AliasedTypeExpression(
             (1, 33, rip),
+            "type",
             PathIdentifier((1, 33, rip), Seq("agg"))
           )
         )
@@ -347,6 +335,7 @@ class TypeParserTest extends ParsingTest {
           (1, 26, rip),
           AliasedTypeExpression(
             (1, 26, rip),
+            "type",
             PathIdentifier((1, 26, rip), Seq("agg"))
           )
         )
@@ -378,7 +367,7 @@ class TypeParserTest extends ParsingTest {
       val rip = RiddlParserInput("""
                                    |domain foo is {
                                    |  type Simple = String
-                                   |  type Compound is {
+                                   |  record Compound is {
                                    |    s: Simple,
                                    |    ns: many Number
                                    |  }
@@ -386,7 +375,7 @@ class TypeParserTest extends ParsingTest {
                                    |  type Complex is {
                                    |    a: Simple,
                                    |    b: TimeStamp,
-                                   |    c: many optional Compound,
+                                   |    c: many optional record Compound,
                                    |    d: optional Choices
                                    |  }
                                    |}
@@ -406,6 +395,7 @@ class TypeParserTest extends ParsingTest {
                   Identifier((10, 5, rpi), "a"),
                   AliasedTypeExpression(
                     (10, 8, rpi),
+                    "type",
                     PathIdentifier((10, 8, rpi), Seq("Simple"))
                   )
                 ),
@@ -421,7 +411,8 @@ class TypeParserTest extends ParsingTest {
                     (12, 22, rpi),
                     AliasedTypeExpression(
                       (12, 22, rpi),
-                      PathIdentifier((12, 22, rpi), Seq("Compound"))
+                      "record",
+                      PathIdentifier((12, 29, rpi), Seq("Compound"))
                     )
                   )
                 ),
@@ -432,6 +423,7 @@ class TypeParserTest extends ParsingTest {
                     (13, 17, rpi),
                     AliasedTypeExpression(
                       (13, 17, rpi),
+                      "type",
                       PathIdentifier((13, 17, rpi), Seq("Choices"))
                     )
                   )

@@ -7,9 +7,9 @@
 package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
-import Terminals.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Parsing rules for Context definitions */
 private[parsing] trait ContextParser {
@@ -26,20 +26,12 @@ private[parsing] trait ContextParser {
     with TypeParser =>
 
   private def contextOptions[X: P]: P[Seq[ContextOption]] = {
-    options[X, ContextOption](
-      StringIn(
-        Options.wrapper,
-        Options.gateway,
-        Options.service,
-        Options.package_,
-        Options.technology
-      ).!
-    ) {
-      case (loc, Options.wrapper, _)       => WrapperOption(loc)
-      case (loc, Options.gateway, _)       => GatewayOption(loc)
-      case (loc, Options.service, _)       => ServiceOption(loc)
-      case (loc, Options.package_, args)   => ContextPackageOption(loc, args)
-      case (loc, Options.technology, args) => ContextTechnologyOption(loc, args)
+    options[X, ContextOption](RiddlOptions.contextOptions) {
+      case (loc, RiddlOption.wrapper, _)       => WrapperOption(loc)
+      case (loc, RiddlOption.gateway, _)       => GatewayOption(loc)
+      case (loc, RiddlOption.service, _)       => ServiceOption(loc)
+      case (loc, RiddlOption.package_, args)   => ContextPackageOption(loc, args)
+      case (loc, RiddlOption.technology, args) => ContextTechnologyOption(loc, args)
     }
   }
 
@@ -49,9 +41,9 @@ private[parsing] trait ContextParser {
 
   private def replica[x: P]: P[Replica] = {
     P(
-      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description
-    ).map { case (loc, id, typeExp, brief, description) =>
-      Replica(loc, id, typeExp, brief, description)
+      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description ~ comments
+    ).map { case (loc, id, typeExp, brief, description, comments) =>
+      Replica(loc, id, typeExp, brief, description, comments)
     }
   }
   private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
@@ -71,8 +63,8 @@ private[parsing] trait ContextParser {
   def context[u: P]: P[Context] = {
     P(
       location ~ Keywords.context ~/ identifier ~ authorRefs ~ is ~ open ~
-        contextOptions ~ contextBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, authors, options, definitions, brief, description) =>
+        contextOptions ~ contextBody ~ close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, authors, options, definitions, brief, description, comments) =>
       val groups = definitions.groupBy(_.getClass)
       val types = mapTo[Type](groups.get(classOf[Type]))
       val constants = mapTo[Constant](groups.get(classOf[Constant]))
@@ -118,7 +110,8 @@ private[parsing] trait ContextParser {
         replicas,
         authors,
         brief,
-        description
+        description,
+        comments
       )
     }
   }

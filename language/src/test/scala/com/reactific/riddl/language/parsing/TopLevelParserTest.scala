@@ -27,7 +27,9 @@ class TopLevelParserTest extends ParsingTestBase {
     Seq.empty[Author]
   )
   val simpleDomainResults: AST.RootContainer = RootContainer(
+    Seq.empty,
     List(simpleDomain),
+    Seq.empty,
     List(
       RiddlParserInput(
         new File("language/src/test/input/domains/simpleDomain.riddl")
@@ -53,7 +55,9 @@ class TopLevelParserTest extends ParsingTestBase {
         val stringContents = source.mkString
         val result = TopLevelParser.parse(stringContents, origin)
         val expected = RootContainer(
+          Seq.empty,
           List(simpleDomain),
+          Seq.empty,
           List(
             StringParserInput(
               """domain foo is {
@@ -69,7 +73,7 @@ class TopLevelParserTest extends ParsingTestBase {
     }
     "parse empty String" in {
       val expected =
-        RootContainer(List(), List(StringParserInput("", "string")))
+        RootContainer(List(), List(), List(), List(StringParserInput("", "string")))
       TopLevelParser.parse("") match {
         case Right(expected) =>
           fail("Should have failed excpecting an author or domain")
@@ -82,14 +86,16 @@ class TopLevelParserTest extends ParsingTestBase {
 
     "handle garbage" in {
       val expected =
-        RootContainer(List(), List(StringParserInput("", "string")))
-      TopLevelParser.parse(" pweio afhj") match {
+        RootContainer(List(),List(),List(), List(StringParserInput("", "string")))
+      TopLevelParser.parse(" pweio afhj", "handle garbage") match {
         case Right(expected) =>
           fail("Should have failed excpecting an author or domain")
         case Left(messages) =>
           messages.length mustBe(1)
           val msg = messages.head
-          msg.message must include("Expected one of (\"author\" | \"domain\"")
+          msg.message must include("Expected one of")
+          msg.message must include("\"author\"")
+          msg.message must include("\"domain\"")
       }
     }
   }

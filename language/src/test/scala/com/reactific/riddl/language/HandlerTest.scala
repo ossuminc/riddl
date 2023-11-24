@@ -180,7 +180,6 @@ class HandlerTest extends ParsingTest {
           |         "execute Unnest"
           |      "end"
           |    }
-          |    // TODO: what commands bring item out of a hold?
           |    on command MarkItemOutForDelivery {
           |      set field journey to "field OutForDelivery"
           |    }
@@ -189,13 +188,13 @@ class HandlerTest extends ParsingTest {
           |      "execute Unnest"
           |    }
           |    on command MachineMissort {
-          |      set field journey to "unknown() // TODO: how do we respond to this?"
+          |      set field journey to "unknown()"
           |    }
           |    on command HumanMissort {
-          |      set field journey to "unknown() // TODO: how do we respond to this?"
+          |      set field journey to "unknown()"
           |    }
           |    on command CustomerAddressingError {
-          |      set field journey to "onHold() // TODO: how do we respond to this?"
+          |      set field journey to "onHold()"
           |    }
           |  }
           |}

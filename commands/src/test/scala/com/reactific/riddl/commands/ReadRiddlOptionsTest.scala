@@ -4,10 +4,10 @@ import org.scalatest.exceptions.TestFailedException
 
 import java.nio.file.Path
 
-/** Unit Tests For ReadOptionsTest */
-class ReadOptionsTest extends CommandTestBase {
+/** Unit Tests For ReadRiddlOptionsTest */
+class ReadRiddlOptionsTest extends CommandTestBase {
 
-  "Options" should {
+  "RiddlOptions" should {
     "read for dump" in {
       val expected = InputFileCommandPlugin
         .Options(Some(Path.of(s"$inputDir/dump.riddl")), "dump")

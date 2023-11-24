@@ -8,8 +8,8 @@ package com.reactific.riddl.language.parsing
 
 import com.reactific.riddl.language.AST.*
 import fastparse.*
-import fastparse.ScalaWhitespace.*
-import Terminals.*
+import fastparse.MultiLineWhitespace.*
+import Readability.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait FunctionParser {
@@ -17,8 +17,8 @@ private[parsing] trait FunctionParser {
   this: ReferenceParser with TypeParser with StatementParser with CommonParser =>
 
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
-    options[X, FunctionOption](StringIn(Options.tail_recursive).!) {
-      case (loc, Options.tail_recursive, _) => TailRecursive(loc)
+    options[X, FunctionOption](StringIn(RiddlOption.tail_recursive).!) { case (loc, RiddlOption.tail_recursive, _) =>
+      TailRecursive(loc)
     }
   }
 
@@ -46,7 +46,6 @@ private[parsing] trait FunctionParser {
     )./.rep(0)
   }
 
-
   private def functionBody[u: P]: P[
     (
       Option[Aggregation],
@@ -73,7 +72,7 @@ private[parsing] trait FunctionParser {
   def function[u: P]: P[Function] = {
     P(
       location ~ Keywords.function ~/ identifier ~ authorRefs ~ is ~ open ~
-        functionOptions ~ functionBody ~ close ~ briefly ~ description
+        functionOptions ~ functionBody ~ close ~ briefly ~ description ~ comments
     )./.map {
       case (
             loc,
@@ -81,8 +80,9 @@ private[parsing] trait FunctionParser {
             authors,
             options,
             (input, output, definitions, statements),
-            briefly,
-            description
+            brief,
+            description,
+            comments
           ) =>
         val groups = definitions.groupBy(_.getClass)
         val types = mapTo[Type](groups.get(classOf[Type]))
@@ -105,8 +105,9 @@ private[parsing] trait FunctionParser {
           includes,
           options,
           terms,
-          briefly,
-          description
+          brief,
+          description,
+          comments
         )
     }
   }

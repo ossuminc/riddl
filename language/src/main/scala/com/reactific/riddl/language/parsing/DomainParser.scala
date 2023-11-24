@@ -6,12 +6,12 @@
 
 package com.reactific.riddl.language.parsing
 
-import com.reactific.riddl.language.AST.*
 import com.reactific.riddl.language.AST
-import Terminals.*
+import com.reactific.riddl.language.AST.*
+import Readability.*
 
 import fastparse.*
-import fastparse.ScalaWhitespace.*
+import fastparse.MultiLineWhitespace.*
 
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {
@@ -26,9 +26,9 @@ private[parsing] trait DomainParser {
     with CommonParser =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
-    options[X, DomainOption](StringIn(Options.package_, Options.technology).!) {
-      case (loc, Options.package_, args)   => DomainPackageOption(loc, args)
-      case (loc, Options.technology, args) => DomainTechnologyOption(loc, args)
+    options[X, DomainOption](StringIn(RiddlOption.package_, RiddlOption.technology).!) {
+      case (loc, RiddlOption.package_, args)   => DomainPackageOption(loc, args)
+      case (loc, RiddlOption.technology, args) => DomainTechnologyOption(loc, args)
     }
   }
 
@@ -38,10 +38,10 @@ private[parsing] trait DomainParser {
 
   private def user[u: P]: P[User] = {
     P(
-      location ~ Keywords.user ~ identifier ~/ is ~ literalString ~ briefly ~
-        description
-    ).map { case (loc, id, is_a, brief, description) =>
-      User(loc, id, is_a, brief, description)
+      location ~ Keywords.user ~ identifier ~/ is ~ literalString ~/ briefly ~/
+        description ~ comments
+    ).map { case (loc, id, is_a, brief, description, comments) =>
+      User(loc, id, is_a, brief, description, comments)
     }
   }
 
@@ -58,10 +58,10 @@ private[parsing] trait DomainParser {
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~ authorRefs ~ is ~ open ~/
-        domainOptions ~ domainBody ~ close ~/
-        briefly ~ description
-    ).map { case (loc, id, authorRefs, options, defs, briefly, description) =>
+      location ~ Keywords.domain ~/ identifier ~/ authorRefs ~  is ~ open ~/
+        domainOptions ~/ domainBody ~ close ~/
+        briefly ~ description ~ comments
+    ).map { case (loc, id, authorRefs, options, defs, brief, description, comments) =>
       val groups = defs.groupBy(_.getClass)
       val authors = mapTo[Author](groups.get(classOf[Author]))
       val subdomains = mapTo[Domain](groups.get(classOf[Domain]))
@@ -94,8 +94,9 @@ private[parsing] trait DomainParser {
         subdomains,
         terms,
         includes,
-        briefly,
-        description
+        brief,
+        description,
+        comments
       )
     }
   }

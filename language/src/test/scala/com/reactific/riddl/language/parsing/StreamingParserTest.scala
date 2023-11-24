@@ -32,7 +32,7 @@ class StreamingParserTest extends ParsingTest {
           (row + 2, 3, rpi),
           Identifier((row + 2, 10, rpi), "Weather"),
           TypeRef(
-            (row + 2, 21, rpi),
+            (row + 2, 21, rpi), "command",
             PathIdentifier((row + 2, 29, rpi), List("Forecast"))
           )
         )
@@ -133,7 +133,7 @@ class StreamingParserTest extends ParsingTest {
                 (7, 5, rpi),
                 Identifier((7, 12, rpi), "Weather"),
                 TypeRef(
-                  (7, 23, rpi),
+                  (7, 23, rpi), "command",
                   PathIdentifier((7, 31, rpi), List("Forecast"))
                 )
               )
@@ -169,7 +169,7 @@ class StreamingParserTest extends ParsingTest {
                 (11, 5, rpi),
                 Identifier((11, 11, rpi), "Weather"),
                 TypeRef(
-                  (11, 22, rpi),
+                  (11, 22, rpi), "command",
                   PathIdentifier((11, 30, rpi), List("Forecast"))
                 )
               )
@@ -179,7 +179,7 @@ class StreamingParserTest extends ParsingTest {
                 (12, 5, rpi),
                 Identifier((12, 12, rpi), "CurrentTemp"),
                 TypeRef(
-                  (12, 27, rpi),
+                  (12, 27, rpi), "command",
                   PathIdentifier((12, 35, rpi), List("Temperature"))
                 )
               )
@@ -215,7 +215,7 @@ class StreamingParserTest extends ParsingTest {
                 (16, 5, rpi),
                 Identifier((16, 11, rpi), "CurrentTemp"),
                 TypeRef(
-                  (16, 26, rpi),
+                  (16, 26, rpi), "command",
                   PathIdentifier((16, 34, rpi), List("Temperature"))
                 )
               )
