@@ -5,7 +5,7 @@
  */
 
 package docs
-import com.reactific.riddl.hugo.RunHugoTestBase
+import com.ossuminc.riddl.hugo.RunHugoTestBase
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.Path

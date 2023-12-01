@@ -1,4 +1,4 @@
-package com.reactific.riddl.utils
+package com.ossuminc.riddl.utils
 
 /** Unit Tests For PathUtils */
 import org.scalatest.wordspec.AnyWordSpec

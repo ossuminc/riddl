@@ -1,7 +1,4 @@
 import com.typesafe.sbt.packager.Keys.maintainer
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicense
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.HeaderLicenseStyle
-import de.heikoseeberger.sbtheader.HeaderPlugin.autoImport.headerLicense
 import sbt.Keys.organizationName
 import sbt.Keys._
 import sbt._
@@ -13,8 +10,6 @@ import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoOptions
 import scoverage.ScoverageKeys._
 import sbtdynver.DynVerPlugin.autoImport.dynverSeparator
 import sbtdynver.DynVerPlugin.autoImport.dynverSonatypeSnapshots
-import sbtdynver.DynVerPlugin.autoImport.dynverVTagPrefix
-import wartremover.WartRemover.autoImport
 import wartremover.{Wart, WartRemover}
 import wartremover.WartRemover.autoImport._
 
@@ -22,122 +17,8 @@ import java.net.URI
 import java.util.Calendar
 import scala.collection.Seq
 
-/** V - Dependency Versions object */
-object V {
-  val commons_io = "2.15.0"
-  val compress = "1.24.0"
-  val config = "1.4.2"
-  val fastparse = "3.0.2"
-  val jgit = "6.5.0"
-  val lang3 = "3.14.0"
-  val pureconfig = "0.17.4"
-  val scalacheck = "1.17.0"
-  val scalatest = "3.2.17"
-  val scopt = "4.1.0"
-  val slf4j = "2.0.4"
-}
-
-object Dep {
-  val compress = "org.apache.commons" % "commons-compress" % V.compress
-  val commons_io = "commons-io" % "commons-io" % V.commons_io
-  val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
-  val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
-  val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3
-  val pureconfig = "com.github.pureconfig" %% "pureconfig-core" % V.pureconfig
-  val scalactic = "org.scalactic" %% "scalactic" % V.scalatest
-  val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
-  val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
-  val scopt = "com.github.scopt" %% "scopt" % V.scopt
-  val slf4j = "org.slf4j" % "slf4j-nop" % V.slf4j
-
-  val testing: Seq[ModuleID] =
-    Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
-  val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)
-
-}
 
 object C {
-  def withInfo(p: Project): Project = {
-    p.settings(
-      ThisBuild / maintainer := "reid@ossum.biz",
-      ThisBuild / maintainer := "reid@ossum.biz",
-      ThisBuild / organization := "com.reactific",
-      ThisBuild / organizationHomepage := Some(URI.create("https://reactific.com/").toURL),
-      ThisBuild / organizationName := "Ossum Inc.",
-      ThisBuild / startYear := Some(2019),
-      ThisBuild / licenses +=
-        (
-          "Apache-2.0",
-          URI.create("https://www.apache.org/licenses/LICENSE-2.0.txt").toURL
-        ),
-      ThisBuild / versionScheme := Option("early-semver"),
-      ThisBuild / dynverVTagPrefix := false,
-      // NEVER  SET  THIS: version := "0.1"
-      // IT IS HANDLED BY: sbt-dynver
-      ThisBuild / dynverSeparator := "-",
-      headerLicense := Some(
-        HeaderLicense.ALv2(
-          startYear.value.get.toString,
-          "Ossum, Inc.",
-          HeaderLicenseStyle.SpdxSyntax
-        )
-      )
-    )
-  }
-
-  lazy val scala_3_options: Seq[String] =
-    Seq(
-      "-deprecation",
-      "-feature",
-      "-new-syntax",
-      // "-explain",
-      // "-explain-types",
-      "-Werror",
-      "-pagewidth",
-      "120"
-    )
-
-  def scala_3_doc_options(version: String): Seq[String] = {
-    Seq(
-      "-deprecation",
-      "-feature",
-      "-groups",
-      "-project:RIDDL",
-      "-comment-syntax:wiki",
-      s"-project-version:$version",
-      "-siteroot:doc/src/hugo/static/apidoc",
-      "-author",
-      "-doc-canonical-base-url:https://riddl.tech/apidoc"
-    )
-  }
-
-  def withWartRemover(p: Project): Project = {
-    p.enablePlugins(WartRemover)
-      .settings(
-        Compile / compile / wartremoverWarnings := Warts.unsafe.filter {
-          case Wart.DefaultArguments | Wart.Any | Wart.IsInstanceOf | Wart.AsInstanceOf // would like to get rid of this
-              =>
-            false
-          case _ => true
-        },
-        Test / compile / wartremoverWarnings := Seq.empty[Wart]
-        // Ignore generated files - not a feature yet!
-        // wartremoverExcluded += baseDirectory.value / "target" / "scala-3.3.1" /
-        //  "src_managed" / "main" / "com" / "reactific"
-      )
-  }
-
-  def withScala3(p: Project): Project = {
-    p.configure(withInfo)
-      .settings(
-        scalaVersion := "3.3.1",
-        scalacOptions := scala_3_options,
-        Compile / doc / scalacOptions := scala_3_doc_options((compile / scalaVersion).value),
-        apiURL := Some(url("https://riddl.tech/apidoc/")),
-        autoAPIMappings := true
-      )
-      .configure(withWartRemover)
-  }
 
   final val defaultPercentage: Int = 50
 
@@ -154,51 +35,6 @@ object C {
     )
   }
 
-  def withBuildInfo(
-    homePage: String,
-    orgName: String,
-    packageName: String,
-    objName: String = "BuildInfo",
-    baseYear: Int = 2023
-  )(p: Project): Project = {
-    p.settings(
-      buildInfoObject := objName,
-      buildInfoPackage := packageName,
-      buildInfoOptions := Seq(ToMap, ToJson, BuildTime),
-      buildInfoUsePackageAsPath := true,
-      buildInfoKeys ++= Seq[BuildInfoKey](
-        name,
-        version,
-        description,
-        organization,
-        organizationName,
-        BuildInfoKey.map(organizationHomepage) { case (k, v) =>
-          k -> v.get.toString
-        },
-        BuildInfoKey.map(homepage) { case (k, v) =>
-          "projectHomepage" -> v.map(_.toString).getOrElse(homePage)
-        },
-        BuildInfoKey.map(startYear) { case (k, v) =>
-          k -> v.map(_.toString).getOrElse(baseYear.toString)
-        },
-        BuildInfoKey.map(startYear) { case (k, v) =>
-          "copyright" -> s"© ${v.map(_.toString).getOrElse(baseYear.toString)}-${Calendar
-              .getInstance()
-              .get(Calendar.YEAR)} $orgName}"
-        },
-        scalaVersion,
-        sbtVersion,
-        BuildInfoKey.map(scalaVersion) { case (k, v) =>
-          val version = if (v.head == '2') { v.substring(0, v.lastIndexOf('.')) }
-          else v
-          "scalaCompatVersion" -> version
-        },
-        BuildInfoKey.map(licenses) { case (k, v) =>
-          k -> v.map(_._1).mkString(", ")
-        }
-      )
-    )
-  }
 
   private def makeThemeResource(
     name: String,
