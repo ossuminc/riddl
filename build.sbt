@@ -1,7 +1,6 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
 import com.ossuminc.sbt.helpers.ProjectInfo.Keys.{projectHomePage, projectStartYear}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
-import com.ossuminc.sbt.{OssumIncPlugin, Root, Module}
 import sbtunidoc.BaseUnidocPlugin.autoImport.unidoc
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -15,13 +14,14 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
   headerLicense
 )
 
-lazy val riddl = Root("riddl")
-  .enablePlugins(OssumIncPlugin)
+enablePlugins(OssumIncPlugin)
+
+lazy val riddl = Root("riddl", startYr = 2019)
   .configure(With.typical)
   .enablePlugins(ScoverageSbtPlugin)
   .enablePlugins(AutomateHeaderPlugin)
   .settings(
-    pgpSigner / skip := true
+    pgpSigner / skip := true,
   )
   .aggregate(
     utils,
@@ -45,8 +45,6 @@ lazy val utils: Project = Module("riddl-utils", "utils")
   .settings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
-    projectHomePage := url("https://riddl.tech"),
-    projectStartYear := 2019,
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
 
@@ -157,7 +155,7 @@ lazy val scaladocSiteSettings = scaladocSiteProjects
 lazy val doc = project
   .in(file("doc"))
   .enablePlugins(OssumIncPlugin)
-  .configure(With.basic, scala3.configure)
+  .configure(With.basic, With.scala3.configure)
   .enablePlugins(ScalaUnidocPlugin, SitePlugin, SiteScaladocPlugin, HugoPlugin)
   .disablePlugins(ScoverageSbtPlugin)
   .settings(scaladocSiteSettings)
