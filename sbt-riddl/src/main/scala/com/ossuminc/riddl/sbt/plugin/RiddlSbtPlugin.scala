@@ -1,7 +1,17 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2023 Ossum, Inc.
  *
- * SPDX-License-Identifier: Apache-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.ossuminc.riddl.sbt.plugin
@@ -9,12 +19,9 @@ package com.ossuminc.riddl.sbt.plugin
 import com.ossuminc.riddl.sbt.SbtRiddlPluginBuildInfo
 import sbt.*
 import sbt.Keys.*
-import sbt.internal.util.ManagedLogger
 import sbt.plugins.JvmPlugin
 
 import java.io.File
-import java.nio.file.FileSystem
-import scala.language.postfixOps
 import scala.sys.process.*
 
 /** A plugin that endows sbt with knowledge of code generation via riddl */
@@ -110,7 +117,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     val riddlcPath = project.runTask(findRiddlcTask, state)
     val minimumVersion: String = project.get(riddlcMinVersion)
     val options: Seq[String] = project.get(riddlcOptions)
-    val rc = Def.task[Int] {
+    Def.task[Int] {
       val streams: TaskStreams = project.get(Keys.streams).value
       runRiddlc(streams, riddlcPath._2, minimumVersion, options, args)
     }
@@ -202,7 +209,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   ): Int = {
     checkVersion(riddlcPath, minimumVersion)
     streams.log.info(s"Running: riddlc ${args.mkString(" ")}\n")
-    val logger = ProcessLogger{ str => println(str) ; streams.log(str) }
+    val logger = ProcessLogger{ str => println(str) ; streams.log(str); () }
     val process = Process(riddlcPath.getAbsolutePath, options ++ args)
     process.!(logger)
   }
