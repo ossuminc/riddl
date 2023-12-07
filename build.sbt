@@ -12,7 +12,7 @@ lazy val riddl = Root("", "riddl", startYr = 2019)
   .configure(With.noPublishing, With.git)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
-    ThisBuild / gitHubOrganization := "reactific",
+    ThisBuild / gitHubOrganization := "ossuminc",
     ThisBuild /
     pgpSigner / skip := true
   )

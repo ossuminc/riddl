@@ -44,7 +44,7 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle non existent URL" in {
       val emptyURL = new java.net.URI(
-        "https://raw.githubusercontent.com/reactific/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
+        "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
       )
       parseDomainDefinition(
         RiddlParserInput(emptyURL),

@@ -62,8 +62,8 @@ object RiddlSbtPlugin extends AutoPlugin {
     // Global / excludeLintKeys ++= Seq(riddlcConf, riddlcOptions),
     scalaVersion := V.scala,
     libraryDependencies ++= Seq(
-      "com.reactific" %% "riddlc" % V.riddl,
-      "com.reactific" %% "riddl-testkit" % V.riddl % Test,
+      "com.ossuminc" %% "riddlc" % V.riddl,
+      "com.ossuminc" %% "riddl-testkit" % V.riddl % Test,
       "org.scalactic" %% "scalactic" % V.scalatest % Test,
       "org.scalatest" %% "scalatest" % V.scalatest % Test,
       "org.scalacheck" %% "scalacheck" % V.scalacheck % Test

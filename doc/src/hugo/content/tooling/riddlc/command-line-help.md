@@ -27,7 +27,7 @@ For this version of `riddlc`:
 [info]       copyright: © 2019-2022 Ossum Inc.
 [info]        built at: 2022-09-09 11:28:07.485-0400
 [info]        licenses: Apache License, Version 2.0
-[info]    organization: Reactific Software LLC
+[info]    organization: Ossum Inc.
 [info]   scala version: 2.13.8
 [info]     sbt version: 1.7.1
 ```
