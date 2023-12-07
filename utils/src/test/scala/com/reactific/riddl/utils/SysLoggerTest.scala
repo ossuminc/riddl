@@ -1,4 +1,4 @@
-package com.reactific.riddl.utils
+package com.ossuminc.riddl.utils
 
 import org.scalatest._
 import org.scalatest.wordspec.AnyWordSpec

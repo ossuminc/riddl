@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.utils
+package com.ossuminc.riddl.utils
 
 import java.nio.file.Path
 
@@ -13,9 +13,9 @@ import java.nio.file.Path
 class FuturePluginSpec
     extends PluginSpecBase(
       svcClassPath =
-        Path.of("com/reactific/riddl/utils/FutureTestPlugin.class"),
+        Path.of("com/ossuminc/riddl/utils/FutureTestPlugin.class"),
       implClassPath = Path
-        .of("com/reactific/riddl/utils/FutureTestPlugin.class")
+        .of("com/ossuminc/riddl/utils/FutureTestPlugin.class")
     ) {
   "FuturePlugin" should {
     "not load" in {

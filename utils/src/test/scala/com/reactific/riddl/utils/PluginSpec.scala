@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.utils
+package com.ossuminc.riddl.utils
 
 /** Tests For Plugins */
 class PluginSpec extends PluginSpecBase() {
