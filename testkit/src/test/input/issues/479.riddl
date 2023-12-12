@@ -1,0 +1,6 @@
+domain Ignore {
+
+  epic Ignore {
+    case Error is {}
+  }
+}

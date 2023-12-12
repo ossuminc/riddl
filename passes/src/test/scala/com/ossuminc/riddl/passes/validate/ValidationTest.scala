@@ -8,8 +8,8 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{At, ParsingTest}
+import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput}
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
 
 import java.nio.file.Path

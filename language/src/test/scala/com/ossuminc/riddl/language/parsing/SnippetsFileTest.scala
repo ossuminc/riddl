@@ -1,7 +1,6 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.ParsingTest
 
 import java.nio.file.Path
 import org.apache.commons.io.FileUtils

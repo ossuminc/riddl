@@ -7,7 +7,6 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{Field, *}
-import com.ossuminc.riddl.language.ParsingTest
 
 /** Unit Tests For TypesParserTest */
 class TypeParserTest extends ParsingTest {

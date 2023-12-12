@@ -3298,7 +3298,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   case class UseCase(
     loc: At,
     id: Identifier,
-    userStory: Option[UserStory] = None,
+    userStory: UserStory = UserStory(),
     contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
@@ -3326,11 +3326,12 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     capability: LiteralString = LiteralString.empty,
     benefit: LiteralString = LiteralString.empty
   ) extends RiddlValue {
-    def format: String = "" // FIXME: Format a UserStory
-
-    override def isEmpty: Boolean = false
+    def format: String = {
+      user.format + " wants to " + capability.s + " so that " + benefit.s
+    }
+    override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
   }
-
+  
   /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an overall story about user interactions
     * with the system. This define functionality from the perspective of users (men or machines) interactions with the
     * system that is part of their role.

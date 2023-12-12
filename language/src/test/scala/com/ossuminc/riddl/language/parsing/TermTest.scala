@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.passes
+package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term}
-import com.ossuminc.riddl.language.{At, ParsingTest}
+import com.ossuminc.riddl.language.{At, Finder}
 class TermTest extends ParsingTest {
 
   "Term" should {

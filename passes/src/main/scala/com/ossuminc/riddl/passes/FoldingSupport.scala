@@ -1,14 +1,8 @@
-/*
- * Copyright 2019 Ossum, Inc.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 package com.ossuminc.riddl.passes
 
+import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.utils.SeqHelpers.*
 
@@ -17,90 +11,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.reflect.{ClassTag, classTag}
 
-object Folding {
-
-  private type SimpleDispatch[S] = (Container[Definition], Definition, S) => S
-
-  def foldEachDefinition[S](
-    parent: Definition,
-    child: Definition,
-    state: S
-  )(f: SimpleDispatch[S]): S = {
-    child match {
-      case definition: LeafDefinition => f(parent, definition, state)
-      case definition: Definition =>
-        val result = f(parent, child, state)
-        definition.contents.foldLeft(result) { case (next, child) =>
-          foldEachDefinition[S](definition, child, next)(f)
-        }
-    }
-  }
-
-  final def foldLeftWithStack[S](
-    value: S,
-    parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
-  )(top: Definition)(f: (S, Definition, Seq[Definition]) => S): S = {
-    val initial = f(value, top, parents.toSeq)
-    parents.push(top)
-    try {
-      top.contents.foldLeft(initial) { (next, definition) =>
-        definition match {
-          case i: Include[Definition] @unchecked =>
-            i.contents.foldLeft(next) {
-              case (n, d: LeafDefinition) => f(n, d, parents.toSeq)
-              case (n, cd: Definition)    => foldLeftWithStack(n, parents)(cd)(f)
-            }
-          case d: LeafDefinition => f(next, d, parents.toSeq)
-          case c: Definition     => foldLeftWithStack(next, parents)(c)(f)
-        }
-      }
-    } finally { parents.pop() }
-  }
-
-  final def foldAround[S](
-    value: S,
-    top: Definition,
-    folder: Folder[S],
-    parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
-  ): S = {
-    // Let them know a container is being opened
-    val startState = folder.openContainer(value, top, parents.toSeq)
-    parents.push(top)
-    val middleState = top.contents.foldLeft(startState) {
-      case (next, definition: LeafDefinition) =>
-        // Leaf node so mention it
-        parents.push(definition)
-        val st = folder.doDefinition(next, definition, parents.toSeq)
-        parents.pop()
-        st
-      case (next, container: Definition) =>
-        // Container node so recurse
-        foldAround(next, container, folder, parents)
-    }
-    // Let them know a container is being closed
-    parents.pop()
-    folder.closeContainer(middleState, top, parents.toSeq)
-  }
-
-  trait Folder[STATE] {
-    def openContainer(
-      state: STATE,
-      container: Definition,
-      parents: Seq[Definition]
-    ): STATE
-
-    def doDefinition(
-      state: STATE,
-      definition: Definition,
-      parents: Seq[Definition]
-    ): STATE
-
-    def closeContainer(
-      state: STATE,
-      container: Definition,
-      parents: Seq[Definition]
-    ): STATE
-  }
+object FoldingSupport {
 
   trait State {
 
@@ -151,19 +62,19 @@ object Folding {
     def symbolTable: SymbolsOutput
 
     def pathIdToDefinition(
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    ): Option[Definition] = {
+                            pid: PathIdentifier,
+                            parents: Seq[Definition]
+                          ): Option[Definition] = {
       val result = resolvePath(pid, parents)()()
       result.headOption
     }
 
     private def adjustStacksForPid(
-      searchFor: String,
-      pid: PathIdentifier,
-      parentStack: mutable.Stack[Definition],
-      nameStack: mutable.Stack[String]
-    ): Seq[Definition] = {
+                                    searchFor: String,
+                                    pid: PathIdentifier,
+                                    parentStack: mutable.Stack[Definition],
+                                    nameStack: mutable.Stack[String]
+                                  ): Seq[Definition] = {
       // Since we're at a field that references another type then we
       // need to push that type's path on the name stack which is just itself
       nameStack.push(searchFor)
@@ -182,10 +93,10 @@ object Folding {
     }
 
     private def findCandidates(
-      searchFor: String,
-      parentStack: mutable.Stack[Definition],
-      nameStack: mutable.Stack[String]
-    ): Seq[Definition] = {
+                                searchFor: String,
+                                parentStack: mutable.Stack[Definition],
+                                nameStack: mutable.Stack[String]
+                              ): Seq[Definition] = {
       parentStack.headOption match {
         case None =>
           // Nothing in the parent stack so we're done searching and
@@ -208,7 +119,7 @@ object Folding {
                   // if we're at a field composed of more fields, then those fields
                   // what we are looking for
                   a.contents
-                case Enumeration(_, enumerators)       => enumerators
+                case Enumeration(_, enumerators) => enumerators
                 case a: AggregateUseCaseTypeExpression =>
                   // Message types have fields too, those fields are what we seek
                   a.contents
@@ -222,10 +133,10 @@ object Folding {
               }
             case t: Type =>
               t.typ match {
-                case a: Aggregation                    => a.contents
+                case a: Aggregation => a.contents
                 case a: AggregateUseCaseTypeExpression => a.contents
-                case Enumeration(_, enumerators)       => enumerators
-                case AliasedTypeExpression(_, _, pid)     =>
+                case Enumeration(_, enumerators) => enumerators
+                case AliasedTypeExpression(_, _, pid) =>
                   // if we're at a type definition that references another type then
                   // we need to push that type's path on the name stack
                   adjustStacksForPid(searchFor, pid, parentStack, nameStack)
@@ -242,7 +153,7 @@ object Folding {
             case d: Definition =>
               d.contents.flatMap {
                 case Include(_, contents, _, _) => contents
-                case d: Definition           => Seq(d)
+                case d: Definition => Seq(d)
               }
           }
       }
@@ -254,16 +165,17 @@ object Folding {
       * resolve it from the map or the symbol table.
       *
       * @param pid
-      *   The path to consider
+      * The path to consider
       * @param parents
-      *   The parent stack to provide the context from which the search starts
+      * The parent stack to provide the context from which the search starts
+      *
       * @return
-      *   Either an error or a definition
+      * Either an error or a definition
       */
     private def resolveRelativePath(
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    ): Seq[Definition] = {
+                                     pid: PathIdentifier,
+                                     parents: Seq[Definition]
+                                   ): Seq[Definition] = {
 
       // Initialize the visited stack. This is used to detect looping. We
       // should never visit the same definition twice but if we do we will
@@ -307,12 +219,15 @@ object Folding {
                 // Generate the error message
                 this.addError(
                   pid.loc,
-                  msg = s"""Path resolution encountered a loop at ${definition.identify}
-                           |  for name '$soughtName' when resolving ${pid.format}
-                           |  in definition context: ${parents
-                            .map(_.identify)
-                            .mkString("\n    ", "\n    ", "\n")}
-                           |""".stripMargin
+                  msg =
+                    s"""Path resolution encountered a loop at ${definition.identify}
+                       |  for name '$soughtName' when resolving ${pid.format}
+                       |  in definition context: ${
+                      parents
+                        .map(_.identify)
+                        .mkString("\n    ", "\n    ", "\n")
+                    }
+                       |""".stripMargin
                 )
                 // Signal we're done searching with no result
                 parentStack.clear()
@@ -335,11 +250,13 @@ object Folding {
                     // The name we are now searching for may have been updated by the
                     // findCandidates function adjusting the stacks.
                     nameStack.headOption match {
-                      case None       => soughtName
+                      case None => soughtName
                       case Some(name) => name
                     }
 
-                  } else { soughtName }
+                  } else {
+                    soughtName
+                  }
 
                 // Now find the match, if any, and handle appropriately
                 val found = candidates.find(_.id.value == newSoughtName)
@@ -375,9 +292,9 @@ object Folding {
     }
 
     private def resolvePathFromHierarchy(
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    ): Seq[Definition] = {
+                                          pid: PathIdentifier,
+                                          parents: Seq[Definition]
+                                        ): Seq[Definition] = {
       pid.value.headOption match {
         case None =>
           Seq.empty[Definition] // signla not found
@@ -404,10 +321,12 @@ object Folding {
     }
 
     private def doNothingMultiple(
-      @unused list: List[(Definition, Seq[Definition])]
-    ): Seq[Definition] = { Seq.empty[Definition] }
+     @unused list: List[(Definition, Seq[Definition])]
+   ): Seq[Definition] = {
+      Seq.empty[Definition]
+    }
 
-    def resolvePidRelativeTo[DEF <: Definition: ClassTag](
+    def resolvePidRelativeTo[DEF <: Definition : ClassTag](
       pid: PathIdentifier,
       definition: Definition
     ): Option[DEF] = {
@@ -415,20 +334,22 @@ object Folding {
       this.resolvePathIdentifier[DEF](pid, parents)
     }
 
-    def resolvePathIdentifier[DEF <: Definition: ClassTag](
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    ): Option[DEF] = {
+    def resolvePathIdentifier[DEF <: Definition : ClassTag](
+                                                             pid: PathIdentifier,
+                                                             parents: Seq[Definition]
+                                                           ): Option[DEF] = {
       def isSameKind(d: Definition): Boolean = {
         val clazz = classTag[DEF].runtimeClass
         d.getClass == clazz
       }
 
-      if pid.value.isEmpty then { None }
+      if pid.value.isEmpty then {
+        None
+      }
       else if pid.value.exists(_.isEmpty) then {
         resolveRelativePath(pid, parents).headOption match {
           case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
-          case _                              => None
+          case _ => None
         }
       } else {
         resolvePathFromHierarchy(pid, parents).headOption match {
@@ -451,18 +372,22 @@ object Folding {
     }
 
     def resolvePath(
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle)(
-      onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] = doNothingMultiple
-    ): Seq[Definition] = {
-      if pid.value.isEmpty then { Seq.empty[Definition] }
+                     pid: PathIdentifier,
+                     parents: Seq[Definition]
+                   )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle)(
+                     onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] = doNothingMultiple
+                   ): Seq[Definition] = {
+      if pid.value.isEmpty then {
+        Seq.empty[Definition]
+      }
       else if pid.value.exists(_.isEmpty) then {
         val resolution = resolveRelativePath(pid, parents)
         onSingle(resolution)
       } else {
         val result = resolvePathFromHierarchy(pid, parents)
-        if result.nonEmpty then { onSingle(result) }
+        if result.nonEmpty then {
+          onSingle(result)
+        }
         else {
           val symTabCompatibleNameSearch = pid.value.reverse
           val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
@@ -482,4 +407,5 @@ object Folding {
       }
     }
   }
+
 }

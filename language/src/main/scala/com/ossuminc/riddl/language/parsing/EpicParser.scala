@@ -108,19 +108,19 @@ private[parsing] trait EpicParser {
   private def interactions[u: P]: P[Seq[Interaction]] = {
     P(
       parallelInteractions | optionalInteractions | sequentialInteractions | stepInteractions
-    ).rep(0, Punctuation.comma./)
+    ).rep(1, Punctuation.comma./)
   }
 
   private def useCase[u: P]: P[UseCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
         (undefined(
-          Option.empty[UserStory],
-          Seq.empty[GenericInteraction]
-        ) | (userStory.? ~ interactions)) ~
+          (Option.empty[UserStory],
+          Seq.empty[GenericInteraction])
+        )./ | (userStory.? ~ interactions)) ~
         close ~ briefly ~ description ~ comments
     ).map { case (loc, id, (userStory, contents), brief, description, comments) =>
-      UseCase(loc, id, userStory, contents, brief, description, comments)
+      UseCase(loc, id, userStory.getOrElse(UserStory()), contents, brief, description, comments)
     }
   }
 
@@ -152,7 +152,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicDefinitions[u: P]: P[Seq[EpicDefinition]] = {
-    P(useCase | term | epicInclude).rep(0)
+    P(useCase | term | epicInclude).rep(1)
   }
 
   type EpicBody = (

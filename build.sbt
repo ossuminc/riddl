@@ -83,6 +83,7 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .settings(libraryDependencies ++= Dep.testKitDeps)
+  .dependsOn(language % "compile->compile;compile->test;test->test")
   .dependsOn(commands % "compile->compile;test->test")
 
 val Stats = config("stats")

@@ -18,8 +18,7 @@ class EpicTest extends ValidatingTest {
         """domain foo is {
           |  user Author is "human writer"
           |epic WritingABook is {
-          |  user foo.Author wants "edit on the screen" so that
-          |  "revise content more easily"
+          |  user foo.Author wants to "edit on the screen" so that "he can revise content more easily"
           |  shown by { http://example.com:80/path/to/WritingABook }
           |  case perfection is { ???  }
           |} described as "A simple authoring story"
@@ -27,11 +26,7 @@ class EpicTest extends ValidatingTest {
           |""".stripMargin
       )
       parseAndValidateDomain(rpi) {
-        case (
-              domain: Domain,
-              rpi: RiddlParserInput,
-              messages: Messages.Messages
-            ) =>
+        case ( domain: Domain, rpi: RiddlParserInput, messages: Messages.Messages ) =>
           domain.epics mustNot be(empty)
           messages.isOnlyIgnorable mustBe true
           val story = domain.epics.head
@@ -40,9 +35,9 @@ class EpicTest extends ValidatingTest {
           val us = story.userStory.get
           us mustNot be(empty)
           us.user.pathId.value mustBe Seq("foo", "Author")
-          us.capability mustBe LiteralString((4, 25, rpi), "edit on the screen")
+          us.capability mustBe LiteralString((4, 28, rpi), "edit on the screen")
           us.benefit mustBe
-            LiteralString((5, 3, rpi), "revise content more easily")
+            LiteralString((4, 57, rpi), "he can revise content more easily")
           story.shownBy mustNot be(empty)
           story.shownBy.head.toString mustBe
             "http://example.com:80/path/to/WritingABook"

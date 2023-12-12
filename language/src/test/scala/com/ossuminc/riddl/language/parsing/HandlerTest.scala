@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.language
+package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.Context
-import com.ossuminc.riddl.language.AST.Entity
+import com.ossuminc.riddl.language.AST.{Context, Entity}
+import com.ossuminc.riddl.language.parsing.ParsingTest
 
 /** Unit Tests For Handler */
 class HandlerTest extends ParsingTest {

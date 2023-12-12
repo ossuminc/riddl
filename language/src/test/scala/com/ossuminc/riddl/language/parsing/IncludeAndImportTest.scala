@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.testkit
+package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.parsing.{RiddlParserInput, StringParserInput}
 
 import scala.util.control.NonFatal
 
@@ -58,7 +57,7 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle existing URI" in {
-      import sys.process._
+      import sys.process.*
       val cwd = System.getProperty("user.dir", ".")
       val urlStr: String = s"file:///${cwd}/testkit/src/test/input/domains/simpleDomain.riddl"
       val uri = java.net.URI(urlStr)
@@ -73,7 +72,7 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle inclusions into domain" in {
-      val rc = checkFile("Domain Includes", "domainIncludes.riddl")
+      val rc = checkFile("Domain Includes", "includes/domainIncludes.riddl")
       val inc = StringParserInput("", "domainIncluded.riddl")
       rc.domains mustNot be(empty)
       rc.domains.head.includes mustNot be(empty)
@@ -85,10 +84,10 @@ class IncludeAndImportTest extends ParsingTest {
         Strng((1, 13, inc)),
         None
       )
-      actual == expected mustBe (true)
+      actual mustBe expected
     }
     "handle inclusions into contexts" in {
-      val rc = checkFile("Context Includes", "contextIncludes.riddl")
+      val rc = checkFile("Context Includes", "includes/contextIncludes.riddl")
       val inc = StringParserInput("", "contextIncluded.riddl")
       rc.domains mustNot be(empty)
       rc.domains.head.contexts mustNot be(empty)
@@ -101,13 +100,13 @@ class IncludeAndImportTest extends ParsingTest {
         Strng((1, 12, inc)),
         None
       )
-      actual mustBe (expected)
+      actual mustBe expected
     }
   }
 
   "Import" should {
     "work syntactically" in {
-      val root = checkFile("Import", "import.riddl")
+      val root = checkFile("Import", "import/import.riddl")
       root.domains must not(be(empty))
       root.domains.head.domains must not(be(empty))
       root.domains.head.domains.head.id.value must be("NotImplemented")

@@ -8,7 +8,6 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.{ParsingTest, TestParser}
 
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
