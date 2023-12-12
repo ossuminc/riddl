@@ -1,0 +1,8 @@
+domain Ignore {
+application Ignore is {
+
+  group Foo is {
+    text blah takes String
+  }
+}
+}

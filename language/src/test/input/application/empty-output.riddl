@@ -1,0 +1,4 @@
+application Ignore is {
+
+  group Foo is {}
+}
