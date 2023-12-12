@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, ParsingTest}
+import com.ossuminc.riddl.language.At
 /** Unit Tests For CommonParser */
 class CommonParserTest extends ParsingTest {
 
@@ -44,7 +44,7 @@ class CommonParserTest extends ParsingTest {
                     |"""".stripMargin
       parse[LiteralString, LiteralString](
         input,
-        StringParser("").literalString(_),
+        TopLevelParser("").literalString(_),
         identity
       ) match {
         case Left(errors) =>

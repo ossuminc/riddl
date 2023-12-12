@@ -102,7 +102,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case e: Epic =>
         e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case uc: UseCase =>
-        uc.userStory.foreach(userStory => resolveARef[User](userStory.user, parentsAsSeq))
+        if uc.userStory.nonEmpty then
+          resolveARef(uc.userStory.user, parentsAsSeq)
+        end if
       case in: Input =>
         resolveARef[Type](in.putIn, parentsAsSeq)
       case out: Output =>

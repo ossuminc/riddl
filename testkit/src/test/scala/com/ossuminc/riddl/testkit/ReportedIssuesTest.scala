@@ -92,6 +92,16 @@ class ReportedIssuesTest extends ValidatingTest {
     "447" in {
       checkOne("447.riddl")
     }
+    "479" in {
+      checkOne("479.riddl") {
+        case Left(messages) =>
+          val errors = messages.justErrors
+          errors.size mustBe 1
+          errors.head.message must include("Expected one of")
+        case Right(result) => 
+          fail("should not have parsed correctly")
+      }
+    }
     "480" in {
       checkOne("480.riddl")
     }

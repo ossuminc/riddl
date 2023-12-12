@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.passes
+package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.Definition
-import com.ossuminc.riddl.language.ParsingTest
-
+import com.ossuminc.riddl.language.Folding
 
 class FoldingTest extends ParsingTest {
 
@@ -56,10 +55,9 @@ class FoldingTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
-          val result = Folding.foldLeftWithStack(empty)(content) {
-            case (track, definition, stack) =>
-              val path = stack.map(_.identify).reverse :+ definition.identify
-              track :+ path
+          val result = Folding.foldLeftWithStack(empty)(content) { case (track, definition, stack) =>
+            val path = stack.map(_.identify).reverse :+ definition.identify
+            track :+ path
           }
           val expectedCount = 26
           result.length must be(expectedCount)

@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST, ParsingTest}
+import com.ossuminc.riddl.language.AST
 
 /** Unit Tests For StreamingParser */
 class StreamingParserTest extends ParsingTest {

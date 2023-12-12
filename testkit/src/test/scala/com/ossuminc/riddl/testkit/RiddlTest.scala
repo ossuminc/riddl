@@ -7,12 +7,11 @@
 package com.ossuminc.riddl.testkit
 
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.utils.StringBuildingPrintStream
 import com.ossuminc.riddl.utils.SysLogger
-
 import org.scalatest.Assertion
 
 import java.io.File

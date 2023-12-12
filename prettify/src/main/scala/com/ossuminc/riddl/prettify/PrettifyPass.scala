@@ -7,8 +7,8 @@
 package com.ossuminc.riddl.prettify
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.{Keyword,Readability}
+import com.ossuminc.riddl.language.Messages.{Messages, nl}
+import com.ossuminc.riddl.language.parsing.{Keyword, Readability}
 import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.passes.{HierarchyPass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
@@ -31,6 +31,7 @@ object PrettifyPass extends PassInfo {
   def keyword(definition: Definition): String = {
     definition match {
       case _: Adaptor       => Keyword.adaptor
+      case _: UseCase       => Keyword.case_
       case _: Context       => Keyword.context
       case _: Connector     => Keyword.connector
       case _: Domain        => Keyword.domain
@@ -212,8 +213,17 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     state.withCurrent(_.closeDef(story))
   }
 
-  private def openUseCase(@unused useCase: UseCase): Unit = {
-    // TODO: write openUseCase
+  private def openUseCase(useCase: UseCase): Unit = {
+    if useCase.isEmpty then
+      state.withCurrent(
+        _.add(PrettifyPass.keyword(useCase))
+          .add(" ")
+          .add(useCase.id.value)
+          .add(" { ??? }")
+          .add(nl)
+      )
+    else ()
+    end if
   }
 
   private def doInteraction(@unused interaction: Interaction): Unit = {

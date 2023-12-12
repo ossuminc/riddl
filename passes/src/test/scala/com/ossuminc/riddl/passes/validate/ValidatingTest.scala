@@ -8,8 +8,8 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.language.{At, CommonOptions, ParsingTest}
+import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.{At, CommonOptions}
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
 import org.scalatest.Assertion
 
