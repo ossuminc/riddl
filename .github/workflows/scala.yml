@@ -28,6 +28,7 @@ jobs:
       run: |
         which hugo
         sbt -v clean coverage Test/compile test coverageAggregate coveralls
+        sbt -v clean compile publishLocal "project riddlc" "stage" "project sbt-riddl" scripted
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
