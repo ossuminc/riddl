@@ -22,6 +22,7 @@ import sbt.Keys.*
 import sbt.plugins.JvmPlugin
 
 import java.io.File
+import java.nio.file.{Files, Path}
 import scala.sys.process.*
 
 /** A plugin that endows sbt with knowledge of code generation via riddl */
@@ -45,7 +46,7 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   import autoImport.*
 
-  object V {
+  private object V {
     val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
     val scalacheck = "1.17.0" // NOTE: Synchronize with Helpers.V.scalacheck
     val scalatest = "3.2.17" // NOTE: Synchronize with Helpers.V.scalatest
@@ -61,22 +62,19 @@ object RiddlSbtPlugin extends AutoPlugin {
   private val riddlc_partial_path: String =
     java.nio.file.Path.of("riddl", "riddlc", "target", "universal", "stage", "bin", "riddlc").toString
 
-  private def findRiddlcPathInPATH: File = {
+  private def findRiddlcPathInPATH: java.nio.file.Path = {
     val user_path = sys.env("PATH")
     val parts = user_path.split(File.pathSeparatorChar)
-    val with_riddlc = parts.map {
+    val viable_paths = parts.filter {
       part: String =>
-        if (part.contains("riddlc")) part else part + "/riddlc"
+        part.endsWith("bin") && Files.isExecutable(java.nio.file.Path.of(part, "/riddlc"))
     }
-    with_riddlc.find { (potential: String) =>
-      Path(potential).exists
-    } match {
-      case Some(found) =>
-        new File(found)
+    viable_paths.headOption match {
+      case Some(path) =>
+        java.nio.file.Path.of(path)
       case None =>
         throw new IllegalStateException(
-          "Can't find the 'riddlc' program in your path. Please install.\n" +
-            parts.mkString("\n")
+          "Can't find a viable 'riddlc' program in your PATH. Please install."
         )
     }
   }
@@ -97,28 +95,30 @@ object RiddlSbtPlugin extends AutoPlugin {
     riddlcConf := file("src/main/riddl/riddlc.conf"),
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
     findRiddlcTask := {
-      val found: File = riddlcPath.value match {
+      val found: Path = riddlcPath.value match {
         case Some(path) =>
           if (path.getAbsolutePath.endsWith("riddlc")) {
-            path
+            path.toPath
           } else {
-            throw new IllegalStateException(s"Your riddlcPath setting is not the full path to the riddlc program ")
+            throw new IllegalStateException(
+              s"Your riddlcPath setting is not the full path to the riddlc program: $path"
+            )
           }
         case None =>
           Option(System.getenv("RIDDLC_PATH")) match {
             case None => findRiddlcPathInPATH
             case Some(path) =>
-              if (path.endsWith("riddlc") && path.contains(riddlc_partial_path)) {
-                new File(path)
+              if (path.endsWith(riddlc_partial_path)) {
+                Path.of(path)
               } else {
                 findRiddlcPathInPATH
               }
           }
       }
-      if (!found.exists) {
-        throw new IllegalStateException(s"riddlc in PATH environment var, but executable not found: $found")
+      if (!Files.isExecutable(found)) {
+        throw new IllegalStateException(s"riddlc path found in environment is not executable: $found")
       }
-      found
+      found.toFile
     },
     commands ++= Seq(riddlcCommand, infoCommand, hugoCommand, validateCommand, statsCommand)
   )
