@@ -23,7 +23,7 @@ class MarkdownWriterTest extends HugoTestBase {
       val output = Path.of(paths.head, paths.tail*)
       val input =
         """domain TestDomain {
-          |  author is { name="Reid Spencer" email="reid@reactific.com" }
+          |  author is { name="Reid Spencer" email="reid@ossuminc.com" }
           |  type MyString is String described as "Just a renamed string"
           |} brief "Just For Testing" described as {
           ||A test domain for ensuring that documentation for domains is
@@ -72,7 +72,7 @@ class MarkdownWriterTest extends HugoTestBase {
               |
               |## *Author*
               |* _Name_: Reid Spencer
-              |* _Email_: reid@reactific.com
+              |* _Email_: reid@ossuminc.com
               |
               |## *Textual Domain Index*
               |{{< toc-tree >}}

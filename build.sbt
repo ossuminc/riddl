@@ -9,12 +9,12 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(OssumIncPlugin)
 
 lazy val riddl = Root("", "riddl", startYr = 2019)
-  .configure(With.noPublishing, With.git)
+  .configure(With.noPublishing, With.git, With.dynver)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
-    ThisBuild / gitHubOrganization := "reactific",
+    ThisBuild / gitHubOrganization := "ossuminc",
     ThisBuild /
-    pgpSigner / skip := true
+      pgpSigner / skip := true
   )
   .aggregate(
     utils,
@@ -202,11 +202,13 @@ lazy val riddlc: Project = Module("riddlc", "riddlc")
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 
-lazy val plugin = OssumIncPlugin.autoImport.Plugin("sbt-riddl", "sbt-riddl")
+lazy val plugin = OssumIncPlugin.autoImport
+  .Plugin("sbt-riddl", "sbt-riddl")
   .disablePlugins(ScoverageSbtPlugin)
   .configure(With.build_info)
   .settings(
+    organization := "com.ossuminc",
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.ossuminc.riddl.sbt",
-    buildInfoUsePackageAsPath := true,
+    buildInfoUsePackageAsPath := true
   )

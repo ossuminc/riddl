@@ -122,7 +122,7 @@ it is time to
 
 ## Create Release On GitHub
 ```shell
-open https://github.com/reactific/riddl/releases/new
+open https://github.com/ossuminc/riddl/releases/new
 ```
 * pick the tag that you just made 
 * write the release notes
@@ -137,7 +137,7 @@ open https://github.com/reactific/riddl/releases/new
 
 
 ## Update riddl-actions
-* Open https://github.com/reactific/riddl/edit/main/actions/get-riddlc/action.yaml
+* Open https://github.com/ossuminc/riddl/edit/main/actions/get-riddlc/action.yaml
 * Scroll to the bottom of the page
 * Update the version number value set in the `version` variable to 
   the ${x.y.z} version you released above.
