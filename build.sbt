@@ -204,8 +204,9 @@ lazy val riddlc: Project = Module("riddlc", "riddlc")
 
 lazy val plugin = OssumIncPlugin.autoImport.Plugin("sbt-riddl", "sbt-riddl")
   .disablePlugins(ScoverageSbtPlugin)
-  .configure(With.build_info)
+  .configure(With.build_info, With)
   .settings(
+
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.ossuminc.riddl.sbt",
     buildInfoUsePackageAsPath := true,
