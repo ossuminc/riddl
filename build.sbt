@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(OssumIncPlugin)
 
 lazy val riddl = Root("", "riddl", startYr = 2019)
-  .configure(With.noPublishing, With.git)
+  .configure(With.noPublishing, With.git, With.dynver)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
     ThisBuild / gitHubOrganization := "ossuminc",

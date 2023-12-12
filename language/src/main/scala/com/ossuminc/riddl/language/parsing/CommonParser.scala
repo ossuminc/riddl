@@ -252,7 +252,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
           "table",
           "graph",
           "animation",
-          "picture"
+          "picture",
         ).!
       )
     )
