@@ -58,7 +58,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     strms.log
   }*/
 
-  val riddlc_partial_path =
+  private val riddlc_partial_path: String =
     java.nio.file.Path.of("riddl", "riddlc", "target", "universal", "stage", "bin", "riddlc").toString
 
   private def findRiddlcPathInPATH: File = {
@@ -108,7 +108,7 @@ object RiddlSbtPlugin extends AutoPlugin {
           Option(System.getenv("RIDDLC_PATH")) match {
             case None => findRiddlcPathInPATH
             case Some(path) =>
-              if ( path.endsWith("riddlc") && path.contains(riddlc_partial_path.toString)) {
+              if (path.endsWith("riddlc") && path.contains(riddlc_partial_path)) {
                 new File(path)
               } else {
                 findRiddlcPathInPATH
