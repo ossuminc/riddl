@@ -11,7 +11,7 @@ class GenerateTestSiteSpec extends RunCommandSpecBase {
         "--show-times",
         "--verbose",
         "from",
-        "src/main/riddl/riddl.conf",
+        "src/main/riddl/riddlc.conf",
         "validate"
       )
       runWith(command)

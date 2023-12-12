@@ -6,7 +6,7 @@ weight: 30
 ---
 
 ```riddl
-Render https://github.com/reactific/riddl-examples/blob/main/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl
+Render https://github.com/ossuminc/riddl-examples/blob/main/src/riddl/ReactiveBBQ/ReactiveBBQ.riddl
 ```
 
 Everything in RIDDL revolves around creating domains and subdomains. These

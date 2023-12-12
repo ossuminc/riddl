@@ -51,7 +51,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     with BeforeAndAfterAll {
 
   val examplesRepo: String =
-    "https://github.com/reactific/riddl-examples/archive/refs/heads/main.zip"
+    "https://github.com/ossuminc/riddl-examples/archive/refs/heads/main.zip"
   val examplesURL: URL = java.net.URI.create(examplesRepo).toURL
   val tmpDir: Path = Files.createTempDirectory("riddl-examples")
   val examplesPath: Path = Path.of(s"riddl-examples-main/src/riddl")

@@ -42,8 +42,8 @@ class DomainValidatorTest extends ValidatingTest {
       val rpi = RiddlParserInput(
         """author Reid is {
                 |    name: "Reid Spencer"
-                |    email: "reid@reactific.com"
-                |    organization: "Reactific Software Inc."
+                |    email: "reid@ossuminc.com"
+                |    organization: "Ossum Inc."
                 |    title: "President"
                 |  } described as "identifying"
                 |domain foo by author Reid is {
@@ -63,8 +63,8 @@ class DomainValidatorTest extends ValidatingTest {
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Reid"),
             LiteralString((2, 11, rpi), "Reid Spencer"),
-            LiteralString((3, 12, rpi), "reid@reactific.com"),
-            Some(LiteralString((4, 19, rpi), "Reactific Software Inc.")),
+            LiteralString((3, 12, rpi), "reid@ossuminc.com"),
+            Some(LiteralString((4, 19, rpi), "Ossum Inc.")),
             Some(LiteralString((5, 12, rpi), "President")),
             None,
             None,

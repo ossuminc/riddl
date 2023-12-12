@@ -8,7 +8,7 @@ weight: 20
 
 ### 1. Obtain source code
 ```shell
-> git clone https://github.com/reactific/riddl.git
+> git clone https://github.com/ossuminc/riddl.git
 > cd riddl
 ```
 

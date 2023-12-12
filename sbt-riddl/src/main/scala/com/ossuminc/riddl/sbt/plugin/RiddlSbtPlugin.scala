@@ -22,6 +22,7 @@ import sbt.Keys.*
 import sbt.plugins.JvmPlugin
 
 import java.io.File
+import java.nio.file.{Files, Path}
 import scala.sys.process.*
 
 /** A plugin that endows sbt with knowledge of code generation via riddl */
@@ -40,12 +41,12 @@ object RiddlSbtPlugin extends AutoPlugin {
       settingKey[String]("Ensure the riddlc used is at least this version")
     }
 
-    lazy val findRiddlcTask = taskKey[File]("Find the riddlc program locally")
+    lazy val findRiddlcTask = taskKey[Option[File]]("Find the riddlc program locally")
   }
 
   import autoImport.*
 
-  object V {
+  private object V {
     val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
     val scalacheck = "1.17.0" // NOTE: Synchronize with Helpers.V.scalacheck
     val scalatest = "3.2.17" // NOTE: Synchronize with Helpers.V.scalatest
@@ -58,12 +59,30 @@ object RiddlSbtPlugin extends AutoPlugin {
     strms.log
   }*/
 
+  private val riddlc_partial_path: String =
+    Path.of("riddl", "riddlc", "target", "universal", "stage", "bin", "riddlc").toString
+
+  private def findRiddlcPathInPATH: Option[Path] = {
+    val user_path = sys.env("PATH")
+    val parts = user_path.split(File.pathSeparatorChar)
+    val viable_paths = parts.filter {
+      part: String =>
+        part.endsWith("bin") && Files.isExecutable(java.nio.file.Path.of(part, "/riddlc"))
+    }
+    viable_paths.headOption match {
+      case Some(path) =>
+        Some(Path.of(path))
+      case None =>
+        None
+    }
+  }
+
   override def projectSettings: Seq[Setting[_]] = Seq(
     // Global / excludeLintKeys ++= Seq(riddlcConf, riddlcOptions),
     scalaVersion := V.scala,
     libraryDependencies ++= Seq(
-      "com.reactific" %% "riddlc" % V.riddl,
-      "com.reactific" %% "riddl-testkit" % V.riddl % Test,
+      "com.ossuminc" %% "riddlc" % V.riddl,
+      "com.ossuminc" %% "riddl-testkit" % V.riddl % Test,
       "org.scalactic" %% "scalactic" % V.scalatest % Test,
       "org.scalatest" %% "scalatest" % V.scalatest % Test,
       "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
@@ -74,40 +93,36 @@ object RiddlSbtPlugin extends AutoPlugin {
     riddlcConf := file("src/main/riddl/riddlc.conf"),
     riddlcMinVersion := SbtRiddlPluginBuildInfo.version,
     findRiddlcTask := {
-      val found: File = riddlcPath.value match {
+      val found: Option[Path] = riddlcPath.value match {
         case Some(path) =>
-          if (path.getAbsolutePath.endsWith("riddlc")) path
-          else {
-            throw new IllegalStateException(s"Your riddlcPath setting is not the full path to the riddlc program ")
+          if (path.getAbsolutePath.endsWith("riddlc")) {
+            Some(path.toPath)
+          } else {
+            throw new IllegalStateException(
+              s"Your riddlcPath setting is not the full path to the riddlc program: $path"
+            )
           }
         case None =>
-          val riddlc_path = System.getenv("RIDDLC_PATH")
-          if (riddlc_path.contains("riddlc")) {
-            new File(riddlc_path)
-          } else {
-            val user_path = System.getenv("PATH")
-            val path_separator = sys.env("path.separator")
-            val parts = user_path.split(path_separator)
-            val with_riddlc = parts.map { part: String =>
-              if (part.contains("riddlc")) part else part + "/riddlc"
-            }
-            with_riddlc.find { (potential: String) =>
-              Path(potential).exists
-            } match {
-              case Some(found) =>
-                new File(found)
-              case None =>
-                throw new IllegalStateException(
-                  "Can't find the 'riddlc' program in your path. Please install.\n" +
-                    parts.mkString("\n")
-                )
-            }
+          Option(System.getenv("RIDDLC_PATH")) match {
+            case None => findRiddlcPathInPATH
+            case Some(path) =>
+              if (path.endsWith(riddlc_partial_path)) {
+                Some(Path.of(path))
+              } else {
+                findRiddlcPathInPATH
+              }
           }
       }
-      if (!found.exists) {
-        throw new IllegalStateException(s"riddlc in PATH environment var, but executable not found: $found")
+      found match {
+        case Some(path) =>
+          if (!Files.isExecutable(path)) {
+            sLog.value.log(Level.Warn, s"The RIDDLC found at $path is not executable")
+          }
+          Some(path.toFile)
+        case None =>
+          sLog.value.log(Level.Error, s"Could not find riddlc in RIDDLC_PATH(${sys.env("RIDDLC_PATH")}) or PATH ")
+          Option.empty[File]
       }
-      found
     },
     commands ++= Seq(riddlcCommand, infoCommand, hugoCommand, validateCommand, statsCommand)
   )
@@ -202,15 +217,23 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   private def runRiddlc(
     streams: TaskStreams,
-    riddlcPath: File,
+    riddlcPath: Option[File],
     minimumVersion: String,
     options: Seq[String],
     args: Seq[String]
   ): Int = {
-    checkVersion(riddlcPath, minimumVersion)
-    streams.log.info(s"Running: riddlc ${args.mkString(" ")}\n")
-    val logger = ProcessLogger{ str => println(str) ; streams.log(str); () }
-    val process = Process(riddlcPath.getAbsolutePath, options ++ args)
-    process.!(logger)
+    riddlcPath match {
+      case None =>
+        streams.log.info("riddlc not found")
+        -1
+      case Some(riddlc_path) =>
+        checkVersion(riddlc_path, minimumVersion)
+        streams.log.info(s"Running: riddlc ${args.mkString(" ")}\n")
+        val logger = ProcessLogger { str =>
+          println(str); streams.log(str); ()
+        }
+        val process = Process(riddlc_path.getAbsolutePath, options ++ args)
+        process.!(logger)
+    }
   }
 }

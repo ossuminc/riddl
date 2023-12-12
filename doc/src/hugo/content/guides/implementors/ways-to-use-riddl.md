@@ -14,7 +14,7 @@ on how you want to work.
 ## Download
 This is the simplest way to get `riddlc`. It should run on Windows, Mac 
 and Linux. Follow these steps:
-* Go to [the riddlc downloads page](https://github.com/reactific/riddl/releases/)
+* Go to [the riddlc downloads page](https://github.com/ossuminc/riddl/releases/)
 * Click on the release title you want to install
 * Scroll down to the "Assets" section
 * Download the riddlc-{version}.zip file
@@ -24,7 +24,7 @@ and Linux. Follow these steps:
 ## Staged
 To use `riddlc` locally and be able to update it with new changes without a 
 large download, use this approach:
-* `git clone https://github.com/reactific/riddl.git`
+* `git clone https://github.com/ossuminc/riddl.git`
 * `cd riddl`
 * Put the `./riddlc/target/universal/stage/bin` directory in your PATH
   variable using a full path instead of "."
@@ -46,8 +46,8 @@ project. The command you configure will run first when you use the `compile`
 command in sbt. Follow these steps:
 
 * In your `plugins.sbt` file, add:
-  `addSbtPlugin("com.reactific" % "sbt-riddl" % "{version}"). You can find 
-  the [latest available version here](https://github.com/reactific/riddl/releases)
+  `addSbtPlugin("com.ossuminc" % "sbt-riddl" % "{version}"). You can find 
+  the [latest available version here](https://github.com/ossuminc/riddl/releases)
 * In your `build.sbt` file, use `enablePlugins(SbtRiddlPlugin)` on your project
 * Set the following sbt settings:
     * `riddlcPath := file("...")` This defaults to "riddlc" which is 
@@ -83,7 +83,7 @@ hugo {
     site-logo-path = "images/RBBQ.png"
     erase-output = true
     base-url = "https://bbq.riddl.tech"
-    source-url = "https://github.com/reactific/riddl"
+    source-url = "https://github.com/ossuminc/riddl"
     edit-path = "/-/blob/main/src/riddl/ReactiveBBQ"
 }
 validate {

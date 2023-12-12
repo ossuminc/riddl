@@ -10,13 +10,13 @@ needs:
 {{< toc >}}
 
 ## I Need A Bug Fixed
-While [RIDDL](https://github.com/reactific/riddl) is competent enough to be used 
+While [RIDDL](https://github.com/ossuminc/riddl) is competent enough to be used 
 for a production software project, we still consider it to be in a pre-release,
 early preview stage. Consequently, we are very eager to perfect it and your bug
 submission will help with that. 
 
 Please submit your bug via 
-[GitHub at this location](https://github.com/reactific/riddl/issues/new). In 
+[GitHub at this location](https://github.com/ossuminc/riddl/issues/new). In 
 the comment area, please ensure you do the following:
 * Provide the release version that the `riddlc version` command puts out.
 * Provide a clear statement of the symptom of the bug. 
@@ -39,14 +39,14 @@ at `reid@ossum.biz`
 There are many things we want to do with RIDDL, some of them are documented on
 the [future work]({{< relref "../future-work" >}}) page. You can also find a 
 list of new features already requested by 
-[clicking here](https://github.com/reactific/riddl/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement)
+[clicking here](https://github.com/ossuminc/riddl/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement)
 
 We would appreciate help with implementing new features and suggest that you 
 clone the repository and submit a pull request. 
 
 If your feature suggestion is not already recorded, and you're unable to 
 implement the feature yourself, please submit your feature suggestion via
-[GitHub at this location](https://github.com/reactific/riddl/issues/new). 
+[GitHub at this location](https://github.com/ossuminc/riddl/issues/new). 
 Please ensure you do the following:
 * Provide a clear statement of the feature you are suggesting we implement. 
   Be as detailed as you can. We can handle it! :)
@@ -63,4 +63,4 @@ have a Zoom conference call to discuss further.
 
 ## I Just Want To Chat With Someone About RIDDL
 
-You can use the [Discussions feature on GitHub](https://github.com/reactific/riddl/discussions/new?category=general)
+You can use the [Discussions feature on GitHub](https://github.com/ossuminc/riddl/discussions/new?category=general)

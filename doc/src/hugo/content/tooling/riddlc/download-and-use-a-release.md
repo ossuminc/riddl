@@ -8,7 +8,7 @@ weight: 20
 
 Starting with the 0.6.0 a "universal" release bundle is made available for
 Linux and MacOS Systems directly from GitHub. You can find them in the
-[GitHub Releases](https://github.com/reactific/riddl/releases) section
+[GitHub Releases](https://github.com/ossuminc/riddl/releases) section
 under "Assets". Note that not all releases have these assets. 
 
 After downloading the `.zip` asset, you should:

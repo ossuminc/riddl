@@ -15,8 +15,8 @@ min_version = "0.94.2"
 
 [params.author]
 name = "Reid Spencer"
-email = "reid@reactific.com"
-homepage = "https://reactific.com/"
+email = "reid@ossuminc.com"
+homepage = "https://ossuminc.com/"
 
 
 # Required to get well formatted code blocks
@@ -95,7 +95,7 @@ home = [ "HTML", "RSS"]
 
 # (Optional, default none) Set source repository location. Used for 'Edit page' links.
 # You can also specify this parameter per page in front matter.
-  geekdocRepo = "https://github.com/reactific/riddl"
+  geekdocRepo = "https://github.com/ossuminc/riddl"
 
 # (Optional, default none) Enable 'Edit page' links. Requires 'GeekdocRepo' param
 # and path must point to 'content' directory of repo.
@@ -113,7 +113,7 @@ home = [ "HTML", "RSS"]
 
 # (Optional, default none) Add a link to your Legal Notice page to the site footer.
 # It can be either a remote url or a local file path relative to your content directory.
-geekdocLegalNotice = "https://github.com/reactific/riddl/blob/main/LICENSE.md"
+geekdocLegalNotice = "https://github.com/ossuminc/riddl/blob/main/LICENSE.md"
 
 # (Optional, default none) Add a link to your Privacy Policy page to the site footer.
 # It can be either a remote url or a local file path relative to your content directory.
@@ -238,14 +238,14 @@ link = "contact"
 [[params.social]]
 title = "twitter"
 icon = "fab fa-twitter" # fontawesome icon : https://fontawesome.com/icons
-link = "https://twitter.com/reactific"
+link = "https://twitter.com/ossuminc"
 
 [[params.social]]
 title = "github"
 icon = "fab fa-github" # fontawesome icon : https://fontawesome.com/icons
-link = "https://github.com/reactific"
+link = "https://github.com/ossuminc"
 
 [[params.social]]
 title = "linkedin"
 icon = "fab fa-linkedin" # fontawesome icon : https://fontawesome.com/icons
-link = "https://linkedin.com/company/reactific"
+link = "https://linkedin.com/company/ossuminc"

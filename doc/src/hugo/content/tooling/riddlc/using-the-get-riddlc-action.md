@@ -37,7 +37,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
     - name: Get riddlc
-      uses: reactific/riddl/actions/get-riddlc@main
+      uses: ossuminc/riddl/actions/get-riddlc@main
     - name: Validate improving-app model with riddlc
       run: |
         echo RIDDLC = "$RIDDLC"
