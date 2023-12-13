@@ -282,6 +282,24 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
+    "allow graphs of types" in {
+      val rip = RiddlParserInput("type g1 = graph of String")
+      val expected = Type(
+        (1, 1, rip),
+        Identifier((1, 6, rip), "g1"),
+        Graph((1, 11, rip), Strng((1, 20, rip)))
+      )
+      checkDefinition[Type, Type](rip, expected, identity)
+    }
+    "allow tables of types" in {
+      val rip = RiddlParserInput("type t1 = table of String of [5,10]")
+      val expected = Type(
+        (1, 1, rip),
+        Identifier((1, 6, rip), "t1"),
+        Table((1, 11, rip), Strng((1, 20, rip)), Seq(5L, 10L))
+      )
+      checkDefinition[Type, Type](rip, expected, identity)
+    }
     "allow range of values" in {
       val rip = RiddlParserInput("type r1 = range(21,  42)")
       val expected = Type(
@@ -300,7 +318,8 @@ class TypeParserTest extends ParsingTest {
         OneOrMore(
           (1, 19, rip),
           AliasedTypeExpression(
-            (1, 19, rip), "type",
+            (1, 19, rip),
+            "type",
             PathIdentifier((1, 19, rip), Seq("agg"))
           )
         )

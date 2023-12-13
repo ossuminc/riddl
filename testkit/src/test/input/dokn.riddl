@@ -33,8 +33,8 @@ domain dokn is {
             options(event-sourced, available)
 
             type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
-            type CompanyAdded is event { ??? }
-            type CompanyEvent is one of { type CompanyAdded }
+            event CompanyAdded is { when: TimeStamp }
+            type CompanyEvent is one of { event CompanyAdded }
 
             record fields is {
               companyId: CompanyId,

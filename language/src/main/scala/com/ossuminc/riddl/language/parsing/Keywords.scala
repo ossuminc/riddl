@@ -40,7 +40,7 @@ object Keywords {
     ).!
   )
 
-  def aggregateTypes[u: P]: P[String] = keywords(
+  def typeKeywords[u: P]: P[String] = keywords(
     StringIn(
       Keyword.type_,
       Keyword.command,
@@ -48,7 +48,8 @@ object Keywords {
       Keyword.event,
       Keyword.result,
       Keyword.record,
-      Keyword.other
+      Keyword.graph,
+      Keyword.table
     ).!
   )
 
@@ -102,6 +103,7 @@ object Keywords {
   def form[u: P]: P[Unit] = keyword(Keyword.form)
   def function[u: P]: P[Unit] = keyword(Keyword.function)
   def given_[u: P]: P[Unit] = keyword(Keyword.given_)
+  def graph[u: P]: P[Unit] = keyword(Keyword.graph)
   def group[u: P]: P[Unit] = keyword(Keyword.group)
   def handler[u: P]: P[Unit] = keyword(Keyword.handler)
   def if_[u: P]: P[Unit] = keyword(Keyword.if_)
@@ -172,6 +174,7 @@ object Keywords {
   def stop[u: P]: P[Unit] = keyword(Keyword.stop)
   def story[u: P]: P[Unit] = keyword(Keyword.story)
   def streamlet[u: P]: P[Unit] = keyword(Keyword.streamlet)
+  def table[u: P]: P[Unit] = keyword(Keyword.table)
   def take[u: P]: P[Unit] = keyword(Keyword.take)
   def tell[u: P]: P[Unit] = keyword(Keyword.tell)
   def term[u: P]: P[Unit] = keyword(Keyword.term)
@@ -284,6 +287,7 @@ object Keyword {
   final val from = "from"
   final val function = "function"
   final val given_ = "given"
+  final val graph = "graph"
   final val group = "group"
   final val handler = "handler"
   final val if_ = "if"
@@ -350,6 +354,7 @@ object Keyword {
   final val stop = "stop"
   final val story = "story"
   final val streamlet = "streamlet"
+  final val table = "table"
   final val take = "take"
   final val tell = "tell"
   final val term = "term"

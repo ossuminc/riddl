@@ -8,7 +8,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 enablePlugins(OssumIncPlugin)
 
-lazy val riddl = Root("", "riddl", startYr = 2019)
+lazy val riddl: Project = Root("", "riddl", startYr = 2019)
   .configure(With.noPublishing, With.git, With.dynver)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
@@ -83,7 +83,7 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .settings(libraryDependencies ++= Dep.testKitDeps)
-  .dependsOn(language % "compile->compile;compile->test;test->test")
+  .dependsOn(language % "compile->test;compile->compile;test->test")
   .dependsOn(commands % "compile->compile;test->test")
 
 val Stats = config("stats")
@@ -92,7 +92,8 @@ lazy val stats: Project = Module("stats", "riddl-stats")
   .configure(With.typical)
   .configure(With.coverage(50))
   .settings(libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing)
-  .dependsOn(commands % "compile->compile;test->test", testkit % "test->compile")
+  .dependsOn(commands % "compile->compile;test->test")
+  .dependsOn(testkit % "test->compile")
 
 val Diagrams = config("diagrams")
 lazy val diagrams: Project = Module("diagrams", "riddl-diagrams")

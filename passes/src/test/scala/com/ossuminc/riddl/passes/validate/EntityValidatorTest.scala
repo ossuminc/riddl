@@ -149,7 +149,9 @@ class EntityValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        msgs.justErrors mustBe empty
+        val errors = msgs.justErrors
+        if errors.nonEmpty then fail(errors.format)
+        succeed
       }
     }
   }
