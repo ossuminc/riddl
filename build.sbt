@@ -124,7 +124,9 @@ lazy val hugo: Project = Module("hugo", "riddl-hugo")
     Test / parallelExecution := false,
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(passes % "compile->compile;test->test", commands, diagrams, testkit % "test->compile", stats)
+  .dependsOn(passes % "compile->compile;test->test")
+  .dependsOn(commands, diagrams, stats)
+  .dependsOn(testkit % "test->compile")
 
 lazy val scaladocSiteProjects = List(
   (utils, Utils),

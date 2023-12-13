@@ -414,6 +414,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     def hasCardinality: Boolean = false
     def isAggregateOf(useCase: AggregateUseCase): Boolean = {
       this match {
+        case AliasedTypeExpression(_,keyword,_) if keyword.compareToIgnoreCase(useCase.format) == 0 => true
         case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == useCase => true
         case _                                                                      => false
       }

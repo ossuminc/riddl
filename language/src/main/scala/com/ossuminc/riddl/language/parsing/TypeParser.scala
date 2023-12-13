@@ -332,15 +332,19 @@ private[parsing] trait TypeParser extends CommonParser {
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
         (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close./
-    ).map { x => (Alternation.apply _).tupled(x) }
+    ).map { x =>
+      (Alternation.apply _).tupled(x)
+    }
   }
 
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
     P(
       location ~ Keywords.typeKeywords.? ~ pathIdentifier
     )./.map {
-      case (loc, Some(key), pid) => AliasedTypeExpression(loc, key, pid)
-      case (loc, None, pid)      => AliasedTypeExpression(loc, "type", pid)
+      case (loc, Some(key), pid) =>
+        AliasedTypeExpression(loc, key, pid)
+      case (loc, None, pid)      =>
+        AliasedTypeExpression(loc, "type", pid)
     }
   }
 
