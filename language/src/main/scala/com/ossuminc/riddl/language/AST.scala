@@ -412,6 +412,13 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
       (this.getClass == classOf[Abstract])
     }
     def hasCardinality: Boolean = false
+    def isAggregateOf(useCase: AggregateUseCase): Boolean = {
+      this match {
+        case AliasedTypeExpression(_,keyword,_) if keyword.compareToIgnoreCase(useCase.format) == 0 => true
+        case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == useCase => true
+        case _                                                                      => false
+      }
+    }
   }
 
   sealed trait NumericType extends TypeExpression {
@@ -770,6 +777,16 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
     /** Format the node to a string */
     override def format: String = s"set of ${of.format}"
+  }
+
+  case class Graph(loc: At, of: TypeExpression) extends TypeExpression {
+
+    /** Format the node to a string */
+    override def format: String = s"graph of ${of.format}"
+  }
+
+  case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression {
+    override def format: String = s"table of ${of.format}(${dimensions.mkString(",")})"
   }
 
   /** A type expression whose value is a reference to an instance of an entity.
@@ -2740,7 +2757,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   case class Inlet(
     loc: At,
     id: Identifier,
-    type_ : Reference[Type],
+    type_ : TypeRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
@@ -2768,7 +2785,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   case class Outlet(
     loc: At,
     id: Identifier,
-    type_ : Reference[Type],
+    type_ : TypeRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
@@ -3234,15 +3251,15 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   /** An interaction where an User receives output
     *
     * @param loc
-    * The locaiton of the interaction in the source
+    *   The locaiton of the interaction in the source
     * @param from
-    * The output received
+    *   The output received
     * @param relationship
-    * THe name of the relationship
+    *   THe name of the relationship
     * @param to
-    * THe user that receives the output
+    *   THe user that receives the output
     * @param brief
-    * A brief description of this interaction
+    *   A brief description of this interaction
     */
   case class FocusOnGroupInteraction(
     loc: At,
@@ -3357,7 +3374,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     }
     override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
   }
-  
+
   /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an overall story about user interactions
     * with the system. This define functionality from the perspective of users (men or machines) interactions with the
     * system that is part of their role.

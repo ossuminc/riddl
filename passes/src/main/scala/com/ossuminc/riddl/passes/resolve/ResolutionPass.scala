@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.{Entity, *}
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.parsing.Keyword
+import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
 import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 
@@ -69,13 +70,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
         addEntity(e)
       case s: State =>
-        resolveARef[Type](s.typ, parentsAsSeq)
+        resolveATypeRef(s.typ, parentsAsSeq)
       case f: Function =>
         resolveFunction(f, parentsAsSeq)
       case i: Inlet =>
-        resolveARef[Type](i.type_, parentsAsSeq)
+        resolveATypeRef(i.type_, parentsAsSeq)
       case o: Outlet =>
-        resolveARef[Type](o.type_, parentsAsSeq)
+        resolveATypeRef(o.type_, parentsAsSeq)
       case c: Connector =>
         resolveConnector(c, parentsAsSeq)
       case c: Constant =>
@@ -102,13 +103,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case e: Epic =>
         e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case uc: UseCase =>
-        if uc.userStory.nonEmpty then
-          resolveARef(uc.userStory.user, parentsAsSeq)
+        if uc.userStory.nonEmpty then resolveARef(uc.userStory.user, parentsAsSeq)
         end if
       case in: Input =>
-        resolveARef[Type](in.putIn, parentsAsSeq)
+        resolveATypeRef(in.putIn, parentsAsSeq)
       case out: Output =>
-        resolveARef[Type](out.putOut, parentsAsSeq)
+        resolveATypeRef(out.putOut, parentsAsSeq)
       case cg: ContainedGroup =>
         resolveARef[Group](cg.group, parentsAsSeq)
       case gi: GenericInteraction =>
@@ -116,7 +116,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
             resolveARef[Definition](from, parentsAsSeq)
             resolveARef[Definition](to, parentsAsSeq)
-          case fi: FocusOnGroupInteraction => 
+          case fi: FocusOnGroupInteraction =>
             resolveARef[Group](fi.from, parentsAsSeq)
             resolveARef[User](fi.to, parentsAsSeq)
           case ti: ShowOutputInteraction =>
@@ -183,6 +183,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveTypeExpression(from, parents)
       case Set(_, of) =>
         resolveTypeExpression(of, parents)
+      case Graph(_, of) =>
+        resolveTypeExpression(of, parents)
+      case Table(loc, of, dimensions) =>
+        resolveTypeExpression(of, parents)
       case c: Cardinality =>
         resolveTypeExpression(c.typeExp, parents)
       case _: Enumeration | _: NumericType | _: PredefinedType => ()
@@ -212,8 +216,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Field](ss.field, parents)
       case BecomeStatement(loc, entity, handler) =>
         resolveARef[Entity](entity, parents)
-      case ForEachStatement(loc, ref, do_) =>
-        resolveAPathId[Type](ref, parents)
+      case ForEachStatement(loc, pid, do_) =>
+        resolveAPathId[Type](pid, parents)
       case SendStatement(loc, msg, portlet) =>
         resolveARef[Type](msg, parents)
       case MorphStatement(loc, entity, state, message) =>
@@ -262,9 +266,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     list: List[(Definition, Seq[Definition])]
   ): Boolean = {
     list.forall { item => isSameKind[T](item._1) } &&
-    list.map { item =>
-      item._2.filterNot(_.isImplicit)
-    }.forall(_ == list.head)
+    list
+      .map { item =>
+        item._2.filterNot(_.isImplicit)
+      }
+      .forall(_ == list.head)
   }
 
   private def handleSymbolTableResults[T <: Definition: ClassTag](
@@ -293,7 +299,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             wrongType[T](pathId, parent, d)
             Seq.empty
           // List has multiple elements
-          case (d, pars) :: tail   if isSameKindAndHasDifferentPathsToSameNode(list) =>
+          case (d, pars) :: tail if isSameKindAndHasDifferentPathsToSameNode(list) =>
             resolved[T](pathId, parent, d)
             d +: pars
           case list =>
@@ -396,10 +402,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   ): Seq[Definition] = {
     val stack: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
     val parents_to_add = anchor_parents.reverse
-    if anchor_parents.nonEmpty && anchor_parents.last.isRootContainer then
-      stack.pushAll(parents_to_add.drop(1))
-    else
-      stack.pushAll(parents_to_add)
+    if anchor_parents.nonEmpty && anchor_parents.last.isRootContainer then stack.pushAll(parents_to_add.drop(1))
+    else stack.pushAll(parents_to_add)
     stack.push(anchor)
     val pathIdStart = pathId.value.drop(1) // we already resolved the anchor
     var continue: Boolean = true
@@ -497,7 +501,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           false
         else if !soughtClass.isAssignableFrom(foundClass) then
           notResolved[T](
-            pathId, parents, s"the found class ${foundClass.getSimpleName} is not compatible with the sough class, " +
+            pathId,
+            parents,
+            s"the found class ${foundClass.getSimpleName} is not compatible with the sough class, " +
               s"'${soughtClass.getSimpleName}"
           )
           false
@@ -505,6 +511,112 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case None =>
         messages.addSevere(pathId.loc, "Empty path id")
         false
+    }
+  }
+
+  private def resolveATypeRef(typeRef: TypeRef, parents: Seq[Definition]): Seq[Definition] = {
+    val loc: At = typeRef.loc
+    val pathId: PathIdentifier = typeRef.pathId
+    val keyword: String = typeRef.keyword
+    val path = resolveAPathId[Type](pathId, parents)
+    path.headOption match {
+      case None => // empty or not a type, bail
+        path
+      case Some(typ: Type) =>
+        keyword match {
+          case Keyword.type_ | "" => path // this is generic, any type so just pass the result
+          case Keyword.command =>
+            typ.typ match {
+              case typEx: AggregateUseCaseTypeExpression if typEx.usecase == CommandCase => path // success
+              case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(CommandCase)) => path // success
+              case typeEx: Alternation =>
+                messages.addError(loc, s"All alternates of `${typeEx.format}` must be command aggregates")
+                Seq.empty
+              case typEx: AggregateUseCaseTypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` is not compatible with keyword `command`")
+                Seq.empty
+              case typEx: TypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` needs to be an aggregate for `command`")
+                Seq.empty
+            }
+          case Keyword.query =>
+            typ.typ match {
+              case typEx: AggregateUseCaseTypeExpression if typEx.usecase == QueryCase => path // success
+              case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(QueryCase)) => path // success
+              case typeEx: Alternation =>
+                messages.addError(loc, s"All alternates of `${typeEx.format}` must be query aggregates")
+                Seq.empty
+              case typEx: AggregateUseCaseTypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` is not compatible with keyword `query`")
+                Seq.empty
+              case typEx: TypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` needs to be an aggregate for `query`")
+                Seq.empty
+            }
+          case Keyword.event =>
+            typ.typ match {
+              case typEx: AggregateUseCaseTypeExpression if typEx.usecase == EventCase => path // success
+              case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(EventCase)) => path // success
+              case typeEx: Alternation =>
+                messages.addError(loc, s"All alternates of `${typeEx.format}` must be event aggregates")
+                Seq.empty
+              case typEx: AggregateUseCaseTypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` is not compatible with keyword `event`")
+                Seq.empty
+              case typEx: TypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` needs to be an aggregate for `event`")
+                Seq.empty
+            }
+          case Keyword.result =>
+            typ.typ match {
+              case typEx: AggregateUseCaseTypeExpression if typEx.usecase == ResultCase => path // success
+              case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(ResultCase)) => path // success
+              case typeEx: Alternation =>
+                messages.addError(loc, s"All alternates of `${typeEx.format}` must be result aggregates")
+                Seq.empty
+              case typEx: AggregateUseCaseTypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` is not compatible with keyword `result`")
+                Seq.empty
+              case typEx: TypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` needs to be an aggregate for `result`")
+                Seq.empty
+            }
+          case Keyword.record =>
+            typ.typ match {
+              case typEx: AggregateUseCaseTypeExpression if typEx.usecase == RecordCase => path // success
+              case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(RecordCase)) => path // success
+              case typeEx: Alternation =>
+                messages.addError(loc, s"All alternates of `${typeEx.format}` must be record aggregates")
+                Seq.empty
+              case typEx: AggregateUseCaseTypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` is not compatible with keyword `record`")
+                Seq.empty
+              case typEx: TypeExpression =>
+                messages.addError(loc, s"Type expression ${typEx.format} needs to be an aggregate for keyword `record`")
+                Seq.empty
+            }
+          case Keyword.graph =>
+            typ.typ match {
+              case _: Graph                                                              => path // success
+              case typeEx: Alternation if typeEx.of.forall(_.getClass == Graph.getClass) => path // success
+              case typEx: TypeExpression =>
+                messages.addError(loc, s"Type expression `${typEx.format}` needs to be a graph for keyword `graph`")
+                Seq.empty
+            }
+          case Keyword.table =>
+            typ.typ match {
+              case _: Table                                                              => path // success
+              case typeEx: Alternation if typeEx.of.forall(_.getClass == Table.getClass) => path // success
+              case typEx: TypeExpression =>
+                messages.addError(
+                  typEx.loc,
+                  s"Type expression `${typEx.format}` needs to be a table for keyword `table`"
+                )
+                Seq.empty
+            }
+        }
+      case Some(x) =>
+        path // error message should have already been issued
     }
   }
 

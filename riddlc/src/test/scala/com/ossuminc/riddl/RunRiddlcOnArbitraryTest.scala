@@ -59,5 +59,10 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
       val config = "src/main/riddl/ImprovingApp.conf"
       validateLocalProject(cwd, config)
     }
+    "validate riddl-examples" in {
+      val cwd = "/Users/reid/Code/Ossum/riddl-examples"
+      val config = "src/riddl/dokn/dokn.conf"
+      validateLocalProject(cwd, config)
+    }
   }
 }
