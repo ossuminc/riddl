@@ -14,6 +14,7 @@ import com.ossuminc.riddl.prettify.PrettifyPass.keyword
 import com.ossuminc.riddl.utils.TextFileWriter
 
 import java.nio.charset.StandardCharsets
+
 /** Unit Tests For RiddlFileEmitter */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
@@ -196,6 +197,14 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .emitTypeExpression(mapping.to)
   }
 
+  private def emitGraph(graph: Graph): this.type = {
+    this.add("graph of ").emitTypeExpression(graph.of)
+  }
+
+  private def emitTable(table: Table): this.type = {
+    this.add("table of ").emitTypeExpression(table.of).add(" of ").add(table.dimensions.mkString("[ ",", ", " ]"))
+  }
+
   def emitPattern(pattern: Pattern): this.type = {
     val line = pattern.pattern.toList match
       case Nil =>
@@ -218,7 +227,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitTypeExpression(typEx: TypeExpression): this.type = {
     typEx match {
-      case string: Strng                => emitString(string)
+      case string: Strng                   => emitString(string)
       case AliasedTypeExpression(_, _, id) => this.add(id.format)
       case URL(_, scheme) =>
         this
@@ -228,6 +237,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case mapping: Mapping         => emitMapping(mapping)
       case sequence: Sequence       => emitSequence(sequence)
       case set: Set                 => emitSet(set)
+      case graph: Graph             => emitGraph(graph)
+      case table: Table             => emitTable(table)
       case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
       case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
       case EntityReferenceTypeExpression(_, er) =>

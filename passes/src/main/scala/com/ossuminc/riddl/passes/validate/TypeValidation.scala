@@ -52,7 +52,7 @@ trait TypeValidation extends DefinitionValidation {
 
   private def checkPattern(p: Pattern): this.type = {
     try {
-      val compound = p.pattern.map(_.s).fold(""){case (a: String, b: String) => a + b }
+      val compound = p.pattern.map(_.s).fold("") { case (a: String, b: String) => a + b }
       java.util.regex.Pattern.compile(compound)
     } catch {
       case x: PatternSyntaxException =>
@@ -155,6 +155,22 @@ trait TypeValidation extends DefinitionValidation {
       .checkTypeExpression(mapping.to, typeDef, parents)
   }
 
+  private def checkGraph(
+    graph: Graph,
+    typeDef: Definition,
+    parents: Seq[Definition]
+  ): this.type = {
+    this.checkTypeExpression(graph.of, typeDef, parents)
+  }
+
+  private def checkTable(
+    table: Table,
+    typeDef: Definition,
+    parents: Seq[Definition]
+  ): this.type = {
+    this.checkTypeExpression(table.of, typeDef, parents)
+  }
+
   def checkTypeExpression(
     typ: TypeExpression,
     defn: Definition,
@@ -170,6 +186,8 @@ trait TypeValidation extends DefinitionValidation {
       case set: Set                    => checkSet(set, defn, parents)
       case seq: Sequence               => checkSeq(seq, defn, parents)
       case mapping: Mapping            => checkMapping(mapping, defn, parents)
+      case graph: Graph                => checkGraph(graph, defn, parents)
+      case table: Table                => checkTable(table, defn, parents)
       case rt: RangeType               => checkRangeType(rt)
       case p: Pattern                  => checkPattern(p)
       case Enumeration(_, enumerators) => checkEnumeration(enumerators)
@@ -197,11 +215,12 @@ trait TypeValidation extends DefinitionValidation {
           typ.loc
         )
       case UniqueId(_, pid) => checkPathRef[Entity](pid, defn, parents)
+      case Decimal(loc, whole, fractional) =>
+        check(whole >= 1, "The whole number part must be positive", Error, loc)
+        check(fractional >= 1, "The fractional part must be positive", Error, loc)
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, defn, parents)
       case _: PredefinedType => () // nothing needed
-      case x =>
-        require(requirement = false, s"Failed to match definition $x")
     }
     this
   }

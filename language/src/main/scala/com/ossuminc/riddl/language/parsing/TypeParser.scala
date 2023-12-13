@@ -332,15 +332,19 @@ private[parsing] trait TypeParser extends CommonParser {
       location ~ Keywords.one ~ Readability.of.? ~/ open ~
         (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close./
-    ).map { x => (Alternation.apply _).tupled(x) }
+    ).map { x =>
+      (Alternation.apply _).tupled(x)
+    }
   }
 
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
     P(
-      location ~ Keywords.aggregateTypes.? ~ pathIdentifier
+      location ~ Keywords.typeKeywords.? ~ pathIdentifier
     )./.map {
-      case (loc, Some(key), pid) => AliasedTypeExpression(loc, key, pid)
-      case (loc, None, pid)      => AliasedTypeExpression(loc, "type", pid)
+      case (loc, Some(key), pid) =>
+        AliasedTypeExpression(loc, key, pid)
+      case (loc, None, pid)      =>
+        AliasedTypeExpression(loc, "type", pid)
     }
   }
 
@@ -393,7 +397,7 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def aggregateUseCase[u: P]: P[AggregateUseCase] = {
     P(
-      Keywords.aggregateTypes
+      Keywords.typeKeywords
     ).map { mk =>
       mk.toLowerCase() match {
         case kind if kind == Keyword.type_   => TypeCase
@@ -437,7 +441,7 @@ private[parsing] trait TypeParser extends CommonParser {
     *   set of String
     * }}}
     */
-  private def set[u: P]: P[Set] = {
+  private def setType[u: P]: P[Set] = {
     P(
       location ~ Keywords.set ~ Readability.of ~ typeExpression
     )./.map { tpl => (Set.apply _).tupled(tpl) }
@@ -452,6 +456,21 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.sequence ~ Readability.of ~ typeExpression
     )./.map { tpl => (Sequence.apply _).tupled(tpl) }
+  }
+
+  /** Parses graphs whose nodes can be any type */
+  private def graphType[u: P]: P[Graph] = {
+    P(location ~ Keywords.graph ~ Readability.of ~ typeExpression)./.map { tpl =>
+      (Graph.apply _).tupled(tpl)
+    }
+  }
+
+  /** Parses tables of at least one dimension of cells of an arbitrary type */
+  private def tableType[u: P]: P[Table] = {
+    P(
+      location ~ Keywords.table ~ Readability.of ~ typeExpression ~ Readability.of ~ Punctuation.squareOpen ~
+        integer.rep(1, ",") ~ Punctuation.squareClose
+    )./.map { tpl => (Table.apply _).tupled(tpl) }
   }
 
   /** Parses ranges, i.e.
@@ -494,16 +513,15 @@ private[parsing] trait TypeParser extends CommonParser {
   private def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType |
-          aggregateUseCaseTypeExpression | mappingFromTo | rangeType |
-          decimalType | alternation | entityReferenceType |
-          aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
+        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType | mappingFromTo | setType |
+          graphType | tableType | aggregateUseCaseTypeExpression | rangeType | decimalType |
+          alternation | entityReferenceType | aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
       )
     )
   }
 
   def replicaTypeExpression[u: P]: P[TypeExpression] = {
-    P(integerPredefTypes | mappingFromTo | set)
+    P(integerPredefTypes | mappingFromTo | setType)
   }
 
   private def defOfTypeKindType[u: P]: P[Type] = {

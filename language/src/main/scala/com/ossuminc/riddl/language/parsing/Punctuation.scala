@@ -17,6 +17,8 @@ object Punctuation {
   final val quote = "\""
   final val roundOpen = "("
   final val roundClose = ")"
+  final val squareOpen = "["
+  final val squareClose = "]"
   final val undefinedMark = "???"
   final val verticalBar = "|"
 

@@ -8,12 +8,11 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.language.parsing.ParsingTestBase
 
 import java.io.File
 import scala.io.Source
 
-class TopLevelParserTest extends ParsingTestBase {
+class TopLevelParserTest extends ParsingTest  {
 
   val origin = "simpleDomain.riddl"
 

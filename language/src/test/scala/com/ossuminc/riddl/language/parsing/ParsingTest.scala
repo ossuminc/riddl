@@ -10,13 +10,16 @@ import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import fastparse.*
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.File
 import scala.annotation.unused
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-class ParsingTest extends ParsingTestBase {
+class ParsingTest extends AnyWordSpec with Matchers {
+  case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content))
 
   def parse[T <: RiddlNode, U <: RiddlNode](
     input: RiddlParserInput,
