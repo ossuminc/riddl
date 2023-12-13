@@ -824,6 +824,9 @@ case class ValidationPass(
       case ShowOutputInteraction(_, _, from: OutputRef, _, to: UserRef, _, _, _) =>
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
+      case FocusOnGroupInteraction(_, _, groupRef, _, userRef, _, _, _) =>
+        checkRef[Group](groupRef,interaction, parents)
+        checkRef[User](userRef, interaction, parents)
       case _: VagueInteraction =>
       // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>

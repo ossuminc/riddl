@@ -74,7 +74,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   def typeRef[u: P]: P[TypeRef] = {
     P(
-      location ~ Keywords.aggregateTypes.? ~ pathIdentifier
+      location ~ Keywords.typeKeywords.? ~ pathIdentifier
     ).map {
       case (loc, Some(key), pid) => TypeRef(loc, key, pid)
       case (loc, None, pid)      => TypeRef(loc, "type", pid)
