@@ -110,10 +110,24 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
         (Readability.at ~ urlDescription))
   )).?
 
+  private def inlineComment[u:P]: P[Comment] = {
+    P(
+      location ~ "/*" ~ until('*', '/')
+    ).map {
+      case ( loc, comment) => Comment(loc, comment)
+    }
+  }
+
+  private def endOfLineComment[u:P]: P[Comment] = {
+    P( location ~ "//" ~ toEndOfLine).map {
+      case (loc, comment) =>  Comment(loc, comment)
+    }
+  }
+
   def comments[u: P]: P[Seq[Comment]] = {
     P(
-      location ~ "//" ~ toEndOfLine
-    ).rep(0).map { _.map(c => Comment(c._1, c._2)) }
+      inlineComment | endOfLineComment
+    ).rep(0)
   }
 
   private def wholeNumber[u: P]: P[Long] = {

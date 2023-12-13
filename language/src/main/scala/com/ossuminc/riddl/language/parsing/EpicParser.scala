@@ -47,6 +47,15 @@ private[parsing] trait EpicParser {
     }
   }
 
+  private def focusOnGroup[u: P]: P[FocusOnGroupInteraction] = {
+    P(
+      location ~ optionalIdentifier(Keyword.focus) ~/ Readability.on ~
+        groupRef ~ Readability.for_ ~ userRef ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, on, to, brief, description, comments) =>
+      FocusOnGroupInteraction(loc, id, on, LiteralString.empty, to, brief, description, comments)
+    }
+  }
+
   private def showOutputStep[u: P]: P[ShowOutputInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.show) ~/
@@ -75,7 +84,7 @@ private[parsing] trait EpicParser {
   }
 
   private def stepInteractions[u: P]: P[Interaction] = {
-    P(Keywords.step ~ (takeInputStep | showOutputStep | selfProcessingStep | arbitraryStep | vagueStep))
+    P(Keywords.step ~ (focusOnGroup | takeInputStep | showOutputStep | selfProcessingStep | arbitraryStep | vagueStep))
   }
 
   private def sequentialInteractions[u: P]: P[SequentialInteractions] = {

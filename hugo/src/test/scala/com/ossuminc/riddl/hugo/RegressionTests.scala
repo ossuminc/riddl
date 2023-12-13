@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.CommandPlugin
-import com.ossuminc.riddl.testkit.ParsingTest
+import com.ossuminc.riddl.language.parsing.ParsingTest
 
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ParsingTest {
@@ -28,7 +28,7 @@ class RegressionTests extends ParsingTest {
         regressionsFolder + source
       )
       val result = CommandPlugin.runMain(args)
-      result mustBe (0)
+      result mustBe 0
     }
   }
 }

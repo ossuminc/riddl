@@ -40,8 +40,9 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   private def rootLessParents(parents: Seq[Definition]): Parents = {
     parents.filter {
-      case _: RootContainer => false
-      case _                => true
+      case _: RootContainer              => false // Roots don't have names and don't matter
+      case x: Definition if x.isImplicit => false // Parents with no names don't count
+      case _                             => true // Everything else is fair game
     }
   }
 
@@ -52,11 +53,17 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
       case definition: Definition =>
         val name = definition.id.value
         if name.nonEmpty then {
-          val copy: Parents = rootLessParents(parents.toSeq)
+          val parentsCopy: Parents = rootLessParents(parents.toSeq)
           val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
-          val included: Seq[SymTabItem] = existing :+ (definition -> copy)
-          symTab.update(name, included)
-          parentage.update(definition, copy)
+          val pairToAdd = definition -> parentsCopy
+          if existing.contains(pairToAdd) then
+            // no need to put a duplicate
+            ()
+          else
+            val included: Seq[SymTabItem] = existing :+ pairToAdd
+            symTab.update(name, included)
+            parentage.update(definition, parentsCopy)
+          end if
         } else {
           messages.addError(definition.loc, "Non implicit value with empty name should not happen")
         }

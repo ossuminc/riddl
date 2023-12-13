@@ -232,7 +232,7 @@ case class ValidationPass(
                 loc
               )
             }
-            checkNonEmpty(do_, "statement list", onClause, MissingWarning, required = false)
+            checkNonEmpty(do_, "statement list", onClause, MissingWarning)
           case IfThenElseStatement(loc, cond, thens, elses) =>
             checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
@@ -304,7 +304,7 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, i)
-    checkNonEmpty(i.condition.toList, "condition", i, Messages.MissingWarning, false)
+    checkNonEmpty(i.condition.toList, "condition", i, Messages.MissingWarning)
     checkDescription(i)
   }
 
@@ -647,7 +647,7 @@ case class ValidationPass(
     in: Input,
     parents: Seq[Definition]
   ): Unit = {
-    val parentsSeq = parents.toSeq
+    val parentsSeq = parents
     checkDefinition(parentsSeq, in)
     checkTypeRef(in.putIn, in, parentsSeq)
     checkDescription(in)
@@ -812,6 +812,9 @@ case class ValidationPass(
     interaction match {
       case SelfInteraction(_, _, from, _, _, _, _) =>
         checkRef[Definition](from, interaction, parents)
+      case FocusOnGroupInteraction(_, _, group: GroupRef, _, user: UserRef, _, _, _) =>
+        checkRef[Group](group, interaction, parents)
+        checkRef[User](user, interaction, parents)
       case TakeInputInteraction(_, _, user: UserRef, _, inputRef: InputRef, _, _, _) =>
         checkRef[User](user, interaction, parents)
         checkRef[Input](inputRef, interaction, parents)

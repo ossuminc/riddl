@@ -116,6 +116,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
             resolveARef[Definition](from, parentsAsSeq)
             resolveARef[Definition](to, parentsAsSeq)
+          case fi: FocusOnGroupInteraction => 
+            resolveARef[Group](fi.from, parentsAsSeq)
+            resolveARef[User](fi.to, parentsAsSeq)
           case ti: ShowOutputInteraction =>
             resolveARef[User](ti.to, parentsAsSeq)
             resolveARef[Output](ti.from, parentsAsSeq)
@@ -255,6 +258,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     clazz.isAssignableFrom(d.getClass)
   }
 
+  private def isSameKindAndHasDifferentPathsToSameNode[T <: Definition: ClassTag](
+    list: List[(Definition, Seq[Definition])]
+  ): Boolean = {
+    list.forall { item => isSameKind[T](item._1) } &&
+    list.map { item =>
+      item._2.filterNot(_.isImplicit)
+    }.forall(_ == list.head)
+  }
+
   private def handleSymbolTableResults[T <: Definition: ClassTag](
     list: List[(Definition, Seq[Definition])],
     pathId: PathIdentifier,
@@ -267,17 +279,21 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         Seq.empty
       case Some(parent) =>
         list match {
+          // List is empty so this is the NotFound case
           case Nil =>
             notResolved[T](pathId, parents)
             Seq.empty
+          // List just has one component and the types are the same so this is the Resolved case
           case (d, pars) :: Nil if isSameKind[T](d) => // exact match
             // Found
             resolved[T](pathId, parent, d)
             d +: pars
+          // List has one component but its the wrong type
           case (d, _) :: Nil =>
             wrongType[T](pathId, parent, d)
             Seq.empty
-          case (d, pars) :: tail if tail.map(_._1).forall(x => x == d && isSameKind[T](x)) =>
+          // List has multiple elements
+          case (d, pars) :: tail   if isSameKindAndHasDifferentPathsToSameNode(list) =>
             resolved[T](pathId, parent, d)
             d +: pars
           case list =>
