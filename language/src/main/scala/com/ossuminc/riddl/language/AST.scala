@@ -3232,6 +3232,32 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   }
 
   /** An interaction where an User receives output
+    *
+    * @param loc
+    * The locaiton of the interaction in the source
+    * @param from
+    * The output received
+    * @param relationship
+    * THe name of the relationship
+    * @param to
+    * THe user that receives the output
+    * @param brief
+    * A brief description of this interaction
+    */
+  case class FocusOnGroupInteraction(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    from: GroupRef,
+    relationship: LiteralString,
+    to: UserRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends GenericInteraction {
+    override def kind: String = "Show Output Interaction"
+  }
+
+  /** An interaction where an User receives output
     * @param loc
     *   The locaiton of the interaction in the source
     * @param from
