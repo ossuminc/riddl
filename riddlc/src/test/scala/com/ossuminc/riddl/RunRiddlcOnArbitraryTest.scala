@@ -50,7 +50,7 @@ class RunRiddlcOnArbitraryTest extends RunCommandSpecBase {
     }
     "validate kalix-improving-template" in {
       val cwd = "/Users/reid/Code/Improving/kalix-improving-template"
-      val config = "design/src/main/riddl/ksoapp.conf"
+      val config = "design/src/main/riddl/example.conf"
       validateLocalProject(cwd, config)
     }
     "validate Improving.app" in {

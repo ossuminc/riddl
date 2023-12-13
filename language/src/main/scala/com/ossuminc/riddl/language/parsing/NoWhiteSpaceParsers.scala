@@ -14,9 +14,28 @@ import java.lang.Character.isISOControl
 /** Parser rules that should not collect white space */
 private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
 
-  def toEndOfLine[u:P]: P[String] = {
+  def toEndOfLine[u: P]: P[String] = {
     P(
       CharsWhile(ch => ch != '\n' && ch != '\r').!
+    )
+  }
+
+  def until[u: P](first: Char, second: Char): P[String] = {
+    var firstFound = false
+    var secondFound = false
+    P(
+      CharsWhile {
+        case ch: Char if firstFound && secondFound => false
+        case ch: Char if ch == first =>
+          firstFound = true
+          true
+        case ch: Char if firstFound && ch == second =>
+          secondFound = true
+          true
+        case _ =>
+          firstFound = false
+          true
+      }.!
     )
   }
 
@@ -43,18 +62,17 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
 
   private val backslash: String = "\\"
   private final val zero: String = "0"
-  private def octalChar[u:P]: P[String] = CharIn("0-7").!
-  private def octalString[u:P]: P[String] = {
-    P(backslash ~ zero ~ octalChar.rep(min=1,sep=P(""),max=3).!)
+  private def octalChar[u: P]: P[String] = CharIn("0-7").!
+  private def octalString[u: P]: P[String] = {
+    P(backslash ~ zero ~ octalChar.rep(min = 1, sep = P(""), max = 3).!)
   }
 
   private def hexDigit[u: P]: P[String] = CharIn("0-9a-fA-F").!./
-  private def hexEscape[u:P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min=2)).!./
-  private def unicodeEscape[u: P]: P[Unit] = P(backslash ~ "u" ~ hexDigit.rep(min=4,max=4,sep="")).!./
-
+  private def hexEscape[u: P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min = 2)).!./
+  private def unicodeEscape[u: P]: P[Unit] = P(backslash ~ "u" ~ hexDigit.rep(min = 4, max = 4, sep = "")).!./
 
   private final val escape_chars = "\\\\\\\"aefnrt"
-  def shortcut[u:P]: P[String] = P("\\" ~ CharIn(escape_chars)).!
+  def shortcut[u: P]: P[String] = P("\\" ~ CharIn(escape_chars)).!
   def escape[u: P]: P[String] = P(shortcut | hexEscape | unicodeEscape).!./
 
   private def stringChars(c: Char): Boolean = c != '\"' && c != '\\'

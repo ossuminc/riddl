@@ -281,6 +281,7 @@ object Keyword {
   final val file = "file"
   final val flow = "flow"
   final val flows = "flows"
+  final val focus = "focus"
   final val for_ = "for"
   final val foreach = "foreach"
   final val form = "form"

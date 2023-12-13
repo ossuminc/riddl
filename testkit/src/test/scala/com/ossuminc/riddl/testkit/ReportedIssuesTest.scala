@@ -46,17 +46,17 @@ class ReportedIssuesTest extends ValidatingTest {
           val errors = messages.justErrors
           errors.length must be(3)
           val f = errors.map(_.format)
-          f contains ("Path 'FooExamplexxx.garbage' was not resolved,")
-          f contains ("Path 'FooExamplexxxx.garbage' was not resolved")
-          f contains ("Path 'Examplexxxx.Foo' was not resolved,")
+          f contains "Path 'FooExamplexxx.garbage' was not resolved,"
+          f contains "Path 'FooExamplexxxx.garbage' was not resolved"
+          f contains "Path 'Examplexxxx.Foo' was not resolved,"
           val usage = messages.justUsage
           usage.length must be(0)
           val u = usage.map(_.format)
-          u contains ("Entity 'FooEntity' is unused")
-          u contains ("Entity 'OtherEntity' is unused:")
-          u contains ("Command 'DoFoo' is unused")
-          u contains ("Record 'OtherState' is unused:")
-          u contains ("Models without any streaming data will exhibit minimal effect:")
+          u contains "Entity 'FooEntity' is unused"
+          u contains "Entity 'OtherEntity' is unused:"
+          u contains "Command 'DoFoo' is unused"
+          u contains "Record 'OtherState' is unused:"
+          u contains "Models without any streaming data will exhibit minimal effect:"
           // info(messages.format)
           succeed
         case Right(result) =>
@@ -104,6 +104,9 @@ class ReportedIssuesTest extends ValidatingTest {
     }
     "480" in {
       checkOne("480.riddl")
+    }
+    "480b" in {
+      checkOne("480b.riddl")
     }
     "486" in {
       checkOne("486.riddl") {
