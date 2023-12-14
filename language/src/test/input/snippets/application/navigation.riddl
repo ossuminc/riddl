@@ -11,7 +11,7 @@ domain foo {
   epic TestCase is {
     case one is {
       step from user U "select" button foo.foo2.choice.b,
-      step b focus on page target for user U
+      step b focus user U on page target
     }
   }
 }

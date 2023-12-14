@@ -117,8 +117,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             resolveARef[Definition](from, parentsAsSeq)
             resolveARef[Definition](to, parentsAsSeq)
           case fi: FocusOnGroupInteraction =>
-            resolveARef[Group](fi.from, parentsAsSeq)
-            resolveARef[User](fi.to, parentsAsSeq)
+            resolveARef[User](fi.from, parentsAsSeq)
+            resolveARef[Group](fi.to, parentsAsSeq)
+          case fou: DirectUserToURLInteraction =>
+            resolveARef[User](fou.from, parentsAsSeq)
           case ti: ShowOutputInteraction =>
             resolveARef[User](ti.to, parentsAsSeq)
             resolveARef[Output](ti.from, parentsAsSeq)
@@ -127,7 +129,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             resolveARef[Input](pi.to, parentsAsSeq)
           case si: SelfInteraction =>
             resolveARef[Definition](si.from, parentsAsSeq)
-          case VagueInteraction(_, _, _, _, _, _) =>
+          case VagueInteraction(_, _, _, _, _, _, _, _) =>
             // no resolution required
             ()
           case SendMessageInteraction(_, _, from, message, to, _, _, _) =>
