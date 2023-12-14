@@ -8,13 +8,11 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 
+import scala.annotation.targetName
 import scala.language.implicitConversions
 
 /** A location of an item in the input */
-case class At(
-  source: RiddlParserInput,
-  offset: Int = 0)
-    extends Ordered[At] {
+case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
 
   def isEmpty: Boolean = offset == 0 && source == RiddlParserInput.empty
 
@@ -28,6 +26,9 @@ case class At(
     if this.source.origin == that.source.origin then { this.offset - that.offset }
     else { this.source.origin.compare(that.source.origin) }
   }
+  
+  @targetName("plus")
+  def +(int: Int): At = At(source, offset + int)
 
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   override def equals(obj: Any): Boolean = {
@@ -46,8 +47,7 @@ object At {
   final val defaultSourceName = RiddlParserInput.empty.origin
 
   implicit def apply(): At = { At(RiddlParserInput.empty) }
-  implicit def apply(line: Int): At = { At(RiddlParserInput.empty, line)
-  }
+  implicit def apply(line: Int): At = { At(RiddlParserInput.empty, line) }
 
   implicit def apply(line: Int, src: RiddlParserInput): At = {
     src.location(src.offsetOf(line))

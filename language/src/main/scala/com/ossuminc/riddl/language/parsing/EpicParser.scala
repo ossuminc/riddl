@@ -23,9 +23,10 @@ private[parsing] trait EpicParser {
 
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
-      location ~ optionalIdentifier("") ~ is ~ literalString ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, relationship, brief, description, comments) =>
-      VagueInteraction(loc, id, relationship, brief, description, comments)
+      location ~ optionalIdentifier("") ~ is ~ literalString ~ literalString ~ literalString ~/
+        briefly ~ description ~ comments
+    )./.map { case (loc, id, from, relationship, to, brief, description, comments) =>
+      VagueInteraction(loc, id, from, relationship, to, brief, description, comments)
     }
   }
 
@@ -59,10 +60,19 @@ private[parsing] trait EpicParser {
 
   private def focusOnGroupStep[u: P]: P[FocusOnGroupInteraction] = {
     P(
-      location ~ optionalIdentifier(Keyword.focus) ~/ Readability.on ~
-        groupRef ~ Readability.for_ ~ userRef ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, on, to, brief, description, comments) =>
-      FocusOnGroupInteraction(loc, id, on, LiteralString.empty, to, brief, description, comments)
+      location ~ optionalIdentifier(Keyword.focus) ~/ userRef ~ Readability.on ~
+        groupRef ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, userRef, groupRef, brief, description, comments) =>
+      FocusOnGroupInteraction(loc, id, userRef, groupRef, brief, description, comments)
+    }
+  }
+
+  private def directUserToURL[u: P]: P[DirectUserToURLInteraction] = {
+    P(
+      location ~ optionalIdentifier(Keyword.direct) ~/ userRef ~/ Readability.to ~ httpUrl ~/
+        briefly ~ description ~ comments
+    )./.map { case (loc, id, user, url, brief, description, comments) =>
+      DirectUserToURLInteraction(loc, id, user, url, brief, description, comments)
     }
   }
 
@@ -95,7 +105,7 @@ private[parsing] trait EpicParser {
 
   private def stepInteractions[u: P]: P[Interaction] = {
     P(
-      Keywords.step ~ (focusOnGroupStep | takeInputStep | showOutputStep | selfProcessingStep |
+      Keywords.step ~ (focusOnGroupStep | directUserToURL | takeInputStep | showOutputStep | selfProcessingStep |
         sendMessageStep | arbitraryStep | vagueStep)
     )
   }

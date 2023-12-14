@@ -125,11 +125,17 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
     sb.append(s"${ndnt(indent)}$from->>$to: send ${smi.message.format}")
   }
 
+  private def focusOnUrlInteraction(fou: DirectUserToURLInteraction, indent: Int): Unit = {
+    val from = actors(fou.from.pathId.format).id.value
+    sb.append(s"${ndnt(indent)}$from->>Internet: ${fou.relationship.format}")
+  }
+
   private def genericInteraction(gi: GenericInteraction, indent: Int): Unit = {
     gi match {
       case twi: TwoReferenceInteraction => twoReferenceInteraction(twi, indent)
       case vi: VagueInteraction         => vagueInteraction(vi, indent)
       case smi: SendMessageInteraction  => sendMessageInteraction(smi, indent)
+      case fou: DirectUserToURLInteraction   => focusOnUrlInteraction(fou, indent)
     }
   }
 
