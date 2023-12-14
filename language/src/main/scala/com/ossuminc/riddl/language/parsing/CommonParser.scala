@@ -105,22 +105,24 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }.?
 
   def description[u: P]: P[Option[Description]] = P(
-    P(Keywords.described ~/
-      ((Readability.byAs ~ blockDescription) | (Readability.in ~ fileDescription) |
-        (Readability.at ~ urlDescription))
-  )).?
+    P(
+      Keywords.described ~/
+        ((Readability.byAs ~ blockDescription) | (Readability.in ~ fileDescription) |
+          (Readability.at ~ urlDescription))
+    )
+  ).?
 
-  private def inlineComment[u:P]: P[Comment] = {
+  private def inlineComment[u: P]: P[Comment] = {
     P(
       location ~ "/*" ~ until('*', '/')
-    ).map {
-      case ( loc, comment) => Comment(loc, comment)
+    ).map { case (loc, comment) =>
+      Comment(loc, comment)
     }
   }
 
-  private def endOfLineComment[u:P]: P[Comment] = {
-    P( location ~ "//" ~ toEndOfLine).map {
-      case (loc, comment) =>  Comment(loc, comment)
+  private def endOfLineComment[u: P]: P[Comment] = {
+    P(location ~ "//" ~ toEndOfLine).map { case (loc, comment) =>
+      Comment(loc, comment)
     }
   }
 
@@ -244,6 +246,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
           "page",
           "pane",
           "dialog",
+          "menu",
           "popup",
           "frame",
           "column",
@@ -266,7 +269,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
           "table",
           "graph",
           "animation",
-          "picture",
+          "picture"
         ).!
       )
     )
@@ -282,7 +285,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
           "button",
           "picklist",
           "selector",
-          "menu"
+          "item"
         ).!
       )
     )

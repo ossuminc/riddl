@@ -7,7 +7,7 @@ import org.scalatest.matchers.must.Matchers
 class ApplicationParsingTest extends ParsingTest with Matchers {
 
   "Application Components" must {
-    "nested empty definitions should fail" in {
+    "support nested empty definitions that fail" in {
       val input =
         """
           |domain foo {
