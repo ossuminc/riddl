@@ -3184,6 +3184,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     override def kind: String = "Optional Interaction"
   }
 
+  sealed trait GenericInteraction extends Interaction with LeafDefinition
+  
   /** A very vague step just written as text */
   case class VagueInteraction(
     loc: At,
@@ -3192,16 +3194,27 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends Interaction {
+  ) extends GenericInteraction {
     override def kind: String = "Vague Interaction"
+  }
 
-    override def contents: Seq[Definition] = Seq.empty[Definition]
+  case class SendMessageInteraction(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    from: Reference[Definition],
+    message: MessageRef,
+    to: Reference[Definition],
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends GenericInteraction {
+    override def kind: String = "Send Message Interaction"
   }
 
   /** One abstract step in an Interaction between things. The set of case classes associated with this sealed trait
     * provide more type specificity to these three fields.
     */
-  sealed trait GenericInteraction extends Interaction with LeafDefinition {
+  sealed trait TwoReferenceInteraction extends GenericInteraction {
     def from: Reference[Definition]
 
     def relationship: LiteralString
@@ -3231,7 +3244,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Arbitrary Interaction"
   }
 
@@ -3243,7 +3256,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Self Interaction"
     override def to: Reference[Definition] = from
   }
@@ -3270,7 +3283,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Focus On Group"
   }
 
@@ -3295,7 +3308,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Show Output Interaction"
   }
 
@@ -3321,7 +3334,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
   }
 

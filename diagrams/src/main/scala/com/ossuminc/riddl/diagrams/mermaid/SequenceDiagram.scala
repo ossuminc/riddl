@@ -26,10 +26,8 @@ trait SequenceDiagramSupport {
 /** A class to generate the sequence diagrams for an Epic
   * @param sds
   *   The SequenceDiagramSupport implementation that provides information for the SequenceDiagram
-  * @param epic
-  *   The epic from which to draw use cases instances and convert into sequence diagrams
-  * @param parents
-  *   The parents of the epic within the model
+  * @param useCase
+  *   The useCase from which to convert into sequence diagram
   */
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extends FileBuilder {
@@ -58,7 +56,7 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
     useCase.contents
       .map { (interaction: Interaction) =>
         interaction match
-          case gi: GenericInteraction =>
+          case gi: TwoReferenceInteraction =>
             val fromDef = sds.getDefinitionFor[Definition](gi.from.pathId, gi)
             val toDef = sds.getDefinitionFor[Definition](gi.to.pathId, gi)
             Seq(
@@ -85,8 +83,8 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       val name = part.id.value
       part match
         case u: User       => sb.append(s"${ndnt()}actor $name as ${u.is_a.s}")
-        case i: Input => sb.append(s"${ndnt()}participant $name as ${i.nounAlias} ${i.id.value}")
-        case o: Output => sb.append(s"${ndnt()}participant $name as ${o.nounAlias} ${o.id.value}")
+        case i: Input      => sb.append(s"${ndnt()}participant $name as ${i.nounAlias} ${i.id.value}")
+        case o: Output     => sb.append(s"${ndnt()}participant $name as ${o.nounAlias} ${o.id.value}")
         case g: Group      => sb.append(s"${ndnt()}participant $name as ${g.alias} ${g.id.value}")
         case d: Definition => sb.append(s"${ndnt()}participant $name as ${d.identify}")
       nl
@@ -96,8 +94,8 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       val link = sds.makeDocLink(part)
       part match
         case _: User       => sb.append(s"${ndnt()}link $name: User @ $link")
-        case i: Input => sb.append(s"${ndnt()}link $name: ${i.nounAlias} @ $link")
-        case o: Output => sb.append(s"${ndnt()}link $name: ${o.nounAlias} @ $link")
+        case i: Input      => sb.append(s"${ndnt()}link $name: ${i.nounAlias} @ $link")
+        case o: Output     => sb.append(s"${ndnt()}link $name: ${o.nounAlias} @ $link")
         case g: Group      => sb.append(s"${ndnt()}link $name: ${g.alias} @ $link")
         case d: Definition => sb.append(s"${ndnt()}link $name: ${d.kind} @ $link")
       nl
@@ -110,16 +108,29 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
         case gi: GenericInteraction     => genericInteraction(gi, indent)
         case si: SequentialInteractions => sequentialInteractions(si, indent)
         case pi: ParallelInteractions   => parallelInteractions(pi, indent)
-        case vi: VagueInteraction       => vagueInteraction(vi, indent)
         case oi: OptionalInteractions   => optionalInteractions(oi, indent)
     }
   }
 
-  private def genericInteraction(gi: GenericInteraction, indent: Int): Unit = {
+  private def twoReferenceInteraction(gi: TwoReferenceInteraction, indent: Int): Unit = {
     val from = actors(gi.from.pathId.format).id.value
     val to = actors(gi.to.pathId.format).id.value
     sb.append(s"${ndnt(indent)}$from->>$to: ${gi.relationship.s}")
     nl
+  }
+
+  private def sendMessageInteraction(smi: SendMessageInteraction, indent: Int): Unit = {
+    val from = actors(smi.from.pathId.format).id.value
+    val to = actors(smi.to.pathId.format).id.value
+    sb.append(s"${ndnt(indent)}$from->>$to: send ${smi.message.format}")
+  }
+
+  private def genericInteraction(gi: GenericInteraction, indent: Int): Unit = {
+    gi match {
+      case twi: TwoReferenceInteraction => twoReferenceInteraction(twi, indent)
+      case vi: VagueInteraction         => vagueInteraction(vi, indent)
+      case smi: SendMessageInteraction  => sendMessageInteraction(smi, indent)
+    }
   }
 
   private def sequentialInteractions(si: SequentialInteractions, indent: Int): Unit = {
