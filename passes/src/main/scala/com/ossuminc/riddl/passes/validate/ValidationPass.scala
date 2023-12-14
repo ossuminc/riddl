@@ -710,21 +710,28 @@ case class ValidationPass(
               "Optional interaction should not be empty"
             )
           }
-        case opt: VagueInteraction =>
-          check(
-            opt.relationship.nonEmpty,
-            "Vague Interactions should have a non-empty description",
-            Messages.MissingWarning,
-            opt.relationship.loc
-          )
-        case step @ (is: GenericInteraction) =>
-          checkPathRef[Definition](is.from.pathId, uc, parents)
-          checkPathRef[Definition](is.to.pathId, uc, parents)
-          if is.relationship.isEmpty then {
-            messages.addMissing(
-              step.loc,
-              s"Interactions must have a non-empty relationship"
-            )
+        case gi: GenericInteraction =>
+          gi match {
+            case vi: VagueInteraction =>
+              check(
+                vi.relationship.nonEmpty,
+                "Vague Interactions should have a non-empty description",
+                Messages.MissingWarning,
+                vi.relationship.loc
+              )
+            case smi: SendMessageInteraction =>
+              checkPathRef[Definition](smi.from.pathId, uc, parents)
+              checkMessageRef(smi.message, uc, parents, Seq(smi.message.messageKind))
+              checkPathRef[Definition](smi.to.pathId, uc, parents)
+            case is: TwoReferenceInteraction =>
+              checkPathRef[Definition](is.from.pathId, uc, parents)
+              checkPathRef[Definition](is.to.pathId, uc, parents)
+              if is.relationship.isEmpty then {
+                messages.addMissing(
+                  is.loc,
+                  s"Interactions must have a non-empty relationship"
+                )
+              }
           }
       }
     }
@@ -827,6 +834,10 @@ case class ValidationPass(
       case ShowOutputInteraction(_, _, from: OutputRef, _, to: UserRef, _, _, _) =>
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
+      case SendMessageInteraction(_, _, from, msg, to, _, _, _) =>
+        checkMessageRef(msg, interaction, parents, Seq(msg.messageKind))
+        checkRef[Definition](from, interaction, parents)
+        checkRef[Definition](to, interaction, parents)
       case _: VagueInteraction =>
       // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>

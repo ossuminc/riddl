@@ -127,6 +127,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             resolveARef[Input](pi.to, parentsAsSeq)
           case si: SelfInteraction =>
             resolveARef[Definition](si.from, parentsAsSeq)
+          case VagueInteraction(_, _, _, _, _, _) =>
+            // no resolution required
+            ()
+          case SendMessageInteraction(_, _, from, message, to, _, _, _) =>
+            resolveARef[Definition](from, parentsAsSeq)
+            resolveAMessageRef(message, parentsAsSeq)
+            resolveARef[Definition](to, parentsAsSeq)
         }
       case _: Author                 => () // no references
       case _: User                   => () // no references
@@ -136,7 +143,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case _: OptionalInteractions   => () // no references
       case _: ParallelInteractions   => () // no references
       case _: SequentialInteractions => () // no references
-      case _: VagueInteraction       => () // no references
       case _: RootContainer          => () // no references
       case _: SagaStep               => () // no references
       case _: Term                   => () // no references
@@ -514,6 +520,33 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     }
   }
 
+  private def resolveAMessageRef(ref: MessageRef, parents: Seq[Definition]): Seq[Definition] = {
+    val loc: At = ref.loc
+    val pathId: PathIdentifier = ref.pathId
+    val kind: AggregateUseCase = ref.messageKind
+    val path = resolveAPathId[Type](pathId, parents)
+    path.headOption match {
+      case None => // empty or not a type, bail
+        path
+      case Some(typ: Type) =>
+        typ.typ match {
+          case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == kind => path // success
+          case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))      => path // success
+          case typeEx: Alternation =>
+            messages.addError(loc, s"All alternates of `${typeEx.format}` must be ${kind.kind.dropRight(4)} aggregates")
+            Seq.empty
+          case typeEx: TypeExpression =>
+            messages.addError(
+              loc,
+              s"Type expression `${typeEx.format}` needs to be an aggregate for `${kind.kind.dropRight(4)}`"
+            )
+            Seq.empty
+        }
+      case Some(_) =>
+        path // error message should have already been issued
+    }
+  }
+
   private def resolveATypeRef(typeRef: TypeRef, parents: Seq[Definition]): Seq[Definition] = {
     val loc: At = typeRef.loc
     val pathId: PathIdentifier = typeRef.pathId
@@ -615,7 +648,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
                 Seq.empty
             }
         }
-      case Some(x) =>
+      case Some(_) =>
         path // error message should have already been issued
     }
   }

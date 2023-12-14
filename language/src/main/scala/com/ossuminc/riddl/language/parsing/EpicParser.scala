@@ -38,6 +38,16 @@ private[parsing] trait EpicParser {
     }
   }
 
+  private def sendMessageStep[u: P]: P[SendMessageInteraction] = {
+    P(
+      location ~ optionalIdentifier(Keyword.send) ~/ messageRef ~
+        Readability.from ~ anyInteractionRef ~ Readability.to ~ anyInteractionRef ~/
+        briefly ~ description ~ comments
+    )./.map { case (loc, id, message, from, to, brief, description, comments) =>
+      SendMessageInteraction(loc, id, from, message, to, brief, description, comments)
+    }
+  }
+
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.for_) ~/
@@ -47,7 +57,7 @@ private[parsing] trait EpicParser {
     }
   }
 
-  private def focusOnGroup[u: P]: P[FocusOnGroupInteraction] = {
+  private def focusOnGroupStep[u: P]: P[FocusOnGroupInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.focus) ~/ Readability.on ~
         groupRef ~ Readability.for_ ~ userRef ~/ briefly ~ description ~ comments
@@ -84,7 +94,10 @@ private[parsing] trait EpicParser {
   }
 
   private def stepInteractions[u: P]: P[Interaction] = {
-    P(Keywords.step ~ (focusOnGroup | takeInputStep | showOutputStep | selfProcessingStep | arbitraryStep | vagueStep))
+    P(
+      Keywords.step ~ (focusOnGroupStep | takeInputStep | showOutputStep | selfProcessingStep |
+        sendMessageStep | arbitraryStep | vagueStep)
+    )
   }
 
   private def sequentialInteractions[u: P]: P[SequentialInteractions] = {
@@ -124,8 +137,7 @@ private[parsing] trait EpicParser {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
         (undefined(
-          (Option.empty[UserStory],
-          Seq.empty[GenericInteraction])
+          (Option.empty[UserStory], Seq.empty[TwoReferenceInteraction])
         )./ | (userStory.? ~ interactions)) ~
         close ~ briefly ~ description ~ comments
     ).map { case (loc, id, (userStory, contents), brief, description, comments) =>
