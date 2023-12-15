@@ -50,6 +50,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .configure(With.coverage(65))
   .settings(
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
+    description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Seq(Dep.fastparse, Dep.commons_io) ++ Dep.testing
   )
   .dependsOn(utils)
@@ -61,6 +62,7 @@ lazy val passes = Module("passes", "riddl-passes")
   .configure(With.coverage(30))
   .settings(
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
+    description := "AST Pass infrastructure and essential passes",
     libraryDependencies ++= Dep.testing
   )
   .dependsOn(language % "compile->compile;test->test")
@@ -71,6 +73,7 @@ lazy val commands: Project = Module("commands", "riddl-commands")
   .configure(With.typical)
   .configure(With.coverage(50))
   .settings(
+    description := "RIDDL Command Infrastructure and basic command definitions",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   )
   .dependsOn(
@@ -83,7 +86,10 @@ val TestKit = config("testkit")
 lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
-  .settings(libraryDependencies ++= Dep.testKitDeps)
+  .settings(
+    description := "A Testkit for testing RIDDL code, and a suite of those tests",
+    libraryDependencies ++= Dep.testKitDeps
+  )
   .dependsOn(language % "compile->test;compile->compile;test->test")
   .dependsOn(commands % "compile->compile;test->test")
 
@@ -92,7 +98,10 @@ lazy val stats: Project = Module("stats", "riddl-stats")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(50))
-  .settings(libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing)
+  .settings(
+    description := "Implementation of the Stats command which Hugo command depends upon",
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+  )
   .dependsOn(commands % "compile->compile;test->test")
   .dependsOn(testkit % "test->compile")
 
@@ -102,7 +111,10 @@ lazy val diagrams: Project = Module("diagrams", "riddl-diagrams")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(50))
-  .settings(libraryDependencies ++= Dep.testing)
+  .settings(
+    description := "A Library of passes and utilities for generating diagrams from RIDDL AST",
+    libraryDependencies ++= Dep.testing
+  )
   .dependsOn(language, passes, testkit % "compile->test")
 
 val Prettify = config("prettify")
@@ -110,7 +122,10 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(65))
-  .settings(libraryDependencies ++= Dep.testing)
+  .settings(
+    description := "Implementation for the RIDDL prettify command, a code reformatter",
+    libraryDependencies ++= Dep.testing
+  )
   .dependsOn(commands, testkit % "test->compile", utils)
 
 val Hugo = config("hugo")
@@ -119,6 +134,7 @@ lazy val hugo: Project = Module("hugo", "riddl-hugo")
   .configure(With.typical)
   .configure(With.coverage(50))
   .settings(
+    description := "The hugo command turns a RIDDL AST into source input for hugo static site generator",
     Compile / unmanagedResourceDirectories += {
       baseDirectory.value / "resources"
     },
@@ -160,6 +176,7 @@ lazy val doc = project
   .settings(scaladocSiteSettings)
   .settings(
     name := "riddl-doc",
+    description := "Generation of the documentation web site",
     publishTo := Option(Resolver.defaultLocal),
     // Hugo / baseURL := uri("https://riddl.tech"),
     SiteScaladoc / siteSubdirName := "api",
@@ -195,6 +212,7 @@ lazy val riddlc: Project = Module("riddlc", "riddlc")
     testkit % "test->compile"
   )
   .settings(
+    description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     mainClass := Option("com.ossuminc.riddl.RIDDLC"),
     graalVMNativeImageOptions ++= Seq(
@@ -211,6 +229,7 @@ lazy val plugin = OssumIncPlugin.autoImport
   .Plugin("sbt-riddl")
   .configure(With.build_info)
   .settings(
+    description := "An sbt plugin to embellish a project with riddlc usage",
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.ossuminc.riddl.sbt",
     buildInfoUsePackageAsPath := true
