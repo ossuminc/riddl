@@ -53,6 +53,9 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     def loc: At
   }
 
+  /** The things that can be found at the top level of the parse */
+  sealed trait TopLevelValue extends RiddlValue
+
   /** Represents a literal string parsed between quote characters in the input
     *
     * @param loc
@@ -177,7 +180,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     * @param text
     *   The text of the comment, everything after the // to the end of line
     */
-  case class Comment(loc: At, text: String = "") extends RiddlValue {
+  case class Comment(loc: At, text: String = "") extends TopLevelValue {
     def format: String = "//" + text
   }
 
@@ -349,7 +352,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   sealed trait RepositoryDefinition extends Definition
 
   /** Base trait of definitions defined at root scope */
-  sealed trait RootDefinition extends Definition
+  sealed trait RootDefinition extends Definition with TopLevelValue
 
   /** Base trait of definitions define within a Streamlet */
   sealed trait StreamletDefinition extends Definition
@@ -1781,8 +1784,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   case class ConstantRef(
     loc: At = At.empty,
     pathId: PathIdentifier = PathIdentifier.empty
-  ) extends Reference[Field] {
-    override def format: String = s"const ${pathId.format}"
+  ) extends Reference[Constant] {
+    override def format: String = s"constant ${pathId.format}"
   }
 
   /** A type definition which associates an identifier with a type expression.
@@ -3302,7 +3305,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends GenericInteraction {
     def relationship: LiteralString =
-      LiteralString(loc+(6+ from.pathId.format.length), "focuses on ")
+      LiteralString(loc + (6 + from.pathId.format.length), "focuses on ")
     override def kind: String = "Focus On URL"
   }
 
@@ -3548,7 +3551,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     nounAlias: String,
     id: Identifier,
     verbAlias: String,
-    putOut: TypeRef,
+    putOut: TypeRef | ConstantRef | LiteralString,
     outputs: Seq[OutputDefinition] = Seq.empty[OutputDefinition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,

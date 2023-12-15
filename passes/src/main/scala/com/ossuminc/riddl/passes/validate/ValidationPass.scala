@@ -658,7 +658,11 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkDefinition(parents, out)
-    checkTypeRef(out.putOut, out, parents)
+    out.putOut match {
+      case typ: TypeRef => checkTypeRef(typ, out, parents)
+      case const: ConstantRef => checkRef[Constant](const, out, parents)
+      case str: LiteralString => checkNonEmpty(str.s, "string to put out", out, Messages.Error)
+    }
     checkDescription(out)
   }
 
@@ -759,22 +763,31 @@ case class ValidationPass(
           case Some(d) if d.isAppRelated =>
             d match {
               case output @ Output(loc, _, id, _, putOut, _, _, _, _) =>
-                checkTypeRef(putOut, parents.head, parents.tail) match {
-                  case Some(Type(_, _, typEx, _, _, _)) if typEx.isContainer =>
-                    typEx match {
-                      case ate: AggregateUseCaseTypeExpression
-                          if ate.usecase == EventCase || ate.usecase == ResultCase =>
-                        None // events and results are permitted
-                      case ty: TypeExpression => // everything else is not
-                        Some(
-                          error(
-                            s"${output.identify} showing ${putOut.format} of type ${ty.format} is invalid " +
-                              s" because ${o.identify} is a vital definition which can only send Events and Results",
-                            loc
-                          )
-                        )
+                putOut match {
+                  case typRef: TypeRef =>
+                    checkTypeRef(typRef, parents.head, parents.tail) match {
+                      case Some(Type(_, _, typEx, _, _, _)) if typEx.isContainer =>
+                        typEx match {
+                          case ate: AggregateUseCaseTypeExpression
+                            if ate.usecase == EventCase || ate.usecase == ResultCase =>
+                            None // events and results are permitted
+                          case ty: TypeExpression => // everything else is not
+                            Some(
+                              error(
+                                s"${output.identify} showing ${typRef.format} of type ${ty.format} is invalid " +
+                                  s" because ${o.identify} is a vital definition which can only send Events and Results",
+                                loc
+                              )
+                            )
+                        }
+                      case _ => None //
                     }
-                  case _ => None //
+                  case constRef: ConstantRef =>
+                    checkRef[Constant](constRef, parents.head, parents.tail)
+                    Option.empty[Message]
+                  case str: LiteralString =>
+                    checkNonEmptyValue (str, "string to put out", parents.head, Messages.Error)
+                    Option.empty[Message]
                 }
               case _ => None
             }

@@ -108,7 +108,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case in: Input =>
         resolveATypeRef(in.putIn, parentsAsSeq)
       case out: Output =>
-        resolveATypeRef(out.putOut, parentsAsSeq)
+        out.putOut match {
+          case typ: TypeRef       => resolveATypeRef(typ, parentsAsSeq)
+          case const: ConstantRef => resolveARef[Constant](const, parentsAsSeq)
+          case _: LiteralString   => () // not a reference
+        }
       case cg: ContainedGroup =>
         resolveARef[Group](cg.group, parentsAsSeq)
       case gi: GenericInteraction =>

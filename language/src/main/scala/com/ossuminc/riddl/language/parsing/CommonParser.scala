@@ -10,7 +10,6 @@ import com.ossuminc.riddl.language.At
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-import java.lang.Character.{isLetter, isLetterOrDigit}
 import java.net.URI
 import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
@@ -56,10 +55,6 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def undefined[u: P, RT](f: => RT): P[RT] = {
     P(Punctuation.undefinedMark./).map(_ => f)
-  }
-
-  def whiteSpaceChar[u: P]: P[Unit] = {
-    CharIn(" \t\n")
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
@@ -200,9 +195,9 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     map: Map[Class[Definition], Seq[Definition]]
   ) {
     def extract[T <: Definition: ClassTag]: Seq[T] = {
-      val classe = classTag[T].runtimeClass
+      val clazzTag = classTag[T].runtimeClass
       map
-        .get(classe.asInstanceOf[Class[Definition]])
+        .get(clazzTag.asInstanceOf[Class[Definition]])
         .fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
     }
   }
