@@ -17,7 +17,9 @@ class SnippetsFileTest extends ParsingTest {
 
   "Snippet Files" should {
     "parse correctly" in {
+
       var failures = 0
+
       for { file <- files } do
         val input = RiddlParserInput(file)
         parseTopLevelDomains(input) match
