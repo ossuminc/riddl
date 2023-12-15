@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.AST.TwoReferenceInteraction
 import com.ossuminc.riddl.language.parsing.{PredefType, RiddlParserInput}
 
 import java.net.URL
@@ -3184,27 +3185,46 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     override def kind: String = "Optional Interaction"
   }
 
+  sealed trait GenericInteraction extends Interaction with LeafDefinition {
+    def relationship: LiteralString
+  }
+
   /** A very vague step just written as text */
   case class VagueInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
+    from: LiteralString,
     relationship: LiteralString,
+    to: LiteralString,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends Interaction {
+  ) extends GenericInteraction {
     override def kind: String = "Vague Interaction"
+  }
 
-    override def contents: Seq[Definition] = Seq.empty[Definition]
+  case class SendMessageInteraction(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    from: Reference[Definition],
+    message: MessageRef,
+    to: Reference[Definition],
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends GenericInteraction {
+    def relationship: LiteralString = {
+      LiteralString(message.loc, s"sends ${message.format} to")
+    }
+
+    override def kind: String = "Send Message Interaction"
   }
 
   /** One abstract step in an Interaction between things. The set of case classes associated with this sealed trait
     * provide more type specificity to these three fields.
     */
-  sealed trait GenericInteraction extends Interaction with LeafDefinition {
+  sealed trait TwoReferenceInteraction extends GenericInteraction {
     def from: Reference[Definition]
-
-    def relationship: LiteralString
 
     def to: Reference[Definition]
   }
@@ -3231,7 +3251,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Arbitrary Interaction"
   }
 
@@ -3243,7 +3263,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Self Interaction"
     override def to: Reference[Definition] = from
   }
@@ -3251,27 +3271,40 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   /** An interaction where an User receives output
     *
     * @param loc
-    *   The locaiton of the interaction in the source
+    *   The location of the interaction in the source
     * @param from
-    *   The output received
-    * @param relationship
-    *   THe name of the relationship
+    *   The User that is being focused
     * @param to
-    *   THe user that receives the output
+    *   The Group that is the target of the focus
     * @param brief
     *   A brief description of this interaction
     */
   case class FocusOnGroupInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
-    from: GroupRef,
-    relationship: LiteralString,
-    to: UserRef,
+    from: UserRef,
+    to: GroupRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends TwoReferenceInteraction {
+    override def kind: String = "Focus On Group"
+    override def relationship: LiteralString = 
+      LiteralString(loc + (6 + from.pathId.format.length), "focuses on")
+  }
+
+  case class DirectUserToURLInteraction(
+    loc: At,
+    id: Identifier = Identifier.empty,
+    from: UserRef, 
+    url: java.net.URL,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends GenericInteraction {
-    override def kind: String = "Focus On Group"
+    def relationship: LiteralString =
+      LiteralString(loc+(6+ from.pathId.format.length), "focuses on ")
+    override def kind: String = "Focus On URL"
   }
 
   /** An interaction where an User receives output
@@ -3295,7 +3328,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Show Output Interaction"
   }
 
@@ -3321,7 +3354,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends GenericInteraction {
+  ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
   }
 
