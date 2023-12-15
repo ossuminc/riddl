@@ -6,7 +6,6 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.AST.TwoReferenceInteraction
 import com.ossuminc.riddl.language.parsing.{PredefType, RiddlParserInput}
 
 import java.net.URL
