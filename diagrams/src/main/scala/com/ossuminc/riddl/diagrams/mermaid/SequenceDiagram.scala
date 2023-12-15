@@ -32,7 +32,7 @@ trait SequenceDiagramSupport {
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extends FileBuilder {
 
-  final val indent_per_level = 4
+  private final val indent_per_level = 4
 
   def generate: Seq[String] = {
     sb.append("sequenceDiagram"); nl
@@ -44,7 +44,7 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
     sb.toString().split('\n').toSeq
   }
 
-  def actorsFirst(a: (String, Definition), b: (String, Definition)): Boolean = {
+  private def actorsFirst(a: (String, Definition), b: (String, Definition)): Boolean = {
     a._2 match
       case _: User if b._2.isInstanceOf[User]       => a._1 < b._1
       case _: User                                  => true

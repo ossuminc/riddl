@@ -1,6 +1,12 @@
 domain foo {
   application foo2 {
-    page target is { ??? }
+    constant ThingToDisplay is string = "A displayed thing"
+    type Foo is record { ??? }
+    page target is {
+      output a displays "something moving but not a movie"
+      output c displays record Foo
+      output b displays constant foo.foo2.ThingToDisplay
+    }
     menu choice is {
       button b acquires Nothing
       item i1 acquires String is { ??? }
