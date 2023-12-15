@@ -3289,14 +3289,14 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends TwoReferenceInteraction {
     override def kind: String = "Focus On Group"
-    override def relationship: LiteralString = 
+    override def relationship: LiteralString =
       LiteralString(loc + (6 + from.pathId.format.length), "focuses on")
   }
 
   case class DirectUserToURLInteraction(
     loc: At,
     id: Identifier = Identifier.empty,
-    from: UserRef, 
+    from: UserRef,
     url: java.net.URL,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
