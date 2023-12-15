@@ -228,7 +228,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def httpUrl[u: P]: P[java.net.URL] = {
     P(
-      "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath
+      "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath.?
     ).!.map(java.net.URI(_).toURL)
   }
 

@@ -723,6 +723,8 @@ case class ValidationPass(
               checkPathRef[Definition](smi.from.pathId, uc, parents)
               checkMessageRef(smi.message, uc, parents, Seq(smi.message.messageKind))
               checkPathRef[Definition](smi.to.pathId, uc, parents)
+            case fou: DirectUserToURLInteraction =>
+              checkPathRef[User](fou.from.pathId, uc, parents)
             case is: TwoReferenceInteraction =>
               checkPathRef[Definition](is.from.pathId, uc, parents)
               checkPathRef[Definition](is.to.pathId, uc, parents)
@@ -756,7 +758,7 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isAppRelated =>
             d match {
-              case output@Output(loc, _, id, _, putOut, _, _, _, _) =>
+              case output @ Output(loc, _, id, _, putOut, _, _, _, _) =>
                 checkTypeRef(putOut, parents.head, parents.tail) match {
                   case Some(Type(_, _, typEx, _, _, _)) if typEx.isContainer =>
                     typEx match {
@@ -782,7 +784,7 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isVital =>
             o match {
-              case input@Input(loc, _, id, _, putIn, _, _, _, _) =>
+              case input @ Input(loc, _, id, _, putIn, _, _, _, _) =>
                 checkTypeRef(putIn, parents.head, parents.tail) match {
                   case Some(Type(_, _, typEx, _, _, _)) if typEx.isContainer =>
                     typEx match {
@@ -819,7 +821,9 @@ case class ValidationPass(
     interaction match {
       case SelfInteraction(_, _, from, _, _, _, _) =>
         checkRef[Definition](from, interaction, parents)
-      case FocusOnGroupInteraction(_, _, group: GroupRef, _, user: UserRef, _, _, _) =>
+      case DirectUserToURLInteraction(_, _, user: UserRef, _, _, _, _) =>
+        checkRef[User](user, interaction, parents)
+      case FocusOnGroupInteraction(_, _, user: UserRef, group: GroupRef, _, _, _) =>
         checkRef[Group](group, interaction, parents)
         checkRef[User](user, interaction, parents)
       case TakeInputInteraction(_, _, user: UserRef, _, inputRef: InputRef, _, _, _) =>
