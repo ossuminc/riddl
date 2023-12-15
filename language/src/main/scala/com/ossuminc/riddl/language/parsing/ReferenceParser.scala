@@ -137,7 +137,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (UserRef.apply _).tupled(tpl))
   }
 
-  private def applicationRef[u: P]: P[ApplicationRef] = {
+  def applicationRef[u: P]: P[ApplicationRef] = {
     P(location ~ Keywords.application ~ pathIdentifier)
       .map(tpl => (ApplicationRef.apply _).tupled(tpl))
   }
