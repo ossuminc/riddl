@@ -1,4 +1,5 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
+import com.ossuminc.sbt.helpers.RootProjectInfo
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
 import sbtunidoc.BaseUnidocPlugin.autoImport.unidoc
@@ -209,7 +210,7 @@ lazy val riddlc: Project = Module("riddlc", "riddlc")
 lazy val plugin = OssumIncPlugin.autoImport
   .Plugin("sbt-riddl", "sbt-riddl")
   .disablePlugins(ScoverageSbtPlugin)
-  .configure(With.build_info)
+  .configure(With.build_info, With.publishing)
   .settings(
     organization := "com.ossuminc",
     buildInfoObject := "SbtRiddlPluginBuildInfo",
