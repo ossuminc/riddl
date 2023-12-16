@@ -1,0 +1,22 @@
+domain Foo {
+  application Bar {
+    type PricingPageString is String(,30)
+    page PricingPage {
+      output PricingPageText shows PricingPageString
+    }
+    record NewUserRecord is { name: String }
+    page NewUser {
+      form NewUserForm accepts NewUserRecord
+    }
+  }
+
+  user AppUser is "Somebody who wants to use the application"
+
+  epic CreateUserEpic {
+    case CreateUserManually {
+      user AppUser wants to "sign up as a registered user in the application" so "they can interact with the demo application"
+      step take form NewUserForm from user AppUser /* insert comment */ ,
+      step focus user AppUser on page PricingPage
+    }
+  }
+}

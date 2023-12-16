@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.utils
+package com.ossuminc.riddl.utils
 
 /** Unit Tests For PluginSpecBase */
 import org.scalatest.*
@@ -19,8 +19,8 @@ import scala.sys.process.Process
 /** Base class for testing plugins */
 abstract class PluginSpecBase(
   svcClassPath: Path = Path
-    .of("com/reactific/riddl/utils/PluginInterface.class"),
-  implClassPath: Path = Path.of("com/reactific/riddl/utils/TestPlugin.class"),
+    .of("com/ossuminc/riddl/utils/PluginInterface.class"),
+  implClassPath: Path = Path.of("com/ossuminc/riddl/utils/TestPlugin.class"),
   moduleName: String = "utils",
   jarFilename: String = "test-plugin.jar")
     extends AnyWordSpec with Matchers with BeforeAndAfterAll {

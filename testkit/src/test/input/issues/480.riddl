@@ -1,0 +1,38 @@
+domain ksoTemplateAppDomain {
+
+  type EmailAddress = String(1,255)
+
+  application ksoTemplateApp {
+    type FirstName: String(2,64)
+    type LastName: String(2,64)
+    type Password: String(8,128)
+
+    record SignupParameters is {
+      firstName: FirstName,
+      lastName: LastName,
+      emailAddress: ksoTemplateAppDomain.EmailAddress,
+      password: Password
+    }
+
+    command CreateUser is {user: SignupParameters }
+    command CreateUserUsingFacebook is {???}
+    command CreateUserUsingGitHub is {???}
+    command CreateUserUsingGmail is {???}
+    command RedirectUserToSigninPage is {???}
+
+   page SignupPage {
+
+     form NewUserForm acquires record ksoTemplateApp.SignupParameters is {
+        input firstName accepts ksoTemplateApp.FirstName
+        input lastName accepts ksoTemplateApp.LastName
+        input emailAddress accepts ksoTemplateAppDomain.EmailAddress
+        input password accepts ksoTemplateApp.Password
+      }
+      button SignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUser
+      button FacebookSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingFacebook
+      button GitHubSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGitHub
+      button GmailSignupButton initiates command ksoTemplateAppDomain.ksoTemplateApp.CreateUserUsingGmail
+      text SigninLink takes command ksoTemplateAppDomain.ksoTemplateApp.RedirectUserToSigninPage
+    }
+  }
+}

@@ -10,8 +10,8 @@ runs:
         distribution: 'temurin'
         java-version: '17'
     - run: |
-        version="0.27.2"
-        wget --quiet https://github.com/reactific/riddl/releases/download/${version}/riddlc-${version}.zip
+        version="0.31.2"
+        wget --quiet https://github.com/ossuminc/riddl/releases/download/${version}/riddlc-${version}.zip
         unzip riddlc-${version}.zip
         export RIDDLC="$(pwd)/riddlc-${version}/bin"
         echo "RIDDLC = ${RIDDLC}"

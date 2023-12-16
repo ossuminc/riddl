@@ -4,11 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.utils
+package com.ossuminc.riddl.utils
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.net.URL
 import java.util.ServiceLoader
 import scala.jdk.StreamConverters.*
 import scala.jdk.CollectionConverters.*
@@ -36,26 +35,28 @@ object Plugin {
     if Files.isDirectory(pluginsDir) then {
       val stream = Files.list(pluginsDir)
 
-      val jars = stream.filter(_.getFileName.toString.endsWith(".jar"))
-        .toScala(List).sortBy(_.toString)
+      val jars = stream
+        .filter(_.getFileName.toString.endsWith(".jar"))
+        .toScala(List)
+        .sortBy(_.toString)
       stream.close()
 
-      val urls = for
-        path <- jars
-      yield {
-        require(
-          Files.isRegularFile(path),
-          s"Candidate plugin $path is not a regular file"
-        )
-        require(
-          Files.isReadable(path),
-          s"Candidate plugin $path is not a regular file"
-        )
-        val ssp = "file://" + path.toAbsolutePath.toString + "!/"
-        val uri = new URI("jar", ssp, "")
-        uri.toURL
-        // URI.create(s"jar:file:${path.toAbsolutePath.toString}").toURL
-      }
+      val urls =
+        for path <- jars
+        yield {
+          require(
+            Files.isRegularFile(path),
+            s"Candidate plugin $path is not a regular file"
+          )
+          require(
+            Files.isReadable(path),
+            s"Candidate plugin $path is not a regular file"
+          )
+          val ssp = "file://" + path.toAbsolutePath.toString + "!/"
+          val uri = new URI("jar", ssp, "")
+          uri.toURL
+          // URI.create(s"jar:file:${path.toAbsolutePath.toString}").toURL
+        }
       PluginClassLoader(urls, getClass.getClassLoader)
     } else { getClass.getClassLoader }
   }
@@ -71,34 +72,34 @@ object Plugin {
         Thread.currentThread.setContextClassLoader(pluginClassLoader)
         val loader = ServiceLoader.load(svcType, pluginClassLoader)
         val list = loader.iterator().asScala.toList
-        val result = for
-          plugin <- list
-        yield {
-          require(
-            plugin.interfaceVersion <= interfaceVersion,
-            s"Plugin ${plugin.getClass.getSimpleName} of interface version ${plugin.interfaceVersion} cannot be supported by Plugin system at " ++
-              s"interface version $interfaceVersion."
-          )
-          val pParts = plugin.riddlVersion.split('.')
-          require(
-            pParts.length >= 2,
-            s"Invalid RIDDL version number; ${plugin.riddlVersion}"
-          )
-          val pMajor = pParts(0).toInt
-          val pMinor = pParts(1).toInt
-          require(
-            pMajor >= 0 && pMinor >= 0,
-            s"Invalid RIDDL version number; ${plugin.riddlVersion}"
-          )
-          val rParts = RiddlBuildInfo.version.split('.')
-          val rMajor = rParts(0).toInt
-          val rMinor = rParts(1).toInt
-          require(
-            pMajor <= rMajor && pMinor <= rMinor,
-            s"Plugin compiled with future RIDDL version ${plugin.riddlVersion}"
-          )
-          plugin
-        }
+        val result =
+          for plugin <- list
+          yield {
+            require(
+              plugin.interfaceVersion <= interfaceVersion,
+              s"Plugin ${plugin.getClass.getSimpleName} of interface version ${plugin.interfaceVersion} cannot be supported by Plugin system at " ++
+                s"interface version $interfaceVersion."
+            )
+            val pParts = plugin.riddlVersion.split('.')
+            require(
+              pParts.length >= 2,
+              s"Invalid RIDDL version number; ${plugin.riddlVersion}"
+            )
+            val pMajor = pParts(0).toInt
+            val pMinor = pParts(1).toInt
+            require(
+              pMajor >= 0 && pMinor >= 0,
+              s"Invalid RIDDL version number; ${plugin.riddlVersion}"
+            )
+            val rParts = RiddlBuildInfo.version.split('.')
+            val rMajor = rParts(0).toInt
+            val rMinor = rParts(1).toInt
+            require(
+              pMajor <= rMajor && pMinor <= rMinor,
+              s"Plugin compiled with future RIDDL version ${plugin.riddlVersion}"
+            )
+            plugin
+          }
         result
       } finally { Thread.currentThread.setContextClassLoader(savedClassLoader) }
     }

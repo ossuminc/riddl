@@ -1,6 +1,0 @@
-com.reactific.riddl.commands.DumpCommand
-com.reactific.riddl.commands.FromCommand
-com.reactific.riddl.commands.ParseCommand
-com.reactific.riddl.commands.RepeatCommand
-com.reactific.riddl.commands.ValidateCommand
-com.reactific.riddl.commands.OnChangeCommand

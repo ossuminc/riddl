@@ -15,7 +15,7 @@ reactive, concurrent systems such as required for modern internet-scale
 applications or corporate back office infrastructure. 
 
 RIDDL is a variety of software libraries and tools, provided in 
-[this GitHub repository](https://github.com/reactific/riddl), that 
+[this GitHub repository](https://github.com/ossuminc/riddl), that 
 allow humans to work with the language to create their own derivative works. 
 
 [`riddlc`] is a complete extensible compiler infrastructure for processing 

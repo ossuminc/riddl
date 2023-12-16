@@ -1,3 +1,4 @@
+/.scalafmt.conf.etag
 .metals/
 .vscode/
 .bloop/

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.reactific.riddl.utils
+package com.ossuminc.riddl.utils
 
-import com.reactific.riddl.utils.TextFileWriter.*
+import com.ossuminc.riddl.utils.TextFileWriter.*
 
 import java.nio.charset.StandardCharsets
 

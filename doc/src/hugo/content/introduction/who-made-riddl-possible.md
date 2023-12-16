@@ -12,7 +12,7 @@ weight: 50
 * Initiated RIDDL in 2019 and started committing changes to the repository 
   at the end of 2021
 * Founder of Reactific Software LLC which was bought by
-  [Ossum Inc.](https://ossum.biz/) in 2022 which he also founded. 
+  [Ossum Inc.](https://ossum.biz/) in 2022 which he also founded.
 
 ## Contributors
 

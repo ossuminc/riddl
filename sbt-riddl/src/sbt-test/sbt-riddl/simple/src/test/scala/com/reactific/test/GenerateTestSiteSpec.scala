@@ -1,6 +1,6 @@
 package app.improving
 
-import com.reactific.riddl.testkit.RunCommandSpecBase
+import com.ossuminc.riddl.testkit.RunCommandSpecBase
 
 /** Generate a test site */
 class GenerateTestSiteSpec extends RunCommandSpecBase {
@@ -11,7 +11,7 @@ class GenerateTestSiteSpec extends RunCommandSpecBase {
         "--show-times",
         "--verbose",
         "from",
-        "src/main/riddl/riddl.conf",
+        "src/main/riddl/riddlc.conf",
         "validate"
       )
       runWith(command)

@@ -28,9 +28,12 @@ jobs:
       run: |
         which hugo
         sbt -v clean coverage Test/compile test coverageAggregate coveralls
+        export RIDDLC_PATH=riddlc/target/universal/stage/bin/riddlc
+        sbt -v clean compile publishLocal "project riddlc" "stage" "project sbt-riddl" scripted
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
+        RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v3

@@ -1,0 +1,23 @@
+domain foo {
+  application foo2 {
+    constant ThingToDisplay is string = "A displayed thing"
+    type Foo is record { ??? }
+    page target is {
+      output a displays "something moving but not a movie"
+      output c displays record Foo
+      output b displays constant foo.foo2.ThingToDisplay
+    }
+    menu choice is {
+      button b acquires Nothing
+      item i1 acquires String is { ??? }
+      item i2 acquires String is { ??? }
+    }
+  }
+  user U is "an example user"
+  epic TestCase is {
+    case one is {
+      step from user U "select" button foo.foo2.choice.b,
+      step b focus user U on page target
+    }
+  }
+}
