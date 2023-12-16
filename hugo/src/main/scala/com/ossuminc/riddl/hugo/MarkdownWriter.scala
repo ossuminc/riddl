@@ -1055,12 +1055,12 @@ case class MarkdownWriter(
       emitTableRow(
         key,
         s.count.toString,
-        f"$percentOfAll%3.1f",
-        f"${s.percent_documented}%3.1f",
-        f"${s.numEmpty}%d",
-        f"${s.completeness}%3.1f",
-        f"${s.complexity}%3.1f",
-        f"${s.averageContainment}%3.1f"
+        "%1.2f".format(s.percent_of_all(total_stats.count)),
+        "%1.2f".format(s.percent_documented),
+        s.numEmpty.toString,
+        "%1.3f".format(s.completeness),
+        "%1.3f".format(s.complexity),
+        "%1.3f".format(s.averageContainment)
       )
     }
     this
