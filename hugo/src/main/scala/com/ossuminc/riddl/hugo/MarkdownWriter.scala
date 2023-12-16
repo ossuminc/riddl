@@ -178,7 +178,7 @@ case class MarkdownWriter(
     for item <- items do {
       item match {
         case body: String    => sb.append(s"* $body\n")
-        case rnod: RiddlNode => sb.append(s"* ${rnod.format}")
+        case rnod: RiddlValue => sb.append(s"* ${rnod.format}")
         case (
               prefix: String,
               description: String,

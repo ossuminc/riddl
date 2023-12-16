@@ -23,7 +23,7 @@ import scala.reflect.*
 /** Base class for tests that need parsing help */
 class ParsingTest extends ParsingTestBase {
 
-  def parse[T <: RiddlNode, U <: RiddlNode](
+  def parse[T <: RiddlValue, U <: RiddlValue](
     input: RiddlParserInput,
     parser: P[?] => P[T],
     extraction: T => U
@@ -39,7 +39,7 @@ class ParsingTest extends ParsingTestBase {
     tp.parseTopLevelDomains
   }
 
-  def parseTopLevelDomain[TO <: RiddlNode](
+  def parseTopLevelDomain[TO <: RiddlValue](
     input: RiddlParserInput,
     extract: RootContainer => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -47,7 +47,7 @@ class ParsingTest extends ParsingTestBase {
     tp.parseTopLevelDomain[TO](extract)
   }
 
-  def parseDomainDefinition[TO <: RiddlNode](
+  def parseDomainDefinition[TO <: RiddlValue](
     input: RiddlParserInput,
     extract: Domain => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -55,7 +55,7 @@ class ParsingTest extends ParsingTestBase {
     tp.parseDomainDefinition[TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
     input: RiddlParserInput,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -63,7 +63,7 @@ class ParsingTest extends ParsingTestBase {
     tp.parseDefinition[FROM, TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
     input: String,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -83,7 +83,7 @@ class ParsingTest extends ParsingTestBase {
     parseDefinition(RiddlParserInput(input))
   }
 
-  def parseInContext[TO <: RiddlNode](
+  def parseInContext[TO <: RiddlValue](
     input: RiddlParserInput,
     extract: Context => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
