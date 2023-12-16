@@ -19,24 +19,33 @@ import scala.reflect.{ClassTag, classTag}
   */
 object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.RiddlOptions with ast.Types with ast.Statements
 
-  ///////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
-  /** The root trait of all things RIDDL AST. Every node in the tree is a RiddlNode. */
-  sealed trait RiddlNode {
+  ///////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES
 
-    /** Format the node to a string */
+  /** The root trait of all parsed values. If a parser returns something, its a RiddlValue. Every node in the AST is a
+    * RiddlNode. Subclasses implement the defs in various ways because this is the most abstract notion of what is
+    * parsed.
+    */
+  sealed trait RiddlValue {
+
+    /** The location in the parse at which this RiddlValue occurs */
+    def loc: At
+
+    /** Format the node to a string in a form suitable for use in error messages */
     def format: String
 
-    /** Determine if this node is a container or not */
+    /** Determine if this value contains other values or not */
     def isContainer: Boolean = false
 
-    // Determine if this node has definitions it contains
+    /** Determine if this value is the top most container, appearing at the root of the AST  */
+    def isRootContainer: Boolean = false
+
+    /** Determine if this node has definitions it contains */
     def hasDefinitions: Boolean = false
 
-    // Determine if this ndoe is a definitiono
+    /** Determine if this value is a definition or not */
     def isDefinition: Boolean = false
 
-    /** determine if this node is empty or not. Non-containers are always empty
-      */
+    /** determine if this node is empty or not. Non-containers are always empty */
     def isEmpty: Boolean = true
 
     @deprecatedOverriding(
@@ -44,18 +53,9 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     ) final def nonEmpty: Boolean = !isEmpty
   }
 
-  /** The root trait of all parsable values. If a parser returns something, its a RiddlValue. The distinguishing factor
-    * is the inclusion of the parsing location given by the `loc` field.
-    */
-  sealed trait RiddlValue extends RiddlNode {
-
-    /** The location in the parse at which this RiddlValue occurs */
-    def loc: At
-  }
-
-  /** The things that can be found at the top level of the parse */
+  /** The things that can be found only at the top level of the parse */
   sealed trait TopLevelValue extends RiddlValue
-
+  
   /** Represents a literal string parsed between quote characters in the input
     *
     * @param loc
@@ -117,6 +117,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
   }
+  
   object Description {
     lazy val empty: Description = new Description {
       val loc: At = At.empty
@@ -167,21 +168,23 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     def hasDescription: Boolean = description.nonEmpty
   }
 
+  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
+    * definition. The comment is stored within the [[Definition]]
+    *
+    * @param loc
+    * Location in the input of the // comment introducer
+    * @param text
+    * The text of the comment, everything after the // to the end of line
+    */
+  case class Comment(loc: At, text: String = "") extends TopLevelValue {
+    def format: String = "//" + text
+  }
+
+
   sealed trait CommentedValue extends RiddlValue {
     def comments: Seq[Comment]
     def commentText: String = comments.map(_.text).mkString("\n")
     def hasComment: Boolean = comments.nonEmpty
-  }
-
-  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
-    * definition. The comment is stored within the [[Definition]]
-    * @param loc
-    *   Location in the input of the // comment introducer
-    * @param text
-    *   The text of the comment, everything after the // to the end of line
-    */
-  case class Comment(loc: At, text: String = "") extends TopLevelValue {
-    def format: String = "//" + text
   }
 
   /** Base trait of any definition that is also a ContainerValue
@@ -194,11 +197,11 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
     override def isEmpty: Boolean = contents.isEmpty
 
-    override def isContainer: Boolean = true
+    final override def isContainer: Boolean = true
 
-    def isRootContainer: Boolean = false
   }
 
+  
   /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
     * yield a string that provides the kind and name
     */
@@ -659,11 +662,10 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     loc: At,
     key: String,
     value: TypeExpression
-  ) extends RiddlNode {
+  ) extends RiddlValue {
 
     /** Format the node to a string */
     def format: String = s"$key: ${value.format}"
-
   }
 
   /** A leaf definition that is a callable method (function) of an aggregation type expressions. Methods associate an
