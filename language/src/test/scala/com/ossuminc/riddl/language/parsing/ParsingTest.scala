@@ -21,7 +21,7 @@ import scala.reflect.*
 class ParsingTest extends AnyWordSpec with Matchers {
   case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content))
 
-  def parse[T <: RiddlNode, U <: RiddlNode](
+  def parse[T <: RiddlValue, U <: RiddlValue](
     input: RiddlParserInput,
     parser: P[?] => P[T],
     extraction: T => U
@@ -37,7 +37,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseRootContainer
   }
 
-  def parseTopLevelDomain[TO <: RiddlNode](
+  def parseTopLevelDomain[TO <: RiddlValue](
     input: RiddlParserInput,
     extract: RootContainer => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -45,7 +45,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseTopLevelDomain[TO](extract)
   }
 
-  def parseDomainDefinition[TO <: RiddlNode](
+  def parseDomainDefinition[TO <: RiddlValue](
     input: RiddlParserInput,
     extract: Domain => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -53,7 +53,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseDomainDefinition[TO](extract)
   }
 
-  def checkDomainDefinitions[TO <: RiddlNode](
+  def checkDomainDefinitions[TO <: RiddlValue](
     cases: Map[String, TO],
     extract: Domain => TO
   ): Unit = {
@@ -69,7 +69,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     }
   }
 
-  def parseContextDefinition[TO <: RiddlNode](
+  def parseContextDefinition[TO <: RiddlValue](
     input: RiddlParserInput,
     extract: Context => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -77,7 +77,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseContextDefinition[TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
     input: RiddlParserInput,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -85,7 +85,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseDefinition[FROM, TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
     input: String,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -106,7 +106,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     parseDefinition(RiddlParserInput(input))
   }
 
-  def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlNode](
+  def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
     rip: RiddlParserInput,
     expected: TO,
     extract: FROM => TO
@@ -119,7 +119,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     }
   }
 
-  def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlNode](
+  def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlValue](
     cases: Map[String, TO],
     @unused extract: FROM => TO
   ): Unit = {
@@ -134,7 +134,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     }
   }
 
-  def parseInContext[TO <: RiddlNode](
+  def parseInContext[TO <: RiddlValue](
     input: RiddlParserInput,
     extract: Context => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {

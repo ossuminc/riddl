@@ -141,7 +141,7 @@ trait ParsingContext {
     error(At.empty, message)
   }
 
-  def expect[T <: RiddlNode](
+  def expect[T <: RiddlValue](
     parser: P[?] => P[T],
     withVerboseFailures: Boolean = false
   ): Either[Messages, (T, RiddlParserInput)] = {
