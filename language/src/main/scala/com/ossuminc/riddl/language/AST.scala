@@ -36,7 +36,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     /** Determine if this value contains other values or not */
     def isContainer: Boolean = false
 
-    /** Determine if this value is the top most container, appearing at the root of the AST  */
+    /** Determine if this value is the top most container, appearing at the root of the AST */
     def isRootContainer: Boolean = false
 
     /** Determine if this node has definitions it contains */
@@ -48,14 +48,23 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     /** determine if this node is empty or not. Non-containers are always empty */
     def isEmpty: Boolean = true
 
+    /** determines if this node is a comment or not */
+    def isComment: Boolean = false
+
+    /** determines if this value is anonymous (un-named) */
+    def isAnonymous: Boolean = true
+
+    def hasOptions: Boolean = false
+
+    def hasAuthors: Boolean = false
+
+    def hasTypes: Boolean = false
+
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
     ) final def nonEmpty: Boolean = !isEmpty
   }
 
-  /** The things that can be found only at the top level of the parse */
-  sealed trait TopLevelValue extends RiddlValue
-  
   /** Represents a literal string parsed between quote characters in the input
     *
     * @param loc
@@ -117,7 +126,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
   }
-  
+
   object Description {
     lazy val empty: Description = new Description {
       val loc: At = At.empty
@@ -160,31 +169,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     */
   sealed trait DescribedValue extends RiddlValue {
     def description: Option[Description]
-    def descriptionValue: String = {
-      description
-        .map(_.lines.map(_.s))
-        .mkString("", System.lineSeparator(), System.lineSeparator())
-    }
     def hasDescription: Boolean = description.nonEmpty
-  }
-
-  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
-    * definition. The comment is stored within the [[Definition]]
-    *
-    * @param loc
-    * Location in the input of the // comment introducer
-    * @param text
-    * The text of the comment, everything after the // to the end of line
-    */
-  case class Comment(loc: At, text: String = "") extends TopLevelValue {
-    def format: String = "//" + text
-  }
-
-
-  sealed trait CommentedValue extends RiddlValue {
-    def comments: Seq[Comment]
-    def commentText: String = comments.map(_.text).mkString("\n")
-    def hasComment: Boolean = comments.nonEmpty
   }
 
   /** Base trait of any definition that is also a ContainerValue
@@ -201,113 +186,10 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
   }
 
-  
-  /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
-    * yield a string that provides the kind and name
-    */
-  sealed trait Definition
-      extends DescribedValue
-      with BrieflyDescribedValue
-      with CommentedValue
-      with Container[Definition] {
-    def id: Identifier
+  ///////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT  DEFINITIONS
 
-    def kind: String
-
-    def identify: String = {
-      if id.isEmpty then { s"Anonymous $kind" }
-      else { s"$kind '${id.format}'" }
-    }
-
-    def identifyWithLoc: String = s"$identify at $loc"
-
-    override def isDefinition: Boolean = true
-
-    override def hasDefinitions: Boolean = contents.nonEmpty
-
-    def isImplicit: Boolean = id.value.isEmpty
-
-    def isVital: Boolean = false
-
-    def isAppRelated: Boolean = false
-
-    @SuppressWarnings(Array("org.wartremover.warts.asInstanceOf"))
-    def asVital[OPT <: OptionValue, DEF <: Definition]: VitalDefinition[OPT, DEF] =
-      require(this.isVital, "Not a vital definition")
-      this.asInstanceOf[VitalDefinition[OPT, DEF]]
-
-    def hasOptions: Boolean = false
-
-    def hasAuthors: Boolean = false
-
-    def hasTypes: Boolean = false
-
-    def resolveNameTo(name: String): Option[Definition] = {
-      contents.find(_.id.value == name)
-    }
-  }
-
-  sealed trait LeafDefinition extends Definition {
-    override def isEmpty: Boolean = true
-    final def contents: Seq[Definition] = Seq.empty[Definition]
-  }
-
-  sealed trait AlwaysEmpty extends Definition {
-    final override def isEmpty: Boolean = true
-  }
-
-  /** A reference to a definition of a specific type.
-    *
-    * @tparam T
-    *   The type of definition to which the references refers.
-    */
-  sealed abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
-
-    /** The Path identifier to the referenced definition
-      */
-    def pathId: PathIdentifier
-
-    /** The optional identifier of the reference to be used locally in some other reference.
-      */
-    def id: Option[Identifier] = None
-
-    /** @return
-      *   String A string that describes this reference
-      */
-    def identify: String = {
-      s"${classTag[T].runtimeClass.getSimpleName} ${
-          if id.nonEmpty then { id.map(_.format + ": ") }
-          else ""
-        }'${pathId.format}'${loc.toShort}"
-    }
-
-    override def isEmpty: Boolean = pathId.isEmpty
-  }
-
-  object Reference {
-    val empty: Reference[Definition] = new Reference[Definition] {
-      def pathId: PathIdentifier = PathIdentifier.empty
-      def format: String = "Empty Reference"
-      def loc: At = At.empty
-    }
-  }
-
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.IsInstanceOf"))
-  def findAuthors(
-    defn: Definition,
-    parents: Seq[Definition]
-  ): Seq[AuthorRef] = {
-    if defn.hasAuthors then {
-      defn.asInstanceOf[WithAuthors].authors
-    } else {
-      parents
-        .find(d => d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors)
-        .map(_.asInstanceOf[WithAuthors].authors)
-        .getOrElse(Seq.empty[AuthorRef])
-    }
-  }
-
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
+  /** The things that can be found only at the top level of the parse */
+  sealed trait TopLevelValue extends RiddlValue
 
   /** Base trait of any definition that is in the content of an adaptor */
   sealed trait AdaptorDefinition extends Definition
@@ -339,18 +221,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   /** Base trait of definitions that are part of an On Clause Definition */
   sealed trait OnClauseDefinition extends Definition
 
-  /** Base trait of definitions defined in a processor */
-  sealed trait ProcessorDefinition
-      extends Definition
-      with AdaptorDefinition
-      with ApplicationDefinition
-      with ContextDefinition
-      with EntityDefinition
-      with ProjectorDefinition
-      with RepositoryDefinition
-      with StreamletDefinition
-      with SagaDefinition
-
   /** Base trait of definitions defined in a repository */
   sealed trait RepositoryDefinition extends Definition
 
@@ -362,25 +232,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
   /** Base trait of definitions that are in the body of a Story definition */
   sealed trait EpicDefinition extends Definition
-
-  sealed trait VitalDefinitionDefinition
-      extends AdaptorDefinition
-      with ApplicationDefinition
-      with ContextDefinition
-      with DomainDefinition
-      with EntityDefinition
-      with FunctionDefinition
-      with StreamletDefinition
-      with ProjectorDefinition
-      with RepositoryDefinition
-      with SagaDefinition
-      with EpicDefinition
-
-  /** Base trait of definitions that can accept a message directly via a reference
-    * @tparam T
-    *   The kind of reference needed
-    */
-  sealed trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
 
   /** Base trait of any definition that is in the content of a function. */
   sealed trait FunctionDefinition extends Definition
@@ -397,10 +248,206 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   /** Base trait of definitions in a UseCase, typically interactions */
   sealed trait UseCaseDefinition extends Definition
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
-
   /** Any definition that is part of a Type's Definition */
   sealed trait TypeDefinition extends Definition
+
+  /** A trait to define the definitions that can be included in the definition of a VitalDefinition */
+  sealed trait VitalDefinitionDefinition
+      extends AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
+      with DomainDefinition
+      with EntityDefinition
+      with FunctionDefinition
+      with StreamletDefinition
+      with ProjectorDefinition
+      with RepositoryDefinition
+      with SagaDefinition
+      with EpicDefinition
+
+  /** A trait for all the definitions that are are considered to be Processors */
+  sealed trait ProcessorDefinition
+      extends Definition
+      with AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
+      with EntityDefinition
+      with ProjectorDefinition
+      with RepositoryDefinition
+      with StreamletDefinition
+      with SagaDefinition
+
+  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
+    * definition. The comment is stored within the [[Definition]]
+    *
+    * @param loc
+    *   Location in the input of the // comment introducer
+    * @param text
+    *   The text of the comment, everything after the // to the end of line
+    */
+  case class Comment(loc: At, text: String = "") extends TopLevelValue {
+    def format: String = "//" + text
+    override def isComment: Boolean = true
+  }
+
+  /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
+    * yield a string that provides the kind and name
+    */
+  sealed trait Definition extends DescribedValue with BrieflyDescribedValue with Container[Definition] {
+
+    /** the name/identifier of this definition. All definitions have one */
+    def id: Identifier
+
+    /** Definitions are never anonymous */
+    override def isAnonymous: Boolean = false
+
+    /** Yes anything deriving from here is a definition */
+    override def isDefinition: Boolean = true
+
+    def kind: String
+
+    def identify: String = {
+      if id.isEmpty then {
+        s"Anonymous $kind"
+      } else {
+        s"$kind '${id.format}'"
+      }
+    }
+
+    def identifyWithLoc: String = s"$identify at $loc"
+
+    /** The list of contained definitions */
+    lazy val definitions: Seq[Definition] = contents.filter(_.isDefinition).map(_.asInstanceOf[Definition])
+
+    /** True iff there are contained definitions */
+    override def hasDefinitions: Boolean = definitions.nonEmpty
+
+    /** Looks up the name of a definition and returns it, or None */
+    def resolveNameTo(name: String): Option[Definition] = {
+      definitions.find(_.id.value == name)
+    }
+
+    def isImplicit: Boolean = id.value.isEmpty
+
+    def isVital: Boolean = false
+
+    def isAppRelated: Boolean = false
+
+    @SuppressWarnings(Array("org.wartremover.warts.asInstanceOf"))
+    def asVital[OPT <: OptionValue, DEF <: Definition]: VitalDefinition[OPT, DEF] =
+      require(this.isVital, "Not a vital definition")
+      this.asInstanceOf[VitalDefinition[OPT, DEF]]
+
+    def comments: Seq[Comment]
+
+  }
+
+  sealed trait LeafDefinition extends Definition {
+    override def isEmpty: Boolean = true
+    final def contents: Seq[Definition] = Seq.empty[Definition]
+  }
+
+  /** A value to record an inclusion of a file while parsing.
+    *
+    * @param loc
+    *   The location of the include statement in the source
+    * @param contents
+    *   The Vital Definitions read from the file
+    * @param source
+    *   A string providing the source (path or URL) of the included source
+    */
+  case class Include[T <: Definition](
+    loc: At = At(RiddlParserInput.empty),
+    contents: Seq[T] = Seq.empty[T],
+    source: Option[String] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends Definition
+      with VitalDefinitionDefinition
+      with RootDefinition {
+
+    def id: Identifier = Identifier.empty 
+    
+    def brief: Option[LiteralString] = None 
+    def description: Option[Description] = None
+    
+    override def isRootContainer: Boolean = true
+
+    def format: String = s"include ${source.getOrElse("none")}"
+
+    final val kind: String = "Include"
+  }
+
+  /** Added to definitions that support includes */
+  sealed trait WithIncludes[T <: Definition] extends Container[T] {
+    def includes: Seq[Include[T]]
+
+    def contents: Seq[T] = {
+      includes.flatMap(_.contents)
+    }
+  }
+
+  /** A reference to a definition of a specific type.
+    *
+    * @tparam T
+    *   The type of definition to which the references refers.
+    */
+  sealed abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
+
+    /** The Path identifier to the referenced definition
+      */
+    def pathId: PathIdentifier
+
+    /** The optional identifier of the reference to be used locally in some other reference.
+      */
+    def id: Option[Identifier] = None
+
+    /** @return
+      *   String A string that describes this reference
+      */
+    def identify: String = {
+      s"${classTag[T].runtimeClass.getSimpleName} ${
+          if id.nonEmpty then {
+            id.map(_.format + ": ")
+          } else ""
+        }'${pathId.format}'${loc.toShort}"
+    }
+
+    override def isEmpty: Boolean = pathId.isEmpty
+  }
+
+  object Reference {
+    val empty: Reference[Definition] = new Reference[Definition] {
+      def pathId: PathIdentifier = PathIdentifier.empty
+
+      def format: String = "Empty Reference"
+
+      def loc: At = At.empty
+    }
+  }
+
+  /** Base trait of definitions that can accept a message directly via a reference
+    *
+    * @tparam T
+    *   The kind of reference needed
+    */
+  sealed trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
+
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.IsInstanceOf"))
+  def findAuthors(
+    defn: Definition,
+    parents: Seq[Definition]
+  ): Seq[AuthorRef] = {
+    if defn.hasAuthors then {
+      defn.asInstanceOf[WithAuthors].authors
+    } else {
+      parents
+        .find(d => d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors)
+        .map(_.asInstanceOf[WithAuthors].authors)
+        .getOrElse(Seq.empty[AuthorRef])
+    }
+  }
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
   sealed trait AggregateDefinition extends TypeDefinition {
     def typeEx: TypeExpression
@@ -647,7 +694,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends LeafDefinition
       with AggregateDefinition
-      with AlwaysEmpty
       with TypeDefinition
       with SagaDefinition
       with StateDefinition
@@ -692,7 +738,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends LeafDefinition
       with AggregateDefinition
-      with AlwaysEmpty
       with TypeDefinition
       with SagaDefinition
       with StateDefinition
@@ -903,12 +948,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
   case class Currency(loc: At, country: String) extends PredefinedType {
     @inline def kind: String = PredefType.Currency
-  }
-
-  /** A type expression that is unknown at compile type but will be resolved before validation time.
-    */
-  case class UnknownType(loc: At) extends PredefinedType {
-    @inline def kind: String = PredefType.Unknown
   }
 
   /** The simplest type expression: Abstract An abstract type expression is one that is not defined explicitly. It is
@@ -1192,7 +1231,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     * @tparam T
     *   The sealed base trait of the permitted options for this definition
     */
-  sealed trait WithOptions[T <: OptionValue] extends Definition {
+  sealed trait WithOptions[T <: OptionValue] extends RiddlValue {
     def options: Seq[T]
 
     def hasOption[OPT <: T: ClassTag]: Boolean = options
@@ -1224,12 +1263,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     loc: At,
     override val args: Seq[LiteralString]
   ) extends AdaptorOption("technology")
-
-  //////////////////////////////////////////////////////////////////// HANDLER
-
-  sealed abstract class HandlerOption(val name: String) extends OptionValue
-
-  case class PartialHandlerOption(loc: At) extends HandlerOption("partial")
 
   //////////////////////////////////////////////////////////////////// PROJECTOR
 
@@ -1472,50 +1505,10 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   }
 
   /** Added to definitions that support a list of term definitions */
-  sealed trait WithTerms {
+  sealed trait WithTerms extends RiddlValue {
     def terms: Seq[Term]
 
     def hasTerms: Boolean = terms.nonEmpty
-  }
-
-  /** A value to record an inclusion of a file while parsing.
-    *
-    * @param loc
-    *   The location of the include statement in the source
-    * @param contents
-    *   The Vital Definitions read from the file
-    * @param source
-    *   A string providing the source (path or URL) of the included source
-    */
-  case class Include[T <: Definition](
-    loc: At = At(RiddlParserInput.empty),
-    contents: Seq[T] = Seq.empty[T],
-    source: Option[String] = None,
-    comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends Definition
-      with VitalDefinitionDefinition
-      with RootDefinition {
-
-    def id: Identifier = Identifier.empty
-
-    def brief: Option[LiteralString] = Option.empty[LiteralString]
-
-    def description: Option[Description] = None
-
-    override def isRootContainer: Boolean = true
-
-    def format: String = ""
-
-    final val kind: String = "Include"
-  }
-
-  /** Added to definitions that support includes */
-  sealed trait WithIncludes[T <: Definition] extends Container[T] {
-    def includes: Seq[Include[T]]
-
-    def contents: Seq[T] = {
-      includes.flatMap(_.contents)
-    }
   }
 
   /** A value that holds the author's information
@@ -1562,7 +1555,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     def kind: String = ""
   }
 
-  sealed trait WithAuthors extends Definition {
+  sealed trait WithAuthors extends RiddlValue {
     def authors: Seq[AuthorRef]
 
     override def hasAuthors: Boolean = authors.nonEmpty
@@ -2744,7 +2737,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   }
 
   /** A sealed trait for Inlets and Outlets */
-  sealed trait Portlet extends LeafDefinition with ProcessorDefinition with AlwaysEmpty
+  sealed trait Portlet extends LeafDefinition with ProcessorDefinition
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -2768,8 +2761,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Portlet
       with LeafDefinition
-      with ProcessorDefinition
-      with AlwaysEmpty {
+      with ProcessorDefinition {
     def format: String = s"inlet ${id.format} is ${type_.format}"
     final val kind: String = "Inlet"
   }
@@ -2796,8 +2788,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Portlet
       with LeafDefinition
-      with ProcessorDefinition
-      with AlwaysEmpty {
+      with ProcessorDefinition {
     def format: String = s"outlet ${id.format} is ${type_.format}"
     final val kind: String = "Outlet"
   }
@@ -2815,8 +2806,6 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   ) extends LeafDefinition
       with ContextDefinition
       with WithOptions[ConnectorOption] {
-    final override def isEmpty: Boolean = super.isEmpty && flows.isEmpty &&
-      from.isEmpty && to.isEmpty
 
     final val kind: String = "Connector"
     override def format: String = s"connector"
@@ -2900,8 +2889,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     constants: Seq[Constant] = Seq.empty[Constant],
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     types: Seq[Type] = Seq.empty[Type],
-    includes: Seq[Include[StreamletDefinition]] = Seq
-      .empty[Include[StreamletDefinition]],
+    includes: Seq[Include[StreamletDefinition]] = Seq.empty[Include[StreamletDefinition]],
     authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
     options: Seq[StreamletOption] = Seq.empty[StreamletOption],
     terms: Seq[Term] = Seq.empty[Term],
@@ -3681,7 +3669,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     override def kind: String = "Application"
     override def isAppRelated: Boolean = true
     override lazy val contents: Seq[ApplicationDefinition] = {
-      super.contents ++ types ++ groups ++ terms ++ includes
+      super.contents ++ types ++ groups ++ terms // ++ includes
     }
   }
 

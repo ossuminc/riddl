@@ -238,7 +238,7 @@ class ASTTest extends AnyWordSpec with Matchers {
       incl.brief mustBe None
       incl.description mustBe None
       incl.loc mustBe At.empty
-      incl.format mustBe ""
+      incl.format mustBe "include none"
     }
   }
 
