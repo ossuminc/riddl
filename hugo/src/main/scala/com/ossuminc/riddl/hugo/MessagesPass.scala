@@ -14,23 +14,20 @@ import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInfo
 import scala.collection.mutable
 
 /** Information about message types collected by the MessagesPass
-  * @param message
+ *
+ * @param message
   *   The type of the message - shows the fields of the message, with their brief descriptions if any
-  * @param definedIn
-  *   shows the subdomain, context, entity, or other definition in which the message is defined, along with that
-  *   definition's brief description
+ * @param link
+ *    The documentation link to the message type
   * @param users
   *   shows the places from which this message is used with full path identification, and each path component is a link
   *   to the documentation for that definition.
   * @param description
-  *   Full description of the message as defined in its "described by" type which could be fairly involved with
-  *   diagrams, etc.
+ *    Brief description of the message
   */
 case class MessageInfo(
-  kind: AggregateUseCase,
-  message: Type,
-  definedIn: Seq[String],
-  breadcrumbs: String,
+  message: String,
+  link: String,
   users: String,
   description: String
 )
@@ -62,41 +59,37 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
   def name: String = MessagesPass.name
 
-  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Option[MessageInfo] = {
+  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Seq[MessageInfo] = {
     definition match {
       case t: Type =>
         val result = t.typ match {
           case aucte: AggregateUseCaseTypeExpression =>
-            val pars = makeParents(parents.toSeq)
-            val definedIn = makeStringParents(parents.toSeq)
-            val breadcrumbs = makeBreadCrumbs(pars)
-            val location = pars.map(_.id.value).mkString(".")
+            val pars = makeStringParents(parents.toSeq)
+            val link = makeDocLink(t, pars)
             val users = usages.getUsers(t)
             val userLinks = users
-              .map { defn =>
-                val link = makeDocLink(defn, pars.map(_.id.value))
-                s"[${defn.id.value}]($link)"
+              .map { definition =>
+                s"[${definition.id.value}](${makeDocLink(definition, pars)})"
               }
               .mkString(", ")
-            val lines: Option[Seq[String]] = t.description.map(_.lines.map(_.s))
-            val description = lines.getOrElse(Seq("No description provided.")).mkString(newline)
-            val mi = MessageInfo(aucte.usecase, t, definedIn, breadcrumbs, userLinks, description)
-            Some(mi)
+            val description: String = t.brief.map(_.s).getOrElse("No description provided.")
+            val mi = MessageInfo(t.identify, link, userLinks, description)
+            Seq(mi)
           case _ =>
-            Option.empty[MessageInfo]
+            Seq.empty[MessageInfo]
         }
         result
       case _ =>
-        None
+        Seq.empty[MessageInfo]
     }
   }
 
   def postProcess(root: com.ossuminc.riddl.language.AST.RootContainer): Unit = ()
 
   override def result: MessageOutput = {
-    MessageOutput(messages.toMessages, collectedValues)
+    val sortedList = collectedValues.sortBy(_.message)
+    MessageOutput(messages.toMessages, sortedList)
   }
-
 }
 
 object MessagesPass extends PassInfo {

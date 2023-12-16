@@ -69,6 +69,10 @@ case class ReferenceMap(messages: Messages.Accumulator) {
         messages.addError(pid.loc, s"Path Id '${pid.format} found ${x.identify} but a ${className} was expected")
         None
   }
+
+  def definitionOf[T <: Definition: ClassTag](ref: Reference[T], parent: Definition): Option[T] = {
+    definitionOf[T](ref.pathId, parent)
+  }
 }
 
 object ReferenceMap {

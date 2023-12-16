@@ -23,9 +23,7 @@ trait TranslatingOptions {
 
 
 /** Base class of all Translators
- *
- * @tparam OPT
-  *   The options class used by the translator
+  *
   */
 abstract class TranslationPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 

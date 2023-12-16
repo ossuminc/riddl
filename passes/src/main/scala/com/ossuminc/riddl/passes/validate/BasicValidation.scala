@@ -317,7 +317,6 @@ trait BasicValidation {
   }
 
   def checkCrossContextReference(ref: PathIdentifier, definition: Definition, container: Definition): Unit = {
-    println(s"Checking CrossContext References for ${ref.format} in ${definition.identify} with ${container.identify}")
     symbols.contextOf(definition) match {
       case Some(definitionContext) =>
         symbols.contextOf(container) match {

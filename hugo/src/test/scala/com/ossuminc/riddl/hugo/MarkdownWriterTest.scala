@@ -37,7 +37,7 @@ class MarkdownWriterTest extends HugoTestBase {
           root.contents mustNot be(empty)
           val domain = root.domains.head
           val mkd = makeMDW(output, PassesResult.empty)
-          mkd.emitDomain(domain, paths.dropRight(1))
+          mkd.emitDomain(domain, paths.dropRight(1), None)
           val emitted = mkd.toString
           val expected =
             """---
@@ -117,8 +117,8 @@ class MarkdownWriterTest extends HugoTestBase {
           |---
           || Term | Type | Brief Description |
           || :---: | :---: | :---              |
-          || [`one`](A/B/one)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/one "Source Link") | [<small>term</small>](https://riddl.tech/concepts/term/) | The first term |
-          || [`two`](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "Source Link") | [<small>term</small>](https://riddl.tech/concepts/term/) | The second term |
+          || [`one`](A/B/one)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/one "Source Link") | <small>[term](https://riddl.tech/concepts/term/)</small> | The first term |
+          || [`two`](A/B/C/two)[{{< icon "gdoc_github" >}}](https://example.com/blob/main/src/main/riddl/two "Source Link") | <small>[term](https://riddl.tech/concepts/term/)</small> | The second term |
           |""".stripMargin
       output mustBe expected
     }

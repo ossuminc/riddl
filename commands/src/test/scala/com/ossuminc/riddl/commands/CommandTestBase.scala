@@ -15,7 +15,7 @@ trait CommandTestBase extends AnyWordSpec with Matchers{
   val quiet = "--quiet"
   val suppressMissing = "--suppress-missing-warnings"
   val suppressStyle = "--suppress-style-warnings"
-  val common = Seq(quiet, suppressMissing, suppressStyle)
+  val common: Seq[String] = Seq(quiet, suppressMissing, suppressStyle)
 
   def runCommand(
     args: Seq[String] = Seq.empty[String],

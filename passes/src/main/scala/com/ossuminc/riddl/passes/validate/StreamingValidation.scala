@@ -22,6 +22,7 @@ trait StreamingValidation extends TypeValidation {
   val outlets: Seq[Outlet] = resolution.kindMap.definitionsOfKind[Outlet]
   val streamlets: Seq[Streamlet] = resolution.kindMap.definitionsOfKind[Streamlet]
   val connectors: Seq[Connector] = resolution.kindMap.definitionsOfKind[Connector]
+  val processors: Seq[Processor[?,?]] = resolution.kindMap.definitionsOfKind[Processor[?,?]]
 
   private def checkStreamingUsage(loc: At): Unit = {
     if inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty then {

@@ -28,13 +28,15 @@ object RiddlOptions {
       RiddlOption.gateway,
       RiddlOption.service,
       RiddlOption.package_,
-      RiddlOption.technology
+      RiddlOption.technology,
+      RiddlOption.color
     ).!
   )
 
   def aggregate[u: P]: P[Unit] = keyword(RiddlOption.aggregate)
   def async[u: P]: P[Unit] = keyword(RiddlOption.async)
   def available[u: P]: P[Unit] = keyword(RiddlOption.available)
+  def color[u:P]: P[Unit] = keyword(RiddlOption.color)
   def concept[u: P]: P[Unit] = keyword(RiddlOption.concept)
   def consistent[u: P]: P[Unit] = keyword(RiddlOption.consistent)
   def device[u: P]: P[Unit] = keyword(RiddlOption.device)
@@ -63,6 +65,7 @@ object RiddlOption {
   final val aggregate = "aggregate"
   final val async = "async"
   final val available = "available"
+  final val color = "color"
   final val concept = "concept"
   final val consistent = "consistent"
   final val device = "device"

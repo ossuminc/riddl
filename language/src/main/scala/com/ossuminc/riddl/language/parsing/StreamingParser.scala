@@ -122,7 +122,7 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int = 0
   ): P[Streamlet] = {
     P(
-      location ~ keyword ~/ identifier ~ authorRefs ~ is ~ open ~
+      location ~ keyword ~ identifier ~ authorRefs ~ is ~ open ~
         streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
         close ~ briefly ~ description ~ comments
     )./.map { case (loc, id, authors, options, definitions, brief, description, comments) =>
@@ -159,7 +159,7 @@ private[parsing] trait StreamingParser {
     }
   }
 
-  private val MaxStreamlets = 1000
+  private val MaxStreamlets = 100
 
   def source[u: P]: P[Streamlet] = {
     streamletTemplate(Keyword.source, minOutlets = 1, maxOutlets = 1)

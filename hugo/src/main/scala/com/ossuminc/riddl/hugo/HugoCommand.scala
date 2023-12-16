@@ -15,6 +15,7 @@ import com.ossuminc.riddl.passes.Pass.{PassesCreator, standardPasses}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.stats.StatsPass
+import com.ossuminc.riddl.diagrams.DiagramsPass
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -79,10 +80,14 @@ object HugoCommand {
       else Seq.empty
 
     val toDo: PassesCreator =
-      if options.withTODOList then Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options)})
+      if options.withTODOList then
+        Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options) })
       else Seq.empty
 
-    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ Seq(
+    val diagrams: PassesCreator =
+      Seq({ (input: PassInput, outputs: PassesOutput) => DiagramsPass(input, outputs) })
+
+    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ diagrams ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         val result = PassesResult(input, outputs, Messages.empty)
         HugoPass(input, outputs, options)

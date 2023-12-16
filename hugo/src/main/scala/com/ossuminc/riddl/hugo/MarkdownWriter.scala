@@ -5,19 +5,23 @@
  */
 
 package com.ossuminc.riddl.hugo
-import com.ossuminc.riddl.diagrams.mermaid.{EntityRelationshipDiagram, SequenceDiagram, SequenceDiagramSupport}
+
+import com.ossuminc.riddl.diagrams.mermaid
+import com.ossuminc.riddl.diagrams.mermaid.{EntityRelationshipDiagram, UseCaseDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.stats.{KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.utils.TextFileWriter
 
-import java.nio.file.Path
-import scala.annotation.unused
 import com.ossuminc.riddl.language.parsing.Keywords
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
+
+import java.nio.file.Path
+import scala.annotation.unused
 import com.sun.org.apache.xerces.internal.util.SymbolTable
+
 
 case class MarkdownWriter(
   filePath: Path,
@@ -173,6 +177,8 @@ case class MarkdownWriter(
 
     for item <- items do {
       item match {
+        case body: String    => sb.append(s"* $body\n")
+        case rnod: RiddlNode => sb.append(s"* ${rnod.format}")
         case (
               prefix: String,
               description: String,
@@ -203,8 +209,6 @@ case class MarkdownWriter(
         case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
           docBlock.foreach(s => sb.append(s"    * $s\n"))
-        case body: String    => sb.append(s"* $body\n")
-        case rnod: RiddlNode => sb.append(s"* ${rnod.format}")
         case x: Any          => sb.append(s"* ${x.toString}\n")
       }
     }
@@ -657,7 +661,7 @@ case class MarkdownWriter(
     this
   }
 
-  def emitDomain(domain: Domain, parents: Seq[String]): this.type = {
+  def emitDomain(domain: Domain, parents: Seq[String], summary: Option[String]): this.type = {
     containerHead(domain, "Domain")
     emitDefDoc(domain, parents)
     toc("Subdomains", mkTocSeq(domain.domains))
@@ -665,6 +669,11 @@ case class MarkdownWriter(
     toc("Applications", mkTocSeq(domain.applications))
     toc("Epics", mkTocSeq(domain.epics))
     emitTypesToc(domain)
+    summary match {
+      case Some(link) =>
+        h3(s"[Message Summary]($link)")
+      case None =>
+    }
     emitUsage(domain)
     emitTerms(domain.terms)
     emitAuthorInfo(domain.authorDefs)
@@ -872,12 +881,12 @@ case class MarkdownWriter(
     emitDefDoc(u, parents)
   }
 
-  def emitUseCase(uc: UseCase, parents: Seq[Definition], sds: SequenceDiagramSupport): this.type = {
+  def emitUseCase(uc: UseCase, parents: Seq[Definition], sds: UseCaseDiagramSupport): this.type = {
     leafHead(uc, weight = 20)
     val parList = passUtilities.makeStringParents(parents)
     emitDefDoc(uc, parList)
     h2("Sequence Diagram")
-    val sd = SequenceDiagram(sds, uc)
+    val sd = UseCaseDiagram(sds, uc)
     val lines = sd.generate
     emitMermaidDiagram(lines)
   }
@@ -984,7 +993,7 @@ case class MarkdownWriter(
     val source_link = makeIconLink("gdoc_github", "Source Link", entry.sourceLink)
     val term = s"[${mono(entry.term)}](${entry.link})$source_link"
     val concept_link =
-      s"[<small>${entry.kind.toLowerCase}</small>](https://riddl.tech/concepts/${entry.kind.toLowerCase}/)"
+      s"<small>[${entry.kind.toLowerCase}](https://riddl.tech/concepts/${entry.kind.toLowerCase}/)</small>"
     emitTableRow(term, concept_link, entry.brief)
   }
 
@@ -1000,16 +1009,23 @@ case class MarkdownWriter(
     this
   }
 
-  def emitToDoList(weight: Int, map: Map[String, Seq[ToDoItem]]): Unit = {
+  def emitToDoList(weight: Int, items:  Seq[ToDoItem]): Unit = {
     fileHead(
       "To Do List",
       weight,
       Option("A list of definitions needing more work")
     )
     h2("Definitions With Missing Content")
-    for (key, items) <- map do {
-      h3(key)
-      list(items.toSeq)
+    for { (author, info) <- items.groupBy(_.author) } do {
+      h3(author)
+      emitTableHead(
+        Seq(
+          "Item Name" -> 'C',
+          "Path To Item" -> 'C'
+        )
+      )
+      for { item <- info.map { item => item.item -> s"[${item.path}](${item.link})" } } do
+        emitTableRow(item._1, item._2)
     }
   }
 
@@ -1035,6 +1051,7 @@ case class MarkdownWriter(
     )
     val total_stats: KindStats = stats.categories.getOrElse("All", KindStats())
     stats.categories.foreach { case (key, s) =>
+      val percentOfAll = s.percent_of_all(total_stats.count)
       emitTableRow(
         key,
         s.count.toString,
@@ -1053,13 +1070,11 @@ case class MarkdownWriter(
     fileHead(
       s"${domain.identify} Message Summary",
       containerWeight + 5,
-      Some(s"Message Summaryfor ${domain.identify}")
+      Some(s"Message Summary for ${domain.identify}")
     )
     emitTableHead(
       Seq(
-        "Kind" -> 'L',
         "Name" -> 'C',
-        "Breadcrumb" -> 'L',
         "Users" -> 'C',
         "Description" -> 'L'
       )
@@ -1069,9 +1084,7 @@ case class MarkdownWriter(
       message <- messages
     } do {
       emitTableRow(
-        message.kind.kind,
-        message.message.id.value,
-        message.breadcrumbs,
+        message.message,
         message.users,
         message.description
       )

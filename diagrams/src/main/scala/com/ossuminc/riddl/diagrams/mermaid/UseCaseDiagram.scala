@@ -12,25 +12,14 @@ import com.ossuminc.riddl.utils.FileBuilder
 
 import scala.reflect.ClassTag
 
-/** A trait to be implemented by the user of SequenceDiagram that provides information that can only be provided from
-  * outside SequenceDiagram itself. Note that the PassesResult from running the standard passes is required.
-  */
-trait SequenceDiagramSupport {
-  def passesResult: PassesResult
-  def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition): Option[T] = {
-    passesResult.refMap.definitionOf[T](pathId, parent)
-  }
-  def makeDocLink(definition: Definition): String
-}
-
-/** A class to generate the sequence diagrams for an Epic
-  * @param sds
-  *   The SequenceDiagramSupport implementation that provides information for the SequenceDiagram
+/** A class to generate the sequence diagrams for an Epic's Use Case
+  * @param ucds
+  *   The UseCaseDiagramSupport implementation that provides information for the UseCaseDiagram
   * @param useCase
-  *   The useCase from which to convert into sequence diagram
+  * The UseCase from the AST to which this diagram applies
   */
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extends FileBuilder {
+case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends FileBuilder {
 
   private final val indent_per_level = 4
 
@@ -74,7 +63,7 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       .toMap
   }
 
-  def ndnt(width: Int = indent_per_level): String = {
+  private def ndnt(width: Int = indent_per_level): String = {
     " ".repeat(width)
   }
 
@@ -83,8 +72,8 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       val name = part.id.value
       part match
         case u: User       => sb.append(s"${ndnt()}actor $name as ${u.is_a.s}")
-        case i: Input      => sb.append(s"${ndnt()}participant $name as ${i.nounAlias} ${i.id.value}")
-        case o: Output     => sb.append(s"${ndnt()}participant $name as ${o.nounAlias} ${o.id.value}")
+        case i: Input => sb.append(s"${ndnt()}participant $name as ${i.nounAlias} ${i.id.value}")
+        case o: Output => sb.append(s"${ndnt()}participant $name as ${o.nounAlias} ${o.id.value}")
         case g: Group      => sb.append(s"${ndnt()}participant $name as ${g.alias} ${g.id.value}")
         case d: Definition => sb.append(s"${ndnt()}participant $name as ${d.identify}")
       nl
@@ -94,8 +83,8 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
       val link = sds.makeDocLink(part)
       part match
         case _: User       => sb.append(s"${ndnt()}link $name: User @ $link")
-        case i: Input      => sb.append(s"${ndnt()}link $name: ${i.nounAlias} @ $link")
-        case o: Output     => sb.append(s"${ndnt()}link $name: ${o.nounAlias} @ $link")
+        case i: Input => sb.append(s"${ndnt()}link $name: ${i.nounAlias} @ $link")
+        case o: Output => sb.append(s"${ndnt()}link $name: ${o.nounAlias} @ $link")
         case g: Group      => sb.append(s"${ndnt()}link $name: ${g.alias} @ $link")
         case d: Definition => sb.append(s"${ndnt()}link $name: ${d.kind} @ $link")
       nl
@@ -112,30 +101,25 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
     }
   }
 
-  private def twoReferenceInteraction(gi: TwoReferenceInteraction, indent: Int): Unit = {
-    val from = actors(gi.from.pathId.format).id.value
-    val to = actors(gi.to.pathId.format).id.value
-    sb.append(s"${ndnt(indent)}$from->>$to: ${gi.relationship.s}")
-    nl
-  }
-
-  private def sendMessageInteraction(smi: SendMessageInteraction, indent: Int): Unit = {
-    val from = actors(smi.from.pathId.format).id.value
-    val to = actors(smi.to.pathId.format).id.value
-    sb.append(s"${ndnt(indent)}$from->>$to: send ${smi.message.format}")
-  }
-
-  private def focusOnUrlInteraction(fou: DirectUserToURLInteraction, indent: Int): Unit = {
-    val from = actors(fou.from.pathId.format).id.value
-    sb.append(s"${ndnt(indent)}$from->>Internet: ${fou.relationship.format}")
-  }
-
   private def genericInteraction(gi: GenericInteraction, indent: Int): Unit = {
     gi match {
-      case twi: TwoReferenceInteraction => twoReferenceInteraction(twi, indent)
-      case vi: VagueInteraction         => vagueInteraction(vi, indent)
-      case smi: SendMessageInteraction  => sendMessageInteraction(smi, indent)
-      case fou: DirectUserToURLInteraction   => focusOnUrlInteraction(fou, indent)
+      case tri: TwoReferenceInteraction =>
+        val from = actors(tri.from.pathId.format).id.value
+        val to = actors(tri.to.pathId.format).id.value
+        sb.append(s"${ndnt(indent)}$from->>$to: ${tri.relationship.s}")
+        nl
+      case vi: VagueInteraction =>
+        val from = vi.from.s
+        val to = vi.to.s
+        sb.append(s"${ndnt(indent)}$from->>$to: ${vi.relationship.s}")
+      case smi: SendMessageInteraction =>
+        val from = actors(smi.from.pathId.format).id.value
+        val to = actors(smi.to.pathId.format).id.value
+        sb.append(s"${ndnt(indent)}$from->>$to: send ${smi.message.format} to")
+      case di: DirectUserToURLInteraction =>
+        val from = actors(di.from.pathId.format).id.value
+        val to = "Internet"
+        sb.append(s"${ndnt(indent)}$from->>$to: direct to ${di.url.toExternalForm}")
     }
   }
 
@@ -147,15 +131,6 @@ case class SequenceDiagram(sds: SequenceDiagramSupport, useCase: UseCase) extend
     sb.append(s"${ndnt(indent)}par ${pi.briefValue}")
     generateInteractions(pi.contents, indent + indent_per_level)
     sb.append(s"${ndnt(indent)}end")
-  }
-
-  private def vagueInteraction(vi: VagueInteraction, indent: Int): Unit = {
-    actors.headOption match {
-      case Some((name: String, _: Definition)) =>
-        sb.append(s"${ndnt(indent)}Note right of $name: ${vi.relationship}")
-      case None =>
-        sb.append(s"${ndnt(indent)}Note: Error:No first actor to base vagueInteraction upon")
-    }
   }
 
   private def optionalInteractions(oi: OptionalInteractions, indent: Int): Unit = {

@@ -17,4 +17,5 @@ case class ValidationOutput(
   outlets: Seq[Outlet] = Seq.empty[Outlet],
   connectors: Seq[Connector] = Seq.empty[Connector],
   streamlets: Seq[Streamlet] = Seq.empty[Streamlet],
+  processors: Seq[Processor[?, ?]] = Seq.empty[Processor[?, ?]]
 ) extends PassOutput

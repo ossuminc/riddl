@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
+import com.ossuminc.riddl.language.parsing.RiddlOption
 import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -46,7 +47,7 @@ case class ValidationPass(
     *   an instance of the output type
     */
   override def result: ValidationOutput = {
-    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets)
+    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets, resolution.kindMap.definitionsOfKind[Processor[?,?]])
   }
 
   def postProcess(root: RootContainer): Unit = {
@@ -594,6 +595,17 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, c)
     checkOptions[ContextOption](c.options, c.loc)
+    c.options.find(_.name == RiddlOption.color) match
+      case Some(option) =>
+        check(option.args.size == 1, "The 'color' option must have a single value", Messages.Error, option.loc)
+        option.args.headOption match
+          case Some(value) =>
+            val regex = "^([a-z]+)|(#\\p{XDigit}{6})$".r
+            if !regex.matches(value.s) then
+              messages.addError(value.loc, "The value of the color option must be a valid HTML color")
+          case None =>
+            messages.addError(option.loc, "The color option requires a single value but none provided")
+      case None =>
     checkDescription(c)
   }
 

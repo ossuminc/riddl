@@ -1,3 +1,9 @@
+/*
+ * Copyright 2023 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.hugo
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
@@ -31,20 +37,22 @@ case class GlossaryPass(
   protected def collect(
     definition: Definition,
     parents: mutable.Stack[Definition]
-  ): Option[GlossaryEntry] = {
+  ): Seq[GlossaryEntry] = {
     definition match {
       case _: OnMessageClause | _: OnOtherClause | _: OnInitClause | _: OnTerminationClause | _: RootContainer |
-          _: Include[Definition] @unchecked =>
+          _: Interaction | _: Include[Definition] @unchecked =>
         // None of these kinds of definitions contribute to the glossary
-        None
+        Seq.empty[GlossaryEntry]
+      case ad: Definition if ad.isImplicit => Seq.empty[GlossaryEntry]
+      // Implicit definitions don't have a name so there's no word to define in the glossary
       case d: Definition =>
         // everything else does
         val stack = parents.toSeq
-        Some(makeGlossaryEntry(definition, stack))
+        Seq(makeGlossaryEntry(definition, stack))
     }
   }
 
-  def makeGlossaryEntry(
+  private def makeGlossaryEntry(
     d: Definition,
     stack: Seq[Definition]
   ): GlossaryEntry = {

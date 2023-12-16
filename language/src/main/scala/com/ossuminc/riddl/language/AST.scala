@@ -396,9 +396,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
-  // We need "Expression" sealed trait from Expression.scala but it
-  // depends on TypeExpression.scala so we make Expression derive from
-  // this forward declaration so we can use it here.
+  /** Any definition that is part of a Type's Definition */
   sealed trait TypeDefinition extends Definition
 
   sealed trait AggregateDefinition extends TypeDefinition {
@@ -1381,6 +1379,8 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   case class GatewayOption(loc: At) extends ContextOption("gateway")
 
   case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
+
+  case class ContextColorOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("color")
 
   //////////////////////////////////////////////////////////////////// PROCESSOR
 
@@ -2742,7 +2742,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
   }
 
   /** A sealed trait for Inlets and Outlets */
-  sealed trait Portlet extends Definition
+  sealed trait Portlet extends LeafDefinition with ProcessorDefinition with AlwaysEmpty
 
   /** A streamlet that supports input of data of a particular type.
     *

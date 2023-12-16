@@ -76,11 +76,13 @@ class TopLevelParserTest extends ParsingTest  {
         RootContainer(List(), List(), List(), List(StringParserInput("", "string")))
       TopLevelParser.parse("") match {
         case Right(expected) =>
-          fail("Should have failed excpecting an author or domain")
+          fail("Should have failed expecting an author or domain")
         case Left(messages) =>
           messages.length mustBe(1)
           val msg = messages.head
-          msg.message must include("Expected one of (\"author\" | \"domain\"")
+          msg.message must include("Expected one of")
+          msg.message must include("\"author\"")
+          msg.message must include("\"domain\"")
       }
     }
 

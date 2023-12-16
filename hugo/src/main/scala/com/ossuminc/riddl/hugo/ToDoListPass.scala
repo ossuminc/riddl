@@ -1,3 +1,8 @@
+/*
+ * Copyright 2023 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.language.{AST, Messages}
@@ -15,7 +20,6 @@ case class ToDoItem(
 
 case class ToDoListOutput(
   messages: Messages.Messages,
-  map: Map[String, Seq[ToDoItem]],
   collected: Seq[ToDoItem] = Seq.empty
 ) extends CollectingPassOutput[ToDoItem]
 
@@ -23,23 +27,33 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
     extends CollectingPass[ToDoItem](input, outputs)
     with PassUtilities {
 
-  protected def collect(definition: Definition, parents: mutable.Stack[Definition]): Option[ToDoItem] = {
-    val pars = parents.toSeq
-    val item = definition.identify
-    val authors = AST.findAuthors(definition, pars)
-    val author = mkAuthor(authors, pars)
-    val prnts = makeStringParents(pars)
-    val path = prnts.mkString(".")
-    val link = makeDocLink(definition, prnts)
-    Some(ToDoItem(item, author, path, link))
+  protected def collect(definition: Definition, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
+    definition match {
+      case _: RootContainer | _: Interaction | _: Include[Definition] @unchecked =>
+        // None of these kinds of definitions contribute to the TODO List because they have a weird name
+        Seq.empty[ToDoItem]
+      case ad: Definition if ad.isImplicit => Seq.empty[ToDoItem]
+      // Implicit definitions don't have a name so there's no word to define in the glossary
+      case d: Definition if d.isEmpty =>
+        val pars = parents.toSeq
+        val item = d.identify
+        val authors = AST.findAuthors(d, pars)
+        val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)
+        val prnts = makeStringParents(pars)
+        val path = (prnts :+ d.id.value).mkString(".")
+        val link = makeDocLink(d, prnts)
+        auths.map(auth => ToDoItem(item, auth, path, link))
+      case _ =>
+        Seq.empty[ToDoItem]
+    }
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-  private def mkAuthor(authors: Seq[AuthorRef], parents: Seq[Definition]): String = {
-    if authors.isEmpty then "Unspecified Author"
+  private def mkAuthor(authors: Seq[AuthorRef], parents: Seq[Definition]): Seq[String] = {
+    if authors.isEmpty then Seq.empty
     else
       parents.headOption match {
-        case None => "Unspecified Author"
+        case None => Seq.empty
         case Some(parent: Definition) =>
           authors
             .map { (ref: AuthorRef) =>
@@ -48,15 +62,13 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
             .filterNot(_.isEmpty)
             .map(_.get)
             .map(x => s"${x.name.s} &lt;${x.email.s}&gt;")
-            .mkString(", ")
       }
   }
 
   override def result: ToDoListOutput = {
-    val map: Map[String, Seq[ToDoItem]] =
-      collectedValues.groupBy(_._2).view.toMap
-    ToDoListOutput(messages.toMessages, map)
+    ToDoListOutput(messages.toMessages, collectedValues)
   }
+
   def name: String = ToDoListPass.name
   def postProcess(root: RootContainer): Unit = ()
 }

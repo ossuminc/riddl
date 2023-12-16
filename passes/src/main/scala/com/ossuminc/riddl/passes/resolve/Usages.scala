@@ -20,7 +20,7 @@ case class Usages (
   def usedBySize: Int = usedBy.size
 
   def isUsed(definition: Definition): Boolean = {
-    uses.keys.find(_ == definition).nonEmpty
+    uses.keys.exists(_ == definition)
   }
 
   def isUsedBy(used: Definition, user: Definition): Boolean = {
@@ -31,7 +31,7 @@ case class Usages (
   }
 
   def uses(user: Definition, used: Definition): Boolean = {
-    this.uses.get(user).map(list => list.contains(used)).getOrElse(false)
+    this.uses.get(user).exists(list => list.contains(used))
   }
 
 

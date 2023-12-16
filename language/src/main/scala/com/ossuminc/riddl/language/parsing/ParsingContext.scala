@@ -120,6 +120,7 @@ trait ParsingContext {
         case s: String                               => s
       }
       .distinct
+      .sorted
       .mkString("(", " | ", ")")
   }
 

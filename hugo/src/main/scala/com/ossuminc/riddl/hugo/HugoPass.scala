@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.TranslatingState
-import com.ossuminc.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, SequenceDiagramSupport}
+import com.ossuminc.riddl.diagrams.{DiagramsPass,DiagramsPassOutput}
+import com.ossuminc.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -44,7 +45,9 @@ case class HugoPass(
   outputs: PassesOutput,
   options: HugoCommand.Options
 ) extends Pass(input, outputs)
- with PassUtilities with TranslatingState[MarkdownWriter] with SequenceDiagramSupport{
+    with PassUtilities
+    with TranslatingState[MarkdownWriter]
+    with UseCaseDiagramSupport {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -63,24 +66,24 @@ case class HugoPass(
   lazy val commonOptions: CommonOptions = input.commonOptions
   lazy val refMap: ReferenceMap = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get.refMap
 
-  lazy val  symbolsOutput: SymbolsOutput = outputs.symbols
-  lazy val  usage: Usages = outputs.usage
-  lazy val passesResult = PassesResult(input,outputs)
+  lazy val symbolsOutput: SymbolsOutput = outputs.symbols
+  lazy val usage: Usages = outputs.usage
+  lazy val diagrams: DiagramsPassOutput =
+    outputs.outputOf[DiagramsPassOutput](DiagramsPass.name).getOrElse(DiagramsPassOutput())
+  lazy val passesResult: PassesResult = PassesResult(input, outputs)
 
   options.inputFile match {
     case Some(inFile) =>
       if Files.exists(inFile) then
         makeDirectoryStructure(options.inputFile)
         options
-      else
-        messages.addError((0,0), "The input-file does not exist")
+      else messages.addError((0, 0), "The input-file does not exist")
     case None =>
-      messages.addWarning((0,0),"The input-file option was not provided")
+      messages.addWarning((0, 0), "The input-file option was not provided")
   }
 
   private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
   writeConfigToml(options, maybeAuthor)
-
 
   def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
@@ -91,7 +94,6 @@ case class HugoPass(
     addFile(mdw)
     mdw
   }
-
 
   override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
@@ -126,12 +128,17 @@ case class HugoPass(
             }
           case h: Handler => mkd.emitHandler(h, parents)
           // These are all handled in emitHandler
-          case f: Function   => mkd.emitFunction(f, parents)
-          case e: Entity     => mkd.emitEntity(e, parents)
-          case c: Context    => mkd.emitContext(c, stack)
-          case d: Domain     =>
-            mkd.emitDomain(d, parents)
-            makeMessageSummary(d)
+          case f: Function => mkd.emitFunction(f, parents)
+          case e: Entity   => mkd.emitEntity(e, parents)
+          case c: Context  => mkd.emitContext(c, stack)
+          case d: Domain =>
+            val summary_link: Option[String] = for {
+              summary <- makeMessageSummary(d)
+              fileName = summary.filePath.getFileName.toString.dropRight(3).toLowerCase
+            } yield {
+              makeDocLink(d) + "/" + fileName
+            }
+            mkd.emitDomain(d, parents, summary_link)
 
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
@@ -139,7 +146,7 @@ case class HugoPass(
           case r: Repository => mkd.emitRepository(r, parents)
           case s: Saga       => mkd.emitSaga(s, parents)
           case e: Epic       => mkd.emitEpic(e, stack)
-          case uc: UseCase   =>
+          case uc: UseCase =>
             mkd.emitUseCase(uc, stack, this)
 
           case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause |
@@ -277,33 +284,36 @@ case class HugoPass(
   }
 
   def makeIndex(root: RootContainer): Unit = {
-    val mdw = addFile(Seq.empty[String], "_index.md")
-    mdw.fileHead("Index", 10, Option("The main index to the content"))
-    makeSystemLandscapeView match {
-      case Some(view) =>
-        mdw.h2("Landscape View")
-        mdw.emitMermaidDiagram(view.split(System.lineSeparator()).toIndexedSeq)
-      case None => // nothing
+    Timer.time("Index Creation") {
+
+      val mdw = addFile(Seq.empty[String], "_index.md")
+      mdw.fileHead("Index", 10, Option("The main index to the content"))
+      makeSystemLandscapeView match {
+        case Some(view) =>
+          mdw.h2("Landscape View")
+          mdw.emitMermaidDiagram(view.split(System.lineSeparator()).toIndexedSeq)
+        case None => // nothing
+      }
+      mdw.h2("Domains")
+      val domains = root.contents
+        .sortBy(_.id.value)
+        .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
+      mdw.list(domains)
+      mdw.h2("Indices")
+      val glossary =
+        if options.withGlossary then { Seq("[Glossary](glossary)") }
+        else { Seq.empty[String] }
+      val todoList = {
+        if options.withTODOList then { Seq("[To Do List](todolist)") }
+        else { Seq.empty[String] }
+      }
+      val statistics = {
+        if options.withStatistics then { Seq("[Statistics](statistics)") }
+        else { Seq.empty[String] }
+      }
+      mdw.list(glossary ++ todoList ++ statistics)
+      mdw.emitIndex("Full", root, Seq.empty[String])
     }
-    mdw.h2("Domains")
-    val domains = root.contents
-      .sortBy(_.id.value)
-      .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
-    mdw.list(domains)
-    mdw.h2("Indices")
-    val glossary =
-      if options.withGlossary then { Seq("[Glossary](glossary)") }
-      else { Seq.empty[String] }
-    val todoList = {
-      if options.withTODOList then { Seq("[To Do List](todolist)") }
-      else { Seq.empty[String] }
-    }
-    val statistics = {
-      if options.withStatistics then { Seq("[Statistics](statistics)") }
-      else { Seq.empty[String] }
-    }
-    mdw.list(glossary ++ todoList ++ statistics)
-    mdw.emitIndex("Full", root, Seq.empty[String])
   }
 
   val glossaryWeight = 970
@@ -313,69 +323,75 @@ case class HugoPass(
 
   private def makeStatistics(): Unit = {
     if options.withStatistics then {
-      val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
-      mdw.emitStatistics(statsWeight)
+      Timer.time("Make Statistics") {
+        val mdw = addFile(Seq.empty[String], fileName = "statistics.md")
+        mdw.emitStatistics(statsWeight)
+      }
     }
   }
 
   private def makeGlossary(): Unit = {
     if options.withGlossary then {
-      val mdw = addFile(Seq.empty[String], "glossary.md")
-      outputs.outputOf[GlossaryOutput](GlossaryPass.name) match {
-        case Some(go) =>
-          mdw.emitGlossary(glossaryWeight, go.entries)
-        case None =>
-          mdw.emitGlossary(glossaryWeight, Seq.empty)
+      Timer.time("Make Glossary") {
+        val mdw = addFile(Seq.empty[String], "glossary.md")
+        outputs.outputOf[GlossaryOutput](GlossaryPass.name) match {
+          case Some(go) =>
+            mdw.emitGlossary(glossaryWeight, go.entries)
+          case None =>
+            mdw.emitGlossary(glossaryWeight, Seq.empty)
+        }
       }
     }
   }
 
-  def makeToDoList(root: RootContainer): Unit = {
+  private def makeToDoList(root: RootContainer): Unit = {
     if options.withTODOList then
-      outputs.outputOf[ToDoListOutput](ToDoListPass.name) match {
-        case Some(tdlo) =>
-          val mdw = addFile(Seq.empty[String], "todolist.md")
-          mdw.emitToDoList(toDoWeight, tdlo.map)
-        case None =>
-        // do nothing
+      Timer.time("Make ToDo List") {
+        outputs.outputOf[ToDoListOutput](ToDoListPass.name) match {
+          case Some(tdlo) =>
+            val mdw = addFile(Seq.empty[String], "todolist.md")
+            mdw.emitToDoList(toDoWeight, tdlo.collected)
+          case None =>
+          // do nothing
+        }
       }
   }
 
-  def makeMessageSummary(forDomain: Domain): Unit = {
+  private def makeMessageSummary(forDomain: Domain): Option[MarkdownWriter] = {
     if options.withMessageSummary then {
-      outputs.outputOf[MessageOutput](MessagesPass.name) match {
-        case Some(mo) =>
-          for {
-            messageInfo <- mo.collected.filter(_.definedIn.contains(forDomain))
-            fname = forDomain.id.value + "-" + messageInfo.message.id.value + ".md"
-            parents = messageInfo.definedIn.dropWhile(_ != forDomain.id.value).dropRight(1).drop(1) if parents.nonEmpty
-          } do {
-            val mdw = addFile(parents, fname)
-            mdw.emitMessageSummary(forDomain, mo.collected)
-          }
-        case None =>
-        // just skip
+      Timer.time("Make Messages Summary") {
+        outputs.outputOf[MessageOutput](MessagesPass.name) match {
+          case Some(mo) =>
+            val fileName = s"${forDomain.id.value}-messages.md"
+            val infos = mo.collected.filter(_.link.contains(forDomain.id.value.toLowerCase))
+            val mdw = {
+              addFile(Seq(forDomain.id.value), fileName)
+            }
+            mdw.emitMessageSummary(forDomain, infos)
+            Some(mdw)
+          case None =>
+            // just skip
+            None
+        }
       }
-    }
+    } else
+      None
   }
 
-
-  def makeSystemLandscapeView: Option[String] = {
+  private def makeSystemLandscapeView: Option[String] = {
     val mdp = new MermaidDiagramsPlugin
     val diagram = mdp.makeRootOverview(root)
     Some(diagram)
   }
-
 
   def close(root: RootContainer): Unit = {
     makeIndex(root)
     makeGlossary()
     makeToDoList(root)
     makeStatistics()
-    val files = writeFiles
-    if commonOptions.verbose || commonOptions.debug then
-      for file <- files do
-        messages.info(s"Wrote file: ${file.getFileName}")
+    Timer.time(s"Writing ${this.files.size} Files") {
+      writeFiles(commonOptions.verbose || commonOptions.debug)
+    }
   }
 
   private def writeConfigToml(

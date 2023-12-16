@@ -32,6 +32,7 @@ private[parsing] trait ContextParser {
       case (loc, RiddlOption.service, _)       => ServiceOption(loc)
       case (loc, RiddlOption.package_, args)   => ContextPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => ContextTechnologyOption(loc, args)
+      case (loc, RiddlOption.color, args)      => ContextColorOption(loc, args)
     }
   }
 
