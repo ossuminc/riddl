@@ -306,7 +306,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     state.withCurrent { file =>
       file
         .openDef(conn)
-        .addSpace()
+      if conn.nonEmpty then
+        file.addSpace()
         .add {
           val flows =
             if conn.flows.nonEmpty then s"flows ${conn.flows.get.format} "
@@ -322,6 +323,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         .nl
         .addSpace()
         .closeDef(conn)
+      end if   
     }
   }
 
