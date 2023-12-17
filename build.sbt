@@ -49,6 +49,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .configure(With.typical)
   .configure(With.coverage(65))
   .settings(
+    scalacOptions += "-explain",
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Seq(Dep.fastparse, Dep.commons_io) ++ Dep.testing
