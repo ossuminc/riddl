@@ -1476,7 +1476,7 @@ object AST { // extends ast.AbstractDefinitions with ast.Definitions with ast.Ri
     */
   case class DomainPackageOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("package")
 
-  case class DomainExternalOption(loc: At) extends DomainOption("external")
+  case class DomainExternalOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("external")
 
   case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")
 
