@@ -26,7 +26,8 @@ private[parsing] trait DomainParser {
     with CommonParser =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
-    options[X, DomainOption](StringIn(RiddlOption.package_, RiddlOption.technology).!) {
+    options[X, DomainOption](RiddlOptions.domainOptions) {
+      case (loc, RiddlOption.external, args)   => DomainExternalOption(loc, args)
       case (loc, RiddlOption.package_, args)   => DomainPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => DomainTechnologyOption(loc, args)
     }
