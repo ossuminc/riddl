@@ -68,7 +68,6 @@ class PrettifyTest extends RiddlFilesTestBase {
       processADirectory("testkit/src/test/input/ranges")
     }
     "check everything.riddl" in {
-      pending
       processAFile("testkit/src/test/input/everything.riddl")
     }
     "check petstore.riddl" in {
