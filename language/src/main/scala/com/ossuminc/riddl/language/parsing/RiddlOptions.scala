@@ -6,6 +6,21 @@ import Keywords.{keyword, keywords}
 
 object RiddlOptions {
 
+  def contextOptions[u: P]: P[String] = keywords(
+    StringIn(
+      RiddlOption.wrapper,
+      RiddlOption.gateway,
+      RiddlOption.service,
+      RiddlOption.package_,
+      RiddlOption.technology,
+      RiddlOption.color
+    ).!
+  )
+
+  def domainOptions[u: P]: P[String] = keywords(
+    StringIn(RiddlOption.external, RiddlOption.package_, RiddlOption.technology).!
+  )
+
   def entityOptions[u: P]: P[String] = keywords(
     StringIn(
       RiddlOption.event_sourced,
@@ -22,24 +37,14 @@ object RiddlOptions {
     ).!
   )
 
-  def contextOptions[u: P]: P[String] = keywords(
-    StringIn(
-      RiddlOption.wrapper,
-      RiddlOption.gateway,
-      RiddlOption.service,
-      RiddlOption.package_,
-      RiddlOption.technology,
-      RiddlOption.color
-    ).!
-  )
-
   def aggregate[u: P]: P[Unit] = keyword(RiddlOption.aggregate)
   def async[u: P]: P[Unit] = keyword(RiddlOption.async)
   def available[u: P]: P[Unit] = keyword(RiddlOption.available)
-  def color[u:P]: P[Unit] = keyword(RiddlOption.color)
+  def color[u: P]: P[Unit] = keyword(RiddlOption.color)
   def concept[u: P]: P[Unit] = keyword(RiddlOption.concept)
   def consistent[u: P]: P[Unit] = keyword(RiddlOption.consistent)
   def device[u: P]: P[Unit] = keyword(RiddlOption.device)
+  def externa[u: P]: P[Unit] = keyword(RiddlOption.external)
   def events_sourced[u: P]: P[Unit] = keyword(RiddlOption.event_sourced)
   def finiteStateMachine[u: P]: P[Unit] = keyword(RiddlOption.finite_state_machine)
   def gateway[u: P]: P[Unit] = keyword(RiddlOption.gateway)
@@ -69,6 +74,7 @@ object RiddlOption {
   final val concept = "concept"
   final val consistent = "consistent"
   final val device = "device"
+  final val external = "external"
   final val event_sourced = "event-sourced"
   final val finite_state_machine = "finite-state-machine"
   final val gateway = "gateway"
