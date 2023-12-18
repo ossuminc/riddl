@@ -33,7 +33,6 @@ private[parsing] trait EntityParser {
       case (loc, RiddlOption.finite_state_machine, _) => EntityIsFiniteStateMachine(loc)
       case (loc, RiddlOption.kind, args)              => EntityKind(loc, args)
       case (loc, RiddlOption.message_queue, _)        => EntityMessageQueue(loc)
-      case (loc, RiddlOption.device, _)               => EntityIsDevice(loc)
       case (loc, RiddlOption.technology, args)        => EntityTechnologyOption(loc, args)
     }
   }
