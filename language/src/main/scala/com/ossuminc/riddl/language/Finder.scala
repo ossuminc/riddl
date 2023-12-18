@@ -8,25 +8,25 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
 
-case class Finder(root: Definition) {
+case class Finder(root: Container[RiddlValue]) {
 
-  def find(select: Definition => Boolean): Seq[Definition] = {
-    Folding.foldEachDefinition(root, root, Seq.empty[Definition]) {
+  def find(select: RiddlValue => Boolean): Seq[RiddlValue] = {
+    Folding.foldEachValue(root, root, Seq.empty[RiddlValue]) {
       case (_, definition, state) =>
         if select(definition) then state :+ definition else state
     }
   }
 
-  type DefWithParents = Seq[(Definition, Seq[Definition])]
+  type ValueWithParents = Seq[(RiddlValue, Seq[RiddlValue])]
 
   def findWithParents(
-    select: Definition => Boolean
-  ): DefWithParents = {
-    Folding.foldLeftWithStack(Seq.empty[(Definition, Seq[Definition])])(root) {
-      case (state, definition, parents) =>
-        if select(definition) then state :+ (definition -> parents) else state
+    select: RiddlValue => Boolean
+  ): ValueWithParents = {
+    Folding.foldLeftWithStack(Seq.empty[(RiddlValue, Seq[RiddlValue])])(root) {
+      case (state, value, parents) =>
+        if select(value) then state :+ (value -> parents) else state
     }
   }
 
-  def findEmpty: DefWithParents = findWithParents(_.isEmpty)
+  def findEmpty: ValueWithParents = findWithParents(_.isEmpty)
 }

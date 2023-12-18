@@ -27,19 +27,19 @@ private[parsing] trait AdaptorParser {
     }
   }
 
-  private def adaptorInclude[u: P]: P[Include[AdaptorDefinition]] = {
-    include[AdaptorDefinition, u](adaptorDefinitions(_))
+  private def adaptorInclude[u: P]: P[Include[AdaptorValue]] = {
+    include[AdaptorValue, u](adaptorValues(_))
   }
 
-  private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
+  private def adaptorValues[u: P]: P[Seq[AdaptorValue]] = {
     P(
       (handler(StatementsSet.AdaptorStatements) | function | inlet |
         outlet | adaptorInclude | term | constant)./.rep(1)
     )
   }
 
-  private def adaptorBody[u: P]: P[Seq[AdaptorDefinition]] = {
-    undefined(Seq.empty[AdaptorDefinition])./ | adaptorDefinitions./
+  private def adaptorBody[u: P]: P[Seq[AdaptorValue]] = {
+    undefined(Seq.empty[AdaptorValue])./ | adaptorValues./
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {
@@ -70,36 +70,12 @@ private[parsing] trait AdaptorParser {
             description,
             comments
           ) =>
-        val groups = defs.groupBy(_.getClass)
-        val includes = mapTo[Include[AdaptorDefinition]](
-          groups.get(
-            classOf[Include[AdaptorDefinition]]
-          )
-        )
-        val terms = mapTo[Term](groups.get(classOf[Term]))
-        val handlers: Seq[Handler] = mapTo[Handler](groups.get(classOf[Handler]))
-        val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-        val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-        val types = mapTo[Type](groups.get(classOf[Outlet]))
-        val functions = mapTo[Function](groups.get(classOf[Function]))
-        val constants = mapTo[Constant](groups.get(classOf[Constant]))
-        val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         Adaptor(
           loc,
           id,
           direction,
           context,
-          handlers,
-          inlets,
-          outlets,
-          types,
-          constants,
-          functions,
-          invariants,
-          includes,
-          authors,
-          options,
-          terms,
+          defs ++ options ++ authors,
           brief,
           description,
           comments

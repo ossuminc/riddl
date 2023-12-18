@@ -64,20 +64,20 @@ private[parsing] trait EntityParser {
     }
   }
 
-  private def entityInclude[X: P]: P[Include[EntityDefinition]] = {
-    include[EntityDefinition, X](entityDefinitions(_))
+  private def entityInclude[X: P]: P[Include[EntityValue]] = {
+    include[EntityValue, X](entityValues(_))
   }
 
-  private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
+  private def entityValues[u: P]: P[Seq[EntityValue]] = {
     P(
       handler(StatementsSet.EntityStatements) | function | invariant |
         typeDef | state | entityInclude | inlet | outlet | term | constant
     )./.rep(1)
   }
 
-  private def entityBody[u: P]: P[Seq[EntityDefinition]] = {
+  private def entityBody[u: P]: P[Seq[EntityValue]] = {
     P(
-      undefined(Seq.empty[EntityDefinition])./ | entityDefinitions./
+      undefined(Seq.empty[EntityValue])./ | entityValues./
     )
   }
 
@@ -86,36 +86,10 @@ private[parsing] trait EntityParser {
       location ~ Keywords.entity ~/ identifier ~ authorRefs ~ is ~ open ~/
         entityOptions ~ entityBody ~ close ~ briefly ~ description ~ comments
     ).map { case (loc, id, authors, options, entityDefs, brief, description, comments) =>
-      val groups = entityDefs.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val constants = mapTo[Constant](groups.get(classOf[Constant]))
-      val states = mapTo[State](groups.get(classOf[State]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val functions = mapTo[Function](groups.get(classOf[Function]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[EntityDefinition]](
-        groups.get(
-          classOf[Include[EntityDefinition]]
-        )
-      )
       Entity(
         loc,
         id,
-        options,
-        states,
-        types,
-        constants,
-        handlers,
-        functions,
-        invariants,
-        inlets,
-        outlets,
-        includes,
-        authors,
-        terms,
+        entityDefs ++ authors ++ options,
         brief,
         description,
         comments

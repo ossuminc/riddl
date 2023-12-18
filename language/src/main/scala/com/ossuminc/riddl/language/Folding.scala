@@ -11,27 +11,27 @@ import scala.collection.mutable
 
 object Folding {
 
-  private type SimpleDispatch[S] = (Container[Definition], Definition, S) => S
+  private type SimpleDispatch[S] = (Container[RiddlValue], RiddlValue, S) => S
 
-  def foldEachDefinition[S](
-    parent: Definition,
-    child: Definition,
+  def foldEachValue[S](
+    parent: Container[RiddlValue],
+    child: RiddlValue,
     state: S
   )(f: SimpleDispatch[S]): S = {
     child match {
-      case definition: LeafDefinition => f(parent, definition, state)
-      case definition: Definition =>
+      case definition: Container[RiddlValue] =>
         val result = f(parent, child, state)
         definition.contents.foldLeft(result) { case (next, child) =>
-          foldEachDefinition[S](definition, child, next)(f)
+          foldEachValue[S](definition, child, next)(f)
         }
+      case definition: RiddlValue => f(parent, definition, state)
     }
   }
 
   final def foldLeftWithStack[S](
     value: S,
-    parents: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
-  )(top: Definition)(f: (S, Definition, Seq[Definition]) => S): S = {
+    parents: mutable.Stack[RiddlValue] = mutable.Stack.empty[RiddlValue]
+  )(top: Container[RiddlValue])(f: (S, RiddlValue, Seq[RiddlValue]) => S): S = {
     val initial = f(value, top, parents.toSeq)
     parents.push(top)
     try {
@@ -39,11 +39,11 @@ object Folding {
         definition match {
           case i: Include[Definition] @unchecked =>
             i.contents.foldLeft(next) {
-              case (n, d: LeafDefinition) => f(n, d, parents.toSeq)
-              case (n, cd: Definition)    => foldLeftWithStack(n, parents)(cd)(f)
+              case (n, cd: Container[RiddlValue])    => foldLeftWithStack(n, parents)(cd)(f)
+              case (n, d: RiddlValue) => f(n, d, parents.toSeq)
             }
-          case d: LeafDefinition => f(next, d, parents.toSeq)
-          case c: Definition     => foldLeftWithStack(next, parents)(c)(f)
+          case c: Container[RiddlValue]     => foldLeftWithStack(next, parents)(c)(f)
+          case d: RiddlValue => f(next, d, parents.toSeq)
         }
       }
     } finally { parents.pop() }

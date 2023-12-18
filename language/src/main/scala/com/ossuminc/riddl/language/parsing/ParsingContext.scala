@@ -65,7 +65,7 @@ trait ParsingContext {
     Domain(At(), Identifier(At(), "NotImplemented"))
   }
 
-  def doInclude[T <: Definition](
+  def doInclude[T <: RiddlValue](
     str: LiteralString
   )(rule: P[?] => P[Seq[T]]): Include[T] = {
     // TODO: implement parallel parsing at include points and use the
@@ -162,7 +162,7 @@ trait ParsingContext {
     }
   }
 
-  def expectMultiple[T <: Definition](
+  def expectMultiple[T <: RiddlValue](
     source: String,
     parser: P[?] => P[Seq[T]],
     withVerboseFailures: Boolean = false

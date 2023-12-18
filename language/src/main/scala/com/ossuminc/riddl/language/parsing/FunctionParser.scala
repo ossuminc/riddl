@@ -22,8 +22,8 @@ private[parsing] trait FunctionParser {
     }
   }
 
-  private def functionInclude[x: P]: P[Include[FunctionDefinition]] = {
-    include[FunctionDefinition, x](functionDefinitions(_))
+  private def functionInclude[x: P]: P[Include[FunctionValue]] = {
+    include[FunctionValue, x](functionDefinitions(_))
   }
 
   def input[u: P]: P[Aggregation] = {
@@ -40,7 +40,7 @@ private[parsing] trait FunctionParser {
     )
   }
 
-  private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
+  private def functionDefinitions[u: P]: P[Seq[FunctionValue]] = {
     P(
       typeDef | function | term | functionInclude
     )./.rep(0)
@@ -50,13 +50,14 @@ private[parsing] trait FunctionParser {
     (
       Option[Aggregation],
       Option[Aggregation],
-      Seq[FunctionDefinition],
+      Seq[FunctionValue],
       Seq[Statement]
     )
   ] = {
-    P(undefined(None).map { _ =>
-      (None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
-    } | (input.? ~ output.? ~ functionDefinitions ~ statementBlock))
+    P(
+      undefined((None, None, Seq.empty[FunctionValue], Seq.empty[Statement])) |
+        (input.? ~ output.? ~ functionDefinitions ~ statementBlock)
+    )
   }
 
   /** Parses function literals, i.e.
@@ -84,27 +85,14 @@ private[parsing] trait FunctionParser {
             description,
             comments
           ) =>
-        val groups = definitions.groupBy(_.getClass)
-        val types = mapTo[Type](groups.get(classOf[Type]))
-        val functions = mapTo[Function](groups.get(classOf[Function]))
-        val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include[FunctionDefinition]](
-          groups.get(
-            classOf[Include[FunctionDefinition]]
-          )
-        )
+        val contents: Seq[FunctionValue] = definitions ++ statements ++ authors ++ options
+        input.map(_.fields).getOrElse(Seq.empty[Field]) ++ output.map(_.fields).getOrElse(Seq.empty[Field])
         Function(
           loc,
           id,
           input,
           output,
-          types,
-          functions,
-          statements,
-          authors,
-          includes,
-          options,
-          terms,
+          contents,
           brief,
           description,
           comments
