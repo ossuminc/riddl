@@ -21,8 +21,10 @@ private[parsing] trait ApplicationParser {
     with CommonParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
-    options[u, ApplicationOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
-      ApplicationTechnologyOption(loc, args)
+    options[u, ApplicationOption](RiddlOptions.applicationOptions) {
+      case (loc, RiddlOption.technology, args) => ApplicationTechnologyOption(loc, args)
+      case (loc, RiddlOption.color, args)      => ApplicationColorOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => ApplicationKindOption(loc, args)
     }
   }
 
@@ -69,7 +71,7 @@ private[parsing] trait ApplicationParser {
 
   private def appOutput[u: P]: P[Output] = {
     P(
-      location ~ outputAliases ~/ identifier ~ presentationAliases ~/ ( literalString | constantRef | typeRef ) ~/
+      location ~ outputAliases ~/ identifier ~ presentationAliases ~/ (literalString | constantRef | typeRef) ~/
         outputDefinitions ~ briefly ~ description ~ comments
     ).map { case (loc, nounAlias, id, verbAlias, putOut, outputs, brief, description, comments) =>
       putOut match {
