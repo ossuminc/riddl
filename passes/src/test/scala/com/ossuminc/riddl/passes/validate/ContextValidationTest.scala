@@ -21,7 +21,7 @@ class ContextValidationTest extends ValidatingTest {
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         msgs.filter(_.kind.isError) mustBe empty
         context.options.size mustBe 5
-        context.options must contain(WrapperOption((2, 11, rpi)))
+        context.options must contain(ContextWrapperOption((2, 11, rpi)))
         context.options must contain(GatewayOption((2, 29, rpi)))
         context.options must contain(ServiceOption((2, 20, rpi)))
         context.options must contain(

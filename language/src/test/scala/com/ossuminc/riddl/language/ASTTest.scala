@@ -176,7 +176,7 @@ class ASTTest extends AnyWordSpec with Matchers {
         val options = Seq(
           EntityIsAggregate(At()),
           EntityTransient(At()),
-          EntityKind(At(), Seq(LiteralString(At(), "concept")))
+          EntityKindOption(At(), Seq(LiteralString(At(), "concept")))
         )
         val states = Seq(
           State(

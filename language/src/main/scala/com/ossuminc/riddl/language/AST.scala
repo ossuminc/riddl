@@ -176,6 +176,17 @@ object AST {
     def hasDescription: Boolean = description.nonEmpty
   }
 
+  /** Base trait for option values for any option of a definition. */
+  sealed trait OptionValue extends RiddlValue {
+    def name: String
+
+    def args: Seq[LiteralString] = Seq.empty[LiteralString]
+
+    override def format: String = name + args
+      .map(_.format)
+      .mkString("(", ", ", ")")
+  }
+
   /** Base trait of any definition that is also a ContainerValue
     *
     * @tparam D
@@ -451,17 +462,6 @@ object AST {
     def authors: Seq[AuthorRef]
 
     override def hasAuthors: Boolean = authors.nonEmpty
-  }
-
-  /** Base trait for option values for any option of a definition. */
-  sealed trait OptionValue extends RiddlValue {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
-    override def format: String = name + args
-      .map(_.format)
-      .mkString("(", ", ", ")")
   }
 
   /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
@@ -1841,12 +1841,15 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** Base class of all options for the Adaptor definition */
-  sealed abstract class AdaptorOption(val name: String) extends OptionValue
+  sealed trait AdaptorOption(final val name: String) extends OptionValue
 
-  case class AdaptorTechnologyOption(
-    loc: At,
-    override val args: Seq[LiteralString]
-  ) extends AdaptorOption("technology")
+  /** A common option that specifies the nature of the technology used to implement the definition */
+  case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
+
+  /** A common option that specifies details about an aspect of */
+  case class AdaptorKindOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("kind")
+
+  case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
 
   sealed trait AdaptorDirection extends RiddlValue
 
@@ -2274,7 +2277,7 @@ object AST {
     * @param name
     *   the name of the option
     */
-  sealed abstract class EntityOption(val name: String) extends EntityValue with OptionValue
+  sealed abstract class EntityOption(val name: String) extends OptionValue
 
   /** An [[EntityOption]] that indicates that this entity should store its state in an event sourced fashion.
     *
@@ -2336,19 +2339,17 @@ object AST {
     */
   case class EntityMessageQueue(loc: At) extends EntityOption("message queue")
 
+  /** An [[EntityOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class EntityColorOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("color")
+
   /** An [[EntityOption]] that specifies the kind of technology used to represent the entity */
   case class EntityTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("technology")
 
   /** An [[EntityOption]] that indicates the general kind of entity being defined. This option takes a value which
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
-    *
-    * @param loc
-    *   The location of the entity kind option
-    * @param args
-    *   The argument to the option
     */
-  case class EntityKind(loc: At, override val args: Seq[LiteralString]) extends EntityOption("kind")
+  case class EntityKindOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("kind")
 
   /** Definition of an Entity
     *
@@ -2419,10 +2420,20 @@ object AST {
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
 
-  sealed abstract class RepositoryOption(val name: String) extends OptionValue
+  sealed abstract class RepositoryOption(final val name: String) extends OptionValue
 
+  /** An [[RepositoryOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class RepositoryColorOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("color")
+
+  /** An [[RepositoryOption]] that specifies the kind of technology used to represent the entity */
   case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends RepositoryOption("technology")
+
+  /** An [[RepositoryOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class RepositoryKindOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("kind")
 
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
     * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
@@ -2493,10 +2504,20 @@ object AST {
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// PROJECTOR
 
-  sealed abstract class ProjectorOption(val name: String) extends OptionValue
+  sealed abstract class ProjectorOption(final val name: String) extends OptionValue
 
+  /** An [[ProjectorOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ProjectorColorOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("color")
+
+  /** An [[ProjectorOption]] that specifies the kind of technology used to represent the entity */
   case class ProjectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends ProjectorOption("technology")
+
+  /** An [[ProjectorOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ProjectorKindOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("kind")
 
   /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view.
     * The concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data
@@ -2588,7 +2609,19 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
 
   /** Base trait for all options a Context can have. */
-  sealed abstract class ContextOption(val name: String) extends OptionValue
+  sealed abstract class ContextOption(final val name: String) extends OptionValue
+
+  /** An [[ContextOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ContextColorOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("color")
+
+  /** An [[ContextOption]] that specifies the kind of technology used to represent the entity */
+  case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
+
+  /** An [[ContextOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ContextKindOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("kind")
 
   /** A [[ContextOption]] that provides the name of the software package the Context is implemented within */
   case class ContextPackageOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("package")
@@ -2599,7 +2632,7 @@ object AST {
     * @param loc
     *   The location of the wrapper option
     */
-  case class WrapperOption(loc: At) extends ContextOption("wrapper")
+  case class ContextWrapperOption(loc: At) extends ContextOption("wrapper")
 
   /** A context's "service" option. This option suggests the bounded context is intended to be a DDD service, similar to
     * a wrapper but without any persistent state and more of a stateless service aspect to its nature
@@ -2616,12 +2649,6 @@ object AST {
     *   The location of the gateway option
     */
   case class GatewayOption(loc: At) extends ContextOption("gateway")
-
-  /** An [[ContextOption]] that defines the kind of technology used to implement the context */
-  case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
-
-  /** A [[ContextOption]] that specifies the color to use for generated diagrams involving this context */
-  case class ContextColorOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("color")
 
   /** A bounded context definition. Bounded contexts provide a definitional boundary on the language used to describe
     * some aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a
@@ -2703,10 +2730,20 @@ object AST {
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// STREAMLET
 
-  sealed abstract class StreamletOption(val name: String) extends OptionValue
+  sealed abstract class StreamletOption(final val name: String) extends OptionValue
 
+  /** An [[StreamletOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class StreamletColorOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("color")
+
+  /** An [[StreamletOption]] that specifies the kind of technology used to represent the entity */
   case class StreamletTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends StreamletOption("technology")
+
+  /** An [[StreamletOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class StreamletKindOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("kind")
 
   /** A sealed trait for Inlets and Outlets */
   sealed trait Portlet extends LeafDefinition with ProcessorDefinition
@@ -2765,12 +2802,23 @@ object AST {
     final val kind: String = "Outlet"
   }
 
-  sealed abstract class ConnectorOption(val name: String) extends OptionValue
+  sealed abstract class ConnectorOption(final val name: String) extends OptionValue
 
-  case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
+  /** An [[ConnectorOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ConnectorColorOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("color")
 
+  /** An [[ConnectorOption]] that specifies the kind of technology used to represent the entity */
   case class ConnectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends ConnectorOption("technology")
+
+  /** An [[ConnectorOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ConnectorKindOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("kind")
+
+  /** An [[ConnectorOption]]  to provide the software package name for the connector */
+  case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
 
   case class Connector(
     loc: At,
@@ -2995,7 +3043,19 @@ object AST {
   }
 
   /** Base trait for all options applicable to a saga. */
-  sealed abstract class SagaOption(val name: String) extends OptionValue
+  sealed abstract class SagaOption(final val name: String) extends OptionValue
+
+  /** An [[SagaOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class SagaColorOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("color")
+
+  /** An [[SagaOption]] that specifies the kind of technology used to represent the entity */
+  case class SagaTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("technology")
+
+  /** An [[SagaOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class SagaKindOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("kind")
 
   /** A [[SagaOption]] that indicates sequential (serial) execution of the saga actions.
     *
@@ -3010,8 +3070,6 @@ object AST {
     *   The location of the parallel option
     */
   case class ParallelOption(loc: At) extends SagaOption("parallel")
-
-  case class SagaTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("technology")
 
   /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define
     * a computing action based on a variety of related commands that must all succeed atomically or have their effects
@@ -3376,9 +3434,19 @@ object AST {
   }
 
   /** The base trait of all option values that pretain to Epics */
-  sealed abstract class EpicOption(val name: String) extends OptionValue
+  sealed abstract class EpicOption(final val name: String) extends OptionValue
 
+  /** An [[EpicOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class EpicColorOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("color")
+
+  /** An [[EpicOption]] that specifies the kind of technology used to represent the entity */
   case class EpicTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("technology")
+
+  /** An [[EpicOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class EpicKindOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("kind")
 
   case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
 
@@ -3601,10 +3669,20 @@ object AST {
     def format: String = s"input ${pathId.format}"
   }
 
-  sealed abstract class ApplicationOption(val name: String) extends OptionValue
+  sealed abstract class ApplicationOption(final val name: String) extends OptionValue
 
-  case class ApplicationTechnologyOption(loc: At, override val args: Seq[LiteralString] = Seq.empty[LiteralString])
+  /** An [[ApplicationOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ApplicationColorOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("color")
+
+  /** An [[ApplicationOption]] that specifies the kind of technology used to represent the entity */
+  case class ApplicationTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends ApplicationOption("technology")
+
+  /** An [[ApplicationOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ApplicationKindOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("kind")
 
   /** An application from which a person, robot, or other active agent (the user) will obtain information, or to which
     * that user will provided information.
@@ -3677,7 +3755,18 @@ object AST {
 
   /** Base trait for all options a Domain can have.
     */
-  sealed abstract class DomainOption(val name: String) extends OptionValue
+  sealed abstract class DomainOption(final val name: String) extends OptionValue
+
+  case class DomainColorOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("color")
+
+  /** An [[DomainOption]] that specifies the kind of technology used to represent the entity */
+  case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")
+
+  /** An [[DomainOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class DomainKindOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("kind")
 
   /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
     * external system and is therefore at the boundary of the context map
@@ -3688,8 +3777,6 @@ object AST {
   case class DomainPackageOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("package")
 
   case class DomainExternalOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("external")
-
-  case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")
 
   /** The definition of a domain. Domains are the highest building block in RIDDL and may be nested inside each other to
     * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies
@@ -3782,3 +3869,15 @@ object AST {
   }
 
 }
+
+//  case class EntityValueOption(loc: At) extends EntityOption("value")
+//  case class ContextPackageOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("package")
+//  case class WrapperOption(loc: At) extends ContextOption("wrapper")
+//  case class ServiceOption(loc: At) extends ContextOption("service")
+//  case class GatewayOption(loc: At) extends ContextOption("gateway")
+//  case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
+//  case class SequentialOption(loc: At) extends SagaOption("sequential")
+//  case class ParallelOption(loc: At) extends SagaOption("parallel")
+//  case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
+//  case class DomainPackageOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("package")
+//  case class DomainExternalOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("external")

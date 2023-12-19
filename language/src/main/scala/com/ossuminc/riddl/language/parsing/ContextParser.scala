@@ -27,12 +27,13 @@ private[parsing] trait ContextParser {
 
   private def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](RiddlOptions.contextOptions) {
-      case (loc, RiddlOption.wrapper, _)       => WrapperOption(loc)
+      case (loc, RiddlOption.wrapper, _)       => ContextWrapperOption(loc)
       case (loc, RiddlOption.gateway, _)       => GatewayOption(loc)
       case (loc, RiddlOption.service, _)       => ServiceOption(loc)
       case (loc, RiddlOption.package_, args)   => ContextPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => ContextTechnologyOption(loc, args)
       case (loc, RiddlOption.color, args)      => ContextColorOption(loc, args)
+      case (loc, RiddlOption.kind, args) => ContextKindOption(loc, args)
     }
   }
 
