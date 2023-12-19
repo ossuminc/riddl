@@ -6,15 +6,15 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{ConstrainedOptionValue, *}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import scala.math.abs
 
-/** Unit Tests For DefinitionValidationState */
-trait DefinitionValidation extends BasicValidation  {
+/** A Trait that defines typical Validation checkers for validating definitions  */
+trait DefinitionValidation extends BasicValidation {
 
   def symbols: SymbolsOutput
 
@@ -25,6 +25,23 @@ trait DefinitionValidation extends BasicValidation  {
       Error,
       loc
     )
+    for {
+      option: OptionValue <- options
+    } {
+      option match {
+        case cov: OptionValue with ConstrainedOptionValue =>
+          val acceptable: Seq[String] = cov.accepted
+          for {
+            value <- cov.args if !acceptable.contains(value)
+          } {
+            messages.addWarning(
+              value.loc,
+              s"Value `$value` for option `${option.name} is not one of the accepted values."
+            )
+          }
+        case _ => ()  
+      }
+    }
     this
   }
 
@@ -73,14 +90,14 @@ trait DefinitionValidation extends BasicValidation  {
       Error,
       definition.loc
     )
-    .checkIdentifierLength(definition)
-    .checkUniqueContent(definition)
-    .check(
-      !definition.isVital || definition.hasAuthors,
-      "Vital definitions should have an author reference",
-      MissingWarning,
-      definition.loc
-    )
+      .checkIdentifierLength(definition)
+      .checkUniqueContent(definition)
+      .check(
+        !definition.isVital || definition.hasAuthors,
+        "Vital definitions should have an author reference",
+        MissingWarning,
+        definition.loc
+      )
     if definition.isVital then {
       definition.asInstanceOf[WithAuthors].authors.foreach { (authorRef: AuthorRef) =>
         pathIdToDefinition(authorRef.pathId, definition +: parents) match {
@@ -138,12 +155,12 @@ trait DefinitionValidation extends BasicValidation  {
       )
     } else if description.nonEmpty then
       description.fold(this) { (desc: Description) =>
-          check(
-            desc.nonEmpty,
-            s"For $id, description at ${desc.loc} is declared but empty",
-            MissingWarning,
-            desc.loc
-          )
+        check(
+          desc.nonEmpty,
+          s"For $id, description at ${desc.loc} is declared but empty",
+          MissingWarning,
+          desc.loc
+        )
       }
     this
   }

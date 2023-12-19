@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.AST.ConstrainedOptionValue
 import com.ossuminc.riddl.language.parsing.{PredefType, RiddlParserInput}
 
 import java.net.URL
@@ -202,7 +203,6 @@ object AST {
     override def isComment: Boolean = true
   }
 
-
   /** Base trait for option values for any option of a definition. */
   sealed trait OptionValue extends RiddlValue {
     def name: String
@@ -212,6 +212,10 @@ object AST {
     override def format: String = name + args
       .map(_.format)
       .mkString("(", ", ", ")")
+  }
+
+  sealed trait ConstrainedOptionValue extends OptionValue {
+    def accepted: Seq[String]
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
@@ -334,7 +338,7 @@ object AST {
     def identifyWithLoc: String = s"$identify at $loc"
 
     /** The list of contained definitions */
-    lazy val definitions: Seq[Definition] = contents.filter(_.isDefinition).map(_.asInstanceOf[Definition])
+    lazy val definitions: Seq[Definition] = contents.filter(_.isDefinition)
 
     /** True iff there are contained definitions */
     override def hasDefinitions: Boolean = definitions.nonEmpty
@@ -1371,10 +1375,23 @@ object AST {
 
     @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || other.isInstanceOf[Date] ||
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Date] || other.isInstanceOf[DateTime] ||
+      other.isInstanceOf[ZonedDateTime] || other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
+  }
+
+  case class ZonedDateTime(loc: At, zone: Option[LiteralString] = None) extends TimeType {
+    @inline def kind: String = PredefType.ZonedDateTime
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[ZonedDateTime] ||
+      other.isInstanceOf[DateTime] || other.isInstanceOf[Date] ||
       other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
       other.isInstanceOf[Pattern]
     }
+
+    override def format: String = s"ZonedDateTime(${zone.map(_.format).getOrElse("\"UTC\"")})"
   }
 
   /** A predefined type expression for a timestamp that records the number of milliseconds from the epoch.
@@ -1421,6 +1438,7 @@ object AST {
     */
   case class URL(loc: At, scheme: Option[LiteralString] = None) extends PredefinedType {
     @inline def kind: String = PredefType.URL
+    override def format: String = s"$kind(${scheme.map(_.format).getOrElse("\"https\"")})"
   }
 
   /** A predefined type expression for a location on earth given in latitude and longitude.
@@ -1430,6 +1448,16 @@ object AST {
     */
   case class Location(loc: At) extends PredefinedType {
     @inline def kind: String = PredefType.Location
+  }
+
+  enum BlobKind:
+    case Text, XML, JSON, Image, Audio, Video, CSV, FileSystem
+
+  case class Blob(loc: At, blobKind: BlobKind) extends PredefinedType {
+    @inline def kind: String = PredefType.Blob
+
+    override def format: String = s"${PredefType.Blob}($blobKind)"
+
   }
 
   /** A predefined type expression for a type that can have no values
@@ -1847,10 +1875,13 @@ object AST {
   case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
 
   /** A common option that specifies details about an aspect of */
-  case class AdaptorKindOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("kind")
+  case class AdaptorKindOption(loc: At, override val args: Seq[LiteralString])
+      extends AdaptorOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("")
+  }
 
   case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
-
 
   sealed trait AdaptorDirection extends RiddlValue
 
@@ -1861,7 +1892,7 @@ object AST {
   case class OutboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "to"
   }
-  
+
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
     * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
     * bounded context. There should be one Adapter for each external Context
@@ -2350,7 +2381,11 @@ object AST {
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class EntityKindOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("kind")
+  case class EntityKindOption(loc: At, override val args: Seq[LiteralString])
+      extends EntityOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("device", "user", "concept", "machine", "digital")
+  }
 
   /** Definition of an Entity
     *
@@ -2434,7 +2469,11 @@ object AST {
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class RepositoryKindOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("kind")
+  case class RepositoryKindOption(loc: At, override val args: Seq[LiteralString])
+      extends RepositoryOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("api", "database", "device", "file")
+  }
 
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
     * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
@@ -2514,11 +2553,15 @@ object AST {
   case class ProjectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends ProjectorOption("technology")
 
-  /** An [[ProjectorOption]] that indicates the general kind of entity being defined. This option takes a value which
+  /** An [[ProjectorOption]] that indicates the general kind of projector being defined. This option takes a value which
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class ProjectorKindOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("kind")
+  case class ProjectorKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ProjectorOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("message queue", "stream")
+  }
 
   /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view.
     * The concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data
@@ -2618,11 +2661,15 @@ object AST {
   /** An [[ContextOption]] that specifies the kind of technology used to represent the entity */
   case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
 
-  /** An [[ContextOption]] that indicates the general kind of entity being defined. This option takes a value which
+  /** An [[ContextOption]] that indicates the general kind of context being defined. This option takes a value which
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class ContextKindOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("kind")
+  case class ContextKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ContextOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("microservice", "gateway", "router", "api")
+  }
 
   /** A [[ContextOption]] that provides the name of the software package the Context is implemented within */
   case class ContextPackageOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("package")
@@ -2744,7 +2791,11 @@ object AST {
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class StreamletKindOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("kind")
+  case class StreamletKindOption(loc: At, override val args: Seq[LiteralString])
+      extends StreamletOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("stream")
+  }
 
   /** A sealed trait for Inlets and Outlets */
   sealed trait Portlet extends LeafDefinition with ProcessorDefinition
@@ -2816,7 +2867,11 @@ object AST {
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class ConnectorKindOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("kind")
+  case class ConnectorKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ConnectorOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("message queue", "pub/sub")
+  }
 
   /** An [[ConnectorOption]]  to provide the software package name for the connector */
   case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
@@ -3056,7 +3111,11 @@ object AST {
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class SagaKindOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("kind")
+  case class SagaKindOption(loc: At, override val args: Seq[LiteralString])
+      extends SagaOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("distributed transaction", "workflow")
+  }
 
   /** A [[SagaOption]] that indicates sequential (serial) execution of the saga actions.
     *
@@ -3447,7 +3506,11 @@ object AST {
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class EpicKindOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("kind")
+  case class EpicKindOption(loc: At, override val args: Seq[LiteralString])
+      extends EpicOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("feature")
+  }
 
   case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
 
@@ -3683,7 +3746,11 @@ object AST {
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class ApplicationKindOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("kind")
+  case class ApplicationKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ApplicationOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("UI", "Automation", "Device", "Controls")
+  }
 
   /** An application from which a person, robot, or other active agent (the user) will obtain information, or to which
     * that user will provided information.
@@ -3763,11 +3830,36 @@ object AST {
   /** An [[DomainOption]] that specifies the kind of technology used to represent the entity */
   case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")
 
-  /** An [[DomainOption]] that indicates the general kind of entity being defined. This option takes a value which
+  /** An [[DomainOption]] that indicates the general kind of domain being defined. This option takes a value which
     * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
     * entities. This entity option may be used by downstream AST processors, especially code generators.
     */
-  case class DomainKindOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("kind")
+  case class DomainKindOption(loc: At, override val args: Seq[LiteralString])
+      extends DomainOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq(
+      "accommodation",
+      "administrative",
+      "agricultural",
+      "healthcare",
+      "entertainment",
+      "clothing",
+      "construction",
+      "education",
+      "electronics",
+      "engineering",
+      "finance",
+      "forestry",
+      "fuel",
+      "information",
+      "insurance",
+      "publishing",
+      "manufacturing",
+      "logistics",
+      "process control",
+      "transportation"
+    )
+  }
 
   /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
     * external system and is therefore at the boundary of the context map
