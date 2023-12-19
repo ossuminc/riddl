@@ -176,17 +176,6 @@ object AST {
     def hasDescription: Boolean = description.nonEmpty
   }
 
-  /** Base trait for option values for any option of a definition. */
-  sealed trait OptionValue extends RiddlValue {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
-    override def format: String = name + args
-      .map(_.format)
-      .mkString("(", ", ", ")")
-  }
-
   /** Base trait of any definition that is also a ContainerValue
     *
     * @tparam D
@@ -198,7 +187,31 @@ object AST {
     override def isEmpty: Boolean = contents.isEmpty
 
     final override def isContainer: Boolean = true
+  }
 
+  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
+    * definition. The comment is stored within the [[Definition]]
+    *
+    * @param loc
+    *   Location in the input of the // comment introducer
+    * @param text
+    *   The text of the comment, everything after the // to the end of line
+    */
+  case class Comment(loc: At, text: String = "") extends TopLevelValue {
+    def format: String = "//" + text
+    override def isComment: Boolean = true
+  }
+
+
+  /** Base trait for option values for any option of a definition. */
+  sealed trait OptionValue extends RiddlValue {
+    def name: String
+
+    def args: Seq[LiteralString] = Seq.empty[LiteralString]
+
+    override def format: String = name + args
+      .map(_.format)
+      .mkString("(", ", ", ")")
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
@@ -291,19 +304,6 @@ object AST {
       with RepositoryDefinition
       with StreamletDefinition
       with SagaDefinition
-
-  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
-    * definition. The comment is stored within the [[Definition]]
-    *
-    * @param loc
-    *   Location in the input of the // comment introducer
-    * @param text
-    *   The text of the comment, everything after the // to the end of line
-    */
-  case class Comment(loc: At, text: String = "") extends TopLevelValue {
-    def format: String = "//" + text
-    override def isComment: Boolean = true
-  }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
 
@@ -1841,7 +1841,7 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** Base class of all options for the Adaptor definition */
-  sealed trait AdaptorOption(final val name: String) extends OptionValue
+  sealed abstract class AdaptorOption(val name: String) extends OptionValue
 
   /** A common option that specifies the nature of the technology used to implement the definition */
   case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
@@ -1849,6 +1849,22 @@ object AST {
   /** A common option that specifies details about an aspect of */
   case class AdaptorKindOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("kind")
 
+  case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
+
+
+  sealed trait AdaptorDirection extends RiddlValue
+
+  case class InboundAdaptor(loc: At) extends AdaptorDirection {
+    def format: String = "from"
+  }
+
+  case class OutboundAdaptor(loc: At) extends AdaptorDirection {
+    def format: String = "to"
+  }
+
+  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
+    * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
+    * bounded context. There should be one Adapter for each external Context
   case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
 
   sealed trait AdaptorDirection extends RiddlValue
@@ -2277,7 +2293,7 @@ object AST {
     * @param name
     *   the name of the option
     */
-  sealed abstract class EntityOption(val name: String) extends OptionValue
+  sealed abstract class EntityOption(val name: String) extends EntityValue with OptionValue
 
   /** An [[EntityOption]] that indicates that this entity should store its state in an event sourced fashion.
     *
@@ -3869,15 +3885,3 @@ object AST {
   }
 
 }
-
-//  case class EntityValueOption(loc: At) extends EntityOption("value")
-//  case class ContextPackageOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("package")
-//  case class WrapperOption(loc: At) extends ContextOption("wrapper")
-//  case class ServiceOption(loc: At) extends ContextOption("service")
-//  case class GatewayOption(loc: At) extends ContextOption("gateway")
-//  case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
-//  case class SequentialOption(loc: At) extends SagaOption("sequential")
-//  case class ParallelOption(loc: At) extends SagaOption("parallel")
-//  case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
-//  case class DomainPackageOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("package")
-//  case class DomainExternalOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("external")

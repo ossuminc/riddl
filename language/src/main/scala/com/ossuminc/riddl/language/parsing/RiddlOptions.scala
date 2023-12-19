@@ -86,6 +86,7 @@ object RiddlOptions {
     ).!
   )
 
+
   def aggregate[u: P]: P[Unit] = keyword(RiddlOption.aggregate)
   def async[u: P]: P[Unit] = keyword(RiddlOption.async)
   def available[u: P]: P[Unit] = keyword(RiddlOption.available)
@@ -93,7 +94,7 @@ object RiddlOptions {
   def concept[u: P]: P[Unit] = keyword(RiddlOption.concept)
   def consistent[u: P]: P[Unit] = keyword(RiddlOption.consistent)
   def device[u: P]: P[Unit] = keyword(RiddlOption.device)
-  def externa[u: P]: P[Unit] = keyword(RiddlOption.external)
+  def external[u: P]: P[Unit] = keyword(RiddlOption.external)
   def events_sourced[u: P]: P[Unit] = keyword(RiddlOption.event_sourced)
   def finiteStateMachine[u: P]: P[Unit] = keyword(RiddlOption.finite_state_machine)
   def gateway[u: P]: P[Unit] = keyword(RiddlOption.gateway)
