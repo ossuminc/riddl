@@ -1861,22 +1861,7 @@ object AST {
   case class OutboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "to"
   }
-
-  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
-    * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
-    * bounded context. There should be one Adapter for each external Context
-  case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
-
-  sealed trait AdaptorDirection extends RiddlValue
-
-  case class InboundAdaptor(loc: At) extends AdaptorDirection {
-    def format: String = "from"
-  }
-
-  case class OutboundAdaptor(loc: At) extends AdaptorDirection {
-    def format: String = "to"
-  }
-
+  
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
     * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
     * bounded context. There should be one Adapter for each external Context
