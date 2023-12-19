@@ -202,7 +202,6 @@ object AST {
     override def isComment: Boolean = true
   }
 
-
   /** Base trait for option values for any option of a definition. */
   sealed trait OptionValue extends RiddlValue {
     def name: String
@@ -1371,10 +1370,23 @@ object AST {
 
     @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || other.isInstanceOf[Date] ||
-      other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Date] || other.isInstanceOf[DateTime] || 
+        other.isInstanceOf[ZonedDateTime] || other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
       other.isInstanceOf[Pattern]
     }
+  }
+
+  case class ZonedDateTime(loc: At, zone: Option[LiteralString] = None) extends TimeType {
+    @inline def kind: String = PredefType.ZonedDateTime
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[ZonedDateTime] || 
+        other.isInstanceOf[DateTime] || other.isInstanceOf[Date] ||
+        other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
+
+    override def format: String = s"ZonedDateTime(${zone.map(_.format).getOrElse("\"UTC\"")})"
   }
 
   /** A predefined type expression for a timestamp that records the number of milliseconds from the epoch.
@@ -1421,6 +1433,7 @@ object AST {
     */
   case class URL(loc: At, scheme: Option[LiteralString] = None) extends PredefinedType {
     @inline def kind: String = PredefType.URL
+    override def format: String = s"$kind(${scheme.map(_.format).getOrElse("\"https\"")})"
   }
 
   /** A predefined type expression for a location on earth given in latitude and longitude.
@@ -1430,6 +1443,16 @@ object AST {
     */
   case class Location(loc: At) extends PredefinedType {
     @inline def kind: String = PredefType.Location
+  }
+
+  enum BlobKind:
+    case Text, XML, JSON, Image, Audio, Video, CSV, FileSystem
+
+  case class Blob(loc: At, blobKind: BlobKind) extends PredefinedType {
+    @inline def kind: String = PredefType.Blob
+
+    override def format: String = s"${PredefType.Blob}($blobKind)"
+
   }
 
   /** A predefined type expression for a type that can have no values
@@ -1851,7 +1874,6 @@ object AST {
 
   case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
 
-
   sealed trait AdaptorDirection extends RiddlValue
 
   case class InboundAdaptor(loc: At) extends AdaptorDirection {
@@ -1861,7 +1883,7 @@ object AST {
   case class OutboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "to"
   }
-  
+
   /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
     * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
     * bounded context. There should be one Adapter for each external Context

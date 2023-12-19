@@ -42,6 +42,12 @@ class ASTTest extends AnyWordSpec with Matchers {
         (0, 0),
         AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("URL")))
       )
+      ZonedDateTime((0, 0)).format mustBe "ZonedDateTime(\"UTC\")"
+      UUID((0, 0)).format mustBe "UUID"
+      URL((0, 0)).format mustBe "URL(\"https\")"
+      Location((0, 0)).format mustBe "Location"
+
+      Blob((0, 0), BlobKind.Audio).format mustBe "Blob(Audio)"
     }
   }
 
