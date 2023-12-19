@@ -25,7 +25,7 @@ class CheckDocsTest extends AnyWordSpec with RunHugoTestBase {
 
   "Docs" should {
     "run successfully with hugo" in {
-      val srcDir = Path.of("doc/src/hugo")
+      val srcDir = Path.of("doc/src/main/hugo")
       runHugo(srcDir)
     }
   }
