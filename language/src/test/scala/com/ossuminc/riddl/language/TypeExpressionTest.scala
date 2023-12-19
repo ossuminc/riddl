@@ -177,10 +177,10 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
     }
     "support URL" in {
       url.kind mustBe PredefType.URL
-      AST.errorDescription(url) mustBe PredefType.URL
+      AST.errorDescription(url) mustBe "URL"
       url.isEmpty mustBe true
       url.isContainer mustBe false
-      url.format mustBe PredefType.URL
+      url.format mustBe "URL(\"https\")"
     }
     "support UUID" in {
       uuid.kind mustBe PredefType.UUID
@@ -295,7 +295,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +
-        "timestamp: TimeStamp, url: URL, uuid: UUID, " +
+        "timestamp: TimeStamp, url: URL(\"https\"), uuid: UUID, " +
         "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
         "id: Id(a.b) }"
       aggregation.isEmpty mustBe false
@@ -335,7 +335,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +
-        "timestamp: TimeStamp, url: URL, uuid: UUID, " +
+        "timestamp: TimeStamp, url: URL(\"https\"), uuid: UUID, " +
         "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
         "id: Id(a.b) }"
       message.isEmpty mustBe false

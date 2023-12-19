@@ -42,6 +42,19 @@ class ASTTest extends AnyWordSpec with Matchers {
         (0, 0),
         AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("URL")))
       )
+      ZonedDateTime((0, 0)).format mustBe "ZonedDateTime(\"UTC\")"
+      UUID((0, 0)).format mustBe "UUID"
+      URL((0, 0)).format mustBe "URL(\"https\")"
+      Location((0, 0)).format mustBe "Location"
+
+      Blob((0, 0), BlobKind.Audio).format mustBe "Blob(Audio)"
+      Blob((0, 0), BlobKind.Video).format mustBe "Blob(Video)"
+      Blob((0, 0), BlobKind.CSV).format mustBe "Blob(CSV)"
+      Blob((0, 0), BlobKind.FileSystem).format mustBe "Blob(FileSystem)"
+      Blob((0, 0), BlobKind.Text).format mustBe "Blob(Text)"
+      Blob((0, 0), BlobKind.XML).format mustBe "Blob(XML)"
+      Blob((0, 0), BlobKind.JSON).format mustBe "Blob(JSON)"
+      Blob((0, 0), BlobKind.Image).format mustBe "Blob(Image)"
     }
   }
 
@@ -148,7 +161,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   }
   "WithTypes" must {
     "be sane" in {
-      val wt = new Domain(At.empty, Identifier.empty)
+      val wt = Domain(At.empty, Identifier.empty)
       wt.hasAuthors mustBe false
       wt.hasTypes mustBe false
       wt.hasOptions mustBe false
