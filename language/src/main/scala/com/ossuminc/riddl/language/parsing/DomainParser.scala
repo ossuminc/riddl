@@ -30,6 +30,8 @@ private[parsing] trait DomainParser {
       case (loc, RiddlOption.external, args)   => DomainExternalOption(loc, args)
       case (loc, RiddlOption.package_, args)   => DomainPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => DomainTechnologyOption(loc, args)
+      case (loc, RiddlOption.color, args)      => DomainColorOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => DomainKindOption(loc, args)
     }
   }
 
@@ -59,7 +61,7 @@ private[parsing] trait DomainParser {
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~/ authorRefs ~  is ~ open ~/
+      location ~ Keywords.domain ~/ identifier ~/ authorRefs ~ is ~ open ~/
         domainOptions ~/ domainBody ~ close ~/
         briefly ~ description ~ comments
     ).map { case (loc, id, authorRefs, options, defs, brief, description, comments) =>

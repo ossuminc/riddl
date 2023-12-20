@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.AST.ConstrainedOptionValue
 import com.ossuminc.riddl.language.parsing.{PredefType, RiddlParserInput}
 
 import java.net.URL
@@ -127,6 +128,7 @@ object AST {
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
   }
 
+  /** Companion class for Description only to define the empty value */
   object Description {
     lazy val empty: Description = new Description {
       val loc: At = At.empty
@@ -135,6 +137,7 @@ object AST {
     }
   }
 
+  /** An alternative to Description to define the description as a block of strings */
   case class BlockDescription(
     loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString]
@@ -142,6 +145,7 @@ object AST {
     def format: String = ""
   }
 
+  /** An alternative to Description to define the description in a Markdown file */
   case class FileDescription(loc: At, file: Path) extends Description {
     lazy val lines: Seq[LiteralString] = {
       val src = scala.io.Source.fromFile(file.toFile)
@@ -150,6 +154,7 @@ object AST {
     def format: String = file.toAbsolutePath.toString
   }
 
+  /** An alternative to Description to define the description with a URL */
   case class URLDescription(loc: At, url: java.net.URL) extends Description {
     lazy val lines: Seq[LiteralString] = Seq.empty[LiteralString]
 
@@ -157,6 +162,7 @@ object AST {
     override def format: String = url.toExternalForm
   }
 
+  /** A trait to add a brief description string to a RiddlValue */
   sealed trait BrieflyDescribedValue extends RiddlValue {
     def brief: Option[LiteralString]
     def briefValue: String = {
@@ -165,8 +171,7 @@ object AST {
     def hasBriefDescription: Boolean = brief.nonEmpty
   }
 
-  /** Base trait of all values that have an optional Description
-    */
+  /** Base trait of all values that have an optional Description */
   sealed trait DescribedValue extends RiddlValue {
     def description: Option[Description]
     def hasDescription: Boolean = description.nonEmpty
@@ -175,7 +180,7 @@ object AST {
   /** Base trait of any definition that is also a ContainerValue
     *
     * @tparam D
-    *   The kind of definition that is contained by the container
+    *   The kind of definition that is contained by the container which must be a RiddlValue
     */
   sealed trait Container[+D <: RiddlValue] extends RiddlValue {
     def contents: Seq[D]
@@ -183,102 +188,100 @@ object AST {
     override def isEmpty: Boolean = contents.isEmpty
 
     final override def isContainer: Boolean = true
-
   }
 
-  ///////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT  DEFINITIONS
+  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
+    * definition. The comment is stored within the [[Definition]]
+    *
+    * @param loc
+    *   Location in the input of the // comment introducer
+    * @param text
+    *   The text of the comment, everything after the // to the end of line
+    */
+  case class Comment(loc: At, text: String = "") extends TopLevelValue {
+    def format: String = "//" + text
+    override def isComment: Boolean = true
+  }
+
+  /** Base trait for option values for any option of a definition. */
+  sealed trait OptionValue extends RiddlValue {
+    def name: String
+
+    def args: Seq[LiteralString] = Seq.empty[LiteralString]
+
+    override def format: String = name + args
+      .map(_.format)
+      .mkString("(", ", ", ")")
+  }
+
+  sealed trait ConstrainedOptionValue extends OptionValue {
+    def accepted: Seq[String]
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
 
   /** The things that can be found only at the top level of the parse */
   sealed trait TopLevelValue extends RiddlValue
 
   /** Base trait of any definition that is in the content of an adaptor */
   sealed trait AdaptorDefinition extends Definition
-  sealed trait AdaptorValue extends RiddlValue
 
   /** Base trait of any definition that is in the content of an Application */
   sealed trait ApplicationDefinition extends Definition
-  sealed trait ApplicationValue extends RiddlValue
-
-  /** Base trait of any definition that is in the content of a context */
-  sealed trait ContextDefinition extends Definition
-  sealed trait ContextValue extends RiddlValue
-
-  /** Base trait of any definition that is in the content of a domain */
-  sealed trait DomainDefinition extends Definition
-  sealed trait DomainValue extends RiddlValue
-
-  /** Base trait of any definition that is in the content of an entity */
-  sealed trait EntityDefinition extends Definition
-  sealed trait EntityValue extends RiddlValue
-
-  /** Base trait of definitions that are in the body of a Story definition */
-  sealed trait EpicDefinition extends Definition
-  sealed trait EpicValue extends RiddlValue
-
-  /** Base trait of any definition that is in the content of a function. */
-  sealed trait FunctionDefinition extends RiddlValue
-  sealed trait FunctionValue extends RiddlValue
 
   /** Base trait of any definition that is in the content of a Group */
   sealed trait GroupDefinition extends Definition
-  sealed trait GroupValue extends RiddlValue
-
-  /** Base trait of definitions that are part of a Handler Definition */
-  sealed trait HandlerDefinition extends Definition
-  sealed trait HandlerValue extends RiddlValue
 
   /** Base trait of any definition that is in the content of an Output */
   sealed trait OutputDefinition extends Definition
-  sealed trait OutputValue extends RiddlValue
 
   /** Base trait of any definition that is in the content of an Input */
   sealed trait InputDefinition extends Definition
-  sealed trait InputValue extends RiddlValue
+
+  /** Base trait of any definition that is in the content of a context */
+  sealed trait ContextDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a domain */
+  sealed trait DomainDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of an entity */
+  sealed trait EntityDefinition extends Definition
+
+  /** Base trait of any value used in the definition of an entity */
+  sealed trait EntityValue extends RiddlValue
+
+  /** Base trait of definitions that are part of a Handler Definition */
+  sealed trait HandlerDefinition extends Definition
 
   /** Base trait of definitions defined in a repository */
   sealed trait RepositoryDefinition extends Definition
-  sealed trait RepositoryValue extends RiddlValue
 
   /** Base trait of definitions defined at root scope */
   sealed trait RootDefinition extends Definition with TopLevelValue
-  sealed trait RootValue extends TopLevelValue
 
   /** Base trait of definitions define within a Streamlet */
   sealed trait StreamletDefinition extends Definition
-  sealed trait StreamletValue extends RiddlValue
+
+  /** Base trait of definitions that are in the body of a Story definition */
+  sealed trait EpicDefinition extends Definition
+
+  /** Base trait of any definition that is in the content of a function. */
+  sealed trait FunctionDefinition extends Definition
 
   /** Base trait of definitions that are part of a Saga Definition */
   sealed trait SagaDefinition extends Definition
-  sealed trait SagaValue extends RiddlValue
 
   /** Base trait of definitions that are part of a Saga Definition */
   sealed trait StateDefinition extends Definition
-  sealed trait StateValue extends RiddlValue
 
   /** Base trait of any definition that occurs in the body of a projector */
   sealed trait ProjectorDefinition extends Definition
-  sealed trait ProjectorValue extends RiddlValue
 
   /** Base trait of definitions in a UseCase, typically interactions */
   sealed trait UseCaseDefinition extends Definition
-  sealed trait UseCaseValue extends RiddlValue
 
   /** Any definition that is part of a Type's Definition */
   sealed trait TypeDefinition extends Definition
-  sealed trait TypeValue extends RiddlValue
-
-  sealed trait VitalDefinitionValue
-      extends AdaptorValue
-      with ApplicationValue
-      with ContextValue
-      with DomainValue
-      with EntityValue
-      with FunctionValue
-      with StreamletValue
-      with ProjectorValue
-      with RepositoryValue
-      with SagaValue
-      with EpicValue
 
   /** A trait to define the definitions that can be included in the definition of a VitalDefinition */
   sealed trait VitalDefinitionDefinition
@@ -294,43 +297,24 @@ object AST {
       with SagaDefinition
       with EpicDefinition
 
-  sealed trait ProcessorValue
-      extends AdaptorValue
-      with ApplicationDefinition
-      with ContextDefinition
-      with EntityValue
-      with FunctionValue
-      with ProjectorValue
-      with RepositoryValue
-      with StreamletValue
-
   /** A trait for all the definitions that are are considered to be Processors */
   sealed trait ProcessorDefinition
-      extends AdaptorDefinition
+      extends Definition
+      with AdaptorDefinition
       with ApplicationDefinition
       with ContextDefinition
       with EntityDefinition
       with ProjectorDefinition
       with RepositoryDefinition
       with StreamletDefinition
+      with SagaDefinition
 
-  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
-    * definition. The comment is stored within the [[Definition]]
-    *
-    * @param loc
-    *   Location in the input of the // comment introducer
-    * @param text
-    *   The text of the comment, everything after the // to the end of line
-    */
-  case class Comment(loc: At, text: String = "") extends TopLevelValue {
-    def format: String = "//" + text
-    override def isComment: Boolean = true
-  }
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
 
   /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
     * yield a string that provides the kind and name
     */
-  sealed trait Definition extends DescribedValue with BrieflyDescribedValue with Container[RiddlValue] {
+  sealed trait Definition extends DescribedValue with BrieflyDescribedValue with Container[Definition] {
 
     /** the name/identifier of this definition. All definitions have one */
     def id: Identifier
@@ -354,7 +338,7 @@ object AST {
     def identifyWithLoc: String = s"$identify at $loc"
 
     /** The list of contained definitions */
-    lazy val definitions: Seq[Definition] = contents.filter(_.isDefinition).map(_.asInstanceOf[Definition])
+    lazy val definitions: Seq[Definition] = contents.filter(_.isDefinition)
 
     /** True iff there are contained definitions */
     override def hasDefinitions: Boolean = definitions.nonEmpty
@@ -393,13 +377,13 @@ object AST {
     * @param source
     *   A string providing the source (path or URL) of the included source
     */
-  case class Include[T <: RiddlValue](
+  case class Include[T <: Definition](
     loc: At = At(RiddlParserInput.empty),
     contents: Seq[T] = Seq.empty[T],
     source: Option[String] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends VitalDefinitionDefinition
-      with VitalDefinitionValue
+  ) extends Definition
+      with VitalDefinitionDefinition
       with RootDefinition {
 
     def id: Identifier = Identifier.empty
@@ -412,45 +396,6 @@ object AST {
     def format: String = s"include ${source.getOrElse("none")}"
 
     final val kind: String = "Include"
-  }
-
-  /** Base trait for option values for any option of a definition. */
-  sealed trait OptionValue extends RiddlValue {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
-    override def format: String = name + args
-      .map(_.format)
-      .mkString("(", ", ", ")")
-  }
-
-  /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
-    * queried, and formatted.
-    *
-    * @tparam T
-    *   The sealed base trait of the permitted options for this definition
-    */
-  sealed trait WithOptions[T <: OptionValue] extends Container[T] {
-    lazy val options: Seq[T] = contents.filter(_.isInstanceOf[T]).map(_.asInstanceOf[T])
-    override def hasOptions: Boolean = options.nonEmpty
-    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
-
-    def hasOption[OPT <: T: ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-
-    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] = options
-      .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-      .map(_.args)
-
-    override def format: String = {
-      options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
-        case x: Int if x > 1 =>
-          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
-      }
-    }
   }
 
   /** A reference to a definition of a specific type.
@@ -499,135 +444,246 @@ object AST {
     */
   sealed trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
 
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHXXX
-
-  sealed trait WithAdaptors extends Container[Adaptor] {
-    lazy val adaptors: Seq[Adaptor] = contents.filter(_.isInstanceOf[Adaptor])
-    def hasAdaptors: Boolean = adaptors.nonEmpty
-    override def isEmpty: Boolean = adaptors.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithAuthors extends Container[AuthorRef] {
-    lazy val authors: Seq[AuthorRef] = contents.filter(_.isInstanceOf[AuthorRef])
-    override def hasAuthors: Boolean = authors.nonEmpty
-    override def isEmpty: Boolean = authors.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithConnectors extends Container[Connector] {
-    lazy val connectors: Seq[Connector] = contents.filter(_.isInstanceOf[Connector])
-    def hasConnectors: Boolean = connectors.nonEmpty
-    override def isEmpty: Boolean = connectors.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithConstants extends Container[Constant] {
-    lazy val constants: Seq[Constant] = contents.filter(_.isInstanceOf[Constant])
-    def hasConstants: Boolean = constants.nonEmpty
-    override def isEmpty: Boolean = constants.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithEntities extends Container[Entity] {
-    lazy val entities: Seq[Entity] = contents.filter(_.isInstanceOf[Entity])
-    def hasEntities: Boolean = entities.nonEmpty
-    override def isEmpty: Boolean = entities.isEmpty && super.isEmpty
-  }
-
-  /** Added to definitions that have Functions */
-  sealed trait WithFunctions extends Container[Function] {
-    lazy val functions: Seq[Function] = contents.filter(_.isInstanceOf[Function])
-    def hasFunctions: Boolean = functions.nonEmpty
-    override def isEmpty: Boolean = functions.isEmpty && super.isEmpty
-  }
-
-  /** Added to definitions that have Handlers */
-  trait WithHandlers extends Container[Handler] {
-    lazy val handlers: Seq[Handler] = contents.filter(_.isInstanceOf[Handler])
-    def hasHandlers: Boolean = handlers.nonEmpty
-    override def isEmpty: Boolean = handlers.isEmpty && super.isEmpty
-  }
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
 
   /** Added to definitions that support includes */
-  trait WithIncludes[T <: RiddlValue] extends Container[Include[T]] {
-    lazy val includes: Seq[Include[T]] = contents.filter(_.isInstanceOf[Include[T]])
-    def hasIncludes: Boolean = includes.nonEmpty
-    override def isEmpty: Boolean = includes.isEmpty && super.isEmpty
+  sealed trait WithIncludes[T <: Definition] extends Container[T] {
+    def includes: Seq[Include[T]]
+
+    def contents: Seq[T] = {
+      includes.flatMap(_.contents)
+    }
   }
 
-  trait WithInlets extends Container[Inlet] {
-    lazy val inlets: Seq[Inlet] = contents.filter(_.isInstanceOf[Inlet])
-    def hasInlets: Boolean = inlets.nonEmpty
-    override def isEmpty: Boolean = inlets.isEmpty && super.isEmpty
-  }
+  /** Added to definitions that support a list of term definitions */
+  sealed trait WithTerms extends RiddlValue {
+    def terms: Seq[Term]
 
-  trait WithInvariants extends Container[Invariant] {
-    lazy val invariants: Seq[Invariant] = contents.filter(_.isInstanceOf[Invariant])
-    def hasInvariants: Boolean = invariants.nonEmpty
-    override def isEmpty: Boolean = invariants.isEmpty && super.isEmpty
-  }
-
-  /** Base trait for containers that expect Outlet definitions */
-  sealed trait WithOutlets extends Container[Outlet] {
-    lazy val outlets: Seq[Outlet] = contents.filter(_.isInstanceOf[Outlet])
-    def hasOutlets: Boolean = outlets.nonEmpty
-    override def isEmpty: Boolean = outlets.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithProjectors extends Container[Projector] {
-    lazy val projectors: Seq[Projector] = contents.filter(_.isInstanceOf[Projector])
-    def hasProjectors: Boolean = projectors.nonEmpty
-    override def isEmpty: Boolean = projectors.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithReplicas extends Container[Replica] {
-    lazy val replicas: Seq[Replica] = contents.filter(_.isInstanceOf[Replica])
-    def hasReplicas: Boolean = replicas.nonEmpty
-    override def isEmpty: Boolean = replicas.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithRepositories extends Container[Repository] {
-    lazy val repositories: Seq[Repository] = contents.filter(_.isInstanceOf[Repository])
-    def hasRepositories: Boolean = repositories.nonEmpty
-    override def isEmpty: Boolean = repositories.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithSagas extends Container[Saga] {
-    lazy val sagas: Seq[Saga] = contents.filter(_.isInstanceOf[Saga])
-    def hasSagas: Boolean = sagas.nonEmpty
-    override def isEmpty: Boolean = sagas.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithStatements extends Container[Statement] {
-    lazy val statements: Seq[Statement] = contents.filter(_.isInstanceOf[Statement])
-    def hasStatements: Boolean = statements.nonEmpty
-    override def isEmpty: Boolean = statements.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithStates extends Container[State] {
-    lazy val states: Seq[State] = contents.filter(_.isInstanceOf[State])
-    def hasStates: Boolean = states.nonEmpty
-    override def isEmpty: Boolean = states.isEmpty && super.isEmpty
-  }
-
-  sealed trait WithStreamlets extends Container[Streamlet] {
-    lazy val streamlets: Seq[Streamlet] = contents.filter(_.isInstanceOf[Streamlet])
-    def hasStreamlets: Boolean = streamlets.nonEmpty
-    override def isEmpty: Boolean = streamlets.isEmpty && super.isEmpty
-  }
-
-  /** Base trait for containers that support Term definitions */
-  sealed trait WithTerms extends Container[Term] {
-    lazy val terms: Seq[Term] = contents.filter(_.isInstanceOf[Term])
     def hasTerms: Boolean = terms.nonEmpty
-    override def isEmpty: Boolean = terms.isEmpty && super.isEmpty
   }
 
-  /** Base trait of Containers that expect Type definitions */
-  sealed trait WithTypes extends Container[Type] {
-    lazy val types: Seq[Type] = contents.filter(_.isInstanceOf[Type])
+  sealed trait WithAuthors extends RiddlValue {
+    def authors: Seq[AuthorRef]
+
+    override def hasAuthors: Boolean = authors.nonEmpty
+  }
+
+  /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
+    * queried, and formatted.
+    *
+    * @tparam T
+    *   The sealed base trait of the permitted options for this definition
+    */
+  sealed trait WithOptions[T <: OptionValue] extends RiddlValue {
+    def options: Seq[T]
+
+    def hasOption[OPT <: T: ClassTag]: Boolean = options
+      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+
+    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] = options
+      .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+      .map(_.args)
+
+    override def format: String = {
+      options.size match {
+        case 0 => ""
+        case 1 => s"option is ${options.head.format}"
+        case x: Int if x > 1 =>
+          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
+      }
+    }
+
+    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
+
+    override def hasOptions: Boolean = options.nonEmpty
+  }
+
+  /** Base trait of any definition that is a container and contains types */
+  sealed trait WithTypes extends Definition {
+    def types: Seq[Type]
+
     override def hasTypes: Boolean = types.nonEmpty
-    override def isEmpty: Boolean = types.isEmpty && super.isEmpty
   }
 
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
+  ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
+
+  sealed trait VitalDefinition[OPT <: OptionValue, DEF <: Definition]
+      extends Definition
+      with WithOptions[OPT]
+      with WithAuthors
+      with WithIncludes[DEF]
+      with WithTerms {
+
+    import scala.language.implicitConversions
+
+    /** Implicit conversion of boolean to Int for easier computation of statistics below
+      *
+      * @param b
+      *   The boolean to convert to an Int
+      *
+      * @return
+      */
+    implicit def bool2int(b: Boolean): Int = if b then 1 else 0
+
+    override def isVital: Boolean = true
+  }
+
+  /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
+    * handlers, and take messages directly with a reference).
+    */
+  sealed trait Processor[OPT <: OptionValue, DEF <: Definition] extends VitalDefinition[OPT, DEF] with WithTypes {
+
+    def types: Seq[Type]
+
+    def constants: Seq[Constant]
+
+    def functions: Seq[Function]
+
+    def invariants: Seq[Invariant]
+
+    def handlers: Seq[Handler]
+
+    def inlets: Seq[Inlet]
+
+    def outlets: Seq[Outlet]
+  }
+
+  /** The root of the containment hierarchy, corresponding roughly to a level about a file.
+    *
+    * @param contents
+    *   The sequence top level definitions contained by this root container
+    * @param inputs
+    *   The inputs for this root scope
+    */
+  case class RootContainer(
+    preComments: Seq[Comment] = Seq.empty[Comment],
+    contents: Seq[RootDefinition] = Seq.empty[RootDefinition],
+    postComments: Seq[Comment] = Seq.empty[Comment],
+    inputs: Seq[RiddlParserInput] = Nil
+  ) extends Definition {
+    lazy val domains: Seq[Domain] = contents.filter(_.getClass == classOf[Domain]).asInstanceOf[Seq[Domain]]
+    lazy val authors: Seq[Author] = contents.filter(_.getClass == classOf[Author]).asInstanceOf[Seq[Author]]
+
+    def comments: Seq[Comment] = Seq.empty[Comment]
+
+    override def isRootContainer: Boolean = true
+
+    def loc: At = At.empty
+
+    override def id: Identifier = Identifier(loc, "Root")
+
+    override def identify: String = "Root"
+
+    override def identifyWithLoc: String = "Root"
+
+    override def description: Option[Description] = None
+
+    override def brief: Option[LiteralString] = None
+
+    final val kind: String = "Root"
+
+    def format: String = ""
+  }
+
+  object RootContainer {
+    val empty: RootContainer = apply(Seq.empty[RootDefinition], Seq.empty[RiddlParserInput])
+
+    def apply(
+      contents: Seq[RootDefinition],
+      inputs: Seq[RiddlParserInput]
+    ): RootContainer = {
+      RootContainer(Seq.empty[Comment], contents, Seq.empty[Comment], inputs)
+    }
+  }
+
+  /** An User (Role) who is the initiator of the user story. Users may be persons or machines
+    *
+    * @param loc
+    *   The location of the user in the source
+    * @param id
+    *   The name (role) of the user
+    * @param is_a
+    *   What kind of thing the user is
+    * @param brief
+    *   A brief description of the user
+    * @param description
+    *   A longer description of the user and its role
+    */
+  case class User(
+    loc: At,
+    id: Identifier,
+    is_a: LiteralString,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends LeafDefinition
+      with DomainDefinition {
+    def format: String = s"user ${id.format} is ${is_a.format}"
+
+    override def kind: String = "User"
+  }
+
+  /** A term definition for the glossary */
+  case class Term(
+    loc: At,
+    id: Identifier,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends LeafDefinition
+      with VitalDefinitionDefinition {
+    override def isEmpty: Boolean = description.isEmpty
+
+    def format: String = s"term ${id.format}"
+
+    final val kind: String = "Term"
+  }
+
+  /** A value that holds the author's information
+    *
+    * @param loc
+    *   The location of the author information
+    * @param name
+    *   The full name of the author
+    * @param email
+    *   The author's email address
+    * @param organization
+    *   The name of the organization the author is associated with
+    * @param title
+    *   The author's title within the organization
+    * @param url
+    *   A URL associated with the author
+    */
+  case class Author(
+    loc: At,
+    id: Identifier,
+    name: LiteralString,
+    email: LiteralString,
+    organization: Option[LiteralString] = None,
+    title: Option[LiteralString] = None,
+    url: Option[java.net.URL] = None,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends LeafDefinition
+      with RootDefinition
+      with DomainDefinition {
+    override def isEmpty: Boolean = {
+      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
+    }
+
+    final val kind: String = "Author"
+
+    def format: String = s"author ${id.format}"
+  }
+
+  case class AuthorRef(loc: At, pathId: PathIdentifier) extends Reference[Author] {
+    override def format: String = s"author ${pathId.format}"
+
+    def kind: String = ""
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
   sealed trait AggregateDefinition extends TypeDefinition {
     def typeEx: TypeExpression
@@ -1319,10 +1375,23 @@ object AST {
 
     @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || other.isInstanceOf[Date] ||
+      super.isAssignmentCompatible(other) || other.isInstanceOf[Date] || other.isInstanceOf[DateTime] ||
+      other.isInstanceOf[ZonedDateTime] || other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
+      other.isInstanceOf[Pattern]
+    }
+  }
+
+  case class ZonedDateTime(loc: At, zone: Option[LiteralString] = None) extends TimeType {
+    @inline def kind: String = PredefType.ZonedDateTime
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[ZonedDateTime] ||
+      other.isInstanceOf[DateTime] || other.isInstanceOf[Date] ||
       other.isInstanceOf[TimeStamp] || other.isInstanceOf[Strng] ||
       other.isInstanceOf[Pattern]
     }
+
+    override def format: String = s"ZonedDateTime(${zone.map(_.format).getOrElse("\"UTC\"")})"
   }
 
   /** A predefined type expression for a timestamp that records the number of milliseconds from the epoch.
@@ -1369,6 +1438,7 @@ object AST {
     */
   case class URL(loc: At, scheme: Option[LiteralString] = None) extends PredefinedType {
     @inline def kind: String = PredefType.URL
+    override def format: String = s"$kind(${scheme.map(_.format).getOrElse("\"https\"")})"
   }
 
   /** A predefined type expression for a location on earth given in latitude and longitude.
@@ -1380,6 +1450,16 @@ object AST {
     @inline def kind: String = PredefType.Location
   }
 
+  enum BlobKind:
+    case Text, XML, JSON, Image, Audio, Video, CSV, FileSystem
+
+  case class Blob(loc: At, blobKind: BlobKind) extends PredefinedType {
+    @inline def kind: String = PredefType.Blob
+
+    override def format: String = s"${PredefType.Blob}($blobKind)"
+
+  }
+
   /** A predefined type expression for a type that can have no values
     *
     * @param loc
@@ -1389,377 +1469,6 @@ object AST {
     @inline def kind: String = PredefType.Nothing
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = false
-  }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////// OPTIONS
-
-  //////////////////////////////////////////////////////////////////// ADAPTOR
-
-  sealed abstract class AdaptorOption(val name: String) extends OptionValue with AdaptorValue
-
-  case class AdaptorTechnologyOption(
-    loc: At,
-    override val args: Seq[LiteralString]
-  ) extends AdaptorOption("technology")
-
-  //////////////////////////////////////////////////////////////////// PROJECTOR
-
-  sealed abstract class ProjectorOption(val name: String) extends OptionValue
-
-  case class ProjectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends ProjectorOption("technology")
-
-  /////////////////////////////////////////////////////////////////// REPOSITORY
-
-  sealed abstract class RepositoryOption(val name: String) extends OptionValue
-
-  case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends RepositoryOption("technology")
-
-  /////////////////////////////////////////////////////////////////////// ENTITY
-
-  /** Abstract base class of options for entities
-    *
-    * @param name
-    *   the name of the option
-    */
-  sealed abstract class EntityOption(val name: String) extends OptionValue with EntityValue
-
-  /** An [[EntityOption]] that indicates that this entity should store its state in an event sourced fashion.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityEventSourced(loc: At) extends EntityOption("event sourced")
-
-  /** An [[EntityOption]] that indicates that this entity should store only the latest value without using event
-    * sourcing. In other words, the history of changes is not stored.
-    *
-    * @param loc
-    *   The location of the option
-    */
-  case class EntityValueOption(loc: At) extends EntityOption("value")
-
-  /** An [[EntityOption]] that indicates that this entity should not persist its state and is only available in
-    * transient memory. All entity values will be lost when the service is stopped.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityTransient(loc: At) extends EntityOption("transient")
-
-  /** An [[EntityOption]] that indicates that this entity is an aggregate root entity through which all commands and
-    * queries are sent on behalf of the aggregated entities.
-    *
-    * @param loc
-    *   The location of the option
-    */
-  case class EntityIsAggregate(loc: At) extends EntityOption("aggregate")
-
-  /** An [[EntityOption]] that indicates that this entity favors consistency over availability in the CAP theorem.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsConsistent(loc: At) extends EntityOption("consistent")
-
-  /** A [[EntityOption]] that indicates that this entity favors availability over consistency in the CAP theorem.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsAvailable(loc: At) extends EntityOption("available")
-
-  /** An [[EntityOption]] that indicates that this entity is intended to implement a finite state machine.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsFiniteStateMachine(loc: At) extends EntityOption("finite state machine")
-
-  /** An [[EntityOption]] that indicates that this entity should allow receipt of commands and queries via a message
-    * queue.
-    *
-    * @param loc
-    *   The location at which this option occurs.
-    */
-  case class EntityMessageQueue(loc: At) extends EntityOption("message queue")
-
-  case class EntityIsDevice(loc: At) extends EntityOption("device")
-
-  case class EntityTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("technology")
-
-  /** An [[EntityOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    *
-    * @param loc
-    *   The location of the entity kind option
-    * @param args
-    *   The argument to the option
-    */
-  case class EntityKind(loc: At, override val args: Seq[LiteralString]) extends EntityOption("kind")
-
-  //////////////////////////////////////////////////////////////////// FUNCTION
-
-  /** Base class of all function options
-    *
-    * @param name
-    *   The name of the option
-    */
-  sealed abstract class FunctionOption(val name: String) extends OptionValue with FunctionValue
-
-  /** A function option to mark a function as being tail recursive
-    * @param loc
-    *   The location of the tail recursive option
-    */
-  case class TailRecursive(loc: At) extends FunctionOption("tail-recursive")
-
-  //////////////////////////////////////////////////////////////////// CONTEXT
-
-  /** Base trait for all options a Context can have.
-    */
-  sealed abstract class ContextOption(val name: String) extends OptionValue
-
-  case class ContextPackageOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("package")
-
-  /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
-    * external system and is therefore at the boundary of the context map
-    *
-    * @param loc
-    *   The location of the wrapper option
-    */
-  case class WrapperOption(loc: At) extends ContextOption("wrapper")
-
-  /** A context's "service" option. This option suggests the bounded context is intended to be a DDD service, similar to
-    * a wrapper but without any persistent state and more of a stateless service aspect to its nature
-    *
-    * @param loc
-    *   The location at which the option occurs
-    */
-  case class ServiceOption(loc: At) extends ContextOption("service")
-
-  /** A context's "gateway" option that suggests the bounded context is intended to be an application gateway to the
-    * model. Gateway's provide authentication and authorization access to external systems, usually user applications.
-    *
-    * @param loc
-    *   The location of the gateway option
-    */
-  case class GatewayOption(loc: At) extends ContextOption("gateway")
-
-  case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
-
-  case class ContextColorOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("color")
-
-  //////////////////////////////////////////////////////////////////// PROCESSOR
-
-  sealed abstract class StreamletOption(val name: String) extends OptionValue
-
-  case class StreamletTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends StreamletOption("technology")
-
-  //////////////////////////////////////////////////////////////////// PIPE
-
-  sealed abstract class ConnectorOption(val name: String) extends OptionValue
-
-  case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
-
-  case class ConnectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends ConnectorOption("technology")
-
-  //////////////////////////////////////////////////////////////////// SAGA
-
-  /** Base trait for all options applicable to a saga.
-    */
-  sealed abstract class SagaOption(val name: String) extends OptionValue
-
-  /** A [[SagaOption]] that indicates sequential (serial) execution of the saga actions.
-    *
-    * @param loc
-    *   The location of the sequential option
-    */
-  case class SequentialOption(loc: At) extends SagaOption("sequential")
-
-  /** A [[SagaOption]] that indicates parallel execution of the saga actions.
-    *
-    * @param loc
-    *   The location of the parallel option
-    */
-  case class ParallelOption(loc: At) extends SagaOption("parallel")
-
-  case class SagaTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("technology")
-
-  ////////////////////////////////////////////////////////////////// APPLICATION
-
-  sealed abstract class ApplicationOption(val name: String) extends OptionValue
-
-  case class ApplicationTechnologyOption(loc: At, override val args: Seq[LiteralString] = Seq.empty[LiteralString])
-      extends ApplicationOption("technology")
-
-  /////////////////////////////////////////////////////////////////////////////////////////////////////// DOMAIN OPTIONS
-
-  /** Base trait for all options a Domain can have.
-    */
-  sealed abstract class DomainOption(val name: String) extends OptionValue
-
-  /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
-    * external system and is therefore at the boundary of the context map
-    *
-    * @param loc
-    *   The location of the wrapper option
-    */
-  case class DomainPackageOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("package")
-
-  case class DomainExternalOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("external")
-
-  case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////// EPIC OPTIONS
-
-  sealed abstract class EpicOption(val name: String) extends OptionValue
-
-  case class EpicTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("technology")
-
-  case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
-
-  /** A term definition for the glossary */
-  case class Term(
-    loc: At,
-    id: Identifier,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None,
-    comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends LeafDefinition
-      with VitalDefinitionDefinition
-      with VitalDefinitionValue {
-    override def isEmpty: Boolean = description.isEmpty
-
-    def format: String = s"term ${id.format}"
-
-    final val kind: String = "Term"
-  }
-
-  /** A value that holds the author's information
-    *
-    * @param loc
-    *   The location of the author information
-    * @param name
-    *   The full name of the author
-    * @param email
-    *   The author's email address
-    * @param organization
-    *   The name of the organization the author is associated with
-    * @param title
-    *   The author's title within the organization
-    * @param url
-    *   A URL associated with the author
-    */
-  case class Author(
-    loc: At,
-    id: Identifier,
-    name: LiteralString,
-    email: LiteralString,
-    organization: Option[LiteralString] = None,
-    title: Option[LiteralString] = None,
-    url: Option[java.net.URL] = None,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None,
-    comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends LeafDefinition
-      with RootDefinition
-      with DomainDefinition {
-    override def isEmpty: Boolean = {
-      name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
-    }
-
-    final val kind: String = "Author"
-
-    def format: String = s"author ${id.format}"
-  }
-
-  case class AuthorRef(loc: At, pathId: PathIdentifier) extends Reference[Author] with VitalDefinitionValue {
-    override def format: String = s"author ${pathId.format}"
-
-    def kind: String = ""
-  }
-
-  sealed trait VitalDefinition[OPT <: OptionValue, DEF <: RiddlValue]
-      extends Definition
-      with WithOptions[OPT]
-      with WithAuthors
-      with WithIncludes[DEF]
-      with WithTerms
-      with WithTypes {
-
-    import scala.language.implicitConversions
-
-    /** Implicit conversion of boolean to Int for easier computation of statistics below
-      *
-      * @param b
-      *   The boolean to convert to an Int
-      * @return
-      */
-    implicit def bool2int(b: Boolean): Int = if b then 1 else 0
-
-    override def isVital: Boolean = true
-  }
-
-  /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
-    * handlers, and take messages directly with a reference).
-    */
-  sealed trait Processor[OPT <: OptionValue, DEF <: RiddlValue]
-      extends VitalDefinition[OPT, DEF]
-      with WithConstants
-      with WithFunctions
-      with WithHandlers
-      with WithInlets
-      with WithInvariants
-      with WithOutlets
-
-  /** The root of the containment hierarchy, corresponding roughly to a level about a file.
-    *
-    * @param contents
-    *   The sequence top level definitions contained by this root container
-    * @param inputs
-    *   The inputs for this root scope
-    */
-  case class RootContainer(
-    preComments: Seq[Comment] = Seq.empty[Comment],
-    contents: Seq[RootDefinition] = Seq.empty[RootDefinition],
-    postComments: Seq[Comment] = Seq.empty[Comment],
-    inputs: Seq[RiddlParserInput] = Nil
-  ) extends Definition {
-    lazy val domains: Seq[Domain] = contents.filter(_.getClass == classOf[Domain]).asInstanceOf[Seq[Domain]]
-    lazy val authors: Seq[Author] = contents.filter(_.getClass == classOf[Author]).asInstanceOf[Seq[Author]]
-    def comments: Seq[Comment] = Seq.empty[Comment]
-
-    override def isRootContainer: Boolean = true
-
-    def loc: At = At.empty
-
-    override def id: Identifier = Identifier(loc, "Root")
-
-    override def identify: String = "Root"
-
-    override def identifyWithLoc: String = "Root"
-
-    override def description: Option[Description] = None
-
-    override def brief: Option[LiteralString] = None
-
-    final val kind: String = "Root"
-
-    def format: String = ""
-  }
-
-  object RootContainer {
-    val empty: RootContainer = apply(Seq.empty[RootDefinition], Seq.empty[RiddlParserInput])
-    def apply(
-      contents: Seq[RootDefinition],
-      inputs: Seq[RiddlParserInput]
-    ): RootContainer = {
-      RootContainer(Seq.empty[Comment], contents, Seq.empty[Comment], inputs)
-    }
   }
 
   /** Base trait for the four kinds of message references */
@@ -1857,46 +1566,6 @@ object AST {
       super.isEmpty && loc.isEmpty && pathId.isEmpty
   }
 
-  /** A definition that represents a constant value for reference in behaviors
-    * @param loc
-    *   The location in the source of the Constant
-    * @param id
-    *   The unique identifier of the Constant
-    * @param typeEx
-    *   The type expression goverining the range of values the constant can have
-    * @param value
-    *   The value of the constant
-    * @param brief
-    *   A brief descriptin of the constant
-    * @param description
-    *   A detailed description of the constant
-    */
-  case class Constant(
-    loc: At,
-    id: Identifier,
-    typeEx: TypeExpression,
-    value: LiteralString,
-    brief: Option[LiteralString],
-    description: Option[Description],
-    comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends LeafDefinition
-      with ProcessorDefinition
-      with ProcessorValue
-      with DomainDefinition {
-    override def kind: String = "Constant"
-
-    /** Format the node to a string */
-    override def format: String =
-      s"const ${id.format} is ${typeEx.format} = ${value.format}"
-  }
-
-  case class ConstantRef(
-    loc: At = At.empty,
-    pathId: PathIdentifier = PathIdentifier.empty
-  ) extends Reference[Constant] {
-    override def format: String = s"constant ${pathId.format}"
-  }
-
   /** A type definition which associates an identifier with a type expression.
     *
     * @param loc
@@ -1919,7 +1588,6 @@ object AST {
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Definition
       with ProcessorDefinition
-      with ProcessorValue
       with ProjectorDefinition
       with FunctionDefinition
       with DomainDefinition {
@@ -1964,9 +1632,51 @@ object AST {
     override def format: String = s"field ${pathId.format}"
   }
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////// CONSTANT
+
+  /** A definition that represents a constant value for reference in behaviors
+    *
+    * @param loc
+    *   The location in the source of the Constant
+    * @param id
+    *   The unique identifier of the Constant
+    * @param typeEx
+    *   The type expression goverining the range of values the constant can have
+    * @param value
+    *   The value of the constant
+    * @param brief
+    *   A brief descriptin of the constant
+    * @param description
+    *   A detailed description of the constant
+    */
+  case class Constant(
+    loc: At,
+    id: Identifier,
+    typeEx: TypeExpression,
+    value: LiteralString,
+    brief: Option[LiteralString],
+    description: Option[Description],
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends LeafDefinition
+      with ProcessorDefinition
+      with DomainDefinition {
+    override def kind: String = "Constant"
+
+    /** Format the node to a string */
+    override def format: String =
+      s"const ${id.format} is ${typeEx.format} = ${value.format}"
+  }
+
+  case class ConstantRef(
+    loc: At = At.empty,
+    pathId: PathIdentifier = PathIdentifier.empty
+  ) extends Reference[Constant] {
+    override def format: String = s"constant ${pathId.format}"
+  }
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// STATEMENTS
 
-  sealed trait Statement extends FunctionValue {
+  sealed trait Statement extends RiddlValue {
     def kind: String = "Statement"
   }
 
@@ -2156,29 +1866,100 @@ object AST {
 
   }
 
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////////// ENTITIES
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
-  /** A reference to an entity
-    *
-    * @param loc
-    *   The location of the entity reference
-    * @param pathId
-    *   The path identifier of the referenced entity.
-    */
-  case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity] {
-    override def format: String = s"entity ${pathId.format}"
+  /** Base class of all options for the Adaptor definition */
+  sealed abstract class AdaptorOption(val name: String) extends OptionValue
+
+  /** A common option that specifies the nature of the technology used to implement the definition */
+  case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
+
+  /** A common option that specifies details about an aspect of */
+  case class AdaptorKindOption(loc: At, override val args: Seq[LiteralString])
+      extends AdaptorOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("")
   }
 
-  /** A reference to a function.
+  case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
+
+  sealed trait AdaptorDirection extends RiddlValue
+
+  case class InboundAdaptor(loc: At) extends AdaptorDirection {
+    def format: String = "from"
+  }
+
+  case class OutboundAdaptor(loc: At) extends AdaptorDirection {
+    def format: String = "to"
+  }
+
+  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
+    * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
+    * bounded context. There should be one Adapter for each external Context
     *
     * @param loc
-    *   The location of the function reference.
-    * @param pathId
-    *   The path identifier of the referenced function.
+    *   Location in the parsing input
+    * @param id
+    *   Name of the adaptor
+    * @param direction
+    *   An indication of whether this is an inbound or outbound adaptor.
+    * @param context
+    *   A reference to the bounded context from which messages are adapted
+    * @param handlers
+    *   A set of [[Handler]]s that indicate what to do when messages occur.
+    * @param brief
+    *   A brief description (one sentence) for use in documentation
+    * @param description
+    *   Optional description of the adaptor.
     */
-  case class FunctionRef(loc: At, pathId: PathIdentifier) extends Reference[Function] {
-    override def format: String = s"function ${pathId.format}"
+  case class Adaptor(
+    loc: At,
+    id: Identifier,
+    direction: AdaptorDirection,
+    context: ContextRef,
+    handlers: Seq[Handler] = Seq.empty[Handler],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
+    types: Seq[Type] = Seq.empty[Type],
+    constants: Seq[Constant] = Seq.empty[Constant],
+    functions: Seq[Function] = Seq.empty[Function],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
+    includes: Seq[Include[AdaptorDefinition]] = Seq
+      .empty[Include[AdaptorDefinition]],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
+    options: Seq[AdaptorOption] = Seq.empty[AdaptorOption],
+    terms: Seq[Term] = Seq.empty[Term],
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None,
+    comments: Seq[Comment] = Seq.empty[Comment]
+  ) extends Processor[AdaptorOption, AdaptorDefinition]
+      with ContextDefinition {
+    override lazy val contents: Seq[AdaptorDefinition] = {
+      super.contents ++ handlers ++ inlets ++ outlets ++ terms
+    }
+    final val kind: String = "Adaptor"
+
   }
+
+  case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
+    override def format: String = s"adaptor ${pathId.format}"
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTION
+
+  /** Base class of all function options
+    *
+    * @param name
+    *   The name of the option
+    */
+  sealed abstract class FunctionOption(val name: String) extends OptionValue
+
+  /** A function option to mark a function as being tail recursive
+    *
+    * @param loc
+    *   The location of the tail recursive option
+    */
+  case class TailRecursive(loc: At) extends FunctionOption("tail-recursive")
 
   /** A function definition which can be part of a bounded context or an entity.
     *
@@ -2214,19 +1995,49 @@ object AST {
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Seq[FunctionValue] = Seq.empty[FunctionValue],
+    types: Seq[Type] = Seq.empty[Type],
+    functions: Seq[Function] = Seq.empty[Function],
+    statements: Seq[Statement] = Seq.empty[Statement],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
+    includes: Seq[Include[FunctionDefinition]] = Seq
+      .empty[Include[FunctionDefinition]],
+    options: Seq[FunctionOption] = Seq.empty[FunctionOption],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends VitalDefinition[FunctionOption, FunctionValue]
-      with VitalDefinitionValue
-      with WithFunctions
-      with WithStatements {
+  ) extends VitalDefinition[FunctionOption, FunctionDefinition]
+      with WithTypes
+      with AdaptorDefinition
+      with ApplicationDefinition
+      with ContextDefinition
+      with EntityDefinition
+      with FunctionDefinition
+      with ProjectorDefinition
+      with RepositoryDefinition
+      with SagaDefinition
+      with StreamletDefinition {
+    override lazy val contents: Seq[FunctionDefinition] = {
+      super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ types ++
+        functions
+    }
 
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty &&
       output.isEmpty
 
     final val kind: String = "Function"
+  }
+
+  /** A reference to a function.
+    *
+    * @param loc
+    *   The location of the function reference.
+    * @param pathId
+    *   The path identifier of the referenced function.
+    */
+  case class FunctionRef(loc: At, pathId: PathIdentifier) extends Reference[Function] {
+    override def format: String = s"function ${pathId.format}"
   }
 
   /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional
@@ -2252,7 +2063,6 @@ object AST {
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends LeafDefinition
       with ProcessorDefinition
-      with ProcessorValue
       with StateDefinition {
     override def isEmpty: Boolean = condition.isEmpty
 
@@ -2260,6 +2070,8 @@ object AST {
 
     final val kind: String = "Invariant"
   }
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////// ON CLAUSE
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
@@ -2387,6 +2199,8 @@ object AST {
     override def format: String = ""
   }
 
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////// HANDLER
+
   /** A named handler of messages (commands, events, queries) that bundles together a set of [[OnMessageClause]]
     * definitions and by doing so defines the behavior of an entity. Note that entities may define multiple handlers and
     * switch between them to change how it responds to messages over time or in response to changing conditions
@@ -2411,7 +2225,6 @@ object AST {
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Container[HandlerDefinition]
-      with VitalDefinitionValue
       with AdaptorDefinition
       with ApplicationDefinition
       with ContextDefinition
@@ -2440,6 +2253,8 @@ object AST {
     override def format: String = s"handler ${pathId.format}"
   }
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// STATE
+
   /** Represents the state of an entity. The MorphAction can cause the state definition of an entity to change.
     *
     * @param loc
@@ -2467,8 +2282,7 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends EntityDefinition
-      with EntityValue {
+  ) extends EntityDefinition {
 
     override def contents: Seq[StateDefinition] = handlers ++ invariants
 
@@ -2486,6 +2300,91 @@ object AST {
     */
   case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State] {
     override def format: String = s"state ${pathId.format}"
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ENTITY
+
+  /** Abstract base class of options for entities
+    *
+    * @param name
+    *   the name of the option
+    */
+  sealed abstract class EntityOption(val name: String) extends EntityValue with OptionValue
+
+  /** An [[EntityOption]] that indicates that this entity should store its state in an event sourced fashion.
+    *
+    * @param loc
+    *   The location of the option.
+    */
+  case class EntityEventSourced(loc: At) extends EntityOption("event sourced")
+
+  /** An [[EntityOption]] that indicates that this entity should store only the latest value without using event
+    * sourcing. In other words, the history of changes is not stored.
+    *
+    * @param loc
+    *   The location of the option
+    */
+  case class EntityValueOption(loc: At) extends EntityOption("value")
+
+  /** An [[EntityOption]] that indicates that this entity should not persist its state and is only available in
+    * transient memory. All entity values will be lost when the service is stopped.
+    *
+    * @param loc
+    *   The location of the option.
+    */
+  case class EntityTransient(loc: At) extends EntityOption("transient")
+
+  /** An [[EntityOption]] that indicates that this entity is an aggregate root entity through which all commands and
+    * queries are sent on behalf of the aggregated entities.
+    *
+    * @param loc
+    *   The location of the option
+    */
+  case class EntityIsAggregate(loc: At) extends EntityOption("aggregate")
+
+  /** An [[EntityOption]] that indicates that this entity favors consistency over availability in the CAP theorem.
+    *
+    * @param loc
+    *   The location of the option.
+    */
+  case class EntityIsConsistent(loc: At) extends EntityOption("consistent")
+
+  /** A [[EntityOption]] that indicates that this entity favors availability over consistency in the CAP theorem.
+    *
+    * @param loc
+    *   The location of the option.
+    */
+  case class EntityIsAvailable(loc: At) extends EntityOption("available")
+
+  /** An [[EntityOption]] that indicates that this entity is intended to implement a finite state machine.
+    *
+    * @param loc
+    *   The location of the option.
+    */
+  case class EntityIsFiniteStateMachine(loc: At) extends EntityOption("finite state machine")
+
+  /** An [[EntityOption]] that indicates that this entity should allow receipt of commands and queries via a message
+    * queue.
+    *
+    * @param loc
+    *   The location at which this option occurs.
+    */
+  case class EntityMessageQueue(loc: At) extends EntityOption("message queue")
+
+  /** An [[EntityOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class EntityColorOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("color")
+
+  /** An [[EntityOption]] that specifies the kind of technology used to represent the entity */
+  case class EntityTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("technology")
+
+  /** An [[EntityOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class EntityKindOption(loc: At, override val args: Seq[LiteralString])
+      extends EntityOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("device", "user", "concept", "machine", "digital")
   }
 
   /** Definition of an Entity
@@ -2514,18 +2413,29 @@ object AST {
   case class Entity(
     loc: At,
     id: Identifier,
-    contents: Seq[EntityValue] = Seq.empty[EntityValue],
+    options: Seq[EntityOption] = Seq.empty[EntityOption],
+    states: Seq[State] = Seq.empty[State],
+    types: Seq[Type] = Seq.empty[Type],
+    constants: Seq[Constant] = Seq.empty[Constant],
+    handlers: Seq[Handler] = Seq.empty[Handler],
+    functions: Seq[Function] = Seq.empty[Function],
+    invariants: Seq[Invariant] = Seq.empty[Invariant],
+    inlets: Seq[Inlet] = Seq.empty[Inlet],
+    outlets: Seq[Outlet] = Seq.empty[Outlet],
+    includes: Seq[Include[EntityDefinition]] = Seq
+      .empty[Include[EntityDefinition]],
+    authors: Seq[AuthorRef] = Seq.empty[AuthorRef],
+    terms: Seq[Term] = Seq.empty[Term],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Processor[EntityOption, EntityDefinition]
-      with WithStates
       with ContextDefinition {
 
-//    override lazy val contents: Seq[EntityDefinition] = {
-//      states ++ types ++ handlers ++ functions ++
-//        invariants ++ terms ++ inlets ++ outlets
-//    }
+    override lazy val contents: Seq[EntityDefinition] = {
+      super.contents ++ states ++ types ++ handlers ++ functions ++
+        invariants ++ terms ++ inlets ++ outlets
+    }
 
     final val kind: String = "Entity"
 
@@ -2533,59 +2443,36 @@ object AST {
 
   }
 
-  sealed trait AdaptorDirection extends AdaptorValue
-
-  case class InboundAdaptor(loc: At) extends AdaptorDirection {
-    def format: String = "from"
-  }
-
-  case class OutboundAdaptor(loc: At) extends AdaptorDirection {
-    def format: String = "to"
-  }
-
-  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
-    * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
-    * bounded context. There should be one Adapter for each external Context
+  /** A reference to an entity
     *
     * @param loc
-    *   Location in the parsing input
-    * @param id
-    *   Name of the adaptor
-    * @param direction
-    *   An indication of whether this is an inbound or outbound adaptor.
-    * @param context
-    *   A reference to the bounded context from which messages are adapted
-    * @param contents
-    *   The set of RiddlValue that this Adaptor contains
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   Optional description of the adaptor.
+    *   The location of the entity reference
+    * @param pathId
+    *   The path identifier of the referenced entity.
     */
-  case class Adaptor(
-    loc: At,
-    id: Identifier,
-    direction: AdaptorDirection,
-    context: ContextRef,
-    contents: Seq[AdaptorValue] = Seq.empty[AdaptorValue],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None,
-    comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends Processor[AdaptorOption, AdaptorDefinition]
-      with ContextDefinition
-      with WithConstants
-      with WithFunctions
-      with WithHandlers
-      with WithInlets
-      with WithInvariants
-      with WithOutlets {
-
-    final val kind: String = "Adaptor"
-
+  case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity] {
+    override def format: String = s"entity ${pathId.format}"
   }
 
-  case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
-    override def format: String = s"adaptor ${pathId.format}"
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
+
+  sealed abstract class RepositoryOption(final val name: String) extends OptionValue
+
+  /** An [[RepositoryOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class RepositoryColorOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("color")
+
+  /** An [[RepositoryOption]] that specifies the kind of technology used to represent the entity */
+  case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
+      extends RepositoryOption("technology")
+
+  /** An [[RepositoryOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class RepositoryKindOption(loc: At, override val args: Seq[LiteralString])
+      extends RepositoryOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("api", "database", "device", "file")
   }
 
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
@@ -2640,7 +2527,7 @@ object AST {
     override def kind: String = "Repository"
 
     override lazy val contents: Seq[RepositoryDefinition] = {
-      types ++ handlers ++ inlets ++ outlets ++ terms ++ constants
+      super.contents ++ types ++ handlers ++ inlets ++ outlets ++ terms ++ constants
     }
   }
 
@@ -2653,6 +2540,27 @@ object AST {
     */
   case class RepositoryRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
     override def format: String = s"repository ${pathId.format}"
+  }
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////// PROJECTOR
+
+  sealed abstract class ProjectorOption(final val name: String) extends OptionValue
+
+  /** An [[ProjectorOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ProjectorColorOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("color")
+
+  /** An [[ProjectorOption]] that specifies the kind of technology used to represent the entity */
+  case class ProjectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
+      extends ProjectorOption("technology")
+
+  /** An [[ProjectorOption]] that indicates the general kind of projector being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ProjectorKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ProjectorOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("message queue", "stream")
   }
 
   /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view.
@@ -2703,13 +2611,27 @@ object AST {
       with ContextDefinition
       with WithTypes {
     override lazy val contents: Seq[ProjectorDefinition] = {
-      handlers ++ invariants ++ terms
+      super.contents ++ handlers ++ invariants ++ terms
     }
     final val kind: String = "Projector"
 
   }
 
+  /** A reference to an context's projector definition
+    *
+    * @param loc
+    *   The location of the state reference
+    * @param pathId
+    *   The path identifier of the referenced projector definition
+    */
+  case class ProjectorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
+    override def format: String = s"projector ${pathId.format}"
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// REPLICA
+
   /** A replicated value within a context. Integer, Map and Set values will use CRDTs
+    *
     * @param loc
     *   The location of
     * @param typeExp
@@ -2728,16 +2650,53 @@ object AST {
     final val format: String = s"replica ${id.format}"
   }
 
-  /** A reference to an context's projector definition
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
+
+  /** Base trait for all options a Context can have. */
+  sealed abstract class ContextOption(final val name: String) extends OptionValue
+
+  /** An [[ContextOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ContextColorOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("color")
+
+  /** An [[ContextOption]] that specifies the kind of technology used to represent the entity */
+  case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
+
+  /** An [[ContextOption]] that indicates the general kind of context being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ContextKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ContextOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("microservice", "gateway", "router", "api")
+  }
+
+  /** A [[ContextOption]] that provides the name of the software package the Context is implemented within */
+  case class ContextPackageOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("package")
+
+  /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
+    * external system and is therefore at the boundary of the context map
     *
     * @param loc
-    *   The location of the state reference
-    * @param pathId
-    *   The path identifier of the referenced projector definition
+    *   The location of the wrapper option
     */
-  case class ProjectorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
-    override def format: String = s"projector ${pathId.format}"
-  }
+  case class ContextWrapperOption(loc: At) extends ContextOption("wrapper")
+
+  /** A context's "service" option. This option suggests the bounded context is intended to be a DDD service, similar to
+    * a wrapper but without any persistent state and more of a stateless service aspect to its nature
+    *
+    * @param loc
+    *   The location at which the option occurs
+    */
+  case class ServiceOption(loc: At) extends ContextOption("service")
+
+  /** A context's "gateway" option that suggests the bounded context is intended to be an application gateway to the
+    * model. Gateway's provide authentication and authorization access to external systems, usually user applications.
+    *
+    * @param loc
+    *   The location of the gateway option
+    */
+  case class GatewayOption(loc: At) extends ContextOption("gateway")
 
   /** A bounded context definition. Bounded contexts provide a definitional boundary on the language used to describe
     * some aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a
@@ -2792,10 +2751,10 @@ object AST {
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Processor[ContextOption, ContextDefinition]
       with DomainDefinition {
-    override lazy val contents: Seq[ContextDefinition] =
+    override lazy val contents: Seq[ContextDefinition] = super.contents ++
       types ++ entities ++ adaptors ++ sagas ++ streamlets ++ functions ++
-        terms ++ handlers ++ projectors ++ repositories ++ inlets ++
-        outlets ++ connections
+      terms ++ handlers ++ projectors ++ repositories ++ inlets ++
+      outlets ++ connections
 
     final val kind: String = "Context"
 
@@ -2817,13 +2776,29 @@ object AST {
     override def format: String = s"context ${pathId.format}"
   }
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////// STREAMLET
+
+  sealed abstract class StreamletOption(final val name: String) extends OptionValue
+
+  /** An [[StreamletOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class StreamletColorOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("color")
+
+  /** An [[StreamletOption]] that specifies the kind of technology used to represent the entity */
+  case class StreamletTechnologyOption(loc: At, override val args: Seq[LiteralString])
+      extends StreamletOption("technology")
+
+  /** An [[StreamletOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class StreamletKindOption(loc: At, override val args: Seq[LiteralString])
+      extends StreamletOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("stream")
+  }
+
   /** A sealed trait for Inlets and Outlets */
-  sealed trait Portlet
-      extends LeafDefinition
-      with ProcessorDefinition
-      with ProcessorValue
-      with SagaValue
-      with SagaDefinition
+  sealed trait Portlet extends LeafDefinition with ProcessorDefinition
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -2845,7 +2820,9 @@ object AST {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends Portlet {
+  ) extends Portlet
+      with LeafDefinition
+      with ProcessorDefinition {
     def format: String = s"inlet ${id.format} is ${type_.format}"
     final val kind: String = "Inlet"
   }
@@ -2870,10 +2847,34 @@ object AST {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends Portlet {
+  ) extends Portlet
+      with LeafDefinition
+      with ProcessorDefinition {
     def format: String = s"outlet ${id.format} is ${type_.format}"
     final val kind: String = "Outlet"
   }
+
+  sealed abstract class ConnectorOption(final val name: String) extends OptionValue
+
+  /** An [[ConnectorOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ConnectorColorOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("color")
+
+  /** An [[ConnectorOption]] that specifies the kind of technology used to represent the entity */
+  case class ConnectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
+      extends ConnectorOption("technology")
+
+  /** An [[ConnectorOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ConnectorKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ConnectorOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("message queue", "pub/sub")
+  }
+
+  /** An [[ConnectorOption]]  to provide the software package name for the connector */
+  case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
 
   case class Connector(
     loc: At,
@@ -2980,7 +2981,7 @@ object AST {
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Processor[StreamletOption, StreamletDefinition]
       with ContextDefinition {
-    override def contents: Seq[StreamletDefinition] =
+    override def contents: Seq[StreamletDefinition] = super.contents ++
       inlets ++ outlets ++ handlers ++ terms ++ constants
 
     final val kind: String = shape.getClass.getSimpleName
@@ -3065,6 +3066,8 @@ object AST {
     override def format: String = s"outlet ${pathId.format}"
   }
 
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// SAGA
+
   /** The definition of one step in a saga with its undo step and example.
     *
     * @param loc
@@ -3089,12 +3092,44 @@ object AST {
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends LeafDefinition
-      with SagaDefinition
-      with SagaValue {
+      with SagaDefinition {
     def format: String = s"step ${id.format}"
 
     final val kind: String = "SagaStep"
   }
+
+  /** Base trait for all options applicable to a saga. */
+  sealed abstract class SagaOption(final val name: String) extends OptionValue
+
+  /** An [[SagaOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class SagaColorOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("color")
+
+  /** An [[SagaOption]] that specifies the kind of technology used to represent the entity */
+  case class SagaTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("technology")
+
+  /** An [[SagaOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class SagaKindOption(loc: At, override val args: Seq[LiteralString])
+      extends SagaOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("distributed transaction", "workflow")
+  }
+
+  /** A [[SagaOption]] that indicates sequential (serial) execution of the saga actions.
+    *
+    * @param loc
+    *   The location of the sequential option
+    */
+  case class SequentialOption(loc: At) extends SagaOption("sequential")
+
+  /** A [[SagaOption]] that indicates parallel execution of the saga actions.
+    *
+    * @param loc
+    *   The location of the parallel option
+    */
+  case class ParallelOption(loc: At) extends SagaOption("parallel")
 
   /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define
     * a computing action based on a variety of related commands that must all succeed atomically or have their effects
@@ -3137,7 +3172,7 @@ object AST {
       with ContextDefinition
       with DomainDefinition {
     override lazy val contents: Seq[SagaDefinition] = {
-      input.map(_.fields).getOrElse(Seq.empty[Field]) ++
+      super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
         output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps ++ terms
     }
     final val kind: String = "Saga"
@@ -3151,32 +3186,7 @@ object AST {
     def format: String = s"saga ${pathId.format}"
   }
 
-  /** An User (Role) who is the initiator of the user story. Users may be persons or machines
-    *
-    * @param loc
-    *   The location of the user in the source
-    * @param id
-    *   The name (role) of the user
-    * @param is_a
-    *   What kind of thing the user is
-    * @param brief
-    *   A brief description of the user
-    * @param description
-    *   A longer description of the user and its role
-    */
-  case class User(
-    loc: At,
-    id: Identifier,
-    is_a: LiteralString,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None,
-    comments: Seq[Comment] = Seq.empty[Comment]
-  ) extends LeafDefinition
-      with DomainDefinition {
-    def format: String = s"user ${id.format} is ${is_a.format}"
-
-    override def kind: String = "User"
-  }
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////// EPIC
 
   /** A reference to an User using a path identifier
     *
@@ -3483,6 +3493,27 @@ object AST {
     override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
   }
 
+  /** The base trait of all option values that pretain to Epics */
+  sealed abstract class EpicOption(final val name: String) extends OptionValue
+
+  /** An [[EpicOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class EpicColorOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("color")
+
+  /** An [[EpicOption]] that specifies the kind of technology used to represent the entity */
+  case class EpicTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("technology")
+
+  /** An [[EpicOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class EpicKindOption(loc: At, override val args: Seq[LiteralString])
+      extends EpicOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("feature")
+  }
+
+  case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
+
   /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an overall story about user interactions
     * with the system. This define functionality from the perspective of users (men or machines) interactions with the
     * system that is part of their role.
@@ -3518,7 +3549,7 @@ object AST {
   ) extends VitalDefinition[EpicOption, EpicDefinition]
       with DomainDefinition {
     override def contents: Seq[EpicDefinition] = {
-      cases ++ terms
+      super.contents ++ cases ++ terms
     }
 
     override def isEmpty: Boolean = {
@@ -3539,6 +3570,8 @@ object AST {
   case class EpicRef(loc: At, pathId: PathIdentifier) extends Reference[Epic] {
     def format: String = s"epic ${pathId.format}"
   }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////// APPLICATION
 
   /** A group of GroupDefinition that can be treated as a whole. For example, a form, a button group, etc.
     * @param loc
@@ -3699,7 +3732,26 @@ object AST {
   case class InputRef(loc: At, pathId: PathIdentifier) extends Reference[Input] {
     def format: String = s"input ${pathId.format}"
   }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////// APPLICATION
+
+  sealed abstract class ApplicationOption(final val name: String) extends OptionValue
+
+  /** An [[ApplicationOption]]  that specifies the color for this entity in generated diagrams, etc. */
+  case class ApplicationColorOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("color")
+
+  /** An [[ApplicationOption]] that specifies the kind of technology used to represent the entity */
+  case class ApplicationTechnologyOption(loc: At, override val args: Seq[LiteralString])
+      extends ApplicationOption("technology")
+
+  /** An [[ApplicationOption]] that indicates the general kind of entity being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class ApplicationKindOption(loc: At, override val args: Seq[LiteralString])
+      extends ApplicationOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq("UI", "Automation", "Device", "Controls")
+  }
+
   /** An application from which a person, robot, or other active agent (the user) will obtain information, or to which
     * that user will provided information.
     * @param loc
@@ -3752,7 +3804,7 @@ object AST {
     override def kind: String = "Application"
     override def isAppRelated: Boolean = true
     override lazy val contents: Seq[ApplicationDefinition] = {
-      types ++ groups ++ terms // ++ includes
+      super.contents ++ types ++ groups ++ terms // ++ includes
     }
   }
 
@@ -3767,7 +3819,57 @@ object AST {
     def format: String = s"application ${pathId.format}"
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////// DOMAIN
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// DOMAIN
+
+  /** Base trait for all options a Domain can have.
+    */
+  sealed abstract class DomainOption(final val name: String) extends OptionValue
+
+  case class DomainColorOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("color")
+
+  /** An [[DomainOption]] that specifies the kind of technology used to represent the entity */
+  case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")
+
+  /** An [[DomainOption]] that indicates the general kind of domain being defined. This option takes a value which
+    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
+    * entities. This entity option may be used by downstream AST processors, especially code generators.
+    */
+  case class DomainKindOption(loc: At, override val args: Seq[LiteralString])
+      extends DomainOption("kind")
+      with ConstrainedOptionValue {
+    val accepted: Seq[String] = Seq(
+      "accommodation",
+      "administrative",
+      "agricultural",
+      "healthcare",
+      "entertainment",
+      "clothing",
+      "construction",
+      "education",
+      "electronics",
+      "engineering",
+      "finance",
+      "forestry",
+      "fuel",
+      "information",
+      "insurance",
+      "publishing",
+      "manufacturing",
+      "logistics",
+      "process control",
+      "transportation"
+    )
+  }
+
+  /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
+    * external system and is therefore at the boundary of the context map
+    *
+    * @param loc
+    *   The location of the wrapper option
+    */
+  case class DomainPackageOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("package")
+
+  case class DomainExternalOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("external")
 
   /** The definition of a domain. Domains are the highest building block in RIDDL and may be nested inside each other to
     * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies
@@ -3824,7 +3926,7 @@ object AST {
       with DomainDefinition {
 
     override lazy val contents: Seq[DomainDefinition] = {
-      domains ++ types ++ constants ++ contexts ++ users ++
+      super.contents ++ domains ++ types ++ constants ++ contexts ++ users ++
         epics ++ applications ++ terms ++ authorDefs
     }
     final val kind: String = "Domain"
@@ -3842,7 +3944,7 @@ object AST {
     override def format: String = s"domain ${pathId.format}"
   }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.IsInstanceOf"))
   def findAuthors(

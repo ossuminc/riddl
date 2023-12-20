@@ -155,7 +155,7 @@ class ParserTest extends ParsingTest {
             Identifier((1, 9, rpi), "bar"),
             Seq(
               ServiceOption((1, 27, rpi)),
-              WrapperOption((1, 36, rpi)),
+              ContextWrapperOption((1, 36, rpi)),
               GatewayOption((1, 45, rpi))
             )
           )

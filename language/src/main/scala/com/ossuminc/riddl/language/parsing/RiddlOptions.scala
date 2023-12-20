@@ -6,6 +6,21 @@ import Keywords.{keyword, keywords}
 
 object RiddlOptions {
 
+  def adaptorOptions[u: P]: P[String] = keywords(
+    StringIn(
+      RiddlOption.technology,
+      RiddlOption.kind,
+      RiddlOption.color
+    ).!
+  )
+  def applicationOptions[u: P]: P[String] = keywords(
+    StringIn(
+      RiddlOption.technology,
+      RiddlOption.kind,
+      RiddlOption.color
+    ).!
+  )
+
   def contextOptions[u: P]: P[String] = keywords(
     StringIn(
       RiddlOption.wrapper,
@@ -13,12 +28,19 @@ object RiddlOptions {
       RiddlOption.service,
       RiddlOption.package_,
       RiddlOption.technology,
-      RiddlOption.color
+      RiddlOption.color,
+      RiddlOption.kind
     ).!
   )
 
   def domainOptions[u: P]: P[String] = keywords(
-    StringIn(RiddlOption.external, RiddlOption.package_, RiddlOption.technology).!
+    StringIn(
+      RiddlOption.external,
+      RiddlOption.package_,
+      RiddlOption.technology,
+      RiddlOption.color,
+      RiddlOption.kind
+    ).!
   )
 
   def entityOptions[u: P]: P[String] = keywords(
@@ -32,10 +54,38 @@ object RiddlOptions {
       RiddlOption.finite_state_machine,
       RiddlOption.kind,
       RiddlOption.message_queue,
-      RiddlOption.device,
-      RiddlOption.technology
+      RiddlOption.technology,
+      RiddlOption.color
     ).!
   )
+
+  def epicOptions[u: P]: P[String] = keywords {
+    StringIn(
+      RiddlOption.technology,
+      RiddlOption.color,
+      RiddlOption.sync,
+      RiddlOption.kind
+    ).!
+  }
+
+  def repositoryOptions[u: P]: P[String] = keywords(
+    StringIn(
+      RiddlOption.technology,
+      RiddlOption.kind,
+      RiddlOption.color
+    ).!
+  )
+
+  def sagaOptions[u: P]: P[String] = keywords(
+    StringIn(
+      RiddlOption.technology,
+      RiddlOption.kind,
+      RiddlOption.color,
+      RiddlOption.parallel,
+      RiddlOption.sequential
+    ).!
+  )
+
 
   def aggregate[u: P]: P[Unit] = keyword(RiddlOption.aggregate)
   def async[u: P]: P[Unit] = keyword(RiddlOption.async)
@@ -44,7 +94,7 @@ object RiddlOptions {
   def concept[u: P]: P[Unit] = keyword(RiddlOption.concept)
   def consistent[u: P]: P[Unit] = keyword(RiddlOption.consistent)
   def device[u: P]: P[Unit] = keyword(RiddlOption.device)
-  def externa[u: P]: P[Unit] = keyword(RiddlOption.external)
+  def external[u: P]: P[Unit] = keyword(RiddlOption.external)
   def events_sourced[u: P]: P[Unit] = keyword(RiddlOption.event_sourced)
   def finiteStateMachine[u: P]: P[Unit] = keyword(RiddlOption.finite_state_machine)
   def gateway[u: P]: P[Unit] = keyword(RiddlOption.gateway)

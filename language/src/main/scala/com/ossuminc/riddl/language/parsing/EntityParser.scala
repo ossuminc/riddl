@@ -22,7 +22,7 @@ private[parsing] trait EntityParser {
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](
-    RiddlOptions.entityOptions
+      RiddlOptions.entityOptions
     ) {
       case (loc, RiddlOption.event_sourced, _)        => EntityEventSourced(loc)
       case (loc, RiddlOption.value, _)                => EntityValueOption(loc)
@@ -31,10 +31,10 @@ private[parsing] trait EntityParser {
       case (loc, RiddlOption.consistent, _)           => EntityIsConsistent(loc)
       case (loc, RiddlOption.available, _)            => EntityIsAvailable(loc)
       case (loc, RiddlOption.finite_state_machine, _) => EntityIsFiniteStateMachine(loc)
-      case (loc, RiddlOption.kind, args)              => EntityKind(loc, args)
+      case (loc, RiddlOption.kind, args)              => EntityKindOption(loc, args)
       case (loc, RiddlOption.message_queue, _)        => EntityMessageQueue(loc)
-      case (loc, RiddlOption.device, _)               => EntityIsDevice(loc)
       case (loc, RiddlOption.technology, args)        => EntityTechnologyOption(loc, args)
+      case (loc, RiddlOption.color, args)             => EntityColorOption(loc, args)
     }
   }
 

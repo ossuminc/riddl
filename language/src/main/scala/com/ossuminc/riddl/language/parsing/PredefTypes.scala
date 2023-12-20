@@ -80,6 +80,7 @@ object PredefTypes {
 
 object PredefType {
   final val Abstract = "Abstract"
+  final val Blob = "Blob"
   final val Boolean = "Boolean"
   final val Current = "Current" // in amperes
   final val Currency = "Currency" // for some nation
@@ -109,4 +110,5 @@ object PredefType {
   final val UserId = "UserId"
   final val UUID = "UUID"
   final val Whole = "Whole"
+  final val ZonedDateTime = "ZonedDateTime"
 }

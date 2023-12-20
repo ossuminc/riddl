@@ -172,7 +172,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicOptions[u: P]: P[Seq[EpicOption]] = {
-    options[u, EpicOption](StringIn(RiddlOption.technology, RiddlOption.sync).!) {
+    options[u, EpicOption](RiddlOptions.epicOptions) {
       case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
       case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
     }

@@ -22,8 +22,10 @@ private[parsing] trait RepositoryParser {
     with TypeParser =>
 
   private def repositoryOptions[u: P]: P[Seq[RepositoryOption]] = {
-    options[u, RepositoryOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
-      RepositoryTechnologyOption(loc, args)
+    options[u, RepositoryOption](RiddlOptions.repositoryOptions) {
+      case (loc, RiddlOption.technology, args) => RepositoryTechnologyOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => RepositoryKindOption(loc, args)
+      case (loc, RiddlOption.color, args)      => RepositoryColorOption(loc, args)
     }
   }
 
