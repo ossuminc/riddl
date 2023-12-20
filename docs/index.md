@@ -1,1 +1,0 @@
-# RIDDL Technical Documentation
