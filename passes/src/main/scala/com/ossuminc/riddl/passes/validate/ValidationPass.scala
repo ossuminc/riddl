@@ -185,6 +185,8 @@ case class ValidationPass(
         statement match {
           case ArbitraryStatement(loc, what) =>
             checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
+          case FocusStatement(loc, group) => 
+            checkRef[Group](group, onClause, parents)
           case ErrorStatement(loc, message) =>
             checkNonEmptyValue(message, "error description", onClause, loc, MissingWarning, required = true)
           case SetStatement(loc, field, value) =>

@@ -228,7 +228,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Field](ss.field, parents)
       case BecomeStatement(loc, entity, handler) =>
         resolveARef[Entity](entity, parents)
-      case ForEachStatement(loc, pid, do_) =>
+      case FocusStatement(loc, group) => 
+        resolveARef[Group](group, parents)
+      case ForEachStatement(_, pid, _) =>
         resolveAPathId[Type](pid, parents)
       case SendStatement(loc, msg, portlet) =>
         resolveARef[Type](msg, parents)

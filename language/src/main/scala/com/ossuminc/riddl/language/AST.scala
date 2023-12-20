@@ -1712,6 +1712,14 @@ object AST {
     def format: String = s"error ${message.format}"
   }
 
+  case class FocusStatement(
+    loc: At,
+    group: GroupRef
+  ) extends Statement {
+    override def kind: String = "Focus Statement"
+    def format: String = s"focus on ${group.format}"
+  }
+
   case class SetStatement(
     loc: At,
     field: FieldRef,

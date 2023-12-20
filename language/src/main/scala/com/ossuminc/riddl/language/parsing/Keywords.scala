@@ -99,6 +99,7 @@ object Keywords {
   def file[u: P]: P[Unit] = keyword(Keyword.file)
   def flow[u: P]: P[Unit] = keyword(Keyword.flow)
   def flows[u: P]: P[Unit] = keyword(Keyword.flows)
+  def focus[u: P]: P[Unit] = keyword(Keyword.focus)
   def foreach[u: P]: P[Unit] = keyword(Keyword.foreach)
   def form[u: P]: P[Unit] = keyword(Keyword.form)
   def function[u: P]: P[Unit] = keyword(Keyword.function)
