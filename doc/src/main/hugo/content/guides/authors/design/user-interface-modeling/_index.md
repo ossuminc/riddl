@@ -38,14 +38,15 @@ To clarify the concepts introduced in this section, a relatively simple
 example from an e-commerce shopping cart will be constructed as you 
 work through the material.  This example roughly translates to the
 following user journey:
-* User selects items from a display of products 
-* Selected items are placed in the user's shopping cart
-* The shopping cart contents is displayed
-* The user drops an item from the shopping cart
-* The user orders the contents of the shopping cart
-* The user enters payment details and shipping address
-* The system confirms the order information.
+1. User selects items from a display of products 
+1. Selected items are placed in the user's shopping cart
+1. The shopping cart contents is displayed
+1. The user drops an item from the shopping cart
+1. The user orders the contents of the shopping cart
+1. The user enters payment details and shipping address
+1. The system confirms the order information.
 
 In the following pages, we will show how to write this sequence
-of interactions
+of interactions using RIDDL epics and applications. 
+
 {{< toc-tree >}}
