@@ -72,14 +72,15 @@ private[parsing] trait AdaptorParser {
             description,
             comments
           ) =>
-        Adaptor(
+        val content = defs ++ authors ++ options ++ comments
+        Adaptor.from(
           loc,
           id,
           direction,
           cRef,
+          content,
           brief,
-          description,
-          defs ++ authors ++ options ++ comments
+          description
         )
     }
   }
