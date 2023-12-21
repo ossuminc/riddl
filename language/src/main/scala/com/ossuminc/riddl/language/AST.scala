@@ -446,6 +446,16 @@ object AST {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
 
+  sealed trait WithDocumentation extends RiddlValue {
+    def brief: Option[LiteralString]
+
+    def description: Option[Description]
+  }
+
+  sealed trait WithComments extends RiddlValue {
+    def comments: Seq[Comment]
+  }
+
   /** Added to definitions that support includes */
   sealed trait WithIncludes[T <: Definition] extends Container[T] {
     def includes: Seq[Include[T]]
@@ -499,16 +509,33 @@ object AST {
   }
 
   /** Base trait of any definition that is a container and contains types */
-  sealed trait WithTypes extends Definition {
+  sealed trait WithTypes extends RiddlValue {
     def types: Seq[Type]
 
     override def hasTypes: Boolean = types.nonEmpty
+  }
+
+  sealed trait WithConstants extends RiddlValue {
+    def constants: Seq[Constant]
+    def hasConstants: Boolean = constants.nonEmpty
+  }
+
+  sealed trait WithInvariants extends RiddlValue {
+    def invariants: Seq[Invariant]
+    def hasInvariants: Boolean = invariants.nonEmpty
+  }
+
+  sealed trait WithStates extends RiddlValue {
+    def states: Seq[State]
+    def hasStates: Boolean = states.nonEmpty
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
 
   sealed trait VitalDefinition[OPT <: OptionValue, DEF <: Definition]
       extends Definition
+      with WithComments
+      with WithDocumentation
       with WithOptions[OPT]
       with WithAuthors
       with WithIncludes[DEF]
@@ -531,20 +558,15 @@ object AST {
   /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
     * handlers, and take messages directly with a reference).
     */
-  sealed trait Processor[OPT <: OptionValue, DEF <: Definition] extends VitalDefinition[OPT, DEF] with WithTypes {
-
-    def types: Seq[Type]
-
-    def constants: Seq[Constant]
+  sealed trait Processor[OPT <: OptionValue, DEF <: Definition]
+      extends VitalDefinition[OPT, DEF]
+      with WithTypes
+      with WithConstants
+      with WithInvariants {
 
     def functions: Seq[Function]
-
-    def invariants: Seq[Invariant]
-
     def handlers: Seq[Handler]
-
     def inlets: Seq[Inlet]
-
     def outlets: Seq[Outlet]
   }
 
@@ -1891,7 +1913,9 @@ object AST {
 
   case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
 
-  sealed trait AdaptorDirection extends RiddlValue
+  sealed trait AdaptorDirection extends RiddlValue {
+    def loc: At
+  }
 
   case class InboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "from"
@@ -1947,6 +1971,52 @@ object AST {
     }
     final val kind: String = "Adaptor"
 
+  }
+
+  object Adaptor {
+    def apply(
+      location: At,
+      id: Identifier,
+      direction: AdaptorDirection,
+      contextRef: ContextRef, 
+      brief: Option[LiteralString],
+      description: Option[Description],
+      values: Seq[RiddlValue]
+    ): Adaptor = {
+      val groups = values.groupBy(_.getClass)
+      val comments = mapGroupTo[Comment](groups.get(classOf[Comment]))
+      val options = mapGroupTo[AdaptorOption](groups.get(classOf[AdaptorOption]))
+      val authors = mapGroupTo[AuthorRef](groups.get(classOf[AuthorRef]))
+      val includes = mapGroupTo[Include[AdaptorDefinition]](groups.get(classOf[Include[AdaptorDefinition]]))
+      val terms = mapGroupTo[Term](groups.get(classOf[Term]))
+      val handlers: Seq[Handler] = mapGroupTo[Handler](groups.get(classOf[Handler]))
+      val inlets = mapGroupTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapGroupTo[Outlet](groups.get(classOf[Outlet]))
+      val types = mapGroupTo[Type](groups.get(classOf[Outlet]))
+      val functions = mapGroupTo[Function](groups.get(classOf[Function]))
+      val constants = mapGroupTo[Constant](groups.get(classOf[Constant]))
+      val invariants = mapGroupTo[Invariant](groups.get(classOf[Invariant]))
+      Adaptor(
+        location,
+        id,
+        direction,
+        contextRef,
+        handlers,
+        inlets,
+        outlets,
+        types,
+        constants,
+        functions,
+        invariants,
+        includes,
+        authors,
+        options,
+        terms,
+        brief,
+        description,
+        comments
+      )
+    }
   }
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
@@ -2438,6 +2508,7 @@ object AST {
     description: Option[Description] = None,
     comments: Seq[Comment] = Seq.empty[Comment]
   ) extends Processor[EntityOption, EntityDefinition]
+      with WithStates
       with ContextDefinition {
 
     override lazy val contents: Seq[EntityDefinition] = {
@@ -3967,6 +4038,10 @@ object AST {
         .map(_.asInstanceOf[WithAuthors].authors)
         .getOrElse(Seq.empty[AuthorRef])
     }
+  }
+
+  def mapGroupTo[T <: RiddlValue](seq: Option[Seq[RiddlValue]]): Seq[T] = {
+    seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
   }
 
 }

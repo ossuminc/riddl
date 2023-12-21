@@ -48,8 +48,8 @@ private[parsing] trait AdaptorParser {
     P(location ~ (Readability.from.! | Readability.to.!)).map {
       case (loc, "from") => InboundAdaptor(loc)
       case (loc, "to")   => OutboundAdaptor(loc)
-      case (loc, _) =>
-        error("Impossible condition at $loc")
+      case (loc, str) =>
+        error(s"Impossible condition at $loc $str")
         InboundAdaptor(loc)
     }
   }
@@ -65,46 +65,21 @@ private[parsing] trait AdaptorParser {
             id,
             authors,
             direction,
-            context,
+            cRef,
             options,
             defs,
             brief,
             description,
             comments
           ) =>
-        val groups = defs.groupBy(_.getClass)
-        val includes = mapTo[Include[AdaptorDefinition]](
-          groups.get(
-            classOf[Include[AdaptorDefinition]]
-          )
-        )
-        val terms = mapTo[Term](groups.get(classOf[Term]))
-        val handlers: Seq[Handler] = mapTo[Handler](groups.get(classOf[Handler]))
-        val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-        val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-        val types = mapTo[Type](groups.get(classOf[Outlet]))
-        val functions = mapTo[Function](groups.get(classOf[Function]))
-        val constants = mapTo[Constant](groups.get(classOf[Constant]))
-        val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
         Adaptor(
           loc,
           id,
           direction,
-          context,
-          handlers,
-          inlets,
-          outlets,
-          types,
-          constants,
-          functions,
-          invariants,
-          includes,
-          authors,
-          options,
-          terms,
+          cRef,
           brief,
           description,
-          comments
+          defs ++ authors ++ options ++ comments
         )
     }
   }
