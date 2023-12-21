@@ -1,5 +1,5 @@
 ---
-title: "Story Case"
+title: "User Story"
 draft: "false"
 ---
 
@@ -28,7 +28,7 @@ The following table shows the pairings recognized:
 
 ## Occurs In
 * [Epic]({{< relref "epic.md" >}})
-* [Use Case]({{< relref "./case.md" >}})
+* [Use Case]({{< relref "./use-case.md" >}})
 
 ## Contains)
 * [Statements]({{< relref "statement.md" >}})

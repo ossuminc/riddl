@@ -6,8 +6,19 @@ draft: "false"
 weight: 30
 ---
 
-A RIDDL _Epic_ is a definition that helps to model the interactivity
-between the user, the application and the rest of the system. 
+A RIDDL _Epic_ is a definition that models the interaction between a 
+user, an [application](application-models-users-tool.md), and the rest of the system.   
+
+[Epics]({{< relref "../../../../../concepts/epic.md">}}) are 
+[definitions]({{< relref "../../../../../concepts/definition.md">}}) that
+contains a related set of 
+[use cases]({{< relref "../../../../../concepts/use-case.md">}}) that
+detail each [interaction]({{< relref "../../../../../concepts/interaction.md">}}) 
+between the [user]({{< relref "../../../../../concepts/user.md">}})
+and the components of the system being modeled. Epics may occur
+within the body of a [Domain]({{< relref "../../../../../concepts/domain.md">}})
+since they are specific to a domain. 
+
 
 * _Epic_ - A specification of the related set of use cases that cohesively
   define a feature of the system. The system will likely be composed of

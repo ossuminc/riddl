@@ -5,10 +5,8 @@ draft: false
 weight: 10
 ---
 
-RIDDL gets its name from an acronym that stands for *Reactive Interface with
+RIDDL gets its name from an acronym that stands for *Reactive Interface to
 Domain Definition Language*.
-
-
 
 RIDDL is a specification language for the niche of large, distributed,
 reactive, concurrent systems such as required for modern internet-scale 
