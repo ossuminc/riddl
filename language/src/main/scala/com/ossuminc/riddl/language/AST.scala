@@ -1974,14 +1974,14 @@ object AST {
   }
 
   object Adaptor {
-    def apply(
+    def from(
       location: At,
       id: Identifier,
       direction: AdaptorDirection,
-      contextRef: ContextRef, 
+      contextRef: ContextRef,
+      values: Seq[RiddlValue],
       brief: Option[LiteralString],
-      description: Option[Description],
-      values: Seq[RiddlValue]
+      description: Option[Description]
     ): Adaptor = {
       val groups = values.groupBy(_.getClass)
       val comments = mapGroupTo[Comment](groups.get(classOf[Comment]))
@@ -3812,7 +3812,7 @@ object AST {
     def format: String = s"input ${pathId.format}"
   }
 
-  sealed abstract class ApplicationOption(final val name: String) extends OptionValue
+  sealed trait ApplicationOption(final val name: String) extends OptionValue
 
   /** An [[ApplicationOption]]  that specifies the color for this entity in generated diagrams, etc. */
   case class ApplicationColorOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("color")
@@ -3884,6 +3884,50 @@ object AST {
     override def isAppRelated: Boolean = true
     override lazy val contents: Seq[ApplicationDefinition] = {
       super.contents ++ types ++ groups ++ terms // ++ includes
+    }
+  }
+
+  object Application {
+    def from(
+      location: At,
+      id: Identifier,
+      values: Seq[RiddlValue],
+      brief: Option[LiteralString],
+      description: Option[Description]
+    ): Application = {
+      val groups = values.groupBy(_.getClass)
+      val options = mapGroupTo[ApplicationOption](groups.get(classOf[ApplicationOption]))
+      val types = mapGroupTo[Type](groups.get(classOf[Type]))
+      val constants = mapGroupTo[Constant](groups.get(classOf[Constant]))
+      val invariants = mapGroupTo[Invariant](groups.get(classOf[Invariant]))
+      val groupDefs = mapGroupTo[Group](groups.get(classOf[Group]))
+      val handlers = mapGroupTo[Handler](groups.get(classOf[Handler]))
+      val functions = mapGroupTo[Function](groups.get(classOf[Function]))
+      val inlets = mapGroupTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapGroupTo[Outlet](groups.get(classOf[Outlet]))
+      val terms = mapGroupTo[Term](groups.get(classOf[Term]))
+      val includes = mapGroupTo[Include[ApplicationDefinition]](groups.get(classOf[Include[ApplicationDefinition]]))
+      val authors = mapGroupTo[AuthorRef](groups.get(classOf[AuthorRef]))
+      val comments = mapGroupTo[Comment](groups.get(classOf[Comment]))
+      new Application(
+        location,
+        id,
+        options,
+        types,
+        constants,
+        invariants,
+        groupDefs,
+        handlers,
+        inlets,
+        outlets,
+        functions,
+        authors,
+        terms,
+        includes,
+        brief,
+        description,
+        comments
+      )
     }
   }
 

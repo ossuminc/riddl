@@ -163,43 +163,15 @@ private[parsing] trait ApplicationParser {
       location ~ Keywords.application ~/ identifier ~ authorRefs ~ is ~ open ~
         (emptyApplication | applicationBody) ~
         close ~ briefly ~ description ~ comments
-    ).map { case (loc, id, authors, (options, content), brief, description, comments) =>
-      val groups = content.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val constants = mapTo[Constant](groups.get(classOf[Constant]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      val groupDefinitions = mapTo[Group](groups.get(classOf[Group]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val functions = mapTo[Function](groups.get(classOf[Function]))
-      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[ApplicationDefinition]](
-        groups.get(
-          classOf[Include[ApplicationDefinition]]
-        )
-      )
-
-      Application(
+    ).map { case (loc, id, authors, (options, definitions), brief, description, comments) =>
+      val content: Seq[RiddlValue] = definitions ++ authors ++ options ++ comments
+      Application.from(
         loc,
         id,
-        options,
-        types,
-        constants,
-        invariants,
-        groupDefinitions,
-        handlers,
-        inlets,
-        outlets,
-        functions,
-        authors,
-        terms,
-        includes,
+        content,
         brief,
-        description,
-        comments
+        description
       )
-
     }
   }
 }
