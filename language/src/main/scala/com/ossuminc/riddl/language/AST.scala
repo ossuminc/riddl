@@ -51,6 +51,10 @@ object AST {
 
     /** determines if this node is a comment or not */
     def isComment: Boolean = false
+    
+    def isVital: Boolean = false
+    
+    def isProcessor: Boolean = false
 
     /** determines if this value is anonymous (un-named) */
     def isAnonymous: Boolean = true
@@ -60,6 +64,7 @@ object AST {
     def hasAuthors: Boolean = false
 
     def hasTypes: Boolean = false
+    
 
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
@@ -348,10 +353,8 @@ object AST {
       definitions.find(_.id.value == name)
     }
 
-    def isImplicit: Boolean = id.value.isEmpty
-
-    def isVital: Boolean = false
-
+    final def isImplicit: Boolean = id.value.isEmpty
+    
     def isAppRelated: Boolean = false
 
     @SuppressWarnings(Array("org.wartremover.warts.asInstanceOf"))
@@ -552,7 +555,7 @@ object AST {
       */
     implicit def bool2int(b: Boolean): Int = if b then 1 else 0
 
-    override def isVital: Boolean = true
+    final override def isVital: Boolean = true
   }
 
   /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
@@ -563,6 +566,8 @@ object AST {
       with WithTypes
       with WithConstants
       with WithInvariants {
+    
+    final override def isProcessor: Boolean = true
 
     def functions: Seq[Function]
     def handlers: Seq[Handler]
