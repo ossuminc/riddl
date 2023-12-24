@@ -24,82 +24,73 @@ private[parsing] trait EpicParser {
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
       location ~ optionalIdentifier("") ~ is ~ literalString ~ literalString ~ literalString ~/
-        briefly ~ description ~ comments
-    )./.map { case (loc, id, from, relationship, to, brief, description, comments) =>
-      VagueInteraction(loc, id, from, relationship, to, brief, description, comments)
+        briefly ~ description
+    )./.map { case (loc, id, from, relationship, to, brief, description) =>
+      VagueInteraction(loc, id, from, relationship, to, brief, description)
     }
   }
 
   private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.from) ~/ anyInteractionRef ~
-        literalString ~ Readability.to.? ~ anyInteractionRef ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, from, ls, to, brief, desc, comments) =>
-      ArbitraryInteraction(loc, id, from, ls, to, brief, desc, comments)
+        literalString ~ Readability.to.? ~ anyInteractionRef ~/ briefly ~ description
+    )./.map { case (loc, id, from, ls, to, brief, desc) =>
+      ArbitraryInteraction(loc, id, from, ls, to, brief, desc)
     }
   }
 
   private def sendMessageStep[u: P]: P[SendMessageInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.send) ~/ messageRef ~
-        Readability.from ~ anyInteractionRef ~ Readability.to ~ anyInteractionRef ~/
-        briefly ~ description ~ comments
-    )./.map { case (loc, id, message, from, to, brief, description, comments) =>
-      SendMessageInteraction(loc, id, from, message, to, brief, description, comments)
+        Readability.from ~ anyInteractionRef ~ Readability.to ~ processorRef ~/
+        briefly ~ description
+    )./.map { case (loc, id, message, from, to, brief, description) =>
+      SendMessageInteraction(loc, id, from, message, to, brief, description)
     }
   }
 
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.for_) ~/
-        anyInteractionRef ~ is ~ literalString ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, fromTo, proc, brief, description, comments) =>
-      SelfInteraction(loc, id, fromTo, proc, brief, description, comments)
+        anyInteractionRef ~ is ~ literalString ~/ briefly ~ description
+    )./.map { case (loc, id, fromTo, proc, brief, description) =>
+      SelfInteraction(loc, id, fromTo, proc, brief, description)
     }
   }
 
   private def focusOnGroupStep[u: P]: P[FocusOnGroupInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.focus) ~/ userRef ~ Readability.on ~
-        groupRef ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, userRef, groupRef, brief, description, comments) =>
-      FocusOnGroupInteraction(loc, id, userRef, groupRef, brief, description, comments)
+        groupRef ~/ briefly ~ description
+    )./.map { case (loc, id, userRef, groupRef, brief, description) =>
+      FocusOnGroupInteraction(loc, id, userRef, groupRef, brief, description)
     }
   }
 
   private def directUserToURL[u: P]: P[DirectUserToURLInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.direct) ~/ userRef ~/ Readability.to ~ httpUrl ~/
-        briefly ~ description ~ comments
-    )./.map { case (loc, id, user, url, brief, description, comments) =>
-      DirectUserToURLInteraction(loc, id, user, url, brief, description, comments)
+        briefly ~ description
+    )./.map { case (loc, id, user, url, brief, description) =>
+      DirectUserToURLInteraction(loc, id, user, url, brief, description)
     }
   }
 
   private def showOutputStep[u: P]: P[ShowOutputInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.show) ~/
-        outputRef ~ Readability.to ~ userRef ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, from, to, brief, description, comments) =>
-      ShowOutputInteraction(loc, id, from, LiteralString.empty, to, brief, description, comments)
+        outputRef ~ Readability.to ~ userRef ~/ briefly ~ description
+    )./.map { case (loc, id, from, to, brief, description) =>
+      ShowOutputInteraction(loc, id, from, LiteralString.empty, to, brief, description)
     }
   }
 
   private def takeInputStep[u: P]: P[TakeInputInteraction] = {
     P(
       location ~ optionalIdentifier(Keyword.take) ~/
-        inputRef ~ Readability.from ~ userRef ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, input, user, brief, description, comments) =>
-      TakeInputInteraction(
-        loc,
-        id,
-        from = user,
-        relationship = LiteralString.empty,
-        to = input,
-        brief,
-        description,
-        comments
-      )
+        inputRef ~ Readability.from ~ userRef ~/ briefly ~ description
+    )./.map { case (loc, id, input, user, brief, description) =>
+      TakeInputInteraction(loc, id, from = user, relationship = LiteralString.empty, to = input, brief, description)
     }
   }
 
@@ -113,27 +104,27 @@ private[parsing] trait EpicParser {
   private def sequentialInteractions[u: P]: P[SequentialInteractions] = {
     P(
       location ~ Keywords.sequence ~ identifier.? ~ open ~ interactions ~ close ~
-        briefly ~ description ~ comments
-    )./.map { case (loc, id, steps, brief, description, comments) =>
-      SequentialInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description, comments)
+        briefly ~ description
+    )./.map { case (loc, id, steps, brief, description) =>
+      SequentialInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description)
     }
   }
 
   private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
       location ~ Keywords.optional ~ identifier.? ~/ open ~ interactions ~ close ~
-        briefly ~ description ~ comments
-    )./.map { case (loc, id, steps, brief, description, comments) =>
-      OptionalInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description, comments)
+        briefly ~ description
+    )./.map { case (loc, id, steps, brief, description) =>
+      OptionalInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description)
     }
   }
 
   private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
       location ~ Keywords.parallel ~ identifier.? ~/ open ~
-        interactions ~ close ~ briefly ~ description ~ comments
-    )./.map { case (loc, id, steps, brief, description, comments) =>
-      ParallelInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description, comments)
+        interactions ~ close ~ briefly ~ description
+    )./.map { case (loc, id, steps, brief, description) =>
+      ParallelInteractions(loc, id.getOrElse(Identifier.empty), steps, brief, description)
     }
   }
 
@@ -149,9 +140,9 @@ private[parsing] trait EpicParser {
         (undefined(
           (Option.empty[UserStory], Seq.empty[TwoReferenceInteraction])
         )./ | (userStory.? ~ interactions)) ~
-        close ~ briefly ~ description ~ comments
-    ).map { case (loc, id, (userStory, contents), brief, description, comments) =>
-      UseCase(loc, id, userStory.getOrElse(UserStory()), contents, brief, description, comments)
+        close ~ briefly ~ description
+    ).map { case (loc, id, (userStory, contents), brief, description) =>
+      UseCase(loc, id, userStory.getOrElse(UserStory()), contents, brief, description)
     }
   }
 
@@ -178,18 +169,18 @@ private[parsing] trait EpicParser {
     }
   }
 
-  private def epicInclude[u: P]: P[Include[EpicDefinition]] = {
-    include[EpicDefinition, u](epicDefinitions(_))
+  private def epicInclude[u: P]: P[Include[OccursInEpic]] = {
+    include[OccursInEpic, u](epicDefinitions(_))
   }
 
-  private def epicDefinitions[u: P]: P[Seq[EpicDefinition]] = {
-    P(useCase | term | epicInclude).rep(1)
+  private def epicDefinitions[u: P]: P[Seq[OccursInEpic]] = {
+    P(useCase | term | epicInclude | comment | authorRef).rep(1)
   }
 
   type EpicBody = (
     Option[UserStory],
     Seq[java.net.URL],
-    Seq[EpicDefinition]
+    Seq[OccursInEpic]
   )
 
   private def epicBody[u: P]: P[EpicBody] = {
@@ -198,7 +189,7 @@ private[parsing] trait EpicParser {
         (
           Option.empty[UserStory],
           Seq.empty[java.net.URL],
-          Seq.empty[EpicDefinition]
+          Seq.empty[OccursInEpic]
         )
       )./ |
         (userStory.? ~ shownBy ~ epicDefinitions)./
@@ -207,44 +198,10 @@ private[parsing] trait EpicParser {
 
   def epic[u: P]: P[Epic] = {
     P(
-      location ~ Keywords.epic ~/ identifier ~ authorRefs ~ is ~ open ~
-        epicOptions ~ epicBody ~ close ~
-        briefly ~ description ~ comments
-    ).map {
-      case (
-            loc,
-            id,
-            authors,
-            options,
-            (userStory, shownBy, definitions),
-            briefly,
-            description,
-            comments
-          ) =>
-        val groups = definitions.groupBy(_.getClass)
-        val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include[EpicDefinition]](
-          groups.get(
-            classOf[Include[EpicDefinition]]
-          )
-        )
-        val cases = mapTo[UseCase](groups.get(classOf[UseCase]))
-
-        Epic(
-          loc,
-          id,
-          userStory,
-          shownBy,
-          cases,
-          authors,
-          includes,
-          options,
-          terms,
-          briefly,
-          description,
-          comments
-        )
+      location ~ Keywords.epic ~/ identifier ~ is ~ open ~
+        epicOptions ~ epicBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, options, (userStory, shownBy, contents), briefly, description) =>
+      Epic(loc, id, userStory, shownBy, options, contents, briefly, description)
     }
   }
-
 }

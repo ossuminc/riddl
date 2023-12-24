@@ -35,7 +35,7 @@ class ValidationTest extends ParsingTest {
   "ValidationState" should {
     "parentOf" should {
       "find the parent of an existent child" in {
-        val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
+        val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
         val domain = Domain(At(), Identifier(At(), "foo"), types = aType :: Nil)
         val root = RootContainer(List(), Seq(domain), List(), Seq.empty)
         val outputs = PassesOutput()
@@ -43,7 +43,7 @@ class ValidationTest extends ParsingTest {
         output.parentOf(aType) mustBe Some(domain)
       }
       "not find the parent of a non-existent child" in {
-        val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
+        val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
         val domain = Domain(At(), Identifier(At(), "foo"), types = Nil)
         val root = RootContainer(List(),Seq(domain), List(), Seq.empty)
         val outputs = PassesOutput()
@@ -54,7 +54,7 @@ class ValidationTest extends ParsingTest {
   }
 
   "Validate All Things" must {
-    var sharedRoot: RootContainer = RootContainer.empty
+    var sharedRoot: Root = Root.empty
 
     "parse correctly" in {
       val rootFile = "language/src/test/input/full/domain.riddl"

@@ -47,7 +47,7 @@ class MermaidDiagramsPlugin {
   def openBox(definition: AST.Definition, level: Int = 0): String = {
     val contents: Seq[Definition] = {
       definition match {
-        case r: RootContainer => r.contents
+        case r: Root => r.contents
         case d: Domain        => d.domains ++ d.includes
         case i: Include[Definition] @unchecked =>
           i.contents
@@ -69,7 +69,7 @@ class MermaidDiagramsPlugin {
   // def traverseDomainsAndContexts
 
   def makeRootOverview(
-    root: AST.RootContainer
+    root: AST.Root
   ): String = {
     val sb = new mutable.StringBuilder()
     sb.append("flowchart TB\n")

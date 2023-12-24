@@ -84,7 +84,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
     }
   }
 
-  def postProcess(root: com.ossuminc.riddl.language.AST.RootContainer): Unit = ()
+  def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ()
 
   override def result: MessageOutput = {
     val sortedList = collectedValues.sortBy(_.message)

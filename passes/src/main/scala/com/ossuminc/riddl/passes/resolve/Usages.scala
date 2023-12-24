@@ -19,27 +19,27 @@ case class Usages (
   def usesSize : Int = uses.size
   def usedBySize: Int = usedBy.size
 
-  def isUsed(definition: Definition): Boolean = {
+  def isUsed(definition: Definition[?]): Boolean = {
     uses.keys.exists(_ == definition)
   }
 
-  def isUsedBy(used: Definition, user: Definition): Boolean = {
+  def isUsedBy(used: Definition[?], user: Definition[?]): Boolean = {
     usedBy.get(used) match {
       case Some(list) if list.contains(user) => true
       case _ => false
     }
   }
 
-  def uses(user: Definition, used: Definition): Boolean = {
+  def uses(user: Definition[?], used: Definition[?]): Boolean = {
     this.uses.get(user).exists(list => list.contains(used))
   }
 
 
-  def getUsers(used: Definition): Seq[Definition] = {
+  def getUsers(used: Definition[?]): Seq[Definition[?]] = {
     usedBy.get(used).getOrElse(Seq.empty)
   }
 
-  def getUses(user: Definition): Seq[Definition] = {
+  def getUses(user: Definition[?]): Seq[Definition[?]] = {
     uses.get(user).getOrElse(Seq.empty)
   }
 

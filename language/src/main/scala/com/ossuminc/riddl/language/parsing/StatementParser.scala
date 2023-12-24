@@ -155,9 +155,9 @@ private[parsing] trait StatementParser {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ briefly ~ description ~ comments
-    ).map { case (loc, id, condition, brief, description, comments) =>
-      Invariant(loc, id, condition, brief, description, comments)
+      ) ~ briefly ~ description
+    ).map { case (loc, id, condition, brief, description) =>
+      Invariant(loc, id, condition, brief, description)
     }
   }
 

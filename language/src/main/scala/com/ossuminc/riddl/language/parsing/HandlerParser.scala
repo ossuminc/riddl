@@ -16,34 +16,35 @@ private[parsing] trait HandlerParser {
 
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
-      location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
-        description ~ comments
+      location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
     ).map(t => (OnOtherClause.apply _).tupled(t))
   }
 
   private def onInitClause[u: P](set: StatementsSet): P[OnInitClause] = {
     P(
-      location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ briefly ~
-        description ~ comments
+      location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
     ).map(t => (OnInitClause.apply _).tupled(t))
   }
 
   private def onTermClause[u: P](set: StatementsSet): P[OnTerminationClause] = {
     P(
-      location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~
-        briefly ~ description ~ comments
+      location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
     ).map(t => (OnTerminationClause.apply _).tupled(t))
   }
 
-  private def messageOrigins[u: P]: P[Reference[Definition]] = {
+  private def maybeName[u: P]: P[Option[Identifier]] = {
+    P((identifier ~ Punctuation.colon).?)
+  }
+
+  private def messageOrigins[u: P]: P[Reference[Definition[?]]] = {
     P(inletRef | processorRef | userRef | epicRef)
   }
 
   private def onMessageClause[u: P](set: StatementsSet): P[OnMessageClause] = {
     location ~ Keywords.on ~ messageRef ~
-      (Readability.from ~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
-      briefly ~ description ~ comments
-  }.map(t => (OnMessageClause.apply _).tupled(t))
+      (Readability.from ~ maybeName ~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
+      briefly ~ description
+  }.map(tpl => (OnMessageClause.apply _).tupled(tpl))
 
   private def onClauses[u: P](set: StatementsSet): P[Seq[OnClause]] = {
     P(onInitClause(set) | onOtherClause(set) | onTermClause(set) | onMessageClause(set)).rep(0)
@@ -55,19 +56,10 @@ private[parsing] trait HandlerParser {
 
   def handler[u: P](set: StatementsSet): P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier ~ authorRefs ~ is ~ open ~
-        handlerBody(set) ~
-        close ~ briefly ~ description ~ comments
-    )./.map { case (loc, id, authors, clauses, brief, description, comments) =>
-      Handler(
-        loc,
-        id,
-        clauses,
-        authors,
-        brief,
-        description,
-        comments
-      )
+      Keywords.handler ~/ location ~ identifier ~ is ~ open ~
+        handlerBody(set) ~ close ~ briefly ~ description
+    )./.map { case (loc, id, clauses, brief, description) =>
+      Handler(loc, id, clauses, brief, description)
     }
   }
 

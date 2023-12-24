@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, RiddlValue, RootContainer}
+import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, RiddlValue, Root}
 import com.ossuminc.riddl.language.Messages.Messages
 import fastparse.P
 import org.scalatest.matchers.must.Matchers
@@ -20,7 +20,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     expect[T](parser).map(x => extract(x._1) -> x._2)
   }
 
-  protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
+  protected def parserFor[T <: Definition[?]: ClassTag]: P[?] => P[T] = {
     val parser: P[?] => P[?] = classTag[T].runtimeClass match {
       case x if x == classOf[AST.Type]       => typeDef(_)
       case x if x == classOf[AST.Domain]     => domain(_)
@@ -43,23 +43,23 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     parser.asInstanceOf[P[?] => P[T]]
   }
 
-  def parseRootContainer: Either[Messages, RootContainer] = {
+  def parseRootContainer: Either[Messages, Root] = {
     parseRootContainer(withVerboseFailures = true)
   }
 
-  def parseTopLevelDomains: Either[Messages, RootContainer] = {
+  def parseTopLevelDomains: Either[Messages, Root] = {
     parseRootContainer(withVerboseFailures = true)
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](
-                                            extract: RootContainer => TO
+                                            extract: Root => TO
                                           ): Either[Messages, (TO, RiddlParserInput)] = {
-    parseRootContainer(withVerboseFailures = true).map { case root: RootContainer =>
+    parseRootContainer(withVerboseFailures = true).map { case root: Root =>
       extract(root) -> current
     }
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
+  def parseDefinition[FROM <: Definition[?]: ClassTag, TO <: RiddlValue](
                                                                       extract: FROM => TO
                                                                     ): Either[Messages, (TO, RiddlParserInput)] = {
     val parser = parserFor[FROM]
@@ -68,7 +68,7 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   }
 
   def parseDefinition[
-    FROM <: Definition: ClassTag
+    FROM <: Definition[?]: ClassTag
   ]: Either[Messages, (FROM, RiddlParserInput)] = {
     val parser = parserFor[FROM]
     expect[FROM](parser)

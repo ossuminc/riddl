@@ -5,7 +5,7 @@
  */
 
 package com.ossuminc.riddl.language
-import com.ossuminc.riddl.language.AST.RootContainer
+import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{FileParserInput, RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.Timer
@@ -16,7 +16,7 @@ object Parser {
   def parse(
     path: Path,
     options: CommonOptions
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages, Root] = {
     if Files.exists(path) then {
       val input = new FileParserInput(path)
       parse(input, options)
@@ -29,7 +29,7 @@ object Parser {
   def parse(
     input: RiddlParserInput,
     options: CommonOptions = CommonOptions.empty
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages, Root] = {
     Timer.time("parse", options.showTimes) {
       TopLevelParser.parse(input)
     }

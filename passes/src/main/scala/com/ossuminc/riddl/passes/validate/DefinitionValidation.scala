@@ -48,7 +48,7 @@ trait DefinitionValidation extends BasicValidation {
   def checkOption[A <: RiddlValue](
     opt: Option[A],
     name: String,
-    thing: Definition
+    thing: Definition[?]
   )(checker: A => Unit): this.type = {
     opt match {
       case None =>
@@ -60,14 +60,14 @@ trait DefinitionValidation extends BasicValidation {
     this
   }
 
-  private def checkUniqueContent(definition: Definition): this.type = {
+  private def checkUniqueContent(definition: Definition[?]): this.type = {
     val allNames = definition.contents.filterNot(_.isImplicit).map(_.id.value)
     if allNames.distinct.size != allNames.size then {
-      val duplicates: Map[String, Seq[Definition]] =
+      val duplicates: Map[String, Seq[Definition[?]]] =
         definition.contents.groupBy(_.id.value).filterNot(_._2.size < 2)
       if duplicates.nonEmpty then {
         val details = duplicates
-          .map { case (_: String, defs: Seq[Definition]) =>
+          .map { case (_: String, defs: Seq[Definition[?]]) =>
             defs.map(_.identifyWithLoc).mkString(", and ")
           }
           .mkString("", "\n  ", "\n")
@@ -81,8 +81,8 @@ trait DefinitionValidation extends BasicValidation {
   }
 
   def checkDefinition(
-    parents: Seq[Definition],
-    definition: Definition
+    parents: Seq[Definition[?]],
+    definition: Definition[?]
   ): this.type = {
     check(
       definition.id.nonEmpty | definition.isImplicit,
@@ -113,7 +113,7 @@ trait DefinitionValidation extends BasicValidation {
 
     val path = symbols.pathOf(definition)
     if !definition.id.isEmpty then {
-      val matches = symbols.lookup[Definition](path)
+      val matches = symbols.lookup[Definition[?]](path)
       if matches.isEmpty then {
         messages.addSevere(
           definition.id.loc,
@@ -125,10 +125,10 @@ trait DefinitionValidation extends BasicValidation {
   }
 
   def checkContainer(
-    parents: Seq[Definition],
-    container: Definition
+    parents: Seq[Definition[?]],
+    container: Definition[?]
   ): this.type = {
-    val parent: Definition = parents.headOption.getOrElse(RootContainer.empty)
+    val parent: Definition[?] = parents.headOption.getOrElse(Root.empty)
     checkDefinition(parents, container).check(
       container.nonEmpty || container.isInstanceOf[Field],
       s"${container.identify} in ${parent.identify} should have content",
@@ -144,7 +144,7 @@ trait DefinitionValidation extends BasicValidation {
     val description: Option[Description] = value.description
     val shouldCheck: Boolean = {
       value.isInstanceOf[Type] |
-        (value.isInstanceOf[Definition] && value.nonEmpty)
+        (value.isInstanceOf[Definition[?]] && value.nonEmpty)
     }
     if description.isEmpty && shouldCheck then {
       check(
@@ -165,7 +165,7 @@ trait DefinitionValidation extends BasicValidation {
     this
   }
 
-  def checkDescription[TD <: Definition](
+  def checkDescription[TD <: Definition[?]](
     definition: TD
   ): this.type = {
     checkDescription(definition.identify, definition)

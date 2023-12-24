@@ -17,7 +17,7 @@ trait TypeValidation extends DefinitionValidation {
   def areSameType(
     tr1: Reference[Type],
     tr2: Reference[Type],
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Boolean = {
     val pid1 = tr1.pathId
     val pid2 = tr2.pathId
@@ -80,8 +80,8 @@ trait TypeValidation extends DefinitionValidation {
 
   private def checkAlternation(
     alternation: Alternation,
-    typeDef: Definition,
-    parents: Seq[Definition]
+    typeDef: Definition[?],
+    parents: Seq[Definition[?]]
   ): this.type = {
     checkSequence(alternation.of) { (typex: TypeExpression) =>
       checkTypeExpression(typex, typeDef, parents)
@@ -120,14 +120,14 @@ trait TypeValidation extends DefinitionValidation {
 
   private def checkAggregateUseCase(
     mt: AggregateUseCaseTypeExpression,
-    typeDef: Definition,
-    parents: Seq[Definition]
+    typeDef: Definition[?],
+    parents: Seq[Definition[?]]
   ): this.type = {
     checkSequence(mt.fields) { (field: Field) =>
       checkIdentifierLength(field)
         .check(
           field.id.value.head.isLower,
-          s"Field names in ${mt.usecase.kind} should start with a lower case letter",
+          s"Field names in ${mt.usecase.useCase} should start with a lower case letter",
           StyleWarning,
           field.loc
         )
@@ -137,18 +137,18 @@ trait TypeValidation extends DefinitionValidation {
     this
   }
 
-  private def checkSet(set: Set, definition: Definition, parents: Seq[Definition]): Unit = {
+  private def checkSet(set: Set, definition: Definition[?], parents: Seq[Definition[?]]): Unit = {
     checkTypeExpression(set.of, definition, parents)
   }
 
-  private def checkSeq(sequence: Sequence, definition: Definition, parents: Seq[Definition]): Unit = {
+  private def checkSeq(sequence: Sequence, definition: Definition[?], parents: Seq[Definition[?]]): Unit = {
     checkTypeExpression(sequence.of, definition, parents)
   }
 
   private def checkMapping(
     mapping: Mapping,
-    typeDef: Definition,
-    parents: Seq[Definition]
+    typeDef: Definition[?],
+    parents: Seq[Definition[?]]
   ): this.type = {
     this
       .checkTypeExpression(mapping.from, typeDef, parents)
@@ -157,24 +157,24 @@ trait TypeValidation extends DefinitionValidation {
 
   private def checkGraph(
     graph: Graph,
-    typeDef: Definition,
-    parents: Seq[Definition]
+    typeDef: Definition[?],
+    parents: Seq[Definition[?]]
   ): this.type = {
     this.checkTypeExpression(graph.of, typeDef, parents)
   }
 
   private def checkTable(
     table: Table,
-    typeDef: Definition,
-    parents: Seq[Definition]
+    typeDef: Definition[?],
+    parents: Seq[Definition[?]]
   ): this.type = {
     this.checkTypeExpression(table.of, typeDef, parents)
   }
 
   def checkTypeExpression(
     typ: TypeExpression,
-    defn: Definition,
-    parents: Seq[Definition]
+    defn: Definition[?],
+    parents: Seq[Definition[?]]
   ): this.type = {
     typ match {
       case AliasedTypeExpression(_, _, id: PathIdentifier) =>

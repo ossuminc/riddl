@@ -26,20 +26,20 @@ private[parsing] trait ProjectorParser {
     }
   }
 
-  private def projectionInclude[u: P]: P[Include[ProjectorDefinition]] = {
-    include[ProjectorDefinition, u](projectionDefinitions(_))
+  private def projectionInclude[u: P]: P[Include[OccursInProjector]] = {
+    include[OccursInProjector, u](projectionDefinitions(_))
   }
 
-  private def projectionDefinitions[u: P]: P[Seq[ProjectorDefinition]] = {
+  private def projectionDefinitions[u: P]: P[Seq[OccursInProjector]] = {
     P(
       typeDef | term | projectionInclude | handler(StatementsSet.ProjectorStatements) |
-        function | inlet | outlet | invariant | constant | typeDef
+        function | inlet | outlet | invariant | constant | typeDef | authorRef | comment
     )./.rep(1)
   }
 
-  private def projectionBody[u: P]: P[Seq[ProjectorDefinition]] = {
+  private def projectionBody[u: P]: P[Seq[OccursInProjector]] = {
     P(
-      undefined(Seq.empty[ProjectorDefinition]) | projectionDefinitions
+      undefined(Seq.empty[OccursInProjector]) | projectionDefinitions
     )
   }
 
@@ -54,51 +54,10 @@ private[parsing] trait ProjectorParser {
     */
   def projector[u: P]: P[Projector] = {
     P(
-      location ~ Keywords.projector ~/ identifier ~ authorRefs ~ is ~ open ~
-        projectionOptions ~ projectionBody ~ close ~ briefly ~ description ~ comments
-    ).map {
-      case (
-            loc,
-            id,
-            authors,
-            options,
-            definitions,
-            brief,
-            description,
-            comments
-          ) =>
-        val groups = definitions.groupBy(_.getClass)
-        val types = mapTo[Type](groups.get(classOf[Type]))
-        val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-        val functions = mapTo[Function](groups.get(classOf[Function]))
-        val constants = mapTo[Constant](groups.get(classOf[Constant]))
-        val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-        val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-        val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-        val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include[ProjectorDefinition]](
-          groups.get(
-            classOf[Include[ProjectorDefinition]]
-          )
-        )
-        Projector(
-          loc,
-          id,
-          authors,
-          options,
-          includes,
-          types,
-          constants,
-          inlets,
-          outlets,
-          handlers,
-          functions,
-          invariants,
-          terms,
-          brief,
-          description,
-          comments
-        )
+      location ~ Keywords.projector ~/ identifier ~ is ~ open ~
+        projectionOptions ~ projectionBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, options, contents, brief, description) =>
+      Projector(loc, id, options, contents, brief, description)
     }
   }
 }

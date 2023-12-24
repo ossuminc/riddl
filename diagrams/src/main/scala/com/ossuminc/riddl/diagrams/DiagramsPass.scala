@@ -105,7 +105,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     s1 ++ s2
   }
 
-  def postProcess(root: RootContainer): Unit = {}
+  def postProcess(root: Root): Unit = {}
 
   def result: DiagramsPassOutput = {
     DiagramsPassOutput(

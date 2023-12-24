@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.{At, Messages}
 
 trait StreamingValidation extends TypeValidation {
 
-  def checkStreaming(root: RootContainer): Unit = {
+  def checkStreaming(root: Root): Unit = {
     val start = root.domains.headOption.map(_.id.loc).getOrElse(At.empty)
     checkStreamingUsage(start)
     checkConnectorPersistence()

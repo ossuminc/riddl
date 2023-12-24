@@ -274,7 +274,7 @@ class PathResolutionPassTest extends ResolvingTest {
     }
     "resolve simple path through an include" in {
       val eL = At.empty
-      val root = RootContainer(
+      val root = Root(
         contents = Seq(
           Domain(
             eL,

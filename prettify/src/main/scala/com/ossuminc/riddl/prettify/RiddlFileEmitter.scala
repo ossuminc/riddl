@@ -115,7 +115,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitString(s: Strng): this.type = {
+  def emitString(s: String_): this.type = {
     (s.min, s.max) match {
       case (Some(n), Some(x)) => this.add(s"String($n,$x)")
       case (None, Some(x))    => this.add(s"String(,$x)")
@@ -218,7 +218,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def emitMessageType(mt: AggregateUseCaseTypeExpression): this.type = {
-    this.add(mt.usecase.kind.toLowerCase).add(" ").emitFields(mt.fields)
+    this.add(mt.usecase.useCase.toLowerCase).add(" ").emitFields(mt.fields)
   }
 
   def emitMessageRef(mr: MessageRef): this.type = {
@@ -227,7 +227,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitTypeExpression(typEx: TypeExpression): this.type = {
     typEx match {
-      case string: Strng                   => emitString(string)
+      case string: String_                   => emitString(string)
       case AliasedTypeExpression(_, _, id) => this.add(id.format)
       case URL(_, scheme) =>
         this

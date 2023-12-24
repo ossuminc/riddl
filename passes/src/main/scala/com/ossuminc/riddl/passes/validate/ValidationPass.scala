@@ -50,15 +50,15 @@ case class ValidationPass(
     ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets, resolution.kindMap.definitionsOfKind[Processor[?,?]])
   }
 
-  def postProcess(root: RootContainer): Unit = {
+  def postProcess(root: Root): Unit = {
     checkOverloads()
     checkStreaming(root)
   }
 
-  def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    val parentsAsSeq: Seq[Definition] = parents.toSeq
+  def process(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = {
+    val parentsAsSeq: Seq[Definition[?]] = parents.toSeq
     definition match {
-      case f: AggregateDefinition =>
+      case f: AggregateValue =>
         f match {
           case f: Field  => validateField(f, parentsAsSeq)
           case m: Method => validateMethod(m, parentsAsSeq)
@@ -89,7 +89,7 @@ case class ValidationPass(
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
         validateConstant(c, parentsAsSeq)
-      case i: Include[ApplicationDefinition] @unchecked =>
+      case i: Include[OccursInApplication] @unchecked =>
         validateInclude(i)
       case s: State =>
         validateState(s, parentsAsSeq)
@@ -138,14 +138,14 @@ case class ValidationPass(
       case cg: ContainedGroup =>
         validateContainedGroup(cg, parentsAsSeq)
       case i: Interaction   => validateInteraction(i, parentsAsSeq)
-      case _: RootContainer => ()
+      case _: Root => ()
 
-      // NOTE: Never put a catch-all here, every Definition type must be handled
+      // NOTE: Never put a catch-all here, every Definition[?] type must be handled
     }
   }
 
   @SuppressWarnings(Array("org.wartremover.wart.IsInstanceOf"))
-  private def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
+  private def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition[?]]): Unit = {
     checkDefinition(parents, omc)
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, omc, parents, Seq(omc.msg.messageKind))
@@ -169,13 +169,13 @@ case class ValidationPass(
         case _ =>
       }
     } else {}
-    omc.from.foreach { (ref: Reference[Definition]) =>
-      checkRef[Definition](ref, omc, parents)
+    omc.from.foreach { (ref: Reference[Definition[?]]) =>
+      checkRef[Definition[?]](ref, omc, parents)
     }
     checkDescription(omc)
   }
 
-  private def validateStatements(statements: Seq[Statement], onClause: OnClause, parents: Seq[Definition]): Unit = {
+  private def validateStatements(statements: Seq[Statement], onClause: OnClause, parents: Seq[Definition[?]]): Unit = {
     if statements.isEmpty then
       messages.add(
         missing(s"${onClause.identify} should have statements")
@@ -247,21 +247,21 @@ case class ValidationPass(
 
   private def validateTerm(
     t: Term,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, t).checkDescription(t)
   }
 
   private def validateEnumerator(
     e: Enumerator,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, e).checkDescription(e)
   }
 
   private def validateField(
     f: Field,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, f)
     if f.id.value.matches("^[^a-z].*") then {
@@ -278,7 +278,7 @@ case class ValidationPass(
   }
   private def validateMethod(
     m: Method,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, m)
     if m.id.value.matches("^[^a-z].*") then
@@ -304,7 +304,7 @@ case class ValidationPass(
 
   private def validateInvariant(
     i: Invariant,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, i)
     checkNonEmpty(i.condition.toList, "condition", i, Messages.MissingWarning)
@@ -313,7 +313,7 @@ case class ValidationPass(
 
   private def validateInlet(
     inlet: Inlet,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, inlet)
     checkRef[Type](inlet.type_, inlet, parents)
@@ -321,7 +321,7 @@ case class ValidationPass(
 
   private def validateOutlet(
     outlet: Outlet,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, outlet)
     checkRef[Type](outlet.type_, outlet, parents)
@@ -329,7 +329,7 @@ case class ValidationPass(
 
   private def validateConnector(
     connector: Connector,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     val refParents = connector +: parents
     val maybeOutlet = checkMaybeRef[Outlet](connector.from, connector, refParents)
@@ -354,7 +354,7 @@ case class ValidationPass(
 
   private def validateAuthorInfo(
     ai: Author,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, ai)
     checkNonEmptyValue(ai.name, "name", ai, required = true)
@@ -365,7 +365,7 @@ case class ValidationPass(
   @SuppressWarnings(Array("org.wartremover.wart.IsInstanceOf"))
   private def validateType(
     t: Type,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, t)
     check(
@@ -382,7 +382,7 @@ case class ValidationPass(
 
   private def validateConstant(
     c: Constant,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, c)
     checkDescription(c)
@@ -390,7 +390,7 @@ case class ValidationPass(
 
   private def validateState(
     s: State,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, s)
     checkRefAndExamine[Type](s.typ, s, parents) { (typ: Type) =>
@@ -411,7 +411,7 @@ case class ValidationPass(
 
   private def validateFunction(
     f: Function,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, f)
     checkOptions[FunctionOption](f.options, f.loc)
@@ -420,13 +420,13 @@ case class ValidationPass(
 
   private def validateHandler(
     h: Handler,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, h)
     checkDescription(h)
   }
 
-  private def validateInclude[T <: Definition](
+  private def validateInclude[T <: Definition[?]](
     i: Include[T]
   ): Unit = {
     check(i.nonEmpty, "Include has no included content", Messages.Error, i.loc)
@@ -435,7 +435,7 @@ case class ValidationPass(
 
   private def validateEntity(
     e: Entity,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, e)
     checkOptions[EntityOption](e.options, e.loc)
@@ -479,7 +479,7 @@ case class ValidationPass(
 
   private def validateProjection(
     p: Projector,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, p)
     check(
@@ -505,7 +505,7 @@ case class ValidationPass(
 
   private def validateRepository(
     r: Repository,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, r)
     checkDescription(r)
@@ -513,7 +513,7 @@ case class ValidationPass(
 
   private def validateAdaptor(
     a: Adaptor,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     parents.headOption match {
       case Some(c: Context) =>
@@ -534,7 +534,7 @@ case class ValidationPass(
 
   private def validateStreamlet(
     s: Streamlet,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, s)
     checkStreamletShape(s)
@@ -543,7 +543,7 @@ case class ValidationPass(
 
   private def validateDomain(
     d: Domain,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, d)
     check(
@@ -557,7 +557,7 @@ case class ValidationPass(
 
   private def validateSaga(
     s: Saga,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, s)
     check(
@@ -577,7 +577,7 @@ case class ValidationPass(
 
   private def validateSagaStep(
     s: SagaStep,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, s)
     checkNonEmpty(s.doStatements, "Do Statements", s, MissingWarning)
@@ -593,7 +593,7 @@ case class ValidationPass(
 
   private def validateContext(
     c: Context,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, c)
     checkOptions[ContextOption](c.options, c.loc)
@@ -613,7 +613,7 @@ case class ValidationPass(
 
   private def validateReplica(
     replica: Replica,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, replica)
     checkTypeExpression(replica.typeExp, replica, parents)
@@ -630,7 +630,7 @@ case class ValidationPass(
 
   private def validateEpic(
     s: Epic,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, s)
     if s.userStory.isEmpty then {
@@ -641,7 +641,7 @@ case class ValidationPass(
 
   private def validateApplication(
     app: Application,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkContainer(parents, app)
     if app.groups.isEmpty then {
@@ -652,14 +652,14 @@ case class ValidationPass(
 
   private def validateGroup(
     grp: Group,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, grp).checkDescription(grp)
   }
 
   private def validateInput(
     in: Input,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     val parentsSeq = parents
     checkDefinition(parentsSeq, in)
@@ -669,7 +669,7 @@ case class ValidationPass(
 
   private def validateOutput(
     out: Output,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, out)
     out.putOut match {
@@ -682,7 +682,7 @@ case class ValidationPass(
 
   private def validateContainedGroup(
     containedGroup: ContainedGroup,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, containedGroup)
     checkRef[Group](containedGroup.group, containedGroup, parents)
@@ -691,7 +691,7 @@ case class ValidationPass(
 
   private def validateUser(
     user: User,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, user)
     if user.is_a.isEmpty then {
@@ -705,7 +705,7 @@ case class ValidationPass(
 
   private def validateUseCase(
     uc: UseCase,
-    parents: Seq[Definition]
+    parents: Seq[Definition[?]]
   ): Unit = {
     checkDefinition(parents, uc)
     if uc.contents.nonEmpty then {
@@ -738,14 +738,14 @@ case class ValidationPass(
                 vi.relationship.loc
               )
             case smi: SendMessageInteraction =>
-              checkPathRef[Definition](smi.from.pathId, uc, parents)
+              checkPathRef[Definition[?]](smi.from.pathId, uc, parents)
               checkMessageRef(smi.message, uc, parents, Seq(smi.message.messageKind))
-              checkPathRef[Definition](smi.to.pathId, uc, parents)
+              checkPathRef[Definition[?]](smi.to.pathId, uc, parents)
             case fou: DirectUserToURLInteraction =>
               checkPathRef[User](fou.from.pathId, uc, parents)
             case is: TwoReferenceInteraction =>
-              checkPathRef[Definition](is.from.pathId, uc, parents)
-              checkPathRef[Definition](is.to.pathId, uc, parents)
+              checkPathRef[Definition[?]](is.from.pathId, uc, parents)
+              checkPathRef[Definition[?]](is.to.pathId, uc, parents)
               if is.relationship.isEmpty then {
                 messages.addMissing(
                   is.loc,
@@ -767,9 +767,9 @@ case class ValidationPass(
 
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def validateArbitraryInteraction(
-    origin: Option[Definition],
-    destination: Option[Definition],
-    parents: Seq[Definition]
+    origin: Option[Definition[?]],
+    destination: Option[Definition[?]],
+    parents: Seq[Definition[?]]
   ): Unit = {
     val maybeMessage: Option[Message] = origin match {
       case Some(o) if o.isVital =>
@@ -842,12 +842,12 @@ case class ValidationPass(
   }
 
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
-  private def validateInteraction(interaction: Interaction, parents: Seq[Definition]): Unit = {
+  private def validateInteraction(interaction: Interaction, parents: Seq[Definition[?]]): Unit = {
     checkDefinition(parents, interaction)
     checkDescription(interaction)
     interaction match {
       case SelfInteraction(_, _, from, _, _, _, _) =>
-        checkRef[Definition](from, interaction, parents)
+        checkRef[Definition[?]](from, interaction, parents)
       case DirectUserToURLInteraction(_, _, user: UserRef, _, _, _, _) =>
         checkRef[User](user, interaction, parents)
       case FocusOnGroupInteraction(_, _, user: UserRef, group: GroupRef, _, _, _) =>
@@ -857,18 +857,18 @@ case class ValidationPass(
         checkRef[User](user, interaction, parents)
         checkRef[Input](inputRef, interaction, parents)
       case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
-        checkRef[Definition](from, interaction, parents)
-        checkRef[Definition](to, interaction, parents)
-        val origin = resolution.refMap.definitionOf[Definition](from.pathId, parents.head)
-        val destination = resolution.refMap.definitionOf[Definition](to.pathId, parents.head)
+        checkRef[Definition[?]](from, interaction, parents)
+        checkRef[Definition[?]](to, interaction, parents)
+        val origin = resolution.refMap.definitionOf[Definition[?]](from.pathId, parents.head)
+        val destination = resolution.refMap.definitionOf[Definition[?]](to.pathId, parents.head)
         validateArbitraryInteraction(origin, destination, parents)
       case ShowOutputInteraction(_, _, from: OutputRef, _, to: UserRef, _, _, _) =>
         checkRef[Output](from, interaction, parents)
         checkRef[User](to, interaction, parents)
       case SendMessageInteraction(_, _, from, msg, to, _, _, _) =>
         checkMessageRef(msg, interaction, parents, Seq(msg.messageKind))
-        checkRef[Definition](from, interaction, parents)
-        checkRef[Definition](to, interaction, parents)
+        checkRef[Definition[?]](from, interaction, parents)
+        checkRef[ProcessorRef[?]](to, interaction, parents)
       case _: VagueInteraction =>
       // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>

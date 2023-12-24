@@ -151,7 +151,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     )
   }
 
-  def postProcess(root: RootContainer): Unit = {
+  def postProcess(root: Root): Unit = {
     for { defStats <- collectedValues } {
       def remapping(existing: Option[KindStats]): Option[KindStats] = {
         Some(

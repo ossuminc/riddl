@@ -57,7 +57,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
       .filterNot(_.isEmpty) // ignore empty things with no references
       .flatten // get rid of seq of seq
       .filterNot(_._1.isEmpty)
-      .map(x => x._1 -> x._2.getOrElse(RootContainer.empty))
+      .map(x => x._1 -> x._2.getOrElse(Root.empty))
       .distinctBy(_._1) // reduce to the distinct ones
       .sortWith(actorsFirst)
       .toMap

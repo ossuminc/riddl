@@ -2,7 +2,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.AST.RootContainer
+import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, StringParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.passes.validate.ValidatingTest
@@ -12,7 +12,7 @@ import java.nio.file.Path
 
 abstract class HugoTestBase extends ValidatingTest {
 
-  def runHugoOn(input: String): Either[Messages, (PassesResult, RootContainer, RiddlParserInput)] = {
+  def runHugoOn(input: String): Either[Messages, (PassesResult, Root, RiddlParserInput)] = {
     val rpi = StringParserInput(input, "hugo Test")
     val commonOptions = CommonOptions.noMinorWarnings
     val options = HugoCommand.Options(Some(Path.of(".")), Some(Path.of("target/hugo-test")))
@@ -30,7 +30,7 @@ abstract class HugoTestBase extends ValidatingTest {
   }
 
   def runHugoAndAssert(input: String)(
-    checker: (PassesResult, RootContainer, RiddlParserInput) => Assertion
+    checker: (PassesResult, Root, RiddlParserInput) => Assertion
   ): Assertion = {
     runHugoOn(input) match {
       case Left(messages) =>
@@ -52,11 +52,11 @@ abstract class HugoTestBase extends ValidatingTest {
     MarkdownWriter(filePath, commonOptions, symbols, refMap, usages, pu)
   }
 
-  def makeMDWFor(input: String): (PassesResult, RootContainer, MarkdownWriter) = {
+  def makeMDWFor(input: String): (PassesResult, Root, MarkdownWriter) = {
     runHugoOn(input) match {
       case Left(messages) =>
         fail(messages.format)
-      case Right((passesResult: PassesResult, root: RootContainer, rpi: RiddlParserInput)) =>
+      case Right((passesResult: PassesResult, root: Root, rpi: RiddlParserInput)) =>
         val filePath = rpi.root.toPath
         passesResult.outputOf[HugoOutput](HugoPass.name) match
           case None => fail("No output from hugo pass")

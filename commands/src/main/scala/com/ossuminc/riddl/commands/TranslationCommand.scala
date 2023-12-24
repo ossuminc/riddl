@@ -51,7 +51,7 @@ trait TranslatingState[OF <: OutputFile] {
     definition: Definition,
     parents: Seq[Definition]
   ): Seq[String] = {
-    parents.filterNot(x => x.isInstanceOf[RootContainer]).map(_.id.value) :+
+    parents.filterNot(x => x.isInstanceOf[Root]).map(_.id.value) :+
       definition.id.value
   }
 }

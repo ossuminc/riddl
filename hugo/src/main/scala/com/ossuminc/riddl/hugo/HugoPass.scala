@@ -60,7 +60,7 @@ case class HugoPass(
     "Output path is empty"
   )
 
-  val root: RootContainer = input.root
+  val root: Root = input.root
   val name: String = HugoPass.name
 
   lazy val commonOptions: CommonOptions = input.commonOptions
@@ -151,14 +151,14 @@ case class HugoPass(
 
           case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause |
                _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
-               _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: RootContainer |
+               _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: Root |
                _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup =>
             // All of these are handled above in their containers content contribution
         }
     }
   }
 
-  override def postProcess(root: AST.RootContainer): Unit = {
+  override def postProcess(root: AST.Root): Unit = {
     close(root)
   }
 
@@ -283,7 +283,7 @@ case class HugoPass(
     loadStaticAssets(inputPath, options)
   }
 
-  def makeIndex(root: RootContainer): Unit = {
+  def makeIndex(root: Root): Unit = {
     Timer.time("Index Creation") {
 
       val mdw = addFile(Seq.empty[String], "_index.md")
@@ -344,7 +344,7 @@ case class HugoPass(
     }
   }
 
-  private def makeToDoList(root: RootContainer): Unit = {
+  private def makeToDoList(root: Root): Unit = {
     if options.withTODOList then
       Timer.time("Make ToDo List") {
         outputs.outputOf[ToDoListOutput](ToDoListPass.name) match {
@@ -384,7 +384,7 @@ case class HugoPass(
     Some(diagram)
   }
 
-  def close(root: RootContainer): Unit = {
+  def close(root: Root): Unit = {
     makeIndex(root)
     makeGlossary()
     makeToDoList(root)

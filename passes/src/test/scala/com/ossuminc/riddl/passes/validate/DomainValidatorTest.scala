@@ -19,7 +19,7 @@ class DomainValidatorTest extends ValidatingTest {
   "DomainValidator" should {
     "identify duplicate domain definitions" in {
       val rpi = RiddlParserInput.empty
-      val root = RootContainer(
+      val root = Root(
         Seq(
           Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
           Domain((2, 2, rpi), Identifier((2, 8, rpi), "foo"))
