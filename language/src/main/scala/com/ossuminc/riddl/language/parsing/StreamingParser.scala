@@ -14,19 +14,19 @@ import com.ossuminc.riddl.language.At
 
 /** Unit Tests For StreamingParser */
 private[parsing] trait StreamingParser {
-  this: HandlerParser with ReferenceParser with StatementParser =>
+  this: HandlerParser with ReferenceParser with StatementParser with FunctionParser with TypeParser =>
 
   def inlet[u: P]: P[Inlet] = {
     P(
       location ~ Keywords.inlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description ~ comments
+        typeRef ~/ briefly ~ description
     )./.map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
       location ~ Keywords.outlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description ~ comments
+        typeRef ~/ briefly ~ description
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
   }
 
@@ -50,9 +50,9 @@ private[parsing] trait StreamingParser {
               Readability.to ~ inletRef
           ).map { case (typ, out, in) =>
             (typ, Some(out), Some(in))
-          }) ~ close ~/ briefly ~ description ~ comments
-    )./.map { case (loc, id, opts, (typ, out, in), brief, description, comments) =>
-      Connector(loc, id, opts, typ, out, in, brief, description, comments)
+          }) ~ close ~/ briefly ~ description
+    )./.map { case (loc, id, opts, (typ, out, in), brief, description) =>
+      Connector(loc, id, opts, typ, out, in, brief, description)
     }
   }
 
@@ -61,8 +61,8 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Include[StreamletDefinition]] = {
-    include[StreamletDefinition, u](
+  ): P[Include[OccursInStreamlets]] = {
+    include[OccursInStreamlets, u](
       streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
   }
@@ -72,11 +72,13 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[StreamletDefinition]] = {
+  ): P[Seq[OccursInStreamlets]] = {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
-        (handler(StatementsSet.StreamStatements) | term |
+        (handler(
+          StatementsSet.StreamStatements
+        ) | term | authorRef | comment | function | invariant | constant | typeDef |
           streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
           inlets ++ outlets ++ definitions
@@ -95,9 +97,9 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[StreamletDefinition]] = {
+  ): P[Seq[OccursInStreamlets]] = {
     P(
-      undefined(Seq.empty[StreamletDefinition]) |
+      undefined(Seq.empty[OccursInStreamlets]) |
         streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)
     )
   }
@@ -122,40 +124,12 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int = 0
   ): P[Streamlet] = {
     P(
-      location ~ keyword ~ identifier ~ authorRefs ~ is ~ open ~
+      location ~ keyword ~ identifier ~ is ~ open ~
         streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ briefly ~ description ~ comments
-    )./.map { case (loc, id, authors, options, definitions, brief, description, comments) =>
+        close ~ briefly ~ description
+    )./.map { case (loc, id, options, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
-      val groups = definitions.groupBy(_.getClass)
-      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val functions = mapTo[Function](groups.get(classOf[Function]))
-      val constants = mapTo[Constant](groups.get(classOf[Constant]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[StreamletDefinition]](groups.get(classOf[Include[StreamletDefinition]]))
-      Streamlet(
-        loc,
-        id,
-        shape,
-        inlets,
-        outlets,
-        handlers,
-        functions,
-        constants,
-        invariants,
-        types,
-        includes,
-        authors,
-        options,
-        terms,
-        brief,
-        description,
-        comments
-      )
+      Streamlet(loc, id, shape, options, contents, brief, description)
     }
   }
 

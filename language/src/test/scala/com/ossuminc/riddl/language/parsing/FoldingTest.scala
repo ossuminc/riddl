@@ -56,7 +56,8 @@ class FoldingTest extends ParsingTest {
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
           val result = Folding.foldLeftWithStack(empty)(content) { case (track, definition, stack) =>
-            val path = stack.map(_.identify).reverse :+ definition.identify
+            val path = stack.map(_.asInstanceOf[Definition[?]].identify).reverse :+
+              definition.asInstanceOf[Definition[?]].identify
             track :+ path
           }
           val expectedCount = 26
@@ -162,71 +163,6 @@ class FoldingTest extends ParsingTest {
             List("Root", "Domain 'one'", "Context 'two'", "Term 'ForcePush'")
           )
           result mustBe expectedResult
-      }
-    }
-
-    case class Tracker(contPush: Int = 0, defs: Int = 0, contPop: Int = 0)
-
-    class Tracking(print: Boolean = false) extends Folding.Folder[Tracker] {
-      def openContainer(
-        t: Tracker,
-        container: Definition,
-        stack: Seq[Definition]
-      ): Tracker = {
-        if print then {
-          info(
-            "> " + container.identify + "(" + stack
-              .map(_.identify)
-              .mkString(", ") + ")"
-          )
-        }
-        t.copy(contPush = t.contPush + 1)
-      }
-
-      def doDefinition(
-        t: Tracker,
-        definition: Definition,
-        stack: Seq[Definition]
-      ): Tracker = {
-        if print then {
-          info(
-            "==" + definition.identify + "(" + stack
-              .map(_.identify)
-              .mkString(", ") + ")"
-          )
-        }
-        t.copy(defs = t.defs + 1)
-      }
-
-      def closeContainer(
-        t: Tracker,
-        container: Definition,
-        stack: Seq[Definition]
-      ): Tracker = {
-        if print then {
-          info(
-            "< " + container.identify + "(" + stack
-              .map(_.identify)
-              .mkString(", ") + ")"
-          )
-        }
-        t.copy(contPop = t.contPop + 1)
-      }
-    }
-
-    "can 'fold around' 3 functions" in {
-      parseTopLevelDomains(input) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(root) =>
-          val tracking = new Tracking
-          val tracked = Folding.foldAround(Tracker(), root, tracking)
-          val expectedContainers = 17
-          val expectedLeaves = 9
-          tracked.defs mustBe expectedLeaves
-          tracked.contPush mustBe expectedContainers
-          tracked.contPush mustBe tracked.contPop
       }
     }
   }

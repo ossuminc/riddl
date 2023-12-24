@@ -63,8 +63,8 @@ object FoldingSupport {
 
     def pathIdToDefinition(
                             pid: PathIdentifier,
-                            parents: Seq[Definition]
-                          ): Option[Definition] = {
+                            parents: Seq[Definition[?]]
+                          ): Option[Definition[?]] = {
       val result = resolvePath(pid, parents)()()
       result.headOption
     }
@@ -72,9 +72,9 @@ object FoldingSupport {
     private def adjustStacksForPid(
                                     searchFor: String,
                                     pid: PathIdentifier,
-                                    parentStack: mutable.Stack[Definition],
+                                    parentStack: mutable.Stack[Definition[?]],
                                     nameStack: mutable.Stack[String]
-                                  ): Seq[Definition] = {
+                                  ): Seq[Definition[?]] = {
       // Since we're at a field that references another type then we
       // need to push that type's path on the name stack which is just itself
       nameStack.push(searchFor)
@@ -89,19 +89,19 @@ object FoldingSupport {
         // Drop up the stack until we find the name we just found
         parentStack.popUntil(_.id.value == top)
       }
-      Seq.empty[Definition]
+      Seq.empty[Definition[?]]
     }
 
     private def findCandidates(
                                 searchFor: String,
-                                parentStack: mutable.Stack[Definition],
+                                parentStack: mutable.Stack[Definition[?]],
                                 nameStack: mutable.Stack[String]
-                              ): Seq[Definition] = {
+                              ): Seq[Definition[?]] = {
       parentStack.headOption match {
         case None =>
           // Nothing in the parent stack so we're done searching and
           // we return empty to signal nothing found
-          Seq.empty[Definition]
+          Seq.empty[Definition[?]]
         case Some(item) =>
           item match {
             case st: AST.State =>
@@ -113,12 +113,12 @@ object FoldingSupport {
               // if we're at an onClause that references a message then we
               // need to push that message's path on the name stack
               adjustStacksForPid(searchFor, oc.msg.pathId, parentStack, nameStack)
-            case ad: AggregateDefinition =>
+            case ad: AggregateValue =>
               ad.typeEx match {
                 case a: Aggregation =>
                   // if we're at a field composed of more fields, then those fields
                   // what we are looking for
-                  a.contents
+                  a.contents.filter
                 case Enumeration(_, enumerators) => enumerators
                 case a: AggregateUseCaseTypeExpression =>
                   // Message types have fields too, those fields are what we seek
@@ -129,7 +129,7 @@ object FoldingSupport {
                   adjustStacksForPid(searchFor, pid, parentStack, nameStack)
                 case _ =>
                   // Any other type expression can't be descend into
-                  Seq.empty[Definition]
+                  Seq.empty[Definition[?]]
               }
             case t: Type =>
               t.typ match {
@@ -142,7 +142,7 @@ object FoldingSupport {
                   adjustStacksForPid(searchFor, pid, parentStack, nameStack)
                 case _ =>
                   // Any other type expression can't be descended into
-                  Seq.empty[Definition]
+                  Seq.empty[Definition[?]]
               }
             case f: Function =>
               // If we're at a Function node, the functions input and output
@@ -150,10 +150,10 @@ object FoldingSupport {
               val input: Aggregation = f.input.getOrElse(Aggregation.empty(f.loc))
               val output: Aggregation = f.output.getOrElse(Aggregation.empty(f.loc))
               input.contents ++ output.contents
-            case d: Definition =>
+            case d: Definition[?] =>
               d.contents.flatMap {
                 case Include(_, contents, _, _) => contents
-                case d: Definition => Seq(d)
+                case d: Definition[?] => Seq(d)
               }
           }
       }
@@ -174,19 +174,19 @@ object FoldingSupport {
       */
     private def resolveRelativePath(
                                      pid: PathIdentifier,
-                                     parents: Seq[Definition]
-                                   ): Seq[Definition] = {
+                                     parents: Seq[Definition[?]]
+                                   ): Seq[Definition[?]] = {
 
       // Initialize the visited stack. This is used to detect looping. We
       // should never visit the same definition twice but if we do we will
       // catch it below.
-      val visitedStack = mutable.Stack.empty[Definition]
+      val visitedStack = mutable.Stack.empty[Definition[?]]
 
       // Implicit definitions don't have names so they don't count in the stack
       val namedParents = parents.filterNot(_.isImplicit).reverse
 
       // Build the parent stack from the named parents
-      val parentStack = mutable.Stack.empty[Definition]
+      val parentStack = mutable.Stack.empty[Definition[?]]
       parentStack.pushAll(namedParents)
 
       // Build the name stack from the PathIdentifier provided
@@ -211,7 +211,7 @@ object FoldingSupport {
           // We have a name to search for if the parent stack is not empty
           parentStack.headOption match {
             case None =>
-              Seq.empty[Definition]
+              Seq.empty[Definition[?]]
             case Some(definition) =>
               // get the next definition of the parentStack
               // If we have already visited this definition, its an error
@@ -261,7 +261,7 @@ object FoldingSupport {
                 // Now find the match, if any, and handle appropriately
                 val found = candidates.find(_.id.value == newSoughtName)
                 found match {
-                  case Some(q: Definition) =>
+                  case Some(q: Definition[?]) =>
                     // found the named item, and it is a Container, so put it on
                     // the stack in case there are more things to resolve
                     parentStack.push(q)
@@ -277,7 +277,7 @@ object FoldingSupport {
       // if there is a single thing left on the stack and that things is
       // a RootContainer
       parentStack.headOption match
-        case Some(x: RootContainer) if parentStack.size == 1 =>
+        case Some(x: Root) if parentStack.size == 1 =>
           // then pop it off because RootContainers don't count and we want to
           // rightfully return an empty sequence for "not found"
           parentStack.pop()
@@ -285,7 +285,7 @@ object FoldingSupport {
           parentStack.toSeq
         case None =>
           // Its weird that something else is the only parent. Let's fail
-          Seq.empty[Definition]
+          Seq.empty[Definition[?]]
         case _ =>
           // Convert parent stack to immutable sequence
           parentStack.toSeq
@@ -293,11 +293,11 @@ object FoldingSupport {
 
     private def resolvePathFromHierarchy(
                                           pid: PathIdentifier,
-                                          parents: Seq[Definition]
-                                        ): Seq[Definition] = {
+                                          parents: Seq[Definition[?]]
+                                        ): Seq[Definition[?]] = {
       pid.value.headOption match {
         case None =>
-          Seq.empty[Definition] // signla not found
+          Seq.empty[Definition[?]] // signla not found
         case Some(top) =>
           // First, scan up through the parent stack to find the starting place
           val newParents = parents.dropUntil(_.id.value == top)
@@ -316,29 +316,29 @@ object FoldingSupport {
       }
     }
 
-    private def doNothingSingle(defStack: Seq[Definition]): Seq[Definition] = {
+    private def doNothingSingle(defStack: Seq[Definition[?]]): Seq[Definition[?]] = {
       defStack
     }
 
     private def doNothingMultiple(
-     @unused list: List[(Definition, Seq[Definition])]
-   ): Seq[Definition] = {
-      Seq.empty[Definition]
+     @unused list: List[(Definition[?], Seq[Definition[?]])]
+   ): Seq[Definition[?]] = {
+      Seq.empty[Definition[?]]
     }
 
-    def resolvePidRelativeTo[DEF <: Definition : ClassTag](
+    def resolvePidRelativeTo[DEF <: Definition[?] : ClassTag](
       pid: PathIdentifier,
-      definition: Definition
+      definition: Definition[?]
     ): Option[DEF] = {
       val parents = definition +: symbolTable.parentsOf(definition)
       this.resolvePathIdentifier[DEF](pid, parents)
     }
 
-    def resolvePathIdentifier[DEF <: Definition : ClassTag](
+    def resolvePathIdentifier[DEF <: Definition[?] : ClassTag](
                                                              pid: PathIdentifier,
-                                                             parents: Seq[Definition]
+                                                             parents: Seq[Definition[?]]
                                                            ): Option[DEF] = {
-      def isSameKind(d: Definition): Boolean = {
+      def isSameKind(d: Definition[?]): Boolean = {
         val clazz = classTag[DEF].runtimeClass
         d.getClass == clazz
       }
@@ -373,12 +373,12 @@ object FoldingSupport {
 
     def resolvePath(
                      pid: PathIdentifier,
-                     parents: Seq[Definition]
-                   )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle)(
-                     onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] = doNothingMultiple
-                   ): Seq[Definition] = {
+                     parents: Seq[Definition[?]]
+                   )(onSingle: Seq[Definition[?]] => Seq[Definition[?]] = doNothingSingle)(
+                     onMultiple: List[(Definition[?], Seq[Definition[?]])] => Seq[Definition[?]] = doNothingMultiple
+                   ): Seq[Definition[?]] = {
       if pid.value.isEmpty then {
-        Seq.empty[Definition]
+        Seq.empty[Definition[?]]
       }
       else if pid.value.exists(_.isEmpty) then {
         val resolution = resolveRelativePath(pid, parents)
@@ -395,7 +395,7 @@ object FoldingSupport {
             case Nil => // nothing found
               // We couldn't find the path in the hierarchy or the symbol table
               // so let's signal this by returning an empty sequence
-              Seq.empty[Definition]
+              Seq.empty[Definition[?]]
             case (d, parents) :: Nil => // exact match
               // Give caller an option to do something or morph the results
               onSingle(d +: parents)

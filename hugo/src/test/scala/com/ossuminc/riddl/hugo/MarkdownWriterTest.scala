@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.language.AST.RootContainer
+import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
 
@@ -131,7 +131,7 @@ class MarkdownWriterTest extends HugoTestBase {
           | | which maps to https://www.merriam-webster.com/
           |}
           |""".stripMargin
-      val (passesResult: PassesResult, root: RootContainer, mdw: MarkdownWriter) = makeMDWFor(input)
+      val (passesResult: PassesResult, root: Root, mdw: MarkdownWriter) = makeMDWFor(input)
       val domain = root.domains.head
       val context = domain.contexts.head
       mdw.emitDescription(domain.description, 0)

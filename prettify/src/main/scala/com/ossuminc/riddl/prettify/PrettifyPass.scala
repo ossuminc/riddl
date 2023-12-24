@@ -44,7 +44,7 @@ object PrettifyPass extends PassInfo {
       case _: Invariant     => Keyword.invariant
       case _: Outlet        => Keyword.outlet
       case s: Streamlet     => s.shape.keyword
-      case _: RootContainer => "root"
+      case _: Root => "root"
       case _: Saga          => Keyword.saga
       case _: SagaStep      => Keyword.step
       case _: State         => Keyword.state
@@ -71,7 +71,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
 
   def name: String = PrettifyPass.name
 
-  def postProcess(root: AST.RootContainer): Unit = ()
+  def postProcess(root: AST.Root): Unit = ()
 
   /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
     *
@@ -115,7 +115,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(_.openDef(input))
       case cg: ContainedGroup =>
         state.withCurrent(_.openDef(cg))
-      case _: RootContainer => () // ignore
+      case _: Root => () // ignore
       case _: Enumerator    => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
            _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
@@ -160,7 +160,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case _: OnMessageClause => closeOnClause()
       case include: Include[Definition] @unchecked =>
         closeInclude(include)
-      case _: RootContainer      => () // ignore
+      case _: Root      => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
         // Plant, Streamlet, Function, SagaStep

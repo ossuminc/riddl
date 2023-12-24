@@ -29,19 +29,19 @@ private[parsing] trait AdaptorParser {
     }
   }
 
-  private def adaptorInclude[u: P]: P[Include[AdaptorDefinition]] = {
-    include[AdaptorDefinition, u](adaptorDefinitions(_))
+  private def adaptorInclude[u: P]: P[Include[OccursInAdaptor]] = {
+    include[OccursInAdaptor, u](adaptorDefinitions(_))
   }
 
-  private def adaptorDefinitions[u: P]: P[Seq[AdaptorDefinition]] = {
+  private def adaptorDefinitions[u: P]: P[Seq[OccursInAdaptor]] = {
     P(
       (handler(StatementsSet.AdaptorStatements) | function | inlet |
-        outlet | adaptorInclude | term | constant)./.rep(1)
+        outlet | adaptorInclude | term | constant | authorRef | comment)./.rep(1)
     )
   }
 
-  private def adaptorBody[u: P]: P[Seq[AdaptorDefinition]] = {
-    undefined(Seq.empty[AdaptorDefinition])./ | adaptorDefinitions./
+  private def adaptorBody[u: P]: P[Seq[OccursInAdaptor]] = {
+    undefined(Seq.empty[OccursInAdaptor])./ | adaptorDefinitions./
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {
@@ -56,29 +56,27 @@ private[parsing] trait AdaptorParser {
 
   def adaptor[u: P]: P[Adaptor] = {
     P(
-      location ~ Keywords.adaptor ~/ identifier ~ authorRefs ~
+      location ~ Keywords.adaptor ~/ identifier ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorOptions ~
-        adaptorBody ~ close ~ briefly ~ description ~ comments
+        adaptorBody ~ close ~ briefly ~ description
     ).map {
       case (
             loc,
             id,
-            authors,
             direction,
             cRef,
             options,
-            defs,
+            contents,
             brief,
-            description,
-            comments
+            description
           ) =>
-        val content = defs ++ authors ++ options ++ comments
-        Adaptor.from(
+        Adaptor(
           loc,
           id,
           direction,
           cRef,
-          content,
+          options,
+          contents,
           brief,
           description
         )

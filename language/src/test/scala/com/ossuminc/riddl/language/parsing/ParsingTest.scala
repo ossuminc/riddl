@@ -32,14 +32,14 @@ class ParsingTest extends AnyWordSpec with Matchers {
 
   def parseTopLevelDomains(
     input: RiddlParserInput
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages, Root] = {
     val tp = TestParser(input)
     tp.parseRootContainer
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](
     input: RiddlParserInput,
-    extract: RootContainer => TO
+    extract: Root => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract)
@@ -77,7 +77,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseContextDefinition[TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
+  def parseDefinition[FROM <: Definition[?]: ClassTag, TO <: RiddlValue](
     input: RiddlParserInput,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -85,7 +85,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseDefinition[FROM, TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
+  def parseDefinition[FROM <: Definition[?]: ClassTag, TO <: RiddlValue](
     input: String,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -93,20 +93,20 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parseDefinition[FROM, TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag](
+  def parseDefinition[FROM <: Definition[?]: ClassTag](
     input: RiddlParserInput
   ): Either[Messages, (FROM, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseDefinition[FROM]
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag](
+  def parseDefinition[FROM <: Definition[?]: ClassTag](
     input: String
   ): Either[Messages, (FROM, RiddlParserInput)] = {
     parseDefinition(RiddlParserInput(input))
   }
 
-  def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
+  def checkDefinition[FROM <: Definition[?]: ClassTag, TO <: RiddlValue](
     rip: RiddlParserInput,
     expected: TO,
     extract: FROM => TO
@@ -119,7 +119,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     }
   }
 
-  def checkDefinitions[FROM <: Definition: ClassTag, TO <: RiddlValue](
+  def checkDefinitions[FROM <: Definition[?]: ClassTag, TO <: RiddlValue](
     cases: Map[String, TO],
     @unused extract: FROM => TO
   ): Unit = {
@@ -147,7 +147,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     @unused label: String,
     fileName: String,
     directory: String = "language/src/test/input/"
-  ): RootContainer = {
+  ): Root = {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
     TopLevelParser.parse(rpi) match {

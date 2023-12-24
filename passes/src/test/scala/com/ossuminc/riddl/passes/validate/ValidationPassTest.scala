@@ -26,7 +26,7 @@ class ValidationPassTest extends ValidatingTest {
     }
 
     "Validate All Things" must {
-      var sharedRoot: RootContainer = RootContainer.empty
+      var sharedRoot: Root = Root.empty
 
       "parse correctly" in {
         val rootFile = "language/src/test/input/full/domain.riddl"

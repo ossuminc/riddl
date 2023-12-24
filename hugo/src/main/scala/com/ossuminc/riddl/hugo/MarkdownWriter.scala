@@ -542,13 +542,13 @@ case class MarkdownWriter(
         val data = mt.fields.map { (f: Field) =>
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
-        s"${mt.usecase.kind} message of: " + data.mkString(", ")
+        s"${mt.usecase.useCase} message of: " + data.mkString(", ")
       case _ => typeEx.format
     }
   }
 
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition]): this.type = {
-    val data = agg.contents.map { (f: AggregateDefinition) =>
+    val data = agg.contents.map { (f: AggregateValue) =>
       val pars = f +: parents
       (f.id.format, resolveTypeExpression(f.typeEx, pars))
     }
@@ -608,7 +608,7 @@ case class MarkdownWriter(
 
   def emitType(typ: Type, stack: Seq[Definition]): this.type = {
     val suffix = typ.typ match {
-      case mt: AggregateUseCaseTypeExpression => mt.usecase.kind
+      case mt: AggregateUseCaseTypeExpression => mt.usecase.useCase
       case _                                  => "Type"
     }
     containerHead(typ, suffix)
@@ -933,7 +933,7 @@ case class MarkdownWriter(
   ): this.type = {
     containerHead(projector, "Projector")
     emitDefDoc(projector, parents)
-    emitProcessorToc[ProjectorOption, ProjectorDefinition](projector)
+    emitProcessorToc[ProjectorOption, OccursInProjector](projector)
     emitIndex("Projector", projector, parents)
   }
 
@@ -943,7 +943,7 @@ case class MarkdownWriter(
   ): this.type = {
     containerHead(repository, "Repository")
     emitDefDoc(repository, parents)
-    emitProcessorToc[RepositoryOption, RepositoryDefinition](repository)
+    emitProcessorToc[RepositoryOption, OccursInRepository](repository)
     emitIndex("Repository", repository, parents)
   }
 
@@ -961,7 +961,7 @@ case class MarkdownWriter(
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)
     p(s"Direction: ${adaptor.direction.format} ${adaptor.context.format}")
-    emitProcessorToc[AdaptorOption, AdaptorDefinition](adaptor)
+    emitProcessorToc[AdaptorOption, OccursInAdaptor](adaptor)
     emitIndex("Adaptor", adaptor, parents)
   }
 

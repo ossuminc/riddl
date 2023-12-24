@@ -37,83 +37,48 @@ private[parsing] trait ContextParser {
     }
   }
 
-  private def contextInclude[X: P]: P[Include[ContextDefinition]] = {
-    include[ContextDefinition, X](contextDefinitions(_))
+  private def contextInclude[X: P]: P[Include[OccursInContext]] = {
+    include[OccursInContext, X](contextDefinitions(_))
   }
 
   private def replica[x: P]: P[Replica] = {
     P(
-      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description ~ comments
-    ).map { case (loc, id, typeExp, brief, description, comments) =>
-      Replica(loc, id, typeExp, brief, description, comments)
+      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description
+    ).map { case (loc, id, typeExp, brief, description) =>
+      Replica(loc, id, typeExp, brief, description)
     }
   }
-  private def contextDefinitions[u: P]: P[Seq[ContextDefinition]] = {
+  
+  private def contextDefinition[u:P]: P[OccursInContext] = {
     P(
-      typeDef | handler(StatementsSet.ContextStatements) | entity |
+      typeDef | handler(StatementsSet.ContextStatements) | entity | authorRef |
         adaptor | function | saga | streamlet | projector | repository |
-        inlet | outlet | connector | term | replica | contextInclude
-    )./.rep(1)
+        inlet | outlet | connector | term | replica | contextInclude | comment
+    )
+  }
+  
+  private def contextDefinitions[u: P]: P[Seq[OccursInContext]] = {
+    contextDefinition./.rep(1)
   }
 
-  private def contextBody[u: P]: P[Seq[ContextDefinition]] = {
+  private def contextBody[u: P]: P[Seq[OccursInContext]] = {
     P(
-      undefined(Seq.empty[ContextDefinition])./ | contextDefinitions./
+      undefined(Seq.empty[OccursInContext])./ | contextDefinitions./
     )
   }
 
   def context[u: P]: P[Context] = {
     P(
-      location ~ Keywords.context ~/ identifier ~ authorRefs ~ is ~ open ~
-        contextOptions ~ contextBody ~ close ~ briefly ~ description ~ comments
-    ).map { case (loc, id, authors, options, definitions, brief, description, comments) =>
-      val groups = definitions.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val constants = mapTo[Constant](groups.get(classOf[Constant]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      val functions = mapTo[Function](groups.get(classOf[Function]))
-      val entities = mapTo[Entity](groups.get(classOf[Entity]))
-      val adaptors = mapTo[Adaptor](groups.get(classOf[Adaptor]))
-      val streamlets = mapTo[Streamlet](groups.get(classOf[Streamlet]))
-      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val connections = mapTo[Connector](groups.get(classOf[Connector]))
-      val includes = mapTo[Include[ContextDefinition]](
-        groups.get(
-          classOf[Include[ContextDefinition]]
-        )
-      )
-      val sagas = mapTo[Saga](groups.get(classOf[Saga]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val projectors = mapTo[Projector](groups.get(classOf[Projector]))
-      val repositories = mapTo[Repository](groups.get(classOf[Repository]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val replicas = mapTo[Replica](groups.get(classOf[Replica]))
+      location ~ Keywords.context ~/ identifier  ~ is ~ open ~
+        contextOptions ~ contextBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, options, contents, brief, description) =>
       Context(
         loc,
         id,
         options,
-        types,
-        constants,
-        entities,
-        adaptors,
-        sagas,
-        streamlets,
-        functions,
-        terms,
-        invariants,
-        includes,
-        handlers,
-        projectors,
-        repositories,
-        inlets,
-        outlets,
-        connections,
-        replicas,
-        authors,
+        contents,
         brief,
-        description,
-        comments
+        description
       )
     }
   }

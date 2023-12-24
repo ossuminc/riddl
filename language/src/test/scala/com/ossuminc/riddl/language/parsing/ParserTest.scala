@@ -271,7 +271,7 @@ class ParserTest extends ParsingTest {
                     Field(
                       (2, 50, rpi),
                       Identifier((2, 50, rpi), "x"),
-                      Strng((2, 53, rpi), None, None),
+                      String_((2, 53, rpi), None, None),
                     )
                   )
                 )

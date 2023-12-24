@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.{AST, At}
 import java.io.File
 import scala.io.Source
 
-class TopLevelParserTest extends ParsingTest  {
+class TopLevelParserTest extends ParsingTest {
 
   val origin = "simpleDomain.riddl"
 
@@ -26,10 +26,8 @@ class TopLevelParserTest extends ParsingTest  {
     Seq.empty[AuthorRef],
     Seq.empty[Author]
   )
-  val simpleDomainResults: AST.RootContainer = RootContainer(
-    Seq.empty,
+  val simpleDomainResults: AST.Root = Root(
     List(simpleDomain),
-    Seq.empty,
     List(
       RiddlParserInput(
         new File("language/src/test/input/domains/simpleDomain.riddl")
@@ -54,10 +52,8 @@ class TopLevelParserTest extends ParsingTest  {
       try {
         val stringContents = source.mkString
         val result = TopLevelParser.parse(stringContents, origin)
-        val expected = RootContainer(
-          Seq.empty,
+        val expected = Root(
           List(simpleDomain),
-          Seq.empty,
           List(
             StringParserInput(
               """domain foo is {
@@ -73,12 +69,12 @@ class TopLevelParserTest extends ParsingTest  {
     }
     "parse empty String" in {
       val expected =
-        RootContainer(List(), List(), List(), List(StringParserInput("", "string")))
+        Root(List(), List(StringParserInput("", "string")))
       TopLevelParser.parse("") match {
         case Right(expected) =>
           fail("Should have failed expecting an author or domain")
         case Left(messages) =>
-          messages.length mustBe(1)
+          messages.length mustBe (1)
           val msg = messages.head
           msg.message must include("Expected one of")
           msg.message must include("\"author\"")
@@ -88,12 +84,12 @@ class TopLevelParserTest extends ParsingTest  {
 
     "handle garbage" in {
       val expected =
-        RootContainer(List(),List(),List(), List(StringParserInput("", "string")))
+        Root(List.empty, List(StringParserInput("", "string")))
       TopLevelParser.parse(" pweio afhj", "handle garbage") match {
         case Right(expected) =>
           fail("Should have failed excpecting an author or domain")
         case Left(messages) =>
-          messages.length mustBe(1)
+          messages.length mustBe (1)
           val msg = messages.head
           msg.message must include("Expected one of")
           msg.message must include("\"author\"")

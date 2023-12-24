@@ -34,14 +34,14 @@ class ParsingTest extends ParsingTestBase {
 
   def parseTopLevelDomains(
     input: RiddlParserInput
-  ): Either[Messages, RootContainer] = {
+  ): Either[Messages, Root] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomains
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](
     input: RiddlParserInput,
-    extract: RootContainer => TO
+    extract: Root => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract)
@@ -96,7 +96,7 @@ class ParsingTest extends ParsingTestBase {
     @unused label: String,
     fileName: String,
     directory: String = "testkit/src/test/input/"
-  ): RootContainer = {
+  ): Root = {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
     TopLevelParser.parse(rpi) match {
