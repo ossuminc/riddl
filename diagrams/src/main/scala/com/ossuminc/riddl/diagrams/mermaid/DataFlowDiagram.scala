@@ -33,7 +33,7 @@ case class DataFlowDiagram(pr: PassesResult) {
     sb.append(newline)
   }
 
-  private def makeNodeLabel(definition: Definition): Unit = {
+  private def makeNodeLabel(definition: Definition[?]): Unit = {
     pr.symbols.parentOf(definition) match {
       case Some(parent) =>
         val name = parent.id.value + "." + definition.id.value
@@ -42,14 +42,14 @@ case class DataFlowDiagram(pr: PassesResult) {
           case _: Inlet      => s"Inlet $name"
           case s: Streamlet  => s"${s.kind} $name"
           case s: Connector  => s"Connector $name"
-          case d: Definition => s"${d.kind} $name"
+          case d: Definition[?] => s"${d.kind} $name"
         }
         val (left, right) = definition match {
           case _: Outlet          => "[\\" -> "\\]"
           case _: Inlet           => "[/" -> "/]"
           case _: Streamlet       => "[[" -> "]]"
           case _: Processor[?, ?] => "[{" -> "}]"
-          case _: Definition      => "[" -> "]"
+          case _: Definition[?]      => "[" -> "]"
         }
         indent(s"${definition.id.value}$left\"$id\"$right")
       case _ =>
@@ -64,7 +64,7 @@ case class DataFlowDiagram(pr: PassesResult) {
     else indent(s"$fromName -- $how --> $toName")
   }
 
-  private[mermaid] def participants(connector: Connector): Seq[Definition] = {
+  private[mermaid] def participants(connector: Connector): Seq[Definition[?]] = {
     for {
       flows <- connector.flows
       to <- connector.to
@@ -73,7 +73,7 @@ case class DataFlowDiagram(pr: PassesResult) {
       toDef <- pr.refMap.definitionOf[Inlet](to, connector)
       fromDef <- pr.refMap.definitionOf[Outlet](from, connector)
     } yield {
-      val to_users: Seq[Definition] = pr.usage.getUsers(toDef).flatMap {
+      val to_users: Seq[Definition[?]] = pr.usage.getUsers(toDef).flatMap {
         case oc: OnClause => pr.symbols.parentOf(oc).flatMap(pr.symbols.parentOf)
         case e: Entity => Seq.empty
         case _ => Seq.empty // FIXME: unfinished cases here
@@ -86,12 +86,12 @@ case class DataFlowDiagram(pr: PassesResult) {
   def generate(context: Context): String = {
     sb.append("flowchart LR").append(newline)
     val parts = for
-      connector <- context.connections
+      connector <- context.connectors
       participants <- this.participants(connector)
     yield participants
     for part <- parts.distinct do makeNodeLabel(part)
     for {
-      conn <- context.connections
+      conn <- context.connectors
       from <- conn.from
       to <- conn.to
       flows <- conn.flows

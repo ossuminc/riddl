@@ -55,7 +55,7 @@ class ParsingTest extends ParsingTestBase {
     tp.parseDomainDefinition[TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
+  def parseDefinition[FROM <: Definition[?]: ClassTag, TO <: RiddlValue](
     input: RiddlParserInput,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
@@ -63,21 +63,21 @@ class ParsingTest extends ParsingTestBase {
     tp.parseDefinition[FROM, TO](extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
+  def parseDefinition[FROM <: Definition[?]: ClassTag, TO <: RiddlValue](
     input: String,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     parseDefinition[FROM, TO](RiddlParserInput(input), extract)
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag](
+  def parseDefinition[FROM <: Definition[?]: ClassTag](
     input: RiddlParserInput
   ): Either[Messages, (FROM, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseDefinition[FROM]
   }
 
-  def parseDefinition[FROM <: Definition: ClassTag](
+  def parseDefinition[FROM <: Definition[?]: ClassTag](
     input: String
   ): Either[Messages, (FROM, RiddlParserInput)] = {
     parseDefinition(RiddlParserInput(input))

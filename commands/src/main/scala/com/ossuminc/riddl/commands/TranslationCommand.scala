@@ -48,8 +48,8 @@ trait TranslatingState[OF <: OutputFile] {
   def addFile(file: OF): this.type = { files.append(file); this }
 
   def makeDefPath(
-    definition: Definition,
-    parents: Seq[Definition]
+    definition: Definition[?],
+    parents: Seq[Definition[?]]
   ): Seq[String] = {
     parents.filterNot(x => x.isInstanceOf[Root]).map(_.id.value) :+
       definition.id.value
