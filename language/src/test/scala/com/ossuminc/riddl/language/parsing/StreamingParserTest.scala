@@ -26,7 +26,7 @@ class StreamingParserTest extends ParsingTest {
       (row + 1, col + 1, rpi),
       Identifier((row + 1, col + 8, rpi), "GetWeatherForecast"),
       Source((row + 1, col + 1, rpi)),
-      List.empty[Inlet],
+      List.empty[StreamletOption],
       List(
         Outlet(
           (row + 2, 3, rpi),
@@ -37,15 +37,6 @@ class StreamingParserTest extends ParsingTest {
           )
         )
       ),
-      List.empty[Handler],
-      List.empty[Function],
-      List.empty[Constant],
-      List.empty[Invariant],
-      List.empty[Type],
-      Seq.empty[Include[OccursInStreamlets]],
-      Seq.empty[AuthorRef],
-      Seq.empty[StreamletOption],
-      Seq.empty[Term],
       Some(LiteralString((row + 3, 9, rpi), "foo")),
       Option(
         BlockDescription(
@@ -71,7 +62,7 @@ class StreamingParserTest extends ParsingTest {
       val expected = Context(
         (1, 1, rpi),
         Identifier((1, 9, rpi), "foo"),
-        streamlets = Seq(sourceExpected(rpi, 17))
+        contents = Seq(sourceExpected(rpi, 17))
       )
       checkDefinition[Context, Context](rpi, expected, identity)
     }
@@ -120,9 +111,7 @@ class StreamingParserTest extends ParsingTest {
             AggregateUseCaseTypeExpression((5, 26, rpi), CommandCase, List()),
             None,
             None
-          )
-        ),
-        streamlets = List(
+          ),
           Streamlet(
             (6, 3, rpi),
             Identifier((6, 10, rpi), "GetWeatherForecast"),
@@ -138,15 +127,6 @@ class StreamingParserTest extends ParsingTest {
                 )
               )
             ),
-            List.empty[Handler],
-            List.empty[Function],
-            List.empty[Constant],
-            List.empty[Invariant],
-            List.empty[Type],
-            Seq.empty[Include[OccursInStreamlets]],
-            Seq.empty[AuthorRef],
-            Seq.empty[StreamletOption],
-            Seq.empty[Term],
             None,
             Option(
               BlockDescription(
@@ -164,6 +144,7 @@ class StreamingParserTest extends ParsingTest {
             (9, 4, rpi),
             Identifier((9, 9, rpi), "GetCurrentTemperature"),
             Flow((9, 4, rpi)),
+            Seq.empty[StreamletOption],
             List(
               Inlet(
                 (11, 5, rpi),
@@ -172,9 +153,7 @@ class StreamingParserTest extends ParsingTest {
                   (11, 22, rpi), "command",
                   PathIdentifier((11, 30, rpi), List("Forecast"))
                 )
-              )
-            ),
-            List(
+              ),
               Outlet(
                 (12, 5, rpi),
                 Identifier((12, 12, rpi), "CurrentTemp"),
@@ -184,15 +163,6 @@ class StreamingParserTest extends ParsingTest {
                 )
               )
             ),
-            List.empty[Handler],
-            List.empty[Function],
-            List.empty[Constant],
-            List.empty[Invariant],
-            List.empty[Type],
-            Seq.empty[Include[OccursInStreamlets]],
-            Seq.empty[AuthorRef],
-            Seq.empty[StreamletOption],
-            Seq.empty[Term],
             None,
             Option(
               BlockDescription(
@@ -209,7 +179,8 @@ class StreamingParserTest extends ParsingTest {
           Streamlet(
             (15, 3, rpi),
             Identifier((15, 8, rpi), "AttenuateSensor"),
-            Sink((15, 3, rpi)),
+            Sink((15, 3, rpi)), 
+            Seq.empty[StreamletOption],
             List(
               Inlet(
                 (16, 5, rpi),
@@ -220,16 +191,6 @@ class StreamingParserTest extends ParsingTest {
                 )
               )
             ),
-            List.empty[Outlet],
-            List.empty[Handler],
-            List.empty[Function],
-            List.empty[Constant],
-            List.empty[Invariant],
-            List.empty[Type],
-            Seq.empty[Include[OccursInStreamlets]],
-            Seq.empty[AuthorRef],
-            Seq.empty[StreamletOption],
-            Seq.empty[Term],
             None,
             Option(
               BlockDescription(

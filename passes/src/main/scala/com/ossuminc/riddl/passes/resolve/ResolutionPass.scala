@@ -64,10 +64,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveOnClauses(tc, parentsAsSeq)
       case oc: OnOtherClause =>
         resolveOnClauses(oc, parentsAsSeq)
-      case h: Handler =>
-        h.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case e: Entity =>
-        e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        e.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
         addEntity(e)
       case s: State =>
         resolveATypeRef(s.typ, parentsAsSeq)
@@ -83,25 +81,25 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveTypeExpression(c.typeEx, parentsAsSeq)
       case a: Adaptor =>
         resolveARef[Context](a.context, parentsAsSeq)
-        a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        a.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case s: Streamlet =>
-        s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case p: Projector =>
-        p.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        p.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case r: Repository =>
-        r.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        r.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case s: Saga =>
-        s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case r: Replica =>
         resolveTypeExpression(r.typeExp, parentsAsSeq)
       case d: Domain =>
-        d.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        d.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case a: Application =>
-        a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        a.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case c: Context =>
-        c.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        c.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case e: Epic =>
-        e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
+        e.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case uc: UseCase =>
         if uc.userStory.nonEmpty then resolveARef(uc.userStory.user, parentsAsSeq)
         end if
@@ -117,7 +115,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Group](cg.group, parentsAsSeq)
       case gi: GenericInteraction =>
         gi match {
-          case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
+          case ArbitraryInteraction(_, _, from, _, to, _, _) =>
             resolveARef[Definition[?]](from, parentsAsSeq)
             resolveARef[Definition[?]](to, parentsAsSeq)
           case fi: FocusOnGroupInteraction =>
@@ -133,10 +131,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             resolveARef[Input](pi.to, parentsAsSeq)
           case si: SelfInteraction =>
             resolveARef[Definition[?]](si.from, parentsAsSeq)
-          case VagueInteraction(_, _, _, _, _, _, _, _) =>
-            // no resolution required
-            ()
-          case SendMessageInteraction(_, _, from, message, to, _, _, _) =>
+          case vi: VagueInteraction => () // no resolution required
+          case SendMessageInteraction(_, _, from, message, to, _, _) =>
             resolveARef[Definition[?]](from, parentsAsSeq)
             resolveAMessageRef(message, parentsAsSeq)
             resolveARef[Definition[?]](to, parentsAsSeq)
@@ -145,20 +141,20 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case _: User                   => () // no references
       case _: Enumerator             => () // no references
       case _: Group                  => () // no references
-      case _: Include[_]             => () // no references
       case _: OptionalInteractions   => () // no references
       case _: ParallelInteractions   => () // no references
       case _: SequentialInteractions => () // no references
-      case _: Root          => () // no references
+      case _: Root                   => () // no references
       case _: SagaStep               => () // no references
       case _: Term                   => () // no references
-      case i: Invariant              => () // no references
+      case _: Handler                => () // no references
+      case _: Invariant              => () // no references
       // case _ => () // NOTE: Never have this catchall! Want compile time errors.
     }
   }
 
   private def resolveFunction(f: Function, parents: Seq[Definition[?]]): Unit = {
-    f.authors.foreach(resolveARef[Author](_, parents))
+    f.authorRefs.foreach(resolveARef[Author](_, parents))
     addFunction(f)
     f.input.foreach(resolveTypeExpression(_, parents))
     f.output.foreach(resolveTypeExpression(_, parents))
@@ -209,7 +205,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     resolveARef[Type](mc.msg, parents)
     mc.from match
       case None => ()
-      case Some(reference) =>
+      case Some(maybeName, reference) =>
         resolveARef[Definition[?]](reference, parents)
     resolveStatements(mc.statements, parents)
   }
@@ -336,7 +332,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private case class AnchorNotFoundInSymTab(topName: String) extends AnchorCase
   private case class AnchorNotFoundInParents(topName: String) extends AnchorCase
   private case class AnchorNotFoundAnywhere(topName: String) extends AnchorCase
-  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition[?], Seq[Definition[?]])]) extends AnchorCase
+  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition[?], Seq[Definition[?]])])
+      extends AnchorCase
   private case class AnchorFoundInSymTab(anchor: Definition[?], anchor_parents: Seq[Definition[?]]) extends AnchorCase
   private case class AnchorFoundInParents(anchor: Definition[?], anchor_parents: Seq[Definition[?]]) extends AnchorCase
   private case class AnchorIsRoot(anchor: Definition[?], anchor_parents: Seq[Definition[?]]) extends AnchorCase
@@ -541,7 +538,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == kind => path // success
           case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))      => path // success
           case typeEx: Alternation =>
-            messages.addError(loc, s"All alternates of `${typeEx.format}` must be ${kind.useCase.dropRight(4)} aggregates")
+            messages.addError(
+              loc,
+              s"All alternates of `${typeEx.format}` must be ${kind.useCase.dropRight(4)} aggregates"
+            )
             Seq.empty
           case typeEx: TypeExpression =>
             messages.addError(
@@ -831,26 +831,29 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
 
       // Return the name and candidates we should next search for
       parentStack.headOption match
-        case None       => Seq.empty[Definition[?]] // shouldn't happen?
-        case Some(head) => head.contents
+        case None       => Seq.empty[T] // shouldn't happen?
+        case Some(head) => head.definitions
 
     } else {
       // Couldn't resolve it, error already issued, signal termination of the search
-      Seq.empty[Definition[?]]
+      Seq.empty
     }
   }
 
-  private def candidatesFromTypeEx(typEx: TypeExpression, parentStack: mutable.Stack[Definition[?]]): Seq[Definition[?]] = {
+  private def candidatesFromTypeEx(
+    typEx: TypeExpression,
+    parentStack: mutable.Stack[Definition[?]]
+  ): Contents[Definition[?]] = {
     typEx match {
-      case a: Aggregation => a.contents
+      case a: Aggregation => a.fields
       // if we're at a field composed of more fields, then those fields
-      // what we are looking for
+      // are what we are looking for
       case Enumeration(_, enumerators) =>
         // if we're at an enumeration type then the numerators are candidates
         enumerators
       case a: AggregateUseCaseTypeExpression =>
         // Any kind of Aggregate's fields are candidates for resolution
-        a.contents
+        a.fields
       case AliasedTypeExpression(_, _, pid) =>
         // if we're at a field that references another type then the candidates
         // are that type's fields. To solve this we need to push
@@ -866,7 +869,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
 
   private def findCandidates(
     parentStack: mutable.Stack[Definition[?]]
-  ): Seq[Definition[?]] = {
+  ): Contents[Definition[?]] = {
     if parentStack.isEmpty then {
       // Nothing in the parent stack so we're done searching and
       // we return empty to signal nothing found
@@ -886,33 +889,26 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
               // need to push that message's path on the name stack
               adjustStacksForPid[Type](oc.msg.pathId, parentStack)
             case field: Field =>
-              candidatesFromTypeEx(field.typeEx, parentStack)
+              candidatesFromTypeEx(field.typeEx, parentStack).definitions
             case c: Constant =>
               candidatesFromTypeEx(c.typeEx, parentStack)
             case t: Type =>
               candidatesFromTypeEx(t.typ, parentStack)
-            case func: Function =>
-              val inputs: Aggregation = func.input.getOrElse(Aggregation.empty())
-              val outputs: Aggregation = func.output.getOrElse(Aggregation.empty())
-              // If we're at a Function node, the functions input parameters
-              // are the candidates to search next
-              inputs.contents ++ outputs.contents
-            case d: Definition[?] =>
+            case d: Container[RiddlValue] =>
               d.contents.flatMap {
-                case Include(_, contents, _, _) =>
-                  contents
-                case d: Definition[?] =>
-                  Seq(d)
+                case Include(_, contents, _) => contents.definitions
+                case d: Definition[?]        => Seq(d)
+                case _                       => Seq.empty
               }
       }
     }
   }
 
-  private def findResolution(soughtName: String, candidate: Definition[?][_]): Boolean = {
+  private def findResolution(soughtName: String, candidate: Definition[?]): Boolean = {
     candidate match {
       case omc: OnMessageClause if omc.msg.id.nonEmpty =>
         omc.msg.id.getOrElse(Identifier.empty).value == soughtName
-      case other: Definition[?][_] =>
+      case other: Definition[?] =>
         other.id.value == soughtName
     }
   }

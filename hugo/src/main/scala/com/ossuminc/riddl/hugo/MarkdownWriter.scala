@@ -384,7 +384,7 @@ case class MarkdownWriter(
       d.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
     if d.isVital then {
-      val authors = d.asInstanceOf[VitalDefinition[?, ?]].authors
+      val authors = d.asInstanceOf[VitalDefinition[?, ?]].authorRefs
       emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
     }
     val path = (parents :+ d.id.format).mkString(".")
@@ -636,7 +636,7 @@ case class MarkdownWriter(
     emitOptions(vd.options)
     emitTerms(vd.terms)
     emitUsage(vd)
-    if vd.authors.nonEmpty then toc("Authors", vd.authors.map(_.format))
+    if vd.authorRefs.nonEmpty then toc("Authors", vd.authorRefs.map(_.format))
     this
   }
 

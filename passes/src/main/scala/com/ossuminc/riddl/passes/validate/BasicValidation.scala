@@ -16,14 +16,14 @@ import scala.annotation.tailrec
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
-/** Unit Tests For BasicValidationState */
+/** Validation infrastrucure needed for all kinds of definition validation */
 trait BasicValidation {
 
   def symbols: SymbolsOutput
   def resolution: ResolutionOutput
   protected def messages: Messages.Accumulator
 
-  def parentOf(definition: Definition[?]): Container[Definition[?]] = {
+  def parentOf(definition: Definition[?]): Definition[?] = {
     symbols.parentOf(definition).getOrElse(Root.empty)
   }
 
@@ -127,7 +127,7 @@ trait BasicValidation {
     } else {
       checkRefAndExamine[Type](ref, topDef, parents) { (definition: Definition[?]) =>
         definition match {
-          case Type(_, _, typ, _, _, _) =>
+          case Type(_, _, typ, _, _) =>
             typ match {
               case AggregateUseCaseTypeExpression(_, mk, _, _) =>
                 check(
@@ -171,9 +171,9 @@ trait BasicValidation {
         case Some(c: Constant) => Some(c.typeEx)
         case Some(s: State) =>
           Some(AliasedTypeExpression(s.typ.loc, "state", s.typ.pathId))
-        case Some(Inlet(_, _, typ, _, _, _)) =>
+        case Some(Inlet(_, _, typ, _, _)) =>
           Some(AliasedTypeExpression(typ.loc, "inlet", typ.pathId))
-        case Some(Outlet(_, _, typ, _, _, _)) =>
+        case Some(Outlet(_, _, typ, _, _)) =>
           Some(AliasedTypeExpression(typ.loc, "outlet", typ.pathId))
         case Some(connector: Connector) =>
           connector.flows

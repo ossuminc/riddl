@@ -33,7 +33,6 @@ object Folding {
     value: S,
     parents: mutable.Stack[Container[CT]] = mutable.Stack.empty[Container[CT]]
   )(top: Container[CT])(f: (S, CT | Container[CT], Seq[Container[CT]]) => S): S = {
-    require(top.isContainer) // FIXME: Remove after debugging
     val initial = f(value, top, parents.toSeq)
     if !top.isAnonymous then parents.push(top)
     try {

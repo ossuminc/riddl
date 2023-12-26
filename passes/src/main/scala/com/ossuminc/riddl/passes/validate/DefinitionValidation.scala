@@ -61,14 +61,15 @@ trait DefinitionValidation extends BasicValidation {
   }
 
   private def checkUniqueContent(definition: Definition[?]): this.type = {
-    val allNames = definition.contents.filterNot(_.isImplicit).map(_.id.value)
-    if allNames.distinct.size != allNames.size then {
-      val duplicates: Map[String, Seq[Definition[?]]] =
-        definition.contents.groupBy(_.id.value).filterNot(_._2.size < 2)
+    val allNamedValues = definition.namedValues 
+    val allNames = allNamedValues.map(_.identify)
+    if allNames.distinct.size < allNames.size then {
+      val duplicates: Map[String, Seq[NamedValue]] =
+        allNamedValues.groupBy(_.identify).filterNot(_._2.size < 2)
       if duplicates.nonEmpty then {
-        val details = duplicates
-          .map { case (_: String, defs: Seq[Definition[?]]) =>
-            defs.map(_.identifyWithLoc).mkString(", and ")
+        val details = duplicates.map { 
+            case (_: String, defs: Seq[NamedValue]) =>
+              defs.map(_.identifyWithLoc).mkString(", and ")
           }
           .mkString("", "\n  ", "\n")
         messages.addError(
@@ -99,7 +100,7 @@ trait DefinitionValidation extends BasicValidation {
         definition.loc
       )
     if definition.isVital then {
-      definition.asInstanceOf[WithAuthors].authors.foreach { (authorRef: AuthorRef) =>
+      definition.asInstanceOf[WithAuthorRefs].authorRefs.foreach { (authorRef: AuthorRef) =>
         pathIdToDefinition(authorRef.pathId, definition +: parents) match {
           case None =>
             messages.addError(

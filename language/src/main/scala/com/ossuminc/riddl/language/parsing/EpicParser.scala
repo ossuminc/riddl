@@ -201,7 +201,7 @@ private[parsing] trait EpicParser {
       location ~ Keywords.epic ~/ identifier ~ is ~ open ~
         epicOptions ~ epicBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, (userStory, shownBy, contents), briefly, description) =>
-      Epic(loc, id, userStory, shownBy, options, contents, briefly, description)
+      Epic(loc, id, options, userStory, shownBy, contents, briefly, description)
     }
   }
 }

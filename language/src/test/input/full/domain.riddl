@@ -1,6 +1,7 @@
 author Reid is { name: "Reid Spencer" email: "reid@ossum.biz" }
 
-domain full by author Reid is {
+domain full is {
+  by author Reid 
   user Doer is "that which does"
   type Something is Abstract
   term Idea is briefly "an abstract notion"
