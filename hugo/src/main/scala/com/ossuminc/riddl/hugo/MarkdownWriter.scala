@@ -277,7 +277,7 @@ case class MarkdownWriter(
       passUtilities.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
-        container.contents
+        container.definitions
           .filter(d => d.nonEmpty && !d.isInstanceOf[OnMessageClause])
           .map(makeData(_, newParents))
       }
@@ -549,8 +549,8 @@ case class MarkdownWriter(
 
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition]): this.type = {
     val data = agg.contents.map { (f: AggregateValue) =>
-      val pars = f +: parents
-      (f.id.format, resolveTypeExpression(f.typeEx, pars))
+      // FIXME: val pars = f +: parents
+      (f.id.format, resolveTypeExpression(f.typeEx, parents))
     }
     list(data)
     this
@@ -632,7 +632,7 @@ case class MarkdownWriter(
     this
   }
 
-  private def emitVitalDefinitionTail[OV <: OptionValue, DEF <: Definition](vd: VitalDefinition[OV, DEF]): this.type = {
+  private def emitVitalDefinitionTail[OV <: OptionValue, DEF <: RiddlValue](vd: VitalDefinition[OV, DEF]): this.type = {
     emitOptions(vd.options)
     emitTerms(vd.terms)
     emitUsage(vd)
@@ -640,7 +640,7 @@ case class MarkdownWriter(
     this
   }
 
-  private def emitProcessorToc[OV <: OptionValue, DEF <: Definition](processor: Processor[OV, DEF]): this.type = {
+  private def emitProcessorToc[OV <: OptionValue, DEF <: RiddlValue](processor: Processor[OV, DEF]): this.type = {
     if processor.types.nonEmpty then emitTypesToc(processor)
     if processor.constants.nonEmpty then toc("Constants", mkTocSeq(processor.constants))
     if processor.functions.nonEmpty then toc("Functions", mkTocSeq(processor.functions))
@@ -676,7 +676,7 @@ case class MarkdownWriter(
     }
     emitUsage(domain)
     emitTerms(domain.terms)
-    emitAuthorInfo(domain.authorDefs)
+    emitAuthorInfo(domain.authors)
     emitIndex("Domain", domain, parents)
     this
   }
@@ -725,8 +725,8 @@ case class MarkdownWriter(
     toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Sagas", mkTocSeq(context.sagas))
     toc("Streamlets", mkTocSeq(context.streamlets))
-    list("Connections", mkTocSeq(context.connections))
-    emitProcessorToc(context)
+    list("Connections", mkTocSeq(context.connectors))
+    emitProcessorToc[ContextOption,OccursInContext](context)
     // TODO: generate a diagram for the processors and pipes
     emitIndex("Context", context, parents)
     this

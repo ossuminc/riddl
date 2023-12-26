@@ -47,7 +47,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private val useCaseDiagrams: mutable.HashMap[Epic, Seq[UseCaseDiagramData]] = mutable.HashMap.empty
   private val contextDiagrams: mutable.HashMap[Context, ContextDiagramData] = mutable.HashMap.empty
 
-  protected def process(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = {
+  protected def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     definition match
       case c: Context =>
         val aggregates = c.entities.filter(_.hasOption[EntityIsAggregate])
@@ -73,7 +73,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     }
   }
 
-  def getStatementReferences(statement: Statement): Seq[Reference[Definition[?]]] = {
+  def getStatementReferences(statement: Statement): Seq[Reference[Definition]] = {
     statement match
       case SendStatement(_, msg, portlet)   => Seq(msg, portlet)
       case TellStatement(_, msg, processor) => Seq(msg, processor)
@@ -82,7 +82,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _                                => Seq.empty
   }
 
-  def inferRelationship(context: Context, definition: Definition[?]): Option[String] = {
+  def inferRelationship(context: Context, definition: Definition): Option[String] = {
     definition match
       case m: Type if m.typ.isContainer && m.typ.hasDefinitions =>
         symTab.contextOf(m).map(c => s"Uses ${m.identify} in ${c.identify}")

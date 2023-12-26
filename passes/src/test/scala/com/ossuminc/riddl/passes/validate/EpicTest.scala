@@ -84,15 +84,14 @@ class EpicTest extends ValidatingTest {
           |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  by author reid 
+          |  by author reid
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    optional {
           |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
-          |        from user ImprovingApp.Owner
-          |        briefly "create org",
+          |        from user ImprovingApp.Owner briefly "create org"
           |      step show output ImprovingApp.Improving_app.OrganizationPage.show
           |        to user ImprovingApp.Owner
           |        briefly "organization added"
@@ -157,11 +156,11 @@ class EpicTest extends ValidatingTest {
           |  "Any legal business activity supported by the terms of use."
           |
           | by author reid
-          |  
+          |
           |  case primary is {
           |    parallel {
           |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
-          |        from  user ImprovingApp.Owner   briefly "create org",
+          |        from  user ImprovingApp.Owner   briefly "create org"
           |      step show output ImprovingApp.Improving_app.OrganizationPage.show
           |        to user ImprovingApp.Owner briefly "organization added"
           |     }
@@ -225,9 +224,9 @@ class EpicTest extends ValidatingTest {
           |  case primary is {
           |    step take input ImprovingApp.Improving_app.OrganizationPage.accept
           |      from user ImprovingApp.Owner
-          |      briefly "create org",
+          |      briefly "create org"
           |    step for user ImprovingApp.Owner "contemplates his navel"
-          |      briefly "self-processing",
+          |      briefly "self-processing"
           |    step show output ImprovingApp.Improving_app.OrganizationPage.show
           |      to user ImprovingApp.Owner
           |      briefly "organization added"
@@ -241,7 +240,7 @@ class EpicTest extends ValidatingTest {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           val errors = msgs.justErrors
           if errors.nonEmpty then
-            // info(msgs.format)
+            info(msgs.format)
             fail("Shouldn't have errors")
           else
             domain mustNot be(empty)

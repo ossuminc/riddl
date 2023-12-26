@@ -16,50 +16,50 @@ import scala.annotation.tailrec
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
-/** Validation infrastrucure needed for all kinds of definition validation */
+/** Validation infrastructure needed for all kinds of definition validation */
 trait BasicValidation {
 
   def symbols: SymbolsOutput
   def resolution: ResolutionOutput
   protected def messages: Messages.Accumulator
 
-  def parentOf(definition: Definition[?]): Definition[?] = {
+  def parentOf(definition: Definition): Definition = {
     symbols.parentOf(definition).getOrElse(Root.empty)
   }
 
-  def lookup[T <: Definition[?]: ClassTag](id: Seq[String]): List[T] = {
+  def lookup[T <: Definition: ClassTag](id: Seq[String]): List[T] = {
     symbols.lookup[T](id)
   }
 
   def pathIdToDefinition(
     pid: PathIdentifier,
-    parents: Seq[Definition[?]]
-  ): Option[Definition[?]] = {
-    parents.headOption.flatMap[Definition[?]] { (head: Definition[?]) =>
-      resolution.refMap.definitionOf[Definition[?]](pid, head)
+    parents: Seq[Definition]
+  ): Option[Definition] = {
+    parents.headOption.flatMap[Definition] { (head: Definition) =>
+      resolution.refMap.definitionOf[Definition](pid, head)
     }
   }
 
   @inline
-  def resolvePath[T <: Definition[?]](
+  def resolvePath[T <: Definition](
     pid: PathIdentifier,
-    parents: Seq[Definition[?]]
+    parents: Seq[Definition]
   ): Option[T] = {
     pathIdToDefinition(pid, parents).map(_.asInstanceOf[T])
   }
 
-  def resolvePidRelativeTo[T <: Definition[?]](
+  private def resolvePidRelativeTo[T <: Definition](
     pid: PathIdentifier,
-    relativeTo: Definition[?]
+    relativeTo: Definition
   ): Option[T] = {
     val parents = relativeTo +: symbols.parentsOf(relativeTo)
     resolvePath[T](pid, parents)
   }
 
-  def checkPathRef[T <: Definition[?]: ClassTag](
+  def checkPathRef[T <: Definition: ClassTag](
     pid: PathIdentifier,
-    container: Definition[?],
-    parents: Seq[Definition[?]]
+    container: Definition,
+    parents: Seq[Definition]
   ): Option[T] = {
     if pid.value.isEmpty then
       val tc = classTag[T].runtimeClass
@@ -68,39 +68,39 @@ trait BasicValidation {
       messages.addError(pid.loc, message)
       Option.empty[T]
     else
-      val pars = parents.headOption match
-        case Some(head: Definition[?]) if head != container =>
+      val pars: Seq[Definition] = parents.headOption match
+        case Some(head: Definition) if head != container =>
           container +: parents
-        case Some(other: Definition[?]) =>
+        case Some(_: Definition) =>
           parents
         case None =>
           parents
       resolvePath[T](pid, pars)
   }
 
-  def checkRef[T <: Definition[?]: ClassTag](
+  def checkRef[T <: Definition: ClassTag](
     reference: Reference[T],
-    definition: Definition[?],
-    parents: Seq[Definition[?]]
+    definition: Definition,
+    parents: Seq[Definition]
   ): Option[T] = {
     checkPathRef[T](reference.pathId, definition, parents)
   }
 
-  def checkRefAndExamine[T <: Definition[?]: ClassTag](
+  def checkRefAndExamine[T <: Definition: ClassTag](
     reference: Reference[T],
-    defn: Definition[?],
-    parents: Seq[Definition[?]]
+    definition: Definition,
+    parents: Seq[Definition]
   )(examiner: T => Unit): this.type = {
-    checkPathRef[T](reference.pathId, defn, parents).foreach { (resolved: T) =>
+    checkPathRef[T](reference.pathId, definition, parents).foreach { (resolved: T) =>
       examiner(resolved)
     }
     this
   }
 
-  def checkMaybeRef[T <: Definition[?]: ClassTag](
+  def checkMaybeRef[T <: Definition: ClassTag](
     reference: Option[Reference[T]],
-    definition: Definition[?],
-    parents: Seq[Definition[?]]
+    definition: Definition,
+    parents: Seq[Definition]
   ): Option[T] = {
     reference.flatMap { ref =>
       checkPathRef[T](ref.pathId, definition, parents)
@@ -109,23 +109,23 @@ trait BasicValidation {
 
   def checkTypeRef(
     ref: TypeRef,
-    topDef: Definition[?],
-    parents: Seq[Definition[?]]
+    topDef: Definition,
+    parents: Seq[Definition]
   ): Option[Type] = {
     checkRef[Type](ref, topDef, parents)
   }
 
   def checkMessageRef(
     ref: MessageRef,
-    topDef: Definition[?],
-    parents: Seq[Definition[?]],
+    topDef: Definition,
+    parents: Seq[Definition],
     kinds: Seq[AggregateUseCase]
   ): this.type = {
     if ref.isEmpty then {
       messages.addError(ref.pathId.loc, s"${ref.identify} is empty")
       this
     } else {
-      checkRefAndExamine[Type](ref, topDef, parents) { (definition: Definition[?]) =>
+      checkRefAndExamine[Type](ref, topDef, parents) { (definition: Definition) =>
         definition match {
           case Type(_, _, typ, _, _) =>
             typ match {
@@ -157,12 +157,12 @@ trait BasicValidation {
 
   @tailrec private final def getPathIdType(
     pid: PathIdentifier,
-    parents: Seq[Definition[?]]
+    parents: Seq[Definition]
   ): Option[TypeExpression] = {
     if pid.value.isEmpty then {
       None
     } else {
-      val maybeDef: Option[Definition[?]] = resolvePath[Definition[?]](pid, parents)
+      val maybeDef: Option[Definition] = resolvePath[Definition](pid, parents)
       val candidate: Option[TypeExpression] = maybeDef match {
         case None              => None
         case Some(f: Function) => f.output
@@ -211,26 +211,18 @@ trait BasicValidation {
     this
   }
 
-  def checkWhen(predicate: Boolean)(checker: () => Unit): this.type = {
-    if predicate then checker()
-    this
-  }
-
   def checkSequence[A](elements: Seq[A])(check: A => Unit): this.type = {
     elements.foreach(check(_))
     this
   }
 
   def checkOverloads(): this.type = {
-    symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition[?]]]) =>
+    symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
       this.checkSequence(defs) { defList =>
         defList.toList match {
           case Nil =>
             // shouldn't happen
             messages.addSevere(At.empty, "Empty list from Symbols.foreachOverloadedSymbol")
-          case head :: Nil =>
-            // shouldn't happen
-            messages.addSevere(At.empty, "Single entry list from Symbols.foreachOverloadedSymbol")
           case head :: tail =>
             tail match
               case last :: Nil =>
@@ -244,7 +236,7 @@ trait BasicValidation {
     this
   }
 
-  def checkIdentifierLength[T <: Definition[?]](d: T, min: Int = 3): this.type = {
+  def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
     if d.id.value.nonEmpty && d.id.value.length < min then {
       messages.addStyle(
         d.id.loc,
@@ -257,7 +249,7 @@ trait BasicValidation {
   def checkNonEmptyValue(
     value: RiddlValue,
     name: String,
-    thing: Definition[?],
+    thing: Definition,
     kind: KindOfMessage = Error,
     required: Boolean = false
   ): this.type = {
@@ -272,7 +264,7 @@ trait BasicValidation {
   def checkNonEmptyValue(
     value: RiddlValue,
     name: String,
-    thing: Definition[?],
+    thing: Definition,
     loc: At,
     kind: KindOfMessage,
     required: Boolean
@@ -288,7 +280,7 @@ trait BasicValidation {
   def checkNonEmpty(
     list: Seq[?],
     name: String,
-    thing: Definition[?],
+    thing: Definition,
     kind: KindOfMessage = Error,
     required: Boolean = false
   ): this.type = {
@@ -303,7 +295,7 @@ trait BasicValidation {
   def checkNonEmpty(
     list: Seq[?],
     name: String,
-    thing: Definition[?],
+    thing: Definition,
     loc: At,
     kind: KindOfMessage,
     required: Boolean
@@ -316,7 +308,7 @@ trait BasicValidation {
     )
   }
 
-  def checkCrossContextReference(ref: PathIdentifier, definition: Definition[?], container: Definition[?]): Unit = {
+  def checkCrossContextReference(ref: PathIdentifier, definition: Definition, container: Definition): Unit = {
     symbols.contextOf(definition) match {
       case Some(definitionContext) =>
         symbols.contextOf(container) match {

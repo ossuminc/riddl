@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.TranslatingState
-import com.ossuminc.riddl.diagrams.{DiagramsPass,DiagramsPassOutput}
+import com.ossuminc.riddl.diagrams.{DiagramsPass, DiagramsPassOutput}
 import com.ossuminc.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
@@ -28,7 +28,7 @@ object HugoPass extends PassInfo {
   val name: String = "hugo"
   private val geekDoc_version = "v0.41.2"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
-  val geekDoc_url = java.net.URI
+  val geekDoc_url: URL = java.net.URI
     .create(
       s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
     )
@@ -76,16 +76,15 @@ case class HugoPass(
     case Some(inFile) =>
       if Files.exists(inFile) then
         makeDirectoryStructure(options.inputFile)
-        options
       else messages.addError((0, 0), "The input-file does not exist")
     case None =>
       messages.addWarning((0, 0), "The input-file option was not provided")
   }
 
-  private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authorDefs.headOption) }
+  private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authors.headOption) }
   writeConfigToml(options, maybeAuthor)
 
-  def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
+  private def addFile(parents: Seq[String], fileName: String): MarkdownWriter = {
     val parDir = parents.foldLeft(options.contentRoot) { (next, par) =>
       next.resolve(par)
     }
@@ -105,7 +104,7 @@ case class HugoPass(
         val (md: MarkdownWriter, parents) = setUpLeaf(u, stack)
         md.emitUser(u, parents)
       case r: Replica =>
-        val (md: MarkdownWriter, parents) = setUpLeaf(r, stack)
+        val (md: MarkdownWriter, _) = setUpLeaf(r, stack)
         val parStrings = makeStringParents(stack)
         md.emitReplica(r, stack, parStrings)
       case container: Definition =>
@@ -232,7 +231,7 @@ case class HugoPass(
     }
   }
 
-  def copyResource(destination: Path, src: String = ""): Unit = {
+  private def copyResource(destination: Path, src: String = ""): Unit = {
     val name = if src.isEmpty then destination.getFileName.toString else src
     PathUtils.copyResource(name, destination)
   }
@@ -283,7 +282,7 @@ case class HugoPass(
     loadStaticAssets(inputPath, options)
   }
 
-  def makeIndex(root: Root): Unit = {
+  private def makeIndex(root: Root): Unit = {
     Timer.time("Index Creation") {
 
       val mdw = addFile(Seq.empty[String], "_index.md")
@@ -295,7 +294,7 @@ case class HugoPass(
         case None => // nothing
       }
       mdw.h2("Domains")
-      val domains = root.contents
+      val domains = root.domains
         .sortBy(_.id.value)
         .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
       mdw.list(domains)
@@ -316,10 +315,9 @@ case class HugoPass(
     }
   }
 
-  val glossaryWeight = 970
-  val toDoWeight = 980
-  val statsWeight = 990
-  val messagesWeight = 975
+  private val glossaryWeight = 970
+  private val toDoWeight = 980
+  private val statsWeight = 990
 
   private def makeStatistics(): Unit = {
     if options.withStatistics then {
@@ -344,13 +342,13 @@ case class HugoPass(
     }
   }
 
-  private def makeToDoList(root: Root): Unit = {
+  private def makeToDoList(): Unit = {
     if options.withTODOList then
       Timer.time("Make ToDo List") {
         outputs.outputOf[ToDoListOutput](ToDoListPass.name) match {
-          case Some(tdlo) =>
+          case Some(output) =>
             val mdw = addFile(Seq.empty[String], "todolist.md")
-            mdw.emitToDoList(toDoWeight, tdlo.collected)
+            mdw.emitToDoList(toDoWeight, output.collected)
           case None =>
           // do nothing
         }
@@ -384,10 +382,10 @@ case class HugoPass(
     Some(diagram)
   }
 
-  def close(root: Root): Unit = {
+  private def close(root: Root): Unit = {
     makeIndex(root)
     makeGlossary()
-    makeToDoList(root)
+    makeToDoList()
     makeStatistics()
     Timer.time(s"Writing ${this.files.size} Files") {
       writeFiles(commonOptions.verbose || commonOptions.debug)

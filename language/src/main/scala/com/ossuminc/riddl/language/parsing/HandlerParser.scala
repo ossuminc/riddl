@@ -36,7 +36,7 @@ private[parsing] trait HandlerParser {
     P((identifier ~ Punctuation.colon).?)
   }
 
-  private def messageOrigins[u: P]: P[Reference[Definition[?]]] = {
+  private def messageOrigins[u: P]: P[Reference[Definition]] = {
     P(inletRef | processorRef | userRef | epicRef)
   }
 

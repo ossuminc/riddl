@@ -8,7 +8,6 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
-import fastparse.StringIn
 import fastparse.MultiLineWhitespace.*
 import Readability.*
 
@@ -19,7 +18,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (AdaptorRef.apply _).tupled(tpl))
   }
 
-  def commandRef[u: P]: P[CommandRef] = {
+  private def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~ pathIdentifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))
   }
@@ -118,7 +117,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (RepositoryRef.apply _).tupled(tpl))
   }
 
-  def sagaRef[u: P]: P[SagaRef] = {
+  private def sagaRef[u: P]: P[SagaRef] = {
     P(location ~ Keywords.saga ~ pathIdentifier)
       .map(tpl => (SagaRef.apply _).tupled(tpl))
   }
@@ -133,7 +132,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (UserRef.apply _).tupled(tpl))
   }
 
-  def applicationRef[u: P]: P[ApplicationRef] = {
+  private def applicationRef[u: P]: P[ApplicationRef] = {
     P(location ~ Keywords.application ~ pathIdentifier)
       .map(tpl => (ApplicationRef.apply _).tupled(tpl))
   }
@@ -166,11 +165,11 @@ private[parsing] trait ReferenceParser extends CommonParser {
     )
   }
 
-  def arbitraryInteractionRef[u: P]: P[Reference[Definition[?]]] = {
+  private def arbitraryInteractionRef[u: P]: P[Reference[Definition]] = {
     P(processorRef | sagaRef | inputRef | outputRef | groupRef)
   }
 
-  def anyInteractionRef[u: P]: P[Reference[Definition[?]]] = {
+  def anyInteractionRef[u: P]: P[Reference[Definition]] = {
     arbitraryInteractionRef | userRef
   }
 }
