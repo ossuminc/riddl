@@ -548,10 +548,7 @@ case class MarkdownWriter(
   }
 
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition]): this.type = {
-    val data = agg.contents.map { (f: AggregateValue) =>
-      // FIXME: val pars = f +: parents
-      (f.id.format, resolveTypeExpression(f.typeEx, parents))
-    }
+    val data = agg.contents.map { (f: AggregateValue) => (f.id.format, resolveTypeExpression(f.typeEx, parents)) }
     list(data)
     this
   }

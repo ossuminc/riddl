@@ -85,20 +85,21 @@ trait StreamingValidation extends TypeValidation {
       (outlet, inlet)
     }
 
-    val inUseOutlets = connected.map(_._1)
-    val unattachedOutlets = outlets.toSet[Outlet] -- inUseOutlets
-
-    unattachedOutlets.foreach { outlet =>
-      val message = s"${outlet.identify} is not connected"
-      messages.addWarning(outlet.loc, message)
+    def findUnconnected[OI <: Portlet](portlets: scala.collection.Set[OI]): Unit = {
+      portlets.foreach { portlet =>
+        val message = s"${portlet.identify} is not connected"
+        messages.addWarning(portlet.loc, message)
+      }
     }
+
+    val inUseOutlets = connected.map(_._1)
+    val unattachedOutlets: scala.collection.Set[Outlet] = outlets.toSet[Outlet] -- inUseOutlets
+
+    findUnconnected(unattachedOutlets)
 
     val inUseInlets = connected.map(_._2)
-    val unattachedInlets = inlets.toSet[Inlet] -- inUseInlets
+    val unattachedInlets: scala.collection.Set[Inlet] = inlets.toSet[Inlet] -- inUseInlets
 
-    unattachedInlets.foreach { inlet =>
-      val message = s"${inlet.identify} is not connected"
-      messages.addWarning(inlet.loc, message)
-    }
+    findUnconnected(unattachedInlets)
   }
 }

@@ -90,8 +90,6 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case function: Function => openFunction(function)
       case st: State          => openState(st)
       case step: SagaStep     => openSagaStep(step)
-      // FIXME: handle non-definition Include case: 
-      // FIXME: case include: Include[Definition] @unchecked => openInclude(include)
       case streamlet: Streamlet => openStreamlet(streamlet)
       case processor: Processor[_, _] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
@@ -151,7 +149,6 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case uc: UseCase        => closeUseCase(uc)
       case st: State          => state.withCurrent(_.closeDef(st))
       case _: OnMessageClause => closeOnClause()
-      //FIXME: case include: Include[Definition] @unchecked => closeInclude(include)
       case _: Root                  => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,

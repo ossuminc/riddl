@@ -315,7 +315,8 @@ object AST {
       with OccursInVitalDefinitions
       with OccursInProcessors
       with OccursAtRootScope {
-    lazy val includes: Seq[Include[CT]] = contents.filter[Include[CT]]
+    lazy val includes: Contents[Include[CT]] = contents.filter[Include[CT]]
+    lazy val nestedDefinitions: Contents[Definition] = includes.flatMap(_.definitions)
     final override def hasIncludes = true
   }
 
