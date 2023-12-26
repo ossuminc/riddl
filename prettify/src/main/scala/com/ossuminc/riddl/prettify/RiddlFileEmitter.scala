@@ -27,7 +27,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def asString: String = sb.toString()
 
-  def spc: String = { " ".repeat(indentLevel) }
+  private def spc: String = { " ".repeat(indentLevel) }
 
   def add(str: String): this.type = {
     sb.append(str)
@@ -63,7 +63,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def addLine(str: String): this.type = {
+  private def addLine(str: String): this.type = {
     sb.append(s"$spc$str\n")
     this
   }
@@ -124,7 +124,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def mkEnumeratorDescription(description: Option[Description]): String = {
+  private def mkEnumeratorDescription(description: Option[Description]): String = {
     description match {
       case Some(desc) =>
         " described as { " + {
@@ -134,7 +134,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def emitEnumeration(enumeration: Enumeration): this.type = {
+  private def emitEnumeration(enumeration: Enumeration): this.type = {
     val head = this.add(s"any of {\n").indent
     val enumerators: String = enumeration.enumerators
       .map { enumerator =>
@@ -146,7 +146,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitAlternation(alternation: Alternation): this.type = {
+  private def emitAlternation(alternation: Alternation): this.type = {
     add(s"one of {\n").indent.addIndent("")
     val paths: Seq[String] = alternation.of.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }
     add(paths.mkString("", " or ", "\n"))
@@ -154,19 +154,19 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitField(field: Field): this.type = {
+  private def emitField(field: Field): this.type = {
     this
       .add(s"${field.id.value}: ")
       .emitTypeExpression(field.typeEx)
       .emitDescription(field.description)
   }
 
-  def emitFields(of: Seq[Field]): this.type = {
+  private def emitFields(of: Seq[Field]): this.type = {
     of.headOption match {
       case None => this.add("{ ??? }")
       case Some(field) if of.size == 1 =>
         add(s"{ ").emitField(field).add(" }").emitDescription(field.description)
-      case Some(field) =>
+      case Some(_) =>
         this.add("{\n").indent
         of.foldLeft(this) { case (s, f) =>
           s.add(spc).emitField(f).emitDescription(f.description).add(",\n")
@@ -177,7 +177,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  def emitAggregation(aggregation: Aggregation): this.type = {
+  private def emitAggregation(aggregation: Aggregation): this.type = {
     emitFields(aggregation.fields)
   }
 
@@ -202,7 +202,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   private def emitTable(table: Table): this.type = {
-    this.add("table of ").emitTypeExpression(table.of).add(" of ").add(table.dimensions.mkString("[ ",", ", " ]"))
+    this.add("table of ").emitTypeExpression(table.of).add(" of ").add(table.dimensions.mkString("[ ", ", ", " ]"))
   }
 
   def emitPattern(pattern: Pattern): this.type = {
@@ -217,7 +217,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this.add(line)
   }
 
-  def emitMessageType(mt: AggregateUseCaseTypeExpression): this.type = {
+  private def emitMessageType(mt: AggregateUseCaseTypeExpression): this.type = {
     this.add(mt.usecase.useCase.toLowerCase).add(" ").emitFields(mt.fields)
   }
 
@@ -227,7 +227,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitTypeExpression(typEx: TypeExpression): this.type = {
     typEx match {
-      case string: String_                   => emitString(string)
+      case string: String_                 => emitString(string)
       case AliasedTypeExpression(_, _, id) => this.add(id.format)
       case URL(_, scheme) =>
         this
@@ -274,19 +274,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .add("\n")
   }
 
-  def emitStatement(
-    action: Statement
-  ): this.type = {
-    add(action.format)
-  }
-
-  def emitStatements(actions: Seq[Statement]): this.type = {
-    actions.foreach { (s: Statement) => emitStatement(s) }
-    this
-  }
-
   def emitCodeBlock(statements: Seq[Statement]): this.type = {
-    if (statements.isEmpty) then add(" { ??? }\n")
+    if statements.isEmpty then add(" { ??? }\n")
     else
       add(" {").indent.nl
       statements.map(_.format + "\n").foreach(addIndent)

@@ -7,16 +7,30 @@
 package com.ossuminc.riddl.testkit
 
 import com.ossuminc.riddl.commands.ASimpleTestCommand
-import org.scalatest.exceptions.TestFailedException
+import com.ossuminc.riddl.language.Messages.*
+
+import java.nio.file.Path
+import scala.annotation.unused
+import org.scalatest.Assertion
 
 /** Compilation Tests For Includes Examples */
 class NamespaceTest
     extends RunCommandOnExamplesTest[ASimpleTestCommand.Options, ASimpleTestCommand](commandName = "validate") {
+
+  override def onFailure(
+    @unused commandName: String,
+    @unused caseName: String,
+    @unused configFile: Path,
+    @unused messages: Messages,
+    @unused tempDir: Path
+  ): Assertion = {
+    info(messages.format)
+    fail(messages.format)
+  }
+
   "FooBarSameDomain" should {
     "error w/ highest severity level 5" in {
-      // FIXME: this test shouldn't be pending and should intercept an exception
-      pending
-      intercept[TestFailedException] {runTest("FooBarSameDomain")}
+      runTest("FooBarSameDomain")
     }
   }
 

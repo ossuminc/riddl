@@ -231,11 +231,11 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
         processLeaf(leaf, parents.toSeq)
       case container: Definition =>
         openContainer(container, parents.toSeq)
-        if container.hasDefinitions then {
-          parents.push(definition)
-          definition.definitions.foreach { item => traverse(item, parents) }
-          parents.pop()
-        }
+        val nested = if container.hasIncludes then container.asInstanceOf[WithIncludes[?]].nestedDefinitions else Seq.empty
+        val content = container.definitions ++ nested 
+        parents.push(definition)
+        content.foreach { item => traverse(item, parents) }
+        parents.pop()
         closeContainer(container, parents.toSeq)
     }
   }
@@ -268,7 +268,17 @@ abstract class CollectingPassOutput[T](
   */
 abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
-  // not required in this kind of pass, final override it
+  /**
+    *  The method usually called for each definition that is to be processed but our implementation of 
+    *  traverse instead calls collect so a value can be returned. This implementation is final because
+    *  it is meant to be ignored. 
+    *  
+    * @param definition
+    *   The definition to be processed
+    * @param parents
+    *   The stack of definitions that are the parents of [[definition]]. This stack goes from immediate parent towards
+    *   the root. The root is deepest in the stack.
+    */
   override final def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = ()
 
   /** The processing method called at each node, similar to [[Pass.process]] but modified to return an
