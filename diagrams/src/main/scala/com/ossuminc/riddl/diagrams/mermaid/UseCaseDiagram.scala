@@ -13,7 +13,7 @@ import com.ossuminc.riddl.utils.FileBuilder
 import scala.reflect.ClassTag
 
 /** A class to generate the sequence diagrams for an Epic's Use Case
-  * @param ucds
+  * @param sds
   *   The UseCaseDiagramSupport implementation that provides information for the UseCaseDiagram
   * @param useCase
   * The UseCase from the AST to which this diagram applies
@@ -26,28 +26,28 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
   def generate: Seq[String] = {
     sb.append("sequenceDiagram"); nl
     sb.append(s"${ndnt()}autonumber"); nl
-    val parts: Seq[Definition] = actors.values.toSeq.sortBy(_.kind)
+    val parts: Seq[Definition[?]] = actors.values.toSeq.sortBy(_.kind)
     makeParticipants(parts)
     generateInteractions(useCase.contents, indent_per_level)
     nl
     sb.toString().split('\n').toSeq
   }
 
-  private def actorsFirst(a: (String, Definition), b: (String, Definition)): Boolean = {
+  private def actorsFirst(a: (String, Definition[?]), b: (String, Definition[?])): Boolean = {
     a._2 match
       case _: User if b._2.isInstanceOf[User]       => a._1 < b._1
       case _: User                                  => true
-      case _: Definition if b._2.isInstanceOf[User] => false
-      case _: Definition                            => a._1 < b._1
+      case _: Definition[?] if b._2.isInstanceOf[User] => false
+      case _: Definition[?]                            => a._1 < b._1
   }
 
-  private val actors: Map[String, Definition] = {
+  private val actors: Map[String, Definition[?]] = {
     useCase.contents
       .map { (interaction: Interaction) =>
         interaction match
           case gi: TwoReferenceInteraction =>
-            val fromDef = sds.getDefinitionFor[Definition](gi.from.pathId, gi)
-            val toDef = sds.getDefinitionFor[Definition](gi.to.pathId, gi)
+            val fromDef = sds.getDefinitionFor[Definition[?]](gi.from.pathId, gi)
+            val toDef = sds.getDefinitionFor[Definition[?]](gi.to.pathId, gi)
             Seq(
               gi.from.pathId.format -> fromDef,
               gi.to.pathId.format -> toDef
@@ -67,18 +67,18 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
     " ".repeat(width)
   }
 
-  private def makeParticipants(parts: Seq[Definition]): Unit = {
-    parts.foreach { (part: Definition) =>
+  private def makeParticipants(parts: Seq[Definition[?]]): Unit = {
+    parts.foreach { (part: Definition[?]) =>
       val name = part.id.value
       part match
         case u: User       => sb.append(s"${ndnt()}actor $name as ${u.is_a.s}")
         case i: Input => sb.append(s"${ndnt()}participant $name as ${i.nounAlias} ${i.id.value}")
         case o: Output => sb.append(s"${ndnt()}participant $name as ${o.nounAlias} ${o.id.value}")
         case g: Group      => sb.append(s"${ndnt()}participant $name as ${g.alias} ${g.id.value}")
-        case d: Definition => sb.append(s"${ndnt()}participant $name as ${d.identify}")
+        case d: Definition[?] => sb.append(s"${ndnt()}participant $name as ${d.identify}")
       nl
     }
-    parts.foreach { (part: Definition) =>
+    parts.foreach { (part: Definition[?]) =>
       val name = part.id.value
       val link = sds.makeDocLink(part)
       part match
@@ -86,7 +86,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
         case i: Input => sb.append(s"${ndnt()}link $name: ${i.nounAlias} @ $link")
         case o: Output => sb.append(s"${ndnt()}link $name: ${o.nounAlias} @ $link")
         case g: Group      => sb.append(s"${ndnt()}link $name: ${g.alias} @ $link")
-        case d: Definition => sb.append(s"${ndnt()}link $name: ${d.kind} @ $link")
+        case d: Definition[?] => sb.append(s"${ndnt()}link $name: ${d.kind} @ $link")
       nl
     }
   }
