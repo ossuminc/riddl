@@ -111,7 +111,7 @@ abstract class ValidatingTest extends ParsingTest {
           validator(Domain(loc, Identifier(loc, "stand-in")), input, errors)
         }
       case Right((model: Domain, rpi)) =>
-        val root = RootContainer(List(),Seq(model), List(), Seq(rpi))
+        val root = Root(Seq(model), Seq(rpi))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
@@ -248,6 +248,6 @@ abstract class ValidatingTest extends ParsingTest {
     content: String
   ): Assertion = {
     val condition = msgs.exists(m => m.kind == expectedKind && m.message.contains(content))
-    assert(condition, s"; expecting, but didn't find '$content', in:\n${msgs.format}")
+    assert(condition, s"; expecting, but didn't find $content', in:\n${msgs.format}")
   }
 }

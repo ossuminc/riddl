@@ -64,7 +64,11 @@ object AST {
 
     def hasAuthors: Boolean = false
 
+    def hasAuthorRefs: Boolean = false
+
     def hasTypes: Boolean = false
+
+    def hasIncludes: Boolean = false
 
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
@@ -189,14 +193,15 @@ object AST {
   type Contents[+CV <: RiddlValue] = Seq[CV]
 
   extension [CV <: RiddlValue](container: Contents[CV])
-    def identified: Seq[CV] = container.filter(_.isIdentified).map(_.asInstanceOf[CV])
-    def filter[T <: RiddlValue: ClassTag]: Seq[T] = {
+    def identified: Contents[CV] = container.filter(_.isIdentified)
+    def filter[T <: RiddlValue: ClassTag]: Contents[T] = {
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
     def find(name: String): Option[CV] =
-      identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name).map(_.asInstanceOf[CV])
-    def definitions: Seq[Definition[?]] = container.filter[Definition[?]].map(_.asInstanceOf[Definition[?]])
+      identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
+    def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
+    def definitions: Contents[Definition[?]] = container.filter[Definition[?]].map(_.asInstanceOf[Definition[?]])
 
   /** Base trait of any definition that is also a ContainerValue
     *
@@ -210,12 +215,14 @@ object AST {
 
     final inline override def isContainer: Boolean = true
 
-    final def filter[T <: RiddlValue: ClassTag]: Seq[T] = contents.filter[T]
+    final def filter[T <: RiddlValue: ClassTag]: Contents[T] = contents.filter[T]
 
     final def find(name: String): Option[CV] = contents.find(name).map(_.asInstanceOf[CV])
 
-    /** The list of contained definitions lazily instantiated so no cost if never used */
-    lazy val definitions: Seq[Definition[?]] = contents.definitions
+    /** The list of contained definitions */
+    final def definitions: Contents[Definition[?]] = contents.definitions
+
+    final def namedValues: Contents[CV & NamedValue] = contents.namedValues
   }
 
   sealed trait Comment
@@ -291,7 +298,12 @@ object AST {
     def description: Option[Description]
   }
 
-  sealed trait WithComments extends Container[RiddlValue] {
+  sealed trait WithComments
+      extends Container[RiddlValue]
+      with OccursInVitalDefinitions
+      with OccursInProcessors
+      with OccursInFunctions
+      with OccursAtRootScope {
     lazy val comments: Seq[Comment] = contents.filter[Comment]
   }
 
@@ -299,8 +311,10 @@ object AST {
   sealed trait WithIncludes[CT <: RiddlValue]
       extends Container[CT]
       with OccursInVitalDefinitions
-      with OccursInProcessors {
-    lazy val includes: Seq[Include[OccursAtRootScope]] = contents.filter[Include[OccursAtRootScope]]
+      with OccursInProcessors
+      with OccursAtRootScope {
+    lazy val includes: Seq[Include[CT]] = contents.filter[Include[CT]]
+    final override def hasIncludes = true
   }
 
   /** Added to definitions that support a list of term definitions */
@@ -310,10 +324,10 @@ object AST {
     def hasTerms: Boolean = terms.nonEmpty
   }
 
-  sealed trait WithAuthors extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
-    def authors: Seq[AuthorRef] = contents.filter[AuthorRef]
+  sealed trait WithAuthorRefs extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
+    def authorRefs: Seq[AuthorRef] = contents.filter[AuthorRef]
 
-    override def hasAuthors: Boolean = authors.nonEmpty
+    override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
   }
 
   /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
@@ -348,7 +362,7 @@ object AST {
 
   /** Base trait of any definition that is a container and contains types */
   sealed trait WithTypes extends Container[RiddlValue] with OccursInProcessors with OccursInFunctions {
-    def types: Seq[Type] = contents.filter[Type]
+    lazy val types: Seq[Type] = contents.filter[Type]
 
     override def hasTypes: Boolean = types.nonEmpty
   }
@@ -381,15 +395,84 @@ object AST {
     def outlets: Seq[Outlet] = contents.filter[Outlet]
   }
 
-  sealed trait WithStates extends Container[RiddlValue] with OccursInProcessors {
+  sealed trait WithStates extends Container[RiddlValue] with OccursInEntity {
     def states: Seq[State] = contents.filter[State]
     def hasStates: Boolean = states.nonEmpty
+  }
+
+  sealed trait WithGroups extends Container[RiddlValue] with OccursInApplication {
+    def groups: Seq[Group] = contents.filter[Group]
   }
 
   sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunctions {
     def statements: Seq[Statement] = contents.filter[Statement]
 
     def hasStatements: Boolean = statements.nonEmpty
+  }
+
+  sealed trait WithContexts extends Container[RiddlValue] with OccursInDomain {
+    def contexts: Seq[Context] = contents.filter[Context]
+  }
+
+  sealed trait WithAuthors extends Container[RiddlValue] with OccursInDomain {
+    def authors: Seq[Author] = contents.filter[Author]
+
+    override def hasAuthors: Boolean = authors.nonEmpty
+  }
+
+  sealed trait WithUsers extends Container[RiddlValue] with OccursInDomain {
+    def users: Seq[User] = contents.filter[User]
+  }
+
+  sealed trait WithEpics extends Container[RiddlValue] with OccursInDomain {
+    def epics: Seq[Epic] = contents.filter[Epic]
+  }
+
+  sealed trait WithApplications extends Container[RiddlValue] with OccursInDomain {
+    def applications: Seq[Application] = contents.filter[Application]
+  }
+
+  sealed trait WithDomains extends Container[RiddlValue] with OccursInDomain {
+    def domains: Seq[Domain] = contents.filter[Domain]
+  }
+
+  sealed trait WithProjectors extends Container[RiddlValue] with OccursInContext {
+    def projectors: Seq[Projector] = contents.filter[Projector]
+  }
+
+  sealed trait WithRepositories extends Container[RiddlValue] with OccursInContext {
+    def repositories: Seq[Repository] = contents.filter[Repository]
+  }
+
+  sealed trait WithReplicas extends Container[RiddlValue] with OccursInContext {
+    def replicas: Seq[Replica] = contents.filter[Replica]
+  }
+  sealed trait WithEntities extends Container[RiddlValue] with OccursInContext {
+    def entities: Seq[Entity] = contents.filter[Entity]
+  }
+
+  sealed trait WithStreamlets extends Container[RiddlValue] with OccursInContext {
+    def streamlets: Seq[Streamlet] = contents.filter[Streamlet]
+  }
+
+  sealed trait WithConnectors extends Container[RiddlValue] with OccursInContext {
+    def connectors: Seq[Connector] = contents.filter[Connector]
+  }
+
+  sealed trait WithAdaptors extends Container[RiddlValue] with OccursInContext {
+    def adaptors: Seq[Adaptor] = contents.filter[Adaptor]
+  }
+
+  sealed trait WithSagas extends Container[RiddlValue] with OccursInContext {
+    def sagas: Seq[Saga] = contents.filter[Saga]
+  }
+
+  sealed trait WithSagaSteps extends Container[RiddlValue] with OccursInSaga {
+    def sagaSteps: Seq[SagaStep] = contents.filter[SagaStep]
+  }
+
+  sealed trait WithUseCases extends Container[RiddlValue] with OccursInEpic {
+    def cases: Seq[UseCase] = contents.filter[UseCase]
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
@@ -513,7 +596,7 @@ object AST {
       with WithComments
       with WithDocumentation
       with WithOptions[OPT]
-      with WithAuthors
+      with WithAuthorRefs
       with WithIncludes[CT]
       with WithTerms {
 
@@ -561,16 +644,11 @@ object AST {
     */
   case class Include[CT <: RiddlValue](
     loc: At = At(RiddlParserInput.empty),
-    contents: Seq[CT] = Seq.empty[CT],
+    contents: Contents[CT] = Seq.empty[CT],
     source: Option[String] = None
   ) extends Container[CT]
       with OccursInVitalDefinitions
       with OccursAtRootScope {
-
-    def id: Identifier = Identifier.empty
-
-    def brief: Option[LiteralString] = None
-    def description: Option[Description] = None
 
     override def isRootContainer: Boolean = true
 
@@ -602,6 +680,8 @@ object AST {
           } else ""
         }'${pathId.format}'${loc.toShort}"
     }
+    
+    override def isEmpty: Boolean = pathId.isEmpty
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// REFERENCES
@@ -626,10 +706,10 @@ object AST {
     contents: Seq[OccursAtRootScope] = Seq.empty[OccursAtRootScope],
     inputs: Seq[RiddlParserInput] = Nil
   ) extends Definition[OccursAtRootScope]
+      with WithDomains
+      with WithAuthors
+      with WithComments
       with WithIncludes[OccursAtRootScope] {
-
-    lazy val domains: Seq[Domain] = contents.filter(_.getClass == classOf[Domain]).asInstanceOf[Seq[Domain]]
-    lazy val authors: Seq[Author] = contents.filter(_.getClass == classOf[Author]).asInstanceOf[Seq[Author]]
 
     override def isRootContainer: Boolean = true
 
@@ -731,6 +811,7 @@ object AST {
   case class AuthorRef(loc: At, pathId: PathIdentifier)
       extends Reference[Author]
       with OccursInVitalDefinitions
+      with OccursInFunctions
       with OccursInProcessors {
     override def format: String = s"author ${pathId.format}"
   }
@@ -1261,7 +1342,9 @@ object AST {
     * @param loc
     *   The location of the Bool type expression
     */
-  case class Bool(loc: At) extends PredefinedType with IntegerTypeExpression
+  case class Bool(loc: At) extends PredefinedType with IntegerTypeExpression {
+    override def kind: String = "Boolean"
+  }
 
   /** A predefined type expression for an arbitrary number value
     *
@@ -1919,8 +2002,8 @@ object AST {
     id: Identifier,
     direction: AdaptorDirection,
     context: ContextRef,
-    options: Seq[AdaptorOption],
-    contents: Seq[OccursInAdaptor],
+    options: Seq[AdaptorOption] = Seq.empty,
+    contents: Seq[OccursInAdaptor] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Processor[AdaptorOption, OccursInAdaptor]
@@ -2366,8 +2449,8 @@ object AST {
   case class Entity(
     loc: At,
     id: Identifier,
-    options: Seq[EntityOption],
-    contents: Seq[OccursInEntity],
+    options: Seq[EntityOption] = Seq.empty,
+    contents: Seq[OccursInEntity] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description]
   ) extends Processor[EntityOption, OccursInEntity]
@@ -2646,10 +2729,18 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Processor[ContextOption, OccursInContext]
+      with WithProjectors
+      with WithRepositories
+      with WithReplicas
+      with WithEntities
+      with WithStreamlets
+      with WithConnectors
+      with WithAdaptors
+      with WithSagas
       with OccursInDomain {
 //    override lazy val contents: Seq[OccursInContext] = super.contents ++
-//      types ++ entities ++ adaptors ++ sagas ++ streamlets ++ functions ++
-//      terms ++ handlers ++ projectors ++ repositories ++ inlets ++
+//      types ++
+//      terms ++ handlers ++  ++ inlets ++
 //      outlets ++ connections
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
@@ -3037,12 +3128,9 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[SagaOption, OccursInSaga]
+      with WithSagaSteps
       with OccursInContext
       with OccursInDomain {
-//    override lazy val contents: Seq[OccursInSaga] = {
-//      super.contents ++ input.map(_.fields).getOrElse(Seq.empty[Field]) ++
-//        output.map(_.fields).getOrElse(Seq.empty[Field]) ++ sagaSteps ++ terms
-//    }
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
@@ -3320,8 +3408,8 @@ object AST {
     contents: Seq[Interaction] = Seq.empty[Interaction],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends OccursInEpic
-      with Container[Interaction] {
+  ) extends Definition[Interaction]
+      with OccursInEpic {
     override def kind: String = "UseCase"
     override def format: String = s"case ${id.format}"
   }
@@ -3392,13 +3480,14 @@ object AST {
   case class Epic(
     loc: At,
     id: Identifier,
+    options: Seq[EpicOption] = Seq.empty[EpicOption],
     userStory: Option[UserStory] = Option.empty[UserStory],
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
-    options: Seq[EpicOption] = Seq.empty[EpicOption],
     contents: Seq[OccursInEpic] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[EpicOption, OccursInEpic]
+      with WithUseCases
       with OccursInDomain {
 //    override def contents: Seq[OccursInEpic] = {
 //      super.contents ++ cases ++ terms
@@ -3636,6 +3725,7 @@ object AST {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends Processor[ApplicationOption, OccursInApplication]
+      with WithGroups
       with OccursInDomain {
     override def isAppRelated: Boolean = true
 //    override lazy val contents: Seq[OccursInApplication] = {
@@ -3745,13 +3835,14 @@ object AST {
   ) extends VitalDefinition[DomainOption, OccursInDomain]
       with OccursAtRootScope
       with WithTypes
-      with OccursInDomain {
-
-//    override lazy val contents: Seq[OccursInDomain] = {
-//      super.contents ++ domains ++ types ++ constants ++ contexts ++ users ++
-//        epics ++ applications ++ terms ++ authorDefs
-//    }
-  }
+      with WithAuthors
+      with WithAuthorRefs
+      with WithContexts
+      with WithUsers
+      with WithApplications
+      with WithEpics
+      with WithDomains
+      with OccursInDomain
 
   /** A reference to a domain definition
     *
@@ -3768,20 +3859,20 @@ object AST {
 
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.IsInstanceOf"))
   def findAuthors(
-    defn: Definition[?],
-    parents: Seq[Definition[?]]
+    defn: RiddlValue,
+    parents: Seq[Container[RiddlValue]]
   ): Seq[AuthorRef] = {
-    if defn.hasAuthors then {
-      defn.asInstanceOf[WithAuthors].authors
+    if defn.hasAuthorRefs then {
+      defn.asInstanceOf[WithAuthorRefs].authorRefs
     } else {
       parents
-        .find(d => d.isInstanceOf[WithAuthors] && d.asInstanceOf[WithAuthors].hasAuthors)
-        .map(_.asInstanceOf[WithAuthors].authors)
+        .find(d => d.isInstanceOf[WithAuthorRefs] && d.asInstanceOf[WithAuthorRefs].hasAuthorRefs)
+        .map(_.asInstanceOf[WithAuthorRefs].authorRefs)
         .getOrElse(Seq.empty[AuthorRef])
     }
   }
 
-  def mapGroupTo[T <: RiddlValue](seq: Option[Seq[RiddlValue]]): Seq[T] = {
+  def mapGroupTo[T <: RiddlValue](seq: Option[Seq[RiddlValue]]): Contents[T] = {
     seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
   }
 

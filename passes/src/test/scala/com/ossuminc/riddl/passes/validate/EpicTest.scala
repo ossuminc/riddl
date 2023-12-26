@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.AST.{Domain, LiteralString}
+import com.ossuminc.riddl.language.AST.{Domain, Epic, LiteralString}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 
@@ -25,25 +25,22 @@ class EpicTest extends ValidatingTest {
           |} described as "a parsing convenience"
           |""".stripMargin
       )
-      parseAndValidateDomain(rpi) {
-        case ( domain: Domain, rpi: RiddlParserInput, messages: Messages.Messages ) =>
-          domain.epics mustNot be(empty)
-          messages.isOnlyIgnorable mustBe true
-          val story = domain.epics.head
-          story.id.format mustBe "WritingABook"
-          story.userStory mustNot be(empty)
-          val us = story.userStory.get
-          us mustNot be(empty)
-          us.user.pathId.value mustBe Seq("foo", "Author")
-          us.capability mustBe LiteralString((4, 28, rpi), "edit on the screen")
-          us.benefit mustBe
-            LiteralString((4, 57, rpi), "he can revise content more easily")
-          story.shownBy mustNot be(empty)
-          story.shownBy.head.toString mustBe
-            "http://example.com:80/path/to/WritingABook"
-          story.cases mustNot be(empty)
-          val sc = story.cases.head
-          sc.id.value mustBe "perfection"
+      parseAndValidateDomain(rpi) { case (domain: Domain, rpi: RiddlParserInput, messages: Messages.Messages) =>
+        domain.epics mustNot be(empty)
+        messages.isOnlyIgnorable mustBe true
+        val epic: Epic = domain.epics.head
+        epic.id.format mustBe "WritingABook"
+        epic.userStory mustNot be(empty)
+        val us = epic.userStory.get
+        us mustNot be(empty)
+        us.user.pathId.value mustBe Seq("foo", "Author")
+        us.capability mustBe LiteralString((4, 28, rpi), "edit on the screen")
+        us.benefit mustBe LiteralString((4, 57, rpi), "he can revise content more easily")
+        epic.shownBy mustNot be(empty)
+        epic.shownBy.head.toString mustBe "http://example.com:80/path/to/WritingABook"
+        epic.cases mustNot be(empty)
+        val uc = epic.cases.head
+        uc.id.value mustBe "perfection"
       }
     }
 
@@ -84,9 +81,10 @@ class EpicTest extends ValidatingTest {
           |
           |user Owner is "a person"
           |
-          |epic EstablishOrganization by author reid is {
+          |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
+          |  by author reid 
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
@@ -152,12 +150,14 @@ class EpicTest extends ValidatingTest {
           |
           |user Owner is "a person"
           |
-          |epic EstablishOrganization by author reid is {
+          |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
+          | by author reid
+          |  
           |  case primary is {
           |    parallel {
           |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
@@ -180,7 +180,7 @@ class EpicTest extends ValidatingTest {
             msgs.hasErrors mustBe false
             succeed
           else
-            //info(msgs.format)
+            // info(msgs.format)
             fail("Shouldn't have errors")
       }
     }

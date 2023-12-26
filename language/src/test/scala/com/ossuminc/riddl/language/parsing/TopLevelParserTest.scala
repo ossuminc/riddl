@@ -22,9 +22,6 @@ class TopLevelParserTest extends ParsingTest {
   val simpleDomain: AST.Domain = Domain(
     At(1, 1, rip),
     Identifier(At(1, 8, rip), "foo"),
-    Seq.empty[DomainOption],
-    Seq.empty[AuthorRef],
-    Seq.empty[Author]
   )
   val simpleDomainResults: AST.Root = Root(
     List(simpleDomain),
@@ -74,7 +71,7 @@ class TopLevelParserTest extends ParsingTest {
         case Right(expected) =>
           fail("Should have failed expecting an author or domain")
         case Left(messages) =>
-          messages.length mustBe (1)
+          messages.length mustBe 1
           val msg = messages.head
           msg.message must include("Expected one of")
           msg.message must include("\"author\"")
@@ -89,7 +86,7 @@ class TopLevelParserTest extends ParsingTest {
         case Right(expected) =>
           fail("Should have failed excpecting an author or domain")
         case Left(messages) =>
-          messages.length mustBe (1)
+          messages.length mustBe 1
           val msg = messages.head
           msg.message must include("Expected one of")
           msg.message must include("\"author\"")

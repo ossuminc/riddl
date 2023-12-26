@@ -26,10 +26,18 @@ object StatsPass extends PassInfo {
   *   The number of kinds of specifications that can be completed from the node's specifications method
   * @param numCompleted
   *   The number of specifications that hve been completed
-  * @param completeness
-  *   The ratio of numCompletions/numSpecifications as a percentage
   * @param numContained
   *   The number of contained definitions
+  * @param numAuthors 
+  *   The number of defining authors
+  * @param numTerms
+  *   The number of term definitions
+  * @param numOptions
+  *   The number of options declared
+  * @param numIncludes
+  *   The number of include statements
+  * @param numStatements
+  *   The number of statements used
   */
 case class DefinitionStats(
   kind: String = "",
@@ -125,7 +133,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
 
     val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
       case vd: VitalDefinition[?, ?] =>
-        (vd.options.size, vd.authors.size, vd.terms.size, vd.includes.size)
+        (vd.options.size, vd.authorRefs.size, vd.terms.size, vd.includes.size)
       case _ => (0, 0, 0, 0)
     }
     val specs: Int = specificationsFor(definition)

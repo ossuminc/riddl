@@ -117,12 +117,12 @@ object FoldingSupport {
               ad.typeEx match {
                 case a: Aggregation =>
                   // if we're at a field composed of more fields, then those fields
-                  // what we are looking for
-                  a.contents.filter
+                  // srt what we are looking for
+                  a.contents.filter[Field]
                 case Enumeration(_, enumerators) => enumerators
                 case a: AggregateUseCaseTypeExpression =>
                   // Message types have fields too, those fields are what we seek
-                  a.contents
+                  a.contents.filter[Field]
                 case AliasedTypeExpression(_, _, pid) =>
                   // if we're at a field that references another type then we
                   // need to push that types path on the name stack
@@ -133,8 +133,8 @@ object FoldingSupport {
               }
             case t: Type =>
               t.typ match {
-                case a: Aggregation => a.contents
-                case a: AggregateUseCaseTypeExpression => a.contents
+                case a: Aggregation => a.contents.filter[Field]
+                case a: AggregateUseCaseTypeExpression => a.contents.filter[Field]
                 case Enumeration(_, enumerators) => enumerators
                 case AliasedTypeExpression(_, _, pid) =>
                   // if we're at a type definition that references another type then
@@ -144,21 +144,16 @@ object FoldingSupport {
                   // Any other type expression can't be descended into
                   Seq.empty[Definition[?]]
               }
-            case f: Function =>
-              // If we're at a Function node, the functions input and output
-              // parameters are the candidates to search next
-              val input: Aggregation = f.input.getOrElse(Aggregation.empty(f.loc))
-              val output: Aggregation = f.output.getOrElse(Aggregation.empty(f.loc))
-              input.contents ++ output.contents
             case d: Definition[?] =>
               d.contents.flatMap {
-                case Include(_, contents, _, _) => contents
+                case Include(_, contents, _) => contents.definitions
                 case d: Definition[?] => Seq(d)
+                case _ => Seq.empty
               }
           }
       }
     }
-
+    
     // final val maxTraversal = 10
 
     /** Resolve a Relative PathIdentifier. If the path is already resolved or it has no empty components then we can

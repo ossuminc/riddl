@@ -42,7 +42,7 @@ private[parsing] trait HandlerParser {
 
   private def onMessageClause[u: P](set: StatementsSet): P[OnMessageClause] = {
     location ~ Keywords.on ~ messageRef ~
-      (Readability.from ~ maybeName ~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
+      (Readability.from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
       briefly ~ description
   }.map(tpl => (OnMessageClause.apply _).tupled(tpl))
 

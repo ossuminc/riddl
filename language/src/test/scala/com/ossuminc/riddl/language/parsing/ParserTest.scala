@@ -29,7 +29,7 @@ class ParserTest extends ParsingTest {
           errors must not be empty
           val head = errors.head.message
           head must include("Expected one of")
-          head must include("\"author\"") 
+          head must include("\"author\"")
           head must include("\"domain\"")
         case Right(_) => fail("Invalid syntax should make an error")
       }
@@ -78,7 +78,8 @@ class ParserTest extends ParsingTest {
             Domain(
               (1, 1, input),
               Identifier((1, 8, input), "foo"),
-              domains = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
+              Seq.empty[DomainOption],
+              contents = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
             )
           )
       }
@@ -254,14 +255,6 @@ class ParserTest extends ParsingTest {
             Identifier((1, 8, rpi), "Hamburger"),
             Seq(EntityTransient((2, 13, rpi)), EntityIsAggregate((2, 24, rpi))),
             Seq(
-              State(
-                (3, 3, rpi),
-                Identifier((3, 9, rpi), "BurgerState"),
-                TypeRef((3, 24, rpi), "type", PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
-                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
-              )
-            ),
-            List(
               Type(
                 (2, 36, rpi),
                 Identifier((2, 41, rpi), "Foo"),
@@ -275,6 +268,12 @@ class ParserTest extends ParsingTest {
                     )
                   )
                 )
+              ),
+              State(
+                (3, 3, rpi),
+                Identifier((3, 9, rpi), "BurgerState"),
+                TypeRef((3, 24, rpi), "type", PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
+                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
               )
             )
           )
@@ -297,7 +296,7 @@ class ParserTest extends ParsingTest {
               (1, 19, rpi),
               PathIdentifier((1, 27, rpi), Seq("foo", "bar"))
             ),
-            Seq.empty[Handler]
+            Seq.empty
           )
       }
     }
@@ -318,33 +317,15 @@ class ParserTest extends ParsingTest {
         case Right((function, _)) =>
           function must matchPattern {
             case Function(
-                  _,
-                  Identifier(_, "foo"),
-                  Some(
-                    Aggregation(
-                      _,
-                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _, _)),
-                      _
-                    )
-                  ),
-                  Some(
-                    Aggregation(
-                      _,
-                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _, _)),
-                      _
-                    )
-                  ),
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  _,
-                  None,
-                  None,
-                  List()
-                ) =>
+              _,
+              Identifier(_, "foo"),
+              _,
+              Some(Aggregation(_,Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)), _)),
+              Some(Aggregation(_,Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)),_)),
+              _,
+              _,
+              _
+            ) =>
           }
       }
     }

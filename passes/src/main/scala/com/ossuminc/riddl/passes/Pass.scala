@@ -192,7 +192,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     process(definition, parents)
     if definition.hasDefinitions then {
       parents.push(definition)
-      definition.contents.foreach { item => traverse(item, parents) }
+      definition.definitions.foreach { item => traverse(item, parents) }
       parents.pop()
     }
   }
@@ -220,20 +220,20 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
   // Instead traverse will use these three methods:
   protected def openContainer(definition: Definition[?], parents: Seq[Definition[?]]): Unit
 
-  protected def processLeaf(definition: LeafDefinition, parents: Seq[Definition[?]]): Unit
+  protected def processLeaf(definition: LeafDefinition[?], parents: Seq[Definition[?]]): Unit
 
   protected def closeContainer(definition: Definition[?], parents: Seq[Definition[?]]): Unit
 
   // Redefine traverse to make the three calls
   override protected def traverse(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = {
     definition match {
-      case leaf: LeafDefinition =>
+      case leaf: LeafDefinition[?] =>
         processLeaf(leaf, parents.toSeq)
       case container: Definition[?] =>
         openContainer(container, parents.toSeq)
         if container.hasDefinitions then {
           parents.push(definition)
-          definition.contents.foreach { item => traverse(item, parents) }
+          definition.definitions.foreach { item => traverse(item, parents) }
           parents.pop()
         }
         closeContainer(container, parents.toSeq)
@@ -293,7 +293,7 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
 
     if definition.hasDefinitions then {
       parents.push(definition)
-      definition.contents.foreach { item => traverse(item, parents) }
+      definition.definitions.foreach { item => traverse(item, parents) }
       parents.pop()
     }
   }

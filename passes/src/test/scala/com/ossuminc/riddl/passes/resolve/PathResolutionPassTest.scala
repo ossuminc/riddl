@@ -279,19 +279,19 @@ class PathResolutionPassTest extends ResolvingTest {
           Domain(
             eL,
             Identifier(eL, "D"),
-            includes = Seq(
+            contents = Seq(
               Include(
                 eL,
                 contents = Seq(
                   Context(
                     eL,
                     Identifier(eL, "C1"),
-                    types = Seq(Type(eL, Identifier(eL, "C1_T"), Number(eL)))
+                    contents = Seq(Type(eL, Identifier(eL, "C1_T"), Number(eL)))
                   ),
                   Context(
                     eL,
                     Identifier(eL, "C2"),
-                    types = Seq(
+                    contents = Seq(
                       Type(
                         eL,
                         Identifier(eL, "C2_T"),
@@ -311,8 +311,11 @@ class PathResolutionPassTest extends ResolvingTest {
         ),
         Seq.empty[RiddlParserInput]
       )
-      root.contents.head.contents.length mustBe 2
-      root.contents.head.contents.forall(_.kind == "Context")
+      val domain: Domain = root.domains.head
+      domain.contents.length mustBe 1
+      domain.contexts.forall(_.kind == "Include")
+      domain.includes.size mustBe 1
+      domain.includes.head.contents.filter[Context].length mustBe 2
       val (in, outs) = resolve(root, CommonOptions())
       val messages = outs.getAllMessages
       val errors = messages.justErrors
