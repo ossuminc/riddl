@@ -19,7 +19,7 @@ object SymbolsPass extends PassInfo {
 }
 
 /** Symbol Table for Validation and other purposes. This symbol table is built from the AST model after syntactic
-  * parsing is complete. It will also work for any sub-tree of the model that is rooted by a ParentDefOf[Definition[?]]
+  * parsing is complete. It will also work for any sub-tree of the model that is rooted by a ParentDefOf[Definition]
   * node.
   *
   * The symbol tree contains a mapping from leaf name to the entire list of parent definitions (symbols) as well as a
@@ -34,23 +34,23 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   private val symTab: SymTab = mutable.HashMap.empty[String, Seq[SymTabItem]]
 
-  private val parentage: Parentage = mutable.HashMap.empty[Definition[?], Parents]
+  private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
 
   override def postProcess(root: Root @unused): Unit = ()
 
-  private def rootLessParents(parents: Seq[Definition[?]]): Parents = {
+  private def rootLessParents(parents: Seq[Definition]): Parents = {
     parents.filter {
       case _: Root              => false // Roots don't have names and don't matter
-      case x: Definition[?] if x.isImplicit => false // Parents with no names don't count
+      case x: Definition if x.isImplicit => false // Parents with no names don't count
       case _                             => true // Everything else is fair game
     }
   }
 
-  def process(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = {
+  def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     definition match {
       case _: Root              => // ignore
-      case d: Definition[?] if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
-      case definition: Definition[?] =>
+      case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
+      case definition: Definition =>
         val name = definition.id.value
         if name.nonEmpty then {
           val parentsCopy: Parents = rootLessParents(parents.toSeq)

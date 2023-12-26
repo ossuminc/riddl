@@ -198,10 +198,11 @@ object AST {
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
+    def vitals: Contents[VitalDefinition[?, ?]] = container.filter[VitalDefinition[?, ?]]
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
-    def definitions: Contents[Definition[?]] = container.filter[Definition[?]].map(_.asInstanceOf[Definition[?]])
+    def definitions: Contents[Definition] = container.filter[Definition].map(_.asInstanceOf[Definition])
 
   /** Base trait of any definition that is also a ContainerValue
     *
@@ -217,12 +218,13 @@ object AST {
 
     final def filter[T <: RiddlValue: ClassTag]: Contents[T] = contents.filter[T]
 
-    final def find(name: String): Option[CV] = contents.find(name).map(_.asInstanceOf[CV])
+    final def find(name: String): Option[CV] = contents.find(name)
 
     /** The list of contained definitions */
-    final def definitions: Contents[Definition[?]] = contents.definitions
+    final def definitions: Contents[Definition] = contents.definitions
 
     final def namedValues: Contents[CV & NamedValue] = contents.namedValues
+
   }
 
   sealed trait Comment
@@ -320,8 +322,6 @@ object AST {
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
     def terms: Seq[Term] = contents.filter[Term]
-
-    def hasTerms: Boolean = terms.nonEmpty
   }
 
   sealed trait WithAuthorRefs extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
@@ -369,14 +369,10 @@ object AST {
 
   sealed trait WithConstants extends Container[RiddlValue] with OccursInProcessors {
     def constants: Seq[Constant] = contents.filter[Constant]
-
-    def hasConstants: Boolean = constants.nonEmpty
   }
 
   sealed trait WithInvariants extends Container[RiddlValue] with OccursInProcessors {
     def invariants: Seq[Invariant] = contents.filter[Invariant]
-
-    def hasInvariants: Boolean = invariants.nonEmpty
   }
 
   sealed trait WithFunctions extends Container[RiddlValue] with OccursInProcessors {
@@ -397,7 +393,6 @@ object AST {
 
   sealed trait WithStates extends Container[RiddlValue] with OccursInEntity {
     def states: Seq[State] = contents.filter[State]
-    def hasStates: Boolean = states.nonEmpty
   }
 
   sealed trait WithGroups extends Container[RiddlValue] with OccursInApplication {
@@ -406,8 +401,6 @@ object AST {
 
   sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunctions {
     def statements: Seq[Statement] = contents.filter[Statement]
-
-    def hasStatements: Boolean = statements.nonEmpty
   }
 
   sealed trait WithContexts extends Container[RiddlValue] with OccursInDomain {
@@ -564,9 +557,9 @@ object AST {
   /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
     * yield a string that provides the kind and name
     */
-  sealed trait Definition[+CT <: RiddlValue]
+  sealed trait Definition
       extends NamedValue
-      with Container[CT]
+      with Container[RiddlValue]
       with DescribedValue
       with BrieflyDescribedValue
       with WithComments {
@@ -582,17 +575,18 @@ object AST {
   }
 
   /** A definition with no content */
-  sealed trait LeafDefinition[+CT <: RiddlValue] extends Definition[CT] {
+  sealed trait LeafDefinition extends Definition {
     override def isEmpty: Boolean = contents.isEmpty && description.isEmpty && brief.isEmpty
 
-    final override def contents: Contents[CT] = Seq.empty[CT]
+    final override def contents: Contents[RiddlValue] = Seq.empty[RiddlValue]
 
     final override def hasDefinitions: Boolean = false
   }
 
   /** A definition that */
   sealed trait VitalDefinition[OPT <: OptionValue, CT <: RiddlValue]
-      extends Definition[CT]
+      extends Definition
+      with Container[CT]
       with WithComments
       with WithDocumentation
       with WithOptions[OPT]
@@ -680,7 +674,7 @@ object AST {
           } else ""
         }'${pathId.format}'${loc.toShort}"
     }
-    
+
     override def isEmpty: Boolean = pathId.isEmpty
   }
 
@@ -705,7 +699,8 @@ object AST {
   case class Root(
     contents: Seq[OccursAtRootScope] = Seq.empty[OccursAtRootScope],
     inputs: Seq[RiddlParserInput] = Nil
-  ) extends Definition[OccursAtRootScope]
+  ) extends Definition
+      with Container[OccursAtRootScope]
       with WithDomains
       with WithAuthors
       with WithComments
@@ -752,7 +747,7 @@ object AST {
     is_a: LiteralString,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursInDomain {
     def format: String = s"user ${id.format} is ${is_a.format}"
   }
@@ -765,7 +760,7 @@ object AST {
     id: Identifier,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursInVitalDefinitions {
 
     def format: String = s"term ${id.format}"
@@ -798,7 +793,7 @@ object AST {
     url: Option[java.net.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursAtRootScope
       with OccursInDomain {
     override def isEmpty: Boolean = {
@@ -1005,7 +1000,7 @@ object AST {
     enumVal: Option[Long] = None,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with TypeValue {
     override def format: String = id.format
   }
@@ -1057,7 +1052,7 @@ object AST {
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with AggregateValue
       with TypeValue
       with OccursInSaga
@@ -1099,7 +1094,7 @@ object AST {
     typeEx: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with AggregateValue
       with TypeValue
       with OccursInSaga
@@ -1664,7 +1659,8 @@ object AST {
     typ: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Definition[TypeValue]
+  ) extends Definition
+      with Container[TypeValue]
       with OccursInProcessors
       with OccursInProjector
       with OccursInFunctions
@@ -1734,7 +1730,7 @@ object AST {
     value: LiteralString,
     brief: Option[LiteralString],
     description: Option[Description]
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursInProcessors
       with OccursInDomain {
 
@@ -1990,8 +1986,10 @@ object AST {
     *   An indication of whether this is an inbound or outbound adaptor.
     * @param context
     *   A reference to the bounded context from which messages are adapted
-    * @param handlers
-    *   A set of [[Handler]]s that indicate what to do when messages occur.
+    * @param options
+    *   The set of options for this Adaptor
+    * @param contents
+    *   The definitional contents of this Adaptor
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2042,20 +2040,10 @@ object AST {
     *   An optional type expression that names and types the fields of the input of the function
     * @param output
     *   An optional type expression that names and types the fields of the output of the function
-    * @param types
-    *   The set of type definitions for use in the function
-    * @param functions
-    *   The set of function definitions for use in the function
-    * @param statements
-    *   The set of statements that define the behavior of this function
-    * @param authors
-    *   References to the authors that helped write this function
-    * @param includes
-    *   Inclusion of other files to complete this function definition
     * @param options
     *   The options for this function that might affect how it behaves
-    * @param terms
-    *   The definition of glossary terms related to this function
+    * @param contents
+    *   The set of types, functions, statements, authors, includes and terms that define this FUnction
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2114,7 +2102,7 @@ object AST {
     condition: Option[LiteralString] = Option.empty[LiteralString],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursInProcessors
       with OccursInState {
     override def isEmpty: Boolean = condition.isEmpty
@@ -2126,7 +2114,7 @@ object AST {
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends LeafDefinition[Statement] with OccursInHandler {
+  sealed trait OnClause extends LeafDefinition with OccursInHandler {
     def statements: Seq[Statement]
   }
 
@@ -2202,7 +2190,7 @@ object AST {
   case class OnMessageClause(
     loc: At,
     msg: MessageRef,
-    from: Option[(Option[Identifier], Reference[Definition[?]])],
+    from: Option[(Option[Identifier], Reference[Definition])],
     statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -2263,7 +2251,8 @@ object AST {
     clauses: Seq[OnClause] = Seq.empty[OnClause],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Definition[OccursInHandler]
+  ) extends Definition
+      with Container[OccursInHandler]
       with OccursInAdaptor
       with OccursInApplication
       with OccursInContext
@@ -2318,7 +2307,8 @@ object AST {
     invariants: Seq[Invariant] = Seq.empty[Invariant],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Definition[OccursInState]
+  ) extends Definition
+      with Container[OccursInState]
       with OccursInEntity {
 
     override def contents: Seq[OccursInState] = handlers ++ invariants
@@ -2425,22 +2415,14 @@ object AST {
 
   /** Definition of an Entity
     *
-    * @param options
-    *   The options for the entity
     * @param loc
     *   The location in the input
     * @param id
     *   The name of the entity
-    * @param states
-    *   The state values of the entity
-    * @param types
-    *   Type definitions useful internally to the entity definition
-    * @param handlers
-    *   A set of event handlers
-    * @param functions
-    *   Utility functions defined for the entity
-    * @param invariants
-    *   Invariant properties of the entity
+    * @param options
+    *   The options for this Entity
+    * @param contents
+    *   The definitional content of this entity: handlers, states, functions, invariants, etc.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2510,18 +2492,10 @@ object AST {
     *   Location in the source of the Repository
     * @param id
     *   The unique identifier for this Repository
-    * @param types
-    *   The types, typically messages, that the Repository uses
-    * @param handlers
-    *   The handler for specifying how messages should be handled by the repository
-    * @param authors
-    *   The author(s) who wrote this repository specification.
-    * @param includes
-    *   Included files
     * @param options
     *   RiddlOptions that can be used by the translators
-    * @param terms
-    *   Definitions of terms about this repository
+    * @param contents
+    *   The definitional content of this Repository: types, handlers, inlets, outlets, etc.
     * @param brief
     *   A brief description of this repository
     * @param description
@@ -2587,16 +2561,10 @@ object AST {
     *   Location in the source of the Projector
     * @param id
     *   The unique identifier for this Projector
-    * @param authors
-    *   The authors of this definition
     * @param options
     *   RiddlOptions that can be used by the translators
-    * @param types
-    *   The type definitions necessary to construct the query results
-    * @param handlers
-    *   Specifies how to handle
-    * @param terms
-    *   Definitions of terms about this Projector
+    * @param contents
+    *   The content of this Projectors' definition
     * @param brief
     *   A brief description of this Projector
     * @param description
@@ -2642,7 +2610,7 @@ object AST {
     typeExp: TypeExpression,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursInContext {
     final val format: String = s"replica ${id.format}"
   }
@@ -2706,16 +2674,8 @@ object AST {
     *   The name of the context
     * @param options
     *   The options for the context
-    * @param types
-    *   Types defined for the scope of this context
-    * @param entities
-    *   Entities defined for the scope of this context
-    * @param adaptors
-    *   Adaptors to messages from other contexts
-    * @param sagas
-    *   Sagas with all-or-none semantics across various entities
-    * @param functions
-    *   Features specified for the context
+    * @param contents
+    *   The definitional content for this Context
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2783,7 +2743,7 @@ object AST {
   }
 
   /** A sealed trait for Inlets and Outlets */
-  sealed trait Portlet extends LeafDefinition[RiddlValue] with OccursInProcessors
+  sealed trait Portlet extends LeafDefinition with OccursInProcessors
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -2805,7 +2765,7 @@ object AST {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends Portlet
-      with LeafDefinition[RiddlValue]
+      with LeafDefinition
       with OccursInProcessors {
     def format: String = s"inlet ${id.format} is ${type_.format}"
   }
@@ -2830,7 +2790,7 @@ object AST {
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends Portlet
-      with LeafDefinition[RiddlValue]
+      with LeafDefinition
       with OccursInProcessors {
     def format: String = s"outlet ${id.format} is ${type_.format}"
   }
@@ -2866,7 +2826,7 @@ object AST {
     to: Option[InletRef] = Option.empty[InletRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description]
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursInContext
       with WithOptions[ConnectorOption] {
 
@@ -2929,14 +2889,10 @@ object AST {
     *   The name of the processor
     * @param shape
     *   The shape of the processor's inputs and outputs
-    * @param inlets
-    *   The list of inlets that provide the data the processor needs
-    * @param outlets
-    *   The list of outlets that the processor produces
-    * @param handlers
-    *   Definitions of how the processor handles each event type
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
+    * @param options
+    *   The options for thsi Streamlet
+    * @param contents
+    *   The definitional content for this Context
     * @param description
     *   An optional description of the processor
     */
@@ -3059,7 +3015,7 @@ object AST {
     undoStatements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends LeafDefinition[RiddlValue]
+  ) extends LeafDefinition
       with OccursInSaga {
     def format: String = s"step ${id.format}"
   }
@@ -3111,8 +3067,8 @@ object AST {
     *   A definition of the aggregate input values needed to invoke the saga, if any.
     * @param output
     *   A definition of the aggregate output values resulting from invoking the saga, if any.
-    * @param sagaSteps
-    *   The set of [[SagaStep]]s that comprise the saga.
+    * @param contents
+    *   The definitional content for this Context
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -3154,7 +3110,22 @@ object AST {
     def format: String = s"user ${pathId.format}"
   }
 
-  sealed trait Interaction extends Definition[Interaction] with OccursInUseCase {
+  sealed trait Interaction extends DescribedValue with BrieflyDescribedValue with OccursInUseCase
+
+  sealed trait GenericInteraction extends Interaction {
+    def relationship: LiteralString
+  }
+
+  /** One abstract step in an Interaction between things. The set of case classes associated with this sealed trait
+    * provide more type specificity to these three fields.
+    */
+  sealed trait TwoReferenceInteraction extends GenericInteraction {
+    def from: Reference[Definition]
+
+    def to: Reference[Definition]
+  }
+
+  sealed trait InteractionContainer extends Interaction with Container[Interaction | Comment] with WithComments {
 
     /** Format the node to a string */
     override def format: String = s"Interaction"
@@ -3171,11 +3142,10 @@ object AST {
     */
   case class ParallelInteractions(
     loc: At,
-    id: Identifier = Identifier.empty,
-    contents: Seq[Interaction] = Seq.empty[Interaction],
+    contents: Contents[Interaction | Comment] = Seq.empty[Interaction | Comment],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Interaction {
+  ) extends InteractionContainer {
     override def kind: String = "Parallel Interaction"
   }
 
@@ -3184,8 +3154,6 @@ object AST {
     *
     * @param loc
     *   Location of the sequence
-    * @param id
-    *   Identifier for the interaction
     * @param contents
     *   The interactions to execute in sequence
     * @param brief
@@ -3195,11 +3163,10 @@ object AST {
     */
   case class SequentialInteractions(
     loc: At,
-    id: Identifier = Identifier.empty,
-    contents: Seq[Interaction] = Seq.empty[Interaction],
+    contents: Contents[Interaction | Comment] = Seq.empty[Interaction | Comment],
     brief: Option[LiteralString],
     description: Option[Description] = None
-  ) extends Interaction {
+  ) extends InteractionContainer {
     override def kind: String = "Sequential Interaction"
   }
 
@@ -3214,23 +3181,16 @@ object AST {
     */
   case class OptionalInteractions(
     loc: At,
-    id: Identifier = Identifier.empty,
-    contents: Seq[Interaction] = Seq.empty[Interaction],
+    contents: Contents[Interaction | Comment] = Seq.empty[Interaction | Comment],
     brief: Option[LiteralString],
     description: Option[Description] = None
-  ) extends Definition[Interaction]
-      with Interaction {
+  ) extends InteractionContainer {
     override def kind: String = "Optional Interaction"
-  }
-
-  sealed trait GenericInteraction extends Interaction with LeafDefinition[Interaction] {
-    def relationship: LiteralString
   }
 
   /** A very vague step just written as text */
   case class VagueInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
     from: LiteralString,
     relationship: LiteralString,
     to: LiteralString,
@@ -3238,12 +3198,12 @@ object AST {
     description: Option[Description] = None
   ) extends GenericInteraction {
     override def kind: String = "Vague Interaction"
+    def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
   case class SendMessageInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
-    from: Reference[Definition[?]],
+    from: Reference[Definition],
     message: MessageRef,
     to: ProcessorRef[?],
     brief: Option[LiteralString] = None,
@@ -3254,15 +3214,8 @@ object AST {
     }
 
     override def kind: String = "Send Message Interaction"
-  }
 
-  /** One abstract step in an Interaction between things. The set of case classes associated with this sealed trait
-    * provide more type specificity to these three fields.
-    */
-  sealed trait TwoReferenceInteraction extends GenericInteraction {
-    def from: Reference[Definition[?]]
-
-    def to: Reference[Definition[?]]
+    def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
   /** An arbitrary interaction step. The abstract nature of the relationship is
@@ -3280,26 +3233,28 @@ object AST {
     */
   case class ArbitraryInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
-    from: Reference[Definition[?]],
+    from: Reference[Definition],
     relationship: LiteralString,
-    to: Reference[Definition[?]],
+    to: Reference[Definition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Arbitrary Interaction"
+
+    def format: String = s"${from.format} ${relationship.s} ${to.format}"
+
   }
 
   case class SelfInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
-    from: Reference[Definition[?]],
+    from: Reference[Definition],
     relationship: LiteralString,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Self Interaction"
-    override def to: Reference[Definition[?]] = from
+    override def to: Reference[Definition] = from
+    def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
   /** An interaction where an User receives output
@@ -3315,7 +3270,6 @@ object AST {
     */
   case class FocusOnGroupInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
     from: UserRef,
     to: GroupRef,
     brief: Option[LiteralString] = None,
@@ -3324,11 +3278,11 @@ object AST {
     override def kind: String = "Focus On Group"
     override def relationship: LiteralString =
       LiteralString(loc + (6 + from.pathId.format.length), "focuses on")
+    def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
   case class DirectUserToURLInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
     from: UserRef,
     url: java.net.URL,
     brief: Option[LiteralString] = None,
@@ -3337,6 +3291,7 @@ object AST {
     def relationship: LiteralString =
       LiteralString(loc + (6 + from.pathId.format.length), "focuses on ")
     override def kind: String = "Focus On URL"
+    def format: String = s"${from.format} ${relationship.s} ${url.toExternalForm}"
   }
 
   /** An interaction where an User receives output
@@ -3353,7 +3308,6 @@ object AST {
     */
   case class ShowOutputInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
     from: OutputRef,
     relationship: LiteralString,
     to: UserRef,
@@ -3361,6 +3315,7 @@ object AST {
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Show Output Interaction"
+    def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
   /** A interaction where and User provides input
@@ -3378,7 +3333,6 @@ object AST {
     */
   case class TakeInputInteraction(
     loc: At,
-    id: Identifier = Identifier.empty,
     from: UserRef,
     relationship: LiteralString,
     to: InputRef,
@@ -3386,6 +3340,7 @@ object AST {
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
+    def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
   /** The definition of a Jacobsen Use Case RIDDL defines these epics by allowing a linkage between the user and RIDDL
@@ -3405,10 +3360,11 @@ object AST {
     loc: At,
     id: Identifier,
     userStory: UserStory = UserStory(),
-    contents: Seq[Interaction] = Seq.empty[Interaction],
+    contents: Contents[Interaction | Comment] = Seq.empty[Interaction | Comment],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Definition[Interaction]
+  ) extends Definition
+      with Container[Interaction | Comment]
       with OccursInEpic {
     override def kind: String = "UseCase"
     override def format: String = s"case ${id.format}"
@@ -3470,8 +3426,8 @@ object AST {
     *   The [[UserStory]] (per agile and xP) that provides the overall big picture of this Epic
     * @param shownBy
     *   A list of URLs to visualizations or other materials related to the epic
-    * @param cases
-    *   A list of UseCase's that define the epic
+    * @param contents
+    *   The definitional content for this Context
     * @param brief
     *   A brief description (one sentence) for use in the glossary and summaries.
     * @param description
@@ -3531,7 +3487,8 @@ object AST {
     elements: Seq[OccursInGroup] = Seq.empty[OccursInGroup],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Definition[OccursInGroup]
+  ) extends Definition
+      with Container[OccursInGroup]
       with OccursInApplication
       with OccursInGroup {
     override def isAppRelated: Boolean = true
@@ -3557,7 +3514,7 @@ object AST {
     group: GroupRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends LeafDefinition[OccursInGroup]
+  ) extends LeafDefinition
       with OccursInGroup {
 
     def format: String = s"contains ${id.format} as ${group.format}"
@@ -3597,7 +3554,8 @@ object AST {
     outputs: Seq[OutputDefinition] = Seq.empty[OutputDefinition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Definition[OutputDefinition]
+  ) extends Definition
+      with Container[OutputDefinition]
       with OccursInApplication
       with OutputDefinition
       with OccursInGroup {
@@ -3643,7 +3601,8 @@ object AST {
     inputs: Seq[InputDefinition] = Seq.empty[InputDefinition],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Definition[InputDefinition]
+  ) extends Definition
+      with Container[InputDefinition]
       with OccursInApplication
       with OccursInGroup
       with InputDefinition {
@@ -3696,22 +3655,8 @@ object AST {
     *   The unique identifier for the application
     * @param options
     *   The options for the application
-    * @param types
-    *   Types that are needed for the communication with the user
-    * @param groups
-    *   A list of group definitions needed by the application
-    * @param handlers
-    *   The handlers for this application to process incoming messages
-    * @param inlets
-    *   Message inlets for the application
-    * @param outlets
-    *   Message outlets for the application
-    * @param authors
-    *   Author definitions for the application, for attribution of application components.
-    * @param terms
-    *   Definitions of terms useful in comprehending the application's purpose
-    * @param includes
-    *   Included source code
+    * @param contents
+    *   The definitional content for this Context
     * @param brief
     *   A brief description of the application
     * @param description
@@ -3806,20 +3751,8 @@ object AST {
     *   The name of the domain
     * @param options
     *   RiddlOptions for the domain
-    * @param types
-    *   Type definitions with a domain (nearly global) scope, with applicability to many contexts or subdomains
-    * @param contexts
-    *   The contexts defined in the scope of the domain
-    * @param users
-    *   User definitions for use in epics
-    * @param epics
-    *   Story definitions for this domain
-    * @param applications
-    *   Application definitions for this domain
-    * @param domains
-    *   Nested sub-domains within this domain
-    * @param terms
-    *   Definition of terms pertaining to this domain that provide explanation of concepts from the domain.
+    * @param contents
+    *   The definitional content for this Context
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -3841,6 +3774,7 @@ object AST {
       with WithUsers
       with WithApplications
       with WithEpics
+      with WithSagas
       with WithDomains
       with OccursInDomain
 
@@ -3870,10 +3804,6 @@ object AST {
         .map(_.asInstanceOf[WithAuthorRefs].authorRefs)
         .getOrElse(Seq.empty[AuthorRef])
     }
-  }
-
-  def mapGroupTo[T <: RiddlValue](seq: Option[Seq[RiddlValue]]): Contents[T] = {
-    seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
   }
 
 }

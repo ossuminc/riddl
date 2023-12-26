@@ -44,8 +44,8 @@ object PassOutput {
   *   THe common options that should be used to run the pass
   */
 case class PassInput(
-                      root: Root,
-                      commonOptions: CommonOptions = CommonOptions.empty
+  root: Root,
+  commonOptions: CommonOptions = CommonOptions.empty
 )
 object PassInput {
   val empty: PassInput = PassInput(Root.empty)
@@ -163,8 +163,8 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     *   the root. The root is deepest in the stack.
     */
   protected def process(
-    definition: Definition[?],
-    parents: mutable.Stack[Definition[?]]
+    definition: Definition,
+    parents: mutable.Stack[Definition]
   ): Unit
 
   /** A signal that the processing is complete and no more calls to [[process]] will be made. This also gives the Pass
@@ -188,7 +188,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     */
   def close(): Unit = ()
 
-  protected def traverse(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = {
+  protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     process(definition, parents)
     if definition.hasDefinitions then {
       parents.push(definition)
@@ -215,21 +215,21 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
 abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   // not required in this kind of pass, final override it as a result
-  override final def process(definition: AST.Definition[?], parents: mutable.Stack[AST.Definition[?]]): Unit = ()
+  override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
 
   // Instead traverse will use these three methods:
-  protected def openContainer(definition: Definition[?], parents: Seq[Definition[?]]): Unit
+  protected def openContainer(definition: Definition, parents: Seq[Definition]): Unit
 
-  protected def processLeaf(definition: LeafDefinition[?], parents: Seq[Definition[?]]): Unit
+  protected def processLeaf(definition: LeafDefinition, parents: Seq[Definition]): Unit
 
-  protected def closeContainer(definition: Definition[?], parents: Seq[Definition[?]]): Unit
+  protected def closeContainer(definition: Definition, parents: Seq[Definition]): Unit
 
   // Redefine traverse to make the three calls
-  override protected def traverse(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = {
+  override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     definition match {
-      case leaf: LeafDefinition[?] =>
+      case leaf: LeafDefinition =>
         processLeaf(leaf, parents.toSeq)
-      case container: Definition[?] =>
+      case container: Definition =>
         openContainer(container, parents.toSeq)
         if container.hasDefinitions then {
           parents.push(definition)
@@ -269,7 +269,7 @@ abstract class CollectingPassOutput[T](
 abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   // not required in this kind of pass, final override it
-  override final def process(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = ()
+  override final def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = ()
 
   /** The processing method called at each node, similar to [[Pass.process]] but modified to return an
     *
@@ -280,16 +280,16 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
     * @return
     *   One of the collected values, an [[F]]
     */
-  protected def collect(definition: Definition[?], parents: mutable.Stack[AST.Definition[?]]): Seq[F]
+  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Seq[F]
 
   @SuppressWarnings(Array("org.wartremover.warts.Var"))
   protected var collectedValues: Seq[F] = Seq.empty[F]
 
   override def result: CollectingPassOutput[F]
 
-  override protected def traverse(definition: Definition[?], parents: mutable.Stack[Definition[?]]): Unit = {
+  override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     val collected = collect(definition, parents)
-    collectedValues = collectedValues ++ collected 
+    collectedValues = collectedValues ++ collected
 
     if definition.hasDefinitions then {
       parents.push(definition)
@@ -361,8 +361,8 @@ object Pass {
   }
 
   def runStandardPasses(
-                         model: Root,
-                         options: CommonOptions
+    model: Root,
+    options: CommonOptions
   ): PassesResult = {
     val input: PassInput = PassInput(model, options)
     runStandardPasses(input)
@@ -387,14 +387,14 @@ object Pass {
   }
 
   private def runOnePass(
-                          root: Root,
-                          commonOptions: CommonOptions,
-                          mkPass: => Pass,
-                          logger: Logger = SysLogger()
+    root: Root,
+    commonOptions: CommonOptions,
+    mkPass: => Pass,
+    logger: Logger = SysLogger()
   ): PassOutput = {
     val pass: Pass = mkPass
     Timer.time[PassOutput](pass.name, commonOptions.showTimes, logger) {
-      val parents: mutable.Stack[Definition[?]] = mutable.Stack.empty
+      val parents: mutable.Stack[Definition] = mutable.Stack.empty
       pass.traverse(root, parents)
       pass.postProcess(root)
       pass.close()

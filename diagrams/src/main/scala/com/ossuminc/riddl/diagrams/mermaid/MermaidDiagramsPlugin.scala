@@ -25,7 +25,7 @@ object MermaidDiagramsPlugin {
 class MermaidDiagramsPlugin {
   import MermaidDiagramsPlugin.*
 
-  def getTechnology(definition: Definition[?]): String = {
+  def getTechnology(definition: Definition): String = {
     val maybeStrings: Option[Seq[String]] = definition match {
       case d: Domain =>
         d.getOptionValue[DomainTechnologyOption]
@@ -44,14 +44,14 @@ class MermaidDiagramsPlugin {
     maybeStrings.map(_.mkString(", ")).getOrElse("Arbitrary Technology")
   }
 
-  def openBox(definition: Definition[?], level: Int = 0): String = {
-    val contents: Seq[Definition[?]] = {
+  def openBox(definition: Definition, level: Int = 0): String = {
+    val contents: Seq[Definition] = {
       definition match {
         case r: Root          => r.domains ++ r.includes.filter[Domain]
         case d: Domain        => d.domains ++ d.includes.filter[Domain]
         // FIXME: case i: Include[?] @unchecked => i.contents.filter[Domain]
         
-        case _ => Seq.empty[Definition[?]]
+        case _ => Seq.empty[Definition]
       }
     }
     val mid = contents.foldLeft("") { case (s, c) => s + openBox(c, level + 1) }

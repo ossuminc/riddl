@@ -18,7 +18,7 @@ class SymbolsPassTest extends ParsingTest {
     Pass.runSymbols(input, outputs)
   }
 
-  def assertRefWithParent[T <: Definition[?]: ClassTag, P <: Definition[?]: ClassTag](
+  def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
     names: Seq[String],
     parentName: String
   ): Assertion = {
@@ -58,7 +58,7 @@ class SymbolsPassTest extends ParsingTest {
     }
 
     "capture expected state field references with appropriate parent" in {
-      st.lookup[Definition[?]](Seq("field")) mustNot be(empty)
+      st.lookup[Definition](Seq("field")) mustNot be(empty)
     }
   }
 }

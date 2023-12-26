@@ -14,7 +14,8 @@ domain example is {
   epic check_for_wrong_types_to_and_from_vitals {
     case UserCreatesANewCompany {
       user Admin wants to "create a new tenant" so that "the tenant can do stuff"
-      step from user Admin "presses" button App.NewTenantPage.Create,
+      step from user Admin "presses" button App.NewTenantPage.Create
+      /** Just a comment because we can*/
       step from button App.NewTenantPage.Create "sends" to context TenantControl
     }
   }

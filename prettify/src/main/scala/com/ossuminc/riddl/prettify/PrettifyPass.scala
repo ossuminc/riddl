@@ -30,28 +30,28 @@ object PrettifyPass extends PassInfo {
     */
   def keyword(definition: Definition): String = {
     definition match {
-      case _: Adaptor       => Keyword.adaptor
-      case _: UseCase       => Keyword.case_
-      case _: Context       => Keyword.context
-      case _: Connector     => Keyword.connector
-      case _: Domain        => Keyword.domain
-      case _: Entity        => Keyword.entity
-      case _: Enumerator    => ""
-      case _: Field         => ""
-      case _: Function      => Keyword.function
-      case _: Handler       => Keyword.handler
-      case _: Inlet         => Keyword.inlet
-      case _: Invariant     => Keyword.invariant
-      case _: Outlet        => Keyword.outlet
-      case s: Streamlet     => s.shape.keyword
-      case _: Root => "root"
-      case _: Saga          => Keyword.saga
-      case _: SagaStep      => Keyword.step
-      case _: State         => Keyword.state
-      case _: Epic          => Keyword.epic
-      case _: Term          => Keyword.term
-      case _: Type          => Keyword.type_
-      case _                => "unknown"
+      case _: Adaptor    => Keyword.adaptor
+      case _: UseCase    => Keyword.case_
+      case _: Context    => Keyword.context
+      case _: Connector  => Keyword.connector
+      case _: Domain     => Keyword.domain
+      case _: Entity     => Keyword.entity
+      case _: Enumerator => ""
+      case _: Field      => ""
+      case _: Function   => Keyword.function
+      case _: Handler    => Keyword.handler
+      case _: Inlet      => Keyword.inlet
+      case _: Invariant  => Keyword.invariant
+      case _: Outlet     => Keyword.outlet
+      case s: Streamlet  => s.shape.keyword
+      case _: Root       => "root"
+      case _: Saga       => Keyword.saga
+      case _: SagaStep   => Keyword.step
+      case _: State      => Keyword.state
+      case _: Epic       => Keyword.epic
+      case _: Term       => Keyword.term
+      case _: Type       => Keyword.type_
+      case _             => "unknown"
     }
   }
 }
@@ -90,8 +90,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case function: Function => openFunction(function)
       case st: State          => openState(st)
       case step: SagaStep     => openSagaStep(step)
-      case include: Include[Definition] @unchecked =>
-        openInclude(include)
+      // FIXME: handle non-definition Include case: 
+      // FIXME: case include: Include[Definition] @unchecked => openInclude(include)
       case streamlet: Streamlet => openStreamlet(streamlet)
       case processor: Processor[_, _] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
@@ -101,12 +101,6 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(_.openDef(saga))
       case replica: Replica =>
         state.withCurrent(_.openDef(replica))
-      case si: SequentialInteractions =>
-        state.withCurrent(_.openDef(si))
-      case pi: ParallelInteractions =>
-        state.withCurrent(_.openDef(pi))
-      case oi: OptionalInteractions =>
-        state.withCurrent(_.openDef(oi))
       case group: Group =>
         state.withCurrent(_.openDef(group))
       case output: Output =>
@@ -115,11 +109,11 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(_.openDef(input))
       case cg: ContainedGroup =>
         state.withCurrent(_.openDef(cg))
-      case _: Root => () // ignore
-      case _: Enumerator    => () // not a container
+      case _: Root       => () // ignore
+      case _: Enumerator => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
-           _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
-           _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
+          _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
+          _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
         () // not  containers
 
     }
@@ -137,7 +131,6 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         )
       case conn: Connector => doConnector(conn)
       case user: User      => doUser(user)
-      case i: Interaction  => doInteraction(i)
       case _: Field        =>
       case _               => ()
       // inlets and outlets handled by openProcessor
@@ -158,9 +151,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case uc: UseCase        => closeUseCase(uc)
       case st: State          => state.withCurrent(_.closeDef(st))
       case _: OnMessageClause => closeOnClause()
-      case include: Include[Definition] @unchecked =>
-        closeInclude(include)
-      case _: Root      => () // ignore
+      //FIXME: case include: Include[Definition] @unchecked => closeInclude(include)
+      case _: Root                  => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
         // Plant, Streamlet, Function, SagaStep
@@ -172,7 +164,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     domain: Domain
   ): Unit = {
     val s0: PrettifyState = state.withCurrent(_.openDef(domain))
-    domain.authorDefs.foldLeft[PrettifyState](s0) { (st: PrettifyState, author) =>
+    domain.authors.foldLeft[PrettifyState](s0) { (st: PrettifyState, author) =>
       val s1: PrettifyState = st.withCurrent(
         _.addIndent(s"author is {\n").indent
           .addIndent(s"name = ${author.name.format}\n")
@@ -222,7 +214,15 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
           .add(" { ??? }")
           .add(nl)
       )
-    else ()
+    else 
+      useCase.contents.foreach {  
+        case si: SequentialInteractions => () // FIXME
+        case pi: ParallelInteractions => () // FIXME
+        case oi: OptionalInteractions => () // FIXME
+        case twori: TwoReferenceInteraction => () // FIXME
+        case gi: GenericInteraction => () // FIXME
+        case _: Comment => ()
+      }
     end if
   }
 
@@ -307,23 +307,24 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       file
         .openDef(conn)
       if conn.nonEmpty then
-        file.addSpace()
-        .add {
-          val flows =
-            if conn.flows.nonEmpty then s"flows ${conn.flows.get.format} "
-            else ""
-          val from =
-            if conn.from.nonEmpty then s"from ${conn.from.get.format} "
-            else ""
-          val to =
-            if conn.to.nonEmpty then s"to ${conn.to.get.format}"
-            else ""
-          flows + from + to
-        }
-        .nl
-        .addSpace()
-        .closeDef(conn)
-      end if   
+        file
+          .addSpace()
+          .add {
+            val flows =
+              if conn.flows.nonEmpty then s"flows ${conn.flows.get.format} "
+              else ""
+            val from =
+              if conn.from.nonEmpty then s"from ${conn.from.get.format} "
+              else ""
+            val to =
+              if conn.to.nonEmpty then s"to ${conn.to.get.format}"
+              else ""
+            flows + from + to
+          }
+          .nl
+          .addSpace()
+          .closeDef(conn)
+      end if
     }
   }
 

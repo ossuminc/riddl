@@ -13,9 +13,9 @@ import scala.collection.mutable
 
 trait UsageBase {
 
-  type UseMap = mutable.HashMap[Definition[?], Seq[Definition[?]]]
+  type UseMap = mutable.HashMap[Definition, Seq[Definition]]
 
-  private def emptyUseMap = mutable.HashMap.empty[Definition[?], Seq[Definition[?]]]
+  private def emptyUseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
 
   protected val uses: UseMap = emptyUseMap
   protected val usedBy: UseMap = emptyUseMap
@@ -32,9 +32,9 @@ trait UsageResolution extends UsageBase {
 
   protected def messages: Messages.Accumulator
 
-  def usesAsMap: Map[Definition[?], Seq[Definition[?]]] = uses.toMap
+  def usesAsMap: Map[Definition, Seq[Definition]] = uses.toMap
 
-  def usedByAsMap: Map[Definition[?], Seq[Definition[?]]] = usedBy.toMap
+  def usedByAsMap: Map[Definition, Seq[Definition]] = usedBy.toMap
 
   protected var entities: Seq[Entity] = Seq.empty[Entity]
 
@@ -57,14 +57,14 @@ trait UsageResolution extends UsageBase {
     this
   }
 
-  def associateUsage(user: Definition[?], use: Definition[?]): this.type = {
+  def associateUsage(user: Definition, use: Definition): this.type = {
 
-    val used = uses.getOrElse(user, Seq.empty[Definition[?]])
+    val used = uses.getOrElse(user, Seq.empty[Definition])
     if !used.contains(use) then {
       uses.update(user,used :+ use)
     }
 
-    val usages = usedBy.getOrElse(use, Seq.empty[Definition[?]])
+    val usages = usedBy.getOrElse(use, Seq.empty[Definition])
     if !usages.contains(user) then {
       usedBy.update(use, usages :+ user)
     }
@@ -73,14 +73,14 @@ trait UsageResolution extends UsageBase {
 
   def checkUnused(): this.type = {
     if commonOptions.showUsageWarnings then {
-      def hasUsages(definition: Definition[?]): Boolean = {
+      def hasUsages(definition: Definition): Boolean = {
         val result = usedBy.get(definition) match {
           case None        => false
           case Some(users) => users.nonEmpty
         }
         result
       }
-      def checkList(definitions: Seq[Definition[?]]): Unit = {
+      def checkList(definitions: Seq[Definition]): Unit = {
         for  defn <- definitions if !hasUsages(defn)  do {
           messages.addUsage(defn.loc, s"${defn.identify} is unused")
         }

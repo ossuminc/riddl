@@ -106,9 +106,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       sizes.foldLeft(0L)((a, b) => a + b)
     }
 
-    definition.contents
-      .filter(_.isVital)
-      .map { (vd: Definition) =>
+    definition.contents.vitals.map { (vd: Definition) =>
         vd match {
           case a: Adaptor     => handlerStatements(a.handlers)
           case a: Application => handlerStatements(a.handlers)
@@ -345,7 +343,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
               + { if c.streamlets.nonEmpty then 1 else 0 }
               + { if c.projectors.nonEmpty then 1 else 0 }
               + { if c.repositories.nonEmpty then 1 else 0 }
-              + { if c.connections.nonEmpty then 1 else 0 }
+              + { if c.connectors.nonEmpty then 1 else 0 }
               + { if c.replicas.nonEmpty then 1 else 0 }
           case e: Entity =>
             countForProcessor
@@ -361,7 +359,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
         }
       case d: Domain =>
         definitionCount(d)
-          + { if d.authorDefs.nonEmpty then 1 else 0 }
+          + { if d.authors.nonEmpty then 1 else 0 }
           + { if d.contexts.nonEmpty then 1 else 0 }
           + { if d.users.nonEmpty then 1 else 0 }
           + { if d.epics.nonEmpty then 1 else 0 }

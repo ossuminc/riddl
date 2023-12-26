@@ -8,20 +8,20 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
 
   private def makeTypeName(
     pid: PathIdentifier,
-    parents: Seq[Definition[?]]
+    parents: Seq[Definition]
   ): String = {
     parents.headOption match
       case None => s"unresolved path: ${pid.format}"
       case Some(parent) =>
-        refMap.definitionOf[Definition[?]](pid, parent) match {
+        refMap.definitionOf[Definition](pid, parent) match {
           case None                   => s"unresolved path: ${pid.format}"
-          case Some(defn: Definition[?]) => defn.id.format
+          case Some(defn: Definition) => defn.id.format
         }
   }
 
   private def makeTypeName(
     typeEx: TypeExpression,
-    parents: Seq[Definition[?]]
+    parents: Seq[Definition]
   ): String = {
     val name = typeEx match {
       case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parents)
@@ -41,7 +41,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
   private def makeERDRelationship(
     from: String,
     to: Field,
-    parents: Seq[Definition[?]]
+    parents: Seq[Definition]
   ): String = {
     val typeName = makeTypeName(to.typeEx, parents)
     if typeName.nonEmpty then {
@@ -66,7 +66,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
   def generate(
     name: String,
     fields: Seq[Field],
-    parents: Seq[Definition[?]]
+    parents: Seq[Definition]
   ): Seq[String] = {
 
     val typ: Seq[String] = s"$name {" +: fields.map { f =>
