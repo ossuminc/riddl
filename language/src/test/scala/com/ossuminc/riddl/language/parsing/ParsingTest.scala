@@ -32,14 +32,14 @@ class ParsingTest extends AnyWordSpec with Matchers {
 
   def parseTopLevelDomains(
     input: RiddlParserInput
-  ): Either[Messages, Root] = {
+  ): Either[Messages, RootContainer] = {
     val tp = TestParser(input)
     tp.parseRootContainer
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](
     input: RiddlParserInput,
-    extract: Root => TO
+    extract: RootContainer => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract)
@@ -147,7 +147,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     @unused label: String,
     fileName: String,
     directory: String = "language/src/test/input/"
-  ): Root = {
+  ): RootContainer = {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
     TopLevelParser.parse(rpi) match {

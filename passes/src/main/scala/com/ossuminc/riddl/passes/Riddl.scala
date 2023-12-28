@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.AST.RootContainer
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{CommonOptions, Parser}
@@ -20,9 +20,9 @@ import java.nio.file.Path
 object Riddl {
 
   def validate(
-                root: Root,
-                options: CommonOptions = CommonOptions.empty,
-                shouldFailOnError: Boolean = true,
+    root: RootContainer,
+    options: CommonOptions = CommonOptions.empty,
+    shouldFailOnError: Boolean = true,
   ): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(root, options)
     if shouldFailOnError && result.messages.hasErrors then

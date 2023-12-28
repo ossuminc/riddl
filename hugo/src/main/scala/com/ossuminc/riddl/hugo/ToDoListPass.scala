@@ -29,7 +29,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
   protected def collect(definition: Definition, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
     definition match {
-      case _: Root | _: Interaction | _: Include[Definition] @unchecked =>
+      case _: RootContainer | _: Interaction | _: Include[Definition] @unchecked =>
         // None of these kinds of definitions contribute to the TODO List because they have a weird name
         Seq.empty[ToDoItem]
       case ad: Definition if ad.isImplicit => Seq.empty[ToDoItem]
@@ -70,7 +70,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
   }
 
   def name: String = ToDoListPass.name
-  def postProcess(root: Root): Unit = ()
+  def postProcess(root: RootContainer): Unit = ()
 }
 
 object ToDoListPass extends PassInfo {

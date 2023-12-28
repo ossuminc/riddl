@@ -23,7 +23,7 @@ class AssignmentCompatibilityTest extends AnyWordSpec with Matchers {
   val decimal = Decimal(At.empty, 8, 3)
   val range = AST.RangeType(At.empty, 0, 100)
   val nothing = AST.Nothing(At.empty)
-  val string = AST.String_(At.empty)
+  val string = AST.Strng(At.empty)
 
   "AssignmentCompatibility" should {
     "check compatibility of Date" in {

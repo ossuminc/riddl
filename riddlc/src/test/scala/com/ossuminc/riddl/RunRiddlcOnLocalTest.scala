@@ -12,9 +12,7 @@ import org.scalatest.Assertion
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** Run a "from" command on a specific .conf file from a specific set of local paths.
-  * These tests are designed to be "pending" if the given directory doesn't exist.
-  * This allows you to develop local test cases for testing RIDDL */
+/** Run a "from" command on a specific .conf file */
 class RunRiddlcOnLocalTest extends RunCommandSpecBase {
 
   // NOTE: This test will succeed if the cwd or config don't exist to allow

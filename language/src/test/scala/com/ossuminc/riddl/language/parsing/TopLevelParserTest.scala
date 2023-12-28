@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.{AST, At}
 import java.io.File
 import scala.io.Source
 
-class TopLevelParserTest extends ParsingTest {
+class TopLevelParserTest extends ParsingTest  {
 
   val origin = "simpleDomain.riddl"
 
@@ -22,9 +22,14 @@ class TopLevelParserTest extends ParsingTest {
   val simpleDomain: AST.Domain = Domain(
     At(1, 1, rip),
     Identifier(At(1, 8, rip), "foo"),
+    Seq.empty[DomainOption],
+    Seq.empty[AuthorRef],
+    Seq.empty[Author]
   )
-  val simpleDomainResults: AST.Root = Root(
+  val simpleDomainResults: AST.RootContainer = RootContainer(
+    Seq.empty,
     List(simpleDomain),
+    Seq.empty,
     List(
       RiddlParserInput(
         new File("language/src/test/input/domains/simpleDomain.riddl")
@@ -49,8 +54,10 @@ class TopLevelParserTest extends ParsingTest {
       try {
         val stringContents = source.mkString
         val result = TopLevelParser.parse(stringContents, origin)
-        val expected = Root(
+        val expected = RootContainer(
+          Seq.empty,
           List(simpleDomain),
+          Seq.empty,
           List(
             StringParserInput(
               """domain foo is {
@@ -66,12 +73,12 @@ class TopLevelParserTest extends ParsingTest {
     }
     "parse empty String" in {
       val expected =
-        Root(List(), List(StringParserInput("", "string")))
+        RootContainer(List(), List(), List(), List(StringParserInput("", "string")))
       TopLevelParser.parse("") match {
         case Right(expected) =>
           fail("Should have failed expecting an author or domain")
         case Left(messages) =>
-          messages.length mustBe 1
+          messages.length mustBe(1)
           val msg = messages.head
           msg.message must include("Expected one of")
           msg.message must include("\"author\"")
@@ -81,12 +88,12 @@ class TopLevelParserTest extends ParsingTest {
 
     "handle garbage" in {
       val expected =
-        Root(List.empty, List(StringParserInput("", "string")))
+        RootContainer(List(),List(),List(), List(StringParserInput("", "string")))
       TopLevelParser.parse(" pweio afhj", "handle garbage") match {
         case Right(expected) =>
           fail("Should have failed excpecting an author or domain")
         case Left(messages) =>
-          messages.length mustBe 1
+          messages.length mustBe(1)
           val msg = messages.head
           msg.message must include("Expected one of")
           msg.message must include("\"author\"")

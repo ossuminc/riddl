@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.testkit
 
-import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.AST.RootContainer
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.CommonOptions
@@ -36,7 +36,7 @@ class CheckMessagesTest extends ValidatingTest {
     fileName: String,
     options: CommonOptions = CommonOptions(noANSIMessages = true)
   )(
-    validation: (Root, Messages) => Assertion
+    validation: (RootContainer, Messages) => Assertion
   ): Assertion = {
     val input = RiddlParserInput(Path.of(fileName))
     Riddl.parseAndValidate(input, options, shouldFailOnError = false) match {

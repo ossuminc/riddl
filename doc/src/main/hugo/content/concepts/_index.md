@@ -1,7 +1,7 @@
 ---
 title: "Concepts"
 draft: false
-weight: 5
+weight: 15
 ---
 
 In this section we will explore the concepts and ideas that RIDDL uses. This is
@@ -48,8 +48,9 @@ With those clarifying simplifications, here's the hierarchy:
         * [Input]({{< relref "input.md" >}})
       * [Handler]({{< relref handler.md >}})
     * [Epic]({{< relref "epic.md" >}})
-      * [Case]({{< relref "case.md" >}})
-        * [Statement]({{< relref "statement.md" >}})
+      * [User Story]({{< relref "user-story.md" >}})
+      * [Use Case]({{< relref "use-case.md" >}})
+          * [Interaction]({{< relref "interaction.md" >}})
     * [Context]({{< relref "context.md" >}})
       * [Type]({{< relref "type.md" >}})
       * [Entity]({{< relref "entity.md" >}})
@@ -101,6 +102,7 @@ With those clarifying simplifications, here's the hierarchy:
       * [InletJoint]({{< relref "joint.md" >}})
       * [OutletJoint]({{< relref "joint.md" >}})
       * [Pipe]({{< relref "pipe.md" >}})
+  * [User]({{< relref "user.md" >}})
 
 ## Next
 When you're done exploring all the concepts, check out our 

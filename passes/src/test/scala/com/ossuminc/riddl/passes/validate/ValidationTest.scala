@@ -35,17 +35,17 @@ class ValidationTest extends ParsingTest {
   "ValidationState" should {
     "parentOf" should {
       "find the parent of an existent child" in {
-        val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
-        val domain = Domain(At(), Identifier(At(), "foo"), Seq.empty, Seq(aType))
-        val root = Root(Seq(domain), Seq.empty)
+        val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
+        val domain = Domain(At(), Identifier(At(), "foo"), types = aType :: Nil)
+        val root = RootContainer(List(), Seq(domain), List(), Seq.empty)
         val outputs = PassesOutput()
         val output = Pass.runSymbols(PassInput(root), outputs)
         output.parentOf(aType) mustBe Some(domain)
       }
       "not find the parent of a non-existent child" in {
-        val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
-        val domain = Domain(At(), Identifier(At(), "foo"))
-        val root = Root(Seq(domain), Seq.empty)
+        val aType = Type(At(), Identifier(At(), "bar"), Strng(At()))
+        val domain = Domain(At(), Identifier(At(), "foo"), types = Nil)
+        val root = RootContainer(List(),Seq(domain), List(), Seq.empty)
         val outputs = PassesOutput()
         val output = Pass.runSymbols(PassInput(root), outputs)
         output.parentOf(aType) mustBe None
@@ -54,7 +54,7 @@ class ValidationTest extends ParsingTest {
   }
 
   "Validate All Things" must {
-    var sharedRoot: Root = Root.empty
+    var sharedRoot: RootContainer = RootContainer.empty
 
     "parse correctly" in {
       val rootFile = "language/src/test/input/full/domain.riddl"
@@ -70,20 +70,17 @@ class ValidationTest extends ParsingTest {
       val incls = sharedRoot.domains.head.includes
       incls mustNot be(empty)
       incls.head.contents mustNot be(empty)
-      incls.head.contents.head.getClass mustBe classOf[Application]
+      incls.head.contents.head.getClass mustBe (classOf[Application])
       incls(1).contents.head.getClass mustBe classOf[Context]
     }
     "have terms and author refs in applications" in {
-      val domain: Domain = sharedRoot.domains.head
-      val include = domain.includes.head
-      val apps = include.contents.filter[Application]
+      val apps = sharedRoot.domains.head.contents
       apps mustNot be(empty)
       apps.head mustBe a[Application]
-      val app:Application = apps.head
+      val app = apps.head.asInstanceOf[Application]
       app.terms mustNot be(empty)
-      app.hasAuthors mustBe false
-      app.hasAuthorRefs mustBe true
-      app.authorRefs mustNot be(empty)
+      app.hasAuthors mustBe true
+      app.authors mustNot be(empty)
     }
   }
 }

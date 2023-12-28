@@ -73,7 +73,7 @@ class RegressionTests extends ValidatingTest {
                     |  type Bug: IntegerRange
                     |}""".stripMargin
 
-      def extract(root: Root): Type = {
+      def extract(root: RootContainer): Type = {
         root.domains.head.types.head
       }
       parseTopLevelDomain[Type](input, extract) match {
@@ -105,7 +105,7 @@ class RegressionTests extends ValidatingTest {
                     |  }
                     |}
                     |""".stripMargin
-      def extract(root: Root): Type = {
+      def extract(root: RootContainer): Type = {
         root.domains.head.types(2)
       }
       parseTopLevelDomain[Type](input, extract) match {

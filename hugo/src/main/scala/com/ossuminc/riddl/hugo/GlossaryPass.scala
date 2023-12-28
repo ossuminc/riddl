@@ -39,8 +39,8 @@ case class GlossaryPass(
     parents: mutable.Stack[Definition]
   ): Seq[GlossaryEntry] = {
     definition match {
-      case _: OnMessageClause | _: OnOtherClause | _: OnInitClause | _: OnTerminationClause | _: Root |
-           _: Interaction | _: Include[Definition] @unchecked =>
+      case _: OnMessageClause | _: OnOtherClause | _: OnInitClause | _: OnTerminationClause | _: RootContainer |
+          _: Interaction | _: Include[Definition] @unchecked =>
         // None of these kinds of definitions contribute to the glossary
         Seq.empty[GlossaryEntry]
       case ad: Definition if ad.isImplicit => Seq.empty[GlossaryEntry]
@@ -74,7 +74,7 @@ case class GlossaryPass(
 
   // Members declared in com.ossuminc.riddl.passes.Pass
   def name: String = GlossaryPass.name
-  def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ()
+  def postProcess(root: com.ossuminc.riddl.language.AST.RootContainer): Unit = ()
 }
 
 object GlossaryPass {

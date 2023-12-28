@@ -21,7 +21,7 @@ private[parsing] trait SagaParser {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
-        briefly ~ description
+        briefly ~ description ~ comments
     ).map(x => (SagaStep.apply _).tupled(x))
   }
 
@@ -35,33 +35,70 @@ private[parsing] trait SagaParser {
     }
   }
 
-  private def sagaInclude[u: P]: P[Include[OccursInSaga]] = {
-    include[OccursInSaga, u](sagaDefinitions(_))
+  private def sagaInclude[u: P]: P[Include[SagaDefinition]] = {
+    include[SagaDefinition, u](sagaDefinitions(_))
   }
 
-  private def sagaDefinitions[u: P]: P[Seq[OccursInSaga]] = {
+  private def sagaDefinitions[u: P]: P[Seq[SagaDefinition]] = {
     P(sagaStep | inlet | outlet | function | term | sagaInclude)./.rep(2)
   }
 
   private type SagaBodyType = (
     Option[Aggregation],
     Option[Aggregation],
-    Seq[OccursInSaga]
+    Seq[SagaDefinition]
   )
 
   private def sagaBody[u: P]: P[SagaBodyType] = {
     P(
-      undefined((None, None, Seq.empty[OccursInSaga])) |
+      undefined((None, None, Seq.empty[SagaDefinition])) |
         (input.? ~ output.? ~ sagaDefinitions)
     )
   }
 
   def saga[u: P]: P[Saga] = {
     P(
-      location ~ Keywords.saga ~ identifier ~ is ~ open ~
-        sagaOptions ~ sagaBody ~ close ~ briefly ~ description
-    ).map { case (location, identifier, options, (input, output, contents), briefly, description) =>
-      Saga(location, identifier, options, input, output, contents, briefly, description)
+      location ~ Keywords.saga ~ identifier ~ authorRefs ~ is ~ open ~
+        sagaOptions ~ sagaBody ~ close ~ briefly ~ description ~ comments
+    ).map {
+      case (
+            location,
+            identifier,
+            authors,
+            options,
+            (input, output, definitions),
+            briefly,
+            description,
+            comments
+          ) =>
+        val groups = definitions.groupBy(_.getClass)
+        val functions = mapTo[Function](groups.get(classOf[Function]))
+        val steps = mapTo[SagaStep](groups.get(classOf[SagaStep]))
+        val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+        val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
+        val includes = mapTo[Include[SagaDefinition]](
+          groups.get(
+            classOf[Include[SagaDefinition]]
+          )
+        )
+        val terms = mapTo[Term](groups.get(classOf[Term]))
+        Saga(
+          location,
+          identifier,
+          options,
+          input,
+          output,
+          steps,
+          functions,
+          inlets,
+          outlets,
+          authors,
+          includes,
+          terms,
+          briefly,
+          description,
+          comments
+        )
     }
   }
 }

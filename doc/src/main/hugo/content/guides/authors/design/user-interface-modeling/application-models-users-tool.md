@@ -6,13 +6,32 @@ draft: "false"
 weight: 40
 ---
 
-This page describes the nature of a RIDDL Application definition, what
-it represents and what it does not represent. 
+This page describes the nature of a RIDDL Application definition. 
+
+## What is a User?
+
+The term
+[user]({{< relref "../../../../../concepts/user.md">}}) in this 
+context is a word of art. It doesn't necessarily mean a human
+being. A user is, literally any thing that uses the system. 
+This could be a piece of software, a human, an alien, or an 
+artificial intelligence. We can define a user in RIDDL very
+simply:
+```riddl
+user Gemini is "an artifical intelligence provided by Google"
+```
+
+## What Is A User Interface?
+A user interface is just that: an interface to a system that is geared 
+toward ease of use by the user. We regard the User Interface to be
+a component of the system being modelled. 
 
 ## What Is An Application?
-An RIDDL _Application_ defines the means by which a user may communicate
-with a system. In other words, it is the system component that adapts itself
-to its users, human or not. 
+A RIDDL _Application_ defines a user interface for the system being
+modeled in RIDDL.  Applications are the means by which a user may
+communicate with a system, and control it.  In other words, it is 
+the system component that adapts the system to the user. A system
+may have multiple applications. 
 
 Abstractly, the communication between a User and an Application requires only
 four kinds of things:
@@ -21,6 +40,7 @@ four kinds of things:
 * Ways to receive information from the user (input)
 * Ways to show information to the user (output)
 
+## 
 User interfaces are made of many kinds of components and new ones are
 being invented continuously. RIDDL Applications do not intend to model the
 look, feel, shape, sensory utilization or any other design attribute of an
@@ -28,12 +48,13 @@ actual user interface. RIDDL Applications do not limit themselves to only
 the current set of technology currently available as a user interfaces(
 web sites, mobile applications, telephones, console panels). 
 
-RIDDL Applications recognize
-that the user experience (UX) is an art and science of its own, and divorce
-themselves from that concern. This allows Applications to refer to rich user
-interface models that cover all the senses of a human, without having to 
-define all that complexity. Such models are better suited to illustrations
-and demonstrations than words.  To support that separation well, RIDDL 
+## RIDDL And The User Experience
+RIDDL recognizes that the user experience (UX) is an art and science 
+of its own, and divorces itself from that concern. This allows 
+Applications to refer to rich user interface models that cover all
+the senses of a human, without having to define all that complexity.
+Such models are better defined with illustrations, demonstrations, 
+wireframes, and etc. To support that separation well, RIDDL 
 Applications use the `shown by <url>` syntax to link its components to 
 such illustrations and demonstrations.
 

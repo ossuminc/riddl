@@ -44,7 +44,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
 
   override def close(): Unit = ()
 
-  def postProcess(root: Root): Unit = {
+  def postProcess(root: RootContainer): Unit = {
     checkUnused()
   }
 
@@ -52,7 +52,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     kindMap.add(definition)
     val parentsAsSeq: Seq[Definition] = definition +: parents.toSeq
     definition match {
-      case ad: AggregateValue =>
+      case ad: AggregateDefinition =>
         resolveTypeExpression(ad.typeEx, parentsAsSeq)
       case t: Type =>
         resolveType(t, parentsAsSeq)
@@ -64,8 +64,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveOnClauses(tc, parentsAsSeq)
       case oc: OnOtherClause =>
         resolveOnClauses(oc, parentsAsSeq)
+      case h: Handler =>
+        h.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case e: Entity =>
-        e.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
         addEntity(e)
       case s: State =>
         resolveATypeRef(s.typ, parentsAsSeq)
@@ -81,30 +83,28 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveTypeExpression(c.typeEx, parentsAsSeq)
       case a: Adaptor =>
         resolveARef[Context](a.context, parentsAsSeq)
-        a.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case s: Streamlet =>
-        s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case p: Projector =>
-        p.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        p.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case r: Repository =>
-        r.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        r.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case s: Saga =>
-        s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        s.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case r: Replica =>
         resolveTypeExpression(r.typeExp, parentsAsSeq)
       case d: Domain =>
-        d.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        d.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case a: Application =>
-        a.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        a.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case c: Context =>
-        c.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        c.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case e: Epic =>
-        e.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        e.authors.foreach(resolveARef[Author](_, parentsAsSeq))
       case uc: UseCase =>
         if uc.userStory.nonEmpty then resolveARef(uc.userStory.user, parentsAsSeq)
         end if
-        if uc.contents.nonEmpty then
-          resolveInteractions(uc.contents, parentsAsSeq)
       case in: Input =>
         resolveATypeRef(in.putIn, parentsAsSeq)
       case out: Output =>
@@ -115,22 +115,50 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         }
       case cg: ContainedGroup =>
         resolveARef[Group](cg.group, parentsAsSeq)
-
+      case gi: GenericInteraction =>
+        gi match {
+          case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
+            resolveARef[Definition](from, parentsAsSeq)
+            resolveARef[Definition](to, parentsAsSeq)
+          case fi: FocusOnGroupInteraction =>
+            resolveARef[User](fi.from, parentsAsSeq)
+            resolveARef[Group](fi.to, parentsAsSeq)
+          case fou: DirectUserToURLInteraction =>
+            resolveARef[User](fou.from, parentsAsSeq)
+          case ti: ShowOutputInteraction =>
+            resolveARef[User](ti.to, parentsAsSeq)
+            resolveARef[Output](ti.from, parentsAsSeq)
+          case pi: TakeInputInteraction =>
+            resolveARef[User](pi.from, parentsAsSeq)
+            resolveARef[Input](pi.to, parentsAsSeq)
+          case si: SelfInteraction =>
+            resolveARef[Definition](si.from, parentsAsSeq)
+          case VagueInteraction(_, _, _, _, _, _, _, _) =>
+            // no resolution required
+            ()
+          case SendMessageInteraction(_, _, from, message, to, _, _, _) =>
+            resolveARef[Definition](from, parentsAsSeq)
+            resolveAMessageRef(message, parentsAsSeq)
+            resolveARef[Definition](to, parentsAsSeq)
+        }
       case _: Author                 => () // no references
       case _: User                   => () // no references
       case _: Enumerator             => () // no references
       case _: Group                  => () // no references
-      case _: Root                   => () // no references
+      case _: Include[_]             => () // no references
+      case _: OptionalInteractions   => () // no references
+      case _: ParallelInteractions   => () // no references
+      case _: SequentialInteractions => () // no references
+      case _: RootContainer          => () // no references
       case _: SagaStep               => () // no references
       case _: Term                   => () // no references
-      case _: Handler                => () // no references
-      case _: Invariant              => () // no references
+      case i: Invariant              => () // no references
       // case _ => () // NOTE: Never have this catchall! Want compile time errors.
     }
   }
 
   private def resolveFunction(f: Function, parents: Seq[Definition]): Unit = {
-    f.authorRefs.foreach(resolveARef[Author](_, parents))
+    f.authors.foreach(resolveARef[Author](_, parents))
     addFunction(f)
     f.input.foreach(resolveTypeExpression(_, parents))
     f.output.foreach(resolveTypeExpression(_, parents))
@@ -163,13 +191,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         of.foreach(resolveTypeExpression(_, parents))
       case Sequence(_, of) =>
         resolveTypeExpression(of, parents)
-      case Mapping(_, from, _) =>
+      case Mapping(_, from, to) =>
         resolveTypeExpression(from, parents)
       case Set(_, of) =>
         resolveTypeExpression(of, parents)
       case Graph(_, of) =>
         resolveTypeExpression(of, parents)
-      case Table(_, of, _) =>
+      case Table(loc, of, dimensions) =>
         resolveTypeExpression(of, parents)
       case c: Cardinality =>
         resolveTypeExpression(c.typeExp, parents)
@@ -181,7 +209,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     resolveARef[Type](mc.msg, parents)
     mc.from match
       case None => ()
-      case Some(_, reference) =>
+      case Some(reference) =>
         resolveARef[Definition](reference, parents)
     resolveStatements(mc.statements, parents)
   }
@@ -198,65 +226,28 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     statement match {
       case ss: SetStatement =>
         resolveARef[Field](ss.field, parents)
-      case BecomeStatement(_, entity, _) =>
+      case BecomeStatement(loc, entity, handler) =>
         resolveARef[Entity](entity, parents)
-      case FocusStatement(_, group) =>
-        resolveARef[Group](group, parents)
-      case ForEachStatement(_, pid, _) =>
+      case ForEachStatement(loc, pid, do_) =>
         resolveAPathId[Type](pid, parents)
-      case SendStatement(_, msg, _) =>
+      case SendStatement(loc, msg, portlet) =>
         resolveARef[Type](msg, parents)
-      case MorphStatement(_, entity, state, message) =>
+      case MorphStatement(loc, entity, state, message) =>
         resolveARef[Entity](entity, parents)
         resolveARef[State](state, parents)
         resolveARef[Type](message, parents)
-      case TellStatement(_, msg, processorRef) =>
+      case TellStatement(loc, msg, processorRef) =>
         resolveARef[Type](msg, parents)
         resolveARef[Processor[?, ?]](processorRef, parents)
-      case CallStatement(_, func) =>
+      case CallStatement(loc, func) =>
         resolveARef[Function](func, parents)
-      case ReplyStatement(_, message) =>
+      case ReplyStatement(loc, message) =>
         resolveARef[Type](message, parents)
       case _: ArbitraryStatement  => () // no references
       case _: ErrorStatement      => () // no references
       case _: ReturnStatement     => () // no references
       case _: IfThenElseStatement => () // no references
       case _: StopStatement       => () // no references
-    }
-  }
-
-  private def resolveInteractions(
-   interactions: Seq[Interaction | Comment],
-   parentsAsSeq: Seq[Definition]
-  ): Unit = {
-    for interaction <- interactions do {
-      interaction match {
-        case ArbitraryInteraction(_, from, _, to, _, _) =>
-          resolveARef[Definition](from, parentsAsSeq)
-          resolveARef[Definition](to, parentsAsSeq)
-        case fi: FocusOnGroupInteraction =>
-          resolveARef[User](fi.from, parentsAsSeq)
-          resolveARef[Group](fi.to, parentsAsSeq)
-        case fou: DirectUserToURLInteraction =>
-          resolveARef[User](fou.from, parentsAsSeq)
-        case ti: ShowOutputInteraction =>
-          resolveARef[User](ti.to, parentsAsSeq)
-          resolveARef[Output](ti.from, parentsAsSeq)
-        case pi: TakeInputInteraction =>
-          resolveARef[User](pi.from, parentsAsSeq)
-          resolveARef[Input](pi.to, parentsAsSeq)
-        case si: SelfInteraction =>
-          resolveARef[Definition](si.from, parentsAsSeq)
-        case SendMessageInteraction(_, from, message, to, _, _) =>
-          resolveARef[Definition](from, parentsAsSeq)
-          resolveAMessageRef(message, parentsAsSeq)
-          resolveARef[Definition](to, parentsAsSeq)
-        case _: VagueInteraction => () // no resolution required
-        case _: OptionalInteractions => () // no references
-        case _: ParallelInteractions => () // no references
-        case _: SequentialInteractions => () // no references
-        case _: Comment => () // no references
-      }
     }
   }
 
@@ -320,7 +311,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             wrongType[T](pathId, parent, d)
             Seq.empty
           // List has multiple elements
-          case (d, pars) :: _ if isSameKindAndHasDifferentPathsToSameNode(list) =>
+          case (d, pars) :: tail if isSameKindAndHasDifferentPathsToSameNode(list) =>
             resolved[T](pathId, parent, d)
             d +: pars
           case list =>
@@ -343,8 +334,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private case class AnchorNotFoundInSymTab(topName: String) extends AnchorCase
   private case class AnchorNotFoundInParents(topName: String) extends AnchorCase
   private case class AnchorNotFoundAnywhere(topName: String) extends AnchorCase
-  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition, Seq[Definition])])
-      extends AnchorCase
+  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition, Seq[Definition])]) extends AnchorCase
   private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
   private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
   private case class AnchorIsRoot(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
@@ -455,13 +445,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       val maybeFound = stack.toSeq
       checkResultingPath(pathId, parents, maybeFound)
       stack.headOption match
-        case Some(_: Root) if stack.size == 1 =>
+        case Some(head: RootContainer) if stack.size == 1 =>
           // then pop it off because RootContainers don't count and we want to
           // rightfully return an empty sequence for "not found"
           stack.pop()
           // Convert parent stack to immutable sequence
           stack.toSeq
-        case Some(_) =>
+        case Some(head) =>
           // Not the root, just convert the result to immutable Seq
           stack.toSeq
         case None =>
@@ -508,7 +498,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     maybeResult: Seq[Definition]
   ): Boolean = {
     pathId.value.headOption match {
-      case Some(_) =>
+      case Some(topName) =>
         val foundDefinition = maybeResult.head
         val foundName = foundDefinition.id.value
         val soughtName = pathId.value.last
@@ -546,18 +536,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         path
       case Some(typ: Type) =>
         typ.typ match {
-          case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == kind => path // success
+          case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == kind => path // success
           case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))      => path // success
           case typeEx: Alternation =>
-            messages.addError(
-              loc,
-              s"All alternates of `${typeEx.format}` must be ${kind.useCase.dropRight(4)} aggregates"
-            )
+            messages.addError(loc, s"All alternates of `${typeEx.format}` must be ${kind.kind.dropRight(4)} aggregates")
             Seq.empty
           case typeEx: TypeExpression =>
             messages.addError(
               loc,
-              s"Type expression `${typeEx.format}` needs to be an aggregate for `${kind.useCase.dropRight(4)}`"
+              s"Type expression `${typeEx.format}` needs to be an aggregate for `${kind.kind.dropRight(4)}`"
             )
             Seq.empty
         }
@@ -716,12 +703,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
                   parents,
                   s"the PathId is invalid since it's first element, $topName, does not exist in the model"
                 )
-              case AnchorNotFoundAnywhere(_) =>
+              case AnchorNotFoundAnywhere(topName) =>
                 notResolved(pathId, parents)
               case AnchorIsRoot(anchor, anchor_parents) =>
                 // The first name in the path id was "Root" so start from there
                 resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
-              case AnchorIsAmbiguous(_, list) =>
+              case AnchorIsAmbiguous(topName, list) =>
                 // The anchor is ambiguous so generate that message
                 ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one"))
   }
@@ -842,29 +829,26 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
 
       // Return the name and candidates we should next search for
       parentStack.headOption match
-        case None       => Seq.empty[T] // shouldn't happen?
-        case Some(head) => head.definitions
+        case None       => Seq.empty[Definition] // shouldn't happen?
+        case Some(head) => head.contents
 
     } else {
       // Couldn't resolve it, error already issued, signal termination of the search
-      Seq.empty
+      Seq.empty[Definition]
     }
   }
 
-  private def candidatesFromTypeEx(
-    typEx: TypeExpression,
-    parentStack: mutable.Stack[Definition]
-  ): Contents[Definition] = {
+  private def candidatesFromTypeEx(typEx: TypeExpression, parentStack: mutable.Stack[Definition]): Seq[Definition] = {
     typEx match {
-      case a: Aggregation => a.fields
+      case a: Aggregation => a.contents
       // if we're at a field composed of more fields, then those fields
-      // are what we are looking for
+      // what we are looking for
       case Enumeration(_, enumerators) =>
         // if we're at an enumeration type then the numerators are candidates
         enumerators
       case a: AggregateUseCaseTypeExpression =>
         // Any kind of Aggregate's fields are candidates for resolution
-        a.fields
+        a.contents
       case AliasedTypeExpression(_, _, pid) =>
         // if we're at a field that references another type then the candidates
         // are that type's fields. To solve this we need to push
@@ -880,7 +864,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
 
   private def findCandidates(
     parentStack: mutable.Stack[Definition]
-  ): Contents[Definition] = {
+  ): Seq[Definition] = {
     if parentStack.isEmpty then {
       // Nothing in the parent stack so we're done searching and
       // we return empty to signal nothing found
@@ -900,16 +884,23 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
               // need to push that message's path on the name stack
               adjustStacksForPid[Type](oc.msg.pathId, parentStack)
             case field: Field =>
-              candidatesFromTypeEx(field.typeEx, parentStack).definitions
+              candidatesFromTypeEx(field.typeEx, parentStack)
             case c: Constant =>
               candidatesFromTypeEx(c.typeEx, parentStack)
             case t: Type =>
               candidatesFromTypeEx(t.typ, parentStack)
-            case d: Container[RiddlValue] =>
+            case func: Function =>
+              val inputs: Aggregation = func.input.getOrElse(Aggregation.empty())
+              val outputs: Aggregation = func.output.getOrElse(Aggregation.empty())
+              // If we're at a Function node, the functions input parameters
+              // are the candidates to search next
+              inputs.contents ++ outputs.contents
+            case d: Definition =>
               d.contents.flatMap {
-                case Include(_, contents, _) => contents.definitions
-                case d: Definition        => Seq(d)
-                case _                       => Seq.empty
+                case Include(_, contents, _, _) =>
+                  contents
+                case d: Definition =>
+                  Seq(d)
               }
       }
     }

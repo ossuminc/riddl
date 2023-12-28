@@ -41,30 +41,22 @@ class TopLevelParser(rpi: RiddlParserInput)
 
   push(rpi)
 
-  private def rootInclude[u: P]: P[Include[OccursAtRootScope]] = {
-    include[OccursAtRootScope, u](rootValues(_))
-  }
-
-  private def rootValues[u: P]: P[Seq[OccursAtRootScope]] = {
-    P(
-      Start ~ (comment | rootInclude[u] | domain | author)./.rep(1) ~ End
-    )
-  }
-
-  private def root[u: P]: P[Root] = {
+  def root[u: P]: P[RootContainer] = {
     val curr_input = current
-    P(rootValues).map { (content: Seq[OccursAtRootScope]) =>
+    P(
+      Start ~ comments ~ (domain | author)./.rep(1) ~ comments ~ End
+    ).map { case (preComments, content, postComments) =>
       pop
-      Root(content, Seq(curr_input))
+      RootContainer(preComments, content, postComments, Seq(curr_input))
     }
   }
 
   def parseRootContainer(
     withVerboseFailures: Boolean = false
-  ): Either[Messages, Root] = {
+  ): Either[Messages, RootContainer] = {
     val input = current
     try {
-      fastparse.parse[Root](input, root(_), withVerboseFailures) match {
+      fastparse.parse[RootContainer](input, root(_), withVerboseFailures) match {
         case Success(root, index) =>
           if errors.nonEmpty then Left(errors.toList)
           else if root.contents.isEmpty then
@@ -91,22 +83,22 @@ object TopLevelParser {
 
   def parse(
     input: RiddlParserInput
-  ): Either[Messages, Root] = {
+  ): Either[Messages, RootContainer] = {
     val tlp = new TopLevelParser(input)
     tlp.parseRootContainer()
   }
 
-  def parse(file: File): Either[Messages, Root] = {
+  def parse(file: File): Either[Messages, RootContainer] = {
     val fpi = FileParserInput(file)
     parse(fpi)
   }
 
-  def parse(path: Path): Either[Messages, Root] = {
+  def parse(path: Path): Either[Messages, RootContainer] = {
     val fpi = new FileParserInput(path)
     parse(fpi)
   }
 
-  def parse(url: URL): Either[Messages, Root] = {
+  def parse(url: URL): Either[Messages, RootContainer] = {
     val upi = URLParserInput(url)
     parse(upi)
   }
@@ -114,7 +106,7 @@ object TopLevelParser {
   def parse(
     input: String,
     origin: String = "string"
-  ): Either[Messages, Root] = {
+  ): Either[Messages, RootContainer] = {
     val spi = StringParserInput(input, origin)
     parse(spi)
   }

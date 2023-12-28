@@ -102,6 +102,10 @@ Usage: testkit/src/test/input/check/everything/everything.riddl(30:5):
  Type 'alt' is unused:
      type alt is one of { enum or stamp or url }
      ^
+Style: testkit/src/test/input/check/everything/everything.riddl(52:20):
+ Field identifier 'n' is too short. The minimum length is 3:
+         requires { n: Nothing }
+                    ^
 Style: testkit/src/test/input/check/everything/everything.riddl(28:5):
  Type 'enum' should start with a capital letter:
      type enum is any of { Apple Pear Peach(21) Persimmon(42) }
@@ -206,6 +210,10 @@ Missing: testkit/src/test/input/check/everything/everything.riddl(67:5):
  Vital definitions should have an author reference:
      entity SomeOtherThing is {
      ^
+Style: testkit/src/test/input/check/everything/everything.riddl(53:19):
+ Field identifier 'b' is too short. The minimum length is 3:
+         returns { b: Boolean }
+                   ^
 Style: testkit/src/test/input/check/everything/everything.riddl(34:7):
  Field identifier 'id' is too short. The minimum length is 3:
        id is ident,

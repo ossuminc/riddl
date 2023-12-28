@@ -17,3 +17,6 @@ All [vital definitions]({{< relref "vital.md" >}})
 
 ## Contains
 No other definitions
+
+## Syntax Example
+TBD

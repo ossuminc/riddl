@@ -63,10 +63,10 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
     }
     "emits Strngs" in {
       rfe.clear
-      val s1 = String_(At.empty, Some(3L), Some(6L))
-      val s2 = String_(At.empty, Some(3L), None)
-      val s3 = String_(At.empty, None, Some(6L))
-      val s4 = String_(At.empty)
+      val s1 = Strng(At.empty, Some(3L), Some(6L))
+      val s2 = Strng(At.empty, Some(3L), None)
+      val s3 = Strng(At.empty, None, Some(6L))
+      val s4 = Strng(At.empty)
       rfe.emitString(s1).toString mustBe "String(3,6)"
       rfe.clear
       rfe.emitString(s2).toString mustBe "String(3)"

@@ -127,7 +127,7 @@ trait TypeValidation extends DefinitionValidation {
       checkIdentifierLength(field)
         .check(
           field.id.value.head.isLower,
-          s"Field names in ${mt.usecase.useCase} should start with a lower case letter",
+          s"Field names in ${mt.usecase.kind} should start with a lower case letter",
           StyleWarning,
           field.loc
         )

@@ -1,41 +1,35 @@
 name: Scala Build
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-    paths:
-      - !'doc/src/main/hugo/**'
-      - !'.github/workflows/gh-pages.yml'
-      - '**.scala
-      - '**.sbt'
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set Up JDK 21
-      uses: actions/setup-java@v4
+    - uses: actions/checkout@v2
+    - name: Set Up JDK 17
+      uses: actions/setup-java@v2
       with:
-        java-version: '21'
-        distribution: 'adopt-hotspot'
-
+        java-version: '17'
+        distribution: 'temurin'
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: 'latest'
         extended: true
-
     - name: Coursier Caching
       uses: coursier/cache-action@v6
-
     - name: Build, Run Test, Coverage
       run: |
         which hugo
         sbt -v clean coverage Test/compile test coverageAggregate coveralls
+        export RIDDLC_PATH=riddlc/target/universal/stage/bin/riddlc
+        sbt -v clean compile publishLocal "project riddlc" "stage" "project sbt-riddl" scripted
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
@@ -45,12 +39,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: code-coverage-report
-        path: "target/scala-2.12/scoverage-report/"
-
-    - name: Test sbt-riddl plugin
-      run: |
-        export RIDDLC_PATH=riddlc/target/universal/stage/bin/riddlc
-        sbt -v clean compile publishLocal "project riddlc" "stage" "project sbt-riddl" scripted
+        path: target/scala-2.12/scoverage-report
 
     - name: Cleanup Before Caching
       shell: bash
@@ -60,3 +49,10 @@ jobs:
         find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
         find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
         find $HOME/.sbt                              -name "*.lock"               -delete || true
+
+
+#    - name: SonarCloud Scan
+#      uses: SonarSource/sonarcloud-github-action@master
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # for PR information, if any
+#        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

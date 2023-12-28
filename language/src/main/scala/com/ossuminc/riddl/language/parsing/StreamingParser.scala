@@ -14,30 +14,28 @@ import com.ossuminc.riddl.language.At
 
 /** Unit Tests For StreamingParser */
 private[parsing] trait StreamingParser {
-  this: HandlerParser with ReferenceParser with StatementParser with FunctionParser with TypeParser =>
+  this: HandlerParser with ReferenceParser with StatementParser =>
 
   def inlet[u: P]: P[Inlet] = {
     P(
       location ~ Keywords.inlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description
+        typeRef ~/ briefly ~ description ~ comments
     )./.map { tpl => (Inlet.apply _).tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
       location ~ Keywords.outlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description
+        typeRef ~/ briefly ~ description ~ comments
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
   }
 
   private def connectorOptions[X: P]: P[Seq[ConnectorOption]] = {
     options[X, ConnectorOption](
-      StringIn(RiddlOption.persistent, RiddlOption.technology, RiddlOption.color, RiddlOption.kind).!
+      StringIn(RiddlOption.persistent, RiddlOption.technology).!
     ) {
       case (loc, RiddlOption.persistent, _)    => ConnectorPersistentOption(loc)
       case (loc, RiddlOption.technology, args) => ConnectorTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => ConnectorColorOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => ConnectorKindOption(loc, args)
     }
   }
 
@@ -52,9 +50,9 @@ private[parsing] trait StreamingParser {
               Readability.to ~ inletRef
           ).map { case (typ, out, in) =>
             (typ, Some(out), Some(in))
-          }) ~ close ~/ briefly ~ description
-    )./.map { case (loc, id, opts, (typ, out, in), brief, description) =>
-      Connector(loc, id, opts, typ, out, in, brief, description)
+          }) ~ close ~/ briefly ~ description ~ comments
+    )./.map { case (loc, id, opts, (typ, out, in), brief, description, comments) =>
+      Connector(loc, id, opts, typ, out, in, brief, description, comments)
     }
   }
 
@@ -63,8 +61,8 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Include[OccursInStreamlet]] = {
-    include[OccursInStreamlet, u](
+  ): P[Include[StreamletDefinition]] = {
+    include[StreamletDefinition, u](
       streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
   }
@@ -74,13 +72,11 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[OccursInStreamlet]] = {
+  ): P[Seq[StreamletDefinition]] = {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
-        (handler(
-          StatementsSet.StreamStatements
-        ) | term | authorRef | comment | function | invariant | constant | typeDef |
+        (handler(StatementsSet.StreamStatements) | term |
           streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
           inlets ++ outlets ++ definitions
@@ -89,10 +85,8 @@ private[parsing] trait StreamingParser {
   }
 
   private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
-    options[u, StreamletOption](StringIn(RiddlOption.technology, RiddlOption.color, RiddlOption.kind).!) {
-      case (loc, RiddlOption.technology, args) => StreamletTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => StreamletColorOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => StreamletKindOption(loc, args)
+    options[u, StreamletOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
+      StreamletTechnologyOption(loc, args)
     }
   }
 
@@ -101,9 +95,9 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[OccursInStreamlet]] = {
+  ): P[Seq[StreamletDefinition]] = {
     P(
-      undefined(Seq.empty[OccursInStreamlet]) |
+      undefined(Seq.empty[StreamletDefinition]) |
         streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)
     )
   }
@@ -128,12 +122,40 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int = 0
   ): P[Streamlet] = {
     P(
-      location ~ keyword ~ identifier ~ is ~ open ~
+      location ~ keyword ~ identifier ~ authorRefs ~ is ~ open ~
         streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ briefly ~ description
-    )./.map { case (loc, id, options, contents, brief, description) =>
+        close ~ briefly ~ description ~ comments
+    )./.map { case (loc, id, authors, options, definitions, brief, description, comments) =>
       val shape = keywordToKind(keyword, loc)
-      Streamlet(loc, id, shape, options, contents, brief, description)
+      val groups = definitions.groupBy(_.getClass)
+      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
+      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
+      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
+      val functions = mapTo[Function](groups.get(classOf[Function]))
+      val constants = mapTo[Constant](groups.get(classOf[Constant]))
+      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
+      val types = mapTo[Type](groups.get(classOf[Type]))
+      val terms = mapTo[Term](groups.get(classOf[Term]))
+      val includes = mapTo[Include[StreamletDefinition]](groups.get(classOf[Include[StreamletDefinition]]))
+      Streamlet(
+        loc,
+        id,
+        shape,
+        inlets,
+        outlets,
+        handlers,
+        functions,
+        constants,
+        invariants,
+        types,
+        includes,
+        authors,
+        options,
+        terms,
+        brief,
+        description,
+        comments
+      )
     }
   }
 

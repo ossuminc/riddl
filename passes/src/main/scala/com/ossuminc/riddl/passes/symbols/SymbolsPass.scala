@@ -36,11 +36,11 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
 
-  override def postProcess(root: Root @unused): Unit = ()
+  override def postProcess(root: RootContainer @unused): Unit = ()
 
   private def rootLessParents(parents: Seq[Definition]): Parents = {
     parents.filter {
-      case _: Root              => false // Roots don't have names and don't matter
+      case _: RootContainer              => false // Roots don't have names and don't matter
       case x: Definition if x.isImplicit => false // Parents with no names don't count
       case _                             => true // Everything else is fair game
     }
@@ -48,7 +48,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     definition match {
-      case _: Root              => // ignore
+      case _: RootContainer              => // ignore
       case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
       case definition: Definition =>
         val name = definition.id.value

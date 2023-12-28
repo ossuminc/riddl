@@ -13,7 +13,7 @@ import org.scalatest.wordspec.AnyWordSpec
 class ResolvingTest extends AnyWordSpec with Matchers {
 
   def resolve(
-               root: Root, commonOptions: CommonOptions = CommonOptions(
+    root: RootContainer, commonOptions: CommonOptions = CommonOptions(
     showMissingWarnings = false,
     showUsageWarnings = false,
     showStyleWarnings = false

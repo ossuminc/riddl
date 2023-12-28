@@ -136,7 +136,8 @@ class ParsingTestTest extends ParsingTest {
     "parseTopLevelDomain[Projector]" in {
       parseTopLevelDomain[Projector](
         "domain foo is { context C is { projector X is { ??? } } }",
-        _.domains.head.contexts.head.projectors.head
+        _.domains.head.contexts.head.
+          projectors.head
       ) match {
         case Left(messages)  => fail(messages.format)
         case Right((src, _)) => src.id.value mustBe "X"

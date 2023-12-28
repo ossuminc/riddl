@@ -156,6 +156,8 @@ class ContextValidationTest extends ValidatingTest {
             (2, 2, rpi),
             Identifier((2, 12, rpi), "foo"),
             List(),
+            List(),
+            List(),
             List(
               Type(
                 (3, 3, rpi),
@@ -167,15 +169,24 @@ class ContextValidationTest extends ValidatingTest {
                 ),
                 None,
                 None
-              ),
+              )
+            ),
+            List.empty[Constant],
+            List.empty[Inlet],
+            List.empty[Outlet],
+            List(
               Handler(
                 (4, 11, rpi),
                 Identifier((4, 11, rpi), "one"),
+                List(),
                 List(),
                 None,
                 None
               )
             ),
+            List(),
+            List(),
+            List(),
             None,
             None
           )

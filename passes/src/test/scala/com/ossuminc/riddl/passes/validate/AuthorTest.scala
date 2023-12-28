@@ -30,7 +30,7 @@ class AuthorTest extends ValidatingTest {
       }
     }
     "must be defined" in {
-      val input = s"""domain foo is { by author Bar }"""
+      val input = """domain foo by author Bar is { ??? }"""
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs) =>
           val errs = msgs.justErrors
@@ -47,7 +47,7 @@ class AuthorTest extends ValidatingTest {
                     |    email: "reid@ossum.biz"
                     |  }
                     |domain Foo is {
-                    |  application Bar  is { by author Reid }
+                    |  application Bar by author Reid is { ??? }
                     |}
                     |""".stripMargin)
       Riddl.parseAndValidate(input) match {
@@ -62,7 +62,7 @@ class AuthorTest extends ValidatingTest {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
-                    |  context Bar  is { by author Reid }
+                    |  context Bar by author Reid is { ??? }
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
@@ -76,7 +76,7 @@ class AuthorTest extends ValidatingTest {
                     |    email: "reid@ossum.biz"
                     |  }
                     |}
-                    |domain Bar  is { by author Reid }
+                    |domain Bar by author Reid is { ??? }
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.hasErrors must be(false)
@@ -88,7 +88,7 @@ class AuthorTest extends ValidatingTest {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
-                    |  domain Bar  is { by author Foo.Reid }
+                    |  domain Bar by author Foo.Reid is { ??? }
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>
@@ -101,9 +101,8 @@ class AuthorTest extends ValidatingTest {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
-                    |  context Bar  is { 
-                    |    by author Reid
-                    |    entity Bar is { by author Reid  }
+                    |  context Bar by author Reid is {
+                    |    entity Bar by author Reid is { ??? }
                     |  }
                     |}
                     |""".stripMargin
@@ -119,10 +118,7 @@ class AuthorTest extends ValidatingTest {
                     |    email: "reid@ossum.biz"
                     |  }
                     |  context Bar {
-                    |    function FooBar is {  
-                    |      by author Reid  
-                    |      body { ??? }
-                    |    }
+                    |    function FooBar by author Reid is { ??? }
                     |  }
                     |}
                     |""".stripMargin
@@ -138,7 +134,7 @@ class AuthorTest extends ValidatingTest {
                     |    email: "reid@ossum.biz"
                     |  }
                     |  context Bar is {
-                    |    repository FooBar  is { by author Reid }
+                    |    repository FooBar by author Reid is { ??? }
                     |  }
                     |}
                     |""".stripMargin
@@ -152,7 +148,7 @@ class AuthorTest extends ValidatingTest {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
-                    |  epic Bar is { by author Reid  }
+                    |  epic Bar by author Reid is { ??? }
                     |}
                     |""".stripMargin
       parseAndValidateDomain(input) { case (_, _, msgs) =>

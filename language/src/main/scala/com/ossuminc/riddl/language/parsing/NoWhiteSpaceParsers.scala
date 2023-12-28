@@ -19,7 +19,7 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
       CharsWhile(ch => ch != '\n' && ch != '\r').!
     )
   }
-  
+
   def until[u: P](first: Char, second: Char): P[String] = {
     var firstFound = false
     var secondFound = false

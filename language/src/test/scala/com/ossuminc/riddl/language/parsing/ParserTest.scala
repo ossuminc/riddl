@@ -9,8 +9,6 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
 
-import java.nio.file.Path
-
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
 
@@ -31,7 +29,7 @@ class ParserTest extends ParsingTest {
           errors must not be empty
           val head = errors.head.message
           head must include("Expected one of")
-          head must include("\"author\"")
+          head must include("\"author\"") 
           head must include("\"domain\"")
         case Right(_) => fail("Invalid syntax should make an error")
       }
@@ -80,8 +78,7 @@ class ParserTest extends ParsingTest {
             Domain(
               (1, 1, input),
               Identifier((1, 8, input), "foo"),
-              Seq.empty[DomainOption],
-              contents = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
+              domains = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
             )
           )
       }
@@ -257,6 +254,14 @@ class ParserTest extends ParsingTest {
             Identifier((1, 8, rpi), "Hamburger"),
             Seq(EntityTransient((2, 13, rpi)), EntityIsAggregate((2, 24, rpi))),
             Seq(
+              State(
+                (3, 3, rpi),
+                Identifier((3, 9, rpi), "BurgerState"),
+                TypeRef((3, 24, rpi), "type", PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
+                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
+              )
+            ),
+            List(
               Type(
                 (2, 36, rpi),
                 Identifier((2, 41, rpi), "Foo"),
@@ -266,16 +271,10 @@ class ParserTest extends ParsingTest {
                     Field(
                       (2, 50, rpi),
                       Identifier((2, 50, rpi), "x"),
-                      String_((2, 53, rpi), None, None),
+                      Strng((2, 53, rpi), None, None),
                     )
                   )
                 )
-              ),
-              State(
-                (3, 3, rpi),
-                Identifier((3, 9, rpi), "BurgerState"),
-                TypeRef((3, 24, rpi), "type", PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
-                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
               )
             )
           )
@@ -298,7 +297,7 @@ class ParserTest extends ParsingTest {
               (1, 19, rpi),
               PathIdentifier((1, 27, rpi), Seq("foo", "bar"))
             ),
-            Seq.empty
+            Seq.empty[Handler]
           )
       }
     }
@@ -319,15 +318,33 @@ class ParserTest extends ParsingTest {
         case Right((function, _)) =>
           function must matchPattern {
             case Function(
-              _,
-              Identifier(_, "foo"),
-              _,
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
-              _,
-              _,
-              _
-            ) =>
+                  _,
+                  Identifier(_, "foo"),
+                  Some(
+                    Aggregation(
+                      _,
+                      Seq(Field(_, Identifier(_, "b"), Bool(_), _, _, _)),
+                      _
+                    )
+                  ),
+                  Some(
+                    Aggregation(
+                      _,
+                      Seq(Field(_, Identifier(_, "i"), Integer(_), _, _, _)),
+                      _
+                    )
+                  ),
+                  _,
+                  _,
+                  _,
+                  _,
+                  _,
+                  _,
+                  _,
+                  None,
+                  None,
+                  List()
+                ) =>
           }
       }
     }
@@ -344,34 +361,6 @@ class ParserTest extends ParsingTest {
         case Right((domain, rpi)) =>
           val r = domain.contexts.head.replicas.head
           r.typeExp mustBe Integer((3, 21, rpi))
-      }
-    }
-    "parse from a complex file" in {
-      val rpi = RiddlParserInput(Path.of("language/src/test/input/everything.riddl"))
-      parseTopLevelDomains(rpi) match {
-        case Left(errors) =>
-          fail(errors.format)
-        case Right(root) =>
-          /*
-          // Top Level Author
-          author Reid is { name: "Reid" email: "reid@ossum.biz" }
-
-         // A top level domain
-        domain Everything is {
-          // How to mark a definition with the author that created it
-          by author Reid
-
-          type SomeType is String // <-- that's a type
-
-          /* This is another way to do a comment, just like C/C++ */
-          command DoAThing is { thingField: Integer }
-           */
-          root.contents.startsWith(Seq(
-            LineComment((1,1,rpi),"Top Level Author"),
-            Author((2,1,rpi),Identifier((2,8,rpi),"Reid"),
-              LiteralString((2,23,rpi), "Reid"),
-              LiteralString((2,37,rpi), "reid@ossum.biz"))
-          ))
       }
     }
   }

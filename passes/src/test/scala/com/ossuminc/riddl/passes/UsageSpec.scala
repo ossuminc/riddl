@@ -29,7 +29,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
                     |      }
                     |      state S of E.SFields is {
                     |        handler H is {
-                    |          on command C.DoIt from di: context C{
+                    |          on command di:C.DoIt {
                     |            set field S.f2 to "field di.f1"
                     |          }
                     |        }
@@ -55,7 +55,7 @@ class UsageSpec extends AnyWordSpec with Matchers {
           val domain = model.domains.head
           val D_T = domain.types.find(_.id.value == "T").get
           val context = domain.contexts.head
-          val DoIt = context.types.find(_.id.value == "DoIt").get
+          val DoIt = context.types.find(_.id.value == "DoIt").get.asInstanceOf[Type]
           val ref = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
           val f1 = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
           val C_T = context.types.find(_.id.value == "T").get
@@ -95,9 +95,9 @@ class UsageSpec extends AnyWordSpec with Matchers {
         case Left(messages) => fail(messages.format)
         case Right(result)  =>
           // info(result.messages.format)
-          result.messages.hasErrors mustBe false
+          result.messages.hasErrors mustBe (false)
           val warnings = result.messages.justUsage
-          warnings.size mustBe 2
+          warnings.size mustBe (2)
           val warnMessage = warnings.last.format
           warnMessage must include("Entity 'fooBar' is unused")
       }
@@ -112,9 +112,9 @@ class UsageSpec extends AnyWordSpec with Matchers {
       Riddl.parseAndValidate(RiddlParserInput(input), options, shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
         case Right(result) =>
-          result.messages.isOnlyIgnorable mustBe true
+          result.messages.isOnlyIgnorable mustBe (true)
           val warnings = result.messages.justWarnings
-          warnings.size mustBe 2
+          warnings.size mustBe (2)
           val warnMessage = warnings.last.format
           warnMessage must include("Type 'Bar' is unused")
       }

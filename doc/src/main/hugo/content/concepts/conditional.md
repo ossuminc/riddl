@@ -18,4 +18,7 @@ TBD
 * [Statements]({{< relref "statement.md" >}})
 
 ## Contains
-Nothing
+Nothing (Lea)
+
+## Syntax Example
+TBD

@@ -25,3 +25,6 @@ All [vital](){{ < relref "vital.md" >}} definitions may contain constants.
 ## Contains
 
 Nothing
+
+## Syntax Example
+TBD

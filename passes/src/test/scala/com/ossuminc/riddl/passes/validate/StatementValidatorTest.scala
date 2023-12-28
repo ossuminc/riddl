@@ -1,5 +1,5 @@
 package com.ossuminc.riddl.passes.validate
-import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.AST.RootContainer
 import com.ossuminc.riddl.language.Messages.{Messages, StyleWarning}
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -29,7 +29,7 @@ class StatementValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate(input, "test case",CommonOptions(), shouldFailOnErrors = false) {
-        (root: Root, _: RiddlParserInput, messages: Messages ) =>
+        (root: RootContainer, _: RiddlParserInput, messages: Messages ) =>
           // info(messages.format)
           root.isEmpty mustBe false
           messages.hasErrors mustBe false

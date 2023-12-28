@@ -62,19 +62,19 @@ object FoldingSupport {
     def symbolTable: SymbolsOutput
 
     def pathIdToDefinition(
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    ): Option[Definition] = {
+                            pid: PathIdentifier,
+                            parents: Seq[Definition]
+                          ): Option[Definition] = {
       val result = resolvePath(pid, parents)()()
       result.headOption
     }
 
     private def adjustStacksForPid(
-      searchFor: String,
-      pid: PathIdentifier,
-      parentStack: mutable.Stack[Definition],
-      nameStack: mutable.Stack[String]
-    ): Seq[Definition] = {
+                                    searchFor: String,
+                                    pid: PathIdentifier,
+                                    parentStack: mutable.Stack[Definition],
+                                    nameStack: mutable.Stack[String]
+                                  ): Seq[Definition] = {
       // Since we're at a field that references another type then we
       // need to push that type's path on the name stack which is just itself
       nameStack.push(searchFor)
@@ -93,10 +93,10 @@ object FoldingSupport {
     }
 
     private def findCandidates(
-      searchFor: String,
-      parentStack: mutable.Stack[Definition],
-      nameStack: mutable.Stack[String]
-    ): Seq[Definition] = {
+                                searchFor: String,
+                                parentStack: mutable.Stack[Definition],
+                                nameStack: mutable.Stack[String]
+                              ): Seq[Definition] = {
       parentStack.headOption match {
         case None =>
           // Nothing in the parent stack so we're done searching and
@@ -113,16 +113,16 @@ object FoldingSupport {
               // if we're at an onClause that references a message then we
               // need to push that message's path on the name stack
               adjustStacksForPid(searchFor, oc.msg.pathId, parentStack, nameStack)
-            case ad: AggregateValue =>
+            case ad: AggregateDefinition =>
               ad.typeEx match {
                 case a: Aggregation =>
                   // if we're at a field composed of more fields, then those fields
-                  // srt what we are looking for
-                  a.contents.filter[Field]
-                case Enumeration(_, enumerators)       => enumerators
+                  // what we are looking for
+                  a.contents
+                case Enumeration(_, enumerators) => enumerators
                 case a: AggregateUseCaseTypeExpression =>
                   // Message types have fields too, those fields are what we seek
-                  a.contents.filter[Field]
+                  a.contents
                 case AliasedTypeExpression(_, _, pid) =>
                   // if we're at a field that references another type then we
                   // need to push that types path on the name stack
@@ -133,10 +133,10 @@ object FoldingSupport {
               }
             case t: Type =>
               t.typ match {
-                case a: Aggregation                    => a.contents.filter[Field]
-                case a: AggregateUseCaseTypeExpression => a.contents.filter[Field]
-                case Enumeration(_, enumerators)       => enumerators
-                case AliasedTypeExpression(_, _, pid)  =>
+                case a: Aggregation => a.contents
+                case a: AggregateUseCaseTypeExpression => a.contents
+                case Enumeration(_, enumerators) => enumerators
+                case AliasedTypeExpression(_, _, pid) =>
                   // if we're at a type definition that references another type then
                   // we need to push that type's path on the name stack
                   adjustStacksForPid(searchFor, pid, parentStack, nameStack)
@@ -144,11 +144,16 @@ object FoldingSupport {
                   // Any other type expression can't be descended into
                   Seq.empty[Definition]
               }
+            case f: Function =>
+              // If we're at a Function node, the functions input and output
+              // parameters are the candidates to search next
+              val input: Aggregation = f.input.getOrElse(Aggregation.empty(f.loc))
+              val output: Aggregation = f.output.getOrElse(Aggregation.empty(f.loc))
+              input.contents ++ output.contents
             case d: Definition =>
               d.contents.flatMap {
-                case Include(_, contents, _) => contents.definitions
-                case d: Definition           => Seq(d)
-                case _                       => Seq.empty
+                case Include(_, contents, _, _) => contents
+                case d: Definition => Seq(d)
               }
           }
       }
@@ -160,17 +165,17 @@ object FoldingSupport {
       * resolve it from the map or the symbol table.
       *
       * @param pid
-      *   The path to consider
+      * The path to consider
       * @param parents
-      *   The parent stack to provide the context from which the search starts
+      * The parent stack to provide the context from which the search starts
       *
       * @return
-      *   Either an error or a definition
+      * Either an error or a definition
       */
     private def resolveRelativePath(
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    ): Seq[Definition] = {
+                                     pid: PathIdentifier,
+                                     parents: Seq[Definition]
+                                   ): Seq[Definition] = {
 
       // Initialize the visited stack. This is used to detect looping. We
       // should never visit the same definition twice but if we do we will
@@ -214,11 +219,14 @@ object FoldingSupport {
                 // Generate the error message
                 this.addError(
                   pid.loc,
-                  msg = s"""Path resolution encountered a loop at ${definition.identify}
+                  msg =
+                    s"""Path resolution encountered a loop at ${definition.identify}
                        |  for name '$soughtName' when resolving ${pid.format}
-                       |  in definition context: ${parents
-                            .map(_.identify)
-                            .mkString("\n    ", "\n    ", "\n")}
+                       |  in definition context: ${
+                      parents
+                        .map(_.identify)
+                        .mkString("\n    ", "\n    ", "\n")
+                    }
                        |""".stripMargin
                 )
                 // Signal we're done searching with no result
@@ -242,7 +250,7 @@ object FoldingSupport {
                     // The name we are now searching for may have been updated by the
                     // findCandidates function adjusting the stacks.
                     nameStack.headOption match {
-                      case None       => soughtName
+                      case None => soughtName
                       case Some(name) => name
                     }
 
@@ -269,7 +277,7 @@ object FoldingSupport {
       // if there is a single thing left on the stack and that things is
       // a RootContainer
       parentStack.headOption match
-        case Some(x: Root) if parentStack.size == 1 =>
+        case Some(x: RootContainer) if parentStack.size == 1 =>
           // then pop it off because RootContainers don't count and we want to
           // rightfully return an empty sequence for "not found"
           parentStack.pop()
@@ -284,9 +292,9 @@ object FoldingSupport {
     }
 
     private def resolvePathFromHierarchy(
-      pid: PathIdentifier,
-      parents: Seq[Definition]
-    ): Seq[Definition] = {
+                                          pid: PathIdentifier,
+                                          parents: Seq[Definition]
+                                        ): Seq[Definition] = {
       pid.value.headOption match {
         case None =>
           Seq.empty[Definition] // signla not found
@@ -313,27 +321,74 @@ object FoldingSupport {
     }
 
     private def doNothingMultiple(
-      @unused list: List[(Definition, Seq[Definition])]
-    ): Seq[Definition] = {
+     @unused list: List[(Definition, Seq[Definition])]
+   ): Seq[Definition] = {
       Seq.empty[Definition]
     }
 
-    def resolvePath(
+    def resolvePidRelativeTo[DEF <: Definition : ClassTag](
       pid: PathIdentifier,
-      parents: Seq[Definition]
-    )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle)(
-      onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] = doNothingMultiple
-    ): Seq[Definition] = {
+      definition: Definition
+    ): Option[DEF] = {
+      val parents = definition +: symbolTable.parentsOf(definition)
+      this.resolvePathIdentifier[DEF](pid, parents)
+    }
+
+    def resolvePathIdentifier[DEF <: Definition : ClassTag](
+                                                             pid: PathIdentifier,
+                                                             parents: Seq[Definition]
+                                                           ): Option[DEF] = {
+      def isSameKind(d: Definition): Boolean = {
+        val clazz = classTag[DEF].runtimeClass
+        d.getClass == clazz
+      }
+
+      if pid.value.isEmpty then {
+        None
+      }
+      else if pid.value.exists(_.isEmpty) then {
+        resolveRelativePath(pid, parents).headOption match {
+          case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
+          case _ => None
+        }
+      } else {
+        resolvePathFromHierarchy(pid, parents).headOption match {
+          case Some(head) if isSameKind(head) => Some(head.asInstanceOf[DEF])
+          case _ =>
+            val symTabCompatibleNameSearch = pid.value.reverse
+            val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
+            list match {
+              case Nil => // nothing found
+                // We couldn't find the path in the hierarchy or the symbol table
+                // so let's signal this by returning an empty sequence
+                None
+              case (d, _) :: Nil if isSameKind(d) => // exact match
+                // Give caller an option to do something or morph the results
+                Some(d.asInstanceOf[DEF])
+              case _ => None
+            }
+        }
+      }
+    }
+
+    def resolvePath(
+                     pid: PathIdentifier,
+                     parents: Seq[Definition]
+                   )(onSingle: Seq[Definition] => Seq[Definition] = doNothingSingle)(
+                     onMultiple: List[(Definition, Seq[Definition])] => Seq[Definition] = doNothingMultiple
+                   ): Seq[Definition] = {
       if pid.value.isEmpty then {
         Seq.empty[Definition]
-      } else if pid.value.exists(_.isEmpty) then {
+      }
+      else if pid.value.exists(_.isEmpty) then {
         val resolution = resolveRelativePath(pid, parents)
         onSingle(resolution)
       } else {
         val result = resolvePathFromHierarchy(pid, parents)
         if result.nonEmpty then {
           onSingle(result)
-        } else {
+        }
+        else {
           val symTabCompatibleNameSearch = pid.value.reverse
           val list = symbolTable.lookupParentage(symTabCompatibleNameSearch)
           list match {

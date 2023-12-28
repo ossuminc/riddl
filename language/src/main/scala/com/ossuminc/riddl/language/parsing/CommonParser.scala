@@ -33,13 +33,13 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
           (Keywords.name ~ Readability.is ~ literalString ~ Keywords.email ~ Readability.is ~
             literalString ~ (Keywords.organization ~ Readability.is ~ literalString).? ~
             (Keywords.title ~ Readability.is ~ literalString).? ~
-            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description
-    ).map { case (loc, id, (name, email, org, title, url), brief, description) =>
-      Author(loc, id, name, email, org, title, url, brief, description)
+            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description ~ comments
+    ).map { case (loc, id, (name, email, org, title, url), brief, description, comments) =>
+      Author(loc, id, name, email, org, title, url, brief, description, comments)
     }
   }
 
-  def include[K <: RiddlValue, u: P](
+  def include[K <: Definition, u: P](
     parser: P[?] => P[Seq[K]]
   ): P[Include[K]] = {
     P(Keywords.include ~/ literalString)./.map { (str: LiteralString) =>
@@ -47,7 +47,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def importDef[u: P]: P[OccursInDomain] = {
+  def importDef[u: P]: P[DomainDefinition] = {
     P(
       location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ Readability.from ~ literalString
     ).map { tuple => doImport(tuple._1, tuple._2, tuple._3) }
@@ -107,27 +107,24 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     )
   ).?
 
-  def inlineComment[u: P]: P[InlineComment] = {
+  private def inlineComment[u: P]: P[Comment] = {
     P(
       location ~ "/*" ~ until('*', '/')
     ).map { case (loc, comment) =>
-      val lines = comment.split('\n').toList
-      InlineComment(loc, lines)
+      Comment(loc, comment)
     }
   }
 
-  def endOfLineComment[u: P]: P[LineComment] = {
+  private def endOfLineComment[u: P]: P[Comment] = {
     P(location ~ "//" ~ toEndOfLine).map { case (loc, comment) =>
-      LineComment(loc, comment)
+      Comment(loc, comment)
     }
-  }
-
-  def comment[u:P]: P[Comment] = {
-    P(inlineComment | endOfLineComment)
   }
 
   def comments[u: P]: P[Seq[Comment]] = {
-    P(comment).rep(0)
+    P(
+      inlineComment | endOfLineComment
+    ).rep(0)
   }
 
   private def wholeNumber[u: P]: P[Long] = {
@@ -194,15 +191,18 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  extension (map: Map[Class[RiddlValue], Seq[RiddlValue]])
-    def extract[T <: RiddlValue: ClassTag]: Seq[T] = {
+  implicit class ClassMapHelper(
+    map: Map[Class[Definition], Seq[Definition]]
+  ) {
+    def extract[T <: Definition: ClassTag]: Seq[T] = {
       val clazzTag = classTag[T].runtimeClass
       map
-        .get(clazzTag.asInstanceOf[Class[RiddlValue]])
+        .get(clazzTag.asInstanceOf[Class[Definition]])
         .fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
     }
+  }
 
-  def mapTo[T <: RiddlValue](seq: Option[Seq[RiddlValue]]): Seq[T] = {
+  def mapTo[T <: Definition](seq: Option[Seq[Definition]]): Seq[T] = {
     seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
   }
 
@@ -228,7 +228,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description)./.map(tpl =>
+    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description ~ comments)./.map(tpl =>
       (Term.apply _).tupled(tpl)
     )
   }

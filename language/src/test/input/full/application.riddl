@@ -1,4 +1,3 @@
-application application is {
-  by author Reid
+application application by author Reid is {
   term term is briefly "Terminal"
 }

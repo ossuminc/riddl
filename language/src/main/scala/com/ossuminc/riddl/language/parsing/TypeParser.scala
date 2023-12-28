@@ -22,14 +22,14 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map { tpl => (EntityReferenceTypeExpression.apply _).tupled(tpl) }
   }
 
-  private def stringType[u: P]: P[String_] = {
+  private def stringType[u: P]: P[Strng] = {
     P(
       location ~ PredefTypes.String_ ~/
         (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~ integer.? ~
           Punctuation.roundClose).?
     ).map {
-      case (loc, Some((min, max))) => String_(loc, min, max)
-      case (loc, None)             => String_(loc, None, None)
+      case (loc, Some((min, max))) => Strng(loc, min, max)
+      case (loc, None)             => Strng(loc, None, None)
     }
   }
 
@@ -314,19 +314,16 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def enumerator[u: P]: P[Enumerator] = {
-    P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
+    P(location ~ identifier ~ enumValue ~ briefly ~ description ~ comments).map { tpl =>
       (Enumerator.apply _).tupled(tpl)
     }
-  }
-  
-  private def enumerators[u:P]: P[Seq[Enumerator]] = {
-    enumerator.rep(1, maybe(Punctuation.comma) ) | undefined[u,Seq[Enumerator]](Seq.empty[Enumerator])
-      
   }
 
   def enumeration[u: P]: P[Enumeration] = {
     P(
-      location ~ Keywords.any ~ Readability.of.? ~/ open ~/ enumerators  ~ close./
+      location ~ Keywords.any ~ Readability.of.? ~/ open ~/
+        (enumerator.rep(1, sep = Punctuation.comma.?) |
+          Punctuation.undefinedMark.!.map(_ => Seq.empty[Enumerator])) ~ close./
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
@@ -346,7 +343,7 @@ private[parsing] trait TypeParser extends CommonParser {
     )./.map {
       case (loc, Some(key), pid) =>
         AliasedTypeExpression(loc, key, pid)
-      case (loc, None, pid) =>
+      case (loc, None, pid)      =>
         AliasedTypeExpression(loc, "type", pid)
     }
   }
@@ -363,7 +360,7 @@ private[parsing] trait TypeParser extends CommonParser {
 
   def field[u: P]: P[Field] = {
     P(
-      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description
+      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description ~ comments
     ).map(tpl => (Field.apply _).tupled(tpl))
   }
 
@@ -378,24 +375,23 @@ private[parsing] trait TypeParser extends CommonParser {
   def method[u: P]: P[Method] = {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
-        is ~ fieldTypeExpression ~ briefly ~ description
+        is ~ fieldTypeExpression ~ briefly ~ description ~ comments
     ).map(tpl => (Method.apply _).tupled(tpl))
   }
 
-  private def aggregateContent[u: P]: P[RiddlValue] = {
-    import sourcecode.Text.generate
-    P(field | method | comment)
-  }
-
-  private def aggregateDefinitions[u: P]: P[Seq[RiddlValue]] = {
+  private def aggregateDefinitions[u: P]: P[Seq[AggregateDefinition]] = {
     P(
-      undefined(Seq.empty[RiddlValue]) | aggregateContent.rep(min = 1,Punctuation.comma.? )
+      undefined(Seq.empty[AggregateDefinition]) |
+        (field | method).rep(min = 1, Punctuation.comma)
     )
   }
 
   def aggregation[u: P]: P[Aggregation] = {
     P(location ~ open ~ aggregateDefinitions ~ close).map { case (loc, contents) =>
-      Aggregation(loc, contents)
+      val groups = contents.groupBy(_.getClass)
+      val fields = mapTo[Field](groups.get(classOf[Field]))
+      val methods = mapTo[Method](groups.get(classOf[Method]))
+      Aggregation(loc, fields, methods)
     }
   }
 
@@ -419,7 +415,7 @@ private[parsing] trait TypeParser extends CommonParser {
     mk: AggregateUseCase,
     agg: Aggregation
   ): AggregateUseCaseTypeExpression = {
-    AggregateUseCaseTypeExpression(loc, mk, agg.contents)
+    AggregateUseCaseTypeExpression(loc, mk, agg.fields, agg.methods)
   }
 
   private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
@@ -437,7 +433,7 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
         Readability.to ~ typeExpression
-    ).map(tpl => (Mapping.apply _).tupled(tpl))
+    ).map { tpl => (Mapping.apply _).tupled(tpl) }
   }
 
   /** Parses sets, i.e.
@@ -531,27 +527,28 @@ private[parsing] trait TypeParser extends CommonParser {
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
       location ~ aggregateUseCase ~/ identifier ~ is ~ (aliasedTypeExpression | aggregation) ~ briefly ~
-        description
-    ).map { case (loc, useCase, id, ateOrAgg, brief, description) =>
+        description ~ comments
+    ).map { case (loc, useCase, id, ateOrAgg, brief, description, comments) =>
       ateOrAgg match {
         case agg: Aggregation =>
-          val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents)
-          Type(loc, id, mt, brief, description)
+          val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.fields, agg.methods)
+          Type(loc, id, mt, brief, description, comments)
         case ate: AliasedTypeExpression =>
-          Type(loc, id, ate, brief, description)
+          Type(loc, id, ate, brief, description, comments)
         case _ =>
           require(false, "Oops! Impossible case")
           // Type just to satisfy compiler because it doesn't know require(false...) will throw
-          Type(loc, id, Nothing(loc), brief, description)
+          Type(loc, id, Nothing(loc), brief, description, comments)
       }
     }
   }
 
   private def defOfType[u: P]: P[Type] = {
     P(
-      location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ briefly ~ description
-    ).map { case (loc, id, typ, brief, description) =>
-      Type(loc, id, typ, brief, description)
+      location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ briefly ~
+        description ~ comments
+    ).map { case (loc, id, typ, brief, description, comments) =>
+      Type(loc, id, typ, brief, description, comments)
     }
   }
 
@@ -562,7 +559,7 @@ private[parsing] trait TypeParser extends CommonParser {
   def constant[u: P]: P[Constant] = {
     P(
       location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ briefly ~ description
+        Punctuation.equalsSign ~ literalString ~ briefly ~ description ~ comments
     ).map { tpl => (Constant.apply _).tupled(tpl) }
   }
 

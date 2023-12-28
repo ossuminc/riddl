@@ -21,9 +21,9 @@ import java.io.File
 abstract class ValidatingTest extends ParsingTest {
 
   protected def runStandardPasses(
-                                   model: Root,
-                                   options: CommonOptions,
-                                   shouldFailOnErrors: Boolean = false
+    model: RootContainer,
+    options: CommonOptions,
+    shouldFailOnErrors: Boolean = false
   ): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(model, options)
     if shouldFailOnErrors && result.messages.hasErrors then Left(result.messages)
@@ -37,7 +37,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (Root, RiddlParserInput, Messages) => Assertion
+    validation: (RootContainer, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, origin) match {
       case Left(errors) =>
@@ -59,7 +59,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    andThen: (PassesResult, Root, RiddlParserInput, Messages) => T
+    andThen: (PassesResult, RootContainer, RiddlParserInput, Messages) => T
   ): T = {
     TopLevelParser.parse(rpi) match {
       case Left(errors) =>
@@ -79,10 +79,10 @@ abstract class ValidatingTest extends ParsingTest {
     commonOptions: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (PassesResult, Root, RiddlParserInput, Messages) => Assertion
+    validation: (PassesResult, RootContainer, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     parseValidateAndThen[Assertion](rpi, commonOptions, shouldFailOnErrors) {
-      (passesResult: PassesResult, root: Root, rpi: RiddlParserInput, messages: Messages) =>
+      (passesResult: PassesResult, root: RootContainer, rpi: RiddlParserInput, messages: Messages) =>
         passesResult.root.inputs mustNot be(empty)
         validation(passesResult, root, rpi, messages)
     }
@@ -99,7 +99,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (Root, PassesResult) => Assertion = (_, pr) => defaultFail(pr)
+    validation: (RootContainer, PassesResult) => Assertion = (_, pr) => defaultFail(pr)
   ): Assertion = {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
@@ -116,7 +116,7 @@ abstract class ValidatingTest extends ParsingTest {
     label: String,
     fileName: String,
     options: CommonOptions = CommonOptions()
-  )(validation: (Root, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
+  )(validation: (RootContainer, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
     Riddl.parseAndValidate(file, options) match {

@@ -47,6 +47,14 @@ use them.
 If you're interested in knowing how we plan to extend RIDDl in the future, 
 please review our [Future Work]({{< relref "./future-work" >}}) section. 
 
+## Important Links
+
+* This Documentation: https://riddl.tech
+* Source Code: https://github.com/ossuminc/riddl
+* Examples Repository: https://github.com/ossuminc/riddl-examples
+* Contact: [Reid's LinkedIn Profile](https://www.linkedin.com/in/reidspencer/)
+* [Reactive Summit 2022 Slide Deck](/decks/ReactiveSummit2022.pptx)
+
 ## Full Index
 
 {{< toc-tree >}}

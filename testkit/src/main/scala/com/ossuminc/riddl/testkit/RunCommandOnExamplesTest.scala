@@ -85,7 +85,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
 
   def validateTestName(@unused name: String): Boolean = true
 
-  private def forEachConfigFile[T](
+  def forEachConfigFile[T](
     f: (String, Path) => T
   ): Seq[Either[(String, Messages), T]] = {
     val configs = FileUtils

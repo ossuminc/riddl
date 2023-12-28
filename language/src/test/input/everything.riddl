@@ -1,14 +1,8 @@
-// Top Level Author
-author Reid is { name: "Reid" email: "reid@ossum.biz" }
+domain Everything by author Reid is {
 
-// A top level domain
-domain Everything is {
-  // How to mark a definition with the author that created it
-  by author Reid
+  author Reid is { name: "Reid" email: "reid@ossum.biz" }
 
-  type SomeType is String // <-- that's a type
-
-  /* This is another way to do a comment, just like C/C++ */
+  type SomeType is String
   command DoAThing is { thingField: Integer }
 
   context APlant is {
@@ -38,9 +32,8 @@ domain Everything is {
     type stamp is TimeStamp        // Define stamp as a TimeStamp
     type url is URL                // Define url as a Uniform Resource Locator
 
-    type PeachType is { a: Integer // can you put a comment here?
-    }
-    type enum is any of { Apple Pear Peach(23)   Persimmon(24) }
+    type PeachType is { a: Integer }
+    type enum is any of { Apple Pear Peach(23)  Persimmon(24) }
 
     type alt is one of { enum or stamp or url } described as {
       | Alternations select one type from a list of types

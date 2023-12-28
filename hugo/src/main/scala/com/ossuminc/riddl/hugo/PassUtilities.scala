@@ -50,7 +50,7 @@ trait PassUtilities {
       case _: OnMessageClause | _: OnInitClause | _: OnTerminationClause | _: OnOtherClause | _: Inlet | _: Outlet =>
         pars + "#" + definition.id.value.toLowerCase
       case _: Field | _: Enumerator | _: Invariant | _: Author | _: SagaStep | _: Include[Definition] @unchecked |
-           _: Root | _: Term =>
+          _: RootContainer | _: Term =>
         pars
       case _ =>
         if parents.isEmpty then pars + definition.id.value.toLowerCase

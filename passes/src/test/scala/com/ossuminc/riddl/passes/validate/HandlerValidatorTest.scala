@@ -80,7 +80,35 @@ class HandlerValidatorTest extends ValidatingTest {
           )
       }
     }
-   
+
+    "produce an error when on clause doesn't reference a message type" in {
+      val input =
+        """domain entityTest is {
+          |context EntityContext is {
+          |entity Hamburger is {
+          |  type Incoming is String
+          |  record Fields is { field1: Number }
+          |  state HamburgerState of Fields is {
+          |    handler foo is {
+          |      on event Incoming {
+          |       set field HamburgerState.field1 to "678"
+          |     }
+          |    }
+          |  }
+          |}
+          |}
+          |}
+          |""".stripMargin
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+        case (_, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "'Type 'Incoming'(8:10) should reference one of these types: Event but is a String type instead"
+          )
+      }
+    }
+
     "allow message clauses to name the message and it resolves" in {
       val input =
         """domain entityTest is {
@@ -90,7 +118,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  record Fields is { field1: String }
           |  state HamburgerState of Fields = {
           |    handler doit is {
-          |      on command EntityCommand {
+          |      on command ec:EntityCommand {
           |        set field HamburgerState.field1 to "field ec.foo"
           |      }
           |    }

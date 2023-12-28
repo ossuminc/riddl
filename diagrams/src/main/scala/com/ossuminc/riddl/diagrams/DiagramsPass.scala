@@ -12,8 +12,7 @@ import com.ossuminc.riddl.passes.*
 
 import scala.collection.mutable
 
-/** The information needed to generate a Data Flow Diagram. DFDs are generated for each 
-  * [[com.ossuminc.riddl.language.AST.Context]] and consist of the
+/** The information needed to generate a Data Flow Diagram. DFDs are generated for each [[Context]] and consist of the
   * streaming components that that are connected.
   */
 case class DataFlowDiagramData()
@@ -57,7 +56,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _ => ()
   }
 
-  private def findRelationships(context: AST.Context): Seq[(Context, String)] = {
+  def findRelationships(context: AST.Context): Seq[(Context, String)] = {
     val statements: Seq[Statement] = pullStatements(context) ++
       context.entities.flatMap(pullStatements) ++
       context.adaptors.flatMap(pullStatements) ++
@@ -74,7 +73,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     }
   }
 
-  private def getStatementReferences(statement: Statement): Seq[Reference[Definition]] = {
+  def getStatementReferences(statement: Statement): Seq[Reference[Definition]] = {
     statement match
       case SendStatement(_, msg, portlet)   => Seq(msg, portlet)
       case TellStatement(_, msg, processor) => Seq(msg, processor)
@@ -83,7 +82,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _                                => Seq.empty
   }
 
-  private def inferRelationship(context: Context, definition: Definition): Option[String] = {
+  def inferRelationship(context: Context, definition: Definition): Option[String] = {
     definition match
       case m: Type if m.typ.isContainer && m.typ.hasDefinitions =>
         symTab.contextOf(m).map(c => s"Uses ${m.identify} in ${c.identify}")
@@ -96,7 +95,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _ => None
   }
 
-  private def pullStatements(processor: Processor[?, ?]): Seq[Statement] = {
+  def pullStatements(processor: Processor[?, ?]): Seq[Statement] = {
     val s1 = processor.functions.flatMap(_.statements)
     val s2 = for {
       h <- processor.handlers
@@ -106,7 +105,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     s1 ++ s2
   }
 
-  def postProcess(root: Root): Unit = {}
+  def postProcess(root: RootContainer): Unit = {}
 
   def result: DiagramsPassOutput = {
     DiagramsPassOutput(
