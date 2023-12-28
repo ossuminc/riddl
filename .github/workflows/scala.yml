@@ -1,11 +1,16 @@
 name: Scala Build
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
+    paths:
+      - !'doc/src/main/hugo/**'
+      - !'.github/workflows/gh-pages.yml'
+      - '**.scala
+      - '**.sbt'
 
 jobs:
   build:
