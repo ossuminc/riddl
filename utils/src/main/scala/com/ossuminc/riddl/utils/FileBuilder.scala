@@ -12,10 +12,20 @@ trait FileBuilder {
 
   protected val sb: mutable.StringBuilder = new mutable.StringBuilder()
 
-  val newLine = System.lineSeparator()
+  protected val newLine = System.lineSeparator()
+
   def nl: this.type = { sb.append(newLine); this }
 
+  protected val spaces_per_level = 2
+
+  protected def indent(line: String, level: Int = 1): this.type = {
+    sb.append(" ".repeat(level*spaces_per_level)).append(line)
+    nl
+  }
+
+
   override def toString: String = sb.toString
+
   def toLines: Seq[String] = sb.toString.split(newLine).toIndexedSeq
 
   def clear: Unit = sb.clear()
