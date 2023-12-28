@@ -3,8 +3,12 @@ title: "Processors"
 draft: false
 ---
 
-A processor is a component of any [vital definition]({{< relref "vital" >}}). 
-A processor performs some transformation of the data flowing in from
+A processor is a  [vital definition]({{< relref "vital" >}}) that
+processes messages that it receives. There are many kinds of processors
+in RIDDL:
+* [Adaptor]({{< relref "adaptor" >}})
+
+some transformation of the data flowing in from
 its [inlet]({{< relref inlet >}}), and produces different
 data to its [outlet]({{< relref outlet >}}).
 

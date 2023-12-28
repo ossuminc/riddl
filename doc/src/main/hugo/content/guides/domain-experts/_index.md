@@ -18,18 +18,18 @@ for their knowledge of business rules, processes, technical details,
 and system requirements.
 
 These are the [EF_Huttons](https://www.youtube.com/watch?v=ByhYlY5WVvQ) of the
-organization.
-
-While not a comprehensive list, these people may be Architects, Analysts,
-Developers, Managers, QA Engineers, or even Call Center Agents, and line
-workers from the warehouse.
+organization since people listen to them. They may be Architects, 
+Analysts, Developers, Managers, Executives, or highly knowledgeable 
+people from anywhere in the organization that speak with authority.
 
 Domain Experts do not need to be well versed in DDD or Reactive Architecture
 initially. It is the job of the Author to act as a guide and mentor through
 these topics. But Domain Experts must be open to change what is for what
-could be. Reactive Architectures can be very challenging for people to digest.
-More specifically, quite often techniques used to implement distributed and
-reactive systems will change user experiences, expectations of consistency
+could be. Complex distributed architectures can be very challenging for 
+people to digest.  More specifically, the techniques used to implement 
+complex distributed systems will change user experiences, expectations of consistency
 and availability, the means used to monitor and maintain systems and processes,
-and so on. Domain experts will need to come to understand the reasons for
-these changes and be able to evangelize them as they interact with their peers.
+and so on. Domain experts will need to understand the reasons for these changes 
+and be able to evangelize them as they interact with their peers.
+
+{{< toc-tree >}}
