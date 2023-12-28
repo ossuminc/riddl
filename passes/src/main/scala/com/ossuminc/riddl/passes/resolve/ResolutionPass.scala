@@ -163,13 +163,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         of.foreach(resolveTypeExpression(_, parents))
       case Sequence(_, of) =>
         resolveTypeExpression(of, parents)
-      case Mapping(_, from, to) =>
+      case Mapping(_, from, _) =>
         resolveTypeExpression(from, parents)
       case Set(_, of) =>
         resolveTypeExpression(of, parents)
       case Graph(_, of) =>
         resolveTypeExpression(of, parents)
-      case Table(loc, of, dimensions) =>
+      case Table(_, of, _) =>
         resolveTypeExpression(of, parents)
       case c: Cardinality =>
         resolveTypeExpression(c.typeExp, parents)
@@ -181,7 +181,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     resolveARef[Type](mc.msg, parents)
     mc.from match
       case None => ()
-      case Some(maybeName, reference) =>
+      case Some(_, reference) =>
         resolveARef[Definition](reference, parents)
     resolveStatements(mc.statements, parents)
   }
@@ -198,24 +198,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     statement match {
       case ss: SetStatement =>
         resolveARef[Field](ss.field, parents)
-      case BecomeStatement(loc, entity, handler) =>
+      case BecomeStatement(_, entity, _) =>
         resolveARef[Entity](entity, parents)
-      case FocusStatement(loc, group) =>
+      case FocusStatement(_, group) =>
         resolveARef[Group](group, parents)
       case ForEachStatement(_, pid, _) =>
         resolveAPathId[Type](pid, parents)
-      case SendStatement(loc, msg, portlet) =>
+      case SendStatement(_, msg, _) =>
         resolveARef[Type](msg, parents)
-      case MorphStatement(loc, entity, state, message) =>
+      case MorphStatement(_, entity, state, message) =>
         resolveARef[Entity](entity, parents)
         resolveARef[State](state, parents)
         resolveARef[Type](message, parents)
-      case TellStatement(loc, msg, processorRef) =>
+      case TellStatement(_, msg, processorRef) =>
         resolveARef[Type](msg, parents)
         resolveARef[Processor[?, ?]](processorRef, parents)
-      case CallStatement(loc, func) =>
+      case CallStatement(_, func) =>
         resolveARef[Function](func, parents)
-      case ReplyStatement(loc, message) =>
+      case ReplyStatement(_, message) =>
         resolveARef[Type](message, parents)
       case _: ArbitraryStatement  => () // no references
       case _: ErrorStatement      => () // no references
@@ -247,11 +247,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           resolveARef[Input](pi.to, parentsAsSeq)
         case si: SelfInteraction =>
           resolveARef[Definition](si.from, parentsAsSeq)
-        case vi: VagueInteraction => () // no resolution required
         case SendMessageInteraction(_, from, message, to, _, _) =>
           resolveARef[Definition](from, parentsAsSeq)
           resolveAMessageRef(message, parentsAsSeq)
           resolveARef[Definition](to, parentsAsSeq)
+        case _: VagueInteraction => () // no resolution required
         case _: OptionalInteractions => () // no references
         case _: ParallelInteractions => () // no references
         case _: SequentialInteractions => () // no references
@@ -320,7 +320,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             wrongType[T](pathId, parent, d)
             Seq.empty
           // List has multiple elements
-          case (d, pars) :: tail if isSameKindAndHasDifferentPathsToSameNode(list) =>
+          case (d, pars) :: _ if isSameKindAndHasDifferentPathsToSameNode(list) =>
             resolved[T](pathId, parent, d)
             d +: pars
           case list =>
@@ -455,13 +455,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       val maybeFound = stack.toSeq
       checkResultingPath(pathId, parents, maybeFound)
       stack.headOption match
-        case Some(head: Root) if stack.size == 1 =>
+        case Some(_: Root) if stack.size == 1 =>
           // then pop it off because RootContainers don't count and we want to
           // rightfully return an empty sequence for "not found"
           stack.pop()
           // Convert parent stack to immutable sequence
           stack.toSeq
-        case Some(head) =>
+        case Some(_) =>
           // Not the root, just convert the result to immutable Seq
           stack.toSeq
         case None =>
@@ -508,7 +508,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     maybeResult: Seq[Definition]
   ): Boolean = {
     pathId.value.headOption match {
-      case Some(topName) =>
+      case Some(_) =>
         val foundDefinition = maybeResult.head
         val foundName = foundDefinition.id.value
         val soughtName = pathId.value.last
@@ -716,12 +716,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
                   parents,
                   s"the PathId is invalid since it's first element, $topName, does not exist in the model"
                 )
-              case AnchorNotFoundAnywhere(topName) =>
+              case AnchorNotFoundAnywhere(_) =>
                 notResolved(pathId, parents)
               case AnchorIsRoot(anchor, anchor_parents) =>
                 // The first name in the path id was "Root" so start from there
                 resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
-              case AnchorIsAmbiguous(topName, list) =>
+              case AnchorIsAmbiguous(_, list) =>
                 // The anchor is ambiguous so generate that message
                 ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one"))
   }

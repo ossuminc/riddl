@@ -12,7 +12,6 @@ import com.ossuminc.riddl.language.{AST, At, Messages}
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
-import scala.annotation.tailrec
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
@@ -46,14 +45,6 @@ trait BasicValidation {
     parents: Seq[Definition]
   ): Option[T] = {
     pathIdToDefinition(pid, parents).map(_.asInstanceOf[T])
-  }
-
-  private def resolvePidRelativeTo[T <: Definition](
-    pid: PathIdentifier,
-    relativeTo: Definition
-  ): Option[T] = {
-    val parents = relativeTo +: symbols.parentsOf(relativeTo)
-    resolvePath[T](pid, parents)
   }
 
   def checkPathRef[T <: Definition: ClassTag](
@@ -151,45 +142,6 @@ trait BasicValidation {
               s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead"
             )
         }
-      }
-    }
-  }
-
-  @tailrec private final def getPathIdType(
-    pid: PathIdentifier,
-    parents: Seq[Definition]
-  ): Option[TypeExpression] = {
-    if pid.value.isEmpty then {
-      None
-    } else {
-      val maybeDef: Option[Definition] = resolvePath[Definition](pid, parents)
-      val candidate: Option[TypeExpression] = maybeDef match {
-        case None              => None
-        case Some(f: Function) => f.output
-        case Some(t: Type)     => Some(t.typ)
-        case Some(f: Field)    => Some(f.typeEx)
-        case Some(c: Constant) => Some(c.typeEx)
-        case Some(s: State) =>
-          Some(AliasedTypeExpression(s.typ.loc, "state", s.typ.pathId))
-        case Some(Inlet(_, _, typ, _, _)) =>
-          Some(AliasedTypeExpression(typ.loc, "inlet", typ.pathId))
-        case Some(Outlet(_, _, typ, _, _)) =>
-          Some(AliasedTypeExpression(typ.loc, "outlet", typ.pathId))
-        case Some(connector: Connector) =>
-          connector.flows
-            .map(typeRef => AliasedTypeExpression(typeRef.loc, "connector", typeRef.pathId))
-            .orElse(Option.empty[TypeExpression])
-        case Some(streamlet: Streamlet) =>
-          streamlet.outlets.headOption match
-            case None       => Option.empty[TypeExpression]
-            case Some(head) => resolvePath[Type](head.type_.pathId, parents).map(_.typ)
-        case Some(_) => Option.empty[TypeExpression]
-      }
-      candidate match {
-        case Some(AliasedTypeExpression(_, _, pid)) =>
-          getPathIdType(pid, maybeDef.toSeq)
-        case Some(other: TypeExpression) => Some(other)
-        case None                        => None
       }
     }
   }

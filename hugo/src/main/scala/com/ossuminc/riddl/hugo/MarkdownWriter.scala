@@ -14,13 +14,11 @@ import com.ossuminc.riddl.stats.{KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.utils.TextFileWriter
 
 import com.ossuminc.riddl.language.parsing.Keywords
-import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import java.nio.file.Path
 import scala.annotation.unused
-import com.sun.org.apache.xerces.internal.util.SymbolTable
 
 case class MarkdownWriter(
   filePath: Path,
@@ -1050,7 +1048,6 @@ case class MarkdownWriter(
     )
     val total_stats: KindStats = stats.categories.getOrElse("All", KindStats())
     stats.categories.foreach { case (key, s) =>
-      val percentOfAll = s.percent_of_all(total_stats.count)
       emitTableRow(
         key,
         s.count.toString,
