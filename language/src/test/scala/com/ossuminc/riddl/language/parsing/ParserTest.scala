@@ -9,6 +9,8 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
 
+import java.nio.file.Path
+
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
 
@@ -320,8 +322,8 @@ class ParserTest extends ParsingTest {
               _,
               Identifier(_, "foo"),
               _,
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)), _)),
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)),_)),
+              Some(Aggregation(_,Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
+              Some(Aggregation(_,Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
               _,
               _,
               _
@@ -342,6 +344,34 @@ class ParserTest extends ParsingTest {
         case Right((domain, rpi)) =>
           val r = domain.contexts.head.replicas.head
           r.typeExp mustBe Integer((3, 21, rpi))
+      }
+    }
+    "parse from a complex file" in {
+      val rpi = RiddlParserInput(Path.of("language/src/test/input/everything.riddl"))
+      parseTopLevelDomains(rpi) match {
+        case Left(errors) =>
+          fail(errors.format)
+        case Right(root) =>
+          /*
+          // Top Level Author
+          author Reid is { name: "Reid" email: "reid@ossum.biz" }
+
+         // A top level domain
+        domain Everything is {
+          // How to mark a definition with the author that created it
+          by author Reid
+
+          type SomeType is String // <-- that's a type
+
+          /* This is another way to do a comment, just like C/C++ */
+          command DoAThing is { thingField: Integer }
+           */
+          root.contents.startsWith(Seq(
+            LineComment((1,1,rpi),"Top Level Author"),
+            Author((2,1,rpi),Identifier((2,8,rpi),"Reid"),
+              LiteralString((2,23,rpi), "Reid"),
+              LiteralString((2,37,rpi), "reid@ossum.biz"))
+          ))
       }
     }
   }

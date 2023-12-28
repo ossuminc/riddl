@@ -107,7 +107,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     )
   ).?
 
-  private def inlineComment[u: P]: P[InlineComment] = {
+  def inlineComment[u: P]: P[InlineComment] = {
     P(
       location ~ "/*" ~ until('*', '/')
     ).map { case (loc, comment) =>
@@ -116,7 +116,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  private def endOfLineComment[u: P]: P[LineComment] = {
+  def endOfLineComment[u: P]: P[LineComment] = {
     P(location ~ "//" ~ toEndOfLine).map { case (loc, comment) =>
       LineComment(loc, comment)
     }

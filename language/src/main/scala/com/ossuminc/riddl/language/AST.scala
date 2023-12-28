@@ -228,7 +228,8 @@ object AST {
   }
 
   sealed trait Comment
-      extends OccursAtRootScope
+      extends RiddlValue
+      with OccursAtRootScope
       with OccursInVitalDefinitions
       with OccursInProcessors
       with OccursInGroup {
@@ -304,7 +305,7 @@ object AST {
       extends Container[RiddlValue]
       with OccursInVitalDefinitions
       with OccursInProcessors
-      with OccursInFunctions
+      with OccursInFunction
       with OccursAtRootScope {
     lazy val comments: Seq[Comment] = contents.filter[Comment]
   }
@@ -362,7 +363,7 @@ object AST {
   }
 
   /** Base trait of any definition that is a container and contains types */
-  sealed trait WithTypes extends Container[RiddlValue] with OccursInProcessors with OccursInFunctions {
+  sealed trait WithTypes extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
     lazy val types: Seq[Type] = contents.filter[Type]
 
     override def hasTypes: Boolean = types.nonEmpty
@@ -400,7 +401,7 @@ object AST {
     def groups: Seq[Group] = contents.filter[Group]
   }
 
-  sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunctions {
+  sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
     def statements: Seq[Statement] = contents.filter[Statement]
   }
 
@@ -484,10 +485,10 @@ object AST {
   sealed trait OccursInGroup extends RiddlValue
 
   /** Base trait of any definition that is in the content of an Output */
-  sealed trait OutputDefinition extends RiddlValue
+  sealed trait OccursInOutput extends RiddlValue
 
   /** Base trait of any definition that is in the content of an Input */
-  sealed trait InputDefinition extends RiddlValue
+  sealed trait OccursInInput extends RiddlValue
 
   /** Base trait of any definition that is in the content of a context */
   sealed trait OccursInContext extends RiddlValue
@@ -498,35 +499,35 @@ object AST {
   /** Base trait of any value used in the definition of an entity */
   sealed trait OccursInEntity extends RiddlValue
 
-  /** Base trait of definitions that are part of a Handler Definition */
-  sealed trait OccursInHandler extends RiddlValue
-
-  /** Base trait of definitions defined in a repository */
-  sealed trait OccursInRepository extends RiddlValue
-
-  /** Base trait of definitions define within a Streamlet */
-  sealed trait OccursInStreamlets extends RiddlValue
-
   /** Base trait of definitions that are in the body of a Story definition */
   sealed trait OccursInEpic extends RiddlValue
 
   /** Base trait of any definition that is in the content of a function. */
-  sealed trait OccursInFunctions extends RiddlValue
+  sealed trait OccursInFunction extends RiddlValue
 
-  /** Base trait of definitions that are part of a Saga Definition */
-  sealed trait OccursInSaga extends RiddlValue
-
-  /** Base trait of definitions that are part of a Saga Definition */
-  sealed trait OccursInState extends RiddlValue
+  /** Base trait of definitions that are part of a Handler Definition */
+  sealed trait OccursInHandler extends RiddlValue
 
   /** Base trait of any definition that occurs in the body of a projector */
   sealed trait OccursInProjector extends RiddlValue
 
-  /** Base trait of definitions in a UseCase, typically interactions */
-  sealed trait OccursInUseCase extends RiddlValue
+  /** Base trait of definitions defined in a repository */
+  sealed trait OccursInRepository extends RiddlValue
+
+  /** Base trait of definitions that are part of a Saga Definition */
+  sealed trait OccursInSaga extends RiddlValue
+
+  /** Base trait of definitions define within a Streamlet */
+  sealed trait OccursInStreamlet extends RiddlValue
+
+  /** Base trait of definitions that are part of a Saga Definition */
+  sealed trait OccursInState extends RiddlValue
 
   /** Any definition that is part of a Type's Definition */
-  sealed trait TypeValue extends RiddlValue
+  sealed trait OccursInType extends RiddlValue
+
+  /** Base trait of definitions in a UseCase, typically interactions */
+  sealed trait OccursInUseCase extends RiddlValue
 
   /** A trait to define the definitions that can be included in the definition of a VitalDefinition */
   sealed trait OccursInVitalDefinitions
@@ -535,8 +536,8 @@ object AST {
       with OccursInContext
       with OccursInDomain
       with OccursInEntity
-      with OccursInFunctions
-      with OccursInStreamlets
+      with OccursInFunction
+      with OccursInStreamlet
       with OccursInProjector
       with OccursInRepository
       with OccursInSaga
@@ -550,7 +551,7 @@ object AST {
       with OccursInEntity
       with OccursInProjector
       with OccursInRepository
-      with OccursInStreamlets
+      with OccursInStreamlet
       with OccursInSaga
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
@@ -807,14 +808,14 @@ object AST {
   case class AuthorRef(loc: At, pathId: PathIdentifier)
       extends Reference[Author]
       with OccursInVitalDefinitions
-      with OccursInFunctions
+      with OccursInFunction
       with OccursInProcessors {
     override def format: String = s"author ${pathId.format}"
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
-  sealed trait AggregateValue extends TypeValue with WithIdentifier {
+  sealed trait AggregateValue extends OccursInType with WithIdentifier {
     def typeEx: TypeExpression
   }
 
@@ -831,7 +832,7 @@ object AST {
     def isAggregateOf(useCase: AggregateUseCase): Boolean = {
       this match {
         case AliasedTypeExpression(_, keyword, _) if keyword.compareToIgnoreCase(useCase.format) == 0 => true
-        case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == useCase                   => true
+        case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == useCase                      => true
         case _                                                                                        => false
       }
     }
@@ -882,7 +883,7 @@ object AST {
       case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
       case RangeType(_, min, max)  => s"Range($min,$max)"
       case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
-      case m @ AggregateUseCaseTypeExpression(_, messageKind, _, _) =>
+      case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
         s"${messageKind.format} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind
       case _                  => "<unknown type expression>"
@@ -1002,7 +1003,7 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
-      with TypeValue {
+      with OccursInType {
     override def format: String = id.format
   }
 
@@ -1055,10 +1056,9 @@ object AST {
     description: Option[Description] = None
   ) extends LeafDefinition
       with AggregateValue
-      with TypeValue
       with OccursInSaga
       with OccursInState
-      with OccursInFunctions
+      with OccursInFunction
       with OccursInProjector {
     override def format: String = s"${id.format}: ${typeEx.format}"
   }
@@ -1097,28 +1097,30 @@ object AST {
     description: Option[Description] = None
   ) extends LeafDefinition
       with AggregateValue
-      with TypeValue
+      with OccursInType
       with OccursInSaga
       with OccursInState
-      with OccursInFunctions
+      with OccursInFunction
       with OccursInProjector {
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
   }
-
+  
   /** A type expression that contains an aggregation of fields
     *
     * This is used as the base trait of Aggregations and Messages
     */
-  sealed trait AggregateTypeExpression extends TypeExpression with Container[AggregateValue] {
-    def fields: Seq[Field]
-    def methods: Seq[Method]
-    final def contents: Contents[AggregateValue] = fields ++ methods
+  sealed trait AggregateTypeExpression(contents: Contents[RiddlValue])
+      extends Container[RiddlValue]
+      with TypeExpression
+      with WithComments {
+    def fields: Seq[Field] = contents.filter[Field]
+    def methods: Seq[Method] = contents.filter[Method]
     override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       other match {
         case oate: AggregateTypeExpression =>
           val validity: Seq[Boolean] = for
-            ofield <- oate.contents
+            ofield: AggregateValue <- oate.contents.filter[AggregateValue]
             named <- contents.find(ofield.id.value)
             myField: Field = named.asInstanceOf[Field] if named.isInstanceOf[Field]
             myTypEx = myField.typeEx
@@ -1137,14 +1139,13 @@ object AST {
     *
     * @param loc
     *   The location of the aggregation definition
-    * @param fields
-    *   The fields of the aggregation
+    * @param contents
+    *   The content of the aggregation
     */
   case class Aggregation(
     loc: At,
-    fields: Seq[Field] = Seq.empty[Field],
-    methods: Seq[Method] = Seq.empty[Method]
-  ) extends AggregateTypeExpression
+    contents: Seq[RiddlValue] = Seq.empty
+  ) extends AggregateTypeExpression(contents)
 
   object Aggregation {
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
@@ -1252,15 +1253,14 @@ object AST {
     *   The location of the message type expression
     * @param usecase
     *   The kind of message defined
-    * @param fields
-    *   The fields of the message's aggregation
+    * @param contents
+    *   The contents of the message's aggregation
     */
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
-    fields: Seq[Field] = Seq.empty[Field],
-    methods: Seq[Method] = Seq.empty[Method]
-  ) extends AggregateTypeExpression {
+    contents: Seq[RiddlValue] = Seq.empty
+  ) extends AggregateTypeExpression(contents) {
     override def format: String = {
       usecase.format.toLowerCase() + " " + super.format
     }
@@ -1661,24 +1661,24 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Definition
-      with Container[TypeValue]
+      with Container[OccursInType]
       with OccursInProcessors
       with OccursInProjector
-      with OccursInFunctions
+      with OccursInFunction
       with OccursInDomain {
-    override def contents: Seq[TypeValue] = {
+    override def contents: Seq[OccursInType] = {
       typ match {
-        case a: Aggregation                    => a.contents
-        case a: AggregateUseCaseTypeExpression => a.contents
+        case a: Aggregation                    => a.fields ++ a.methods
+        case a: AggregateUseCaseTypeExpression => a.fields ++ a.methods
         case Enumeration(_, enumerators)       => enumerators
-        case _                                 => Seq.empty[TypeValue]
+        case _                                 => Seq.empty[OccursInType]
       }
     }
 
     final override def kind: String = {
       typ match {
-        case AggregateUseCaseTypeExpression(_, useCase, _, _) => useCase.useCase
-        case _                                                => "Type"
+        case AggregateUseCaseTypeExpression(_, useCase, _) => useCase.useCase
+        case _                                             => "Type"
       }
     }
 
@@ -1750,7 +1750,7 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// STATEMENTS
 
   /** Base trait of all Statements that can occur in OnClauses */
-  sealed trait Statement extends RiddlValue with OccursInProcessors with OccursInFunctions
+  sealed trait Statement extends RiddlValue with OccursInProcessors with OccursInFunction
 
   /** A statement whose behavior is specified as a text string allowing an arbitrary action to be specified handled by
     * RIDDL's syntax.
@@ -2051,19 +2051,19 @@ object AST {
     *   An optional description of the function.
     */
   case class Function(
-    loc: At,
-    id: Identifier,
-    options: Seq[FunctionOption] = Seq.empty,
-    input: Option[Aggregation] = None,
-    output: Option[Aggregation] = None,
-    contents: Contents[OccursInFunctions] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends VitalDefinition[FunctionOption, OccursInFunctions]
+                       loc: At,
+                       id: Identifier,
+                       options: Seq[FunctionOption] = Seq.empty,
+                       input: Option[Aggregation] = None,
+                       output: Option[Aggregation] = None,
+                       contents: Contents[OccursInFunction] = Seq.empty,
+                       brief: Option[LiteralString] = Option.empty[LiteralString],
+                       description: Option[Description] = None
+  ) extends VitalDefinition[FunctionOption, OccursInFunction]
       with WithTypes
       with WithFunctions
       with WithStatements
-      with OccursInFunctions
+      with OccursInFunction
       with OccursInProcessors {
 
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty &&
@@ -2260,7 +2260,7 @@ object AST {
       with OccursInEntity
       with OccursInState
       with OccursInRepository
-      with OccursInStreamlets
+      with OccursInStreamlet
       with OccursInProjector {
     override def isEmpty: Boolean = clauses.isEmpty
 
@@ -2902,10 +2902,10 @@ object AST {
     id: Identifier,
     shape: StreamletShape,
     options: Seq[StreamletOption] = Seq.empty[StreamletOption],
-    contents: Contents[OccursInStreamlets] = Seq.empty,
+    contents: Contents[OccursInStreamlet] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[StreamletOption, OccursInStreamlets]
+  ) extends Processor[StreamletOption, OccursInStreamlet]
       with OccursInContext {
 //    override def contents: Seq[OccursInStreamlets] = super.contents ++
 //      inlets ++ outlets ++ handlers ++ terms ++ constants
@@ -3552,18 +3552,18 @@ object AST {
     id: Identifier,
     verbAlias: String,
     putOut: TypeRef | ConstantRef | LiteralString,
-    outputs: Seq[OutputDefinition] = Seq.empty[OutputDefinition],
+    outputs: Seq[OccursInOutput] = Seq.empty[OccursInOutput],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends Definition
-      with Container[OutputDefinition]
+      with Container[OccursInOutput]
       with OccursInApplication
-      with OutputDefinition
+      with OccursInOutput
       with OccursInGroup {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def isAppRelated: Boolean = true
 
-    override lazy val contents: Seq[OutputDefinition] = outputs
+    override lazy val contents: Seq[OccursInOutput] = outputs
 
     /** Format the node to a string */
     override def format: String = s"$kind ${id.value} $verbAlias ${putOut.format}"
@@ -3599,18 +3599,18 @@ object AST {
     id: Identifier,
     verbAlias: String,
     putIn: TypeRef,
-    inputs: Seq[InputDefinition] = Seq.empty[InputDefinition],
+    inputs: Seq[OccursInInput] = Seq.empty[OccursInInput],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends Definition
-      with Container[InputDefinition]
+      with Container[OccursInInput]
       with OccursInApplication
       with OccursInGroup
-      with InputDefinition {
+      with OccursInInput {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def isAppRelated: Boolean = true
 
-    override lazy val contents: Seq[InputDefinition] = inputs
+    override lazy val contents: Seq[OccursInInput] = inputs
 
     /** Format the node to a string */
     override def format: String = {

@@ -10,6 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import Readability.*
+import com.ossuminc.riddl.language.AST
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {

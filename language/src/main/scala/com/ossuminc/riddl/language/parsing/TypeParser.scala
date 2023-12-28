@@ -318,12 +318,15 @@ private[parsing] trait TypeParser extends CommonParser {
       (Enumerator.apply _).tupled(tpl)
     }
   }
+  
+  private def enumerators[u:P]: P[Seq[Enumerator]] = {
+    enumerator.rep(1, maybe(Punctuation.comma) ) | undefined[u,Seq[Enumerator]](Seq.empty[Enumerator])
+      
+  }
 
   def enumeration[u: P]: P[Enumeration] = {
     P(
-      location ~ Keywords.any ~ Readability.of.? ~/ open ~/
-        (enumerator.rep(1, sep = Punctuation.comma.?) |
-          Punctuation.undefinedMark.!.map(_ => Seq.empty[Enumerator])) ~ close./
+      location ~ Keywords.any ~ Readability.of.? ~/ open ~/ enumerators  ~ close./
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
@@ -379,19 +382,20 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map(tpl => (Method.apply _).tupled(tpl))
   }
 
-  private def aggregateDefinitions[u: P]: P[Seq[AggregateValue]] = {
+  private def aggregateContent[u: P]: P[RiddlValue] = {
+    import sourcecode.Text.generate
+    P(field | method | comment)
+  }
+
+  private def aggregateDefinitions[u: P]: P[Seq[RiddlValue]] = {
     P(
-      undefined(Seq.empty[AggregateValue]) |
-        (field | method).rep(min = 1, Punctuation.comma)
+      undefined(Seq.empty[RiddlValue]) | aggregateContent.rep(min = 1,Punctuation.comma.? )
     )
   }
 
   def aggregation[u: P]: P[Aggregation] = {
     P(location ~ open ~ aggregateDefinitions ~ close).map { case (loc, contents) =>
-      val groups = contents.groupBy(_.getClass)
-      val fields = mapTo[Field](groups.get(classOf[Field]))
-      val methods = mapTo[Method](groups.get(classOf[Method]))
-      Aggregation(loc, fields, methods)
+      Aggregation(loc, contents)
     }
   }
 
@@ -415,7 +419,7 @@ private[parsing] trait TypeParser extends CommonParser {
     mk: AggregateUseCase,
     agg: Aggregation
   ): AggregateUseCaseTypeExpression = {
-    AggregateUseCaseTypeExpression(loc, mk, agg.fields, agg.methods)
+    AggregateUseCaseTypeExpression(loc, mk, agg.contents)
   }
 
   private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
@@ -433,7 +437,7 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
         Readability.to ~ typeExpression
-    ).map { tpl => (Mapping.apply _).tupled(tpl) }
+    ).map(tpl => (Mapping.apply _).tupled(tpl))
   }
 
   /** Parses sets, i.e.
@@ -531,7 +535,7 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map { case (loc, useCase, id, ateOrAgg, brief, description) =>
       ateOrAgg match {
         case agg: Aggregation =>
-          val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.fields, agg.methods)
+          val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents)
           Type(loc, id, mt, brief, description)
         case ate: AliasedTypeExpression =>
           Type(loc, id, ate, brief, description)
