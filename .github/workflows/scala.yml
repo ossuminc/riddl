@@ -17,13 +17,16 @@ jobs:
       with:
         java-version: '21'
         distribution: 'adopt-hotspot'
+
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: 'latest'
         extended: true
+
     - name: Coursier Caching
       uses: coursier/cache-action@v6
+
     - name: Build, Run Test, Coverage
       run: |
         which hugo
@@ -40,7 +43,7 @@ jobs:
         path: "target/scala-2.12/scoverage-report/"
 
     - name: Test sbt-riddl plugin
-    - run: |
+      run: |
         export RIDDLC_PATH=riddlc/target/universal/stage/bin/riddlc
         sbt -v clean compile publishLocal "project riddlc" "stage" "project sbt-riddl" scripted
 
