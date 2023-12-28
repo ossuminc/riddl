@@ -10,4 +10,4 @@ In this section we will explore what RIDDL is, by answering these questions:
 {{< toc-tree >}}
 
 Click on the above links to explore this section; or, go to the next recommended
-section: [Conceptual Overview]({{< relref "../concepts" >}}).
+section: [Guides]({{< relref "../guides" >}}).

@@ -7,7 +7,8 @@ Messages are a foundational concept in RIDDL because a RIDDL model implies
 an implementation that is a message-driven system per the 
 [Reactive Manifesto](https://reactivemanifesto.org). Messages in RIDDL are 
 a special case of an [aggregate type]({{< relref "type.md#aggregation" >}}) 
-and the _lingua franca_ of many RIDDL definitions. They define the API for:
+and the _lingua franca_ of many RIDDL definitions. They define the API for
+all the [processors]({{< relref "./processor.md" >}}):
 * [`adaptor`s]({{< relref "adaptor.md" >}})
 * [`application`s]({{< relref "adaptor.md" >}})
 * [`context`s]({{< relref "context.md" >}})
