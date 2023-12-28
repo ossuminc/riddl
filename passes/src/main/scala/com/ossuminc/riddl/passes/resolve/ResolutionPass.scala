@@ -546,7 +546,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         path
       case Some(typ: Type) =>
         typ.typ match {
-          case AggregateUseCaseTypeExpression(_, usecase, _, _) if usecase == kind => path // success
+          case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == kind => path // success
           case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))      => path // success
           case typeEx: Alternation =>
             messages.addError(

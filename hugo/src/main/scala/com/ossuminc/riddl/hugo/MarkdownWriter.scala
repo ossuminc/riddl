@@ -22,7 +22,6 @@ import java.nio.file.Path
 import scala.annotation.unused
 import com.sun.org.apache.xerces.internal.util.SymbolTable
 
-
 case class MarkdownWriter(
   filePath: Path,
   commonOptions: CommonOptions,
@@ -177,7 +176,7 @@ case class MarkdownWriter(
 
     for item <- items do {
       item match {
-        case body: String    => sb.append(s"* $body\n")
+        case body: String     => sb.append(s"* $body\n")
         case rnod: RiddlValue => sb.append(s"* ${rnod.format}")
         case (
               prefix: String,
@@ -209,7 +208,7 @@ case class MarkdownWriter(
         case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
           docBlock.foreach(s => sb.append(s"    * $s\n"))
-        case x: Any          => sb.append(s"* ${x.toString}\n")
+        case x: Any => sb.append(s"* ${x.toString}\n")
       }
     }
     this
@@ -503,7 +502,7 @@ case class MarkdownWriter(
     parents: Seq[Definition]
   ): String = {
     val name = typeEx match {
-      case AliasedTypeExpression(_, _, pid)         => makeTypeName(pid, parents)
+      case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parents)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
       case UniqueId(_, pid)                      => makeTypeName(pid, parents)
       case Alternation(_, of) =>
@@ -548,8 +547,11 @@ case class MarkdownWriter(
   }
 
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition]): this.type = {
-    val data = agg.contents.map { (f: AggregateValue) => (f.id.format, resolveTypeExpression(f.typeEx, parents)) }
-    list(data)
+    val data = agg.contents.map {
+      case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
+      case _                 => ("", "")
+    }
+    list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
   }
 
@@ -723,7 +725,7 @@ case class MarkdownWriter(
     toc("Sagas", mkTocSeq(context.sagas))
     toc("Streamlets", mkTocSeq(context.streamlets))
     list("Connections", mkTocSeq(context.connectors))
-    emitProcessorToc[ContextOption,OccursInContext](context)
+    emitProcessorToc[ContextOption, OccursInContext](context)
     // TODO: generate a diagram for the processors and pipes
     emitIndex("Context", context, parents)
     this
@@ -1006,7 +1008,7 @@ case class MarkdownWriter(
     this
   }
 
-  def emitToDoList(weight: Int, items:  Seq[ToDoItem]): Unit = {
+  def emitToDoList(weight: Int, items: Seq[ToDoItem]): Unit = {
     fileHead(
       "To Do List",
       weight,
