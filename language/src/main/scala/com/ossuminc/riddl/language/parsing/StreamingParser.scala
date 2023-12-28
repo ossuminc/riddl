@@ -32,10 +32,12 @@ private[parsing] trait StreamingParser {
 
   private def connectorOptions[X: P]: P[Seq[ConnectorOption]] = {
     options[X, ConnectorOption](
-      StringIn(RiddlOption.persistent, RiddlOption.technology).!
+      StringIn(RiddlOption.persistent, RiddlOption.technology, RiddlOption.color, RiddlOption.kind).!
     ) {
       case (loc, RiddlOption.persistent, _)    => ConnectorPersistentOption(loc)
       case (loc, RiddlOption.technology, args) => ConnectorTechnologyOption(loc, args)
+      case (loc, RiddlOption.color, args)      => ConnectorColorOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => ConnectorKindOption(loc, args)
     }
   }
 
@@ -61,8 +63,8 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Include[OccursInStreamlets]] = {
-    include[OccursInStreamlets, u](
+  ): P[Include[OccursInStreamlet]] = {
+    include[OccursInStreamlet, u](
       streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
   }
@@ -72,7 +74,7 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[OccursInStreamlets]] = {
+  ): P[Seq[OccursInStreamlet]] = {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
@@ -87,8 +89,10 @@ private[parsing] trait StreamingParser {
   }
 
   private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
-    options[u, StreamletOption](StringIn(RiddlOption.technology).!) { case (loc, RiddlOption.technology, args) =>
-      StreamletTechnologyOption(loc, args)
+    options[u, StreamletOption](StringIn(RiddlOption.technology, RiddlOption.color, RiddlOption.kind).!) {
+      case (loc, RiddlOption.technology, args) => StreamletTechnologyOption(loc, args)
+      case (loc, RiddlOption.color, args)      => StreamletColorOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => StreamletKindOption(loc, args)
     }
   }
 
@@ -97,9 +101,9 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[OccursInStreamlets]] = {
+  ): P[Seq[OccursInStreamlet]] = {
     P(
-      undefined(Seq.empty[OccursInStreamlets]) |
+      undefined(Seq.empty[OccursInStreamlet]) |
         streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)
     )
   }

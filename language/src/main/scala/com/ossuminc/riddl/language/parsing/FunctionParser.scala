@@ -22,8 +22,8 @@ private[parsing] trait FunctionParser {
     }
   }
 
-  private def functionInclude[x: P]: P[Include[OccursInFunctions]] = {
-    include[OccursInFunctions, x](functionDefinitions(_))
+  private def functionInclude[x: P]: P[Include[OccursInFunction]] = {
+    include[OccursInFunction, x](functionDefinitions(_))
   }
 
   def input[u: P]: P[Aggregation] = {
@@ -40,7 +40,7 @@ private[parsing] trait FunctionParser {
     )
   }
 
-  private def functionDefinitions[u: P]: P[Seq[OccursInFunctions]] = {
+  private def functionDefinitions[u: P]: P[Seq[OccursInFunction]] = {
     P(
       typeDef | function | term | functionInclude | authorRef | comment
     )./.rep(0)
@@ -50,12 +50,12 @@ private[parsing] trait FunctionParser {
     (
       Option[Aggregation],
       Option[Aggregation],
-      Seq[OccursInFunctions],
+      Seq[OccursInFunction],
       Seq[Statement]
     )
   ] = {
     P(undefined(None).map { _ =>
-      (None, None, Seq.empty[OccursInFunctions], Seq.empty[Statement])
+      (None, None, Seq.empty[OccursInFunction], Seq.empty[Statement])
     } | (input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 

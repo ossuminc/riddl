@@ -15,12 +15,6 @@ import java.net.URL
 private[parsing] trait EpicParser {
   this: CommonParser with ReferenceParser =>
 
-  private def optionalIdentifier[u: P](keyword: String): P[Identifier] = {
-    P(
-      keyword.map(_ => Identifier.empty) | (identifier ~ keyword)
-    )
-  }
-
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
       location ~ is ~ literalString ~ literalString ~ literalString ~/
@@ -168,6 +162,8 @@ private[parsing] trait EpicParser {
     options[u, EpicOption](RiddlOptions.epicOptions) {
       case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
       case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
+      case (loc, RiddlOption.color, args) => EpicColorOption(loc, args)
+      case (loc, RiddlOption.kind, args) => EpicKindOption(loc, args)
     }
   }
 
@@ -179,7 +175,7 @@ private[parsing] trait EpicParser {
     P(useCase | term | epicInclude | comment | authorRef).rep(1)
   }
 
-  type EpicBody = (
+  private type EpicBody = (
     Option[UserStory],
     Seq[java.net.URL],
     Seq[OccursInEpic]

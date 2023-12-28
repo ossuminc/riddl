@@ -58,14 +58,14 @@ private[parsing] trait ApplicationParser {
       .!
   }
 
-  private def outputDefinitions[u: P]: P[Seq[OutputDefinition]] = {
+  private def outputDefinitions[u: P]: P[Seq[OccursInOutput]] = {
     P(
       is ~ open ~
-        (undefined(Seq.empty[OutputDefinition]) | appOutput.rep(1)) ~
+        (undefined(Seq.empty[OccursInOutput]) | appOutput.rep(1)) ~
         close
     ).?.map {
       case Some(definitions) => definitions
-      case None              => Seq.empty[OutputDefinition]
+      case None              => Seq.empty[OccursInOutput]
     }
   }
 
@@ -85,28 +85,19 @@ private[parsing] trait ApplicationParser {
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
           error(s"Expected a type reference, constant reference, or literal string, not: $xval")
-          Output(
-            loc,
-            nounAlias,
-            id,
-            verbAlias,
-            LiteralString(loc, s"INVALID: `$xval``"),
-            outputs,
-            brief,
-            description
-          )
+          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"), outputs, brief, description)
       }
     }
   }
 
-  private def inputDefinitions[uP: P]: P[Seq[InputDefinition]] = {
+  private def inputDefinitions[uP: P]: P[Seq[OccursInInput]] = {
     P(
       is ~ open ~
-        (undefined(Seq.empty[InputDefinition]) | appInput.rep(1))
+        (undefined(Seq.empty[OccursInInput]) | appInput.rep(1))
         ~ close
     ).?.map {
       case Some(definitions) => definitions
-      case None              => Seq.empty[InputDefinition]
+      case None              => Seq.empty[OccursInInput]
     }
   }
 
