@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]  # Set a branch to deploy
     paths:
-      - doc/src/hugo/**
+      - doc/src/main/hugo/**
       - .github/workflows/gh-pages.yml
       - .vale.ini
       - .github/styles/**
@@ -37,14 +37,15 @@ jobs:
 
       - name: Generate Site With Hugo
         run: |
-          cd doc/src/hugo ; \
+          cd doc/src/main/hugo ; \
           hugo --minify -v \
           --baseURL "https://riddl.tech" \
-          --printMemoryUsage --noBuildLock
+          --printMemoryUsage --noBuildLock --cleanDestinationDir \
+          --enableGitInfo --noBuildLock --printPathWarnings --printMemoryUsage
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc/src/hugo/public
+          publish_dir: ./doc/src/main/hugo/public
