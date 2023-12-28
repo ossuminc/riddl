@@ -3,6 +3,13 @@ name: Documentation
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - doc/src/main/hugo/**
+      - .github/workflows/gh-pages.yml
+      - .vale.ini
+      - .github/styles/**
   push:
     branches: [main]  # Set a branch to deploy
     paths:
