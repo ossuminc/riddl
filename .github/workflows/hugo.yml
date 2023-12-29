@@ -64,6 +64,7 @@ jobs:
           hugo --minify --baseURL "https://riddl.tech" \
           --printMemoryUsage --noBuildLock --cleanDestinationDir \
           --enableGitInfo --noBuildLock --printPathWarnings --printMemoryUsage ; \
+          cd ../../../.. ; \
           sbt "project doc" "test"
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
