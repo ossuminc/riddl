@@ -1,5 +1,5 @@
 ---
-title: "Command/Event Patterns"
+title: "Command/Event Patterns | Author's Guide"
 description: "Alternatives & Recommendations for Command Handler Messages"
 date: 2022-02-25T10:50:32-07:00
 draft: "false"

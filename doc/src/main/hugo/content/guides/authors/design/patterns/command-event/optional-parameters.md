@@ -1,5 +1,5 @@
 ---
-title: "3 - Optional or List Parameters"
+title: "3 - Optional or List Parameters | Author's Guide"
 description: "Entities where every parameter is optional or list"
 date: 2022-02-25T10:50:32-07:00
 draft: "false"
