@@ -318,15 +318,15 @@ private[parsing] trait TypeParser extends CommonParser {
       (Enumerator.apply _).tupled(tpl)
     }
   }
-  
-  private def enumerators[u:P]: P[Seq[Enumerator]] = {
-    enumerator.rep(1, maybe(Punctuation.comma) ) | undefined[u,Seq[Enumerator]](Seq.empty[Enumerator])
-      
+
+  private def enumerators[u: P]: P[Seq[Enumerator]] = {
+    enumerator.rep(1, maybe(Punctuation.comma)) | undefined[u, Seq[Enumerator]](Seq.empty[Enumerator])
+
   }
 
   def enumeration[u: P]: P[Enumeration] = {
     P(
-      location ~ Keywords.any ~ Readability.of.? ~/ open ~/ enumerators  ~ close./
+      location ~ Keywords.any ~ Readability.of.? ~/ open ~/ enumerators ~ close./
     ).map(enums => (Enumeration.apply _).tupled(enums))
   }
 
@@ -383,13 +383,12 @@ private[parsing] trait TypeParser extends CommonParser {
   }
 
   private def aggregateContent[u: P]: P[RiddlValue] = {
-    import sourcecode.Text.generate
     P(field | method | comment)
   }
 
   private def aggregateDefinitions[u: P]: P[Seq[RiddlValue]] = {
     P(
-      undefined(Seq.empty[RiddlValue]) | aggregateContent.rep(min = 1,Punctuation.comma.? )
+      undefined(Seq.empty[RiddlValue]) | aggregateContent.rep(min = 1, Punctuation.comma.?)
     )
   }
 
@@ -445,7 +444,7 @@ private[parsing] trait TypeParser extends CommonParser {
     *   set of String
     * }}}
     */
-  private def setType[u: P]: P[Set] = {
+  private def aSetType[u: P]: P[Set] = {
     P(
       location ~ Keywords.set ~ Readability.of ~ typeExpression
     )./.map { tpl => (Set.apply _).tupled(tpl) }
@@ -475,6 +474,16 @@ private[parsing] trait TypeParser extends CommonParser {
       location ~ Keywords.table ~ Readability.of ~ typeExpression ~ Readability.of ~ Punctuation.squareOpen ~
         integer.rep(1, ",") ~ Punctuation.squareClose
     )./.map { tpl => (Table.apply _).tupled(tpl) }
+  }
+
+  private def replicaType[x: P]: P[Replica] = {
+    P(
+      location ~ Keywords.replica ~ Readability.of ~ replicaTypeExpression
+    ).map { tpl => (Replica.apply _).tupled(tpl) }
+  }
+
+  private def replicaTypeExpression[u: P]: P[TypeExpression] = {
+    P(integerPredefTypes | mappingFromTo | aSetType)
   }
 
   /** Parses ranges, i.e.
@@ -517,15 +526,11 @@ private[parsing] trait TypeParser extends CommonParser {
   private def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType | mappingFromTo | setType |
-          graphType | tableType | aggregateUseCaseTypeExpression | rangeType | decimalType |
+        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType | mappingFromTo | aSetType |
+          graphType | tableType | replicaType | aggregateUseCaseTypeExpression | rangeType | decimalType |
           alternation | entityReferenceType | aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
       )
     )
-  }
-
-  def replicaTypeExpression[u: P]: P[TypeExpression] = {
-    P(integerPredefTypes | mappingFromTo | setType)
   }
 
   private def defOfTypeKindType[u: P]: P[Type] = {

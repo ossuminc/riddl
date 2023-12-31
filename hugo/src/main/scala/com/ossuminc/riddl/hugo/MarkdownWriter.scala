@@ -943,17 +943,7 @@ case class MarkdownWriter(
     emitProcessorToc[RepositoryOption, OccursInRepository](repository)
     emitIndex("Repository", repository, parents)
   }
-
-  def emitReplica(
-    replica: Replica,
-    parents: Seq[Definition],
-    parStrings: Seq[String]
-  ): this.type = {
-    containerHead(replica, "Replica")
-    emitTypeExpression(replica.typeExp, parents, 3)
-    emitDefDoc(replica, parStrings)
-  }
-
+  
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)

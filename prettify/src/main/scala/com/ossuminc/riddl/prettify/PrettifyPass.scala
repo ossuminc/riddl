@@ -97,8 +97,6 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(_.openDef(handler))
       case saga: Saga =>
         state.withCurrent(_.openDef(saga))
-      case replica: Replica =>
-        state.withCurrent(_.openDef(replica))
       case group: Group =>
         state.withCurrent(_.openDef(group))
       case output: Output =>
