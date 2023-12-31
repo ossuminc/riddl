@@ -331,19 +331,19 @@ class ParserTest extends ParsingTest {
           }
       }
     }
-    "support Replica values in Contexts" in {
+    "support Replica types in Contexts" in {
       val input: String =
         """domain foo {
           |  context bar is {
-          |    replica crdt is Integer
+          |    type crdt is replica of Integer
           |  }
           |}
           |""".stripMargin
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
-          val r = domain.contexts.head.replicas.head
-          r.typeExp mustBe Integer((3, 21, rpi))
+          val typ = domain.contexts.head.types.head
+          typ.typ mustBe Replica((3,18,rpi), Integer((3, 29, rpi)))
       }
     }
     "parse from a complex file" in {

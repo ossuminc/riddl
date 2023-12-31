@@ -202,7 +202,11 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   private def emitTable(table: Table): this.type = {
-    this.add("table of ").emitTypeExpression(table.of).add(" of ").add(table.dimensions.mkString("[ ", ", ", " ]"))
+    this.add("table of ").emitTypeExpression(table.of).add(table.dimensions.mkString("[ ", ", ", " ]"))
+  }
+
+  private def emitReplica(replica: Replica): this.type = {
+    this.add("replica of").emitTypeExpression(replica.of)
   }
 
   def emitPattern(pattern: Pattern): this.type = {
@@ -239,6 +243,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case set: Set                 => emitSet(set)
       case graph: Graph             => emitGraph(graph)
       case table: Table             => emitTable(table)
+      case replica: Replica         => emitReplica(replica)
       case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
       case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
       case EntityReferenceTypeExpression(_, er) =>

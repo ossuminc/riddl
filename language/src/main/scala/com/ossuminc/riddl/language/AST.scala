@@ -439,9 +439,6 @@ object AST {
     def repositories: Seq[Repository] = contents.filter[Repository]
   }
 
-  sealed trait WithReplicas extends Container[RiddlValue] with OccursInContext {
-    def replicas: Seq[Replica] = contents.filter[Replica]
-  }
   sealed trait WithEntities extends Container[RiddlValue] with OccursInContext {
     def entities: Seq[Entity] = contents.filter[Entity]
   }
@@ -858,6 +855,7 @@ object AST {
   case class AliasedTypeExpression(loc: At, keyword: String, pathId: PathIdentifier) extends TypeExpression {
     override def format: String = s"$keyword ${pathId.format}"
   }
+  
 
   /** A utility function for getting the kind of a type expression.
     *
@@ -1187,14 +1185,45 @@ object AST {
     override def format: String = s"set of ${of.format}"
   }
 
+  /** A graph of homogenous nodes. This implies the nodes are augmented with
+    * additional data to support navigation in the graph but that detail is
+    * left to the implementation of the model.
+    * @param loc
+    *   Where the type expression occurs in the source
+    * @param of
+    *   The type of the elements of the graph
+    */
   case class Graph(loc: At, of: TypeExpression) extends TypeExpression {
 
     /** Format the node to a string */
     override def format: String = s"graph of ${of.format}"
   }
 
+  /** A vector, table, or array of homogeneous cells. 
+    * @param loc
+    *   Where the type expression occurs in the source
+    * @param of
+    *   The type of the elements of the table
+    * @param dimensions
+    *   The size of the dimensions of the table. There can be as many dimensions as needed. 
+    */
   case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression {
     override def format: String = s"table of ${of.format}(${dimensions.mkString(",")})"
+  }
+
+  /**
+    * A value that is replicated across nodes in a cluster. Usage requirements placement in 
+    * a definition such as [[Context]] or [[Entity]] that supports the `clustered` value 
+    * for the `kind` option.  
+    * @param loc
+    *   Where the replica type expression occurs in the source
+    * @param of
+    *   The kind of data value that is replicated across cluster nodes.  Because replicas
+    *   imply use of a Conflict-free Replicated Data Type, the kind of type expression for
+    *   `of` is restricted to numeric, set, and map types 
+    */
+  case class Replica(loc: At, of: TypeExpression) extends TypeExpression {
+    override def format: String = s"replica of ${of.format}"
   }
 
   /** A type expression whose value is a reference to an instance of an entity.
@@ -2596,26 +2625,6 @@ object AST {
     override def format: String = s"projector ${pathId.format}"
   }
 
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// REPLICA
-
-  /** A replicated value within a context. Integer, Map and Set values will use CRDTs
-    *
-    * @param loc
-    *   The location of
-    * @param typeExp
-    *   The type of the replica
-    */
-  case class Replica(
-    loc: At,
-    id: Identifier,
-    typeExp: TypeExpression,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends LeafDefinition
-      with OccursInContext {
-    final val format: String = s"replica ${id.format}"
-  }
-
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
 
   /** Base trait for all options a Context can have. */
@@ -2692,7 +2701,6 @@ object AST {
   ) extends Processor[ContextOption, OccursInContext]
       with WithProjectors
       with WithRepositories
-      with WithReplicas
       with WithEntities
       with WithStreamlets
       with WithConnectors

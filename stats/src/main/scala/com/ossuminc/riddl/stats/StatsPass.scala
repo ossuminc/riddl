@@ -344,7 +344,6 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
               + { if c.projectors.nonEmpty then 1 else 0 }
               + { if c.repositories.nonEmpty then 1 else 0 }
               + { if c.connectors.nonEmpty then 1 else 0 }
-              + { if c.replicas.nonEmpty then 1 else 0 }
           case e: Entity =>
             countForProcessor
               + { if e.states.nonEmpty then 1 else 0 }

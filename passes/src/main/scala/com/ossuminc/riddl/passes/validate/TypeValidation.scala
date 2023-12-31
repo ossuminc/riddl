@@ -171,6 +171,22 @@ trait TypeValidation extends DefinitionValidation {
     this.checkTypeExpression(table.of, typeDef, parents)
   }
 
+  private def checkReplica(
+    replica: Replica,
+    typeDef: Definition,
+    parents: Seq[Definition]
+  ): Unit = {
+    checkTypeExpression(replica.of, typeDef, parents)
+    replica.of match {
+      case _: Mapping | _: Sequence | _: Set  => // these are okay
+      case _: Cardinality =>
+        messages.addError(replica.loc, s"Replica type expressions may not have cardinality")
+      case t: TypeExpression =>
+        messages.addError(replica.loc, s"Type expression in Replica is not a replicable type")
+    }
+  }
+
+
   def checkTypeExpression(
     typ: TypeExpression,
     defn: Definition,
@@ -188,6 +204,7 @@ trait TypeValidation extends DefinitionValidation {
       case mapping: Mapping            => checkMapping(mapping, defn, parents)
       case graph: Graph                => checkGraph(graph, defn, parents)
       case table: Table                => checkTable(table, defn, parents)
+      case replica: Replica            => checkReplica(replica, defn, parents)
       case rt: RangeType               => checkRangeType(rt)
       case p: Pattern                  => checkPattern(p)
       case Enumeration(_, enumerators) => checkEnumeration(enumerators)

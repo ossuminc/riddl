@@ -103,10 +103,6 @@ case class HugoPass(
       case u: User =>
         val (md: MarkdownWriter, parents) = setUpLeaf(u, stack)
         md.emitUser(u, parents)
-      case r: Replica =>
-        val (md: MarkdownWriter, _) = setUpLeaf(r, stack)
-        val parStrings = makeStringParents(stack)
-        md.emitReplica(r, stack, parStrings)
       case container: Definition =>
         // Everything else is a container and definitely needs its own page
         // and glossary entry.

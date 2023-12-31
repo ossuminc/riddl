@@ -90,8 +90,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         r.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case s: Saga =>
         s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-      case r: Replica =>
-        resolveTypeExpression(r.typeExp, parentsAsSeq)
       case d: Domain =>
         d.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case a: Application =>
@@ -170,6 +168,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case Graph(_, of) =>
         resolveTypeExpression(of, parents)
       case Table(_, of, _) =>
+        resolveTypeExpression(of, parents)
+      case Replica(_, of) => 
         resolveTypeExpression(of, parents)
       case c: Cardinality =>
         resolveTypeExpression(c.typeExp, parents)

@@ -41,19 +41,11 @@ private[parsing] trait ContextParser {
     include[OccursInContext, X](contextDefinitions(_))
   }
 
-  private def replica[x: P]: P[Replica] = {
-    P(
-      location ~ Keywords.replica ~ identifier ~ is ~ replicaTypeExpression ~ briefly ~ description
-    ).map { case (loc, id, typeExp, brief, description) =>
-      Replica(loc, id, typeExp, brief, description)
-    }
-  }
-  
   private def contextDefinition[u:P]: P[OccursInContext] = {
     P(
       typeDef | handler(StatementsSet.ContextStatements) | entity | authorRef |
         adaptor | function | saga | streamlet | projector | repository |
-        inlet | outlet | connector | term | replica | contextInclude | comment
+        inlet | outlet | connector | term | contextInclude | comment
     )
   }
   
