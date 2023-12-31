@@ -1,5 +1,5 @@
 ---
-title: "2 - Same Parameters | Author's Guide"
+title: "2 - Same Parameters"
 description: "Events with Same Parameters"
 date: 2022-02-25T10:50:32-07:00
 draft: "false"

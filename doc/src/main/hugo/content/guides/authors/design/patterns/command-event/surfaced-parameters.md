@@ -1,5 +1,5 @@
 ---
-title: "4 - Surfaced Parameters | Author's Guide"
+title: "4 - Surfaced Parameters"
 description: "Surfacing Entity Data in Events"
 date: 2022-02-25T10:50:32-07:00
 draft: "false"

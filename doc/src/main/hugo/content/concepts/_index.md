@@ -1,7 +1,7 @@
 ---
 title: "Concepts"
 draft: false
-weight: 5
+weight: 15
 ---
 
 In this section we will explore the concepts and ideas that RIDDL uses. This is

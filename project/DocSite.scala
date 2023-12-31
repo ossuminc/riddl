@@ -28,19 +28,20 @@ object DocSite {
         publishTo := Option(Resolver.defaultLocal),
         Compile / doc / target := apiOutput,
         ScalaUnidoc / scalaVersion := (compile / scalaVersion).value,
-        ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(docProjects.map(x => projectToRef(x._1)):_*),
+        ScalaUnidoc / unidoc / unidocProjectFilter := inProjects(docProjects.map(x => projectToRef(x._1)): _*),
         ScalaUnidoc / unidoc / target := apiOutput,
         Compile / doc / scalacOptions := Seq(
-          "-project:RIDDL",
+          "-project:RIDDL API Documentation",
           s"-project-version:${version.value}",
           s"-project-logo:$logoPath",
-          s"-project-footer:Copyright ${projectStartYear.value} ${organizationName}. All Rights Reserved.",
+          s"-project-footer:Copyright ${projectStartYear.value} ${organizationName.value}. All Rights Reserved.",
+          s"-revision:main",
           "-comment-syntax:wiki",
-          s"-source-links:github://$gitHubOrganization/$gitHubRepository/",
+          s"-source-links:github://${gitHubOrganization.value}/${gitHubRepository.value}/main",
           s"-siteroot:${apiOutput.toString}", {
             val mappings: Seq[Seq[String]] = Seq(
               Seq(".*scala", "scaladoc3", "https://scala-lang.org/api/3.x/"),
-              Seq(".*java", "javadoc", "https://docs.oracle.com/javase/8/docs/api/"),
+              Seq(".*java", "javadoc", "https://docs.oracle.com/javase/8/docs/api/")
             )
             s"-external-mappings:${mappings.map(_.mkString("::")).mkString(",")}"
           }

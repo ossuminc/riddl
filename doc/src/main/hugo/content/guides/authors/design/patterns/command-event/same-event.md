@@ -1,5 +1,5 @@
 ---
-title: "1 - Same Event | Author's Guide"
+title: "1 - Same Event"
 description: "Same Event For Each Command"
 date: 2022-02-25T10:50:32-07:00
 draft: "false"
