@@ -2,7 +2,7 @@
 title: "Language"
 type: "page"
 draft: "false"
-weight: 30
+weight: 50
 ---
 
 This section presents the RIDDL source language syntax, one definition at a

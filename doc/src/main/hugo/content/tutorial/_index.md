@@ -3,7 +3,7 @@ title: "Tutorial"
 description: "A tutorial guide to RIDDL with the Reactive BBQ"
 type: "page"
 draft: "false"
-weight: 80
+weight: 20
 ---
 
 Some people can learn RIDDL faster by looking at examples than they can by 
