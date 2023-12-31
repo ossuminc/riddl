@@ -17,6 +17,7 @@ target
 /chroma-riddl-lexer/go.sum
 /.riddl-timestamp
 /doc/src/main/hugo/public/**
+/doc/src/main/hugo/static/apidoc/**
 /doc/src/main/hugo/.hugo_build.lock
 /doc/src/main/hugo/resources/_gen/**
 *.lock
