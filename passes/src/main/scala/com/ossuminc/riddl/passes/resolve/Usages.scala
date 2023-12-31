@@ -36,11 +36,11 @@ case class Usages (
 
 
   def getUsers(used: Definition): Seq[Definition] = {
-    usedBy.get(used).getOrElse(Seq.empty)
+    usedBy.getOrElse(used, Seq.empty)
   }
 
   def getUses(user: Definition): Seq[Definition] = {
-    uses.get(user).getOrElse(Seq.empty)
+    uses.getOrElse(user, Seq.empty)
   }
 
   def usesAsString: String = {

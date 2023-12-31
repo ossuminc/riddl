@@ -81,7 +81,7 @@ class IncludeAndImportTest extends ParsingTest {
       val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
-        Strng((1, 13, inc)),
+        String_((1, 13, inc)),
         None
       )
       actual mustBe expected
@@ -97,7 +97,7 @@ class IncludeAndImportTest extends ParsingTest {
       val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
-        Strng((1, 12, inc)),
+        String_((1, 12, inc)),
         None
       )
       actual mustBe expected

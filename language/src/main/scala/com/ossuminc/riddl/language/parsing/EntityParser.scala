@@ -38,88 +38,55 @@ private[parsing] trait EntityParser {
     }
   }
 
-  private def stateDefinitions[u: P]: P[Seq[StateDefinition]] = {
+  private def stateDefinitions[u: P]: P[Seq[OccursInState]] = {
     P(handler(StatementsSet.EntityStatements) | invariant).rep(0)
   }
 
-  private def stateBody[u: P]: P[Seq[StateDefinition]] = {
-    P(undefined(Seq.empty[StateDefinition]) | stateDefinitions)
+  private def stateBody[u: P]: P[Seq[OccursInState]] = {
+    P(undefined(Seq.empty[OccursInState]) | stateDefinitions)
   }
 
   private def state[u: P]: P[State] = {
     P(
       location ~ Keywords.state ~ identifier ~/ Readability.of ~
         typeRef ~/ is ~ (open ~ stateBody ~ close).? ~/
-        briefly ~ description ~ comments
-    )./.map { case (loc, id, typRef, body, brief, description, comments) =>
+        briefly ~ description
+    )./.map { case (loc, id, typRef, body, brief, description) =>
       body match {
         case Some(defs) =>
           val groups = defs.groupBy(_.getClass)
           val handlers = mapTo[Handler](groups.get(classOf[Handler]))
           val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-          State(loc, id, typRef, handlers, invariants, brief, description, comments)
+          State(loc, id, typRef, handlers, invariants, brief, description)
         case None =>
-          State(loc, id, typRef, brief = brief, description, comments)
+          State(loc, id, typRef, brief = brief, description)
       }
     }
   }
 
-  private def entityInclude[X: P]: P[Include[EntityDefinition]] = {
-    include[EntityDefinition, X](entityDefinitions(_))
+  private def entityInclude[X: P]: P[Include[OccursInEntity]] = {
+    include[OccursInEntity, X](entityDefinitions(_))
   }
 
-  private def entityDefinitions[u: P]: P[Seq[EntityDefinition]] = {
+  private def entityDefinitions[u: P]: P[Seq[OccursInEntity]] = {
     P(
-      handler(StatementsSet.EntityStatements) | function | invariant |
-        typeDef | state | entityInclude | inlet | outlet | term | constant
+      handler(StatementsSet.EntityStatements) | function | invariant | state | entityInclude | inlet | outlet |
+        typeDef | term | authorRef | comment | constant
     )./.rep(1)
   }
 
-  private def entityBody[u: P]: P[Seq[EntityDefinition]] = {
+  private def entityBody[u: P]: P[Seq[OccursInEntity]] = {
     P(
-      undefined(Seq.empty[EntityDefinition])./ | entityDefinitions./
+      undefined(Seq.empty[OccursInEntity])./ | entityDefinitions./
     )
   }
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ authorRefs ~ is ~ open ~/
-        entityOptions ~ entityBody ~ close ~ briefly ~ description ~ comments
-    ).map { case (loc, id, authors, options, entityDefs, brief, description, comments) =>
-      val groups = entityDefs.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val constants = mapTo[Constant](groups.get(classOf[Constant]))
-      val states = mapTo[State](groups.get(classOf[State]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val functions = mapTo[Function](groups.get(classOf[Function]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[EntityDefinition]](
-        groups.get(
-          classOf[Include[EntityDefinition]]
-        )
-      )
-      Entity(
-        loc,
-        id,
-        options,
-        states,
-        types,
-        constants,
-        handlers,
-        functions,
-        invariants,
-        inlets,
-        outlets,
-        includes,
-        authors,
-        terms,
-        brief,
-        description,
-        comments
-      )
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
+        entityOptions ~ entityBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, options, contents, brief, description) =>
+      Entity(loc, id, options, contents, brief, description)
     }
   }
 }

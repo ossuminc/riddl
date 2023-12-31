@@ -47,10 +47,17 @@ case class ValidationPass(
     *   an instance of the output type
     */
   override def result: ValidationOutput = {
-    ValidationOutput(messages.toMessages, inlets, outlets, connectors, streamlets, resolution.kindMap.definitionsOfKind[Processor[?,?]])
+    ValidationOutput(
+      messages.toMessages,
+      inlets,
+      outlets,
+      connectors,
+      streamlets,
+      resolution.kindMap.definitionsOfKind[Processor[?, ?]]
+    )
   }
 
-  def postProcess(root: RootContainer): Unit = {
+  def postProcess(root: Root): Unit = {
     checkOverloads()
     checkStreaming(root)
   }
@@ -58,7 +65,7 @@ case class ValidationPass(
   def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     val parentsAsSeq: Seq[Definition] = parents.toSeq
     definition match {
-      case f: AggregateDefinition =>
+      case f: AggregateValue =>
         f match {
           case f: Field  => validateField(f, parentsAsSeq)
           case m: Method => validateMethod(m, parentsAsSeq)
@@ -89,8 +96,6 @@ case class ValidationPass(
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
         validateConstant(c, parentsAsSeq)
-      case i: Include[ApplicationDefinition] @unchecked =>
-        validateInclude(i)
       case s: State =>
         validateState(s, parentsAsSeq)
       case f: Function =>
@@ -123,12 +128,12 @@ case class ValidationPass(
         validateDomain(d, parentsAsSeq)
       case s: Epic =>
         validateEpic(s, parentsAsSeq)
+      case uc: UseCase => 
+        validateUseCase(uc, parentsAsSeq)
       case a: Application =>
         validateApplication(a, parentsAsSeq)
       case r: Replica =>
         validateReplica(r, parentsAsSeq)
-      case uc: UseCase =>
-        validateUseCase(uc, parentsAsSeq)
       case grp: Group =>
         validateGroup(grp, parentsAsSeq)
       case in: Input =>
@@ -137,8 +142,8 @@ case class ValidationPass(
         validateOutput(out, parentsAsSeq)
       case cg: ContainedGroup =>
         validateContainedGroup(cg, parentsAsSeq)
-      case i: Interaction   => validateInteraction(i, parentsAsSeq)
-      case _: RootContainer => ()
+      
+      case _: Root        => ()
 
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
@@ -169,7 +174,7 @@ case class ValidationPass(
         case _ =>
       }
     } else {}
-    omc.from.foreach { (ref: Reference[Definition]) =>
+    omc.from.foreach { (_: Option[Identifier], ref: Reference[Definition]) =>
       checkRef[Definition](ref, omc, parents)
     }
     checkDescription(omc)
@@ -185,6 +190,8 @@ case class ValidationPass(
         statement match {
           case ArbitraryStatement(loc, what) =>
             checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
+          case FocusStatement(loc, group) =>
+            checkRef[Group](group, onClause, parents)
           case ErrorStatement(loc, message) =>
             checkNonEmptyValue(message, "error description", onClause, loc, MissingWarning, required = true)
           case SetStatement(loc, field, value) =>
@@ -424,9 +431,7 @@ case class ValidationPass(
     checkDescription(h)
   }
 
-  private def validateInclude[T <: Definition](
-    i: Include[T]
-  ): Unit = {
+  private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
     check(i.nonEmpty, "Include has no included content", Messages.Error, i.loc)
     check(i.source.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
   }
@@ -671,7 +676,7 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, out)
     out.putOut match {
-      case typ: TypeRef => checkTypeRef(typ, out, parents)
+      case typ: TypeRef       => checkTypeRef(typ, out, parents)
       case const: ConstantRef => checkRef[Constant](const, out, parents)
       case str: LiteralString => checkNonEmpty(str.s, "string to put out", out, Messages.Error)
     }
@@ -751,6 +756,7 @@ case class ValidationPass(
                 )
               }
           }
+        case _: Comment => ()
       }
     }
     if uc.nonEmpty then {
@@ -774,14 +780,14 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isAppRelated =>
             d match {
-              case output @ Output(loc, _, id, _, putOut, _, _, _, _) =>
+              case output @ Output(loc, _, id, _, putOut, _, _, _) =>
                 putOut match {
                   case typRef: TypeRef =>
                     checkTypeRef(typRef, parents.head, parents.tail) match {
-                      case Some(Type(_, _, typEx, _, _, _)) if typEx.isContainer =>
+                      case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
                         typEx match {
                           case ate: AggregateUseCaseTypeExpression
-                            if ate.usecase == EventCase || ate.usecase == ResultCase =>
+                              if ate.usecase == EventCase || ate.usecase == ResultCase =>
                             None // events and results are permitted
                           case ty: TypeExpression => // everything else is not
                             Some(
@@ -798,7 +804,7 @@ case class ValidationPass(
                     checkRef[Constant](constRef, parents.head, parents.tail)
                     Option.empty[Message]
                   case str: LiteralString =>
-                    checkNonEmptyValue (str, "string to put out", parents.head, Messages.Error)
+                    checkNonEmptyValue(str, "string to put out", parents.head, Messages.Error)
                     Option.empty[Message]
                 }
               case _ => None
@@ -809,9 +815,9 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isVital =>
             o match {
-              case input @ Input(loc, _, id, _, putIn, _, _, _, _) =>
+              case input @ Input(loc, _, id, _, putIn, _, _, _) =>
                 checkTypeRef(putIn, parents.head, parents.tail) match {
-                  case Some(Type(_, _, typEx, _, _, _)) if typEx.isContainer =>
+                  case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
                     typEx match {
                       case ate: AggregateUseCaseTypeExpression
                           if ate.usecase == CommandCase || ate.usecase == QueryCase =>
@@ -841,32 +847,32 @@ case class ValidationPass(
 
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def validateInteraction(interaction: Interaction, parents: Seq[Definition]): Unit = {
-    checkDefinition(parents, interaction)
+    val useCase = parents.head
     checkDescription(interaction)
     interaction match {
-      case SelfInteraction(_, _, from, _, _, _, _) =>
-        checkRef[Definition](from, interaction, parents)
-      case DirectUserToURLInteraction(_, _, user: UserRef, _, _, _, _) =>
-        checkRef[User](user, interaction, parents)
-      case FocusOnGroupInteraction(_, _, user: UserRef, group: GroupRef, _, _, _) =>
-        checkRef[Group](group, interaction, parents)
-        checkRef[User](user, interaction, parents)
-      case TakeInputInteraction(_, _, user: UserRef, _, inputRef: InputRef, _, _, _) =>
-        checkRef[User](user, interaction, parents)
-        checkRef[Input](inputRef, interaction, parents)
-      case ArbitraryInteraction(_, _, from, _, to, _, _, _) =>
-        checkRef[Definition](from, interaction, parents)
-        checkRef[Definition](to, interaction, parents)
+      case SelfInteraction(_, from, _, _, _) =>
+        checkRef[Definition](from, useCase, parents)
+      case DirectUserToURLInteraction(_, user: UserRef, _, _, _) =>
+        checkRef[User](user, useCase, parents)
+      case FocusOnGroupInteraction(_, user: UserRef, group: GroupRef, _, _) =>
+        checkRef[Group](group, useCase, parents)
+        checkRef[User](user, useCase, parents)
+      case TakeInputInteraction(_, user: UserRef, _, inputRef: InputRef, _, _) =>
+        checkRef[User](user, useCase, parents)
+        checkRef[Input](inputRef, useCase, parents)
+      case ArbitraryInteraction(_, from, _, to, _, _) =>
+        checkRef[Definition](from, useCase, parents)
+        checkRef[Definition](to, useCase, parents)
         val origin = resolution.refMap.definitionOf[Definition](from.pathId, parents.head)
         val destination = resolution.refMap.definitionOf[Definition](to.pathId, parents.head)
         validateArbitraryInteraction(origin, destination, parents)
-      case ShowOutputInteraction(_, _, from: OutputRef, _, to: UserRef, _, _, _) =>
-        checkRef[Output](from, interaction, parents)
-        checkRef[User](to, interaction, parents)
-      case SendMessageInteraction(_, _, from, msg, to, _, _, _) =>
-        checkMessageRef(msg, interaction, parents, Seq(msg.messageKind))
-        checkRef[Definition](from, interaction, parents)
-        checkRef[Definition](to, interaction, parents)
+      case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _, _) =>
+        checkRef[Output](from, useCase, parents)
+        checkRef[User](to, useCase, parents)
+      case SendMessageInteraction(_, from, msg, to, _, _) =>
+        checkMessageRef(msg, useCase, parents, Seq(msg.messageKind))
+        checkRef[Definition](from, useCase, parents)
+        checkRef[Processor[?, ?]](to, useCase, parents)
       case _: VagueInteraction =>
       // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>

@@ -22,8 +22,8 @@ private[parsing] trait FunctionParser {
     }
   }
 
-  private def functionInclude[x: P]: P[Include[FunctionDefinition]] = {
-    include[FunctionDefinition, x](functionDefinitions(_))
+  private def functionInclude[x: P]: P[Include[OccursInFunction]] = {
+    include[OccursInFunction, x](functionDefinitions(_))
   }
 
   def input[u: P]: P[Aggregation] = {
@@ -40,9 +40,9 @@ private[parsing] trait FunctionParser {
     )
   }
 
-  private def functionDefinitions[u: P]: P[Seq[FunctionDefinition]] = {
+  private def functionDefinitions[u: P]: P[Seq[OccursInFunction]] = {
     P(
-      typeDef | function | term | functionInclude
+      typeDef | function | term | functionInclude | authorRef | comment
     )./.rep(0)
   }
 
@@ -50,12 +50,12 @@ private[parsing] trait FunctionParser {
     (
       Option[Aggregation],
       Option[Aggregation],
-      Seq[FunctionDefinition],
+      Seq[OccursInFunction],
       Seq[Statement]
     )
   ] = {
     P(undefined(None).map { _ =>
-      (None, None, Seq.empty[FunctionDefinition], Seq.empty[Statement])
+      (None, None, Seq.empty[OccursInFunction], Seq.empty[Statement])
     } | (input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 
@@ -71,44 +71,10 @@ private[parsing] trait FunctionParser {
     */
   def function[u: P]: P[Function] = {
     P(
-      location ~ Keywords.function ~/ identifier ~ authorRefs ~ is ~ open ~
-        functionOptions ~ functionBody ~ close ~ briefly ~ description ~ comments
-    )./.map {
-      case (
-            loc,
-            id,
-            authors,
-            options,
-            (input, output, definitions, statements),
-            brief,
-            description,
-            comments
-          ) =>
-        val groups = definitions.groupBy(_.getClass)
-        val types = mapTo[Type](groups.get(classOf[Type]))
-        val functions = mapTo[Function](groups.get(classOf[Function]))
-        val terms = mapTo[Term](groups.get(classOf[Term]))
-        val includes = mapTo[Include[FunctionDefinition]](
-          groups.get(
-            classOf[Include[FunctionDefinition]]
-          )
-        )
-        Function(
-          loc,
-          id,
-          input,
-          output,
-          types,
-          functions,
-          statements,
-          authors,
-          includes,
-          options,
-          terms,
-          brief,
-          description,
-          comments
-        )
+      location ~ Keywords.function ~/ identifier  ~ is ~ open ~
+        functionOptions ~ functionBody ~ close ~ briefly ~ description
+    )./.map { case (loc, id, options, (ins, outs, contents, statements), briefly, description) =>
+      Function(loc, id, options, ins, outs, contents ++ statements, briefly, description)
     }
   }
 }

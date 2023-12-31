@@ -1,5 +1,8 @@
-context other by author Reid is { ??? }
-context context by author Reid is {
+context other  is {
+ by author Reid
+}
+context context is {
+  by author Reid
   adaptor adaptor from context other is { ??? }
   term term is briefly "not interesting"
   function function is { ??? }

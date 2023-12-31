@@ -13,7 +13,7 @@ import com.ossuminc.riddl.utils.FileBuilder
 import scala.reflect.ClassTag
 
 /** A class to generate the sequence diagrams for an Epic's Use Case
-  * @param ucds
+  * @param sds
   *   The UseCaseDiagramSupport implementation that provides information for the UseCaseDiagram
   * @param useCase
   * The UseCase from the AST to which this diagram applies
@@ -42,22 +42,20 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
   }
 
   private val actors: Map[String, Definition] = {
-    useCase.contents
-      .map { (interaction: Interaction) =>
-        interaction match
-          case gi: TwoReferenceInteraction =>
-            val fromDef = sds.getDefinitionFor[Definition](gi.from.pathId, gi)
-            val toDef = sds.getDefinitionFor[Definition](gi.to.pathId, gi)
-            Seq(
-              gi.from.pathId.format -> fromDef,
-              gi.to.pathId.format -> toDef
-            )
-          case _ => Seq.empty
-      }
+    useCase.contents.map { 
+      case gi: TwoReferenceInteraction =>
+        val fromDef = sds.getDefinitionFor[Definition](gi.from.pathId, useCase)
+        val toDef = sds.getDefinitionFor[Definition](gi.to.pathId,useCase)
+        Seq(
+          gi.from.pathId.format -> fromDef,
+          gi.to.pathId.format -> toDef
+        )
+      case _ => Seq.empty
+    }
       .filterNot(_.isEmpty) // ignore empty things with no references
       .flatten // get rid of seq of seq
       .filterNot(_._1.isEmpty)
-      .map(x => x._1 -> x._2.getOrElse(RootContainer.empty))
+      .map(x => x._1 -> x._2.getOrElse(Root.empty))
       .distinctBy(_._1) // reduce to the distinct ones
       .sortWith(actorsFirst)
       .toMap
@@ -91,13 +89,13 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
     }
   }
 
-  private def generateInteractions(interactions: Seq[Interaction], indent: Int): Unit = {
-    interactions.foreach { (interaction: Interaction) =>
-      interaction match
-        case gi: GenericInteraction     => genericInteraction(gi, indent)
-        case si: SequentialInteractions => sequentialInteractions(si, indent)
-        case pi: ParallelInteractions   => parallelInteractions(pi, indent)
-        case oi: OptionalInteractions   => optionalInteractions(oi, indent)
+  private def generateInteractions(interactions: Seq[Interaction | Comment], indent: Int): Unit = {
+    interactions.foreach {
+      case gi: GenericInteraction => genericInteraction(gi, indent)
+      case si: SequentialInteractions => sequentialInteractions(si, indent)
+      case pi: ParallelInteractions => parallelInteractions(pi, indent)
+      case oi: OptionalInteractions => optionalInteractions(oi, indent)
+      case _: Comment => ()
     }
   }
 
@@ -129,13 +127,13 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
 
   private def parallelInteractions(pi: ParallelInteractions, indent: Int): Unit = {
     sb.append(s"${ndnt(indent)}par ${pi.briefValue}")
-    generateInteractions(pi.contents, indent + indent_per_level)
+    generateInteractions(pi.contents.filter[Interaction], indent + indent_per_level)
     sb.append(s"${ndnt(indent)}end")
   }
 
   private def optionalInteractions(oi: OptionalInteractions, indent: Int): Unit = {
     sb.append(s"${ndnt(indent)}opt ${oi.briefValue}")
-    generateInteractions(oi.contents, indent + indent_per_level)
+    generateInteractions(oi.contents.filter[Interaction], indent + indent_per_level)
     sb.append(s"${ndnt(indent)}end")
   }
 }

@@ -17,7 +17,7 @@ import com.ossuminc.riddl.passes.PassesResult
   *   C -->|Two| E[iPhone]
   *   C -->|Three| F[fa:fa-car Car]
   * }}}
-  * 
+  *
   * @param pr
   *   The PassesResult from running the standard passes to obtain all the collected ideas.
   */
@@ -27,7 +27,7 @@ case class DataFlowDiagram(pr: PassesResult) {
   private val sb: StringBuilder = StringBuilder(1000)
   private val spacesPerIndent = 2
 
-  def indent(str: String, level: Int = 1): Unit = {
+  private def indent(str: String, level: Int = 1): Unit = {
     sb.append(" ".repeat(level * spacesPerIndent))
     sb.append(str)
     sb.append(newline)
@@ -41,7 +41,7 @@ case class DataFlowDiagram(pr: PassesResult) {
           case _: Outlet     => s"Outlet $name"
           case _: Inlet      => s"Inlet $name"
           case s: Streamlet  => s"${s.kind} $name"
-          case s: Connector  => s"Connector $name"
+          case _: Connector  => s"Connector $name"
           case d: Definition => s"${d.kind} $name"
         }
         val (left, right) = definition match {
@@ -75,23 +75,23 @@ case class DataFlowDiagram(pr: PassesResult) {
     } yield {
       val to_users: Seq[Definition] = pr.usage.getUsers(toDef).flatMap {
         case oc: OnClause => pr.symbols.parentOf(oc).flatMap(pr.symbols.parentOf)
-        case e: Entity => Seq.empty
-        case _ => Seq.empty // FIXME: unfinished cases here
+        case e: Entity    => Seq.empty
+        case _            => Seq.empty // FIXME: unfinished cases here
       }
       val from_users = pr.usage.getUsers(fromDef)
       (Seq(fromDef, toDef) ++ to_users ++ from_users).distinct.filterNot(_.isInstanceOf[Connector])
     }
   }.getOrElse(Seq.empty)
 
-  def generate(context: Context): String = {
+  private def generate(context: Context): String = {
     sb.append("flowchart LR").append(newline)
     val parts = for
-      connector <- context.connections
+      connector <- context.connectors
       participants <- this.participants(connector)
     yield participants
     for part <- parts.distinct do makeNodeLabel(part)
     for {
-      conn <- context.connections
+      conn <- context.connectors
       from <- conn.from
       to <- conn.to
       flows <- conn.flows

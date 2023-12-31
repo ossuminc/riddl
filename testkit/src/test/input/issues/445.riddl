@@ -14,7 +14,7 @@ domain example is {
   epic allow_groups_to_receive {
     case UserCreatesANewCompany {
       user Admin wants to "create a new tenant" so that "the tenant can do stuff"
-      step from user Admin "presses" to application App,
+      step from user Admin "presses" to application App
       step from input App.NewTenantPage.TenantInfoPage.NextButton "routes user" to group App.NewTenantPage.InfoList
     }
   }

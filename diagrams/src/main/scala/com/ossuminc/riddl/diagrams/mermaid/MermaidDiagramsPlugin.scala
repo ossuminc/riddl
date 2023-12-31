@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.AST.*
 import scala.collection.mutable
 
 object MermaidDiagramsPlugin {
-  val containerStyles: Seq[String] = Seq(
+  private val containerStyles: Seq[String] = Seq(
     "font-size:1pc,fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:36px",
     "font-size:1pc,fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white,margin-top:36px",
     "font-size:1pc,fill:#4444CC,stroke:black,stroke-width:4,border:solid,color:white,margin-top:36px",
@@ -25,7 +25,7 @@ object MermaidDiagramsPlugin {
 class MermaidDiagramsPlugin {
   import MermaidDiagramsPlugin.*
 
-  def getTechnology(definition: Definition): String = {
+  private def getTechnology(definition: Definition): String = {
     val maybeStrings: Option[Seq[String]] = definition match {
       case d: Domain =>
         d.getOptionValue[DomainTechnologyOption]
@@ -44,15 +44,12 @@ class MermaidDiagramsPlugin {
     maybeStrings.map(_.mkString(", ")).getOrElse("Arbitrary Technology")
   }
 
-  def openBox(definition: AST.Definition, level: Int = 0): String = {
+  private def openBox(definition: Definition, level: Int = 0): String = {
     val contents: Seq[Definition] = {
       definition match {
-        case r: RootContainer => r.contents
-        case d: Domain        => d.domains ++ d.includes
-        case i: Include[Definition] @unchecked =>
-          i.contents
-            .filter(_.isInstanceOf[Domain])
-        case _ => Seq.empty[Definition]
+        case r: Root   => r.domains ++ r.nestedDefinitions.filter[Domain]
+        case d: Domain => d.domains ++ d.nestedDefinitions.filter[Domain]
+        case _         => Seq.empty[Definition]
       }
     }
     val mid = contents.foldLeft("") { case (s, c) => s + openBox(c, level + 1) }
@@ -69,7 +66,7 @@ class MermaidDiagramsPlugin {
   // def traverseDomainsAndContexts
 
   def makeRootOverview(
-    root: AST.RootContainer
+    root: AST.Root
   ): String = {
     val sb = new mutable.StringBuilder()
     sb.append("flowchart TB\n")

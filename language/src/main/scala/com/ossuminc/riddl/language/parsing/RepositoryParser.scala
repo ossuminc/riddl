@@ -29,57 +29,25 @@ private[parsing] trait RepositoryParser {
     }
   }
 
-  private def repositoryInclude[x: P]: P[Include[RepositoryDefinition]] = {
-    include[RepositoryDefinition, x](repositoryDefinitions(_))
+  private def repositoryInclude[x: P]: P[Include[OccursInRepository]] = {
+    include[OccursInRepository, x](repositoryDefinitions(_))
   }
 
-  private def repositoryDefinitions[u: P]: P[Seq[RepositoryDefinition]] = {
+  private def repositoryDefinitions[u: P]: P[Seq[OccursInRepository]] = {
     P(
       typeDef | handler(StatementsSet.RepositoryStatements) |
-        function | term | repositoryInclude | inlet | outlet | constant
+        function | term | repositoryInclude | inlet | outlet | constant | authorRef | comment
     ).rep(0)
   }
 
   def repository[u: P]: P[Repository] = {
     P(
-      location ~ Keywords.repository ~/ identifier ~ authorRefs ~ is ~ open ~
+      location ~ Keywords.repository ~/ identifier ~ is ~ open ~
         repositoryOptions ~
-        (undefined(Seq.empty[RepositoryDefinition]) | repositoryDefinitions) ~
-        close ~ briefly ~ description ~ comments
-    ).map { case (loc, id, authors, options, defs, brief, description, comments) =>
-      val groups = defs.groupBy(_.getClass)
-      val types = mapTo[Type](groups.get(classOf[Type]))
-      val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-      val functions = mapTo[Function](groups.get(classOf[Function]))
-      val constants = mapTo[Constant](groups.get(classOf[Constant]))
-      val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-      val inlets = mapTo[Inlet](groups.get(classOf[Inlet]))
-      val outlets = mapTo[Outlet](groups.get(classOf[Outlet]))
-      val terms = mapTo[Term](groups.get(classOf[Term]))
-      val includes = mapTo[Include[RepositoryDefinition]](
-        groups.get(
-          classOf[Include[RepositoryDefinition]]
-        )
-      )
-
-      Repository(
-        loc,
-        id,
-        types,
-        handlers,
-        inlets,
-        outlets,
-        authors,
-        functions,
-        constants,
-        invariants,
-        includes,
-        options,
-        terms,
-        brief,
-        description,
-        comments
-      )
+        (undefined(Seq.empty[OccursInRepository]) | repositoryDefinitions) ~
+        close ~ briefly ~ description
+    ).map { case (loc, id, options, contents, brief, description) =>
+      Repository(loc, id, options, contents, brief, description)
     }
   }
 

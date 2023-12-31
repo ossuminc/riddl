@@ -12,19 +12,18 @@ import com.ossuminc.riddl.language.{AST, At, Messages}
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
-import scala.annotation.tailrec
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
-/** Unit Tests For BasicValidationState */
+/** Validation infrastructure needed for all kinds of definition validation */
 trait BasicValidation {
 
   def symbols: SymbolsOutput
   def resolution: ResolutionOutput
   protected def messages: Messages.Accumulator
 
-  def parentOf(definition: Definition): Container[Definition] = {
-    symbols.parentOf(definition).getOrElse(RootContainer.empty)
+  def parentOf(definition: Definition): Definition = {
+    symbols.parentOf(definition).getOrElse(Root.empty)
   }
 
   def lookup[T <: Definition: ClassTag](id: Seq[String]): List[T] = {
@@ -48,14 +47,6 @@ trait BasicValidation {
     pathIdToDefinition(pid, parents).map(_.asInstanceOf[T])
   }
 
-  def resolvePidRelativeTo[T <: Definition](
-    pid: PathIdentifier,
-    relativeTo: Definition
-  ): Option[T] = {
-    val parents = relativeTo +: symbols.parentsOf(relativeTo)
-    resolvePath[T](pid, parents)
-  }
-
   def checkPathRef[T <: Definition: ClassTag](
     pid: PathIdentifier,
     container: Definition,
@@ -68,10 +59,10 @@ trait BasicValidation {
       messages.addError(pid.loc, message)
       Option.empty[T]
     else
-      val pars = parents.headOption match
+      val pars: Seq[Definition] = parents.headOption match
         case Some(head: Definition) if head != container =>
           container +: parents
-        case Some(other: Definition) =>
+        case Some(_: Definition) =>
           parents
         case None =>
           parents
@@ -88,10 +79,10 @@ trait BasicValidation {
 
   def checkRefAndExamine[T <: Definition: ClassTag](
     reference: Reference[T],
-    defn: Definition,
+    definition: Definition,
     parents: Seq[Definition]
   )(examiner: T => Unit): this.type = {
-    checkPathRef[T](reference.pathId, defn, parents).foreach { (resolved: T) =>
+    checkPathRef[T](reference.pathId, definition, parents).foreach { (resolved: T) =>
       examiner(resolved)
     }
     this
@@ -127,13 +118,13 @@ trait BasicValidation {
     } else {
       checkRefAndExamine[Type](ref, topDef, parents) { (definition: Definition) =>
         definition match {
-          case Type(_, _, typ, _, _, _) =>
+          case Type(_, _, typ, _, _) =>
             typ match {
-              case AggregateUseCaseTypeExpression(_, mk, _, _) =>
+              case AggregateUseCaseTypeExpression(_, mk, _) =>
                 check(
                   kinds.contains(mk),
                   s"'${ref.identify} should be one of these message types: ${kinds.mkString(",")}" +
-                    s" but is ${article(mk.kind)} type instead",
+                    s" but is ${article(mk.useCase)} type instead",
                   Error,
                   ref.pathId.loc
                 )
@@ -155,45 +146,6 @@ trait BasicValidation {
     }
   }
 
-  @tailrec private final def getPathIdType(
-    pid: PathIdentifier,
-    parents: Seq[Definition]
-  ): Option[TypeExpression] = {
-    if pid.value.isEmpty then {
-      None
-    } else {
-      val maybeDef: Option[Definition] = resolvePath[Definition](pid, parents)
-      val candidate: Option[TypeExpression] = maybeDef match {
-        case None              => None
-        case Some(f: Function) => f.output
-        case Some(t: Type)     => Some(t.typ)
-        case Some(f: Field)    => Some(f.typeEx)
-        case Some(c: Constant) => Some(c.typeEx)
-        case Some(s: State) =>
-          Some(AliasedTypeExpression(s.typ.loc, "state", s.typ.pathId))
-        case Some(Inlet(_, _, typ, _, _, _)) =>
-          Some(AliasedTypeExpression(typ.loc, "inlet", typ.pathId))
-        case Some(Outlet(_, _, typ, _, _, _)) =>
-          Some(AliasedTypeExpression(typ.loc, "outlet", typ.pathId))
-        case Some(connector: Connector) =>
-          connector.flows
-            .map(typeRef => AliasedTypeExpression(typeRef.loc, "connector", typeRef.pathId))
-            .orElse(Option.empty[TypeExpression])
-        case Some(streamlet: Streamlet) =>
-          streamlet.outlets.headOption match
-            case None       => Option.empty[TypeExpression]
-            case Some(head) => resolvePath[Type](head.type_.pathId, parents).map(_.typ)
-        case Some(_) => Option.empty[TypeExpression]
-      }
-      candidate match {
-        case Some(AliasedTypeExpression(_, _, pid)) =>
-          getPathIdType(pid, maybeDef.toSeq)
-        case Some(other: TypeExpression) => Some(other)
-        case None                        => None
-      }
-    }
-  }
-
   private val vowels: Regex = "[aAeEiIoOuU]".r
 
   def article(thing: String): String = {
@@ -211,11 +163,6 @@ trait BasicValidation {
     this
   }
 
-  def checkWhen(predicate: Boolean)(checker: () => Unit): this.type = {
-    if predicate then checker()
-    this
-  }
-
   def checkSequence[A](elements: Seq[A])(check: A => Unit): this.type = {
     elements.foreach(check(_))
     this
@@ -228,9 +175,6 @@ trait BasicValidation {
           case Nil =>
             // shouldn't happen
             messages.addSevere(At.empty, "Empty list from Symbols.foreachOverloadedSymbol")
-          case head :: Nil =>
-            // shouldn't happen
-            messages.addSevere(At.empty, "Single entry list from Symbols.foreachOverloadedSymbol")
           case head :: tail =>
             tail match
               case last :: Nil =>

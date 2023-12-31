@@ -27,5 +27,26 @@ class ApplicationParsingTest extends ParsingTest with Matchers {
           succeed
       }
     }
+    "supports using the focus statement" in {
+      val input =
+        """
+          |domain foo {
+          |application foo2 {
+          |  command GoHome {???} brief "Directive to focus on going to the home page"
+          |  handler foo3 is {
+          |    on command GoHome {
+          |      focus on group g2
+          |    }
+          |  }
+          |  group g2 is { ??? }
+          |}
+          |}""".stripMargin
+      parseDefinition[Domain](input) match {
+        case Left(messages: Messages) =>
+          fail(messages.format)
+        case Right((dom: Domain, _)) =>
+          succeed
+      }
+    }
   }
 }

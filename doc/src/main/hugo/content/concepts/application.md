@@ -46,6 +46,3 @@ other components, like a [context]({{< relref context.md >}}) or
 * [Type]({{< relref "type.md" >}})
 * [Group]({{< relref "element.md" >}})
 * [Handler]({{< relref "handler.md" >}})
-
-## Syntax Example
-TBD

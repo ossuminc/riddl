@@ -68,7 +68,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   }
 
   "String" should {
-    "have kind 'String'" in { Strng(At()).kind mustBe "String" }
+    "have kind 'String'" in { String_(At()).kind mustBe "String" }
   }
 
   "Bool" should {
@@ -100,7 +100,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   val application: Application = Application(
     At.empty,
     Identifier(At.empty, "application"),
-    authors = Seq(authorRef)
+    contents = Seq(authorRef)
   )
   val author: Author = Author(
     At.empty,
@@ -122,7 +122,7 @@ class ASTTest extends AnyWordSpec with Matchers {
     }
   }
   val domain: AST.Domain =
-    Domain(At(), Identifier(At(), "test"), authorDefs = Seq(author))
+    Domain(At(), Identifier(At(), "test"), contents = Seq(author))
   val context: AST.Context = Context(At(), Identifier(At(), "test"))
 
   "Adaptor" should {
@@ -155,7 +155,7 @@ class ASTTest extends AnyWordSpec with Matchers {
     "correctly identify emptiness" in { context.contents mustBe empty }
     "correctly identify non-emptiness" in {
       val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
-      Context(At(), Identifier(At(), "test"), types = types).contents mustBe
+      Context(At(), Identifier(At(), "test"), contents = types).contents mustBe
         types
     }
   }
@@ -176,12 +176,12 @@ class ASTTest extends AnyWordSpec with Matchers {
     }
     "non-empty domain should have non-empty contents" in {
       val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
-      Domain(At(), Identifier(At(), "test"), types = types).contents mustBe
+      Domain(At(), Identifier(At(), "test"), contents = types).contents mustBe
         types
     }
   }
 
-  "Epic" should { "format correctly" in { epic.format mustBe "epic epic" } }
+  "Epic" should { "format correctly" in { epic.format mustBe "Epic epic" } }
 
   "Entity" should {
     "contents" should {
@@ -204,6 +204,7 @@ class ASTTest extends AnyWordSpec with Matchers {
           Function(
             At(),
             Identifier(At(), "my_func"),
+            Seq.empty,
             None,
             Option(
               Aggregation(
@@ -225,11 +226,7 @@ class ASTTest extends AnyWordSpec with Matchers {
           loc = At(),
           id = Identifier(At(), "foo"),
           options = options,
-          states = states,
-          types = types,
-          handlers = handlers,
-          functions = functions,
-          invariants = invariants,
+          contents = states++types++handlers++functions++invariants,
           description = None
         )
 
@@ -246,10 +243,8 @@ class ASTTest extends AnyWordSpec with Matchers {
 
   "Include" should {
     "identify as root container, etc" in {
-      val incl = Include(At(), Seq.empty[Definition])
+      val incl = Include(At(), Seq.empty)
       incl.isRootContainer mustBe true
-      incl.brief mustBe None
-      incl.description mustBe None
       incl.loc mustBe At.empty
       incl.format mustBe "include none"
     }
@@ -271,12 +266,12 @@ class ASTTest extends AnyWordSpec with Matchers {
   "Repository" should { "have a test" in { pending } }
 
   "RootContainer" should {
-    "be at location 0,0" in { RootContainer(Nil).loc mustBe At.empty }
-    "have no description" in { RootContainer(Nil).description mustBe None }
-    "have no brief" in { RootContainer(Nil).brief mustBe None }
-    "have no id" in { RootContainer(Nil).identify mustBe "Root" }
+    "be at location 0,0" in { Root(Nil).loc mustBe At.empty }
+    "have no description" in { Root(Nil).description mustBe None }
+    "have no brief" in { Root(Nil).brief mustBe None }
+    "have no id" in { Root(Nil).identify mustBe "Root" }
     "identify as root container" in {
-      RootContainer(Nil).isRootContainer mustBe true
+      Root(Nil).isRootContainer mustBe true
     }
   }
 

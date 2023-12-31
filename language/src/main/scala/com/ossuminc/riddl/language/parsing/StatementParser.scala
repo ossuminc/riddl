@@ -105,6 +105,12 @@ private[parsing] trait StatementParser {
       location ~ Keywords.become ~/ entityRef ~ Readability.to ~ handlerRef
     )./.map { tpl => (BecomeStatement.apply _).tupled(tpl) }
   }
+  
+  private def focusStatement[u: P]: P[FocusStatement] = {
+    P(
+      location ~ Keywords.focus ~/ Readability.on ~ groupRef 
+    )./.map { tpl => (FocusStatement.apply _).tupled(tpl) }
+  }
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
     P(
@@ -121,7 +127,7 @@ private[parsing] trait StatementParser {
   def statement[u: P](set: StatementsSet): P[Statement] = {
     set match {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
-      case StatementsSet.ApplicationStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.ApplicationStatements => anyDefStatements(set) | focusStatement
       case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
       case StatementsSet.EntityStatements =>
         anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
@@ -149,9 +155,9 @@ private[parsing] trait StatementParser {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ briefly ~ description ~ comments
-    ).map { case (loc, id, condition, brief, description, comments) =>
-      Invariant(loc, id, condition, brief, description, comments)
+      ) ~ briefly ~ description
+    ).map { case (loc, id, condition, brief, description) =>
+      Invariant(loc, id, condition, brief, description)
     }
   }
 

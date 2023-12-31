@@ -44,11 +44,11 @@ object PassOutput {
   *   THe common options that should be used to run the pass
   */
 case class PassInput(
-  root: RootContainer,
+  root: Root,
   commonOptions: CommonOptions = CommonOptions.empty
 )
 object PassInput {
-  val empty: PassInput = PassInput(RootContainer.empty)
+  val empty: PassInput = PassInput(Root.empty)
 }
 
 /** The output from running a set of Passes. This collects the PassOutput instances from each Pass run and provides
@@ -109,7 +109,7 @@ case class PassesResult(
   outputs: PassesOutput = PassesOutput(),
   additionalMessages: Messages = Messages.empty
 ) {
-  def root: RootContainer = input.root
+  def root: Root = input.root
   def commonOptions: CommonOptions = input.commonOptions
 
   def outputOf[T <: PassOutput](passName: String): Option[T] = outputs.outputOf[T](passName)
@@ -176,7 +176,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * @return
     *   Unit
     */
-  def postProcess(root: RootContainer): Unit
+  def postProcess(root: Root): Unit
 
   /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
     * @return
@@ -192,7 +192,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     process(definition, parents)
     if definition.hasDefinitions then {
       parents.push(definition)
-      definition.contents.foreach { item => traverse(item, parents) }
+      definition.definitions.foreach { item => traverse(item, parents) }
       parents.pop()
     }
   }
@@ -231,11 +231,11 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
         processLeaf(leaf, parents.toSeq)
       case container: Definition =>
         openContainer(container, parents.toSeq)
-        if container.hasDefinitions then {
-          parents.push(definition)
-          definition.contents.foreach { item => traverse(item, parents) }
-          parents.pop()
-        }
+        val nested = if container.hasIncludes then container.asInstanceOf[WithIncludes[?]].nestedDefinitions else Seq.empty
+        val content = container.definitions ++ nested 
+        parents.push(definition)
+        content.foreach { item => traverse(item, parents) }
+        parents.pop()
         closeContainer(container, parents.toSeq)
     }
   }
@@ -268,7 +268,17 @@ abstract class CollectingPassOutput[T](
   */
 abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
-  // not required in this kind of pass, final override it
+  /**
+    *  The method usually called for each definition that is to be processed but our implementation of 
+    *  traverse instead calls collect so a value can be returned. This implementation is final because
+    *  it is meant to be ignored. 
+    *  
+    * @param definition
+    *   The definition to be processed
+    * @param parents
+    *   The stack of definitions that are the parents of [[definition]]. This stack goes from immediate parent towards
+    *   the root. The root is deepest in the stack.
+    */
   override final def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = ()
 
   /** The processing method called at each node, similar to [[Pass.process]] but modified to return an
@@ -289,11 +299,11 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
 
   override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     val collected = collect(definition, parents)
-    collectedValues = collectedValues ++ collected 
+    collectedValues = collectedValues ++ collected
 
     if definition.hasDefinitions then {
       parents.push(definition)
-      definition.contents.foreach { item => traverse(item, parents) }
+      definition.definitions.foreach { item => traverse(item, parents) }
       parents.pop()
     }
   }
@@ -361,7 +371,7 @@ object Pass {
   }
 
   def runStandardPasses(
-    model: RootContainer,
+    model: Root,
     options: CommonOptions
   ): PassesResult = {
     val input: PassInput = PassInput(model, options)
@@ -387,7 +397,7 @@ object Pass {
   }
 
   private def runOnePass(
-    root: RootContainer,
+    root: Root,
     commonOptions: CommonOptions,
     mkPass: => Pass,
     logger: Logger = SysLogger()

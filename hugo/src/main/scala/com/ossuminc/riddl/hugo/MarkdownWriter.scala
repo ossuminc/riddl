@@ -14,14 +14,11 @@ import com.ossuminc.riddl.stats.{KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.utils.TextFileWriter
 
 import com.ossuminc.riddl.language.parsing.Keywords
-import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import java.nio.file.Path
 import scala.annotation.unused
-import com.sun.org.apache.xerces.internal.util.SymbolTable
-
 
 case class MarkdownWriter(
   filePath: Path,
@@ -177,7 +174,7 @@ case class MarkdownWriter(
 
     for item <- items do {
       item match {
-        case body: String    => sb.append(s"* $body\n")
+        case body: String     => sb.append(s"* $body\n")
         case rnod: RiddlValue => sb.append(s"* ${rnod.format}")
         case (
               prefix: String,
@@ -209,7 +206,7 @@ case class MarkdownWriter(
         case (prefix: String, docBlock: Seq[String] @unchecked) =>
           sb.append(s"* $prefix\n")
           docBlock.foreach(s => sb.append(s"    * $s\n"))
-        case x: Any          => sb.append(s"* ${x.toString}\n")
+        case x: Any => sb.append(s"* ${x.toString}\n")
       }
     }
     this
@@ -277,7 +274,7 @@ case class MarkdownWriter(
       passUtilities.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
-        container.contents
+        container.definitions
           .filter(d => d.nonEmpty && !d.isInstanceOf[OnMessageClause])
           .map(makeData(_, newParents))
       }
@@ -384,7 +381,7 @@ case class MarkdownWriter(
       d.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
     if d.isVital then {
-      val authors = d.asInstanceOf[VitalDefinition[?, ?]].authors
+      val authors = d.asInstanceOf[VitalDefinition[?, ?]].authorRefs
       emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
     }
     val path = (parents :+ d.id.format).mkString(".")
@@ -503,7 +500,7 @@ case class MarkdownWriter(
     parents: Seq[Definition]
   ): String = {
     val name = typeEx match {
-      case AliasedTypeExpression(_, _, pid)         => makeTypeName(pid, parents)
+      case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parents)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
       case UniqueId(_, pid)                      => makeTypeName(pid, parents)
       case Alternation(_, of) =>
@@ -542,17 +539,17 @@ case class MarkdownWriter(
         val data = mt.fields.map { (f: Field) =>
           (f.id.format, resolveTypeExpression(f.typeEx, parents))
         }
-        s"${mt.usecase.kind} message of: " + data.mkString(", ")
+        s"${mt.usecase.useCase} message of: " + data.mkString(", ")
       case _ => typeEx.format
     }
   }
 
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition]): this.type = {
-    val data = agg.contents.map { (f: AggregateDefinition) =>
-      val pars = f +: parents
-      (f.id.format, resolveTypeExpression(f.typeEx, pars))
+    val data = agg.contents.map {
+      case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
+      case _                 => ("", "")
     }
-    list(data)
+    list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
   }
 
@@ -608,7 +605,7 @@ case class MarkdownWriter(
 
   def emitType(typ: Type, stack: Seq[Definition]): this.type = {
     val suffix = typ.typ match {
-      case mt: AggregateUseCaseTypeExpression => mt.usecase.kind
+      case mt: AggregateUseCaseTypeExpression => mt.usecase.useCase
       case _                                  => "Type"
     }
     containerHead(typ, suffix)
@@ -632,15 +629,15 @@ case class MarkdownWriter(
     this
   }
 
-  private def emitVitalDefinitionTail[OV <: OptionValue, DEF <: Definition](vd: VitalDefinition[OV, DEF]): this.type = {
+  private def emitVitalDefinitionTail[OV <: OptionValue, DEF <: RiddlValue](vd: VitalDefinition[OV, DEF]): this.type = {
     emitOptions(vd.options)
     emitTerms(vd.terms)
     emitUsage(vd)
-    if vd.authors.nonEmpty then toc("Authors", vd.authors.map(_.format))
+    if vd.authorRefs.nonEmpty then toc("Authors", vd.authorRefs.map(_.format))
     this
   }
 
-  private def emitProcessorToc[OV <: OptionValue, DEF <: Definition](processor: Processor[OV, DEF]): this.type = {
+  private def emitProcessorToc[OV <: OptionValue, DEF <: RiddlValue](processor: Processor[OV, DEF]): this.type = {
     if processor.types.nonEmpty then emitTypesToc(processor)
     if processor.constants.nonEmpty then toc("Constants", mkTocSeq(processor.constants))
     if processor.functions.nonEmpty then toc("Functions", mkTocSeq(processor.functions))
@@ -676,7 +673,7 @@ case class MarkdownWriter(
     }
     emitUsage(domain)
     emitTerms(domain.terms)
-    emitAuthorInfo(domain.authorDefs)
+    emitAuthorInfo(domain.authors)
     emitIndex("Domain", domain, parents)
     this
   }
@@ -725,8 +722,8 @@ case class MarkdownWriter(
     toc("Adaptors", mkTocSeq(context.adaptors))
     toc("Sagas", mkTocSeq(context.sagas))
     toc("Streamlets", mkTocSeq(context.streamlets))
-    list("Connections", mkTocSeq(context.connections))
-    emitProcessorToc(context)
+    list("Connections", mkTocSeq(context.connectors))
+    emitProcessorToc[ContextOption, OccursInContext](context)
     // TODO: generate a diagram for the processors and pipes
     emitIndex("Context", context, parents)
     this
@@ -933,7 +930,7 @@ case class MarkdownWriter(
   ): this.type = {
     containerHead(projector, "Projector")
     emitDefDoc(projector, parents)
-    emitProcessorToc[ProjectorOption, ProjectorDefinition](projector)
+    emitProcessorToc[ProjectorOption, OccursInProjector](projector)
     emitIndex("Projector", projector, parents)
   }
 
@@ -943,7 +940,7 @@ case class MarkdownWriter(
   ): this.type = {
     containerHead(repository, "Repository")
     emitDefDoc(repository, parents)
-    emitProcessorToc[RepositoryOption, RepositoryDefinition](repository)
+    emitProcessorToc[RepositoryOption, OccursInRepository](repository)
     emitIndex("Repository", repository, parents)
   }
 
@@ -961,7 +958,7 @@ case class MarkdownWriter(
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)
     p(s"Direction: ${adaptor.direction.format} ${adaptor.context.format}")
-    emitProcessorToc[AdaptorOption, AdaptorDefinition](adaptor)
+    emitProcessorToc[AdaptorOption, OccursInAdaptor](adaptor)
     emitIndex("Adaptor", adaptor, parents)
   }
 
@@ -1009,7 +1006,7 @@ case class MarkdownWriter(
     this
   }
 
-  def emitToDoList(weight: Int, items:  Seq[ToDoItem]): Unit = {
+  def emitToDoList(weight: Int, items: Seq[ToDoItem]): Unit = {
     fileHead(
       "To Do List",
       weight,
@@ -1051,7 +1048,6 @@ case class MarkdownWriter(
     )
     val total_stats: KindStats = stats.categories.getOrElse("All", KindStats())
     stats.categories.foreach { case (key, s) =>
-      val percentOfAll = s.percent_of_all(total_stats.count)
       emitTableRow(
         key,
         s.count.toString,

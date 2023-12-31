@@ -39,7 +39,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
 
   val pattern = Pattern(At.empty, Seq(LiteralString(At.empty, "^$")))
   val range = RangeType(At.empty, 2, 4)
-  val string = Strng(At.empty, Some(42), None)
+  val string = String_(At.empty, Some(42), None)
   val id = UniqueId(At.empty, PathIdentifier(At.empty, Seq("a", "b")))
 
   "Simple Predefined Types" must {

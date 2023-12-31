@@ -1,4 +1,4 @@
-domain foo by author foo.Nada is {
+domain foo is {
   term Fum described by "A Fum Description"
   author Nada is {
     name: "Anil Nada"

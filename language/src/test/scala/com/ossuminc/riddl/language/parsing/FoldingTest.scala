@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.Definition
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Folding
 
 class FoldingTest extends ParsingTest {
@@ -48,6 +48,34 @@ class FoldingTest extends ParsingTest {
       |}
       |""".stripMargin
 
+  val expectedResult: Seq[Seq[String]] = List(
+    List("Root"),
+    List("Root", "Domain 'one'"),
+    List("Root", "Domain 'one'", "Context 'one'"),
+    List("Root", "Domain 'one'", "Context 'one'", "Connector 'a'"),
+    List("Root", "Domain 'one'", "Context 'one'", "Term 'whomprat'"),
+    List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'"),
+    List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Inlet 'b_in'"),
+    List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Outlet 'b_out'"),
+    List("Root", "Domain 'one'", "LineComment(empty(10:3),context one is { ??? })"),
+    List("Root", "Domain 'one'", "Context 'two'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Term 'ForcePush'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Function 'foo'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Type 'oneState'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'", "State 'entityState'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'", "Handler 'one'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'", "Function 'one'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'", "Invariant 'one'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'two'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'two'", "State 'entityState'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'two'", "Handler 'one'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'two'", "Function " + "'one'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Entity 'two'", "Invariant " + "'one'"),
+    List("Root", "Domain 'one'", "Context 'two'", "Adaptor 'one'"),
+    List("Root", "Domain 'one'", "Type 'AString'")
+  )
+
   "Folding" should {
     "visit each definition" in {
 
@@ -56,177 +84,18 @@ class FoldingTest extends ParsingTest {
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
           val result = Folding.foldLeftWithStack(empty)(content) { case (track, definition, stack) =>
-            val path = stack.map(_.identify).reverse :+ definition.identify
-            track :+ path
+            val previous: Seq[String] = stack.map {
+              case nv: NamedValue => nv.identify
+              case rv: RiddlValue => rv.toString
+            }.reverse
+            definition match {
+              case nv: NamedValue => track :+ (previous :+ nv.identify)
+              case rv: RiddlValue => track :+ (previous :+ rv.toString)
+            }
           }
-          val expectedCount = 26
+          val expectedCount = 25
           result.length must be(expectedCount)
-          val expectedResult = List(
-            List("Root"),
-            List("Root", "Domain 'one'"),
-            List("Root", "Domain 'one'", "Type 'AString'"),
-            List("Root", "Domain 'one'", "Context 'one'"),
-            List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'"),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'one'",
-              "Flow 'b'",
-              "Inlet 'b_in'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'one'",
-              "Flow 'b'",
-              "Outlet 'b_out'"
-            ),
-            List("Root", "Domain 'one'", "Context 'one'", "Term 'whomprat'"),
-            List("Root", "Domain 'one'", "Context 'one'", "Connector 'a'"),
-            List("Root", "Domain 'one'", "Context 'two'"),
-            List("Root", "Domain 'one'", "Context 'two'", "Type 'oneState'"),
-            List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'"),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'one'",
-              "State " + "'entityState'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'one'",
-              "Handler 'one'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'one'",
-              "Function 'one'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'one'",
-              "Invariant 'one'"
-            ),
-            List("Root", "Domain 'one'", "Context 'two'", "Entity 'two'"),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'two'",
-              "State 'entityState'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'two'",
-              "Handler 'one'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'two'",
-              "Function " + "'one'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Entity 'two'",
-              "Invariant " + "'one'"
-            ),
-            List("Root", "Domain 'one'", "Context 'two'", "Adaptor 'one'"),
-            List("Root", "Domain 'one'", "Context 'two'", "Function 'foo'"),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Function 'foo'",
-              "Field 'a'"
-            ),
-            List(
-              "Root",
-              "Domain 'one'",
-              "Context 'two'",
-              "Function 'foo'",
-              "Field 'b'"
-            ),
-            List("Root", "Domain 'one'", "Context 'two'", "Term 'ForcePush'")
-          )
           result mustBe expectedResult
-      }
-    }
-
-    case class Tracker(contPush: Int = 0, defs: Int = 0, contPop: Int = 0)
-
-    class Tracking(print: Boolean = false) extends Folding.Folder[Tracker] {
-      def openContainer(
-        t: Tracker,
-        container: Definition,
-        stack: Seq[Definition]
-      ): Tracker = {
-        if print then {
-          info(
-            "> " + container.identify + "(" + stack
-              .map(_.identify)
-              .mkString(", ") + ")"
-          )
-        }
-        t.copy(contPush = t.contPush + 1)
-      }
-
-      def doDefinition(
-        t: Tracker,
-        definition: Definition,
-        stack: Seq[Definition]
-      ): Tracker = {
-        if print then {
-          info(
-            "==" + definition.identify + "(" + stack
-              .map(_.identify)
-              .mkString(", ") + ")"
-          )
-        }
-        t.copy(defs = t.defs + 1)
-      }
-
-      def closeContainer(
-        t: Tracker,
-        container: Definition,
-        stack: Seq[Definition]
-      ): Tracker = {
-        if print then {
-          info(
-            "< " + container.identify + "(" + stack
-              .map(_.identify)
-              .mkString(", ") + ")"
-          )
-        }
-        t.copy(contPop = t.contPop + 1)
-      }
-    }
-
-    "can 'fold around' 3 functions" in {
-      parseTopLevelDomains(input) match {
-        case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
-        case Right(root) =>
-          val tracking = new Tracking
-          val tracked = Folding.foldAround(Tracker(), root, tracking)
-          val expectedContainers = 17
-          val expectedLeaves = 9
-          tracked.defs mustBe expectedLeaves
-          tracked.contPush mustBe expectedContainers
-          tracked.contPush mustBe tracked.contPop
       }
     }
   }

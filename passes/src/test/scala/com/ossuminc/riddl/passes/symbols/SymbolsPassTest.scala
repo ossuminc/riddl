@@ -1,8 +1,8 @@
 package com.ossuminc.riddl.passes.symbols
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.language.{At, CommonOptions}
+import com.ossuminc.riddl.language.parsing.ParsingTest
+import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
 import org.scalatest.Assertion
 

@@ -48,6 +48,3 @@ Outbound adaptors provide an adaptation that occurs from the
 * [Authors]({{< relref "author.md" >}})
 * [Handlers]({{< relref "handler.md" >}})
 * [Terms]({{< relref "term.md" >}})
-
-## Syntax Example
-TBD

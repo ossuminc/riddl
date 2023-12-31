@@ -26,10 +26,18 @@ object StatsPass extends PassInfo {
   *   The number of kinds of specifications that can be completed from the node's specifications method
   * @param numCompleted
   *   The number of specifications that hve been completed
-  * @param completeness
-  *   The ratio of numCompletions/numSpecifications as a percentage
   * @param numContained
   *   The number of contained definitions
+  * @param numAuthors 
+  *   The number of defining authors
+  * @param numTerms
+  *   The number of term definitions
+  * @param numOptions
+  *   The number of options declared
+  * @param numIncludes
+  *   The number of include statements
+  * @param numStatements
+  *   The number of statements used
   */
 case class DefinitionStats(
   kind: String = "",
@@ -98,9 +106,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       sizes.foldLeft(0L)((a, b) => a + b)
     }
 
-    definition.contents
-      .filter(_.isVital)
-      .map { (vd: Definition) =>
+    definition.contents.vitals.map { (vd: Definition) =>
         vd match {
           case a: Adaptor     => handlerStatements(a.handlers)
           case a: Application => handlerStatements(a.handlers)
@@ -125,7 +131,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
 
     val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
       case vd: VitalDefinition[?, ?] =>
-        (vd.options.size, vd.authors.size, vd.terms.size, vd.includes.size)
+        (vd.options.size, vd.authorRefs.size, vd.terms.size, vd.includes.size)
       case _ => (0, 0, 0, 0)
     }
     val specs: Int = specificationsFor(definition)
@@ -151,7 +157,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     )
   }
 
-  def postProcess(root: RootContainer): Unit = {
+  def postProcess(root: Root): Unit = {
     for { defStats <- collectedValues } {
       def remapping(existing: Option[KindStats]): Option[KindStats] = {
         Some(
@@ -337,7 +343,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
               + { if c.streamlets.nonEmpty then 1 else 0 }
               + { if c.projectors.nonEmpty then 1 else 0 }
               + { if c.repositories.nonEmpty then 1 else 0 }
-              + { if c.connections.nonEmpty then 1 else 0 }
+              + { if c.connectors.nonEmpty then 1 else 0 }
               + { if c.replicas.nonEmpty then 1 else 0 }
           case e: Entity =>
             countForProcessor
@@ -353,7 +359,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
         }
       case d: Domain =>
         definitionCount(d)
-          + { if d.authorDefs.nonEmpty then 1 else 0 }
+          + { if d.authors.nonEmpty then 1 else 0 }
           + { if d.contexts.nonEmpty then 1 else 0 }
           + { if d.users.nonEmpty then 1 else 0 }
           + { if d.epics.nonEmpty then 1 else 0 }

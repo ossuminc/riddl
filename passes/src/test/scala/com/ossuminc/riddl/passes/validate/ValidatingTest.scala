@@ -20,9 +20,9 @@ import scala.reflect.*
 abstract class ValidatingTest extends ParsingTest {
 
   protected def runStandardPasses(
-    model: RootContainer,
-    options: CommonOptions,
-    shouldFailOnErrors: Boolean = false
+                                   model: Root,
+                                   options: CommonOptions,
+                                   shouldFailOnErrors: Boolean = false
   ): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(model, options)
     if shouldFailOnErrors && result.messages.hasErrors then
@@ -50,7 +50,7 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  def parseAndValidateInContext[D <: ContextDefinition: ClassTag](
+  def parseAndValidateInContext[D <: OccursInContext: ClassTag](
     input: String,
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
@@ -61,13 +61,13 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
         val clazz = classTag[D].runtimeClass
-        val root = RootContainer(Seq(model), Seq(rpi))
+        val root = Root(Seq(model), Seq(rpi))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(messages) =>
             fail(messages.format)
           case Right(result) =>
             val msgs = result.messages
-            model.contexts.head.contents.filter(_.getClass == clazz).map { (d: ContextDefinition) =>
+            model.contexts.head.contents.filter(_.getClass == clazz).map { (d: OccursInContext) =>
               val reducedMessages = msgs.filterNot(_.loc.line == 1)
               validator(d.asInstanceOf[D], rpi, reducedMessages)
             }
@@ -87,7 +87,7 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val root = RootContainer(Seq(model), Seq(rpi))
+        val root = Root(Seq(model), Seq(rpi))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) => fail(errors.format)
           case Right(ao) =>
@@ -111,7 +111,7 @@ abstract class ValidatingTest extends ParsingTest {
           validator(Domain(loc, Identifier(loc, "stand-in")), input, errors)
         }
       case Right((model: Domain, rpi)) =>
-        val root = RootContainer(List(),Seq(model), List(), Seq(rpi))
+        val root = Root(Seq(model), Seq(rpi))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
@@ -127,7 +127,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (RootContainer, RiddlParserInput, Messages) => Assertion
+    validation: (Root, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     TopLevelParser.parse(input, origin) match {
       case Left(errors) =>
@@ -150,7 +150,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    andThen: (PassesResult, RootContainer, RiddlParserInput, Messages) => T
+    andThen: (PassesResult, Root, RiddlParserInput, Messages) => T
   ): T = {
     TopLevelParser.parse(rpi) match {
       case Left(errors) =>
@@ -170,10 +170,10 @@ abstract class ValidatingTest extends ParsingTest {
     commonOptions: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (PassesResult, RootContainer, RiddlParserInput, Messages) => Assertion
+    validation: (PassesResult, Root, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     parseValidateAndThen[Assertion](rpi, commonOptions, shouldFailOnErrors) {
-      (passesResult: PassesResult, root: RootContainer, rpi: RiddlParserInput, messages: Messages) =>
+      (passesResult: PassesResult, root: Root, rpi: RiddlParserInput, messages: Messages) =>
         passesResult.root.inputs mustNot be(empty)
         validation(passesResult, root, rpi, messages)
     }
@@ -190,7 +190,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (RootContainer, Messages) => Assertion = (_, msgs) => defaultFail(msgs)
+    validation: (Root, Messages) => Assertion = (_, msgs) => defaultFail(msgs)
   ): Assertion = {
     val file = new File(directory + fileName)
     TopLevelParser.parse(file) match {
@@ -248,6 +248,6 @@ abstract class ValidatingTest extends ParsingTest {
     content: String
   ): Assertion = {
     val condition = msgs.exists(m => m.kind == expectedKind && m.message.contains(content))
-    assert(condition, s"; expecting, but didn't find '$content', in:\n${msgs.format}")
+    assert(condition, s"; expecting, but didn't find $content', in:\n${msgs.format}")
   }
 }

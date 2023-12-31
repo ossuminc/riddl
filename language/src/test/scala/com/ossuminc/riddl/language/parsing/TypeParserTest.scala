@@ -15,7 +15,7 @@ class TypeParserTest extends ParsingTest {
     "allow renames of String" in {
       val rpi = RiddlParserInput("type str = String")
       val expected =
-        Type((1, 1, rpi), Identifier((1, 6, rpi), "str"), Strng((1, 12, rpi)))
+        Type((1, 1, rpi), Identifier((1, 6, rpi), "str"), String_((1, 12, rpi)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow renames of Number" in {
@@ -160,7 +160,7 @@ class TypeParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((Type(_, _, typeExp, _, _, _), _)) => typeExp mustBe expected
+        case Right((Type(_, _, typeExp,  _, _), _)) => typeExp mustBe expected
       }
     }
     "allow aggregation" in {
@@ -215,9 +215,7 @@ class TypeParserTest extends ParsingTest {
               (2, 3, rip),
               Identifier((2, 3, rip), "key"),
               Number((2, 8, rip))
-            )
-          ),
-          methods = Seq(
+            ),
             Method(
               (3, 3, rip),
               Identifier((3, 3, rip), "calc"),
@@ -278,7 +276,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "m1"),
-        Mapping((1, 11, rip), Strng((1, 24, rip)), Number((1, 34, rip)))
+        Mapping((1, 11, rip), String_((1, 24, rip)), Number((1, 34, rip)))
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
@@ -287,7 +285,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "g1"),
-        Graph((1, 11, rip), Strng((1, 20, rip)))
+        Graph((1, 11, rip), String_((1, 20, rip)))
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
@@ -296,7 +294,7 @@ class TypeParserTest extends ParsingTest {
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "t1"),
-        Table((1, 11, rip), Strng((1, 20, rip)), Seq(5L, 10L))
+        Table((1, 11, rip), String_((1, 20, rip)), Seq(5L, 10L))
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }

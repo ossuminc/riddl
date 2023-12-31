@@ -8,7 +8,6 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
-import fastparse.StringIn
 import fastparse.MultiLineWhitespace.*
 import Readability.*
 
@@ -19,32 +18,28 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (AdaptorRef.apply _).tupled(tpl))
   }
 
-  private def maybeName[u: P]: P[Option[Identifier]] = {
-    P((identifier ~ Punctuation.colon).?)
-  }
-
-  def commandRef[u: P]: P[CommandRef] = {
-    P(location ~ Keywords.command ~ maybeName ~ pathIdentifier)
+  private def commandRef[u: P]: P[CommandRef] = {
+    P(location ~ Keywords.command ~ pathIdentifier)
       .map(tpl => (CommandRef.apply _).tupled(tpl))
   }
 
   private def eventRef[u: P]: P[EventRef] = {
-    P(location ~ Keywords.event ~ maybeName ~ pathIdentifier)
+    P(location ~ Keywords.event ~ pathIdentifier)
       .map(tpl => (EventRef.apply _).tupled(tpl))
   }
 
   private def queryRef[u: P]: P[QueryRef] = {
-    P(location ~ Keywords.query ~ maybeName ~ pathIdentifier)
+    P(location ~ Keywords.query ~ pathIdentifier)
       .map(tpl => (QueryRef.apply _).tupled(tpl))
   }
 
   private def resultRef[u: P]: P[ResultRef] = {
-    P(location ~ Keywords.result ~ maybeName ~ pathIdentifier)
+    P(location ~ Keywords.result ~ pathIdentifier)
       .map(tpl => (ResultRef.apply _).tupled(tpl))
   }
 
   private def recordRef[u: P]: P[RecordRef] = {
-    P(location ~ Keywords.record ~ maybeName ~ pathIdentifier)
+    P(location ~ Keywords.record ~ pathIdentifier)
       .map(tpl => (RecordRef.apply _).tupled(tpl))
   }
 
@@ -122,7 +117,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (RepositoryRef.apply _).tupled(tpl))
   }
 
-  def sagaRef[u: P]: P[SagaRef] = {
+  private def sagaRef[u: P]: P[SagaRef] = {
     P(location ~ Keywords.saga ~ pathIdentifier)
       .map(tpl => (SagaRef.apply _).tupled(tpl))
   }
@@ -137,7 +132,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (UserRef.apply _).tupled(tpl))
   }
 
-  def applicationRef[u: P]: P[ApplicationRef] = {
+  private def applicationRef[u: P]: P[ApplicationRef] = {
     P(location ~ Keywords.application ~ pathIdentifier)
       .map(tpl => (ApplicationRef.apply _).tupled(tpl))
   }
@@ -157,10 +152,10 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map { case (loc, _, pid) => GroupRef(loc, pid) }
   }
 
-  def authorRefs[u: P]: P[Seq[AuthorRef]] = {
-    P(location ~ by ~ Keywords.author ~ pathIdentifier)
-      .map(tpl => (AuthorRef.apply _).tupled(tpl))
-      .rep(0, ",", 3)
+  def authorRef[u:P]: P[AuthorRef] = {
+    P(
+      location ~ by ~ Keywords.author ~ pathIdentifier
+    ).map(tpl => (AuthorRef.apply _).tupled(tpl))
   }
 
   def processorRef[u: P]: P[ProcessorRef[Processor[?, ?]]] = {
@@ -170,7 +165,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
     )
   }
 
-  def arbitraryInteractionRef[u: P]: P[Reference[Definition]] = {
+  private def arbitraryInteractionRef[u: P]: P[Reference[Definition]] = {
     P(processorRef | sagaRef | inputRef | outputRef | groupRef)
   }
 
