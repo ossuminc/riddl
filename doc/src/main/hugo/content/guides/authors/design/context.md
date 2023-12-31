@@ -1,5 +1,5 @@
 ---
-title: "Context | Author's Guide"
+title: "Context"
 description: "Using Contexts To Isolate Language"
 date: 2022-02-25T10:50:32-07:00
 draft: true

@@ -1,5 +1,5 @@
 ---
-title: "riddlc Examples | Author's Guide"
+title: "riddlc Examples"
 date: 2022-03-01T15:48:53-07:00
 draft: true
 weight: 20
