@@ -1,15 +1,15 @@
 import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
-import com.ossuminc.sbt.helpers.RootProjectInfo
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
-import sbtunidoc.BaseUnidocPlugin.autoImport.unidoc
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
 
 enablePlugins(OssumIncPlugin)
 
-lazy val riddl: Project = Root("", "riddl", startYr = 2019)
+lazy val startYear: Int = 2019
+
+lazy val riddl: Project = Root("", "riddl", startYr = startYear)
   .configure(With.noPublishing, With.git, With.dynver)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
@@ -28,7 +28,7 @@ lazy val riddl: Project = Root("", "riddl", startYr = 2019)
     stats,
     hugo,
     riddlc,
-    doc,
+    docsite,
     plugin
   )
 
@@ -146,7 +146,7 @@ lazy val hugo: Project = Module("hugo", "riddl-hugo")
   .dependsOn(commands, diagrams, stats)
   .dependsOn(testkit % "test->compile")
 
-lazy val scaladocSiteProjects = List(
+lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
   (passes, Passes),
@@ -159,31 +159,15 @@ lazy val scaladocSiteProjects = List(
   (riddlc, Riddlc)
 )
 
-lazy val scaladocSiteSettings = scaladocSiteProjects
-  .flatMap { case (project, conf) =>
-    SiteScaladocPlugin.scaladocSettings(
-      conf,
-      project / Compile / packageDoc / mappings,
-      scaladocDir = s"api/${project.id}"
-    )
-  }
+lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "apidoc"
 
-lazy val doc = project
-  .in(file("doc"))
-  .enablePlugins(OssumIncPlugin)
-  .configure(With.basic, With.scala3)
-  .enablePlugins(ScalaUnidocPlugin, SitePlugin, SiteScaladocPlugin, HugoPlugin)
-  .disablePlugins(ScoverageSbtPlugin)
-  .settings(scaladocSiteSettings)
+lazy val docsite = DocSite("doc", docOutput, docProjects)
   .settings(
     name := "riddl-doc",
     description := "Generation of the documentation web site",
-    publishTo := Option(Resolver.defaultLocal),
     // Hugo / baseURL := uri("https://riddl.tech"),
-    SiteScaladoc / siteSubdirName := "api",
-    ScalaUnidoc / unidoc / unidocProjectFilter :=
-      inAnyProject -- inProjects(plugin),
-    ScalaUnidoc / scalaVersion := (compile / scalaVersion).value,
+//    SiteScaladoc / siteSubdirName := "api",
+//    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(plugin),
 
     /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
     mkdir -p themes/hugo-geekdoc/
@@ -194,7 +178,7 @@ lazy val doc = project
     // (mappings / (
     //   ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc
     // ),
-    publishSite
+    // publishSite
   )
   .dependsOn(hugo % "test->test", riddlc)
 

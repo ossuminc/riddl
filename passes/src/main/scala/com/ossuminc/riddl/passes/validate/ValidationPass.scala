@@ -132,8 +132,6 @@ case class ValidationPass(
         validateUseCase(uc, parentsAsSeq)
       case a: Application =>
         validateApplication(a, parentsAsSeq)
-      case r: Replica =>
-        validateReplica(r, parentsAsSeq)
       case grp: Group =>
         validateGroup(grp, parentsAsSeq)
       case in: Input =>
@@ -614,22 +612,6 @@ case class ValidationPass(
     checkDescription(c)
   }
 
-  private def validateReplica(
-    replica: Replica,
-    parents: Seq[Definition]
-  ): Unit = {
-    checkDefinition(parents, replica)
-    checkTypeExpression(replica.typeExp, replica, parents)
-    replica.typeExp match {
-      case Mapping(loc, from, to) =>
-      case Sequence(loc, of)      =>
-      case Set(loc, of)           =>
-      case typeEx: Cardinality    =>
-      case t: TypeExpression =>
-        messages.addError(t.loc, s"Type expression in Replica ${replica.identify} is not a replicable type")
-    }
-    checkDescription(replica)
-  }
 
   private def validateEpic(
     s: Epic,

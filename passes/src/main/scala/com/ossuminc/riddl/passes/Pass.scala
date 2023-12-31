@@ -94,8 +94,8 @@ case class PassesOutput() {
 
 }
 
-/** The result of running a set of passes. This provides the input and ouputs of the run as well as any additional
-  * messages (likely from an exception) This provides convenience methods for accessing the various output content
+/** The result of running a set of passes. This provides the input and outputs of the run as well as any additional
+  * messages (likely from an exception). This provides convenience methods for accessing the various output content
   *
   * @param input
   *   The input provided to the run of the passes
@@ -159,7 +159,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * @param definition
     *   The definition to be processed
     * @param parents
-    *   The stack of definitions that are the parents of [[definition]]. This stack goes from immediate parent towards
+    *   The stack of definitions that are the parents of [[com.ossuminc.riddl.language.AST.Definition]]. This stack goes from immediate parent towards
     *   the root. The root is deepest in the stack.
     */
   protected def process(
@@ -167,14 +167,12 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     parents: mutable.Stack[Definition]
   ): Unit
 
-  /** A signal that the processing is complete and no more calls to [[process]] will be made. This also gives the Pass
+  /** A signal that the processing is complete and no more calls to `process` will be made. This also gives the Pass
     * subclass a chance to do post-processing as some computations can only be done after collecting data from the
     * entire AST
     *
     * @param root
-    *   The [[in]].root field just as a convenience
-    * @return
-    *   Unit
+    *   The root of the parsed model just as a convenience for post processing
     */
   def postProcess(root: Root): Unit
 
@@ -188,6 +186,14 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     */
   def close(): Unit = ()
 
+  /** A method for the traversal of the AST hierarchy. While subclasses implement this differently, there
+    * is generally no need to override in non-RIDDL code.
+    *
+    * @param definition
+    *   The root (starting point) of the traveral
+    * @param parents
+    *   The parents of the definition
+    */
   protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     process(definition, parents)
     if definition.hasDefinitions then {
@@ -214,17 +220,48 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
   */
 abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
-  // not required in this kind of pass, final override it as a result
+  /** not required in this kind of pass, final override it as a result
+    *
+    * @param definition
+    *   The definition to be processed
+    * @param parents
+    *   The stack of definitions that are the parents of [[com.ossuminc.riddl.language.AST.Definition]].
+    *   This stack goes from immediate parent towards the root. The root is deepest in the stack.
+    */
   override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
 
-  // Instead traverse will use these three methods:
+  /** Called by traverse when a new container is started
+    * Subclasses must implement this method.
+    * @param definition
+    *   The definition that was opened
+    * @param parents
+    *   The parents of the definition opened
+    */
   protected def openContainer(definition: Definition, parents: Seq[Definition]): Unit
 
+  /** Called by traverse when a leaf node is encountered
+    * Subclasses must implement this method
+    * @param definition
+    * The leaf definition that was found
+    * @param parents
+    * THe parents of the leaf node
+    */
   protected def processLeaf(definition: LeafDefinition, parents: Seq[Definition]): Unit
 
+  /** Called by traverse after all leaf nodes of an opened node have been processed and
+    * the opened node is now being closed. Subclasses must implement this method.
+    * @param definition
+    *   The opened node that now needs to be closed
+    * @param parents
+    *   THe parents of the node to be closed; should be the same as when it was opened
+    */
   protected def closeContainer(definition: Definition, parents: Seq[Definition]): Unit
 
-  // Redefine traverse to make the three calls
+  /** Redefine traverse to make the three calls
+    *
+    * @param definition
+    * @param parents
+    */
   override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
     definition match {
       case leaf: LeafDefinition =>
@@ -232,7 +269,7 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
       case container: Definition =>
         openContainer(container, parents.toSeq)
         val nested = if container.hasIncludes then container.asInstanceOf[WithIncludes[?]].nestedDefinitions else Seq.empty
-        val content = container.definitions ++ nested 
+        val content = container.definitions ++ nested
         parents.push(definition)
         content.foreach { item => traverse(item, parents) }
         parents.pop()
@@ -269,19 +306,21 @@ abstract class CollectingPassOutput[T](
 abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   /**
-    *  The method usually called for each definition that is to be processed but our implementation of 
+    *  The method usually called for each definition that is to be processed but our implementation of
     *  traverse instead calls collect so a value can be returned. This implementation is final because
-    *  it is meant to be ignored. 
-    *  
+    *  it is meant to be ignored.
+    *
     * @param definition
     *   The definition to be processed
     * @param parents
-    *   The stack of definitions that are the parents of [[definition]]. This stack goes from immediate parent towards
+    *   The stack of definitions that are the parents of [[com.ossuminc.riddl.language.AST.Definition]].
+    *   This stack goes from immediate parent towards
     *   the root. The root is deepest in the stack.
     */
   override final def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = ()
 
-  /** The processing method called at each node, similar to [[Pass.process]] but modified to return an
+  /** The processing method called at each node, similar to [[com.ossuminc.riddl.passes.Pass.process]] but
+    * modified to return an sequence of the collectable, [[F]].
     *
     * @param definition
     *   The definition from which an [[F]] value is collected.
@@ -336,8 +375,6 @@ object Pass {
     *   The post-parsing input to the passes as a PassInput containing a RootContainer and CommonOptions
     * @param passes
     *   The list of Pass construction functions to use to instantiate the passes and run them. The type
-    * @see
-    *   [[PassesCreator]] type
     * @param logger
     *   The logger to which messages are logged
     * @return
