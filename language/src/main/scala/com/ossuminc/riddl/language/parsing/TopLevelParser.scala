@@ -7,20 +7,18 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import fastparse.*
-import fastparse.Parsed.Success
-import fastparse.Parsed.Failure
 import fastparse.MultiLineWhitespace.*
 
 import java.io.File
-import java.net.URL
-import java.nio.file.Path
-import scala.util.control.NonFatal
+import java.nio.file.{Files, Path}
+import java.util.concurrent.{ExecutorService, Executors}
+import scala.concurrent.ExecutionContext
 
 /** Top level parsing rules */
-class TopLevelParser(rpi: RiddlParserInput)
+class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = CommonOptions.empty )
     extends DomainParser
     with AdaptorParser
     with ApplicationParser
@@ -53,63 +51,63 @@ class TopLevelParser(rpi: RiddlParserInput)
 
   private def root[u: P]: P[Root] = {
     val curr_input = current
-    P(rootValues).map { (content: Seq[OccursAtRootScope]) =>
+    rootValues.map { (content: Seq[OccursAtRootScope]) =>
       pop
       Root(content, Seq(curr_input))
     }
   }
 
-  def parseRootContainer(
+  def parseRoot(
     withVerboseFailures: Boolean = false
   ): Either[Messages, Root] = {
-    val input = current
-    try {
-      fastparse.parse[Root](input, root(_), withVerboseFailures) match {
-        case Success(root, index) =>
-          if errors.nonEmpty then Left(errors.toList)
-          else if root.contents.isEmpty then
-            error(
-              At(input, index),
-              s"Parser could not translate '${input.origin}' after $index characters",
-              s"while parsing ${input.origin}"
-            )
-            Right(root)
-          else Right(root)
-        case failure: Failure =>
-          makeParseFailureError(failure)
-          Left(errors.toList)
-      }
-    } catch {
-      case NonFatal(exception) =>
-        makeParseFailureError(exception)
-        Left(errors.toList)
+    parseRule[Root](root(_), withVerboseFailures) { (root: Root, input: RiddlParserInput, index: Int) =>
+      if root.contents.isEmpty then
+        error(
+          At(input, index),
+          s"Parser could not translate '${input.origin}' after $index characters",
+          s"while parsing ${input.origin}"
+        )
+      end if
+      root
     }
   }
 }
 
 object TopLevelParser {
 
-  def parse(
-    input: RiddlParserInput
+
+  def parseRoot(
+    path: Path,
+    commonOptions: CommonOptions
   ): Either[Messages, Root] = {
-    val tlp = new TopLevelParser(input)
-    tlp.parseRootContainer()
+    if Files.exists(path) then {
+      if Files.isReadable(path) then
+        val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
+        implicit val _: ExecutionContext = ExecutionContext.fromExecutorService(es)
+        val fpi = new FileParserInput(path)
+        val tlp = new TopLevelParser(fpi)
+        tlp.parseRoot()
+      else {
+        Left(
+          List(Messages.error(s"Input file `${path.toString} is not readable."))
+        )
+      }
+    } else {
+      Left(
+        List(Messages.error(s"Input file `${path.toString} does not exist."))
+      )
+    }
   }
 
+  def parse(input: RiddlParserInput): Either[Messages, Root] = {
+    val tlp = new TopLevelParser(input)
+    tlp.parseRoot()
+  }
   def parse(file: File): Either[Messages, Root] = {
     val fpi = FileParserInput(file)
     parse(fpi)
   }
 
-  def parse(path: Path): Either[Messages, Root] = {
-    val fpi = new FileParserInput(path)
-    parse(fpi)
-  }
-
-  def parse(url: URL): Either[Messages, Root] = {
-    val upi = URLParserInput(url)
-    parse(upi)
-  }
 
   def parse(
     input: String,

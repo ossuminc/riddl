@@ -9,11 +9,12 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
-import fastparse.*
+import fastparse.{P, *}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.File
+import java.nio.file.Path
 import scala.annotation.unused
 import scala.reflect.*
 
@@ -30,11 +31,21 @@ class ParsingTest extends AnyWordSpec with Matchers {
     tp.parse[T, U](parser, extraction)
   }
 
+  def parseRoot(file: File): Either[Messages, Root] = {
+    val rpi = RiddlParserInput(file)
+    parseTopLevelDomains(rpi)
+  }
+
+  def parseRoot(path: Path): Either[Messages, Root] = {
+    val rpi = RiddlParserInput(path)
+    parseTopLevelDomains(rpi)
+  }
+
   def parseTopLevelDomains(
     input: RiddlParserInput
   ): Either[Messages, Root] = {
     val tp = TestParser(input)
-    tp.parseRootContainer
+    tp.parseRoot
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](

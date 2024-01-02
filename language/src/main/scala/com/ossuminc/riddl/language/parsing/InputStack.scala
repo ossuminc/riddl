@@ -28,4 +28,6 @@ case class InputStack(
     require(inputs.nonEmpty, "No current input available")
     inputs.headOption.getOrElse(RiddlParserInput.empty)
   }
+
+  def sourceNames: Seq[String] = inputs.toSeq.map(_.origin)
 }

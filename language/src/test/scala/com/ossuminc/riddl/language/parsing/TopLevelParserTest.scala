@@ -40,10 +40,6 @@ class TopLevelParserTest extends ParsingTest {
     "parse File" in {
       TopLevelParser.parse(simpleDomainFile) mustBe Right(simpleDomainResults)
     }
-    "parse Path" in {
-      TopLevelParser.parse(simpleDomainFile.toPath) mustBe
-        Right(simpleDomainResults)
-    }
     "parse String" in {
       val source = Source.fromFile(simpleDomainFile)
       try {

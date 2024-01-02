@@ -7,9 +7,10 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
-import fastparse.*
+import com.ossuminc.riddl.utils.Timer
+import fastparse.{P, *}
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 import fastparse.internal.Lazy
@@ -17,16 +18,22 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 
 import java.io.File
 import java.nio.file.Path
+import java.util.concurrent.{ExecutorService, Executors}
 import scala.annotation.unused
 import scala.collection.mutable
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
 trait ParsingContext {
 
+  def commonOptions: CommonOptions
+
   private val stack: InputStack = InputStack()
 
   protected val errors: mutable.ListBuffer[Messages.Message] = mutable.ListBuffer.empty[Messages.Message]
+
+  protected val futures: mutable.ListBuffer[Future[Seq[RiddlValue]]] = mutable.ListBuffer.empty[Future[Seq[RiddlValue]]]
 
   @inline def current: RiddlParserInput = { stack.current }
   @inline protected def push(path: Path): Unit = { stack.push(path) }
@@ -39,7 +46,46 @@ trait ParsingContext {
 
   private val filesSeen: mutable.ListBuffer[RiddlParserInput] = mutable.ListBuffer.empty[RiddlParserInput]
 
+
   def inputSeen: Seq[RiddlParserInput] = filesSeen.toSeq
+
+
+  def parseRule[RESULT <: RiddlValue](
+    rule: P[?] => P[RESULT],
+    withVerboseFailures: Boolean = false
+  )(validate: (result: RESULT, input: RiddlParserInput, index: Int) => RESULT = {
+    (result: RESULT, _: RiddlParserInput, _: Int) => result
+  }):  Either[Messages, RESULT] = {
+    val input = current
+    try {
+      fastparse.parse[RESULT](input, rule(_), withVerboseFailures) match {
+        case Success(root, index) =>
+          if errors.nonEmpty then Left(errors.toList) else Right(validate(root, input, index))
+        case failure: Failure =>
+          makeParseFailureError(failure)
+          Left(errors.toList)
+      }
+    } catch {
+      case NonFatal(exception) =>
+        makeParseFailureError(exception)
+        Left(errors.toList)
+    }
+  }
+
+  def parseInputForRule[RESULT <: RiddlValue](
+    timerName: String,
+    input: RiddlParserInput,
+    rule: P[?] => P[RESULT],
+    withVerboseFailure: Boolean = false
+  )(implicit ec: ExecutionContext): Future[Either[Messages, RESULT]] = {
+    Future {
+      Timer.time(timerName, commonOptions.showTimes) {
+        val tlp = new TopLevelParser(input)
+        tlp.parseRule[RESULT](rule, withVerboseFailure)()
+      }
+    }
+  }
+
 
   def location[u: P]: P[At] = {
     P(Index.map(idx => current.location(idx)))
@@ -132,7 +178,7 @@ trait ParsingContext {
       case 1 => s"Expected " + mkTerminals(trace.terminals.value)
       case _ => s"Expected one of " + mkTerminals(trace.terminals.value)
     }
-    val context = trace.groups.render
+    val context = trace.groups.render + stack.sourceNames.drop(1).mkString("\n  from", "\n  from", "\n" )
     error(location, msg, context)
   }
 

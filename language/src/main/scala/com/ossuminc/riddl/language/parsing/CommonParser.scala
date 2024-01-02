@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import fastparse.*
+import fastparse.{P, *}
 import fastparse.MultiLineWhitespace.*
 
 import java.net.URI
@@ -38,6 +38,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
       Author(loc, id, name, email, org, title, url, brief, description)
     }
   }
+
 
   def include[K <: RiddlValue, u: P](
     parser: P[?] => P[Seq[K]]
@@ -107,7 +108,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     )
   ).?
 
-  def inlineComment[u: P]: P[InlineComment] = {
+  private def inlineComment[u: P]: P[InlineComment] = {
     P(
       location ~ "/*" ~ until('*', '/')
     ).map { case (loc, comment) =>
@@ -116,7 +117,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def endOfLineComment[u: P]: P[LineComment] = {
+  private def endOfLineComment[u: P]: P[LineComment] = {
     P(location ~ "//" ~ toEndOfLine).map { case (loc, comment) =>
       LineComment(loc, comment)
     }

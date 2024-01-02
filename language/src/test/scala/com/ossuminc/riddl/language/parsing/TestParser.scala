@@ -43,18 +43,18 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
     parser.asInstanceOf[P[?] => P[T]]
   }
 
-  def parseRootContainer: Either[Messages, Root] = {
-    parseRootContainer(withVerboseFailures = true)
+  def parseRoot: Either[Messages, Root] = {
+    parseRoot(withVerboseFailures = true)
   }
 
   def parseTopLevelDomains: Either[Messages, Root] = {
-    parseRootContainer(withVerboseFailures = true)
+    parseRoot(withVerboseFailures = true)
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](
     extract: Root => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    parseRootContainer(withVerboseFailures = true).map { (root: Root) => extract(root) -> current }
+    parseRoot(withVerboseFailures = true).map { (root: Root) => extract(root) -> current }
   }
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](

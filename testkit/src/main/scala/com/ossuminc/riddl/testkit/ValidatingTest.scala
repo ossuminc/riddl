@@ -18,12 +18,12 @@ import org.scalatest.*
 import java.io.File
 
 /** Convenience functions for tests that do validation */
-abstract class ValidatingTest extends ParsingTest {
+abstract class ValidatingTest extends com.ossuminc.riddl.language.parsing.ParsingTest {
 
   protected def runStandardPasses(
-                                   model: Root,
-                                   options: CommonOptions,
-                                   shouldFailOnErrors: Boolean = false
+    model: Root,
+    options: CommonOptions,
+    shouldFailOnErrors: Boolean = false
   ): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(model, options)
     if shouldFailOnErrors && result.messages.hasErrors then Left(result.messages)
@@ -54,40 +54,6 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  def parseValidateAndThen[T](
-    rpi: RiddlParserInput,
-    options: CommonOptions = CommonOptions(),
-    shouldFailOnErrors: Boolean = true
-  )(
-    andThen: (PassesResult, Root, RiddlParserInput, Messages) => T
-  ): T = {
-    TopLevelParser.parse(rpi) match {
-      case Left(errors) =>
-        fail(errors.format)
-      case Right(root) =>
-        runStandardPasses(root, options, shouldFailOnErrors) match {
-          case Left(errors) =>
-            fail(errors.format)
-          case Right(passesResult: PassesResult) =>
-            andThen(passesResult, root, rpi, passesResult.messages)
-        }
-    }
-  }
-
-  def parseAndThenValidate(
-    rpi: RiddlParserInput,
-    commonOptions: CommonOptions = CommonOptions(),
-    shouldFailOnErrors: Boolean = true
-  )(
-    validation: (PassesResult, Root, RiddlParserInput, Messages) => Assertion
-  ): Assertion = {
-    parseValidateAndThen[Assertion](rpi, commonOptions, shouldFailOnErrors) {
-      (passesResult: PassesResult, root: Root, rpi: RiddlParserInput, messages: Messages) =>
-        passesResult.root.inputs mustNot be(empty)
-        validation(passesResult, root, rpi, messages)
-    }
-  }
-
   private def defaultFail(passesResult: PassesResult): Assertion = {
     fail(passesResult.messages.format)
   }
@@ -102,7 +68,7 @@ abstract class ValidatingTest extends ParsingTest {
     validation: (Root, PassesResult) => Assertion = (_, pr) => defaultFail(pr)
   ): Assertion = {
     val file = new File(directory + fileName)
-    TopLevelParser.parse(file) match {
+    parseRoot(file) match {
       case Left(errors) =>
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
