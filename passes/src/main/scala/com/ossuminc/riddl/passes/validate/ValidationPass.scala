@@ -140,9 +140,8 @@ case class ValidationPass(
         validateOutput(out, parentsAsSeq)
       case cg: ContainedGroup =>
         validateContainedGroup(cg, parentsAsSeq)
-
-      case _: Root        => ()
-
+      case _: Root        => () // No validation needed
+      case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
   }

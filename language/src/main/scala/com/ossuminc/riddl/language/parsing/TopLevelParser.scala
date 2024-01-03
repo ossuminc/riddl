@@ -77,6 +77,7 @@ class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = C
 }
 
 object TopLevelParser {
+  val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
 
 
   def parseRoot(
@@ -85,7 +86,6 @@ object TopLevelParser {
   ): Either[Messages, Root] = {
     if Files.exists(path) then {
       if Files.isReadable(path) then
-        val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
         implicit val _: ExecutionContext = ExecutionContext.fromExecutorService(es)
         val fpi = new FileParserInput(path)
         val tlp = new TopLevelParser(fpi)

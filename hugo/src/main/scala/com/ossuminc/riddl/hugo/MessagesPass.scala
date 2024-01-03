@@ -1,12 +1,7 @@
 package com.ossuminc.riddl.hugo
-import com.ossuminc.riddl.language.{AST, Messages}
-import com.ossuminc.riddl.language.AST.{
-  AggregateUseCase,
-  AggregateUseCaseTypeExpression,
-  Definition,
-  Description,
-  Type
-}
+
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsPass}
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInfo, PassInput, PassOutput, PassesOutput}
@@ -59,11 +54,11 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
   def name: String = MessagesPass.name
 
-  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Seq[MessageInfo] = {
+  protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[MessageInfo] = {
     definition match {
       case t: Type =>
         val result = t.typ match {
-          case aucte: AggregateUseCaseTypeExpression =>
+          case _: AggregateUseCaseTypeExpression =>
             val pars = makeStringParents(parents.toSeq)
             val link = makeDocLink(t, pars)
             val users = usages.getUsers(t)
@@ -84,10 +79,10 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
     }
   }
 
-  def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ()
+  def postProcess(root: Root): Unit = ()
 
   override def result: MessageOutput = {
-    val sortedList = collectedValues.sortBy(_.message)
+    val sortedList = collectedValues.sortBy(_.message).toSeq 
     MessageOutput(messages.toMessages, sortedList)
   }
 }

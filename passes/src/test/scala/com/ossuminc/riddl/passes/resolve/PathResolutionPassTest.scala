@@ -282,6 +282,7 @@ class PathResolutionPassTest extends ResolvingTest {
             contents = Seq(
               Include(
                 eL,
+                RiddlParserInput.empty, 
                 contents = Seq(
                   Context(
                     eL,
@@ -303,8 +304,7 @@ class PathResolutionPassTest extends ResolvingTest {
                       )
                     )
                   )
-                ),
-                Some("foo")
+                )
               )
             )
           )

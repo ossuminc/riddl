@@ -47,8 +47,8 @@ class MermaidDiagramsPlugin {
   private def openBox(definition: Definition, level: Int = 0): String = {
     val contents: Seq[Definition] = {
       definition match {
-        case r: Root   => r.domains ++ r.nestedDefinitions.filter[Domain]
-        case d: Domain => d.domains ++ d.nestedDefinitions.filter[Domain]
+        case r: Root   => r.domains ++ r.includes.filter[Domain]
+        case d: Domain => d.domains ++ d.includes.filter[Domain]
         case _         => Seq.empty[Definition]
       }
     }

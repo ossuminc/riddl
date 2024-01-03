@@ -70,8 +70,8 @@ trait ParsingErrors {
     error(location, msg, context)
   }
 
-   def makeParseFailureError(exception: Throwable, loc: At  = At.empty): Unit = {
+   def makeParseFailureError(exception: Throwable, loc: At  = At.empty, context: String = ""): Unit = {
     val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
-    error(loc, message)
+    error(loc, message, context)
   }
 }

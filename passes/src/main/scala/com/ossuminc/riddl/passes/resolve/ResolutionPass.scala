@@ -119,8 +119,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         }
       case cg: ContainedGroup =>
         resolveARef[Group](cg.group, parentsAsSeq)
-
-      case _: NonDefinitionValues => () // None of these are referencable 
+      case _: NonReferencableDefinitions => () // These can't be referenced 
+      case _: NonDefinitionValues => () // Neither can these values  
       // case _ => () // NOTE: Never have this catchall! Want compile time errors!
     }
   }

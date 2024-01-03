@@ -73,6 +73,11 @@ object AST {
 
     def hasIncludes: Boolean = false
 
+    def hasDescription: Boolean = false
+
+    def hasBriefDescription: Boolean = false
+
+
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
     ) final def nonEmpty: Boolean = !isEmpty
@@ -142,6 +147,9 @@ object AST {
     def lines: Seq[LiteralString]
 
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
+
+    override def hasDescription: Boolean = lines.nonEmpty
+
   }
 
   /** Companion class for Description only to define the empty value */
@@ -184,13 +192,13 @@ object AST {
     def briefValue: String = {
       brief.map(_.s).getOrElse("No brief description.")
     }
-    def hasBriefDescription: Boolean = brief.nonEmpty
+    override def hasBriefDescription: Boolean = brief.exists(_.s.nonEmpty)
   }
 
   /** Base trait of all values that have an optional Description */
   sealed trait DescribedValue extends RiddlValue {
     def description: Option[Description]
-    def hasDescription: Boolean = description.nonEmpty
+    override def hasDescription: Boolean = description.exists(_.hasDescription)
   }
 
   type Contents[+CV <: RiddlValue] = Seq[CV]
@@ -471,12 +479,10 @@ object AST {
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
 
-  type NonDefinitionValues = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant |
-    LiteralString | Identifier | PathIdentifier | Description | FileDescription | ArbitraryInteraction | Include[?] |
-    SelfInteraction | FocusOnGroupInteraction | ShowOutputInteraction | TakeInputInteraction | VagueInteraction |
-    DirectUserToURLInteraction | ParallelInteractions | SequentialInteractions | OptionalInteractions |
-    SendMessageInteraction | AggregateUseCaseTypeExpression | Aggregation | AggregateUseCaseTypeExpression |
-    LineComment
+  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
+  type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
+    IncludeHolder[?] | TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
+    AdaptorDirection | UserStory | MethodArgument
 
   /** Base trait of values defined at the root (top of file) scope */
   sealed trait OccursAtRootScope extends RiddlValue

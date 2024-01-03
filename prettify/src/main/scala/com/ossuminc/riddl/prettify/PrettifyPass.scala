@@ -363,20 +363,18 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     @unused include: Include[T]
   ): Unit = {
     if !state.options.singleFile then {
-      include.source match {
-        case Some(path: String) if path.startsWith("http") =>
+      include.rpi.origin  match {
+        case path: String if path.startsWith("http") =>
           val url = java.net.URI.create(path).toURL
           state.current.add(s"include \"$path\"")
           val outPath = state.outPathFor(url)
           state.pushFile(RiddlFileEmitter(outPath))
-        case Some(str: String) =>
+        case str: String =>
           val path = Path.of(str)
           val relativePath = state.relativeToInPath(path)
           state.current.add(s"include \"$relativePath\"")
           val outPath = state.outPathFor(path)
           state.pushFile(RiddlFileEmitter(outPath))
-        case None =>
-          state.current.add(s"include \"<missing file filePath>\"")
       }
     }
   }

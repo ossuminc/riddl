@@ -126,7 +126,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       .sum[Long]
   }
 
-  protected def collect(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Seq[DefinitionStats] = {
+  protected def collect(definition: RiddlValue, parents: mutable.Stack[AST.Definition]): Seq[DefinitionStats] = {
     if parents.size >= maximum_depth then maximum_depth = parents.size + 1
 
     val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
@@ -136,25 +136,29 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     }
     val specs: Int = specificationsFor(definition)
     val completes: Int = completedCount(definition)
-    Seq(
-      DefinitionStats(
-        kind = definition.kind,
-        isEmpty = definition.isEmpty,
-        descriptionLines = {
-          definition.description.getOrElse(Description.empty).lines.size + {
-            if definition.brief.nonEmpty then 1 else 0
-          }
-        },
-        numSpecifications = specs,
-        numCompleted = completes,
-        numContained = definition.contents.size,
-        numOptions = options,
-        numAuthors = authors,
-        numTerms = terms,
-        numIncludes = includes,
-        numStatements = computeNumStatements(definition)
-      )
-    )
+    definition match {
+      case definition: Definition =>
+        Seq(
+          DefinitionStats(
+            kind = definition.kind,
+            isEmpty = definition.isEmpty,
+            descriptionLines = {
+              definition.description.getOrElse(Description.empty).lines.size + {
+                if definition.brief.nonEmpty then 1 else 0
+              }
+            },
+            numSpecifications = specs,
+            numCompleted = completes,
+            numContained = definition.contents.size,
+            numOptions = options,
+            numAuthors = authors,
+            numTerms = terms,
+            numIncludes = includes,
+            numStatements = computeNumStatements(definition)
+          )
+        )
+      case value: RiddlValue => Seq.empty[DefinitionStats]
+    }
   }
 
   def postProcess(root: Root): Unit = {
@@ -228,7 +232,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     * @return
     *   The number of types of specifications for v
     */
-  private def specificationsFor(v: Definition): Int = {
+  private def specificationsFor(v: RiddlValue): Int = {
     val specsForDefinition: Int = 0
       + 1 // Brief Description
       + 1 // Description
@@ -300,12 +304,12 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
           + 1 // input
           + 1 // output
           + 1 // steps
-      case _: Definition => // shouldn't happen
+      case _: RiddlValue => // shouldn't happen
         specsForDefinition
     }
   }
 
-  private def definitionCount(d: Definition): Int =
+  private def definitionCount(d: RiddlValue): Int =
     var result = 0
     if d.hasTypes then result += 1
     if d.hasAuthors then result += 1
@@ -323,7 +327,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     if p.outlets.nonEmpty then result += 1
     result
 
-  private def completedCount(v: Definition): Int = {
+  private def completedCount(v: RiddlValue): Int = {
     v match {
       case p: Processor[?, ?] =>
         val countForProcessor = processorCount(p)
@@ -381,7 +385,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
           + { if s.input.nonEmpty then 1 else 0 }
           + { if s.output.nonEmpty then 1 else 0 }
           + { if s.sagaSteps.nonEmpty then 1 else 0 }
-      case x: Definition => // shouldn't happen
+      case x: RiddlValue => // shouldn't happen
         definitionCount(x)
     }
   }

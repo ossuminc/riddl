@@ -48,7 +48,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private val useCaseDiagrams: mutable.HashMap[Epic, Seq[UseCaseDiagramData]] = mutable.HashMap.empty
   private val contextDiagrams: mutable.HashMap[Context, ContextDiagramData] = mutable.HashMap.empty
 
-  protected def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+  protected def process(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
     definition match
       case c: Context =>
         val aggregates = c.entities.filter(_.hasOption[EntityIsAggregate])

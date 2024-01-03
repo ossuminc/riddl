@@ -246,7 +246,7 @@ class ASTTest extends AnyWordSpec with Matchers {
       val incl = Include()
       incl.isRootContainer mustBe true
       incl.loc mustBe At.empty
-      incl.format mustBe "include none"
+      incl.format mustBe "include empty"
     }
   }
 

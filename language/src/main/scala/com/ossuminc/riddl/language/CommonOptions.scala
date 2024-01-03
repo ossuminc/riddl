@@ -24,7 +24,7 @@ case class CommonOptions(
   groupMessagesByKind: Boolean = true,
   noANSIMessages: Boolean = false,
   maxParallelParsing: Int = Runtime.getRuntime.availableProcessors,
-  maxIncludeWait: Duration = 1.second,
+  maxIncludeWait: Duration = 5.second,
   warningsAreFatal: Boolean = false
 )
 

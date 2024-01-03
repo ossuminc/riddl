@@ -159,7 +159,7 @@ trait ParsingContext extends ParsingErrors {
           }
         } catch {
           case NonFatal(exception) =>
-            makeParseFailureError(exception, ih.loc)
+            makeParseFailureError(exception, ih.loc, s"while including '${ih.included.origin}")
             Seq.empty[CT]
         }
         Include[CT](ih.loc, ih.included, contents).asInstanceOf[CT]
