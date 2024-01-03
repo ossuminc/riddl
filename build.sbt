@@ -5,8 +5,6 @@ import org.scoverage.coveralls.Imports.CoverallsKeys.*
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
 
-ThisBuild / maintainer := "reid@ossuminc.com"
-
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
@@ -166,7 +164,7 @@ lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "a
 lazy val docsite = DocSite("doc", docOutput, docProjects)
   .settings(
     name := "riddl-doc",
-    description := "Generation of the documentation web site",
+    description := "Generation of the documentation web site"
     // Hugo / baseURL := uri("https://riddl.tech"),
 //    SiteScaladoc / siteSubdirName := "api",
 //    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(plugin),
@@ -201,6 +199,7 @@ lazy val riddlc: Project = Module("riddlc", "riddlc")
   .settings(
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
+    maintainer := "reid@ossuminc.com",
     mainClass := Option("com.ossuminc.riddl.RIDDLC"),
     graalVMNativeImageOptions ++= Seq(
       "--verbose",
