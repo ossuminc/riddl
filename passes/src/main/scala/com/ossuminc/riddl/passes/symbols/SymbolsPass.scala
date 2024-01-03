@@ -46,7 +46,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
     }
   }
 
-  def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+  def process(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
     definition match {
       case _: Root              => // ignore
       case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
@@ -67,6 +67,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
         } else {
           messages.addError(definition.loc, "Non implicit value with empty name should not happen")
         }
+      case _: RiddlValue => // ignore, not indexable, no name
     }
   }
 

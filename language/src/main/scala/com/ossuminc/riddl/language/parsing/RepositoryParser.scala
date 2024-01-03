@@ -29,7 +29,7 @@ private[parsing] trait RepositoryParser {
     }
   }
 
-  private def repositoryInclude[x: P]: P[Include[OccursInRepository]] = {
+  private def repositoryInclude[x: P]: P[IncludeHolder[OccursInRepository]] = {
     include[OccursInRepository, x](repositoryDefinitions(_))
   }
 

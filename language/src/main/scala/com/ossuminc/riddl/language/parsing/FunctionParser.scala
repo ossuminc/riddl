@@ -22,7 +22,7 @@ private[parsing] trait FunctionParser {
     }
   }
 
-  private def functionInclude[x: P]: P[Include[OccursInFunction]] = {
+  private def functionInclude[x: P]: P[IncludeHolder[OccursInFunction]] = {
     include[OccursInFunction, x](functionDefinitions(_))
   }
 

@@ -9,9 +9,10 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import Readability.*
-
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
+
+import scala.concurrent.{Await, Future}
 
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {
@@ -23,7 +24,8 @@ private[parsing] trait DomainParser {
     with StreamingParser
     with StatementParser
     with TypeParser
-    with CommonParser =>
+    with CommonParser
+    with ParsingContext =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
     options[X, DomainOption](RiddlOptions.domainOptions) {
@@ -35,7 +37,7 @@ private[parsing] trait DomainParser {
     }
   }
 
-  private def domainInclude[u: P]: P[Include[OccursInDomain]] = {
+  private def domainInclude[u: P]: P[IncludeHolder[OccursInDomain]] = {
     include[OccursInDomain, u](domainDefinitions(_))
   }
 
@@ -65,11 +67,12 @@ private[parsing] trait DomainParser {
         domainOptions ~/ domainBody ~ close ~/
         briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
+      val mergedContent = mergeAsynchContent[OccursInDomain](contents)
       Domain(
         loc,
         id,
         options,
-        contents,
+        mergedContent,
         brief,
         description
       )

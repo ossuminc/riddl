@@ -19,7 +19,7 @@ import scala.annotation.unused
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-class ParsingTest extends AnyWordSpec with Matchers {
+trait ParsingTest extends AnyWordSpec with Matchers {
   case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content))
 
   def parse[T <: RiddlValue, U <: RiddlValue](
@@ -53,7 +53,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     extract: Root => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
-    tp.parseTopLevelDomain[TO](extract)
+    tp.parseTopLevelDomain[TO](extract).map( x => (x, input))
   }
 
   def parseDomainDefinition[TO <: RiddlValue](

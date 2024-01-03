@@ -28,7 +28,7 @@ private[parsing] trait ProjectorParser {
     }
   }
 
-  private def projectionInclude[u: P]: P[Include[OccursInProjector]] = {
+  private def projectionInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
     include[OccursInProjector, u](projectionDefinitions(_))
   }
 

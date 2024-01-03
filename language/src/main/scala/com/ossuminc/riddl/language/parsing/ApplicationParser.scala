@@ -136,7 +136,7 @@ private[parsing] trait ApplicationParser {
     P(applicationDefinition.rep(0, comments))
   }
 
-  private def applicationInclude[u: P]: P[Include[OccursInApplication]] = {
+  private def applicationInclude[u: P]: P[IncludeHolder[OccursInApplication]] = {
     include[OccursInApplication, u](applicationDefinitions(_))
   }
 

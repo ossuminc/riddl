@@ -37,7 +37,7 @@ private[parsing] trait ContextParser {
     }
   }
 
-  private def contextInclude[X: P]: P[Include[OccursInContext]] = {
+  private def contextInclude[X: P]: P[IncludeHolder[OccursInContext]] = {
     include[OccursInContext, X](contextDefinitions(_))
   }
 

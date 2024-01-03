@@ -16,9 +16,12 @@ import java.io.File
 import java.nio.file.{Files, Path}
 import java.util.concurrent.{ExecutorService, Executors}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.global
 
 /** Top level parsing rules */
-class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = CommonOptions.empty )
+class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = CommonOptions.empty)(
+  implicit val ec: ExecutionContext = global
+)
     extends DomainParser
     with AdaptorParser
     with ApplicationParser
@@ -39,7 +42,7 @@ class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = C
 
   push(rpi)
 
-  private def rootInclude[u: P]: P[Include[OccursAtRootScope]] = {
+  private def rootInclude[u: P]: P[IncludeHolder[OccursAtRootScope]] = {
     include[OccursAtRootScope, u](rootValues(_))
   }
 

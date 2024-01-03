@@ -167,7 +167,7 @@ private[parsing] trait EpicParser {
     }
   }
 
-  private def epicInclude[u: P]: P[Include[OccursInEpic]] = {
+  private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
     include[OccursInEpic, u](epicDefinitions(_))
   }
 

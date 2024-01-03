@@ -53,8 +53,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
 
   def parseTopLevelDomain[TO <: RiddlValue](
     extract: Root => TO
-  ): Either[Messages, (TO, RiddlParserInput)] = {
-    parseRoot(withVerboseFailures = true).map { (root: Root) => extract(root) -> current }
+  ): Either[Messages, TO] = {
+    parseRoot(withVerboseFailures = true).map { (root: Root) => extract(root) }
   }
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](

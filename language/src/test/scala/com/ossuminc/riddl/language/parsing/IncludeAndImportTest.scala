@@ -21,8 +21,8 @@ class IncludeAndImportTest extends ParsingTest {
         ),
         identity
       ) match {
-        case Right(_) =>
-          fail("Should have gotten 'does not exist' error")
+        case Right(result) =>
+          fail(s"Should have gotten 'does not exist' error but succeeded with \n${result._1}")
         case Left(errors) =>
           errors.size must be(1)
           errors.exists(_.format.contains("does not exist,"))
@@ -59,7 +59,7 @@ class IncludeAndImportTest extends ParsingTest {
     "handle existing URI" in {
       import sys.process.*
       val cwd = System.getProperty("user.dir", ".")
-      val urlStr: String = s"file:///${cwd}/testkit/src/test/input/domains/simpleDomain.riddl"
+      val urlStr: String = s"file:///$cwd/testkit/src/test/input/domains/simpleDomain.riddl"
       val uri = java.net.URI(urlStr)
       parseDomainDefinition(
         RiddlParserInput(uri),

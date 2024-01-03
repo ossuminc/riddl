@@ -7,33 +7,28 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.Timer
 import fastparse.{P, *}
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
-import fastparse.internal.Lazy
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import java.io.File
 import java.nio.file.Path
-import java.util.concurrent.{ExecutorService, Executors}
 import scala.annotation.unused
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
-trait ParsingContext {
+trait ParsingContext extends ParsingErrors {
 
   def commonOptions: CommonOptions
+  implicit def ec: ExecutionContext
 
-  private val stack: InputStack = InputStack()
-
-  protected val errors: mutable.ListBuffer[Messages.Message] = mutable.ListBuffer.empty[Messages.Message]
-
-  protected val futures: mutable.ListBuffer[Future[Seq[RiddlValue]]] = mutable.ListBuffer.empty[Future[Seq[RiddlValue]]]
+  protected val stack: InputStack = InputStack()
 
   @inline def current: RiddlParserInput = { stack.current }
   @inline protected def push(path: Path): Unit = { stack.push(path) }
@@ -46,16 +41,14 @@ trait ParsingContext {
 
   private val filesSeen: mutable.ListBuffer[RiddlParserInput] = mutable.ListBuffer.empty[RiddlParserInput]
 
-
   def inputSeen: Seq[RiddlParserInput] = filesSeen.toSeq
-
 
   def parseRule[RESULT <: RiddlValue](
     rule: P[?] => P[RESULT],
     withVerboseFailures: Boolean = false
   )(validate: (result: RESULT, input: RiddlParserInput, index: Int) => RESULT = {
     (result: RESULT, _: RiddlParserInput, _: Int) => result
-  }):  Either[Messages, RESULT] = {
+  }): Either[Messages, RESULT] = {
     val input = current
     try {
       fastparse.parse[RESULT](input, rule(_), withVerboseFailures) match {
@@ -86,7 +79,6 @@ trait ParsingContext {
     }
   }
 
-
   def location[u: P]: P[At] = {
     P(Index.map(idx => current.location(idx)))
   }
@@ -111,80 +103,68 @@ trait ParsingContext {
     Domain(At(), Identifier(At(), "NotImplemented"))
   }
 
-  def doInclude[T <: RiddlValue](
-    str: LiteralString
-  )(rule: P[?] => P[Seq[T]]): Include[T] = {
-    // TODO: implement parallel parsing at include points and use the
-    // TODO: commonOption.maxParallelParsing to limit parallelism
-    val source = if str.s.startsWith("http") then {
-      val url = java.net.URI(str.s).toURL
-      push(url)
-      str.s
+  private def startNextSource(from: LiteralString): RiddlParserInput = {
+    val str = from.s
+    val source = if str.startsWith("http") then {
+      val url = java.net.URI(str).toURL
+      RiddlParserInput(url)
     } else {
       val name = {
-        if str.s.endsWith(".riddl") then str.s
-        else str.s + ".riddl"
+        if str.endsWith(".riddl") then str
+        else str + ".riddl"
       }
       val path = current.root.toPath.resolve(name)
-      push(path)
-      path.toString
+      RiddlParserInput(path)
     }
-    try {
-      this.expectMultiple[T](str.s, rule) match {
-        case Left(theErrors) =>
-          theErrors.filterNot(errors.contains).foreach(errors.append)
-          Include[T](str.loc, Seq.empty[T], Some(source))
-        case Right((parseResult, _)) =>
-          Include[T](str.loc, parseResult, Some(source))
+    source
+  }
+
+  def doInclude[CT <: RiddlValue](
+    loc: At,
+    str: LiteralString
+  )(rule: P[?] => P[Seq[CT]]): AST.IncludeHolder[CT] = {
+    // TODO: implement parallel parsing at include points and use the
+    // TODO: commonOption.maxParallelParsing to limit parallelism
+    val rpi = startNextSource(str)
+    val future = Future[Either[Messages, Seq[CT]]] {
+      try {
+        this.expectMultiple[CT](rpi, rule) match {
+          case Left(theErrors) =>
+            theErrors.filterNot(errors.contains).foreach(errors.append)
+            Left(theErrors)
+          case Right((parseResult, _)) =>
+            Right(parseResult)
+        }
+      } catch {
+        case NonFatal(exception) =>
+          val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n  ", "\n  ", "\n")
+          val err = Messages.Message(loc, message, Messages.Error, s"while including ${str.s}")
+          val msgs: Messages.Messages = errors.toList :+ err
+          Left(msgs)
       }
-    } catch {
-      case NonFatal(exception) =>
-        val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n  ", "\n  ", "\n")
-        error(str.loc, s"Include file '${str.s}' not found: $message ")
-        Include[T](str.loc, Seq.empty[T], Some(str.s))
-    } finally {
-      pop
     }
+    AST.IncludeHolder[CT](loc, rpi, commonOptions.maxIncludeWait, future)
   }
 
-  def error(message: String): Unit = {
-    val msg = Messages.Message(At.empty(current), message, Messages.Error)
-    errors.append(msg)
-  }
-  def error(loc: At, message: String, context: String = ""): Unit = {
-    val msg = Messages.Message(loc, message, Messages.Error, context)
-    errors.append(msg)
-  }
-
-  private def mkTerminals(list: List[Lazy[String]]): String = {
-    list
-      .map(_.force)
-      .map {
-        case s: String if s.startsWith("char-pred")  => "pattern"
-        case s: String if s.startsWith("chars-with") => "pattern"
-        case s: String if s == "fail"                => "whitespace after keyword"
-        case s: String                               => s
-      }
-      .distinct
-      .sorted
-      .mkString("(", " | ", ")")
-  }
-
-  def makeParseFailureError(failure: Failure): Unit = {
-    val location = current.location(failure.index)
-    val trace = failure.trace()
-    val msg = trace.terminals.value.size match {
-      case 0 => "Unexpected content"
-      case 1 => s"Expected " + mkTerminals(trace.terminals.value)
-      case _ => s"Expected one of " + mkTerminals(trace.terminals.value)
+  def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
+    contents.map {
+      case ih: IncludeHolder[CT] @unchecked =>
+        val contents: Contents[CT] = try {
+          Await.result[Either[Messages,Seq[CT]]](ih.future, ih.maxDelay) match {
+            case Left(messages: Messages) =>
+              messages.foreach(m => addMessage(m))
+              Seq.empty[CT]
+            case Right(content: Seq[CT]) =>
+              content
+          }
+        } catch {
+          case NonFatal(exception) =>
+            makeParseFailureError(exception, ih.loc)
+            Seq.empty[CT]
+        }
+        Include[CT](ih.loc, ih.included, contents).asInstanceOf[CT]
+      case rv: CT => rv
     }
-    val context = trace.groups.render + stack.sourceNames.drop(1).mkString("\n  from", "\n  from", "\n" )
-    error(location, msg, context)
-  }
-
-  def makeParseFailureError(exception: Throwable): Unit = {
-    val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
-    error(At.empty, message)
   }
 
   def expect[T <: RiddlValue](
@@ -209,7 +189,7 @@ trait ParsingContext {
   }
 
   def expectMultiple[T <: RiddlValue](
-    source: String,
+    source: RiddlParserInput,
     parser: P[?] => P[Seq[T]],
     withVerboseFailures: Boolean = false
   ): Either[Messages, (Seq[T], RiddlParserInput)] = {
@@ -222,7 +202,7 @@ trait ParsingContext {
             error(
               At(input, index),
               s"Parser could not translate '${input.origin}''",
-              s"while including $source"
+              s"while including ${source.origin}"
             )
             Right(content -> input)
           else Right(content -> input)

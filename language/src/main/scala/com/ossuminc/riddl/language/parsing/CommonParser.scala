@@ -42,9 +42,9 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def include[K <: RiddlValue, u: P](
     parser: P[?] => P[Seq[K]]
-  ): P[Include[K]] = {
-    P(Keywords.include ~/ literalString)./.map { (str: LiteralString) =>
-      doInclude[K](str)(parser)
+  ): P[IncludeHolder[K]] = {
+    P(location ~ Keywords.include ~/ literalString)./.map {
+      case (loc: At, str: LiteralString) => doInclude[K](loc, str)(parser)
     }
   }
 
