@@ -5,6 +5,8 @@ import org.scoverage.coveralls.Imports.CoverallsKeys.*
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
 
+ThisBuild / maintainer := "reid@ossuminc.com"
+
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
