@@ -139,17 +139,17 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   def outputRef[u: P]: P[OutputRef] = {
     P(location ~ outputAliases ~ pathIdentifier)
-      .map { case (loc, _, pid) => OutputRef(loc, pid) }
+      .map { case (loc, keyword, pid) => OutputRef(loc, keyword, pid) }
   }
 
   def inputRef[u: P]: P[InputRef] = {
     P(location ~ inputAliases ~ pathIdentifier)
-      .map { case (loc, _, pid) => InputRef(loc, pid) }
+      .map { case (loc, keyword, pid) => InputRef(loc, keyword, pid) }
   }
 
   def groupRef[u: P]: P[GroupRef] = {
     P(location ~ groupAliases ~ pathIdentifier)
-      .map { case (loc, _, pid) => GroupRef(loc, pid) }
+      .map { case (loc, keyword, pid) => GroupRef(loc, keyword, pid) }
   }
 
   def authorRef[u:P]: P[AuthorRef] = {

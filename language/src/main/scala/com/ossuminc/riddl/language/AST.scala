@@ -3540,6 +3540,20 @@ object AST {
     override def format: String = s"group ${id.value}"
   }
 
+  /** A Reference to a Group
+    *
+    * @param loc
+    *    The At locator of the group reference
+    * @param keyword
+    *   The keyword used to introduce the Group
+    * @param pathId
+    * The path to the referenced group
+    */
+  case class GroupRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Group] {
+    def format: String = s"$keyword ${pathId.format}"
+  }
+
+
   /** A Group contained within a group
     *
     * @param loc
@@ -3559,16 +3573,6 @@ object AST {
       with OccursInGroup {
 
     def format: String = s"contains ${id.format} as ${group.format}"
-  }
-
-  /** A Reference to a Group
-    * @param loc
-    *   The At locator of the group reference
-    * @param pathId
-    *   The path to the referenced group
-    */
-  case class GroupRef(loc: At, pathId: PathIdentifier) extends Reference[Group] {
-    def format: String = s"group ${pathId.format}"
   }
 
   /** A UI Element that presents some information to the user
@@ -3616,8 +3620,8 @@ object AST {
     * @param pathId
     *   The path identifier that refers to the View
     */
-  case class OutputRef(loc: At, pathId: PathIdentifier) extends Reference[Output] {
-    def format: String = s"output ${pathId.format}"
+  case class OutputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Output] {
+    def format: String = s"$keyword ${pathId.format}"
   }
 
   /** A Give is a UI Element to allow the user to 'give' some data to the application. It is analogous to a form in HTML
@@ -3665,8 +3669,8 @@ object AST {
     * @param pathId
     *   The path identifier that refers to the Give
     */
-  case class InputRef(loc: At, pathId: PathIdentifier) extends Reference[Input] {
-    def format: String = s"input ${pathId.format}"
+  case class InputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Input] {
+    def format: String = s"$keyword ${pathId.format}"
   }
 
   sealed trait ApplicationOption(final val name: String) extends OptionValue
