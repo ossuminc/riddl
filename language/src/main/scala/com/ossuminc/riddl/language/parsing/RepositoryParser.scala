@@ -29,7 +29,7 @@ private[parsing] trait RepositoryParser {
     }
   }
 
-  private def repositoryInclude[x: P]: P[Include[OccursInRepository]] = {
+  private def repositoryInclude[x: P]: P[IncludeHolder[OccursInRepository]] = {
     include[OccursInRepository, x](repositoryDefinitions(_))
   }
 
@@ -47,7 +47,8 @@ private[parsing] trait RepositoryParser {
         (undefined(Seq.empty[OccursInRepository]) | repositoryDefinitions) ~
         close ~ briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
-      Repository(loc, id, options, contents, brief, description)
+      val mergedContent = mergeAsynchContent[OccursInRepository](contents)
+      Repository(loc, id, options, mergedContent, brief, description)
     }
   }
 

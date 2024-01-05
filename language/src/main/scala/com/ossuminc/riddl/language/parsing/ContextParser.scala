@@ -37,7 +37,7 @@ private[parsing] trait ContextParser {
     }
   }
 
-  private def contextInclude[X: P]: P[Include[OccursInContext]] = {
+  private def contextInclude[X: P]: P[IncludeHolder[OccursInContext]] = {
     include[OccursInContext, X](contextDefinitions(_))
   }
 
@@ -64,11 +64,12 @@ private[parsing] trait ContextParser {
       location ~ Keywords.context ~/ identifier  ~ is ~ open ~
         contextOptions ~ contextBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
+      val mergedContent = mergeAsynchContent[OccursInContext](contents)
       Context(
         loc,
         id,
         options,
-        contents,
+        mergedContent,
         brief,
         description
       )

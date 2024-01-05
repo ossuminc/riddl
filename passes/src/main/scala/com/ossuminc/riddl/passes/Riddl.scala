@@ -8,27 +8,24 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{CommonOptions, Parser}
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.utils.{Logger,SysLogger}
 import com.ossuminc.riddl.passes.Pass.PassesCreator
-import com.ossuminc.riddl.utils.{Logger, SysLogger}
 
 import java.nio.file.Path
-
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
   def validate(
-                root: Root,
-                options: CommonOptions = CommonOptions.empty,
-                shouldFailOnError: Boolean = true,
+    root: Root,
+    options: CommonOptions = CommonOptions.empty,
+    shouldFailOnError: Boolean = true
   ): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(root, options)
-    if shouldFailOnError && result.messages.hasErrors then
-      Left(result.messages)
-    else
-      Right(result)
+    if shouldFailOnError && result.messages.hasErrors then Left(result.messages)
+    else Right(result)
   }
 
   def parseAndValidate(
@@ -36,17 +33,15 @@ object Riddl {
     commonOptions: CommonOptions = CommonOptions.empty,
     shouldFailOnError: Boolean = true,
     passes: PassesCreator = Pass.standardPasses,
-    logger: Logger = SysLogger(),
+    logger: Logger = SysLogger()
   ): Either[Messages, PassesResult] = {
-    Parser.parse(input, commonOptions) match {
+    TopLevelParser.parseInput(input, commonOptions) match {
       case Left(messages) => Left(messages)
       case Right(root) =>
-       val input = PassInput(root, commonOptions)
-       val result = Pass.runThesePasses(input, passes, logger)
-       if shouldFailOnError && result.messages.hasErrors then
-         Left(result.messages)
-       else
-         Right(result)
+        val input = PassInput(root, commonOptions)
+        val result = Pass.runThesePasses(input, passes, logger)
+        if shouldFailOnError && result.messages.hasErrors then Left(result.messages)
+        else Right(result)
     }
   }
 
@@ -55,7 +50,7 @@ object Riddl {
     commonOptions: CommonOptions = CommonOptions.empty,
     shouldFailOnError: Boolean = true,
     passes: PassesCreator = Pass.standardPasses,
-    logger: Logger = SysLogger(),
+    logger: Logger = SysLogger()
   ): Either[Messages, PassesResult] = {
     parseAndValidate(RiddlParserInput(path), commonOptions, shouldFailOnError, passes, logger)
   }

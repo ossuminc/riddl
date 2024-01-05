@@ -16,18 +16,22 @@ case class InputStack(
 
   private val inputs: mutable.Stack[RiddlParserInput] = mutable.Stack()
 
-  def push(input: RiddlParserInput): Unit = inputs.push(input)
+  def push(input: RiddlParserInput): Unit = synchronized { inputs.push(input) }
 
-  def push(file: File): Unit = { inputs.push(FileParserInput(file)) }
+  def push(file: File): Unit = { synchronized { inputs.push(FileParserInput(file)) } }
 
-  def push(url: URL): Unit = { inputs.push(URLParserInput(url)) }
+  def push(url: URL): Unit = { synchronized { inputs.push(URLParserInput(url)) } }
 
-  def pop: RiddlParserInput = { inputs.pop() }
+  def pop: RiddlParserInput = { synchronized { inputs.pop() } }
 
   def current: RiddlParserInput = {
-    require(inputs.nonEmpty, "No current input available")
-    inputs.headOption.getOrElse(RiddlParserInput.empty)
+    synchronized {
+      require(inputs.nonEmpty, "No current input available")
+      inputs.headOption.getOrElse(RiddlParserInput.empty)
+    }
   }
 
-  def sourceNames: Seq[String] = inputs.toSeq.map(_.origin)
+  def sourceNames: Seq[String] = {
+    synchronized { inputs.toSeq.map(_.origin) }
+  }
 }

@@ -64,7 +64,7 @@ private[parsing] trait EntityParser {
     }
   }
 
-  private def entityInclude[X: P]: P[Include[OccursInEntity]] = {
+  private def entityInclude[X: P]: P[IncludeHolder[OccursInEntity]] = {
     include[OccursInEntity, X](entityDefinitions(_))
   }
 
@@ -86,7 +86,8 @@ private[parsing] trait EntityParser {
       location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
         entityOptions ~ entityBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
-      Entity(loc, id, options, contents, brief, description)
+      val mergedContent = mergeAsynchContent[OccursInEntity](contents)
+      Entity(loc, id, options, mergedContent, brief, description)
     }
   }
 }

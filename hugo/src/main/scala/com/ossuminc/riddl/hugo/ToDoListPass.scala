@@ -27,7 +27,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
     extends CollectingPass[ToDoItem](input, outputs)
     with PassUtilities {
 
-  protected def collect(definition: Definition, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
+  protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
     definition match {
       case _: Root | _: Interaction | _: Include[Definition] @unchecked =>
         // None of these kinds of definitions contribute to the TODO List because they have a weird name
@@ -66,7 +66,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
   }
 
   override def result: ToDoListOutput = {
-    ToDoListOutput(messages.toMessages, collectedValues)
+    ToDoListOutput(messages.toMessages, collectedValues.toSeq)
   }
 
   def name: String = ToDoListPass.name

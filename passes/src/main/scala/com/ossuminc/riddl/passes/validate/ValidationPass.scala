@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.parsing.RiddlOption
 import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
-import com.ossuminc.riddl.utils.SeqHelpers.SeqHelpers
+import com.ossuminc.riddl.utils.SeqHelpers.*
 
 import scala.collection.mutable
 
@@ -62,9 +62,9 @@ case class ValidationPass(
     checkStreaming(root)
   }
 
-  def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+  def process(value: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
     val parentsAsSeq: Seq[Definition] = parents.toSeq
-    definition match {
+    value match {
       case f: AggregateValue =>
         f match {
           case f: Field  => validateField(f, parentsAsSeq)
@@ -128,7 +128,7 @@ case class ValidationPass(
         validateDomain(d, parentsAsSeq)
       case s: Epic =>
         validateEpic(s, parentsAsSeq)
-      case uc: UseCase => 
+      case uc: UseCase =>
         validateUseCase(uc, parentsAsSeq)
       case a: Application =>
         validateApplication(a, parentsAsSeq)
@@ -140,9 +140,8 @@ case class ValidationPass(
         validateOutput(out, parentsAsSeq)
       case cg: ContainedGroup =>
         validateContainedGroup(cg, parentsAsSeq)
-      
-      case _: Root        => ()
-
+      case _: Root        => () // No validation needed
+      case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
   }
@@ -430,8 +429,8 @@ case class ValidationPass(
   }
 
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
-    check(i.nonEmpty, "Include has no included content", Messages.Error, i.loc)
-    check(i.source.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
+    check(i.contents.nonEmpty, "Include has no included content", Messages.Error, i.loc)
+    check(i.origin.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
   }
 
   private def validateEntity(

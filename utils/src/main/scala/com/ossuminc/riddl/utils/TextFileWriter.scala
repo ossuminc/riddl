@@ -6,8 +6,6 @@
 
 package com.ossuminc.riddl.utils
 
-import com.ossuminc.riddl.utils.TextFileWriter.*
-
 import java.nio.charset.StandardCharsets
 
 import scala.annotation.tailrec
@@ -26,7 +24,7 @@ abstract class TextFileWriter extends OutputFile {
     require(src != null, s"Failed too load '$resourceName' as a stream")
     val templateBytes = src.readAllBytes()
     val template = new String(templateBytes, StandardCharsets.UTF_8)
-    val result = substitute(template, substitutions)
+    val result = TextFileWriter.substitute(template, substitutions)
     sb.append(result)
   }
 }

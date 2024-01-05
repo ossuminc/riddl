@@ -9,10 +9,10 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
+import com.ossuminc.riddl.utils.{Logger,SysLogger, Timer}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
-import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.annotation.unused
@@ -163,7 +163,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     *   the root. The root is deepest in the stack.
     */
   protected def process(
-    definition: Definition,
+    definition: RiddlValue,
     parents: mutable.Stack[Definition]
   ): Unit
 
@@ -194,12 +194,23 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * @param parents
     *   The parents of the definition
     */
-  protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    process(definition, parents)
-    if definition.hasDefinitions then {
-      parents.push(definition)
-      definition.definitions.foreach { item => traverse(item, parents) }
-      parents.pop()
+  protected def traverse(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
+    definition match {
+      case leaf: LeafDefinition =>
+        process(leaf, parents)
+      case root: Root =>
+        parents.push(root)
+        root.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+      case definition: Definition =>
+        process(definition, parents)
+        parents.push(definition)
+        definition.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+      case include: Include[?] =>
+        include.contents.foreach { value => traverse(value, parents) }
+      case value: RiddlValue =>
+        process(value, parents)
     }
   }
 
@@ -228,7 +239,7 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
     *   The stack of definitions that are the parents of [[com.ossuminc.riddl.language.AST.Definition]].
     *   This stack goes from immediate parent towards the root. The root is deepest in the stack.
     */
-  override final def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = ()
+  override final def process(definition: RiddlValue, parents: mutable.Stack[AST.Definition]): Unit = ()
 
   /** Called by traverse when a new container is started
     * Subclasses must implement this method.
@@ -248,6 +259,15 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
     */
   protected def processLeaf(definition: LeafDefinition, parents: Seq[Definition]): Unit
 
+  /** Process a non-definition, non-include, value
+    *
+    * @param value
+    *   The value to be processed
+    * @param parents
+    *   The parent definitions of value
+    */
+  protected def processValue(value: RiddlValue, parents: Seq[Definition]): Unit = ()
+
   /** Called by traverse after all leaf nodes of an opened node have been processed and
     * the opened node is now being closed. Subclasses must implement this method.
     * @param definition
@@ -260,20 +280,28 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
   /** Redefine traverse to make the three calls
     *
     * @param definition
+    *   The RiddlValue being considered
     * @param parents
+    *   The definition parents of the value
     */
-  override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
+  override protected def traverse(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
     definition match {
       case leaf: LeafDefinition =>
         processLeaf(leaf, parents.toSeq)
       case container: Definition =>
         openContainer(container, parents.toSeq)
-        val nested = if container.hasIncludes then container.asInstanceOf[WithIncludes[?]].nestedDefinitions else Seq.empty
-        val content = container.definitions ++ nested
-        parents.push(definition)
-        content.foreach { item => traverse(item, parents) }
+        parents.push(container)
+        container.contents.foreach {
+          case leaf: LeafDefinition => processLeaf(leaf, parents.toSeq)
+          case definition: Definition => traverse(definition, parents)
+          case include: Include[?]  => traverse(include, parents)
+          case value: RiddlValue => processValue(value, parents.toSeq)
+        }
         parents.pop()
         closeContainer(container, parents.toSeq)
+      case include: Include[?] =>
+        include.contents.foreach { item => traverse(item, parents) }
+      case value: RiddlValue => processValue(value, parents.toSeq)
     }
   }
 }
@@ -317,7 +345,12 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
     *   This stack goes from immediate parent towards
     *   the root. The root is deepest in the stack.
     */
-  override final def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = ()
+  override final def process(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
+    val collected: Seq[F] = collect(definition, parents)
+    collectedValues ++= collected
+  }
+
+  protected val collectedValues: mutable.ArrayBuffer[F] = mutable.ArrayBuffer.empty[F]
 
   /** The processing method called at each node, similar to [[com.ossuminc.riddl.passes.Pass.process]] but
     * modified to return an sequence of the collectable, [[F]].
@@ -329,23 +362,9 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
     * @return
     *   One of the collected values, an [[F]]
     */
-  protected def collect(definition: Definition, parents: mutable.Stack[AST.Definition]): Seq[F]
-
-  @SuppressWarnings(Array("org.wartremover.warts.Var"))
-  protected var collectedValues: Seq[F] = Seq.empty[F]
+  protected def collect(definition: RiddlValue, parents: mutable.Stack[AST.Definition]): Seq[F]
 
   override def result: CollectingPassOutput[F]
-
-  override protected def traverse(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    val collected = collect(definition, parents)
-    collectedValues = collectedValues ++ collected
-
-    if definition.hasDefinitions then {
-      parents.push(definition)
-      definition.definitions.foreach { item => traverse(item, parents) }
-      parents.pop()
-    }
-  }
 }
 
 object Pass {

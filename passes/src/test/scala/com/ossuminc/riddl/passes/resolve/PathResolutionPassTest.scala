@@ -282,6 +282,7 @@ class PathResolutionPassTest extends ResolvingTest {
             contents = Seq(
               Include(
                 eL,
+                "", 
                 contents = Seq(
                   Context(
                     eL,
@@ -303,13 +304,11 @@ class PathResolutionPassTest extends ResolvingTest {
                       )
                     )
                   )
-                ),
-                Some("foo")
+                )
               )
             )
           )
-        ),
-        Seq.empty[RiddlParserInput]
+        )
       )
       val domain: Domain = root.domains.head
       domain.contents.length mustBe 1

@@ -7,8 +7,9 @@
 package com.ossuminc.riddl.commands
 
 /** Unit Tests For Running Riddlc Commands from Plugins */
-import com.ossuminc.riddl.utils.Plugin
-import com.ossuminc.riddl.utils.PluginSpecBase
+
+import com.ossuminc.riddl.utils.{Plugin,PluginSpecBase}
+
 import pureconfig.ConfigSource
 import scopt.OParser
 

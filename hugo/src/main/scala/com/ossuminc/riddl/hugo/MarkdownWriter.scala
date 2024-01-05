@@ -10,12 +10,13 @@ import com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.diagrams.mermaid.{EntityRelationshipDiagram, UseCaseDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.stats.{KindStats, StatsOutput, StatsPass}
-import com.ossuminc.riddl.utils.TextFileWriter
-
 import com.ossuminc.riddl.language.parsing.Keywords
+import com.ossuminc.riddl.stats.{KindStats, StatsOutput, StatsPass}
+
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
+import com.ossuminc.riddl.utils.{TextFileWriter,Timer,PathUtils,TreeCopyFileVisitor,Tar,Zip,Logger}
+
 
 import java.nio.file.Path
 import scala.annotation.unused
@@ -943,7 +944,7 @@ case class MarkdownWriter(
     emitProcessorToc[RepositoryOption, OccursInRepository](repository)
     emitIndex("Repository", repository, parents)
   }
-  
+
   def emitAdaptor(adaptor: Adaptor, parents: Seq[String]): this.type = {
     containerHead(adaptor, "Adaptor")
     emitDefDoc(adaptor, parents)

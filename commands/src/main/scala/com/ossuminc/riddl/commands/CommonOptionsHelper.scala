@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.utils.{RiddlBuildInfo, SysLogger}
+import com.ossuminc.riddl.utils.{RiddlBuildInfo,SysLogger,StringHelpers,Plugin}
+
 import scopt.DefaultOEffectSetup
 import scopt.DefaultOParserSetup
 import scopt.OParser

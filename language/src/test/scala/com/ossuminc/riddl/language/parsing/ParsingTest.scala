@@ -9,18 +9,25 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.CommonOptions
 import fastparse.{P, *}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.File
 import java.nio.file.Path
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.DurationInt
 import scala.annotation.unused
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-class ParsingTest extends AnyWordSpec with Matchers {
-  case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content))
+trait ParsingTest extends AnyWordSpec with Matchers {
+  
+  protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
+  
+  case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content), testingOptions)
 
   def parse[T <: RiddlValue, U <: RiddlValue](
     input: RiddlParserInput,
@@ -53,7 +60,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
     extract: Root => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
-    tp.parseTopLevelDomain[TO](extract)
+    tp.parseTopLevelDomain[TO](extract).map( x => (x, input))
   }
 
   def parseDomainDefinition[TO <: RiddlValue](
@@ -161,7 +168,7 @@ class ParsingTest extends AnyWordSpec with Matchers {
   ): Root = {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
-    TopLevelParser.parse(rpi) match {
+    TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) => root

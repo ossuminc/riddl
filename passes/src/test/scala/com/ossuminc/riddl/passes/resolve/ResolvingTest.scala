@@ -30,7 +30,7 @@ class ResolvingTest extends AnyWordSpec with Matchers {
   )(
     onSuccess: (PassInput, PassesOutput) => Assertion = (_, _)  => succeed
   )(onFailure: Messages => Assertion = messages => fail(messages.format)): Assertion = {
-    TopLevelParser.parse(input) match {
+    TopLevelParser.parseInput(input) match {
       case Left(errors) =>
         fail(errors.map(_.format).mkString("\n"))
       case Right(model) =>

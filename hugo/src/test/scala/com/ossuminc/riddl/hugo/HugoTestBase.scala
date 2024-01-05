@@ -18,7 +18,7 @@ abstract class HugoTestBase extends ValidatingTest {
     val options = HugoCommand.Options(Some(Path.of(".")), Some(Path.of("target/hugo-test")))
     val passes = HugoCommand.getPasses(commonOptions, options)
 
-    TopLevelParser.parse(input) match {
+    TopLevelParser.parseString(input) match {
       case Left(errors) =>
         fail(errors.format)
       case Right(root) =>

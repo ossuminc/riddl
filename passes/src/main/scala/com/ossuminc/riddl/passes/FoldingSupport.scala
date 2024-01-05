@@ -146,7 +146,7 @@ object FoldingSupport {
               }
             case d: Definition =>
               d.contents.flatMap {
-                case Include(_, contents, _) => contents.definitions
+                case Include(_, _, contents) => contents.definitions
                 case d: Definition           => Seq(d)
                 case _                       => Seq.empty
               }

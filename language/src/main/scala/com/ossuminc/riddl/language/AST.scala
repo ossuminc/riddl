@@ -6,10 +6,13 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 
 import java.net.URL
 import java.nio.file.Path
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 import scala.reflect.{ClassTag, classTag}
 
 /** Abstract Syntax Tree This object defines the model for processing RIDDL and producing a raw AST from it. This raw
@@ -69,6 +72,10 @@ object AST {
     def hasTypes: Boolean = false
 
     def hasIncludes: Boolean = false
+
+    def hasDescription: Boolean = false
+
+    def hasBriefDescription: Boolean = false
 
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
@@ -139,6 +146,9 @@ object AST {
     def lines: Seq[LiteralString]
 
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
+
+    override def hasDescription: Boolean = lines.nonEmpty
+
   }
 
   /** Companion class for Description only to define the empty value */
@@ -181,13 +191,13 @@ object AST {
     def briefValue: String = {
       brief.map(_.s).getOrElse("No brief description.")
     }
-    def hasBriefDescription: Boolean = brief.nonEmpty
+    override def hasBriefDescription: Boolean = brief.exists(_.s.nonEmpty)
   }
 
   /** Base trait of all values that have an optional Description */
   sealed trait DescribedValue extends RiddlValue {
     def description: Option[Description]
-    def hasDescription: Boolean = description.nonEmpty
+    override def hasDescription: Boolean = description.exists(_.hasDescription)
   }
 
   type Contents[+CV <: RiddlValue] = Seq[CV]
@@ -317,7 +327,6 @@ object AST {
       with OccursInProcessors
       with OccursAtRootScope {
     lazy val includes: Contents[Include[CT]] = contents.filter[Include[CT]]
-    lazy val nestedDefinitions: Contents[Definition] = includes.flatMap(_.definitions)
     final override def hasIncludes = true
   }
 
@@ -468,6 +477,11 @@ object AST {
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
+
+  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
+  type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
+    IncludeHolder[?] | TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
+    AdaptorDirection | UserStory | MethodArgument
 
   /** Base trait of values defined at the root (top of file) scope */
   sealed trait OccursAtRootScope extends RiddlValue
@@ -626,26 +640,51 @@ object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
 
+  /** A value to hold the result of an Include while it is being included asynchronously
+    *
+    * @param loc
+    *   The location at which the include occurs in the input
+    *
+    * @param future
+    *   The future deliverable of the result of parsing the inclusion; either a list of error messages or the
+    *   RiddlParserInput for the included content and a list of the values parsed
+    * @tparam CT
+    *   The type of values expected at the top level of the
+    */
+  case class IncludeHolder[CT <: RiddlValue](
+    loc: At = At.empty,
+    origin: String = "",
+    maxDelay: scala.concurrent.duration.Duration = 0.seconds,
+    future: Future[Either[Messages, Seq[CT]]] = Future.successful(Left(Messages.empty))
+  ) extends RiddlValue
+      with OccursInVitalDefinitions
+      with OccursAtRootScope {
+    def format: String = s"include \"$origin\""
+    override def toString: String = format
+  }
+
   /** A value to record an inclusion of a file while parsing.
     *
     * @param loc
     *   The location of the include statement in the source
     * @param contents
     *   The Vital Definitions read from the file
-    * @param source
-    *   A string providing the source (path or URL) of the included source
+    * @param origin
+    *   The string that indicates the origin of the inclusion
     */
   case class Include[CT <: RiddlValue](
-    loc: At = At(RiddlParserInput.empty),
-    contents: Contents[CT] = Seq.empty[CT],
-    source: Option[String] = None
-  ) extends Container[CT]
+    loc: At = At.empty,
+    origin: String = "",
+    contents: Contents[CT] = Seq.empty[CT]
+  ) extends RiddlValue
+      with Container[CT]
       with OccursInVitalDefinitions
       with OccursAtRootScope {
 
     override def isRootContainer: Boolean = true
 
-    def format: String = s"include ${source.getOrElse("none")}"
+    def format: String = s"include \"$origin\""
+    override def toString: String = format
   }
 
   /** A reference to a definition of a specific type.
@@ -692,12 +731,9 @@ object AST {
     *
     * @param contents
     *   The sequence top level definitions contained by this root container
-    * @param inputs
-    *   The inputs for this root scope
     */
   case class Root(
-    contents: Seq[OccursAtRootScope] = Seq.empty[OccursAtRootScope],
-    inputs: Seq[RiddlParserInput] = Nil
+    contents: Seq[OccursAtRootScope] = Seq.empty[OccursAtRootScope]
   ) extends Definition
       with Container[OccursAtRootScope]
       with WithDomains
@@ -723,7 +759,7 @@ object AST {
   }
 
   object Root {
-    val empty: Root = apply(Seq.empty[OccursAtRootScope], Seq.empty[RiddlParserInput])
+    val empty: Root = apply(Seq.empty[OccursAtRootScope])
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// USER
@@ -855,7 +891,6 @@ object AST {
   case class AliasedTypeExpression(loc: At, keyword: String, pathId: PathIdentifier) extends TypeExpression {
     override def format: String = s"$keyword ${pathId.format}"
   }
-  
 
   /** A utility function for getting the kind of a type expression.
     *
@@ -1102,7 +1137,7 @@ object AST {
       with OccursInProjector {
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
   }
-  
+
   /** A type expression that contains an aggregation of fields
     *
     * This is used as the base trait of Aggregations and Messages
@@ -1185,9 +1220,8 @@ object AST {
     override def format: String = s"set of ${of.format}"
   }
 
-  /** A graph of homogenous nodes. This implies the nodes are augmented with
-    * additional data to support navigation in the graph but that detail is
-    * left to the implementation of the model.
+  /** A graph of homogenous nodes. This implies the nodes are augmented with additional data to support navigation in
+    * the graph but that detail is left to the implementation of the model.
     * @param loc
     *   Where the type expression occurs in the source
     * @param of
@@ -1199,28 +1233,25 @@ object AST {
     override def format: String = s"graph of ${of.format}"
   }
 
-  /** A vector, table, or array of homogeneous cells. 
+  /** A vector, table, or array of homogeneous cells.
     * @param loc
     *   Where the type expression occurs in the source
     * @param of
     *   The type of the elements of the table
     * @param dimensions
-    *   The size of the dimensions of the table. There can be as many dimensions as needed. 
+    *   The size of the dimensions of the table. There can be as many dimensions as needed.
     */
   case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression {
     override def format: String = s"table of ${of.format}(${dimensions.mkString(",")})"
   }
 
-  /**
-    * A value that is replicated across nodes in a cluster. Usage requirements placement in 
-    * a definition such as [[Context]] or [[Entity]] that supports the `clustered` value 
-    * for the `kind` option.  
+  /** A value that is replicated across nodes in a cluster. Usage requirements placement in a definition such as
+    * [[Context]] or [[Entity]] that supports the `clustered` value for the `kind` option.
     * @param loc
     *   Where the replica type expression occurs in the source
     * @param of
-    *   The kind of data value that is replicated across cluster nodes.  Because replicas
-    *   imply use of a Conflict-free Replicated Data Type, the kind of type expression for
-    *   `of` is restricted to numeric, set, and map types 
+    *   The kind of data value that is replicated across cluster nodes. Because replicas imply use of a Conflict-free
+    *   Replicated Data Type, the kind of type expression for `of` is restricted to numeric, set, and map types
     */
   case class Replica(loc: At, of: TypeExpression) extends TypeExpression {
     override def format: String = s"replica of ${of.format}"
@@ -2080,14 +2111,14 @@ object AST {
     *   An optional description of the function.
     */
   case class Function(
-                       loc: At,
-                       id: Identifier,
-                       options: Seq[FunctionOption] = Seq.empty,
-                       input: Option[Aggregation] = None,
-                       output: Option[Aggregation] = None,
-                       contents: Contents[OccursInFunction] = Seq.empty,
-                       brief: Option[LiteralString] = Option.empty[LiteralString],
-                       description: Option[Description] = None
+    loc: At,
+    id: Identifier,
+    options: Seq[FunctionOption] = Seq.empty,
+    input: Option[Aggregation] = None,
+    output: Option[Aggregation] = None,
+    contents: Contents[OccursInFunction] = Seq.empty,
+    brief: Option[LiteralString] = Option.empty[LiteralString],
+    description: Option[Description] = None
   ) extends VitalDefinition[FunctionOption, OccursInFunction]
       with WithTypes
       with WithFunctions

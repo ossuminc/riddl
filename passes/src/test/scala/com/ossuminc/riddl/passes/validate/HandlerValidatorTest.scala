@@ -74,8 +74,8 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'On event EntityContext.Incoming' because
-              |definition 'Incoming' was not found inside 'Context 'EntityContext'''
+            """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'On event EntityContext.Incoming'
+              |because definition 'Incoming' was not found inside 'Context 'EntityContext'''
               |and it should refer to a Type""".stripMargin
           )
       }
@@ -122,7 +122,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |  }
           |}""".stripMargin
       parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) {
-        case (root, rpi, messages: Messages) =>
+        case (_, messages: Messages) =>
           val warnings = messages.justWarnings.format
           // info(warnings)
           warnings mustNot be(empty)

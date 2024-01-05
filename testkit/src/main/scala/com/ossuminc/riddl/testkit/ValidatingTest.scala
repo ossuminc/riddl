@@ -14,11 +14,13 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, Riddl}
 import org.scalatest.*
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.io.File
 
 /** Convenience functions for tests that do validation */
-abstract class ValidatingTest extends com.ossuminc.riddl.language.parsing.ParsingTest {
+abstract class ValidatingTest extends AnyWordSpec with Matchers with com.ossuminc.riddl.language.parsing.ParsingTest {
 
   protected def runStandardPasses(
     model: Root,
@@ -37,9 +39,9 @@ abstract class ValidatingTest extends com.ossuminc.riddl.language.parsing.Parsin
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (Root, RiddlParserInput, Messages) => Assertion
+    validation: (Root, Messages) => Assertion
   ): Assertion = {
-    TopLevelParser.parse(input, origin) match {
+    TopLevelParser.parseString(input) match {
       case Left(errors) =>
         val msgs = errors.format
         fail(s"In $origin:\n$msgs")
@@ -48,8 +50,7 @@ abstract class ValidatingTest extends com.ossuminc.riddl.language.parsing.Parsin
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
-            ao.root.inputs mustNot be(empty)
-            validation(root, root.inputs.head, ao.messages)
+            validation(root, ao.messages)
         }
     }
   }

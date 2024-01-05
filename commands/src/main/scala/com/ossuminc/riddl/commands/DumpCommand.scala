@@ -9,8 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
+import com.ossuminc.riddl.utils.{Logger,StringHelpers}
 
 import java.nio.file.Path
 
@@ -32,7 +31,7 @@ class DumpCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
     options.withInputFile { (inputFile: Path) =>
       Riddl.parseAndValidate(inputFile, commonOptions).map { result =>
         log.info(s"AST of $inputFile is:")
-        log.info(toPrettyString(result, 1, None))
+        log.info(StringHelpers.toPrettyString(result, 1, None))
         result
       }
     }

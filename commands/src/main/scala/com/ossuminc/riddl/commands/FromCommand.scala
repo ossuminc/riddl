@@ -8,8 +8,8 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.utils.StringHelpers
+import com.ossuminc.riddl.utils.{Logger, StringHelpers}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser

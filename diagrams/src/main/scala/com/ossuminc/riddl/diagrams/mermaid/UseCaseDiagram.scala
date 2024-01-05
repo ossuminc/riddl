@@ -8,7 +8,7 @@ package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.FileBuilder
+import com.ossuminc.riddl.utils.FileBuilder 
 
 import scala.reflect.ClassTag
 
@@ -42,7 +42,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends 
   }
 
   private val actors: Map[String, Definition] = {
-    useCase.contents.map { 
+    useCase.contents.map {
       case gi: TwoReferenceInteraction =>
         val fromDef = sds.getDefinitionFor[Definition](gi.from.pathId, useCase)
         val toDef = sds.getDefinitionFor[Definition](gi.to.pathId,useCase)

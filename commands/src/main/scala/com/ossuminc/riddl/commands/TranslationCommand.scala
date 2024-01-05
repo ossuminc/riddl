@@ -7,8 +7,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.{OutputFile, Timer}
-
+import com.ossuminc.riddl.utils.{Timer,OutputFile}
 import java.nio.file.Path
 import scala.collection.mutable
 import scala.reflect.ClassTag

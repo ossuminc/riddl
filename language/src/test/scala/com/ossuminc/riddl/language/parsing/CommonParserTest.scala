@@ -44,7 +44,7 @@ class CommonParserTest extends ParsingTest {
                     |"""".stripMargin
       parse[LiteralString, LiteralString](
         input,
-        TopLevelParser("").literalString(_),
+        StringParser("").literalString(_),
         identity
       ) match {
         case Left(errors) =>

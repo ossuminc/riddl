@@ -35,7 +35,7 @@ private[parsing] trait SagaParser {
     }
   }
 
-  private def sagaInclude[u: P]: P[Include[OccursInSaga]] = {
+  private def sagaInclude[u: P]: P[IncludeHolder[OccursInSaga]] = {
     include[OccursInSaga, u](sagaDefinitions(_))
   }
 
@@ -61,7 +61,8 @@ private[parsing] trait SagaParser {
       location ~ Keywords.saga ~ identifier ~ is ~ open ~
         sagaOptions ~ sagaBody ~ close ~ briefly ~ description
     ).map { case (location, identifier, options, (input, output, contents), briefly, description) =>
-      Saga(location, identifier, options, input, output, contents, briefly, description)
+      val mergedContent = mergeAsynchContent[OccursInSaga](contents)
+      Saga(location, identifier, options, input, output, mergedContent, briefly, description)
     }
   }
 }

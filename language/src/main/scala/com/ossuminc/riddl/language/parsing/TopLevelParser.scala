@@ -9,6 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.utils.Timer 
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -18,7 +19,10 @@ import java.util.concurrent.{ExecutorService, Executors}
 import scala.concurrent.ExecutionContext
 
 /** Top level parsing rules */
-class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = CommonOptions.empty )
+class TopLevelParser(
+  val input: RiddlParserInput,
+  val commonOptions: CommonOptions = CommonOptions.empty
+)(implicit val ec: ExecutionContext)
     extends DomainParser
     with AdaptorParser
     with ApplicationParser
@@ -37,9 +41,7 @@ class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = C
     with CommonParser
     with ParsingContext {
 
-  push(rpi)
-
-  private def rootInclude[u: P]: P[Include[OccursAtRootScope]] = {
+  private def rootInclude[u: P]: P[IncludeHolder[OccursAtRootScope]] = {
     include[OccursAtRootScope, u](rootValues(_))
   }
 
@@ -50,17 +52,13 @@ class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = C
   }
 
   private def root[u: P]: P[Root] = {
-    val curr_input = current
-    rootValues.map { (content: Seq[OccursAtRootScope]) =>
-      pop
-      Root(content, Seq(curr_input))
-    }
+    rootValues.map { (content: Seq[OccursAtRootScope]) => Root(content) }
   }
 
   def parseRoot(
     withVerboseFailures: Boolean = false
   ): Either[Messages, Root] = {
-    parseRule[Root](root(_), withVerboseFailures) { (root: Root, input: RiddlParserInput, index: Int) =>
+    parseRule[Root](input, root(_), withVerboseFailures) { (root: Root, input: RiddlParserInput, index: Int) =>
       if root.contents.isEmpty then
         error(
           At(input, index),
@@ -75,45 +73,44 @@ class TopLevelParser(rpi: RiddlParserInput, val commonOptions: CommonOptions = C
 
 object TopLevelParser {
 
-
-  def parseRoot(
-    path: Path,
-    commonOptions: CommonOptions
+  def parseInput(
+    input: RiddlParserInput,
+    commonOptions: CommonOptions = CommonOptions.empty,
+    withVerboseFailures: Boolean = false
   ): Either[Messages, Root] = {
-    if Files.exists(path) then {
-      if Files.isReadable(path) then
-        val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
-        implicit val _: ExecutionContext = ExecutionContext.fromExecutorService(es)
-        val fpi = new FileParserInput(path)
-        val tlp = new TopLevelParser(fpi)
-        tlp.parseRoot()
-      else {
-        Left(
-          List(Messages.error(s"Input file `${path.toString} is not readable."))
-        )
-      }
-    } else {
-      Left(
-        List(Messages.error(s"Input file `${path.toString} does not exist."))
-      )
+    Timer.time(s"parse ${input.origin}", commonOptions.showTimes) {
+      val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
+      implicit val _: ExecutionContext = ExecutionContext.fromExecutorService(es)
+      val tlp = new TopLevelParser(input)
+      tlp.parseRoot(withVerboseFailures)
     }
   }
 
-  def parse(input: RiddlParserInput): Either[Messages, Root] = {
-    val tlp = new TopLevelParser(input)
-    tlp.parseRoot()
-  }
-  def parse(file: File): Either[Messages, Root] = {
-    val fpi = FileParserInput(file)
-    parse(fpi)
-  }
-
-
-  def parse(
-    input: String,
-    origin: String = "string"
+  def parsePath(
+    path: Path,
+    commonOptions: CommonOptions = CommonOptions.empty
   ): Either[Messages, Root] = {
-    val spi = StringParserInput(input, origin)
-    parse(spi)
+    if Files.exists(path) then
+      if Files.isReadable(path) then parseInput(RiddlParserInput(path), commonOptions)
+      else Left(List(Messages.error(s"Input file `${path.toString} is not readable.")))
+      end if
+    else Left(List(Messages.error(s"Input file `${path.toString} does not exist.")))
+    end if
+  }
+
+  def parseFile(
+    file: File,
+    commonOptions: CommonOptions = CommonOptions.empty
+  ): Either[Messages, Root] = {
+    parsePath(file.toPath, commonOptions)
+  }
+
+  def parseString(
+    input: String,
+    commonOptions: CommonOptions = CommonOptions.empty,
+    origin: Option[String] = None
+  ): Either[Messages, Root] = {
+    val spi = StringParserInput(input, origin.getOrElse(s"string(${input.length})"))
+    parseInput(spi, commonOptions)
   }
 }

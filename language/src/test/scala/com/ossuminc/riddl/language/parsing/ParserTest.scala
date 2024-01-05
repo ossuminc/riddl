@@ -10,6 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
 
 import java.nio.file.Path
+import scala.concurrent.ExecutionContext.Implicits.global 
 
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
@@ -20,7 +21,6 @@ class ParserTest extends ParsingTest {
       val testParser = TestParser(riddlParserInput)
       testParser
     }
-
   }
 
   "Parser" must {

@@ -3,21 +3,44 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, RiddlValue, Root}
 import com.ossuminc.riddl.language.Messages.Messages
-import fastparse.P
+import fastparse.*
+import fastparse.Parsed.{Failure,Success}
 import org.scalatest.matchers.must.Matchers
 
 import scala.reflect.{ClassTag, classTag}
+import scala.util.control.NonFatal
+import scala.concurrent.ExecutionContext
 
-case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
-    extends TopLevelParser(input)
+case class TestParser(override val input: RiddlParserInput, throwOnError: Boolean = false)(implicit ec: ExecutionContext)
+    extends TopLevelParser(input)(ec)
     with Matchers {
-  push(input)
+
+  def expect[CT <: RiddlValue](
+    parser: P[?] => P[CT],
+    withVerboseFailures: Boolean = false
+  ): Either[Messages, CT] = {
+    try {
+      fastparse.parse[CT](input, parser(_), withVerboseFailures) match {
+        case Success(content: CT, _) =>
+          if errorsNonEmpty then Left(errorsAsList)
+          else Right(content)
+        case failure: Failure =>
+          makeParseFailureError(failure, input)
+          Left(errorsAsList)
+      }
+    } catch {
+      case NonFatal(exception) =>
+        makeParseFailureError(exception)
+        Left(errorsAsList)
+    }
+  }
+
 
   def parse[T <: RiddlValue, U <: RiddlValue](
     parser: P[?] => P[T],
     extract: T => U
   ): Either[Messages, (U, RiddlParserInput)] = {
-    expect[T](parser).map(x => extract(x._1) -> x._2)
+    expect[T](parser).map(x => extract(x) -> input)
   }
 
   protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
@@ -53,8 +76,8 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
 
   def parseTopLevelDomain[TO <: RiddlValue](
     extract: Root => TO
-  ): Either[Messages, (TO, RiddlParserInput)] = {
-    parseRoot(withVerboseFailures = true).map { (root: Root) => extract(root) -> current }
+  ): Either[Messages, TO] = {
+    parseRoot(withVerboseFailures = true).map { (root: Root) => extract(root) }
   }
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
@@ -62,14 +85,14 @@ case class TestParser(input: RiddlParserInput, throwOnError: Boolean = false)
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val parser = parserFor[FROM]
     val result = expect[FROM](parser)
-    result.map(x => extract(x._1) -> x._2)
+    result.map(x => extract(x) -> input)
   }
 
   def parseDefinition[
     FROM <: Definition: ClassTag
   ]: Either[Messages, (FROM, RiddlParserInput)] = {
     val parser = parserFor[FROM]
-    expect[FROM](parser)
+    expect[FROM](parser).map(ct => ct -> input)
   }
 
   def parseDomainDefinition[TO <: RiddlValue](

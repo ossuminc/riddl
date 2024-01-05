@@ -243,10 +243,10 @@ class ASTTest extends AnyWordSpec with Matchers {
 
   "Include" should {
     "identify as root container, etc" in {
-      val incl = Include(At(), Seq.empty)
+      val incl = Include()
       incl.isRootContainer mustBe true
       incl.loc mustBe At.empty
-      incl.format mustBe "include none"
+      incl.format mustBe "include \"\""
     }
   }
 

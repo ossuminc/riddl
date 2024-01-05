@@ -7,11 +7,9 @@
 package com.ossuminc.riddl.testkit
 
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput}
+import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.StringBuildingPrintStream
-import com.ossuminc.riddl.utils.SysLogger
 import org.scalatest.Assertion
 
 import java.io.File
@@ -23,9 +21,9 @@ class RiddlTest extends ParsingTest {
 
   "parse" should {
     "parse a file" in {
-      Parser.parse(
+      TopLevelParser.parsePath(
         path = Path.of("testkit/src/test/input/rbbq.riddl"),
-        options = CommonOptions(showTimes = true)
+        commonOptions = CommonOptions(showTimes = true)
       ) match {
         case Left(errors) => fail(errors.mkString(System.lineSeparator()))
         case Right(_)     => succeed
@@ -34,19 +32,19 @@ class RiddlTest extends ParsingTest {
 
     "return an error when file does not exist" in {
       val options = CommonOptions(showTimes = true)
-      val path = new File(UUID.randomUUID().toString).toPath
-      Parser.parse(path, options) match {
+      val file = new File(UUID.randomUUID().toString).toPath
+      TopLevelParser.parsePath(file, options) match {
         case Right(root) => fail(s"File doesn't exist, can't be \n$root")
         case Left(errors) =>
           require(errors.size == 1)
-          errors.head.message must include(s"$path does not exist")
+          errors.head.message must include(s"$file does not exist")
       }
     }
     "record errors" in {
       val riddlParserInput: RiddlParserInput =
         RiddlParserInput(UUID.randomUUID().toString)
       val options = CommonOptions(showTimes = true)
-      Parser.parse(input = riddlParserInput, options) match {
+      TopLevelParser.parseInput(input = riddlParserInput, options) match {
         case Right(_) => succeed
         case Left(errors) if errors.nonEmpty =>
           require(

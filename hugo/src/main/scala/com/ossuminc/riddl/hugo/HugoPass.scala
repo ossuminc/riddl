@@ -17,7 +17,8 @@ import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Resolu
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.stats.StatsPass
-import com.ossuminc.riddl.utils.*
+import com.ossuminc.riddl.utils.{Timer,PathUtils,TreeCopyFileVisitor,Tar,Zip,Logger}
+
 
 import java.io.File
 import java.net.URL
@@ -74,8 +75,7 @@ case class HugoPass(
 
   options.inputFile match {
     case Some(inFile) =>
-      if Files.exists(inFile) then
-        makeDirectoryStructure(options.inputFile)
+      if Files.exists(inFile) then makeDirectoryStructure(options.inputFile)
       else messages.addError((0, 0), "The input-file does not exist")
     case None =>
       messages.addWarning((0, 0), "The input-file option was not provided")
@@ -94,9 +94,9 @@ case class HugoPass(
     mdw
   }
 
-  override def process(definition: AST.Definition, parents: mutable.Stack[AST.Definition]): Unit = {
+  override def process(value: AST.RiddlValue, parents: mutable.Stack[AST.Definition]): Unit = {
     val stack = parents.toSeq
-    definition match {
+    value match {
       case c: Connector =>
         val (md: MarkdownWriter, parents) = setUpLeaf(c, stack)
         md.emitConnector(c, parents)
@@ -144,12 +144,15 @@ case class HugoPass(
           case uc: UseCase =>
             mkd.emitUseCase(uc, stack, this)
 
-          case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause |
-               _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Replica |
-               _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: Root |
-               _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup =>
-            // All of these are handled above in their containers content contribution
+
+          case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Author |
+              _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Inlet |
+              _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: Root |
+              _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup =>
+          // All of these are handled above in their containers content contribution
         }
+      case _: AST.NonDefinitionValues  =>
+      // These aren't definitions so don't count for documentation generation (no names)
     }
   }
 
@@ -368,8 +371,7 @@ case class HugoPass(
             None
         }
       }
-    } else
-      None
+    } else None
   }
 
   private def makeSystemLandscapeView: Option[String] = {

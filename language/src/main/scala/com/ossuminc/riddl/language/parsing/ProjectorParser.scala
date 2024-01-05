@@ -28,7 +28,7 @@ private[parsing] trait ProjectorParser {
     }
   }
 
-  private def projectionInclude[u: P]: P[Include[OccursInProjector]] = {
+  private def projectionInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
     include[OccursInProjector, u](projectionDefinitions(_))
   }
 
@@ -59,7 +59,8 @@ private[parsing] trait ProjectorParser {
       location ~ Keywords.projector ~/ identifier ~ is ~ open ~
         projectionOptions ~ projectionBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
-      Projector(loc, id, options, contents, brief, description)
+      val mergedContent = mergeAsynchContent[OccursInProjector](contents)
+      Projector(loc, id, options, mergedContent, brief, description)
     }
   }
 }

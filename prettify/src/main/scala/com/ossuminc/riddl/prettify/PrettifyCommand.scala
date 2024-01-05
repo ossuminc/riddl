@@ -13,6 +13,7 @@ import com.ossuminc.riddl.passes.Pass.{PassesCreator, standardPasses}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.prettify.PrettifyCommand.cmdName
 import com.ossuminc.riddl.utils.Logger
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser

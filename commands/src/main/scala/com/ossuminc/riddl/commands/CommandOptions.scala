@@ -9,6 +9,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
+import com.ossuminc.riddl.utils.StringHelpers.*
 import com.ossuminc.riddl.utils.Plugin
 import pureconfig.error.ConfigReaderFailures
 import pureconfig.ConfigCursor
@@ -212,7 +213,6 @@ object CommandOptions {
     ConfigSource.file(path.toFile).load[CommonOptions] match {
       case Right(options) =>
         if options.debug then {
-          import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
           println(toPrettyString(options, 1, Some("Loaded common options:")))
         }
         Right(options)

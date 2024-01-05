@@ -20,8 +20,6 @@ object Timer {
     *
     * prints: Stage 'my-stage': 0.000 seconds
     *
-    * @param clock
-    *   the clock that provides the start/end times to compute execution time
     * @param out
     *   the PrintStream to write execution time information to
     * @param stage
@@ -33,7 +31,6 @@ object Timer {
     * @return
     *   The result of running `f`
     */
-  @SuppressWarnings(Array("org.wartremover.warts.Any"))
   def time[T](
     stage: String,
     show: Boolean = true,
@@ -49,7 +46,7 @@ object Timer {
           val delta = stop - start
           val seconds = delta / 1000
           val milliseconds = delta % 1000
-          out.info(f"Stage '$stage': $seconds.$milliseconds%03d seconds")
+          out.info(f"$seconds%3d.$milliseconds%03d sec: $stage")
         }
       result
     } else { f }

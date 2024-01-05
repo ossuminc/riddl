@@ -12,10 +12,7 @@ import java.nio.file.{Files, Path}
 
 object D3Diagrams {
 
-  case class Level(
-    name: String,
-    href: String,
-    children: Seq[Level]) {
+  case class Level(name: String, href: String, children: Seq[Level]) {
     override def toString: String = {
       s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
     }

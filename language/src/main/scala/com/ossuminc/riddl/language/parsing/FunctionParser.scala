@@ -22,7 +22,7 @@ private[parsing] trait FunctionParser {
     }
   }
 
-  private def functionInclude[x: P]: P[Include[OccursInFunction]] = {
+  private def functionInclude[x: P]: P[IncludeHolder[OccursInFunction]] = {
     include[OccursInFunction, x](functionDefinitions(_))
   }
 
@@ -74,7 +74,8 @@ private[parsing] trait FunctionParser {
       location ~ Keywords.function ~/ identifier  ~ is ~ open ~
         functionOptions ~ functionBody ~ close ~ briefly ~ description
     )./.map { case (loc, id, options, (ins, outs, contents, statements), briefly, description) =>
-      Function(loc, id, options, ins, outs, contents ++ statements, briefly, description)
+      val mergedContent = mergeAsynchContent[OccursInFunction](contents)
+      Function(loc, id, options, ins, outs, mergedContent ++ statements, briefly, description)
     }
   }
 }

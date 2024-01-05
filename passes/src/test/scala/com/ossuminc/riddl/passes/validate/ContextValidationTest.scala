@@ -8,7 +8,6 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.TopLevelParser
 
 import java.nio.file.Path
 
@@ -211,7 +210,7 @@ class ContextValidationTest extends ValidatingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndValidate(input, "detect bad color options", shouldFailOnErrors = false) { case (root, rpi, messages) =>
+      parseAndValidate(input, "detect bad color options", shouldFailOnErrors = false) { case (_, messages) =>
         if messages.hasErrors then
           val errs = messages.justErrors
           errs.format must include("color option must be a valid HTML color")

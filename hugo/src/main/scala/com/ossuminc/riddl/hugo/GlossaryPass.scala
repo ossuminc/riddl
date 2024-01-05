@@ -35,20 +35,19 @@ case class GlossaryPass(
 
   // Members declared in com.ossuminc.riddl.passes.CollectingPass
   protected def collect(
-    definition: Definition,
+    definition: RiddlValue,
     parents: mutable.Stack[Definition]
   ): Seq[GlossaryEntry] = {
     definition match {
-      case _: OnMessageClause | _: OnOtherClause | _: OnInitClause | _: OnTerminationClause | _: Root |
-           _: Interaction | _: Include[Definition] @unchecked =>
-        // None of these kinds of definitions contribute to the glossary
-        Seq.empty[GlossaryEntry]
       case ad: Definition if ad.isImplicit => Seq.empty[GlossaryEntry]
       // Implicit definitions don't have a name so there's no word to define in the glossary
       case d: Definition =>
         // everything else does
         val stack = parents.toSeq
-        Seq(makeGlossaryEntry(definition, stack))
+        Seq(makeGlossaryEntry(d, stack))
+      case _: RiddlValue =>
+        // None of these kinds of definitions contribute to the glossary
+        Seq.empty[GlossaryEntry]
     }
   }
 
@@ -69,7 +68,7 @@ case class GlossaryPass(
   }
 
   def result: GlossaryOutput = {
-    GlossaryOutput(messages.toMessages, collectedValues)
+    GlossaryOutput(messages.toMessages, collectedValues.toSeq)
   }
 
   // Members declared in com.ossuminc.riddl.passes.Pass

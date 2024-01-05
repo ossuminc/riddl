@@ -48,10 +48,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     checkUnused()
   }
 
-  def process(definition: Definition, parents: mutable.Stack[Definition]): Unit = {
-    kindMap.add(definition)
-    val parentsAsSeq: Seq[Definition] = definition +: parents.toSeq
-    definition match {
+  def process(value: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
+    val parentsAsSeq: Seq[Definition] = 
+      if value.isDefinition then 
+        val definition = value.asInstanceOf[Definition]
+        kindMap.add(definition)
+        definition  +: parents.toSeq
+      else 
+        parents.toSeq
+      end if  
+    value match {
       case ad: AggregateValue =>
         resolveTypeExpression(ad.typeEx, parentsAsSeq)
       case t: Type =>
@@ -113,17 +119,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         }
       case cg: ContainedGroup =>
         resolveARef[Group](cg.group, parentsAsSeq)
-
-      case _: Author                 => () // no references
-      case _: User                   => () // no references
-      case _: Enumerator             => () // no references
-      case _: Group                  => () // no references
-      case _: Root                   => () // no references
-      case _: SagaStep               => () // no references
-      case _: Term                   => () // no references
-      case _: Handler                => () // no references
-      case _: Invariant              => () // no references
-      // case _ => () // NOTE: Never have this catchall! Want compile time errors.
+      case _: NonReferencableDefinitions => () // These can't be referenced 
+      case _: NonDefinitionValues => () // Neither can these values  
+      // case _ => () // NOTE: Never have this catchall! Want compile time errors!
     }
   }
 
@@ -770,7 +768,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case Some(dfntn) =>
         s"Path '${pid.format}' was not resolved, in ${dfntn.identify}${
             if why.isEmpty then "\n"
-            else " because\n" + why + "\n"
+            else "\nbecause " + why + "\n"
           }"
 
     val referTo = tc.getSimpleName
@@ -907,7 +905,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
               candidatesFromTypeEx(t.typ, parentStack)
             case d: Container[RiddlValue] =>
               d.contents.flatMap {
-                case Include(_, contents, _) => contents.definitions
+                case Include(_, _, contents) => contents.definitions
                 case d: Definition        => Seq(d)
                 case _                       => Seq.empty
               }

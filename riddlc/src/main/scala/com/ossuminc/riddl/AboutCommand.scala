@@ -13,6 +13,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.Logger
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
