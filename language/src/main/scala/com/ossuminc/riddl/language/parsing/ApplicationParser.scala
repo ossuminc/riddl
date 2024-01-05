@@ -42,11 +42,11 @@ private[parsing] trait ApplicationParser {
 
   private def group[u: P]: P[Group] = {
     P(
-      location ~ groupAliases ~ identifier ~/ is ~ open ~
+      location ~ groupAliases ~ identifier ~/ (Keywords.shown ~ Readability.byAsIn ~ httpUrl).? ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
         close ~ briefly ~ description
-    ).map { case (loc, alias, id, elements, brief, description) =>
-      Group(loc, alias, id, elements, brief, description)
+    ).map { case (loc, alias, id, url, elements, brief, description) =>
+      Group(loc, alias, id, url, elements, brief, description)
     }
   }
 
