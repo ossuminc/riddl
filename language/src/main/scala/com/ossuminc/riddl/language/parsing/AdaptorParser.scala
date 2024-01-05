@@ -60,27 +60,9 @@ private[parsing] trait AdaptorParser {
       location ~ Keywords.adaptor ~/ identifier ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorOptions ~
         adaptorBody ~ close ~ briefly ~ description
-    ).map {
-      case (
-            loc,
-            id,
-            direction,
-            cRef,
-            options,
-            contents,
-            brief,
-            description
-          ) =>
-        Adaptor(
-          loc,
-          id,
-          direction,
-          cRef,
-          options,
-          contents,
-          brief,
-          description
-        )
+    ).map { case (loc, id, direction, cRef, options, contents, brief, description) =>
+      val mergedContent = mergeAsynchContent[OccursInAdaptor](contents)
+      Adaptor(loc, id, direction, cRef, options, mergedContent, brief, description)
     }
   }
 }

@@ -363,7 +363,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     @unused include: Include[T]
   ): Unit = {
     if !state.options.singleFile then {
-      include.rpi.origin  match {
+      include.origin  match {
         case path: String if path.startsWith("http") =>
           val url = java.net.URI.create(path).toURL
           state.current.add(s"include \"$path\"")

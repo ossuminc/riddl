@@ -133,7 +133,8 @@ private[parsing] trait StreamingParser {
         close ~ briefly ~ description
     )./.map { case (loc, id, options, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
-      Streamlet(loc, id, shape, options, contents, brief, description)
+      val mergedContent = mergeAsynchContent[OccursInStreamlet](contents)
+      Streamlet(loc, id, shape, options, mergedContent, brief, description)
     }
   }
 

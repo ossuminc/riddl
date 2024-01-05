@@ -13,10 +13,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.language.Messages.warnings
-import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.utils.PathUtils
-import com.ossuminc.riddl.utils.SysLogger
-import com.ossuminc.riddl.utils.Zip
+import com.ossuminc.riddl.utils.{PathUtils,Logger,SysLogger,Zip} 
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.DirectoryFileFilter
 import org.apache.commons.io.filefilter.NotFileFilter
@@ -218,6 +215,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     *   The name of the test case
     * @param configFile
     *   The configuration file that was run
+    * @param tempDir
+    *   THe Path to the temporary directory containing the source
     * @return
     */
   def onSuccess(
@@ -228,6 +227,20 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     @unused tempDir: Path
   ): Assertion = { succeed }
 
+  /** Override this to capture the failure condition
+    *
+    * @param commandName
+    *   The name of the command that failed
+    * @param caseName
+    *   The name of the test case that was running
+    * @param configFile
+    *   The path to the config file that was used
+    * @param messages
+    *   The messages generated from the failure
+    * @param tempDir
+    *   THe Path to the temporary directory containing the source
+    * @return
+    */
   def onFailure(
     @unused commandName: String,
     @unused caseName: String,

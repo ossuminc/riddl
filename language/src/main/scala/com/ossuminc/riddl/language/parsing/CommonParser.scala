@@ -43,8 +43,8 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def include[K <: RiddlValue, u: P](
     parser: P[?] => P[Seq[K]]
   ): P[IncludeHolder[K]] = {
-    P(location ~ Keywords.include ~/ literalString)./.map {
-      case (loc: At, str: LiteralString) => doInclude[K](loc, str)(parser)
+    P(location ~ Keywords.include ~/ location ~ literalString)./.map {
+      case (loc: At, loc2: At, str: LiteralString) => doInclude[K](loc2, str)(parser)
     }
   }
 
@@ -78,14 +78,14 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
   }
 
-  private def fileDescription[u: P]: P[FileDescription] = {
-    P(location ~ Keywords.file ~ literalString).map { tpl =>
-      val path = current.root.toPath.resolve(tpl._2.s)
+  private def fileDescription[u: P](implicit ctx: P[?]): P[FileDescription] = {
+    P(location ~ Keywords.file ~ literalString).map { case(loc, file) =>
+      val path = ctx.input.asInstanceOf[RiddlParserInput].root.toPath.resolve(file.s)
       if Files.isReadable(path) && Files.isRegularFile(path) then {
-        FileDescription(tpl._1, path)
+        FileDescription(loc, path)
       } else {
-        error(tpl._1, s"Description file cannot be read: $path ")
-        FileDescription(tpl._1, path)
+        error(loc, s"Description file cannot be read: $path ")
+        FileDescription(loc, path)
       }
     }
   }

@@ -210,7 +210,7 @@ class ContextValidationTest extends ValidatingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndValidate(input, "detect bad color options", shouldFailOnErrors = false) { case (_, _, messages) =>
+      parseAndValidate(input, "detect bad color options", shouldFailOnErrors = false) { case (_, messages) =>
         if messages.hasErrors then
           val errs = messages.justErrors
           errs.format must include("color option must be a valid HTML color")

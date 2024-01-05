@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.parsing.RiddlOption
 import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
-import com.ossuminc.riddl.utils.SeqHelpers.SeqHelpers
+import com.ossuminc.riddl.utils.SeqHelpers.*
 
 import scala.collection.mutable
 
@@ -430,7 +430,7 @@ case class ValidationPass(
 
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
     check(i.contents.nonEmpty, "Include has no included content", Messages.Error, i.loc)
-    check(i.rpi.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
+    check(i.origin.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
   }
 
   private def validateEntity(

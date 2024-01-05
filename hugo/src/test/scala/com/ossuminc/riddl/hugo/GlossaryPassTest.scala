@@ -16,7 +16,7 @@ class GlossaryPassTest extends ValidatingTest {
         else
           val pass = new GlossaryPass(pr.input, pr.outputs, HugoCommand.Options())
           val output: GlossaryOutput = Pass.runPass[GlossaryOutput](pr.input, pr.outputs, pass)
-          output.entries.size must be(56)
+          output.entries.size must be(58) // TODO: Enhance this test to check entry contents
       }
     }
   }

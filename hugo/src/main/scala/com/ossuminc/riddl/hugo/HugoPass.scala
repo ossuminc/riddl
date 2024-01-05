@@ -17,7 +17,8 @@ import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Resolu
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.stats.StatsPass
-import com.ossuminc.riddl.utils.*
+import com.ossuminc.riddl.utils.{Timer,PathUtils,TreeCopyFileVisitor,Tar,Zip,Logger}
+
 
 import java.io.File
 import java.net.URL
@@ -143,7 +144,7 @@ case class HugoPass(
           case uc: UseCase =>
             mkd.emitUseCase(uc, stack, this)
 
-          
+
           case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Author |
               _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Inlet |
               _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: Root |

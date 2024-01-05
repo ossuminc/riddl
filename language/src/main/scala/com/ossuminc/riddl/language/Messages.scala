@@ -5,6 +5,7 @@
  */
 
 package com.ossuminc.riddl.language
+
 import com.ossuminc.riddl.language.parsing.{
   FileParserInput,
   SourceParserInput,
@@ -12,7 +13,7 @@ import com.ossuminc.riddl.language.parsing.{
   URLParserInput,
   EmptyParserInput
 }
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.Logger 
 
 import scala.collection.mutable
 import scala.io.AnsiColor.*
@@ -222,7 +223,7 @@ object Messages {
     highestSeverity(list)
   }
 
-  def logMessage(message: Message, log: Logger): Unit = {
+  private def logMessage(message: Message, log: Logger): Unit = {
     message.kind match {
       case Info           => log.info(message.format)
       case StyleWarning   => log.warn(message.format)
@@ -234,11 +235,11 @@ object Messages {
     }
   }
 
-  def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
+  private def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
     list.foreach { msg => logMessage(msg, log) }
   }
 
-  def logMessagesByGroup(
+  private def logMessagesByGroup(
     messages: Messages,
     commonOptions: CommonOptions,
     log: Logger

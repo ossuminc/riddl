@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.{CommonOptions, Messages, Parser}
+import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.PassesCreator
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult}
@@ -42,8 +43,8 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     commonOptions: CommonOptions,
     log: Logger
   ): Either[Messages, PassesResult] = {
-    options.withInputFile { (inputFile: Path) =>
-      Parser.parse(inputFile, commonOptions) match {
+    options.withInputFile { (inputPath: Path) =>
+      TopLevelParser.parsePath(inputPath, commonOptions) match {
         case Left(errors) =>
           Left[Messages, PassesResult](errors)
         case Right(root) =>

@@ -199,7 +199,8 @@ private[parsing] trait EpicParser {
       location ~ Keywords.epic ~/ identifier ~ is ~ open ~
         epicOptions ~ epicBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, (userStory, shownBy, contents), briefly, description) =>
-      Epic(loc, id, options, userStory, shownBy, contents, briefly, description)
+      val mergedContent = mergeAsynchContent[OccursInEpic](contents)
+      Epic(loc, id, options, userStory, shownBy, mergedContent, briefly, description)
     }
   }
 }

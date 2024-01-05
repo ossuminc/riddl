@@ -5,6 +5,7 @@
  */
 
 package com.ossuminc.riddl.utils
+
 import scala.collection.mutable
 
 trait FileBuilder {

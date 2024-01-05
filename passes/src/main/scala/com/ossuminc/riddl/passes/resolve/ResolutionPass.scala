@@ -768,7 +768,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case Some(dfntn) =>
         s"Path '${pid.format}' was not resolved, in ${dfntn.identify}${
             if why.isEmpty then "\n"
-            else " because\n" + why + "\n"
+            else "\nbecause " + why + "\n"
           }"
 
     val referTo = tc.getSimpleName

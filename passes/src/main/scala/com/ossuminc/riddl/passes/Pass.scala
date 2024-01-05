@@ -9,10 +9,10 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
+import com.ossuminc.riddl.utils.{Logger,SysLogger, Timer}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
-import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.annotation.unused
@@ -195,10 +195,15 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     *   The parents of the definition
     */
   protected def traverse(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
-    process(definition, parents)
     definition match {
-      case leaf: LeafDefinition => process(leaf, parents)
+      case leaf: LeafDefinition =>
+        process(leaf, parents)
+      case root: Root =>
+        parents.push(root)
+        root.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
       case definition: Definition =>
+        process(definition, parents)
         parents.push(definition)
         definition.contents.foreach { value => traverse(value, parents) }
         parents.pop()

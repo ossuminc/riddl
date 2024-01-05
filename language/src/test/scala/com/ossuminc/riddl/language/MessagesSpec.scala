@@ -10,7 +10,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{Logger, StringLogger}
+import com.ossuminc.riddl.utils.{Logger,StringLogger}
 
 class MessagesSpec extends AnyWordSpec with Matchers {
 

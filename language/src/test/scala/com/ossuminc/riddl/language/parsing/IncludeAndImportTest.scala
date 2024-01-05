@@ -22,16 +22,15 @@ class IncludeAndImportTest extends ParsingTest {
         identity
       ) match {
         case Right(result) =>
-          fail(s"Should have gotten 'does not exist' error but succeeded with \n${result._1}")
+          fail(s"Should have gotten 'FileNotFoundException' but succeeded with: ${result._1}")
         case Left(errors) =>
           errors.size must be(1)
           errors.exists(_.format.contains("does not exist,"))
       }
     }
     "handle bad URL" in {
-      val badURL = new java.net.URI("https://incredible.lightness.of.being:8900000/@@@").toURL
       parseDomainDefinition(
-        RiddlParserInput(badURL),
+        "include \"https://incredible.lightness.of.being:8900000/@@@\"",
         identity
       ) match {
         case Right(_) =>

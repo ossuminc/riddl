@@ -39,9 +39,9 @@ abstract class ValidatingTest extends AnyWordSpec with Matchers with com.ossumin
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (Root, RiddlParserInput, Messages) => Assertion
+    validation: (Root, Messages) => Assertion
   ): Assertion = {
-    TopLevelParser.parse(input, origin) match {
+    TopLevelParser.parseString(input) match {
       case Left(errors) =>
         val msgs = errors.format
         fail(s"In $origin:\n$msgs")
@@ -50,8 +50,7 @@ abstract class ValidatingTest extends AnyWordSpec with Matchers with com.ossumin
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
-            ao.root.inputs mustNot be(empty)
-            validation(root, root.inputs.head, ao.messages)
+            validation(root, ao.messages)
         }
     }
   }

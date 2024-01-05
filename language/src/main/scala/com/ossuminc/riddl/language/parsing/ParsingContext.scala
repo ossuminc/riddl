@@ -9,14 +9,14 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.Timer
-import fastparse.{P, *}
+import com.ossuminc.riddl.utils.Timer 
+import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 import org.apache.commons.lang3.exception.ExceptionUtils
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.annotation.unused
 import scala.collection.mutable
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -26,74 +26,52 @@ import scala.util.control.NonFatal
 trait ParsingContext extends ParsingErrors {
 
   def commonOptions: CommonOptions
+
   implicit def ec: ExecutionContext
 
-  protected val stack: InputStack = InputStack()
-
-  @inline def current: RiddlParserInput = { stack.current }
-  @inline protected def push(path: Path): Unit = { stack.push(path) }
-  @inline protected def push(rpi: RiddlParserInput): Unit = { stack.push(rpi) }
-  @inline protected def pop: RiddlParserInput = {
-    val rpi = stack.pop
-    filesSeen.append(rpi)
-    rpi
-  }
-
-  private val filesSeen: mutable.ListBuffer[RiddlParserInput] = mutable.ListBuffer.empty[RiddlParserInput]
-
-  def inputSeen: Seq[RiddlParserInput] = filesSeen.toSeq
-
   def parseRule[RESULT <: RiddlValue](
+    rpi: RiddlParserInput,
     rule: P[?] => P[RESULT],
     withVerboseFailures: Boolean = false
   )(validate: (result: RESULT, input: RiddlParserInput, index: Int) => RESULT = {
     (result: RESULT, _: RiddlParserInput, _: Int) => result
   }): Either[Messages, RESULT] = {
-    val input = current
     try {
-      fastparse.parse[RESULT](input, rule(_), withVerboseFailures) match {
+      fastparse.parse[RESULT](rpi, rule(_), withVerboseFailures) match {
         case Success(root, index) =>
-          if errors.nonEmpty then Left(errors.toList) else Right(validate(root, input, index))
+          if errorsNonEmpty then Left(errorsAsList) else Right(validate(root, rpi, index))
         case failure: Failure =>
-          makeParseFailureError(failure)
-          Left(errors.toList)
+          makeParseFailureError(failure, rpi)
+          Left(errorsAsList)
       }
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception)
-        Left(errors.toList)
+        Left(errorsAsList)
     }
   }
 
-  def parseInputForRule[RESULT <: RiddlValue](
-    timerName: String,
-    input: RiddlParserInput,
-    rule: P[?] => P[RESULT],
-    withVerboseFailure: Boolean = false
-  )(implicit ec: ExecutionContext): Future[Either[Messages, RESULT]] = {
-    Future {
-      Timer.time(timerName, commonOptions.showTimes) {
-        val tlp = new TopLevelParser(input)
-        tlp.parseRule[RESULT](rule, withVerboseFailure)()
-      }
-    }
-  }
-
-  def location[u: P]: P[At] = {
-    P(Index.map(idx => current.location(idx)))
+  def location[u: P](implicit ctx: P[_]): P[At] = {
+    // NOTE: This isn't strictly kosher because of the cast but as long as we
+    // NOTE: always use a RiddlParserInput, should be safe enough. This is
+    // NOTE: required because of includes and concurrent parsing
+    P(Index.map(idx => ctx.input.asInstanceOf[RiddlParserInput].location(idx)))
   }
 
   def doImport(
     loc: At,
     domainName: Identifier,
     fileName: LiteralString
-  ): Domain = {
+  )(implicit ctx: P[?]): Domain = {
     val name = fileName.s
-    val file = new File(current.root, name)
+    val input = ctx.input.asInstanceOf[RiddlParserInput]
+    val file = new File(input.root, name)
     if !file.exists() then {
       error(s"File '$name` does not exist, can't be imported.")
       Domain(loc, domainName)
-    } else { importDomain(file) }
+    } else {
+      importDomain(file)
+    }
   }
 
   private def importDomain(
@@ -103,9 +81,9 @@ trait ParsingContext extends ParsingErrors {
     Domain(At(), Identifier(At(), "NotImplemented"))
   }
 
-  private def startNextSource(from: LiteralString): RiddlParserInput = {
+  private def startNextSource(from: LiteralString)(implicit ctx: P[?]): RiddlParserInput = {
     val str = from.s
-    val source = if str.startsWith("http") then {
+    if str.startsWith("http") then {
       val url = java.net.URI(str).toURL
       RiddlParserInput(url)
     } else {
@@ -113,107 +91,62 @@ trait ParsingContext extends ParsingErrors {
         if str.endsWith(".riddl") then str
         else str + ".riddl"
       }
-      val path = current.root.toPath.resolve(name)
+      val path = ctx.input.asInstanceOf[RiddlParserInput].root.toPath.resolve(name)
+      require(Files.exists(path), s"File does not exist: $name")
+      require(Files.isReadable(path), s"File is not readable; $name")
       RiddlParserInput(path)
     }
-    source
   }
 
   def doInclude[CT <: RiddlValue](
     loc: At,
     str: LiteralString
-  )(rule: P[?] => P[Seq[CT]]): AST.IncludeHolder[CT] = {
+  )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
     // TODO: implement parallel parsing at include points and use the
     // TODO: commonOption.maxParallelParsing to limit parallelism
-    val rpi = startNextSource(str)
     val future = Future[Either[Messages, Seq[CT]]] {
-      try {
-        this.expectMultiple[CT](rpi, rule) match {
-          case Left(theErrors) =>
-            theErrors.filterNot(errors.contains).foreach(errors.append)
-            Left(theErrors)
-          case Right((parseResult, _)) =>
-            Right(parseResult)
+      Timer.time(s"include '$str.s'", commonOptions.showTimes) {
+        try {
+          val rpi = startNextSource(str)
+          fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
+            case Success(content, _) =>
+              if errorsNonEmpty then Left(errorsAsList)
+              else if content.isEmpty then
+                error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
+                Right(content)
+              else Right(content)
+            case failure: Failure =>
+              makeParseFailureError(failure, rpi)
+              Left(errorsAsList)
+          }
+        } catch {
+          case NonFatal(exception) =>
+            makeParseFailureError(exception, loc, s"while included '${str.s}'")
+            Left(errorsAsList)
         }
-      } catch {
-        case NonFatal(exception) =>
-          val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n  ", "\n  ", "\n")
-          val err = Messages.Message(loc, message, Messages.Error, s"while including ${str.s}")
-          val msgs: Messages.Messages = errors.toList :+ err
-          Left(msgs)
       }
     }
-    AST.IncludeHolder[CT](loc, rpi, commonOptions.maxIncludeWait, future)
+    AST.IncludeHolder[CT](loc, str.s, commonOptions.maxIncludeWait, future)
   }
 
   def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
     contents.map {
-      case ih: IncludeHolder[CT] @unchecked =>
-        val contents: Contents[CT] = try {
-          Await.result[Either[Messages,Seq[CT]]](ih.future, ih.maxDelay) match {
-            case Left(messages: Messages) =>
-              messages.foreach(m => addMessage(m))
+      case ih: IncludeHolder[?] =>
+        val contents: Contents[CT] =
+          try {
+            Await.result(ih.future, ih.maxDelay) match {
+              case Left(messages: Messages) =>
+                Seq.empty[CT]
+              case Right(content: Seq[?]) =>
+                content.asInstanceOf[Seq[CT]]
+            }
+          } catch {
+            case NonFatal(exception) =>
+              makeParseFailureError(exception, ih.loc, s"while including '${ih.origin}''")
               Seq.empty[CT]
-            case Right(content: Seq[CT]) =>
-              content
           }
-        } catch {
-          case NonFatal(exception) =>
-            makeParseFailureError(exception, ih.loc, s"while including '${ih.included.origin}")
-            Seq.empty[CT]
-        }
-        Include[CT](ih.loc, ih.included, contents).asInstanceOf[CT]
+        Include[CT](ih.loc, ih.origin, contents).asInstanceOf[CT]
       case rv: CT => rv
-    }
-  }
-
-  def expect[T <: RiddlValue](
-    parser: P[?] => P[T],
-    withVerboseFailures: Boolean = false
-  ): Either[Messages, (T, RiddlParserInput)] = {
-    val input = current
-    try {
-      fastparse.parse[T](input, parser(_), withVerboseFailures) match {
-        case Success(content, _) =>
-          if errors.nonEmpty then Left(errors.toList)
-          else Right(content -> input)
-        case failure: Failure =>
-          makeParseFailureError(failure)
-          Left(errors.toList)
-      }
-    } catch {
-      case NonFatal(exception) =>
-        makeParseFailureError(exception)
-        Left(errors.toList)
-    }
-  }
-
-  def expectMultiple[T <: RiddlValue](
-    source: RiddlParserInput,
-    parser: P[?] => P[Seq[T]],
-    withVerboseFailures: Boolean = false
-  ): Either[Messages, (Seq[T], RiddlParserInput)] = {
-    val input = current
-    try {
-      fastparse.parse[Seq[T]](input, parser(_), withVerboseFailures) match {
-        case Success(content, index) =>
-          if errors.nonEmpty then Left(errors.toList)
-          else if content.isEmpty then
-            error(
-              At(input, index),
-              s"Parser could not translate '${input.origin}''",
-              s"while including ${source.origin}"
-            )
-            Right(content -> input)
-          else Right(content -> input)
-        case failure: Failure =>
-          makeParseFailureError(failure)
-          Left(errors.toList)
-      }
-    } catch {
-      case NonFatal(exception) =>
-        makeParseFailureError(exception)
-        Left(errors.toList)
     }
   }
 }

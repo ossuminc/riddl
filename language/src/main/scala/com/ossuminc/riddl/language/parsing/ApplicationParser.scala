@@ -154,14 +154,8 @@ private[parsing] trait ApplicationParser {
         (emptyApplication | applicationBody) ~
         close ~ briefly ~ description
     ).map { case (loc, id, (options, contents), brief, description) =>
-      Application(
-        loc,
-        id,
-        options,
-        contents,
-        brief,
-        description
-      )
+      val mergedContent = mergeAsynchContent[OccursInApplication](contents)
+      Application(loc, id, options, mergedContent, brief, description)
     }
   }
 }

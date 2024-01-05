@@ -10,7 +10,8 @@ import com.ossuminc.riddl.commands.CommandOptions.optional
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{Interrupt, Logger}
+import com.ossuminc.riddl.utils.{Interrupt,Logger}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import pureconfig.ConfigReader.Result

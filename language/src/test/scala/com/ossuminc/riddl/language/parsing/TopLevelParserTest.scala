@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, At}
 
 import java.io.File
@@ -21,52 +22,34 @@ class TopLevelParserTest extends ParsingTest {
 
   val simpleDomain: AST.Domain = Domain(
     At(1, 1, rip),
-    Identifier(At(1, 8, rip), "foo"),
+    Identifier(At(1, 8, rip), "foo")
   )
-  val simpleDomainResults: AST.Root = Root(
-    List(simpleDomain),
-    List(
-      RiddlParserInput(
-        new File("language/src/test/input/domains/simpleDomain.riddl")
-      )
-    )
-  )
+  val simpleDomainResults: AST.Root = Root(List(simpleDomain))
 
   "parse" should {
     "parse RiddlParserInput" in {
-      TopLevelParser.parse(RiddlParserInput(simpleDomainFile)) mustBe
+      TopLevelParser.parseInput(RiddlParserInput(simpleDomainFile)) mustBe
         Right(simpleDomainResults)
     }
     "parse File" in {
-      TopLevelParser.parse(simpleDomainFile) mustBe Right(simpleDomainResults)
+      TopLevelParser.parseFile(simpleDomainFile) mustBe Right(simpleDomainResults)
     }
     "parse String" in {
       val source = Source.fromFile(simpleDomainFile)
       try {
         val stringContents = source.mkString
-        val result = TopLevelParser.parse(stringContents, origin)
-        val expected = Root(
-          List(simpleDomain),
-          List(
-            StringParserInput(
-              """domain foo is {
-              |  ???
-              |}
-              |""".stripMargin,
-              "simpleDomain.riddl"
-            )
-          )
-        )
+        val result = TopLevelParser.parseString(stringContents, origin = Some(simpleDomainFile.getName))
+        val expected = Root(List(simpleDomain))
         result mustBe Right(expected)
       } finally { source.close() }
     }
     "parse empty String" in {
-      val expected =
-        Root(List(), List(StringParserInput("", "string")))
-      TopLevelParser.parse("") match {
-        case Right(expected) =>
-          fail("Should have failed expecting an author or domain")
-        case Left(messages) =>
+      val expected = Root(List())
+      val parser = StringParser("")
+      parser.parseRoot() match {
+        case Right(r: Root) =>
+          fail(s"Should have failed expecting an author or domain but got ${r.format}")
+        case Left(messages: Messages) =>
           messages.length mustBe 1
           val msg = messages.head
           msg.message must include("Expected one of")
@@ -76,11 +59,9 @@ class TopLevelParserTest extends ParsingTest {
     }
 
     "handle garbage" in {
-      val expected =
-        Root(List.empty, List(StringParserInput("", "string")))
-      TopLevelParser.parse(" pweio afhj", "handle garbage") match {
-        case Right(expected) =>
-          fail("Should have failed excpecting an author or domain")
+      TopLevelParser.parseString(" pweio afhj") match {
+        case Right(_) =>
+          fail("Should have failed; expecting an author or domain")
         case Left(messages) =>
           messages.length mustBe 1
           val msg = messages.head

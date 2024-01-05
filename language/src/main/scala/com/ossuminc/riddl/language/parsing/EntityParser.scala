@@ -86,7 +86,8 @@ private[parsing] trait EntityParser {
       location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
         entityOptions ~ entityBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
-      Entity(loc, id, options, contents, brief, description)
+      val mergedContent = mergeAsynchContent[OccursInEntity](contents)
+      Entity(loc, id, options, mergedContent, brief, description)
     }
   }
 }

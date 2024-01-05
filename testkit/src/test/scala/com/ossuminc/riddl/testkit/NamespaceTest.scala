@@ -12,6 +12,7 @@ import com.ossuminc.riddl.language.Messages.*
 import java.nio.file.Path
 import scala.annotation.unused
 import org.scalatest.Assertion
+import org.scalatest.exceptions.TestFailedException
 
 /** Compilation Tests For Includes Examples */
 class NamespaceTest
@@ -25,12 +26,15 @@ class NamespaceTest
     @unused tempDir: Path
   ): Assertion = {
     info(messages.format)
+    info(s"tempDir = ${tempDir.toAbsolutePath}")
     fail(messages.format)
   }
 
   "FooBarSameDomain" should {
     "error w/ highest severity level 5" in {
-      runTest("FooBarSameDomain")
+      val exception = intercept[TestFailedException](runTest("FooBarSameDomain"))
+      exception mustBe a[TestFailedException]
+      exception.getMessage must include("ambiguous")
     }
   }
 
@@ -41,6 +45,6 @@ class NamespaceTest
   }
 
   "FooBarSuccess" should {
-    "succeed in compilation" in { runTest("FooBarSuccess") mustEqual () }
+    "succeed in validation" in { runTest("FooBarSuccess") mustEqual () }
   }
 }

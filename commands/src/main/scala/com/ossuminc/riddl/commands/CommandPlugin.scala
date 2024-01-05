@@ -13,9 +13,8 @@ import com.ossuminc.riddl.language.Messages.SevereError
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.language.Messages.highestSeverity
 import com.ossuminc.riddl.language.Messages.severes
+import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
-import com.ossuminc.riddl.utils.{Logger, Plugin, PluginInterface, RiddlBuildInfo, StringLogger, SysLogger, Timer}
 import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import scopt.OParser
@@ -191,8 +190,7 @@ object CommandPlugin {
         log.info(s"Would have executed: ${remaining.mkString(" ")}")
         0
       else
-        val result = CommandPlugin
-          .runCommandWithArgs(name, remaining, log, commonOptions)
+        val result = CommandPlugin.runCommandWithArgs(name, remaining, log, commonOptions)
         handleCommandResult(result, commonOptions, log)
   }
 
@@ -257,14 +255,13 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: St
           println(s"Read command options from $configFile")
         }
         if commonOptions.debug then {
-          import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
-          println(toPrettyString(value, 1))
+          println(StringHelpers.toPrettyString(value, 1))
         }
         Right(value)
       case Left(fails) =>
         Left(
           errors(
-            s"Errors while reading ${configFile}:\n" + fails.prettyPrint(1)
+            s"Errors while reading $configFile:\n" + fails.prettyPrint(1)
           )
         )
     }
@@ -352,7 +349,7 @@ abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: St
         val input = parent.resolve(inFile)
         val result = replaceInputFile(options, input)
         if commonOptions.debug then {
-          val pretty = toPrettyString(
+          val pretty = StringHelpers.toPrettyString(
             result,
             1,
             Some(s"Loaded these options:${System.lineSeparator()}")

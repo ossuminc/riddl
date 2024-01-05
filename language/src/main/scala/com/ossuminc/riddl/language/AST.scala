@@ -77,7 +77,6 @@ object AST {
 
     def hasBriefDescription: Boolean = false
 
-
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
     ) final def nonEmpty: Boolean = !isEmpty
@@ -654,13 +653,13 @@ object AST {
     */
   case class IncludeHolder[CT <: RiddlValue](
     loc: At = At.empty,
-    included: RiddlParserInput = RiddlParserInput.empty,
+    origin: String = "",
     maxDelay: scala.concurrent.duration.Duration = 0.seconds,
     future: Future[Either[Messages, Seq[CT]]] = Future.successful(Left(Messages.empty))
   ) extends RiddlValue
       with OccursInVitalDefinitions
       with OccursAtRootScope {
-    def format: String = s"include ${included.origin}"
+    def format: String = s"include \"$origin\""
     override def toString: String = format
   }
 
@@ -670,12 +669,12 @@ object AST {
     *   The location of the include statement in the source
     * @param contents
     *   The Vital Definitions read from the file
-    * @param rpi
-    *   The RiddlParserInput that was included
+    * @param origin
+    *   The string that indicates the origin of the inclusion
     */
   case class Include[CT <: RiddlValue](
     loc: At = At.empty,
-    rpi: RiddlParserInput = RiddlParserInput.empty,
+    origin: String = "",
     contents: Contents[CT] = Seq.empty[CT]
   ) extends RiddlValue
       with Container[CT]
@@ -684,7 +683,7 @@ object AST {
 
     override def isRootContainer: Boolean = true
 
-    def format: String = s"include ${rpi.origin}"
+    def format: String = s"include \"$origin\""
     override def toString: String = format
   }
 
@@ -732,12 +731,9 @@ object AST {
     *
     * @param contents
     *   The sequence top level definitions contained by this root container
-    * @param inputs
-    *   The inputs for this root scope
     */
   case class Root(
-    contents: Seq[OccursAtRootScope] = Seq.empty[OccursAtRootScope],
-    inputs: Seq[RiddlParserInput] = Nil
+    contents: Seq[OccursAtRootScope] = Seq.empty[OccursAtRootScope]
   ) extends Definition
       with Container[OccursAtRootScope]
       with WithDomains
@@ -763,7 +759,7 @@ object AST {
   }
 
   object Root {
-    val empty: Root = apply(Seq.empty[OccursAtRootScope], Seq.empty[RiddlParserInput])
+    val empty: Root = apply(Seq.empty[OccursAtRootScope])
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// USER

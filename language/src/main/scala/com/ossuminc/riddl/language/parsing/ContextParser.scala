@@ -64,11 +64,12 @@ private[parsing] trait ContextParser {
       location ~ Keywords.context ~/ identifier  ~ is ~ open ~
         contextOptions ~ contextBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
+      val mergedContent = mergeAsynchContent[OccursInContext](contents)
       Context(
         loc,
         id,
         options,
-        contents,
+        mergedContent,
         brief,
         description
       )
