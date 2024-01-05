@@ -3524,6 +3524,7 @@ object AST {
     loc: At,
     alias: String,
     id: Identifier,
+    shownBy: Option[java.net.URL] = None,
     elements: Seq[OccursInGroup] = Seq.empty[OccursInGroup],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None

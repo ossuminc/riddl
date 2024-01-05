@@ -12,6 +12,7 @@ object Readability {
   def at[u: P]: P[Unit] = keyword("at")
   def by[u: P]: P[Unit] = keyword("by")
   def byAs[u: P]: P[Unit] = Keywords.keywords(StringIn("by", "as"))
+  def byAsIn[u: P]: P[Unit] = Keywords.keywords(StringIn("by", "as", "in"))
   def byFromAs[u: P]: P[Unit] = { Keywords.keywords(StringIn("by", "from", "as")).? }
 
   def for_[u: P]: P[Unit] = keyword("for")

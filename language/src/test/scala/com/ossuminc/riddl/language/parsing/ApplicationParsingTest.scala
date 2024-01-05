@@ -48,5 +48,17 @@ class ApplicationParsingTest extends ParsingTest with Matchers {
           succeed
       }
     }
+    "supports 'shown by' in groups" in {
+      val input =
+        """
+          |domain foo {
+          |  application ignore {
+          |    group Mickey shown by https://pngimg.com/uploads/mickey_mouse/mickey_mouse_PNG54.png is {
+          |      ???
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+    }
   }
 }
