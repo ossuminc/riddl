@@ -5,8 +5,9 @@
  */
 
 package com.ossuminc.riddl.diagrams.mermaid
-import com.ossuminc.riddl.language.AST._
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.utils.FileBuilder
 
 /** Generate a data flow diagram Like this:
   * {{{
@@ -21,18 +22,10 @@ import com.ossuminc.riddl.passes.PassesResult
   * @param pr
   *   The PassesResult from running the standard passes to obtain all the collected ideas.
   */
-case class DataFlowDiagram(pr: PassesResult) {
-
-  final private val newline: String = System.getProperty("line.separator")
-  private val sb: StringBuilder = StringBuilder(1000)
-  private val spacesPerIndent = 2
-
-  private def indent(str: String, level: Int = 1): Unit = {
-    sb.append(" ".repeat(level * spacesPerIndent))
-    sb.append(str)
-    sb.append(newline)
-  }
-
+case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
+  
+  override val spaces_per_level = 2
+  
   private def makeNodeLabel(definition: Definition): Unit = {
     pr.symbols.parentOf(definition) match {
       case Some(parent) =>
@@ -84,7 +77,7 @@ case class DataFlowDiagram(pr: PassesResult) {
   }.getOrElse(Seq.empty)
 
   private def generate(context: Context): String = {
-    sb.append("flowchart LR").append(newline)
+    sb.append("flowchart LR") ;  nl
     val parts = for
       connector <- context.connectors
       participants <- this.participants(connector)
