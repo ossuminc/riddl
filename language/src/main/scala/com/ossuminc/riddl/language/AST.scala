@@ -3329,8 +3329,8 @@ object AST {
     description: Option[Description] = None
   ) extends GenericInteraction {
     def relationship: LiteralString =
-      LiteralString(loc + (6 + from.pathId.format.length), "focuses on ")
-    override def kind: String = "Focus On URL"
+      LiteralString(loc + (6 + from.pathId.format.length), "directed to ")
+    override def kind: String = "Direct User To URL"
     def format: String = s"${from.format} ${relationship.s} ${url.toExternalForm}"
   }
 
@@ -3536,6 +3536,8 @@ object AST {
 
     override lazy val contents: Seq[OccursInGroup] = { elements }
 
+    override def identify: String = s"$alias ${id.value}"
+
     /** Format the node to a string */
     override def format: String = s"group ${id.value}"
   }
@@ -3543,16 +3545,15 @@ object AST {
   /** A Reference to a Group
     *
     * @param loc
-    *    The At locator of the group reference
+    *   The At locator of the group reference
     * @param keyword
     *   The keyword used to introduce the Group
     * @param pathId
-    * The path to the referenced group
+    *   The path to the referenced group
     */
   case class GroupRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Group] {
     def format: String = s"$keyword ${pathId.format}"
   }
-
 
   /** A Group contained within a group
     *
@@ -3607,6 +3608,8 @@ object AST {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def isAppRelated: Boolean = true
 
+    override def identify: String = s"$verbAlias ${id.value}"
+
     override lazy val contents: Seq[OccursInOutput] = outputs
 
     /** Format the node to a string */
@@ -3655,6 +3658,8 @@ object AST {
     override def isAppRelated: Boolean = true
 
     override lazy val contents: Seq[OccursInInput] = inputs
+
+    override def identify: String = s"$verbAlias ${id.value}"
 
     /** Format the node to a string */
     override def format: String = {

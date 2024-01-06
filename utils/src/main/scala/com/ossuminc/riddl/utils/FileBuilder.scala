@@ -18,11 +18,10 @@ trait FileBuilder {
 
   protected val spaces_per_level = 2
 
-  protected def indent(line: String, level: Int = 1): this.type = {
-    sb.append(" ".repeat(level*spaces_per_level)).append(line)
+  protected def indent(line: String = "", level: Int = 1): this.type = {
+    sb.append(" ".repeat(level * spaces_per_level)).append(line)
     nl
   }
-
 
   override def toString: String = sb.toString
 

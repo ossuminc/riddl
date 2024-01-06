@@ -8,132 +8,104 @@ package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.FileBuilder 
+import com.ossuminc.riddl.utils.FileBuilder
+import com.ossuminc.riddl.diagrams.UseCaseDiagramData
 
 import scala.reflect.ClassTag
 
 /** A class to generate the sequence diagrams for an Epic's Use Case
   * @param sds
   *   The UseCaseDiagramSupport implementation that provides information for the UseCaseDiagram
-  * @param useCase
-  * The UseCase from the AST to which this diagram applies
+  * @param ucdd
+  *   The UseCaseDiagramData from the DiagramsPass for this
   */
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends FileBuilder {
-
-  private final val indent_per_level = 4
-
+case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) extends FileBuilder {
+  
   def generate: Seq[String] = {
     sb.append("sequenceDiagram"); nl
-    sb.append(s"${ndnt()}autonumber"); nl
-    val parts: Seq[Definition] = actors.values.toSeq.sortBy(_.kind)
+    sb.append(s"${indent()}autonumber"); nl
+    val parts: Seq[Definition] = ucdd.actors.values.toSeq.sortBy(_.kind)
     makeParticipants(parts)
-    generateInteractions(useCase.contents, indent_per_level)
+    generateInteractions(ucdd.interactions)
     nl
     sb.toString().split('\n').toSeq
   }
 
-  private def actorsFirst(a: (String, Definition), b: (String, Definition)): Boolean = {
-    a._2 match
-      case _: User if b._2.isInstanceOf[User]       => a._1 < b._1
-      case _: User                                  => true
-      case _: Definition if b._2.isInstanceOf[User] => false
-      case _: Definition                            => a._1 < b._1
-  }
-
-  private val actors: Map[String, Definition] = {
-    useCase.contents.map {
-      case gi: TwoReferenceInteraction =>
-        val fromDef = sds.getDefinitionFor[Definition](gi.from.pathId, useCase)
-        val toDef = sds.getDefinitionFor[Definition](gi.to.pathId,useCase)
-        Seq(
-          gi.from.pathId.format -> fromDef,
-          gi.to.pathId.format -> toDef
-        )
-      case _ => Seq.empty
-    }
-      .filterNot(_.isEmpty) // ignore empty things with no references
-      .flatten // get rid of seq of seq
-      .filterNot(_._1.isEmpty)
-      .map(x => x._1 -> x._2.getOrElse(Root.empty))
-      .distinctBy(_._1) // reduce to the distinct ones
-      .sortWith(actorsFirst)
-      .toMap
-  }
-
-  private def ndnt(width: Int = indent_per_level): String = {
-    " ".repeat(width)
-  }
 
   private def makeParticipants(parts: Seq[Definition]): Unit = {
     parts.foreach { (part: Definition) =>
       val name = part.id.value
       part match
-        case u: User       => sb.append(s"${ndnt()}actor $name as ${u.is_a.s}")
-        case i: Input => sb.append(s"${ndnt()}participant $name as ${i.nounAlias} ${i.id.value}")
-        case o: Output => sb.append(s"${ndnt()}participant $name as ${o.nounAlias} ${o.id.value}")
-        case g: Group      => sb.append(s"${ndnt()}participant $name as ${g.alias} ${g.id.value}")
-        case d: Definition => sb.append(s"${ndnt()}participant $name as ${d.identify}")
+        case u: User       => sb.append(s"${indent()}actor $name as ${u.is_a.s}")
+        case i: Input      => sb.append(s"${indent()}participant $name as ${i.identify}")
+        case o: Output     => sb.append(s"${indent()}participant $name as ${o.identify}")
+        case g: Group      => sb.append(s"${indent()}participant $name as ${g.identify}")
+        case d: Definition => sb.append(s"${indent()}participant $name as ${d.identify}")
       nl
     }
     parts.foreach { (part: Definition) =>
       val name = part.id.value
       val link = sds.makeDocLink(part)
       part match
-        case _: User       => sb.append(s"${ndnt()}link $name: User @ $link")
-        case i: Input => sb.append(s"${ndnt()}link $name: ${i.nounAlias} @ $link")
-        case o: Output => sb.append(s"${ndnt()}link $name: ${o.nounAlias} @ $link")
-        case g: Group      => sb.append(s"${ndnt()}link $name: ${g.alias} @ $link")
-        case d: Definition => sb.append(s"${ndnt()}link $name: ${d.kind} @ $link")
+        case _: User       => sb.append(s"${indent()}link $name: User @ $link")
+        case i: Input      => sb.append(s"${indent()}link $name: ${i.nounAlias} @ $link")
+        case o: Output     => sb.append(s"${indent()}link $name: ${o.nounAlias} @ $link")
+        case g: Group      => sb.append(s"${indent()}link $name: ${g.alias} @ $link")
+        case d: Definition => sb.append(s"${indent()}link $name: ${d.kind} @ $link")
       nl
     }
   }
 
-  private def generateInteractions(interactions: Seq[Interaction | Comment], indent: Int): Unit = {
+  private def generateInteractions(interactions: Seq[Interaction | Comment], level: Int = 1): Unit = {
     interactions.foreach {
-      case gi: GenericInteraction => genericInteraction(gi, indent)
-      case si: SequentialInteractions => sequentialInteractions(si, indent)
-      case pi: ParallelInteractions => parallelInteractions(pi, indent)
-      case oi: OptionalInteractions => optionalInteractions(oi, indent)
-      case _: Comment => ()
+      case gi: GenericInteraction     => genericInteraction(gi, level)
+      case si: SequentialInteractions => sequentialInteractions(si, level)
+      case pi: ParallelInteractions   => parallelInteractions(pi, level)
+      case oi: OptionalInteractions   => optionalInteractions(oi, level)
+      case _: Comment                 => ()
     }
   }
 
-  private def genericInteraction(gi: GenericInteraction, indent: Int): Unit = {
+  private def genericInteraction(gi: GenericInteraction, level: Int): Unit = {
     gi match {
-      case tri: TwoReferenceInteraction =>
-        val from = actors(tri.from.pathId.format).id.value
-        val to = actors(tri.to.pathId.format).id.value
-        sb.append(s"${ndnt(indent)}$from->>$to: ${tri.relationship.s}")
-        nl
+      case fogi: FocusOnGroupInteraction =>
+        val from = ucdd.actors(fogi.from.pathId.format).id.value
+        val to = fogi.to.keyword + " " + ucdd.actors(fogi.to.pathId.format).id.value
+        indent(s"$from->>$to: set focus on", level)
       case vi: VagueInteraction =>
         val from = vi.from.s
         val to = vi.to.s
-        sb.append(s"${ndnt(indent)}$from->>$to: ${vi.relationship.s}")
+        indent(s"$from->>$to: ${vi.relationship.s}", level)
       case smi: SendMessageInteraction =>
-        val from = actors(smi.from.pathId.format).id.value
-        val to = actors(smi.to.pathId.format).id.value
-        sb.append(s"${ndnt(indent)}$from->>$to: send ${smi.message.format} to")
+        val from = ucdd.actors(smi.from.pathId.format).id.value
+        val to = ucdd.actors(smi.to.pathId.format).id.value
+        indent(s"$from->>$to: send ${smi.message.format} to", level)
       case di: DirectUserToURLInteraction =>
-        val from = actors(di.from.pathId.format).id.value
+        val from = ucdd.actors(di.from.pathId.format).id.value
         val to = "Internet"
-        sb.append(s"${ndnt(indent)}$from->>$to: direct to ${di.url.toExternalForm}")
+        indent(s"$from->>$to: direct to ${di.url.toExternalForm}",level)
+      case tri: TwoReferenceInteraction =>
+        val from = ucdd.actors(tri.from.pathId.format).id.value
+        val to = ucdd.actors(tri.to.pathId.format).id.value
+        indent(s"$from->>$to: ${tri.relationship.s}", level)
     }
+    nl
   }
 
-  private def sequentialInteractions(si: SequentialInteractions, indent: Int): Unit = {
-    generateInteractions(si.contents, indent + indent_per_level)
+  private def sequentialInteractions(si: SequentialInteractions, level: Int): Unit = {
+    generateInteractions(si.contents, level + 1)
   }
 
-  private def parallelInteractions(pi: ParallelInteractions, indent: Int): Unit = {
-    sb.append(s"${ndnt(indent)}par ${pi.briefValue}")
-    generateInteractions(pi.contents.filter[Interaction], indent + indent_per_level)
-    sb.append(s"${ndnt(indent)}end")
+  private def parallelInteractions(pi: ParallelInteractions, level: Int): Unit = {
+    indent(s"par ${pi.briefValue}", level)
+    generateInteractions(pi.contents.filter[Interaction], level + 1)
+    indent(s"end", level)
   }
 
-  private def optionalInteractions(oi: OptionalInteractions, indent: Int): Unit = {
-    sb.append(s"${ndnt(indent)}opt ${oi.briefValue}")
-    generateInteractions(oi.contents.filter[Interaction], indent + indent_per_level)
-    sb.append(s"${ndnt(indent)}end")
+  private def optionalInteractions(oi: OptionalInteractions, level: Int): Unit = {
+    indent(s"opt ${oi.briefValue}", level)
+    generateInteractions(oi.contents.filter[Interaction], level + 1)
+    indent("end", level)
   }
 }

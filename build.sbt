@@ -116,7 +116,7 @@ lazy val diagrams: Project = Module("diagrams", "riddl-diagrams")
     description := "A Library of passes and utilities for generating diagrams from RIDDL AST",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(language, passes, testkit % "compile->test")
+  .dependsOn(language, passes, testkit % "test->compile")
 
 val Prettify = config("prettify")
 lazy val prettify = Module("prettify", "riddl-prettify")
