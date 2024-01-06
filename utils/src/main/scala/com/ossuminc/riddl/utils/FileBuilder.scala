@@ -12,7 +12,7 @@ trait FileBuilder {
 
   protected val sb: mutable.StringBuilder = new mutable.StringBuilder()
 
-  protected val newLine = System.lineSeparator()
+  protected val newLine: String = System.lineSeparator()
 
   def nl: this.type = { sb.append(newLine); this }
 
@@ -28,5 +28,5 @@ trait FileBuilder {
 
   def toLines: Seq[String] = sb.toString.split(newLine).toIndexedSeq
 
-  def clear: Unit = sb.clear()
+  def clear(): Unit = sb.clear()
 }
