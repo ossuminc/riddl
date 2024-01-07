@@ -82,14 +82,22 @@ private[parsing] trait EpicParser {
       location ~ Keywords.take ~/
         inputRef ~ Readability.from ~ userRef ~/ briefly ~ description
     )./.map { case (loc, input, user, brief, description) =>
-      TakeInputInteraction(loc, from = user, relationship = LiteralString.empty, to = input, brief, description)
+      TakeInputInteraction(loc, from = user, to = input, brief, description)
+    }
+  }
+
+  private def selectInputStep[u: P]: P[SelectInputInteraction] = {
+    P(
+      location ~ userRef ~ Keywords.selects ~ inputRef ~/ briefly ~ description
+    )./.map { case (loc, user, input, brief, description) =>
+      SelectInputInteraction(loc, from = user, to = input, brief, description)
     }
   }
 
   private def stepInteractions[u: P]: P[Interaction] = {
     P(
-      Keywords.step ~ (focusOnGroupStep | directUserToURL | takeInputStep | showOutputStep | selfProcessingStep |
-        sendMessageStep | arbitraryStep | vagueStep)
+      Keywords.step ~ (focusOnGroupStep | directUserToURL | selectInputStep | takeInputStep |
+        showOutputStep | selfProcessingStep | sendMessageStep | arbitraryStep | vagueStep)
     )
   }
 
@@ -162,8 +170,8 @@ private[parsing] trait EpicParser {
     options[u, EpicOption](RiddlOptions.epicOptions) {
       case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
       case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args) => EpicColorOption(loc, args)
-      case (loc, RiddlOption.kind, args) => EpicKindOption(loc, args)
+      case (loc, RiddlOption.color, args)      => EpicColorOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => EpicKindOption(loc, args)
     }
   }
 

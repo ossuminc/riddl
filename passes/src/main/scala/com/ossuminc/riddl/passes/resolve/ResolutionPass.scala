@@ -50,14 +50,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   }
 
   def process(value: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
-    val parentsAsSeq: Seq[Definition] = 
-      if value.isDefinition then 
+    val parentsAsSeq: Seq[Definition] =
+      if value.isDefinition then
         val definition = value.asInstanceOf[Definition]
         kindMap.add(definition)
-        definition  +: parents.toSeq
-      else 
-        parents.toSeq
-      end if  
+        definition +: parents.toSeq
+      else parents.toSeq
+      end if
     value match {
       case ad: AggregateValue =>
         resolveTypeExpression(ad.typeEx, parentsAsSeq)
@@ -108,8 +107,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case uc: UseCase =>
         if uc.userStory.nonEmpty then resolveARef(uc.userStory.user, parentsAsSeq)
         end if
-        if uc.contents.nonEmpty then
-          resolveInteractions(uc.contents, parentsAsSeq)
+        if uc.contents.nonEmpty then resolveInteractions(uc.contents, parentsAsSeq)
       case in: Input =>
         resolveATypeRef(in.putIn, parentsAsSeq)
       case out: Output =>
@@ -120,8 +118,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         }
       case cg: ContainedGroup =>
         resolveARef[Group](cg.group, parentsAsSeq)
-      case _: NonReferencableDefinitions => () // These can't be referenced 
-      case _: NonDefinitionValues => () // Neither can these values  
+      case _: NonReferencableDefinitions => () // These can't be referenced
+      case _: NonDefinitionValues        => () // Neither can these values
       // case _ => () // NOTE: Never have this catchall! Want compile time errors!
     }
   }
@@ -168,7 +166,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveTypeExpression(of, parents)
       case Table(_, of, _) =>
         resolveTypeExpression(of, parents)
-      case Replica(_, of) => 
+      case Replica(_, of) =>
         resolveTypeExpression(of, parents)
       case c: Cardinality =>
         resolveTypeExpression(c.typeExp, parents)
@@ -225,8 +223,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   }
 
   private def resolveInteractions(
-   interactions: Seq[Interaction | Comment],
-   parentsAsSeq: Seq[Definition]
+    interactions: Seq[Interaction | Comment],
+    parentsAsSeq: Seq[Definition]
   ): Unit = {
     for interaction <- interactions do {
       interaction match {
@@ -241,6 +239,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         case ti: ShowOutputInteraction =>
           resolveARef[User](ti.to, parentsAsSeq)
           resolveARef[Output](ti.from, parentsAsSeq)
+        case si: SelectInputInteraction =>
+          resolveARef[User](si.from, parentsAsSeq)
+          resolveARef[Input](si.to, parentsAsSeq)
         case pi: TakeInputInteraction =>
           resolveARef[User](pi.from, parentsAsSeq)
           resolveARef[Input](pi.to, parentsAsSeq)
@@ -250,11 +251,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           resolveARef[Definition](from, parentsAsSeq)
           resolveAMessageRef(message, parentsAsSeq)
           resolveARef[Definition](to, parentsAsSeq)
-        case _: VagueInteraction => () // no resolution required
-        case _: OptionalInteractions => () // no references
-        case _: ParallelInteractions => () // no references
+        case _: VagueInteraction       => () // no resolution required
+        case _: OptionalInteractions   => () // no references
+        case _: ParallelInteractions   => () // no references
         case _: SequentialInteractions => () // no references
-        case _: Comment => () // no references
+        case _: Comment                => () // no references
       }
     }
   }
@@ -342,8 +343,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private case class AnchorNotFoundInSymTab(topName: String) extends AnchorCase
   private case class AnchorNotFoundInParents(topName: String) extends AnchorCase
   private case class AnchorNotFoundAnywhere(topName: String) extends AnchorCase
-  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition, Seq[Definition])])
-      extends AnchorCase
+  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition, Seq[Definition])]) extends AnchorCase
   private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
   private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
   private case class AnchorIsRoot(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
@@ -546,7 +546,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case Some(typ: Type) =>
         typ.typ match {
           case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == kind => path // success
-          case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))      => path // success
+          case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))   => path // success
           case typeEx: Alternation =>
             messages.addError(
               loc,
@@ -907,7 +907,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             case d: Container[RiddlValue] =>
               d.contents.flatMap {
                 case Include(_, _, contents) => contents.definitions
-                case d: Definition        => Seq(d)
+                case d: Definition           => Seq(d)
                 case _                       => Seq.empty
               }
       }

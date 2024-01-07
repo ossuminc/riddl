@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.utils
 
 object StringHelpers {
+  // extension (str: String)
 
   def toPrettyString(
     obj: Any,
@@ -34,13 +35,15 @@ object StringHelpers {
 
       obj match {
         case seq: Iterable[Any] => seq.foreach(doIt(_, depth + 1, None))
-        case obj: Product => (obj.productIterator zip obj.productElementNames)
+        case obj: Product =>
+          (obj.productIterator zip obj.productElementNames)
             .foreach { case (subObj, pName) =>
               doIt(subObj, depth + 1, Some(pName))
             }
         case _ =>
       }
     }
+
     doIt(obj, depth, paramName)
     buf.toString
   }

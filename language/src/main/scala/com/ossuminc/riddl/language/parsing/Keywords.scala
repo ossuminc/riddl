@@ -165,6 +165,7 @@ object Keywords {
   def saga[u: P]: P[Unit] = keyword(Keyword.saga)
   def scenario[u: P]: P[Unit] = keyword(Keyword.scenario)
   def see[u: P]: P[Unit] = keyword(Keyword.see)
+  def selects[u:P]: P[Unit] = keyword(Keyword.selects)
   def send[u: P]: P[Unit] = keyword(Keyword.send)
   def sequence[u: P]: P[Unit] = keyword(Keyword.sequence)
   def set[u: P]: P[Unit] = keyword(Keyword.set)
@@ -347,6 +348,7 @@ object Keyword {
   final val saga = "saga"
   final val scenario = "scenario"
   final val see = "see"
+  final val selects = "selects"
   final val send = "send"
   final val sequence = "sequence"
   final val set = "set"

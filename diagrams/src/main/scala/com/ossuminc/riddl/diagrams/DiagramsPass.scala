@@ -75,11 +75,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
         val domain = parents.head.asInstanceOf[Domain]
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates, relationships))
       case epic: Epic =>
-        epic.cases.foreach { uc => 
+        epic.cases.foreach { uc =>
           val data = captureUseCase(uc)
           useCaseDiagrams.put(uc, data)
         }
-        
+
       case _ => ()
   }
 
@@ -150,14 +150,14 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
               tri.from.pathId.format -> fromDef,
               tri.to.pathId.format -> toDef
             )
-          case _: InteractionContainer | _: Interaction | _: Comment => Seq.empty 
+          case _: InteractionContainer | _: Interaction | _: Comment => Seq.empty
         }
-        .filterNot(_.isEmpty) // ignore empty things with no references
+        .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq
-        .filterNot(_._1.isEmpty)
-        .map(x => x._1 -> x._2.getOrElse(Root.empty))
-        .distinctBy(_._1) // reduce to the distinct ones
-        .sortWith(actorsFirst)
+        .filterNot(_._1.isEmpty) // drop empty things
+        .map(x => x._1 -> x._2.getOrElse(Root.empty)) // get rid of no definition case
+        .distinctBy(_._1) // eliminate duplicates
+        .sortWith(actorsFirst) // always list actors first (left side of diagram)
         .toMap
     }
     UseCaseDiagramData(uc.identify, actors, uc.contents.filter[Interaction])

@@ -3358,14 +3358,35 @@ object AST {
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
+  /** A interaction where a User selects an command generating item
+    *
+    * @param loc
+    *   The location of the interaction in the source
+    * @param from
+    *   The user providing the input
+    * @param to
+    *   The input definition that receives the input
+    * @param brief
+    *   A description of this interaction step
+    */
+  case class SelectInputInteraction(
+    loc: At,
+    from: UserRef,
+    to: InputRef,
+    brief: Option[LiteralString] = None,
+    description: Option[Description] = None
+  ) extends TwoReferenceInteraction {
+    override def kind: String = "Select Input Interaction"
+    def format: String = s"${from.format} selects ${to.format}"
+    def relationship: LiteralString = LiteralString(loc, "selects")
+  }
+
   /** A interaction where and User provides input
     *
     * @param loc
     *   The location of the interaction in the source
     * @param from
     *   The user providing the input
-    * @param relationship
-    *   A description of the relationship in this interaction
     * @param to
     *   The input definition that receives the input
     * @param brief
@@ -3374,13 +3395,13 @@ object AST {
   case class TakeInputInteraction(
     loc: At,
     from: UserRef,
-    relationship: LiteralString,
     to: InputRef,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
+    def relationship: LiteralString = LiteralString(loc, "Provides data to")
   }
 
   /** The definition of a Jacobsen Use Case RIDDL defines these epics by allowing a linkage between the user and RIDDL

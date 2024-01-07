@@ -20,9 +20,20 @@ import scala.reflect.ClassTag
 @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) extends FileBuilder {
   
+  val config = Map(
+    "theme" -> "dark",
+    "forceMenus" -> "true", 
+    "wrap" -> "true", 
+    "mirrorActors" -> "false"
+  )
   def generate: Seq[String] = {
+    sb.append("---\n")
+    sb.append("  sequence:\n")
+    sb.append(config.map(x => x._1 + ": " + x._2).mkString("    ", "\n    ", "\n"))
+    sb.append("---\n")
     sb.append("sequenceDiagram"); nl
-    sb.append(s"${indent()}autonumber"); nl
+    indent("autonumber")
+    
     val parts: Seq[Definition] = ucdd.actors.values.toSeq.sortBy(_.kind)
     makeParticipants(parts)
     generateInteractions(ucdd.interactions)
@@ -35,23 +46,21 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
     parts.foreach { (part: Definition) =>
       val name = part.id.value
       part match
-        case u: User       => sb.append(s"${indent()}actor $name as ${u.is_a.s}")
-        case i: Input      => sb.append(s"${indent()}participant $name as ${i.identify}")
-        case o: Output     => sb.append(s"${indent()}participant $name as ${o.identify}")
-        case g: Group      => sb.append(s"${indent()}participant $name as ${g.identify}")
-        case d: Definition => sb.append(s"${indent()}participant $name as ${d.identify}")
-      nl
+        case u: User       => indent(s"actor $name as ${u.is_a.s}")
+        case i: Input      => indent(s"participant $name as ${i.nounAlias} ${i.id.value}")
+        case o: Output     => indent(s"participant $name as ${o.nounAlias} ${o.id.value}")
+        case g: Group      => indent(s"participant $name as ${g.alias} ${g.id.value}")
+        case d: Definition => indent(s"participant $name as ${d.identify}")
     }
     parts.foreach { (part: Definition) =>
       val name = part.id.value
       val link = sds.makeDocLink(part)
       part match
-        case _: User       => sb.append(s"${indent()}link $name: User @ $link")
-        case i: Input      => sb.append(s"${indent()}link $name: ${i.nounAlias} @ $link")
-        case o: Output     => sb.append(s"${indent()}link $name: ${o.nounAlias} @ $link")
-        case g: Group      => sb.append(s"${indent()}link $name: ${g.alias} @ $link")
-        case d: Definition => sb.append(s"${indent()}link $name: ${d.kind} @ $link")
-      nl
+        case _: User       => ()
+        case i: Input      => indent(s"link $name: ${i.nounAlias} @ $link")
+        case o: Output     => indent(s"link $name: ${o.nounAlias} @ $link")
+        case g: Group      => indent(s"link $name: ${g.alias} @ $link")
+        case d: Definition => indent(s"link $name: ${d.kind} @ $link")
     }
   }
 
@@ -88,7 +97,6 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
         val to = ucdd.actors(tri.to.pathId.format).id.value
         indent(s"$from->>$to: ${tri.relationship.s}", level)
     }
-    nl
   }
 
   private def sequentialInteractions(si: SequentialInteractions, level: Int): Unit = {

@@ -839,7 +839,10 @@ case class ValidationPass(
       case FocusOnGroupInteraction(_, user: UserRef, group: GroupRef, _, _) =>
         checkRef[Group](group, useCase, parents)
         checkRef[User](user, useCase, parents)
-      case TakeInputInteraction(_, user: UserRef, _, inputRef: InputRef, _, _) =>
+      case SelectInputInteraction(_, user: UserRef, inputRef: InputRef, _, _) =>
+        checkRef[User](user, useCase, parents)
+        checkRef[Input](inputRef, useCase, parents)
+      case TakeInputInteraction(_, user: UserRef, inputRef: InputRef, _, _) =>
         checkRef[User](user, useCase, parents)
         checkRef[Input](inputRef, useCase, parents)
       case ArbitraryInteraction(_, from, _, to, _, _) =>
