@@ -4,7 +4,7 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsPass}
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput}
 
 import scala.collection.mutable
 
@@ -89,4 +89,5 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
 object MessagesPass extends PassInfo {
   val name: String = "Messages"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => MessagesPass(in, out, HugoCommand.Options())}
 }

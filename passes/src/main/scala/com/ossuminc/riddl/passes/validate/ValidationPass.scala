@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
 import com.ossuminc.riddl.language.parsing.RiddlOption
-import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.utils.SeqHelpers.*
@@ -19,6 +19,7 @@ import scala.collection.mutable
 
 object ValidationPass extends PassInfo {
   val name: String = "Validation"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ValidationPass(in, out) }
 }
 
 /** The ValidationPass

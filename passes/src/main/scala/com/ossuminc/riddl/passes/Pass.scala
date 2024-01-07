@@ -9,7 +9,8 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
-import com.ossuminc.riddl.utils.{Logger,SysLogger, Timer}
+import com.ossuminc.riddl.passes.PassCreator
+import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
@@ -19,10 +20,18 @@ import scala.annotation.unused
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
+/** A function type that creates a Pass instance */
+type PassCreator = (PassInput, PassesOutput) => Pass
+
+/** A sequence of PassCreator. This is used to run a set of passes */
+type PassesCreator = Seq[PassCreator]
+
+
 /** Information a pass must provide, basically its name
   */
 trait PassInfo {
   def name: String
+  def creator: PassCreator
 }
 
 /** Information that a Pass must produce, currently just any messages it generated. Passes should derive their own
@@ -369,21 +378,11 @@ abstract class CollectingPass[F](input: PassInput, outputs: PassesOutput) extend
 
 object Pass {
 
-  /** A function type that creates a Pass instance */
-  type PassCreator = (PassInput, PassesOutput) => Pass
-
-  /** A sequence of PassCreator. This is used to run a set of passes */
-  type PassesCreator = Seq[PassCreator]
-
   /** A PassesCreator of the standard passes that should be run on every AST pass. These generate the symbol table,
     * resolve path references, and validate the input. Only after these three have passed successfull should the model
     * be considered processable by other passes
     */
-  val standardPasses: PassesCreator = Seq(
-    { (input: PassInput, outputs: PassesOutput) => SymbolsPass(input, outputs) },
-    { (input: PassInput, outputs: PassesOutput) => ResolutionPass(input, outputs) },
-    { (input: PassInput, outputs: PassesOutput) => ValidationPass(input, outputs) }
-  )
+  val standardPasses: PassesCreator = Seq(SymbolsPass.creator, ResolutionPass.creator, ValidationPass.creator)
 
   /** The name of the standard passes */
   val standardPassNames: Seq[String] = Seq(SymbolsPass.name, ResolutionPass.name, ValidationPass.name)

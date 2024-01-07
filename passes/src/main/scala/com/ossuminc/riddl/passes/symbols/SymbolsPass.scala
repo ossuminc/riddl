@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.symbols
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput, PassCreator}
 import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
 
 import scala.annotation.unused
@@ -16,6 +16,7 @@ import scala.collection.mutable
 
 object SymbolsPass extends PassInfo {
   val name: String = "Symbols"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => SymbolsPass(in, out) }
 }
 
 /** Symbol Table for Validation and other purposes. This symbol table is built from the AST model after syntactic

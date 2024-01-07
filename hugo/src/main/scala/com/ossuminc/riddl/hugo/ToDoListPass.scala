@@ -7,7 +7,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
 
 import scala.collection.mutable
 
@@ -75,6 +75,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
 object ToDoListPass extends PassInfo {
   val name: String = "ToDoList"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ToDoListPass(in, out, HugoCommand.Options() ) }
 }
 
 // val finder: Finder = Finder(root)

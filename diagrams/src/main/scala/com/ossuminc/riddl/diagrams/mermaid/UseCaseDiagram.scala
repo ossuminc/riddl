@@ -14,8 +14,6 @@ import com.ossuminc.riddl.diagrams.UseCaseDiagramData
 import scala.reflect.ClassTag
 
 /** A class to generate the sequence diagrams for an Epic's Use Case
-  * @param sds
-  *   The UseCaseDiagramSupport implementation that provides information for the UseCaseDiagram
   * @param ucdd
   *   The UseCaseDiagramData from the DiagramsPass for this
   */

@@ -8,7 +8,7 @@ package com.ossuminc.riddl.stats
 import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 
@@ -16,6 +16,7 @@ import scala.collection.mutable
 
 object StatsPass extends PassInfo {
   val name: String = "stats"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => StatsPass(in, out) }
 }
 
 /** @param isEmpty

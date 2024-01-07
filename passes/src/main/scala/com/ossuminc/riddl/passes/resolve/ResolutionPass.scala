@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.resolve
 import com.ossuminc.riddl.language.AST.{Entity, *}
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
-import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 
 import scala.collection.mutable
@@ -24,6 +24,7 @@ case class ResolutionOutput(
 
 object ResolutionPass extends PassInfo {
   val name: String = "Resolution"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ResolutionPass(in, out) }
 }
 
 /** The Reference Resolution Pass */

@@ -12,13 +12,12 @@ import com.ossuminc.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, UseCaseDiagra
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput, PassesResult}
+import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.stats.StatsPass
-import com.ossuminc.riddl.utils.{Timer,PathUtils,TreeCopyFileVisitor,Tar,Zip,Logger}
-
+import com.ossuminc.riddl.utils.{Logger, PathUtils, Tar, Timer, TreeCopyFileVisitor, Zip}
 
 import java.io.File
 import java.net.URL
@@ -27,6 +26,7 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo {
   val name: String = "hugo"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => HugoPass(in, out, HugoCommand.Options() )}
   private val geekDoc_version = "v0.41.2"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL = java.net.URI

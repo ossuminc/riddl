@@ -11,8 +11,8 @@ import com.ossuminc.riddl.commands.{CommandOptions, PassCommand, TranslatingOpti
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.Pass.{PassesCreator, standardPasses}
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult}
+import com.ossuminc.riddl.passes.Pass.standardPasses
+import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult, PassesCreator}
 import com.ossuminc.riddl.stats.StatsPass
 import com.ossuminc.riddl.diagrams.DiagramsPass
 import com.ossuminc.riddl.utils.Logger 

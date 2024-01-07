@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.{Messages, nl}
 import com.ossuminc.riddl.language.parsing.{Keyword, Readability}
 import com.ossuminc.riddl.language.{AST, Messages}
-import com.ossuminc.riddl.passes.{HierarchyPass, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.passes.{HierarchyPass, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
@@ -20,6 +20,7 @@ import scala.annotation.unused
 
 object PrettifyPass extends PassInfo {
   val name: String = "prettify"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, PrettifyState()) }
 
   /** A function to translate between a definition and the keyword that introduces them.
     *
@@ -62,7 +63,7 @@ case class PrettifyOutput(
 ) extends PassOutput
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
-case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState)
+case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState = PrettifyState())
     extends HierarchyPass(input, outputs) {
 
   requires(SymbolsPass)

@@ -9,8 +9,8 @@ package com.ossuminc.riddl.prettify
 import com.ossuminc.riddl.commands.CommandOptions.optional
 import com.ossuminc.riddl.commands.TranslationCommand
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.passes.Pass.{PassesCreator, standardPasses}
-import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.Pass.standardPasses
+import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesCreator}
 import com.ossuminc.riddl.prettify.PrettifyCommand.cmdName
 import com.ossuminc.riddl.utils.Logger
 

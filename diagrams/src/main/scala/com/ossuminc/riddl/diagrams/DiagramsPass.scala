@@ -48,7 +48,7 @@ case class ContextDiagramData(
 case class DiagramsPassOutput(
   messages: Messages.Messages = Messages.empty,
   dataFlowDiagrams: Map[Context, DataFlowDiagramData] = Map.empty,
-  userCaseDiagrams: Map[Epic, Seq[UseCaseDiagramData]] = Map.empty,
+  userCaseDiagrams: Map[UseCase, UseCaseDiagramData] = Map.empty,
   contextDiagrams: Map[Context, ContextDiagramData] = Map.empty
 ) extends PassOutput
 
@@ -64,7 +64,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private val symTab = outputs.symbols
 
   private val dataFlowDiagrams: mutable.HashMap[Context, DataFlowDiagramData] = mutable.HashMap.empty
-  private val useCaseDiagrams: mutable.HashMap[Epic, Seq[UseCaseDiagramData]] = mutable.HashMap.empty
+  private val useCaseDiagrams: mutable.HashMap[UseCase, UseCaseDiagramData] = mutable.HashMap.empty
   private val contextDiagrams: mutable.HashMap[Context, ContextDiagramData] = mutable.HashMap.empty
 
   protected def process(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
@@ -75,8 +75,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
         val domain = parents.head.asInstanceOf[Domain]
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates, relationships))
       case epic: Epic =>
-        val data = epic.cases.map(uc => captureUseCase(uc, epic) )
-        useCaseDiagrams.put(epic, data)
+        epic.cases.foreach { uc => 
+          val data = captureUseCase(uc)
+          useCaseDiagrams.put(uc, data)
+        }
+        
       case _ => ()
   }
 
@@ -137,7 +140,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _: Definition => a._1 < b._1
   }
 
-  private def captureUseCase(uc: UseCase, epic: Epic): UseCaseDiagramData = {
+  private def captureUseCase(uc: UseCase): UseCaseDiagramData = {
     val actors: Map[String, Definition] = {
       uc.contents.map {
           case tri: TwoReferenceInteraction =>
@@ -175,4 +178,5 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
 
 object DiagramsPass extends PassInfo {
   val name: String = "Diagrams"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => DiagramsPass(in, out) }
 }

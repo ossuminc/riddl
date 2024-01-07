@@ -6,19 +6,18 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.diagrams.mermaid
+import com.ossuminc.riddl.diagrams.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData, mermaid}
 import com.ossuminc.riddl.diagrams.mermaid.{EntityRelationshipDiagram, UseCaseDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.Keywords
 import com.ossuminc.riddl.stats.{KindStats, StatsOutput, StatsPass}
-
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
-import com.ossuminc.riddl.utils.{TextFileWriter,Timer,PathUtils,TreeCopyFileVisitor,Tar,Zip,Logger}
-
+import com.ossuminc.riddl.utils.{Logger, PathUtils, Tar, TextFileWriter, Timer, TreeCopyFileVisitor, Zip}
 
 import java.nio.file.Path
+import javax.swing.border.TitledBorder
 import scala.annotation.unused
 
 case class MarkdownWriter(
@@ -145,6 +144,13 @@ case class MarkdownWriter(
 
   private def mono(phrase: String): String = { s"`$phrase`" }
 
+  private def notAvailable(thing: String, title: String = "Unavailable"): this.type = {
+    sb.append(s"\n{{< hint type=note icon=gdoc_error_outline title=\"$title\" >}}\n")
+    sb.append(thing)
+    sb.append("{{< /hint >}}")
+    this
+  }
+  
   private def listOf[T <: Definition](
     kind: String,
     items: Seq[T],
@@ -884,9 +890,26 @@ case class MarkdownWriter(
     val parList = passUtilities.makeStringParents(parents)
     emitDefDoc(uc, parList)
     h2("Sequence Diagram")
-    val sd = UseCaseDiagram(sds, uc)
-    val lines = sd.generate
-    emitMermaidDiagram(lines)
+    parents.headOption match
+      case Some(p1) =>
+        val epic = p1.asInstanceOf[Epic]
+        passUtilities.outputs.outputOf[DiagramsPassOutput](DiagramsPass.name) match
+          case Some(dpo) =>
+            dpo.userCaseDiagrams.get(uc) match
+              case Some(useCaseDiagramData: UseCaseDiagramData) =>
+                val ucd = UseCaseDiagram(sds, useCaseDiagramData)
+                val lines = ucd.generate
+                emitMermaidDiagram(lines)
+              
+              case None =>
+                notAvailable("Sequence diagram is not available")
+            end match    
+          case None =>
+            notAvailable("Sequence diagram is not available")
+        end match     
+      case None =>
+        notAvailable("Sequence diagram is not available")
+    end match    
   }
 
   def emitConnector(conn: Connector, parents: Seq[String]): this.type = {

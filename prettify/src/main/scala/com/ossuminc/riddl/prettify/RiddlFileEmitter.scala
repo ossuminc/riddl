@@ -20,8 +20,8 @@ import java.nio.charset.StandardCharsets
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   private var indentLevel: Int = 0
 
-  override def clear: Unit = {
-    super.clear
+  override def clear(): Unit = {
+    super.clear()
     indentLevel = 0
   }
 

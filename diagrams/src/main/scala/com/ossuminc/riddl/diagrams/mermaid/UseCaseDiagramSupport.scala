@@ -16,9 +16,6 @@ import scala.reflect.ClassTag
   */
 trait UseCaseDiagramSupport {
   def passesResult: PassesResult
-  def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition): Option[T] = {
-    passesResult.refMap.definitionOf[T](pathId, parent)
-  }
   def makeDocLink(definition: Definition): String
 }
 
