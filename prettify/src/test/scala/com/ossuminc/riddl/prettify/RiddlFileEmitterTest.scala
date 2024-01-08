@@ -11,8 +11,8 @@ import com.ossuminc.riddl.language.At
 /** Tests For RiddlFileEmitter */
 class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 
-  val path: Path = Path.of("prettify/target/test/rfe.out")
-  val rfe = RiddlFileEmitter(path)
+  private val path: Path = Path.of("prettify/target/test/rfe.out")
+  private val rfe = RiddlFileEmitter(path)
 
   "RiddlFileEmitter" should {
     "add literal strings" in {
@@ -43,18 +43,18 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear()
       rfe.addIndent()
       rfe.toString mustBe ""
-      rfe.indent
+      rfe.incr
       rfe.addIndent()
       rfe.toString mustBe "  "
     }
     "outdent catches unmatched" in {
       rfe.clear()
-      intercept[IllegalArgumentException] { rfe.outdent }
+      intercept[IllegalArgumentException] { rfe.decr }
     }
     "starts a definition with/out a brace" in {
       rfe.clear()
       val defn = Domain(At.empty, Identifier(At.empty, "domain"))
-      rfe.openDef(defn, withBrace = true)
+      rfe.openDef(defn)
       defn.isEmpty mustBe true
       rfe.toString mustBe "domain domain is { ??? }"
       rfe.clear()

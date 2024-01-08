@@ -18,28 +18,11 @@ import java.nio.charset.StandardCharsets
 /** Unit Tests For RiddlFileEmitter */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
-  private var indentLevel: Int = 0
-
-  override def clear(): Unit = {
-    super.clear()
-    indentLevel = 0
-  }
-
-  def asString: String = sb.toString()
-
-  private def spc: String = { " ".repeat(indentLevel) }
-
-  def add(str: String): this.type = {
-    sb.append(str)
-    this
-  }
-
-  def addSpace(): this.type = add(spc)
-
+  
   def add(strings: Seq[LiteralString]): this.type = {
     if strings.sizeIs > 1 then {
-      sb.append("\n")
-      strings.foreach(s => sb.append(s"""$spc"${s.s}"$newLine"""))
+      nl
+      strings.foreach(s => sb.append(s"""$spc"${s.s}"$new_line"""))
     } else { strings.foreach(s => sb.append(s""" "${s.s}" """)) }
     this
   }
@@ -53,37 +36,14 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
   }
 
-  def addIndent(): this.type = {
-    sb.append(s"$spc")
-    this
-  }
-
-  def addIndent(str: String): this.type = {
-    sb.append(s"$spc$str")
-    this
-  }
-
-  private def addLine(str: String): this.type = {
-    sb.append(s"$spc$str\n")
-    this
-  }
-
-  def indent: this.type = { indentLevel = indentLevel + 2; this }
-
-  def outdent: this.type = {
-    require(indentLevel > 1, "unmatched indents")
-    indentLevel = indentLevel - 2
-    this
-  }
-
   def openDef(
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    addSpace().add(s"${keyword(definition)} ${definition.id.format} is ")
+    addIndent().add(s"${keyword(definition)} ${definition.id.format} is ")
     if withBrace then {
       if definition.isEmpty then add("{ ??? }")
-      else add("{\n").indent
+      else add("{").nl.incr
     }
     this
   }
@@ -92,9 +52,9 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    if withBrace && !definition.isEmpty then { outdent.addIndent("}") }
+    if withBrace && !definition.isEmpty then { decr.addIndent("}") }
     emitBrief(definition.brief)
-    emitDescription(definition.description).add("\n")
+    emitDescription(definition.description).nl
   }
 
   def emitBrief(brief: Option[LiteralString]): this.type = {
@@ -104,13 +64,13 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitDescription(description: Option[Description]): this.type = {
     description.map { (desc: Description) =>
-      add(" described as {\n")
-      indent
+      add(" described as {").nl
+      incr
       desc.lines.foreach { line =>
-        add(spc + "|" + line.s + "\n")
+        add(spc + "|" + line.s).nl
       }
-      outdent
-      addLine("}")
+      decr
+      addIndent("}")
     }
     this
   }
@@ -128,29 +88,29 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     description match {
       case Some(desc) =>
         " described as { " + {
-          desc.lines.map(_.format).mkString("", s"\n$spc", " }\n")
+          desc.lines.map(_.format).mkString("", s"$new_line$spc", s" }$new_line")
         }
       case None => ""
     }
   }
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
-    val head = this.add(s"any of {\n").indent
+    val head = this.add(s"any of {").nl.incr
     val enumerators: String = enumeration.enumerators
       .map { enumerator =>
         enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)") +
           mkEnumeratorDescription(enumerator.description)
       }
-      .mkString(s"$spc", s",\n$spc", s"\n")
-    head.add(enumerators).outdent.addLine("}")
+      .mkString(s"$spc", s",$new_line", new_line)
+    head.add(enumerators).decr.addLine("}")
     this
   }
 
   private def emitAlternation(alternation: Alternation): this.type = {
-    add(s"one of {\n").indent.addIndent("")
+    add(s"one of {").nl.incr.addIndent("")
     val paths: Seq[String] = alternation.of.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }
-    add(paths.mkString("", " or ", "\n"))
-    outdent.addIndent("}")
+    add(paths.mkString("", " or ", new_line))
+    decr.addIndent("}")
     this
   }
 
@@ -167,12 +127,12 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case Some(field) if of.size == 1 =>
         add(s"{ ").emitField(field).add(" }").emitDescription(field.description)
       case Some(_) =>
-        this.add("{\n").indent
+        this.add("{").nl.incr
         of.foldLeft(this) { case (s, f) =>
-          s.add(spc).emitField(f).emitDescription(f.description).add(",\n")
+          s.add(spc).emitField(f).emitDescription(f.description).add(",").nl
         }
         sb.deleteCharAt(sb.length - 2)
-        outdent.add(s"$spc} ")
+        decr.add(s"$spc} ")
     }
     this
   }
@@ -216,8 +176,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case pat :: Nil =>
         s"Pattern(${pat.format})"
       case pat :: tail =>
-        val lines = (pat :: tail).map(_.format).mkString(spc, s"\n$spc", "\n")
-        s"Pattern(\n$lines)\n"
+        val lines = (pat :: tail).map(_.format).mkString(spc, s"$new_line$spc", new_line)
+        s"Pattern($new_line$lines)$new_line"
     this.add(line)
   }
 
@@ -276,15 +236,15 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .add(s"${spc}type ${t.id.value} is ")
       .emitTypeExpression(t.typ)
       .emitDescription(t.description)
-      .add("\n")
+      .nl
   }
 
   def emitCodeBlock(statements: Seq[Statement]): this.type = {
-    if statements.isEmpty then add(" { ??? }\n")
+    if statements.isEmpty then add(" { ??? }").nl
     else
-      add(" {").indent.nl
-      statements.map(_.format + "\n").foreach(addIndent)
-      outdent.addIndent("}").nl
+      add(" {").incr.nl
+      statements.map(_.format + new_line).foreach(addIndent)
+      decr.addIndent("}").nl
     this
   }
 

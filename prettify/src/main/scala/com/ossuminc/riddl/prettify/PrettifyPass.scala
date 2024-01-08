@@ -162,7 +162,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     val s0: PrettifyState = state.withCurrent(_.openDef(domain))
     domain.authors.foldLeft[PrettifyState](s0) { (st: PrettifyState, author) =>
       val s1: PrettifyState = st.withCurrent(
-        _.addIndent(s"author is {\n").indent
+        _.addIndent(s"author is {").nl.incr
           .addIndent(s"name = ${author.name.format}\n")
           .addIndent(s"email = ${author.email.format}\n")
       )
@@ -174,7 +174,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       val s3: PrettifyState = author.title
         .map(title => s2.withCurrent(_.addIndent(s"title = ${title.format}\n")))
         .getOrElse(s2)
-      s3.withCurrent(_.outdent.addIndent("}\n"))
+      s3.withCurrent(_.decr.addIndent("}").nl)
     }
   }
 
@@ -247,7 +247,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       state.withCurrent(_.emitUndefined().add(" }\n"))
     } else
       state.withCurrent { rfe =>
-        rfe.add("\n").indent.emitStreamlets(adaptor)
+        rfe.add("\n").incr.emitStreamlets(adaptor)
       }
 
   }
@@ -284,7 +284,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def closeOnClause(): Unit = {
-    state.withCurrent(_.outdent.addIndent("}\n"))
+    state.withCurrent(_.decr.addIndent("}\n"))
   }
 
   private def doUser(user: User): Unit = {
@@ -304,7 +304,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         .openDef(conn)
       if conn.nonEmpty then
         file
-          .addSpace()
+          .addIndent()
           .add {
             val flows =
               if conn.flows.nonEmpty then s"flows ${conn.flows.get.format} "
@@ -318,7 +318,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
             flows + from + to
           }
           .nl
-          .addSpace()
+          .addIndent()
           .closeDef(conn)
       end if
     }
@@ -337,14 +337,14 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     riddl_state: State
   ): Unit = {
     state.withCurrent { st =>
-      st.addSpace()
+      st.addIndent()
         .add(
           s"${PrettifyPass.keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format} is {"
         )
       if riddl_state.isEmpty then {
         st.add(" ??? }")
       } else {
-        st.nl.indent
+        st.nl.incr
       }
     }
   }

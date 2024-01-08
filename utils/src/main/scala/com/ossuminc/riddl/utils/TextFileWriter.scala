@@ -14,8 +14,6 @@ import scala.collection.mutable
 /** Unit Tests For TextFileWriter */
 abstract class TextFileWriter extends OutputFile {
 
-  override def toString: String = sb.toString
-
   def fillTemplateFromResource(
     resourceName: String,
     substitutions: Map[String, String]

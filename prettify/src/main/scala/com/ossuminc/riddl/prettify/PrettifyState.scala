@@ -49,7 +49,7 @@ case class PrettifyState(
 
   def filesAsString: String = {
     closeStack()
-    files.map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.asString}").mkString
+    files.map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.toString}").mkString
   }
 
   private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack
