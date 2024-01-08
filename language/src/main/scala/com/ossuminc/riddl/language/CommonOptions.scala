@@ -6,10 +6,11 @@
 
 package com.ossuminc.riddl.language
 import java.nio.file.Path
-import scala.concurrent.duration.{Duration,DurationInt}
+import scala.concurrent.duration.{FiniteDuration,DurationInt}
 
 case class CommonOptions(
   showTimes: Boolean = false,
+  showIncludeTimes: Boolean = false,
   verbose: Boolean = false,
   dryRun: Boolean = false,
   quiet: Boolean = false,
@@ -21,10 +22,10 @@ case class CommonOptions(
   debug: Boolean = false,
   pluginsDir: Option[Path] = None,
   sortMessagesByLocation: Boolean = false,
-  groupMessagesByKind: Boolean = true,
+  groupMessagesByKind: Boolean = false,
   noANSIMessages: Boolean = false,
   maxParallelParsing: Int = Runtime.getRuntime.availableProcessors,
-  maxIncludeWait: Duration = 5.second,
+  maxIncludeWait: FiniteDuration = 5.second,
   warningsAreFatal: Boolean = false
 )
 

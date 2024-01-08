@@ -102,10 +102,8 @@ trait ParsingContext extends ParsingErrors {
     loc: At,
     str: LiteralString
   )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
-    // TODO: implement parallel parsing at include points and use the
-    // TODO: commonOption.maxParallelParsing to limit parallelism
     val future = Future[Either[Messages, Seq[CT]]] {
-      Timer.time(s"include '$str.s'", commonOptions.showTimes) {
+      Timer.time(s"include '$str.s'", commonOptions.showIncludeTimes) {
         try {
           val rpi = startNextSource(str)
           fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
