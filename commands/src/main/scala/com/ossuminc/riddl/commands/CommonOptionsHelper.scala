@@ -42,10 +42,12 @@ object CommonOptionsHelper {
     OParser.sequence(
       programName("riddlc"),
       head(blurb),
-      opt[Unit]('t', name = "show-times")
-        .optional()
+      opt[Unit]('t', name = "show-times").optional()
         .action((_, c) => c.copy(showTimes = true))
-        .text("Show compilation phase execution times "),
+        .text("Show parsing phase execution times"),
+      opt[Unit]('i', name = "show-include-times").optional()
+        .action((_,c) => c.copy(showIncludeTimes = true))
+        .text("Show parsing of included files execution times"),
       opt[Unit]('d', "dry-run")
         .optional()
         .action((_, c) => c.copy(dryRun = true))
