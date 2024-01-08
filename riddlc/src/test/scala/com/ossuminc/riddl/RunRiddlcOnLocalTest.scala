@@ -33,7 +33,7 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
         succeed
       }
     } else {
-      info(s"Root path is not a directory: $cwd")
+      info(s"Skipping non-directory: $cwd")
       succeed
     }
   }

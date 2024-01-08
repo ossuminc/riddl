@@ -29,7 +29,8 @@ class RiddlOptionsReadingTest extends AnyWordSpec with Matchers {
         case Left(messages) => fail(messages.format)
       }
       CommandPlugin.loadCommandNamed("repeat") match {
-        case Right(cmd) => cmd.loadOptionsFrom(optionFile) match {
+        case Right(cmd) =>
+          cmd.loadOptionsFrom(optionFile) match {
             case Left(errors) => fail(errors.format)
             case Right(options) =>
               val opts = options.asInstanceOf[RepeatCommand.Options]
