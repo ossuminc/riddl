@@ -81,7 +81,7 @@ object TopLevelParser {
     Timer.time(s"parse ${input.origin}", commonOptions.showTimes) {
       val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
       implicit val _: ExecutionContext = ExecutionContext.fromExecutorService(es)
-      val tlp = new TopLevelParser(input)
+      val tlp = new TopLevelParser(input, commonOptions)
       tlp.parseRoot(withVerboseFailures)
     }
   }

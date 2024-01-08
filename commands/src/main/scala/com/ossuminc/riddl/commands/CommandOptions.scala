@@ -95,7 +95,7 @@ object CommandOptions {
         dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
         quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
         debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
-        noANSIMessages <- optional(objCur, "noANSIMessages", false)(cc => cc.asBoolean)
+        noANSIMessages <- optional(objCur, "no-ansi-messages", false)(cc => cc.asBoolean)
         sortMessages <- optional(objCur, "sort-messages-by-location", noBool)(cc => cc.asBoolean.map(Option(_)))
         suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
         suppressStyleWarnings <- optional(objCur, "suppress-style-warnings", noBool) { cc =>

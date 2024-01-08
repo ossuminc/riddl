@@ -103,7 +103,7 @@ trait ParsingContext extends ParsingErrors {
     str: LiteralString
   )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
     val future = Future[Either[Messages, Seq[CT]]] {
-      Timer.time(s"include '$str.s'", commonOptions.showIncludeTimes) {
+      Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes ) {
         try {
           val rpi = startNextSource(str)
           fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {

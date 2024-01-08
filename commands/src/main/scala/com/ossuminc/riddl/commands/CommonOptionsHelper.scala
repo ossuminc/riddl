@@ -16,6 +16,8 @@ import scopt.OParserBuilder
 import scopt.OParserSetup
 import scopt.RenderingMode
 
+import scala.concurrent.duration.FiniteDuration
+
 import java.io.File
 import java.util.Calendar
 
@@ -135,6 +137,9 @@ object CommonOptionsHelper {
         .text(
           "Controls the maximum number of include files that will be parsed in parallel"
         ),
+      opt[Int](name="max-include-wait").optional()
+        .action((v,c) => c.copy(maxIncludeWait = FiniteDuration(v,"seconds")))
+        .text("Maximum time that parsing an include file will wait for it to complete"),
       opt[Boolean]("warnings-are-fatal")
         .optional()
         .action((v,c) => c.copy(warningsAreFatal = true))
@@ -155,7 +160,7 @@ object CommonOptionsHelper {
     }
 
     val dontTerminate: DefaultOEffectSetup = new DefaultOEffectSetup {
-      val log = SysLogger()
+      val log: SysLogger = SysLogger()
       override def displayToOut(msg: String): Unit = { log.info(msg) }
 
       override def displayToErr(msg: String): Unit = { log.error(msg) }
