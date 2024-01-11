@@ -9,7 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.Timer 
+import com.ossuminc.riddl.utils.Timer
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -48,7 +48,9 @@ class TopLevelParser(
   private def rootValues[u: P]: P[Seq[OccursAtRootScope]] = {
     P(
       Start ~ (comment | rootInclude[u] | domain | author)./.rep(1) ~ End
-    )
+    ).map { (content: Contents[OccursAtRootScope]) =>
+      mergeAsynchContent[OccursAtRootScope](content)
+    }
   }
 
   private def root[u: P]: P[Root] = {
@@ -58,15 +60,16 @@ class TopLevelParser(
   def parseRoot(
     withVerboseFailures: Boolean = false
   ): Either[Messages, Root] = {
-    parseRule[Root](input, root(_), withVerboseFailures) { (root: Root, input: RiddlParserInput, index: Int) =>
-      if root.contents.isEmpty then
-        error(
-          At(input, index),
-          s"Parser could not translate '${input.origin}' after $index characters",
-          s"while parsing ${input.origin}"
-        )
-      end if
-      root
+    parseRule[Root](input, root(_), withVerboseFailures) {
+      (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
+        result match {
+          case l: Left[Messages, Root] => l
+          case r @ Right(root) =>
+            if root.contents.isEmpty then
+              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters", "")
+            end if
+            r
+        }
     }
   }
 }

@@ -278,6 +278,8 @@ object AST {
   }
 
   sealed trait NamedValue extends RiddlValue with WithIdentifier
+  
+  sealed trait NamedContainer[CV <: RiddlValue] extends NamedValue with Container[CV]
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
 
@@ -571,8 +573,7 @@ object AST {
     * yield a string that provides the kind and name
     */
   sealed trait Definition
-      extends NamedValue
-      with Container[RiddlValue]
+      extends NamedContainer[RiddlValue]
       with DescribedValue
       with BrieflyDescribedValue
       with WithComments {
@@ -654,8 +655,8 @@ object AST {
   case class IncludeHolder[CT <: RiddlValue](
     loc: At = At.empty,
     origin: String = "",
-    maxDelay: scala.concurrent.duration.Duration = 0.seconds,
-    future: Future[Either[Messages, Seq[CT]]] = Future.successful(Left(Messages.empty))
+    maxDelay: scala.concurrent.duration.FiniteDuration,
+    future: Future[Contents[CT]]
   ) extends RiddlValue
       with OccursInVitalDefinitions
       with OccursAtRootScope {

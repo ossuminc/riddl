@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.symbols
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassesOutput}
-import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
+import com.ossuminc.riddl.passes.symbols.Symbols.*
 
 import scala.annotation.unused
 import scala.collection.mutable
@@ -34,11 +34,11 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   private val symTab: SymTab = mutable.HashMap.empty[String, Seq[SymTabItem]]
 
-  private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
+  private val parentage: Parentage = mutable.HashMap.empty[NamedValue, Parents]
 
   override def postProcess(root: Root @unused): Unit = ()
 
-  private def rootLessParents(parents: Seq[Definition]): Parents = {
+  private def rootLessParents(parents: Parents): Parents = {
     parents.filter {
       case _: Root              => false // Roots don't have names and don't matter
       case x: Definition if x.isImplicit => false // Parents with no names don't count
@@ -46,28 +46,28 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
     }
   }
 
-  def process(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
+  def process(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case _: Root              => // ignore
-      case d: Definition if d.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
-      case definition: Definition =>
-        val name = definition.id.value
+      case _: Root              => // NOTE: Root doesn't have any names 
+      case nv: NamedValue if nv.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
+      case namedValue: NamedValue  => // NOTE: Anything with a name goes in symbol table 
+        val name = namedValue.id.value
         if name.nonEmpty then {
           val parentsCopy: Parents = rootLessParents(parents.toSeq)
           val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
-          val pairToAdd = definition -> parentsCopy
+          val pairToAdd = namedValue -> parentsCopy
           if existing.contains(pairToAdd) then
             // no need to put a duplicate
             ()
           else
             val included: Seq[SymTabItem] = existing :+ pairToAdd
             symTab.update(name, included)
-            parentage.update(definition, parentsCopy)
+            parentage.update(namedValue, parentsCopy)
           end if
         } else {
-          messages.addError(definition.loc, "Non implicit value with empty name should not happen")
+          messages.addError(namedValue.loc, "Non implicit value with empty name should not happen")
         }
-      case _: RiddlValue => // ignore, not indexable, no name
+      case _ => // NOTE: nothing else has a name
     }
   }
 

@@ -8,8 +8,6 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 
-import scala.util.control.NonFatal
-
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
 
@@ -100,6 +98,11 @@ class IncludeAndImportTest extends ParsingTest {
         None
       )
       actual mustBe expected
+    }
+    "handle 553-Contained-Group-References-Do-Not-Work" in {
+      val root = checkFile("Include Group", "includes/includer.riddl")
+      root.domains mustNot be(empty)
+      root.domains.head.includes.head.contents mustNot be(empty)
     }
   }
 

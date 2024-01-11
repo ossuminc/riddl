@@ -15,6 +15,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
+import com.ossuminc.riddl.passes.symbols.Symbols.ParentStack
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.stats.StatsPass
 import com.ossuminc.riddl.utils.{Timer,PathUtils,TreeCopyFileVisitor,Tar,Zip,Logger}
@@ -94,7 +95,7 @@ case class HugoPass(
     mdw
   }
 
-  override def process(value: AST.RiddlValue, parents: mutable.Stack[AST.Definition]): Unit = {
+  override def process(value: AST.RiddlValue, parents: ParentStack): Unit = {
     val stack = parents.toSeq
     value match {
       case c: Connector =>

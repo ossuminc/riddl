@@ -39,12 +39,12 @@ trait PassUtilities {
     }.mkString("/")
   }
 
-  def makeDocLink(definition: Definition): String = {
+  def makeDocLink(definition: NamedValue): String = {
     val parents = makeStringParents(outputs.symbols.parentsOf(definition))
     makeDocLink(definition, parents)
   }
 
-  def makeDocLink(definition: Definition, parents: Seq[String]): String = {
+  def makeDocLink(definition: NamedValue, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
       case _: OnMessageClause | _: OnInitClause | _: OnTerminationClause | _: OnOtherClause | _: Inlet | _: Outlet =>
@@ -60,7 +60,7 @@ trait PassUtilities {
     result.replace(" ", "-")
   }
 
-  def makeDocAndParentsLinks(definition: Definition): String = {
+  def makeDocAndParentsLinks(definition: NamedValue): String = {
     val parents = outputs.symbols.parentsOf(definition)
     val docLink = makeDocLink(definition, makeStringParents(parents))
     if parents.isEmpty then { s"[${definition.identify}]($docLink)" }
