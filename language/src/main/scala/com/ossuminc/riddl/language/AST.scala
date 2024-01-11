@@ -212,6 +212,7 @@ object AST {
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
+    def includes: Contents[Include[CV]] = container.filter[Include[CV]].map(_.asInstanceOf[Include[CV]])
     def definitions: Contents[Definition] = container.filter[Definition].map(_.asInstanceOf[Definition])
 
   /** Base trait of any definition that is also a ContainerValue

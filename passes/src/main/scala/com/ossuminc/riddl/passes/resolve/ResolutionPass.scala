@@ -876,15 +876,20 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         Seq.empty[Definition]
     }
   }
-  
-  private def candidatesFromContainer(container: Container[RiddlValue]): Contents[NamedValue] = {
-    container.contents.flatMap {
+
+  private def candidatesFromContainer(contents: Contents[RiddlValue]): Contents[NamedValue] = {
+    contents.flatMap {
       case Include(_, _, contents) =>
-        // NOTE: The included contents should appear as children of the container so we include them too
-        contents.namedValues
-      case nv: NamedValue => 
+        // NOTE: An included file can include another file at the same definitional level.
+        // NOTE: We need to recursively descend that stack.  An include in a nested definitional level
+        // NOTE: will not be picked up by contents.includes because it would be inside another definition.
+        // NOTE: So we take the NamedValues from the contents as well as from
+        val nested = candidatesFromContainer(contents.includes)
+        val current = contents.namedValues
+        current ++ nested
+      case nv: NamedValue =>
         Seq(nv)
-      case _ => 
+      case _ =>
         Seq.empty
     }
 
@@ -918,7 +923,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             case t: Type =>
               candidatesFromTypeEx(t.typ, parentStack)
             case d: Container[RiddlValue] =>
-              candidatesFromContainer(d)
+              candidatesFromContainer(d.contents)
       }
     }
   }
