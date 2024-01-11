@@ -19,7 +19,7 @@ trait UseCaseDiagramSupport {
   def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition): Option[T] = {
     passesResult.refMap.definitionOf[T](pathId, parent)
   }
-  def makeDocLink(definition: Definition): String
+  def makeDocLink(definition: NamedValue): String
 }
 
 

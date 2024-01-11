@@ -68,14 +68,7 @@ private[parsing] trait DomainParser {
         briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInDomain](contents)
-      Domain(
-        loc,
-        id,
-        options,
-        mergedContent,
-        brief,
-        description
-      )
+      Domain(loc, id, options, mergedContent, brief, description)
     }
   }
 }

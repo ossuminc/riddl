@@ -10,6 +10,7 @@ import com.ossuminc.riddl.language.AST.{Entity, *}
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
 import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 
 import scala.collection.mutable
@@ -48,15 +49,14 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     checkUnused()
   }
 
-  def process(value: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
-    val parentsAsSeq: Seq[Definition] = 
-      if value.isDefinition then 
+  def process(value: RiddlValue, parents: ParentStack): Unit = {
+    val parentsAsSeq: Seq[Definition] =
+      if value.isDefinition then
         val definition = value.asInstanceOf[Definition]
         kindMap.add(definition)
-        definition  +: parents.toSeq
-      else 
-        parents.toSeq
-      end if  
+        definition +: parents.toSeq
+      else parents.toSeq
+      end if
     value match {
       case ad: AggregateValue =>
         resolveTypeExpression(ad.typeEx, parentsAsSeq)
@@ -107,8 +107,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case uc: UseCase =>
         if uc.userStory.nonEmpty then resolveARef(uc.userStory.user, parentsAsSeq)
         end if
-        if uc.contents.nonEmpty then
-          resolveInteractions(uc.contents, parentsAsSeq)
+        if uc.contents.nonEmpty then resolveInteractions(uc.contents, parentsAsSeq)
       case in: Input =>
         resolveATypeRef(in.putIn, parentsAsSeq)
       case out: Output =>
@@ -119,8 +118,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         }
       case cg: ContainedGroup =>
         resolveARef[Group](cg.group, parentsAsSeq)
-      case _: NonReferencableDefinitions => () // These can't be referenced 
-      case _: NonDefinitionValues => () // Neither can these values  
+      case _: NonReferencableDefinitions => () // These can't be referenced
+      case _: NonDefinitionValues        => () // Neither can these values
       // case _ => () // NOTE: Never have this catchall! Want compile time errors!
     }
   }
@@ -167,7 +166,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveTypeExpression(of, parents)
       case Table(_, of, _) =>
         resolveTypeExpression(of, parents)
-      case Replica(_, of) => 
+      case Replica(_, of) =>
         resolveTypeExpression(of, parents)
       case c: Cardinality =>
         resolveTypeExpression(c.typeExp, parents)
@@ -224,8 +223,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   }
 
   private def resolveInteractions(
-   interactions: Seq[Interaction | Comment],
-   parentsAsSeq: Seq[Definition]
+    interactions: Seq[Interaction | Comment],
+    parentsAsSeq: Seq[Definition]
   ): Unit = {
     for interaction <- interactions do {
       interaction match {
@@ -249,11 +248,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           resolveARef[Definition](from, parentsAsSeq)
           resolveAMessageRef(message, parentsAsSeq)
           resolveARef[Definition](to, parentsAsSeq)
-        case _: VagueInteraction => () // no resolution required
-        case _: OptionalInteractions => () // no references
-        case _: ParallelInteractions => () // no references
+        case _: VagueInteraction       => () // no resolution required
+        case _: OptionalInteractions   => () // no references
+        case _: ParallelInteractions   => () // no references
         case _: SequentialInteractions => () // no references
-        case _: Comment => () // no references
+        case _: Comment                => () // no references
       }
     }
   }
@@ -276,13 +275,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     resolveAPathId[T](ref.pathId, parents)
   }
 
-  private def isSameKind[DEF <: Definition: ClassTag](d: Definition): Boolean = {
+  private def isSameKind[DEF <: NamedValue: ClassTag](d: NamedValue): Boolean = {
     val clazz = classTag[DEF].runtimeClass
     clazz.isAssignableFrom(d.getClass)
   }
 
-  private def isSameKindAndHasDifferentPathsToSameNode[T <: Definition: ClassTag](
-    list: List[(Definition, Seq[Definition])]
+  private def isSameKindAndHasDifferentPathsToSameNode[T <: NamedValue: ClassTag](
+    list: List[(NamedValue, Seq[NamedContainer[?]])]
   ): Boolean = {
     list.forall { item => isSameKind[T](item._1) } &&
     list
@@ -292,16 +291,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       .forall(_ == list.head)
   }
 
-  private def handleSymbolTableResults[T <: Definition: ClassTag](
-    list: List[(Definition, Seq[Definition])],
+  private def handleSymbolTableResults[T <: NamedValue: ClassTag](
+    list: List[SymTabItem],
     pathId: PathIdentifier,
-    parents: Seq[Definition]
-  ): Seq[Definition] = {
+    parents: Parents
+  ): Seq[NamedValue] = {
     parents.headOption match {
       case None =>
         // shouldn't happen
         notResolved[T](pathId, parents)
-        Seq.empty
+        Seq.empty[Parent]
       case Some(parent) =>
         list match {
           // List is empty so this is the NotFound case
@@ -331,7 +330,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private def searchSymbolTable[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition]
-  ): Seq[Definition] = {
+  ): Contents[NamedValue] = {
     val symTabCompatibleNameSearch = pathId.value.reverse
     val list = symbols.lookupParentage(symTabCompatibleNameSearch)
     handleSymbolTableResults[T](list, pathId, parents)
@@ -341,11 +340,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private case class AnchorNotFoundInSymTab(topName: String) extends AnchorCase
   private case class AnchorNotFoundInParents(topName: String) extends AnchorCase
   private case class AnchorNotFoundAnywhere(topName: String) extends AnchorCase
-  private case class AnchorIsAmbiguous(topName: String, list: List[(Definition, Seq[Definition])])
+  private case class AnchorIsAmbiguous(topName: String, list: List[SymTabItem])
       extends AnchorCase
-  private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
-  private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
-  private case class AnchorIsRoot(anchor: Definition, anchor_parents: Seq[Definition]) extends AnchorCase
+  private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Parents)
+      extends AnchorCase
+  private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Parents)
+      extends AnchorCase
+  private case class AnchorIsRoot(anchor: Definition, anchor_parents: Parents) extends AnchorCase
 
   private def findAnchorInParents(
     topName: String,
@@ -416,11 +417,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   @SuppressWarnings(Array("org.wartremover.warts.Var", "org.wartremover.warts.IterableOps"))
   private def resolvePathFromAnchor[T <: Definition: ClassTag](
     pathId: PathIdentifier,
-    parents: Seq[Definition],
+    parents: Parents,
     anchor: Definition,
-    anchor_parents: Seq[Definition]
-  ): Seq[Definition] = {
-    val stack: mutable.Stack[Definition] = mutable.Stack.empty[Definition]
+    anchor_parents: Parents
+  ): Contents[Parent] = {
+    val stack: ParentStack = mutable.Stack.empty[Definition]
     val parents_to_add = anchor_parents.reverse
     if anchor_parents.nonEmpty && anchor_parents.last.isRootContainer then stack.pushAll(parents_to_add.drop(1))
     else stack.pushAll(parents_to_add)
@@ -471,8 +472,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private def checkResultingPath[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition],
-    maybeFound: Seq[Definition]
-  ): Seq[Definition] = {
+    maybeFound: Seq[NamedContainer[?]]
+  ): Seq[NamedValue] = {
     maybeFound.toList match {
       case Nil =>
         notResolved[T](pathId, parents)
@@ -502,8 +503,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def checkThatPathIdMatchesFoundParentStack[T <: Definition: ClassTag](
     pathId: PathIdentifier,
-    parents: Seq[Definition],
-    maybeResult: Seq[Definition]
+    parents: Parents,
+    maybeResult: Seq[NamedValue]
   ): Boolean = {
     pathId.value.headOption match {
       case Some(_) =>
@@ -545,7 +546,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case Some(typ: Type) =>
         typ.typ match {
           case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == kind => path // success
-          case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))      => path // success
+          case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(kind))   => path // success
           case typeEx: Alternation =>
             messages.addError(
               loc,
@@ -689,7 +690,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             // Easy case, just search the symbol table and deal with it there.
             // In other words, there really isn't a path to search here, just the
             // symbol table
-            searchSymbolTable[T](pathId, parents)
+            searchSymbolTable[T](pathId, parents).definitions
           else
             // Okay, we have multiple names so we first have to find the anchor
             // node from the first name in the PathId. This can be "Root" for the
@@ -704,10 +705,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
                 )
               case AnchorFoundInSymTab(anchor, anchor_parents) =>
                 // We found the anchor in the
-                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
+                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents).definitions
               case AnchorFoundInParents(anchor, anchor_parents) =>
                 // We found the anchor in the parents list
-                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
+                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents).definitions
               case AnchorNotFoundInSymTab(topName) =>
                 notResolved(
                   pathId,
@@ -718,16 +719,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
                 notResolved(pathId, parents)
               case AnchorIsRoot(anchor, anchor_parents) =>
                 // The first name in the path id was "Root" so start from there
-                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents)
+                resolvePathFromAnchor(pathId, parents, anchor, anchor_parents).definitions
               case AnchorIsAmbiguous(_, list) =>
                 // The anchor is ambiguous so generate that message
-                ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one"))
+                ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one")).definitions
   }
 
-  private def resolved[T <: Definition: ClassTag](
+  private def resolved[T <: NamedValue: ClassTag](
     pathId: PathIdentifier,
     pidDirectParent: Definition,
-    definition: Definition
+    definition: NamedValue
   ): Option[T] = {
     // a candidate was found and it has the same type as expected
     val t = definition.asInstanceOf[T]
@@ -744,10 +745,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     Some(t)
   }
 
-  private def wrongType[T <: Definition: ClassTag](
+  private def wrongType[T <: NamedValue: ClassTag](
     pid: PathIdentifier,
     container: Definition,
-    foundDef: Definition
+    foundDef: NamedValue
   ): Unit = {
     val referTo = classTag[T].runtimeClass.getSimpleName
     val message = s"Path '${pid.format}' resolved to ${foundDef.identifyWithLoc}," +
@@ -755,9 +756,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     messages.addError(pid.loc, message)
   }
 
-  private def notResolved[T <: Definition: ClassTag](
+  private def notResolved[T <: NamedValue: ClassTag](
     pid: PathIdentifier,
-    parents: Seq[Definition],
+    parents: Parents,
     why: String = ""
   ): Seq[Definition] = {
     val tc = classTag[T].runtimeClass
@@ -782,11 +783,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     Seq.empty
   }
 
-  private def ambiguous[T <: Definition: ClassTag](
+  private def ambiguous[T <: NamedValue: ClassTag](
     pid: PathIdentifier,
-    list: List[(Definition, Seq[Definition])],
+    list: List[SymTabItem],
     context: Option[String] = None
-  ): Seq[Definition] = {
+  ): Contents[NamedValue] = {
     // Extract all the definitions that were found
     val definitions = list.map(_._1)
     val allDifferent = definitions.map(_.kind).distinct.sizeIs ==
@@ -827,7 +828,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private def adjustStacksForPid[T <: Definition: ClassTag](
     pid: PathIdentifier,
     parentStack: mutable.Stack[Definition]
-  ): Seq[Definition] = {
+  ): Contents[NamedValue] = {
 
     // Recursively resolve this PathIdentifier
     val path: Seq[Definition] = resolveAPathId[T](pid, parentStack.toSeq)
@@ -852,7 +853,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private def candidatesFromTypeEx(
     typEx: TypeExpression,
     parentStack: mutable.Stack[Definition]
-  ): Contents[Definition] = {
+  ): Contents[NamedValue] = {
     typEx match {
       case a: Aggregation => a.fields
       // if we're at a field composed of more fields, then those fields
@@ -875,10 +876,23 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         Seq.empty[Definition]
     }
   }
+  
+  private def candidatesFromContainer(container: Container[RiddlValue]): Contents[NamedValue] = {
+    container.contents.flatMap {
+      case Include(_, _, contents) =>
+        // NOTE: The included contents should appear as children of the container so we include them too
+        contents.namedValues
+      case nv: NamedValue => 
+        Seq(nv)
+      case _ => 
+        Seq.empty
+    }
+
+  }
 
   private def findCandidates(
-    parentStack: mutable.Stack[Definition]
-  ): Contents[Definition] = {
+    parentStack: ParentStack
+  ): Contents[NamedValue] = {
     if parentStack.isEmpty then {
       // Nothing in the parent stack so we're done searching and
       // we return empty to signal nothing found
@@ -904,16 +918,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             case t: Type =>
               candidatesFromTypeEx(t.typ, parentStack)
             case d: Container[RiddlValue] =>
-              d.contents.flatMap {
-                case Include(_, _, contents) => contents.definitions
-                case d: Definition        => Seq(d)
-                case _                       => Seq.empty
-              }
+              candidatesFromContainer(d)
       }
     }
   }
 
-  private def findResolution(soughtName: String, candidate: Definition): Boolean = {
+  private def findResolution(soughtName: String, candidate: NamedValue): Boolean = {
     candidate match {
       case omc: OnMessageClause if omc.msg.id.nonEmpty =>
         omc.msg.id.getOrElse(Identifier.empty).value == soughtName

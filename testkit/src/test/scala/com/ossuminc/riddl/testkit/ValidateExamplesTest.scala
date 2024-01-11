@@ -11,7 +11,10 @@ import com.ossuminc.riddl.language.CommonOptions
 /** Validate files */
 class ValidateExamplesTest extends ValidatingTest {
 
-  val files: Map[String, String] = Map("Reactive BBQ" -> "rbbq.riddl")
+  val files: Map[String, String] = Map(
+    "Reactive BBQ" -> "rbbq.riddl",
+    "Group Found" -> "unfound-group.riddl"
+  )
 
   "ValidateExamples" should {
     "validate all with no errors or warnings" in {
