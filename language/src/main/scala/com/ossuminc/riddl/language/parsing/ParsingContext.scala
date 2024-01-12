@@ -10,16 +10,15 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.Timer
+import com.ossuminc.riddl.utils.SeqHelpers.*
+
 import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
-import org.apache.commons.lang3.exception.ExceptionUtils
 
 import java.io.File
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
 import scala.annotation.unused
-import scala.collection.mutable
-import scala.concurrent.duration.{FiniteDuration, DurationInt}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -40,17 +39,17 @@ trait ParsingContext extends ParsingErrors {
     try {
       fastparse.parse[RESULT](rpi, rule(_), withVerboseFailures) match {
         case Success(root, index) =>
-          if errorsNonEmpty then validate(Left(errorsAsList), rpi, index)
+          if messagesNonEmpty then validate(Left(messagesAsList), rpi, index)
           else validate(Right(root), rpi, index)
           end if
         case failure: Failure =>
           makeParseFailureError(failure, rpi)
-          validate(Left(errorsAsList), rpi, 0)
+          validate(Left(messagesAsList), rpi, 0)
       }
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception)
-        validate(Left(errorsAsList), rpi, 0)
+        validate(Left(messagesAsList), rpi, 0)
     }
   }
 
@@ -111,7 +110,7 @@ trait ParsingContext extends ParsingErrors {
           val rpi = startNextSource(str)
           fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
             case Success(content, _) =>
-              if errorsNonEmpty then Seq.empty[CT]
+              if messagesNonEmpty then Seq.empty[CT]
               else if content.isEmpty then
                 error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
               end if
@@ -131,7 +130,7 @@ trait ParsingContext extends ParsingErrors {
   }
 
   def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
-    contents.map {
+    val result: Contents[CT] = contents.map {
       case ih: IncludeHolder[CT] @unchecked =>
         val contents: Contents[CT] =
           try {
@@ -147,5 +146,17 @@ trait ParsingContext extends ParsingErrors {
         Include[CT](ih.loc, ih.origin, contents).asInstanceOf[CT]
       case rv: CT => rv
     }
+
+    val allIncludes = result.filter[Include[?]]
+    val distinctIncludes = allIncludes.distinctBy(_.origin)
+    for {
+      incl <- distinctIncludes
+      copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
+    } yield {
+      val copyList = copies.map(i => i.origin + " at " + i.loc.toShort ).mkString(", ")
+      val message = s"Duplicate include origin detected in $copyList"
+      warning(incl.loc,message,"while merging includes")
+    }
+    result
   }
 }

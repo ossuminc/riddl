@@ -57,16 +57,14 @@ class TopLevelParser(
     rootValues.map { (content: Seq[OccursAtRootScope]) => Root(content) }
   }
 
-  def parseRoot(
-    withVerboseFailures: Boolean = false
-  ): Either[Messages, Root] = {
+  def parseRoot(withVerboseFailures: Boolean = false): Either[Messages, Root] = {
     parseRule[Root](input, root(_), withVerboseFailures) {
       (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
         result match {
           case l: Left[Messages, Root] => l
           case r @ Right(root) =>
             if root.contents.isEmpty then
-              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters", "")
+              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
             end if
             r
         }
