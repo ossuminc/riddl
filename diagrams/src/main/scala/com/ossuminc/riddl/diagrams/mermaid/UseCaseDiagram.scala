@@ -77,10 +77,17 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
     }
   }
 
+  private def actorName(key: String): String = {
+    ucdd.actors.get(key) match {
+      case Some(definition) => definition.id.value
+      case None => key
+    }
+  }
+  
   private def genericInteraction(gi: GenericInteraction): Unit = {
     gi match {
       case fogi: FocusOnGroupInteraction =>
-        val from = ucdd.actors(fogi.from.pathId.format).id.value
+        val from = actorName(fogi.from.pathId.format)
         val to = fogi.to.keyword + " " + ucdd.actors(fogi.to.pathId.format).id.value
         addIndent(s"$from->>$to: set focus on")
       case vi: VagueInteraction =>
@@ -88,16 +95,16 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
         val to = vi.to.s
         addIndent(s"$from->>$to: ${vi.relationship.s}")
       case smi: SendMessageInteraction =>
-        val from = ucdd.actors(smi.from.pathId.format).id.value
-        val to = ucdd.actors(smi.to.pathId.format).id.value
+        val from = actorName(smi.from.pathId.format)
+        val to = actorName(smi.to.pathId.format)
         addIndent(s"$from->>$to: send ${smi.message.format} to")
       case di: DirectUserToURLInteraction =>
-        val from = ucdd.actors(di.from.pathId.format).id.value
+        val from = actorName(di.from.pathId.format)
         val to = "Internet"
         addIndent(s"$from->>$to: direct to ${di.url.toExternalForm}")
       case tri: TwoReferenceInteraction =>
-        val from = ucdd.actors(tri.from.pathId.format).id.value
-        val to = ucdd.actors(tri.to.pathId.format).id.value
+        val from = actorName(tri.from.pathId.format)
+        val to = actorName(tri.to.pathId.format)
         addIndent(s"$from->>$to: ${tri.relationship.s}")
     }
   }

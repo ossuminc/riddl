@@ -48,7 +48,7 @@ trait ParsingContext extends ParsingErrors {
       }
     } catch {
       case NonFatal(exception) =>
-        makeParseFailureError(exception)
+        makeParseFailureError(exception, At((0, 0), rpi))
         validate(Left(messagesAsList), rpi, 0)
     }
   }
@@ -153,9 +153,9 @@ trait ParsingContext extends ParsingErrors {
       incl <- distinctIncludes
       copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
     } yield {
-      val copyList = copies.map(i => i.origin + " at " + i.loc.toShort ).mkString(", ")
+      val copyList = copies.map(i => i.origin + " at " + i.loc.toShort).mkString(", ")
       val message = s"Duplicate include origin detected in $copyList"
-      warning(incl.loc,message,"while merging includes")
+      warning(incl.loc, message, "while merging includes")
     }
     result
   }
