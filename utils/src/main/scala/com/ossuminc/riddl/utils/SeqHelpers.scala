@@ -10,7 +10,7 @@ import scala.collection.mutable
 
 object SeqHelpers {
 
-  implicit class SeqHelpers[T](seq: Seq[T]) {
+  extension[T] (seq: Seq[T])
     def dropUntil(f: T => Boolean): Seq[T] = {
       val index = seq.indexWhere(f)
       if index < 0 then { Seq.empty[T] }
@@ -35,13 +35,12 @@ object SeqHelpers {
         }
       }
     }
-  }
-
-  implicit class StackHelpers[T](stack: mutable.Stack[T]) {
+  
+  extension[T](stack: mutable.Stack[T]) 
     def popUntil(f: T => Boolean): mutable.Stack[T] = {
       val index = stack.indexWhere(f) - 1
       if index < 0 then { stack.clearAndShrink() }
       else { for _ <- 0 to index do { stack.pop() }; stack }
     }
-  }
+  
 }

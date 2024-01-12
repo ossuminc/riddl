@@ -1,4 +1,3 @@
-import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
 
@@ -14,7 +13,7 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
     ThisBuild / gitHubOrganization := "ossuminc",
-    ThisBuild / pgpSigner / skip := true
+    publish / skip := true
   )
   .aggregate(
     utils,

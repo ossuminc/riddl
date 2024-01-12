@@ -8,6 +8,8 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 
+import java.nio.file.Path
+
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
 
@@ -103,6 +105,22 @@ class IncludeAndImportTest extends ParsingTest {
       val root = checkFile("Include Group", "includes/includer.riddl")
       root.domains mustNot be(empty)
       root.domains.head.includes.head.contents mustNot be(empty)
+    }
+    "warn about duplicate includes" in {
+      val path = Path.of("language/src/test/input/includes/duplicateInclude.riddl") 
+      val input = RiddlParserInput(path)
+      TopLevelParser.parseInput(input) match {
+        case Right(_) =>
+          fail("Should have failed with warnings")
+        case Left(messages) =>
+          val errors = messages.justErrors
+          if errors.nonEmpty then fail(errors.format)
+          val warnings = messages.justWarnings
+          warnings.size mustBe 1
+          warnings.head.message must include ("Duplicate include origin detected in someTypes")
+          succeed
+      }
+
     }
   }
 
