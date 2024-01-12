@@ -17,7 +17,6 @@ import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.utils.{Logger, PathUtils, Tar, TextFileWriter, Timer, TreeCopyFileVisitor, Zip}
 
 import java.nio.file.Path
-import javax.swing.border.TitledBorder
 import scala.annotation.unused
 
 case class MarkdownWriter(
@@ -150,8 +149,8 @@ case class MarkdownWriter(
     sb.append("{{< /hint >}}")
     this
   }
-  
-  private def listOf[T <: Definition](
+
+  private def listOf[T <: NamedValue](
     kind: String,
     items: Seq[T],
     level: Int = 2
@@ -295,7 +294,7 @@ case class MarkdownWriter(
       case _ => h2("Used By None")
     }
     usage.getUses(definition) match {
-      case usages: Seq[Definition] if usages.nonEmpty => listOf("Uses", usages)
+      case usages: Seq[NamedValue] if usages.nonEmpty => listOf("Uses", usages)
       case _                                          => h2("Uses Nothing")
     }
     this
@@ -407,7 +406,7 @@ case class MarkdownWriter(
       val kind = rMatch.group(1)
       val pathId = rMatch.group(3)
 
-      def doSub(line: String, definition: Definition, isAmbiguous: Boolean = false): String = {
+      def doSub(line: String, definition: NamedValue, isAmbiguous: Boolean = false): String = {
         val docLink = passUtilities.makeDocLink(definition)
         val substitution =
           if isAmbiguous then s"($kind $pathId (ambiguous))[$docLink]"
@@ -900,16 +899,16 @@ case class MarkdownWriter(
                 val ucd = UseCaseDiagram(sds, useCaseDiagramData)
                 val lines = ucd.generate
                 emitMermaidDiagram(lines)
-              
+
               case None =>
                 notAvailable("Sequence diagram is not available")
-            end match    
+            end match
           case None =>
             notAvailable("Sequence diagram is not available")
-        end match     
+        end match
       case None =>
         notAvailable("Sequence diagram is not available")
-    end match    
+    end match
   }
 
   def emitConnector(conn: Connector, parents: Seq[String]): this.type = {

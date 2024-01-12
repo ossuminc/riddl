@@ -13,17 +13,15 @@ import scala.collection.mutable
 
 trait UsageBase {
 
-  type UseMap = mutable.HashMap[Definition, Seq[Definition]]
+  type UseMap = mutable.HashMap[Definition, Seq[NamedValue]]
+  type UsedByMap = mutable.HashMap[NamedValue, Seq[Definition]]
 
-  private def emptyUseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
-
-  protected val uses: UseMap = emptyUseMap
-  protected val usedBy: UseMap = emptyUseMap
+  protected val uses: UseMap = mutable.HashMap.empty[Definition, Seq[NamedValue]]
+  protected val usedBy: UsedByMap = mutable.HashMap.empty[NamedValue, Seq[Definition]]
 }
 
-/** Validation State for Uses/UsedBy Tracking. During parsing, when usage is
-  * detected, call associateUsage. After parsing ends, call checkUnused.
-  * Collects entities, types and functions too
+/** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call associateUsage. After
+  * parsing ends, call checkUnused. Collects entities, types and functions too
   */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
 trait UsageResolution extends UsageBase {
@@ -32,9 +30,9 @@ trait UsageResolution extends UsageBase {
 
   protected def messages: Messages.Accumulator
 
-  def usesAsMap: Map[Definition, Seq[Definition]] = uses.toMap
+  def usesAsMap: Map[Definition, Seq[NamedValue]] = uses.toMap
 
-  def usedByAsMap: Map[Definition, Seq[Definition]] = usedBy.toMap
+  def usedByAsMap: Map[NamedValue, Seq[Definition]] = usedBy.toMap
 
   protected var entities: Seq[Entity] = Seq.empty[Entity]
 
@@ -57,11 +55,11 @@ trait UsageResolution extends UsageBase {
     this
   }
 
-  def associateUsage(user: Definition, use: Definition): this.type = {
+  def associateUsage(user: Definition, use: NamedValue): this.type = {
 
-    val used = uses.getOrElse(user, Seq.empty[Definition])
+    val used = uses.getOrElse(user, Seq.empty[NamedValue])
     if !used.contains(use) then {
-      uses.update(user,used :+ use)
+      uses.update(user, used :+ use)
     }
 
     val usages = usedBy.getOrElse(use, Seq.empty[Definition])
@@ -81,7 +79,7 @@ trait UsageResolution extends UsageBase {
         result
       }
       def checkList(definitions: Seq[Definition]): Unit = {
-        for  defn <- definitions if !hasUsages(defn)  do {
+        for defn <- definitions if !hasUsages(defn) do {
           messages.addUsage(defn.loc, s"${defn.identify} is unused")
         }
       }

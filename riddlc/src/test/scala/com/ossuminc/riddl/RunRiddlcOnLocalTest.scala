@@ -26,14 +26,14 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       val fullPath = Path.of(cwd, config)
       info(s"config path is: ${fullPath.toAbsolutePath.toString}")
       if Files.isReadable(fullPath) then {
-        val args = Seq("--show-times", "--verbose", "from", fullPath.toString, cmd)
+        val args = Seq( "from", fullPath.toString, cmd)
         runWith(args)
       } else {
         info(s"Skipping unreadable $fullPath")
         succeed
       }
     } else {
-      info(s"Root path is not a directory: $cwd")
+      info(s"Skipping non-directory: $cwd")
       succeed
     }
   }

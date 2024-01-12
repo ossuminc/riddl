@@ -1,0 +1,4 @@
+domain ignore {
+  include "someTypes"
+  include "someTypes"  
+}

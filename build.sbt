@@ -1,4 +1,3 @@
-import com.jsuereth.sbtpgp.PgpKeys.pgpSigner
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
 
@@ -14,16 +13,15 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
     ThisBuild / gitHubOrganization := "ossuminc",
-    ThisBuild /
-      pgpSigner / skip := true
+    publish / skip := true
   )
   .aggregate(
     utils,
     language,
     passes,
     commands,
-    diagrams,
     testkit,
+    diagrams,
     prettify,
     stats,
     hugo,
@@ -165,10 +163,6 @@ lazy val docsite = DocSite("doc", docOutput, docProjects)
   .settings(
     name := "riddl-doc",
     description := "Generation of the documentation web site"
-    // Hugo / baseURL := uri("https://riddl.tech"),
-//    SiteScaladoc / siteSubdirName := "api",
-//    ScalaUnidoc / unidoc / unidocProjectFilter := inAnyProject -- inProjects(plugin),
-
     /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
     mkdir -p themes/hugo-geekdoc/
     curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1

@@ -169,7 +169,7 @@ trait BasicValidation {
   }
 
   def checkOverloads(): this.type = {
-    symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
+    symbols.foreachOverloadedSymbol { (defs: Seq[Seq[NamedValue]]) =>
       this.checkSequence(defs) { defList =>
         defList.toList match {
           case Nil =>

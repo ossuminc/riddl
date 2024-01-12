@@ -13,7 +13,7 @@ import scala.collection.mutable
 /** Unit Tests For Usages */
 case class Usages (
   override protected val uses: UsageBase#UseMap,
-  override protected val usedBy: UsageBase#UseMap
+  override protected val usedBy: UsageBase#UsedByMap
 ) extends UsageBase {
 
   def usesSize : Int = uses.size
@@ -30,16 +30,16 @@ case class Usages (
     }
   }
 
-  def uses(user: Definition, used: Definition): Boolean = {
+  def uses(user: Definition, used: NamedValue): Boolean = {
     this.uses.get(user).exists(list => list.contains(used))
   }
 
 
-  def getUsers(used: Definition): Seq[Definition] = {
+  def getUsers(used: NamedValue): Seq[Definition] = {
     usedBy.getOrElse(used, Seq.empty)
   }
 
-  def getUses(user: Definition): Seq[Definition] = {
+  def getUses(user: Definition): Seq[NamedValue] = {
     uses.getOrElse(user, Seq.empty)
   }
 

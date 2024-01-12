@@ -9,6 +9,7 @@ package com.ossuminc.riddl.commands
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import scala.concurrent.duration.DurationInt
 import java.nio.file.Path
 
 class CommonOptionsTest extends AnyWordSpec with Matchers {
@@ -180,5 +181,24 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
       }
     }
 
+    "load message related common options from a file" in {
+      val optionFile = Path.of("commands/src/test/input/message-options.conf")
+      CommandOptions.loadCommonOptions(optionFile) match {
+        case Right(opts) =>
+          opts.showTimes mustBe true
+          opts.verbose mustBe true
+          opts.quiet mustBe false
+          opts.dryRun mustBe false
+          opts.showWarnings mustBe true
+          opts.showStyleWarnings mustBe false
+          opts.showMissingWarnings mustBe false
+          opts.maxIncludeWait mustBe 1.minute
+          opts.sortMessagesByLocation mustBe true
+          opts.groupMessagesByKind mustBe true
+          opts.noANSIMessages mustBe true
+        case Left(messages) =>
+          fail(messages.format)
+      }
+    }
   }
 }

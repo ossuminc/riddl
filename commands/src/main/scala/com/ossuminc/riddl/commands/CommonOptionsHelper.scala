@@ -16,6 +16,8 @@ import scopt.OParserBuilder
 import scopt.OParserSetup
 import scopt.RenderingMode
 
+import scala.concurrent.duration.FiniteDuration
+
 import java.io.File
 import java.util.Calendar
 
@@ -42,10 +44,12 @@ object CommonOptionsHelper {
     OParser.sequence(
       programName("riddlc"),
       head(blurb),
-      opt[Unit]('t', name = "show-times")
-        .optional()
+      opt[Unit]('t', name = "show-times").optional()
         .action((_, c) => c.copy(showTimes = true))
-        .text("Show compilation phase execution times "),
+        .text("Show parsing phase execution times"),
+      opt[Unit]('i', name = "show-include-times").optional()
+        .action((_,c) => c.copy(showIncludeTimes = true))
+        .text("Show parsing of included files execution times"),
       opt[Unit]('d', "dry-run")
         .optional()
         .action((_, c) => c.copy(dryRun = true))
@@ -133,6 +137,9 @@ object CommonOptionsHelper {
         .text(
           "Controls the maximum number of include files that will be parsed in parallel"
         ),
+      opt[Int](name="max-include-wait").optional()
+        .action((v,c) => c.copy(maxIncludeWait = FiniteDuration(v,"seconds")))
+        .text("Maximum time that parsing an include file will wait for it to complete"),
       opt[Boolean]("warnings-are-fatal")
         .optional()
         .action((v,c) => c.copy(warningsAreFatal = true))
@@ -153,7 +160,7 @@ object CommonOptionsHelper {
     }
 
     val dontTerminate: DefaultOEffectSetup = new DefaultOEffectSetup {
-      val log = SysLogger()
+      val log: SysLogger = SysLogger()
       override def displayToOut(msg: String): Unit = { log.info(msg) }
 
       override def displayToErr(msg: String): Unit = { log.error(msg) }

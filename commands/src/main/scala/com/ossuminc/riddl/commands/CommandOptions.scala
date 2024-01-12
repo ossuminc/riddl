@@ -17,6 +17,7 @@ import pureconfig.ConfigObjectCursor
 import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import scopt.OParser
+import scala.concurrent.duration.{FiniteDuration, DurationInt}
 
 import java.nio.file.Path
 
@@ -88,13 +89,13 @@ object CommandOptions {
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey("common")
         objCur <- topRes.asObjectCursor
-        showTimes <-
-          optional[Boolean](objCur, "show-times", false)(c => c.asBoolean)
+        showTimes <- optional[Boolean](objCur, "show-times", false)(c => c.asBoolean)
+        showIncludeTimes <- optional[Boolean](objCur, "show-include-times", false)(c => c.asBoolean)
         verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
         dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
         quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
         debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
-        noANSIMessages <- optional(objCur, "noANSIMessages", false)(cc => cc.asBoolean)
+        noANSIMessages <- optional(objCur, "no-ansi-messages", false)(cc => cc.asBoolean)
         sortMessages <- optional(objCur, "sort-messages-by-location", noBool)(cc => cc.asBoolean.map(Option(_)))
         suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
         suppressStyleWarnings <- optional(objCur, "suppress-style-warnings", noBool) { cc =>
@@ -145,9 +146,11 @@ object CommandOptions {
         maxParallel <- optional(objCur, "max-parallel-parsing", Some(4)) { cc =>
           cc.asInt.map(Option(_))
         }
+        maxIncludeWait <- optional[Int](objCur, "max-include-wait", 5) { cc => cc.asInt }
         warnsAreFatal <- optional(objCur, "warnings-are-fatal", Option.empty[Boolean]) { cc =>
           cc.asBoolean.map(Option(_))
         }
+        groupMessagesByKind <- optional(objCur, "group-messages-by-kind", false) { cc => cc.asBoolean }
       yield {
         val default = CommonOptions()
         val shouldShowWarnings = suppressWarnings
@@ -189,6 +192,7 @@ object CommandOptions {
           )
         CommonOptions(
           showTimes,
+          showIncludeTimes,
           verbose,
           dryRun,
           quiet,
@@ -200,7 +204,10 @@ object CommandOptions {
           debug,
           pluginsDir,
           sortMessagesByLocation = sortMessages.getOrElse(false),
+          groupMessagesByKind,
+          noANSIMessages,
           maxParallelParsing = maxParallel.getOrElse(4),
+          maxIncludeWait = FiniteDuration(maxIncludeWait, "seconds"),
           warningsAreFatal = warnsAreFatal.getOrElse(false)
         )
       }

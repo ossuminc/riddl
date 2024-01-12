@@ -22,16 +22,16 @@ case class TestParser(override val input: RiddlParserInput, throwOnError: Boolea
     try {
       fastparse.parse[CT](input, parser(_), withVerboseFailures) match {
         case Success(content: CT, _) =>
-          if errorsNonEmpty then Left(errorsAsList)
+          if messagesNonEmpty then Left(messagesAsList)
           else Right(content)
         case failure: Failure =>
           makeParseFailureError(failure, input)
-          Left(errorsAsList)
+          Left(messagesAsList)
       }
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception)
-        Left(errorsAsList)
+        Left(messagesAsList)
     }
   }
 

@@ -9,16 +9,16 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.Timer 
+import com.ossuminc.riddl.utils.Timer
+import com.ossuminc.riddl.utils.SeqHelpers.*
+
 import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
-import org.apache.commons.lang3.exception.ExceptionUtils
 
 import java.io.File
-import java.nio.file.{Files, Path}
+import java.nio.file.Files
 import scala.annotation.unused
-import scala.collection.mutable
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 
@@ -33,21 +33,23 @@ trait ParsingContext extends ParsingErrors {
     rpi: RiddlParserInput,
     rule: P[?] => P[RESULT],
     withVerboseFailures: Boolean = false
-  )(validate: (result: RESULT, input: RiddlParserInput, index: Int) => RESULT = {
-    (result: RESULT, _: RiddlParserInput, _: Int) => result
+  )(validate: (result: Either[Messages, RESULT], input: RiddlParserInput, index: Int) => Either[Messages, RESULT] = {
+    (result: Either[Messages, RESULT], _: RiddlParserInput, _: Int) => result
   }): Either[Messages, RESULT] = {
     try {
       fastparse.parse[RESULT](rpi, rule(_), withVerboseFailures) match {
         case Success(root, index) =>
-          if errorsNonEmpty then Left(errorsAsList) else Right(validate(root, rpi, index))
+          if messagesNonEmpty then validate(Left(messagesAsList), rpi, index)
+          else validate(Right(root), rpi, index)
+          end if
         case failure: Failure =>
           makeParseFailureError(failure, rpi)
-          Left(errorsAsList)
+          validate(Left(messagesAsList), rpi, 0)
       }
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception)
-        Left(errorsAsList)
+        validate(Left(messagesAsList), rpi, 0)
     }
   }
 
@@ -102,27 +104,25 @@ trait ParsingContext extends ParsingErrors {
     loc: At,
     str: LiteralString
   )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
-    // TODO: implement parallel parsing at include points and use the
-    // TODO: commonOption.maxParallelParsing to limit parallelism
-    val future = Future[Either[Messages, Seq[CT]]] {
-      Timer.time(s"include '$str.s'", commonOptions.showTimes) {
+    val future = Future[Seq[CT]] {
+      Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
         try {
           val rpi = startNextSource(str)
           fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
             case Success(content, _) =>
-              if errorsNonEmpty then Left(errorsAsList)
+              if messagesNonEmpty then Seq.empty[CT]
               else if content.isEmpty then
                 error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
-                Right(content)
-              else Right(content)
+              end if
+              content
             case failure: Failure =>
               makeParseFailureError(failure, rpi)
-              Left(errorsAsList)
+              Seq.empty[CT]
           }
         } catch {
           case NonFatal(exception) =>
             makeParseFailureError(exception, loc, s"while included '${str.s}'")
-            Left(errorsAsList)
+            Seq.empty[CT]
         }
       }
     }
@@ -130,23 +130,33 @@ trait ParsingContext extends ParsingErrors {
   }
 
   def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
-    contents.map {
-      case ih: IncludeHolder[?] =>
+    val result: Contents[CT] = contents.map {
+      case ih: IncludeHolder[CT] @unchecked =>
         val contents: Contents[CT] =
           try {
-            Await.result(ih.future, ih.maxDelay) match {
-              case Left(messages: Messages) =>
-                Seq.empty[CT]
-              case Right(content: Seq[?]) =>
-                content.asInstanceOf[Seq[CT]]
-            }
+            val result = Await.result[Contents[CT]](ih.future, ih.maxDelay)
+            mergeAsynchContent(result)
           } catch {
             case NonFatal(exception) =>
               makeParseFailureError(exception, ih.loc, s"while including '${ih.origin}''")
+              // NOTE: makeParseFailureError already captured the error
+              // NOTE: We just want to place empty content into the Include
               Seq.empty[CT]
           }
         Include[CT](ih.loc, ih.origin, contents).asInstanceOf[CT]
       case rv: CT => rv
     }
+
+    val allIncludes = result.filter[Include[?]]
+    val distinctIncludes = allIncludes.distinctBy(_.origin)
+    for {
+      incl <- distinctIncludes
+      copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
+    } yield {
+      val copyList = copies.map(i => i.origin + " at " + i.loc.toShort ).mkString(", ")
+      val message = s"Duplicate include origin detected in $copyList"
+      warning(incl.loc,message,"while merging includes")
+    }
+    result
   }
 }
