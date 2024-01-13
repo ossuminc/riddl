@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.utils.{RiddlBuildInfo,SysLogger,StringHelpers,Plugin}
+import com.ossuminc.riddl.utils.{RiddlBuildInfo, SysLogger}
 
 import scopt.DefaultOEffectSetup
 import scopt.DefaultOParserSetup
@@ -24,9 +24,9 @@ import java.util.Calendar
 /** Handle processing of Language module's CommonOptions */
 object CommonOptionsHelper {
 
-  val year: Int = Calendar.getInstance().get(Calendar.YEAR)
-  val start: String = RiddlBuildInfo.startYear
-  val blurb: String =
+  private def year: Int = Calendar.getInstance().get(Calendar.YEAR)
+  private val start: String = RiddlBuildInfo.startYear
+  private val blurb: String =
     s"""RIDDL Compiler © $start-$year Ossum Inc. All rights reserved."
        |Version: ${RiddlBuildInfo.version}
        |
@@ -44,11 +44,13 @@ object CommonOptionsHelper {
     OParser.sequence(
       programName("riddlc"),
       head(blurb),
-      opt[Unit]('t', name = "show-times").optional()
+      opt[Unit]('t', name = "show-times")
+        .optional()
         .action((_, c) => c.copy(showTimes = true))
         .text("Show parsing phase execution times"),
-      opt[Unit]('i', name = "show-include-times").optional()
-        .action((_,c) => c.copy(showIncludeTimes = true))
+      opt[Unit]('i', name = "show-include-times")
+        .optional()
+        .action((_, c) => c.copy(showIncludeTimes = true))
         .text("Show parsing of included files execution times"),
       opt[Unit]('d', "dry-run")
         .optional()
@@ -57,7 +59,7 @@ object CommonOptionsHelper {
       opt[Unit]('v', "verbose")
         .optional()
         .action((_, c) => c.copy(verbose = true))
-        .text("Provide verbose output detailing riddlc's actions"),
+        .text("Provide verbose output detailing actions taken by riddlc"),
       opt[Unit]('D', "debug")
         .optional()
         .action((_, c) => c.copy(debug = true))
@@ -78,7 +80,8 @@ object CommonOptionsHelper {
             showMissingWarnings = false,
             showStyleWarnings = false,
             showUsageWarnings = false
-          ))
+          )
+        )
         .text("Suppress all warning messages so only errors are shown"),
       opt[Unit]('m', name = "suppress-missing-warnings")
         .optional()
@@ -104,7 +107,8 @@ object CommonOptionsHelper {
             showMissingWarnings = false,
             showStyleWarnings = false,
             showUsageWarnings = false
-          )),
+          )
+        ),
       opt[Unit]('m', name = "hide-missing-warnings")
         .optional()
         .action((_, c) => c.copy(showMissingWarnings = false))
@@ -133,16 +137,17 @@ object CommonOptionsHelper {
         ),
       opt[Int]('x', name = "max-parallel-processing")
         .optional()
-        .action((v,c) => c.copy(maxParallelParsing = v))
+        .action((v, c) => c.copy(maxParallelParsing = v))
         .text(
           "Controls the maximum number of include files that will be parsed in parallel"
         ),
-      opt[Int](name="max-include-wait").optional()
-        .action((v,c) => c.copy(maxIncludeWait = FiniteDuration(v,"seconds")))
+      opt[Int](name = "max-include-wait")
+        .optional()
+        .action((v, c) => c.copy(maxIncludeWait = FiniteDuration(v, "seconds")))
         .text("Maximum time that parsing an include file will wait for it to complete"),
       opt[Boolean]("warnings-are-fatal")
         .optional()
-        .action((v,c) => c.copy(warningsAreFatal = true))
+        .action((_, c) => c.copy(warningsAreFatal = true))
         .text(
           "Makes validation warnings fatal to encourage code perfection"
         )
