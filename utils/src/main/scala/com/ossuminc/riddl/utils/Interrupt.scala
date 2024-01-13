@@ -10,7 +10,6 @@ import java.util.concurrent.CancellationException
 import scala.concurrent.*
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@SuppressWarnings(Array("org.wartremover.warts.Var"))
 final class Interrupt extends (() => Boolean) {
 
   // We need a state-machine to track the progress.
@@ -20,14 +19,14 @@ final class Interrupt extends (() => Boolean) {
   // an Interrupt reference means that it is already cancelled or is already
   // too late.
   sealed trait State
-  case object NotStarted extends State
-  case class Started(onThread: Thread) extends State
-  case class CancelledOrLate(that: Interrupt) extends State
+  private case object NotStarted extends State
+  private case class Started(onThread: Thread) extends State
+  private case class CancelledOrLate(that: Interrupt) extends State
 
   private[this] var state: AnyRef = NotStarted
 
-  /** This is the signal to cancel the execution of the logic. Returns whether
-    * the cancellation signal was successully issued or not.
+  /** This is the signal to cancel the execution of the logic. Returns whether the cancellation signal was successfully
+    * issued or not.
     */
   override def apply(): Boolean = this.synchronized {
     state match {
@@ -68,18 +67,16 @@ final class Interrupt extends (() => Boolean) {
 
   def ready: Boolean = thread.nonEmpty
 
-  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
-  def cancel: Unit = {
-    if thread.nonEmpty then thread.map(_.interrupt())
+  def cancel(): Unit = {
+    if thread.nonEmpty then thread.foreach(_.interrupt())
     else {
       throw new IllegalStateException("Thread not obtained yet.")
     }
   }
 
-  /** Executes the supplied block of code and returns the result. Throws
-    * CancellationException if the block was interrupted.
+  /** Executes the supplied block of code and returns the result. Throws CancellationException if the block was
+    * interrupted.
     */
-  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   def interruptibly[T](block: => T): T = {
     if enter() then {
       thread = Some(Thread.currentThread())
@@ -100,10 +97,9 @@ final class Interrupt extends (() => Boolean) {
 
 object Interrupt {
 
-  def aFuture[T](
+  private def aFuture[T](
     block: => T
-  )(implicit ec: ExecutionContext
-  ): (Future[T], Interrupt) = {
+  )(implicit ec: ExecutionContext): (Future[T], Interrupt) = {
     val interrupt = new Interrupt()
     Future { interrupt.interruptibly(block) }(ec) -> interrupt
   }
@@ -114,8 +110,7 @@ object Interrupt {
     if !isInteractive then { Future.successful(false) -> None }
     else {
       val result = aFuture[Boolean] {
-        while
-          Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit:\n")).nonEmpty
+        while Option(scala.io.StdIn.readLine("Type <Ctrl-D> To Exit:\n")).nonEmpty
         do {}
         true
       }

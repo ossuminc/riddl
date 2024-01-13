@@ -17,14 +17,13 @@ import scala.reflect.ClassTag
   * @param ucdd
   *   The UseCaseDiagramData from the DiagramsPass for this
   */
-@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) extends FileBuilder {
-  
+
   private val config = Map(
     "title" -> ucdd.name,
     "theme" -> "dark",
-    "forceMenus" -> "true", 
-    "wrap" -> "true", 
+    "forceMenus" -> "true",
+    "wrap" -> "true",
     "mirrorActors" -> "false",
     "messageFontFamily" -> "monospace"
   )
@@ -35,7 +34,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
     sb.append("---\n")
     sb.append("sequenceDiagram"); nl.incr
     addIndent("autonumber")
-    
+
     val parts: Seq[Definition] = ucdd.actors.values.toSeq.sortBy(_.kind)
     makeParticipants(parts)
     generateInteractions(ucdd.interactions)
@@ -83,7 +82,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
       case None => key
     }
   }
-  
+
   private def genericInteraction(gi: GenericInteraction): Unit = {
     gi match {
       case fogi: FocusOnGroupInteraction =>

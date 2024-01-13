@@ -30,7 +30,6 @@ case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
   @targetName("plus")
   def +(int: Int): At = At(source, offset + int)
 
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   override def equals(obj: Any): Boolean = {
     if obj.getClass != classOf[At] then { false }
     else {

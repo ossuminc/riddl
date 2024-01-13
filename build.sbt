@@ -1,5 +1,10 @@
+import com.ossuminc.sbt.OssumIncPlugin.autoImport.With.wartRemover
+import com.ossuminc.sbt.helpers.Publishing
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
+import com.ossuminc.sbt.helpers.WartRemover.Keys
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
+import wartremover.Wart
+import wartremover.Wart.*
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
@@ -8,8 +13,13 @@ enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
+lazy val nonWarts: Seq[Wart] = Seq(
+  ToString, MutableDataStructures, GlobalExecutionContext
+)
+
+
 lazy val riddl: Project = Root("", "riddl", startYr = startYear)
-  .configure(With.noPublishing, With.git, With.dynver)
+  .configure(Publishing.configure, With.git, With.dynver)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
     ThisBuild / gitHubOrganization := "ossuminc",
@@ -33,7 +43,7 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
 lazy val Utils = config("utils")
 lazy val utils: Project = Module("utils", "riddl-utils")
   .enablePlugins(OssumIncPlugin)
-  .configure(With.typical, With.build_info)
+  .configure(With.typical, With.build_info, With.coverage(70))
   .settings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -44,8 +54,7 @@ lazy val utils: Project = Module("utils", "riddl-utils")
 val Language = config("language")
 lazy val language: Project = Module("language", "riddl-language")
   .enablePlugins(OssumIncPlugin)
-  .configure(With.typical)
-  .configure(With.coverage(65))
+  .configure(With.typical, With.coverage(65))
   .settings(
     scalacOptions += "-explain",
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",

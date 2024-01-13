@@ -15,7 +15,6 @@ import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
 
 /** Common Parsing Rules */
-@SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.Throw"))
 private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def author[u: P]: P[Author] = {

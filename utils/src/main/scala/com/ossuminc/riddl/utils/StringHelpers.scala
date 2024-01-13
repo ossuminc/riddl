@@ -17,7 +17,6 @@ object StringHelpers {
     val buf = new StringBuffer(1024)
     val nl = System.lineSeparator()
 
-    @SuppressWarnings(Array("org.wartremover.warts.Any"))
     def doIt(
       obj: Any,
       depth: Int,

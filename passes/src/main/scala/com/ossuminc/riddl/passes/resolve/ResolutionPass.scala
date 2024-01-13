@@ -29,7 +29,6 @@ object ResolutionPass extends PassInfo {
 }
 
 /** The Reference Resolution Pass */
-@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) with UsageResolution {
 
   override def name: String = ResolutionPass.name
@@ -383,7 +382,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     }
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def findAnchor[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition]
@@ -414,7 +412,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         AnchorNotFoundAnywhere("<unknown>")
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.Var", "org.wartremover.warts.IterableOps"))
   private def resolvePathFromAnchor[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Parents,
@@ -468,7 +465,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     else Seq.empty[Definition]
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def checkResultingPath[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition],
@@ -500,7 +496,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
 
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def checkThatPathIdMatchesFoundParentStack[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Parents,
@@ -671,7 +666,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     }
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def resolveAPathId[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Seq[Definition]

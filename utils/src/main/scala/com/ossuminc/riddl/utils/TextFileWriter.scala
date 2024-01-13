@@ -36,7 +36,6 @@ object TextFileWriter {
     val textLength = template.length
     val builder = new mutable.StringBuilder(textLength)
 
-    @SuppressWarnings(Array("org.wartremover.warts.Null"))
     @tailrec def loop(text: String): mutable.StringBuilder = {
       if text.isEmpty then { builder }
       else if text.startsWith("${") then {

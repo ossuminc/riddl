@@ -54,7 +54,6 @@ case class DefinitionStats(
   numStatements: Long = 0
 )
 
-@SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class KindStats(
   var count: Long = 0,
   var numEmpty: Long = 0,
@@ -84,7 +83,6 @@ case class StatsOutput(
 ) extends CollectingPassOutput[DefinitionStats]
 
 /** Unit Tests For StatsPass */
-@SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class StatsPass(input: PassInput, outputs: PassesOutput) extends CollectingPass[DefinitionStats](input, outputs) {
 
   def name: String = StatsPass.name

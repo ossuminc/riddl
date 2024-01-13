@@ -279,7 +279,7 @@ object AST {
   }
 
   sealed trait NamedValue extends RiddlValue with WithIdentifier
-  
+
   sealed trait NamedContainer[CV <: RiddlValue] extends NamedValue with Container[CV]
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
@@ -857,7 +857,6 @@ object AST {
   /** Base trait of an expression that defines a type
     */
   sealed trait TypeExpression extends RiddlValue {
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     def isAssignmentCompatible(other: TypeExpression): Boolean = {
       (other == this) || (other.getClass == this.getClass) ||
       (other.getClass == classOf[Abstract]) ||
@@ -875,7 +874,6 @@ object AST {
 
   sealed trait NumericType extends TypeExpression {
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
     }
@@ -1283,7 +1281,6 @@ object AST {
     override def format: String =
       s"$kind(${pattern.map(_.format).mkString(", ")})"
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[String_]
     }
@@ -1301,7 +1298,6 @@ object AST {
 
     override def format: String = s"$kind(${entityPath.format})"
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[String_] ||
       other.isInstanceOf[Pattern]
@@ -1358,7 +1354,6 @@ object AST {
       if min.isEmpty && max.isEmpty then kind else s"$kind(${min.getOrElse("")},${max.getOrElse("")})"
     }
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
     }
@@ -1385,7 +1380,6 @@ object AST {
   }
 
   case class UserId(loc: At) extends PredefinedType {
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || {
         other match
@@ -1435,7 +1429,6 @@ object AST {
     override def format: String = s"$kind($min,$max)"
     inline override def kind: String = "Range"
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[NumericType]
     }
@@ -1500,7 +1493,6 @@ object AST {
     */
   case class Date(loc: At) extends TimeType {
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
       other.isInstanceOf[TimeStamp] || other.isInstanceOf[String_] ||
@@ -1515,7 +1507,6 @@ object AST {
     */
   case class Time(loc: At) extends TimeType {
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
       other.isInstanceOf[TimeStamp] || other.isInstanceOf[String_] ||
@@ -1530,7 +1521,6 @@ object AST {
     */
   case class DateTime(loc: At) extends TimeType {
 
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Date] || other.isInstanceOf[DateTime] ||
       other.isInstanceOf[ZonedDateTime] || other.isInstanceOf[TimeStamp] || other.isInstanceOf[String_] ||
@@ -1556,7 +1546,6 @@ object AST {
     *   The location of the timestamp
     */
   case class TimeStamp(loc: At) extends TimeType {
-    @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
       other.isInstanceOf[Date] || other.isInstanceOf[String_] ||
@@ -3864,7 +3853,6 @@ object AST {
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf", "org.wartremover.warts.IsInstanceOf"))
   def findAuthors(
     defn: RiddlValue,
     parents: Seq[Container[RiddlValue]]
