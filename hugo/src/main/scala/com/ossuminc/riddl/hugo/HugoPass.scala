@@ -56,7 +56,6 @@ case class HugoPass(
   requires(ValidationPass)
   requires(StatsPass)
 
-  require(options.outputRoot.getNameCount > 2, "Output path is too shallow")
   require(
     options.outputRoot.getFileName.toString.nonEmpty,
     "Output path is empty"
