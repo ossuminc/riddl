@@ -1,4 +1,5 @@
 import com.ossuminc.sbt.OssumIncPlugin.autoImport.With.wartRemover
+import com.ossuminc.sbt.helpers.Publishing
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import com.ossuminc.sbt.helpers.WartRemover.Keys
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
@@ -18,7 +19,7 @@ lazy val nonWarts: Seq[Wart] = Seq(
 
 
 lazy val riddl: Project = Root("", "riddl", startYr = startYear)
-  .configure(With.noPublishing, With.git, With.dynver)
+  .configure(Publishing.configure, With.git, With.dynver)
   .settings(
     ThisBuild / gitHubRepository := "riddl",
     ThisBuild / gitHubOrganization := "ossuminc",
