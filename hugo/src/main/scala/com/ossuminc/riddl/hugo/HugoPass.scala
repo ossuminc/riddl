@@ -41,7 +41,6 @@ case class HugoOutput(
   messages: Messages = Messages.empty
 ) extends PassOutput
 
-@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class HugoPass(
   input: PassInput,
   outputs: PassesOutput,

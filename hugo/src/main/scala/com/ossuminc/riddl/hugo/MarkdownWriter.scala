@@ -420,8 +420,7 @@ case class MarkdownWriter(
       }
     }
   }
-
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
+  
   def emitDescription(d: Option[Description], level: Int = 2): this.type = {
     d match {
       case None => this
@@ -679,7 +678,6 @@ case class MarkdownWriter(
     this
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
   private def emitInputOutput(
     input: Option[Aggregation],
     output: Option[Aggregation]
@@ -843,7 +841,6 @@ case class MarkdownWriter(
     emitTerms(application.terms)
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial", "org.wartremover.warts.IterableOps"))
   def emitEpic(epic: Epic, stack: Seq[Definition]): this.type = {
     containerHead(epic, "Epic")
     val parents = passUtilities.makeStringParents(stack)

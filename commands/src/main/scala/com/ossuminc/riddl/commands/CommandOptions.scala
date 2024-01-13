@@ -248,7 +248,6 @@ object CommandOptions {
     }
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   val commandOptionsParser: OParser[Unit, CommandOptions] = {
     val plugins = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]]()
     val list =
