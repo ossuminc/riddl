@@ -23,10 +23,9 @@ object Logger {
   case object Warning extends Lvl
   case object Info extends Lvl
 
-  val nl = System.getProperty("line.separator")
+  val nl: String = System.getProperty("line.separator")
 }
 
-@SuppressWarnings(Array("org.wartremover.warts.Var"))
 trait Logger {
   import Logger.*
 
@@ -57,10 +56,10 @@ trait Logger {
       s"[$level] $s"
     else
       val prefix = level match {
-        case Logger.Severe  => s"${RED_B}${BLACK}"
-        case Logger.Error   => s"${RED}"
-        case Logger.Warning => s"${YELLOW}"
-        case Logger.Info    => s"${BLUE}"
+        case Logger.Severe  => s"$RED_B$BLACK"
+        case Logger.Error   => s"$RED"
+        case Logger.Warning => s"$YELLOW"
+        case Logger.Info    => s"$BLUE"
       }
       val lines = s.split(nl)
       val head = s"$prefix$BOLD[$level] ${lines.head}$RESET"

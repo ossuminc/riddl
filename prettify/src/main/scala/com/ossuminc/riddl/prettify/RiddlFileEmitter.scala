@@ -16,7 +16,6 @@ import com.ossuminc.riddl.utils.{Logger, TextFileWriter}
 import java.nio.charset.StandardCharsets
 
 /** Unit Tests For RiddlFileEmitter */
-@SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   private var indentLevel: Int = 0
 

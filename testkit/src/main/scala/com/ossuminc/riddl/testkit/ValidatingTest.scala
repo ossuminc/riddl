@@ -32,7 +32,6 @@ abstract class ValidatingTest extends AnyWordSpec with Matchers with com.ossumin
     else Right(result)
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   def parseAndValidate(
     input: String,
     origin: String,

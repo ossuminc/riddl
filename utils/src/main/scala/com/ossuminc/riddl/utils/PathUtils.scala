@@ -25,7 +25,7 @@ object PathUtils {
     */
   def copyResource(resourceName: String, destination: Path): Unit = {
     val src = this.getClass.getClassLoader.getResourceAsStream(resourceName)
-    require(src != null, s"Failed to open resource ${resourceName}")
+    require(src != null, s"Failed to open resource $resourceName")
     Files.copy(src, destination, StandardCopyOption.REPLACE_EXISTING)
   }
 
@@ -58,7 +58,6 @@ object PathUtils {
     } else { "" }
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.Var"))
   def compareDirectories(
     a: Path,
     b: Path

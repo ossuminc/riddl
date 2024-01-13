@@ -26,7 +26,6 @@ object ValidationPass extends PassInfo {
   * @param input
   *   Input from previous passes
   */
-@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class ValidationPass(
   input: PassInput,
   outputs: PassesOutput
@@ -146,7 +145,6 @@ case class ValidationPass(
     }
   }
 
-  @SuppressWarnings(Array("org.wartremover.wart.IsInstanceOf"))
   private def validateOnMessageClause(omc: OnMessageClause, parents: Seq[Definition]): Unit = {
     checkDefinition(parents, omc)
     if omc.msg.nonEmpty then {
@@ -364,7 +362,6 @@ case class ValidationPass(
     checkDescription(ai)
   }
 
-  @SuppressWarnings(Array("org.wartremover.wart.IsInstanceOf"))
   private def validateType(
     t: Type,
     parents: Seq[Definition]
@@ -750,7 +747,6 @@ case class ValidationPass(
     checkDescription(uc)
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def validateArbitraryInteraction(
     origin: Option[Definition],
     destination: Option[Definition],
@@ -826,7 +822,6 @@ case class ValidationPass(
     }
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.IterableOps"))
   private def validateInteraction(interaction: Interaction, parents: Seq[Definition]): Unit = {
     val useCase = parents.head
     checkDescription(interaction)

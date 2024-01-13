@@ -10,7 +10,6 @@ import java.net.URLClassLoader
 
 /** Loads a plugin using a [[java.net.URLClassLoader]].
   */
-@SuppressWarnings(Array("org.wartremover.warts.Var"))
 case class PluginClassLoader(urls: List[URL], parentClassLoader: ClassLoader)
     extends URLClassLoader(urls.toArray, parentClassLoader) {
   require(urls.forall(_.getProtocol == "jar"))

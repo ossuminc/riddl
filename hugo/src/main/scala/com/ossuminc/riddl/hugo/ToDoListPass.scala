@@ -48,7 +48,6 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
     }
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
   private def mkAuthor(authors: Seq[AuthorRef], parents: Seq[Definition]): Seq[String] = {
     if authors.isEmpty then Seq.empty
     else

@@ -17,7 +17,6 @@ object Tar {
 
   final val bufferSize: Int = 1024 * 1024 // 1 MB
 
-  @SuppressWarnings(Array("org.wartremover.warts.Var"))
   def untar(tarFile: Path, destDir: Path): Either[String, Int] = {
     val fname = tarFile.getFileName.toString
     val fi = Files.newInputStream(tarFile)
@@ -36,7 +35,7 @@ object Tar {
 
     taris match
       case None =>
-        Left(s"Tar file name ${tarFile} must end in .tar.gz or .tar")
+        Left(s"Tar file name $tarFile must end in .tar.gz or .tar")
       case Some(taris) =>
         var counter = 0
         var tae = taris.getNextTarEntry

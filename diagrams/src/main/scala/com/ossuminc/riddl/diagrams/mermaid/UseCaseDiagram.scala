@@ -18,7 +18,6 @@ import scala.reflect.ClassTag
   * @param useCase
   * The UseCase from the AST to which this diagram applies
   */
-@SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
 case class UseCaseDiagram(sds: UseCaseDiagramSupport, useCase: UseCase) extends FileBuilder {
 
   private final val indent_per_level = 4
