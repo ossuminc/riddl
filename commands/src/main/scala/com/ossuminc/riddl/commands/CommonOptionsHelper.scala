@@ -26,7 +26,7 @@ object CommonOptionsHelper {
 
   private def year: Int = Calendar.getInstance().get(Calendar.YEAR)
   private val start: String = RiddlBuildInfo.startYear
-  private val blurb: String =
+  val blurb: String =
     s"""RIDDL Compiler © $start-$year Ossum Inc. All rights reserved."
        |Version: ${RiddlBuildInfo.version}
        |
