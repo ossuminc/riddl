@@ -1,17 +1,8 @@
-/*
- * Copyright 2019 Ossum, Inc.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 package com.ossuminc.riddl.diagrams.mermaid
 
-import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{Definition, Domain, Root}
 
-import scala.collection.mutable
-
-object MermaidDiagramsPlugin {
+object RootOverviewDiagram {
   private val containerStyles: Seq[String] = Seq(
     "font-size:1pc,fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:36px",
     "font-size:1pc,fill:#2222AA,stroke:black,stroke-width:5,border:solid,color:white,margin-top:36px",
@@ -22,34 +13,20 @@ object MermaidDiagramsPlugin {
   )
 }
 
-class MermaidDiagramsPlugin {
-  import MermaidDiagramsPlugin.*
 
-  private def getTechnology(definition: Definition): String = {
-    val maybeStrings: Option[Seq[String]] = definition match {
-      case d: Domain =>
-        d.getOptionValue[DomainTechnologyOption]
-          .map(list => list.map(_.s))
-      case c: Context =>
-        c.getOptionValue[ContextTechnologyOption]
-          .map(list => list.map(_.s))
-      case e: Entity =>
-        e.getOptionValue[EntityTechnologyOption]
-          .map(list => list.map(_.s))
-      case p: Projector =>
-        p.getOptionValue[ProjectorTechnologyOption]
-          .map(list => list.map(_.s))
-      case _ => Option.empty[Seq[String]]
-    }
-    maybeStrings.map(_.mkString(", ")).getOrElse("Arbitrary Technology")
-  }
+class RootOverviewDiagram(root: Root) extends FlowchartDiagramGenerator("Root Overview", "TD") {
 
-  private def openBox(definition: Definition, level: Int = 0): String = {
+  private val domains = root.domains ++ root.includes.filter[Domain]
+
+  append(openBox(root))
+
+
+  def openBox(definition: Definition, level: Int = 0): String = {
     val contents: Seq[Definition] = {
       definition match {
-        case r: Root   => r.domains ++ r.includes.filter[Domain]
+        case r: Root => r.domains ++ r.includes.filter[Domain]
         case d: Domain => d.domains ++ d.includes.filter[Domain]
-        case _         => Seq.empty[Definition]
+        case _ => Seq.empty[Definition]
       }
     }
     val mid = contents.foldLeft("") { case (s, c) => s + openBox(c, level + 1) }
@@ -59,20 +36,13 @@ class MermaidDiagramsPlugin {
       val head = "  ".repeat(level) +
         s"subgraph $name [\"$name<br/><small>${definition.briefValue}<br/>($technology)</small>\"]\n"
       head + mid + "  ".repeat(level) + "end\n" + "  ".repeat(level) +
-        s"style $name ${containerStyles(level)}\n"
-    } else { mid }
+        s"style $name ${RootOverviewDiagram.containerStyles(level)}\n"
+    } else {
+      mid
+    }
   }
 
-  // def traverseDomainsAndContexts
 
-  def makeRootOverview(
-    root: AST.Root
-  ): String = {
-    val sb = new mutable.StringBuilder()
-    sb.append("flowchart TB\n")
-    sb.append(openBox(root))
-    sb.toString()
-  }
   /*
   graph TB
     linkStyle default fill:#ffffff
@@ -85,4 +55,5 @@ class MermaidDiagramsPlugin {
   style 2 fill:#1168bd,stroke:#0b4884,color:#ffffff
 
    */
+
 }

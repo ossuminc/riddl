@@ -170,7 +170,8 @@ private[parsing] trait EpicParser {
     options[u, EpicOption](RiddlOptions.epicOptions) {
       case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
       case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => EpicColorOption(loc, args)
+      case (loc, RiddlOption.color, args)      => EpicCssOption(loc, args)
+      case (loc, RiddlOption.faicon, args)     => EpicIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => EpicKindOption(loc, args)
     }
   }

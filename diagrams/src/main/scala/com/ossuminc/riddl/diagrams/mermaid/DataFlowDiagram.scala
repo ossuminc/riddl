@@ -23,9 +23,9 @@ import com.ossuminc.riddl.utils.FileBuilder
   *   The PassesResult from running the standard passes to obtain all the collected ideas.
   */
 case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
-  
+
   override val spaces_per_level = 2
-  
+
   private def makeNodeLabel(definition: Definition): Unit = {
     pr.symbols.parentOf(definition) match {
       case Some(parent) =>

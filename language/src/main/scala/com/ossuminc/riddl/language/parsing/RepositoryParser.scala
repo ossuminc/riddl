@@ -25,7 +25,8 @@ private[parsing] trait RepositoryParser {
     options[u, RepositoryOption](RiddlOptions.repositoryOptions) {
       case (loc, RiddlOption.technology, args) => RepositoryTechnologyOption(loc, args)
       case (loc, RiddlOption.kind, args)       => RepositoryKindOption(loc, args)
-      case (loc, RiddlOption.color, args)      => RepositoryColorOption(loc, args)
+      case (loc, RiddlOption.color, args)      => RepositoryCssOption(loc, args)
+      case (loc, RiddlOption.faicon, args)     => RepositoryIconOption(loc, args)
     }
   }
 

@@ -28,7 +28,8 @@ private[parsing] trait SagaParser {
   private def sagaOptions[u: P]: P[Seq[SagaOption]] = {
     options[u, SagaOption](RiddlOptions.sagaOptions) {
       case (loc, RiddlOption.technology, args)                  => SagaTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)                       => SagaColorOption(loc, args)
+      case (loc, RiddlOption.color, args)                       => SagaCssOption(loc, args)
+      case (loc, RiddlOption.faicon, args)                      => SagaIconOption(loc, args)
       case (loc, RiddlOption.kind, args)                        => SagaKindOption(loc, args)
       case (loc, option, _) if option == RiddlOption.parallel   => ParallelOption(loc)
       case (loc, option, _) if option == RiddlOption.sequential => SequentialOption(loc)

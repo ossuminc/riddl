@@ -32,8 +32,9 @@ private[parsing] trait ContextParser {
       case (loc, RiddlOption.service, _)       => ServiceOption(loc)
       case (loc, RiddlOption.package_, args)   => ContextPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => ContextTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => ContextColorOption(loc, args)
-      case (loc, RiddlOption.kind, args) => ContextKindOption(loc, args)
+      case (loc, RiddlOption.color, args)      => ContextCssOption(loc, args)
+      case (loc, RiddlOption.faicon, args)     => ContextIconOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => ContextKindOption(loc, args)
     }
   }
 
@@ -41,14 +42,14 @@ private[parsing] trait ContextParser {
     include[OccursInContext, X](contextDefinitions(_))
   }
 
-  private def contextDefinition[u:P]: P[OccursInContext] = {
+  private def contextDefinition[u: P]: P[OccursInContext] = {
     P(
       typeDef | handler(StatementsSet.ContextStatements) | entity | authorRef |
         adaptor | function | saga | streamlet | projector | repository |
         inlet | outlet | connector | term | contextInclude | comment
     )
   }
-  
+
   private def contextDefinitions[u: P]: P[Seq[OccursInContext]] = {
     contextDefinition./.rep(1)
   }
@@ -61,7 +62,7 @@ private[parsing] trait ContextParser {
 
   def context[u: P]: P[Context] = {
     P(
-      location ~ Keywords.context ~/ identifier  ~ is ~ open ~
+      location ~ Keywords.context ~/ identifier ~ is ~ open ~
         contextOptions ~ contextBody ~ close ~ briefly ~ description
     ).map { case (loc, id, options, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInContext](contents)

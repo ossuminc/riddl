@@ -12,7 +12,6 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import java.net.URL
 import java.nio.file.Path
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 import scala.reflect.{ClassTag, classTag}
 
 /** Abstract Syntax Tree This object defines the model for processing RIDDL and producing a raw AST from it. This raw
@@ -2012,8 +2011,12 @@ object AST {
     val accepted: Seq[String] = Seq("")
   }
 
-  case class AdaptorColorOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("color")
+  /** An [[AdaptorOption]] to specify the css for this adaptor in generated diagrams, etc. */
+  case class AdaptorCssOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("css")
 
+  /** An [[AdaptorOption]] to specify the Font Awesome icon for this [[Adaptor]] in generated diagrams, etc. */
+  case class AdaptorIconOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("faicon")
+  
   sealed trait AdaptorDirection extends RiddlValue {
     def loc: At
   }
@@ -2449,8 +2452,11 @@ object AST {
     */
   case class EntityMessageQueue(loc: At) extends EntityOption("message queue")
 
-  /** An [[EntityOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class EntityColorOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("color")
+  /** An [[EntityOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class EntityCssOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("css")
+
+  /** An [[EntityOption]] to specify the Font Awesome icon for this [[Entity]] in generated diagrams, etc. */
+  case class EntityIconOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("faicon")
 
   /** An [[EntityOption]] that specifies the kind of technology used to represent the entity */
   case class EntityTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("technology")
@@ -2515,8 +2521,12 @@ object AST {
 
   sealed abstract class RepositoryOption(final val name: String) extends OptionValue
 
-  /** An [[RepositoryOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class RepositoryColorOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("color")
+  /** An [[RepositoryOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class RepositoryCssOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("css")
+
+  /** An [[RepositoryOption]] to specify the Font Awesome icon for this [[Repository]] in generated diagrams, etc. */
+  case class RepositoryIconOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("faicon")
+
 
   /** An [[RepositoryOption]] that specifies the kind of technology used to represent the entity */
   case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
@@ -2584,8 +2594,11 @@ object AST {
 
   sealed abstract class ProjectorOption(final val name: String) extends OptionValue
 
-  /** An [[ProjectorOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class ProjectorColorOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("color")
+  /** An [[ProjectorOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class ProjectorCssOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("css")
+
+  /** An [[ProjectorOption]] to specify the Font Awesome icon for this [[Projector]] in generated diagrams, etc. */
+  case class ProjectorIconOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("faicon")
 
   /** An [[ProjectorOption]] that specifies the kind of technology used to represent the entity */
   case class ProjectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
@@ -2652,8 +2665,12 @@ object AST {
   /** Base trait for all options a Context can have. */
   sealed abstract class ContextOption(final val name: String) extends OptionValue
 
-  /** An [[ContextOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class ContextColorOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("color")
+  /** An [[ContextOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class ContextCssOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("css")
+
+  /** An [[ContextOption]] to specify the Font Awesome icon for this [[Context]] in generated diagrams, etc. */
+  case class ContextIconOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("faicon")
+
 
   /** An [[ContextOption]] that specifies the kind of technology used to represent the entity */
   case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
@@ -2756,8 +2773,11 @@ object AST {
 
   sealed abstract class StreamletOption(final val name: String) extends OptionValue
 
-  /** An [[StreamletOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class StreamletColorOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("color")
+  /** An [[StreamletOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class StreamletCssOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("css")
+
+  /** An [[StreamletOption]] to specify the Font Awesome icon for this [[Streamlet]] in generated diagrams, etc. */
+  case class StreamletIconOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("faicon")
 
   /** An [[StreamletOption]] that specifies the kind of technology used to represent the entity */
   case class StreamletTechnologyOption(loc: At, override val args: Seq[LiteralString])
@@ -2828,8 +2848,11 @@ object AST {
 
   sealed abstract class ConnectorOption(final val name: String) extends OptionValue
 
-  /** An [[ConnectorOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class ConnectorColorOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("color")
+  /** An [[ConnectorOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class ConnectorCssOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("css")
+
+  /** An [[ConnectorOption]] to specify the Font Awesome icon for this [[Connector]] in generated diagrams, etc. */
+  case class ConnectorIconOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("faicon")
 
   /** An [[ConnectorOption]] that specifies the kind of technology used to represent the entity */
   case class ConnectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
@@ -3054,8 +3077,11 @@ object AST {
   /** Base trait for all options applicable to a saga. */
   sealed abstract class SagaOption(final val name: String) extends OptionValue
 
-  /** An [[SagaOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class SagaColorOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("color")
+  /** An [[SagaOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class SagaCssOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("css")
+
+  /** An [[SagaOption]] to specify the Font Awesome icon for this [[Saga]] in generated diagrams, etc. */
+  case class SagaIconOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("faicon")
 
   /** An [[SagaOption]] that specifies the kind of technology used to represent the entity */
   case class SagaTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("technology")
@@ -3448,8 +3474,11 @@ object AST {
   /** The base trait of all option values that pretain to Epics */
   sealed abstract class EpicOption(final val name: String) extends OptionValue
 
-  /** An [[EpicOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class EpicColorOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("color")
+  /** An [[EpicOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class EpicCssOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("css")
+
+  /** An [[EpicOption]] to specify the Font Awesome icon for this [[Epic]] in generated diagrams, etc. */
+  case class EpicIconOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("faicon")
 
   /** An [[EpicOption]] that specifies the kind of technology used to represent the entity */
   case class EpicTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("technology")
@@ -3692,8 +3721,12 @@ object AST {
 
   sealed trait ApplicationOption(final val name: String) extends OptionValue
 
-  /** An [[ApplicationOption]]  that specifies the color for this entity in generated diagrams, etc. */
-  case class ApplicationColorOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("color")
+  /** An [[ApplicationOption]]  that specifies the css for this entity in generated diagrams, etc. */
+  case class ApplicationCssOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("css")
+
+  
+  /** An [[ApplicationOption]]  that specifies the Font Awesome icon to use in generated diagrams for this application */
+  case class ApplicationIconOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("faicon")
 
   /** An [[ApplicationOption]] that specifies the kind of technology used to represent the entity */
   case class ApplicationTechnologyOption(loc: At, override val args: Seq[LiteralString])
@@ -3757,7 +3790,11 @@ object AST {
     */
   sealed abstract class DomainOption(final val name: String) extends OptionValue
 
-  case class DomainColorOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("color")
+  /** An [[DomainOption]] to specify the css for this [[Domain]] in generated diagrams, etc. */
+  case class DomainCssOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("css")
+
+  /** An [[DomainOption]] to specify the Font Awesome icon for this [[Domain]] in generated diagrams, etc. */
+  case class DomainIconOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("faicon")
 
   /** An [[DomainOption]] that specifies the kind of technology used to represent the entity */
   case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")

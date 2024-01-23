@@ -36,7 +36,8 @@ private[parsing] trait StreamingParser {
     ) {
       case (loc, RiddlOption.persistent, _)    => ConnectorPersistentOption(loc)
       case (loc, RiddlOption.technology, args) => ConnectorTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => ConnectorColorOption(loc, args)
+      case (loc, RiddlOption.color, args)      => ConnectorCssOption(loc, args)
+      case (loc, RiddlOption.faicon, args)     => ConnectorIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => ConnectorKindOption(loc, args)
     }
   }
@@ -91,7 +92,7 @@ private[parsing] trait StreamingParser {
   private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
     options[u, StreamletOption](StringIn(RiddlOption.technology, RiddlOption.color, RiddlOption.kind).!) {
       case (loc, RiddlOption.technology, args) => StreamletTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => StreamletColorOption(loc, args)
+      case (loc, RiddlOption.color, args)      => StreamletCssOption(loc, args)
       case (loc, RiddlOption.kind, args)       => StreamletKindOption(loc, args)
     }
   }

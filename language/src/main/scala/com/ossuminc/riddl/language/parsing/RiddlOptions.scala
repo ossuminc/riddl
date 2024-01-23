@@ -126,6 +126,7 @@ object RiddlOption {
   final val device = "device"
   final val external = "external"
   final val event_sourced = "event-sourced"
+  final val faicon = "faicon"
   final val finite_state_machine = "finite-state-machine"
   final val gateway = "gateway"
   final val kind = "kind"

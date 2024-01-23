@@ -8,7 +8,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.TranslatingState
 import com.ossuminc.riddl.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.diagrams.mermaid.{MermaidDiagramsPlugin, UseCaseDiagramSupport}
+import com.ossuminc.riddl.diagrams.mermaid.{RootOverviewDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -18,7 +18,7 @@ import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.symbols.Symbols.ParentStack
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.stats.StatsPass
-import com.ossuminc.riddl.utils.{Logger, PathUtils, Tar, Timer, TreeCopyFileVisitor, Zip}
+import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, TreeCopyFileVisitor, Zip}
 
 import java.io.File
 import java.net.URL
@@ -285,11 +285,12 @@ case class HugoPass(
 
       val mdw = addFile(Seq.empty[String], "_index.md")
       mdw.fileHead("Index", 10, Option("The main index to the content"))
+      mdw.h2("Landscape View")
       makeSystemLandscapeView match {
-        case Some(view) =>
-          mdw.h2("Landscape View")
-          mdw.emitMermaidDiagram(view.split(System.lineSeparator()).toIndexedSeq)
-        case None => // nothing
+        case view: Seq[String] if view.nonEmpty =>
+          mdw.emitMermaidDiagram(view)
+        case _ => // no view, show nothing
+          mdw.addLine("Not Available")
       }
       mdw.h2("Domains")
       val domains = root.domains
@@ -373,10 +374,9 @@ case class HugoPass(
     } else None
   }
 
-  private def makeSystemLandscapeView: Option[String] = {
-    val mdp = new MermaidDiagramsPlugin
-    val diagram = mdp.makeRootOverview(root)
-    Some(diagram)
+  private def makeSystemLandscapeView: Seq[String] = {
+    val rod = new RootOverviewDiagram(root)
+    rod.generate
   }
 
   private def close(root: Root): Unit = {

@@ -21,10 +21,11 @@ private[parsing] trait ProjectorParser {
     with TypeParser =>
 
   private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
-    options[u, ProjectorOption](StringIn(RiddlOption.technology,RiddlOption.color,RiddlOption.kind).!) {
+    options[u, ProjectorOption](StringIn(RiddlOption.technology, RiddlOption.color, RiddlOption.kind).!) {
       case (loc, RiddlOption.technology, args) => ProjectorTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args) => ProjectorColorOption(loc, args)
-      case (loc, RiddlOption.kind, args) => ProjectorKindOption(loc, args)
+      case (loc, RiddlOption.color, args)      => ProjectorCssOption(loc, args)
+      case (loc, RiddlOption.faicon, args)     => ProjectorIconOption(loc, args)
+      case (loc, RiddlOption.kind, args)       => ProjectorKindOption(loc, args)
     }
   }
 
