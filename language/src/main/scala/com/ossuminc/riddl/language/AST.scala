@@ -207,7 +207,8 @@ object AST {
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
-    def vitals: Contents[VitalDefinition[?, ?]] = container.filter[VitalDefinition[?, ?]]
+    def vitals: Contents[VitalDefinition[?, CV]] = container.filter[VitalDefinition[?, CV]]
+    def processors: Contents[Processor[?,CV]] = container.filter[Processor[?,CV]]
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
@@ -319,7 +320,7 @@ object AST {
       with OccursInProcessors
       with OccursInFunction
       with OccursAtRootScope {
-    lazy val comments: Seq[Comment] = contents.filter[Comment]
+    lazy val comments: Contents[Comment] = contents.filter[Comment]
   }
 
   /** Added to definitions that support includes */
@@ -334,11 +335,11 @@ object AST {
 
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
-    def terms: Seq[Term] = contents.filter[Term]
+    def terms: Contents[Term] = contents.filter[Term]
   }
 
   sealed trait WithAuthorRefs extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
-    def authorRefs: Seq[AuthorRef] = contents.filter[AuthorRef]
+    def authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
 
     override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
   }
@@ -350,7 +351,7 @@ object AST {
     *   The sealed base trait of the permitted options for this definition
     */
   sealed trait WithOptions[T <: OptionValue] extends Container[RiddlValue] {
-    def options: Seq[OptionValue]
+    def options: Contents[OptionValue]
 
     def hasOption[OPT <: T: ClassTag]: Boolean = options
       .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
@@ -375,107 +376,107 @@ object AST {
 
   /** Base trait of any definition that is a container and contains types */
   sealed trait WithTypes extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
-    lazy val types: Seq[Type] = contents.filter[Type]
+    lazy val types: Contents[Type] = contents.filter[Type]
 
     override def hasTypes: Boolean = types.nonEmpty
   }
 
   sealed trait WithConstants extends Container[RiddlValue] with OccursInProcessors {
-    def constants: Seq[Constant] = contents.filter[Constant]
+    def constants: Contents[Constant] = contents.filter[Constant]
   }
 
   sealed trait WithInvariants extends Container[RiddlValue] with OccursInProcessors {
-    def invariants: Seq[Invariant] = contents.filter[Invariant]
+    def invariants: Contents[Invariant] = contents.filter[Invariant]
   }
 
   sealed trait WithFunctions extends Container[RiddlValue] with OccursInProcessors {
-    def functions: Seq[Function] = contents.filter[Function]
+    def functions: Contents[Function] = contents.filter[Function]
   }
 
   sealed trait WithHandlers extends Container[RiddlValue] with OccursInProcessors {
-    def handlers: Seq[Handler] = contents.filter[Handler]
+    def handlers: Contents[Handler] = contents.filter[Handler]
   }
 
   sealed trait WithInlets extends Container[RiddlValue] with OccursInProcessors {
-    def inlets: Seq[Inlet] = contents.filter[Inlet]
+    def inlets: Contents[Inlet] = contents.filter[Inlet]
   }
 
   sealed trait WithOutlets extends Container[RiddlValue] with OccursInProcessors {
-    def outlets: Seq[Outlet] = contents.filter[Outlet]
+    def outlets: Contents[Outlet] = contents.filter[Outlet]
   }
 
   sealed trait WithStates extends Container[RiddlValue] with OccursInEntity {
-    def states: Seq[State] = contents.filter[State]
+    def states: Contents[State] = contents.filter[State]
   }
 
   sealed trait WithGroups extends Container[RiddlValue] with OccursInApplication {
-    def groups: Seq[Group] = contents.filter[Group]
+    def groups: Contents[Group] = contents.filter[Group]
   }
 
   sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
-    def statements: Seq[Statement] = contents.filter[Statement]
+    def statements: Contents[Statement] = contents.filter[Statement]
   }
 
   sealed trait WithContexts extends Container[RiddlValue] with OccursInDomain {
-    def contexts: Seq[Context] = contents.filter[Context]
+    def contexts: Contents[Context] = contents.filter[Context]
   }
 
   sealed trait WithAuthors extends Container[RiddlValue] with OccursInDomain {
-    def authors: Seq[Author] = contents.filter[Author]
+    def authors: Contents[Author] = contents.filter[Author]
 
     override def hasAuthors: Boolean = authors.nonEmpty
   }
 
   sealed trait WithUsers extends Container[RiddlValue] with OccursInDomain {
-    def users: Seq[User] = contents.filter[User]
+    def users: Contents[User] = contents.filter[User]
   }
 
   sealed trait WithEpics extends Container[RiddlValue] with OccursInDomain {
-    def epics: Seq[Epic] = contents.filter[Epic]
+    def epics: Contents[Epic] = contents.filter[Epic]
   }
 
   sealed trait WithApplications extends Container[RiddlValue] with OccursInDomain {
-    def applications: Seq[Application] = contents.filter[Application]
+    def applications: Contents[Application] = contents.filter[Application]
   }
 
   sealed trait WithDomains extends Container[RiddlValue] with OccursInDomain {
-    def domains: Seq[Domain] = contents.filter[Domain]
+    def domains: Contents[Domain] = contents.filter[Domain]
   }
 
   sealed trait WithProjectors extends Container[RiddlValue] with OccursInContext {
-    def projectors: Seq[Projector] = contents.filter[Projector]
+    def projectors: Contents[Projector] = contents.filter[Projector]
   }
 
   sealed trait WithRepositories extends Container[RiddlValue] with OccursInContext {
-    def repositories: Seq[Repository] = contents.filter[Repository]
+    def repositories: Contents[Repository] = contents.filter[Repository]
   }
 
   sealed trait WithEntities extends Container[RiddlValue] with OccursInContext {
-    def entities: Seq[Entity] = contents.filter[Entity]
+    def entities: Contents[Entity] = contents.filter[Entity]
   }
 
   sealed trait WithStreamlets extends Container[RiddlValue] with OccursInContext {
-    def streamlets: Seq[Streamlet] = contents.filter[Streamlet]
+    def streamlets: Contents[Streamlet] = contents.filter[Streamlet]
   }
 
   sealed trait WithConnectors extends Container[RiddlValue] with OccursInContext {
-    def connectors: Seq[Connector] = contents.filter[Connector]
+    def connectors: Contents[Connector] = contents.filter[Connector]
   }
 
   sealed trait WithAdaptors extends Container[RiddlValue] with OccursInContext {
-    def adaptors: Seq[Adaptor] = contents.filter[Adaptor]
+    def adaptors: Contents[Adaptor] = contents.filter[Adaptor]
   }
 
   sealed trait WithSagas extends Container[RiddlValue] with OccursInContext {
-    def sagas: Seq[Saga] = contents.filter[Saga]
+    def sagas: Contents[Saga] = contents.filter[Saga]
   }
 
   sealed trait WithSagaSteps extends Container[RiddlValue] with OccursInSaga {
-    def sagaSteps: Seq[SagaStep] = contents.filter[SagaStep]
+    def sagaSteps: Contents[SagaStep] = contents.filter[SagaStep]
   }
 
   sealed trait WithUseCases extends Container[RiddlValue] with OccursInEpic {
-    def cases: Seq[UseCase] = contents.filter[UseCase]
+    def cases: Contents[UseCase] = contents.filter[UseCase]
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
@@ -1968,7 +1969,7 @@ object AST {
 
   case class ForEachStatement(
     loc: At,
-    ref: PathIdentifier,
+    ref: FieldRef | OutletRef | InletRef ,
     do_ : Seq[Statement]
   ) extends Statement {
     override def kind: String = "Foreach Statement"
@@ -2734,7 +2735,7 @@ object AST {
     loc: At,
     id: Identifier,
     options: Seq[ContextOption] = Seq.empty[ContextOption],
-    contents: Seq[OccursInContext] = Seq.empty,
+    contents: Contents[OccursInContext] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Processor[ContextOption, OccursInContext]

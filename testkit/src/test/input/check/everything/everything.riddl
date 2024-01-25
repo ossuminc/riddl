@@ -59,7 +59,7 @@ domain Everything is {
       handler foo is {
         on command ACommand {
           send event full.SomeOtherThing.ItHappened to
-            inlet Everything.full.SomeOtherThing.SOT_in
+            inlet SomeOtherThing.SOT_In
         }
       }
     }

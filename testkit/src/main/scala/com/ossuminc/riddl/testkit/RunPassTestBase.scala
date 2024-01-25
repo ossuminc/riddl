@@ -19,7 +19,9 @@ abstract class RunPassTestBase extends ValidatingTest {
       case Right(root:Root) =>
         val passesToRun = Pass.standardPasses :+ passToRun
         val passInput = PassInput(root, commonOptions)
-        Pass.runThesePasses(passInput, passesToRun, SysLogger())
+        val result = Pass.runThesePasses(passInput, passesToRun, SysLogger())
+        if result.messages.hasErrors then fail(result.messages.justErrors.format)
+        result
     }
   }
 }

@@ -140,7 +140,7 @@ case class ValidationPass(
         validateOutput(out, parentsAsSeq)
       case cg: ContainedGroup =>
         validateContainedGroup(cg, parentsAsSeq)
-      case _: Root        => () // No validation needed
+      case _: Root                => () // No validation needed
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
@@ -226,12 +226,12 @@ case class ValidationPass(
               checkCrossContextReference(funcRef.pathId, function, onClause)
             }
 
-          case ForEachStatement(loc, pid, do_) =>
-            checkPathRef[Type](pid, onClause, parents).foreach { typ =>
-              checkCrossContextReference(pid, typ, onClause)
+          case ForEachStatement(loc, ref, do_) =>
+            checkPathRef[Type](ref.pathId, onClause, parents).foreach { typ =>
+              checkCrossContextReference(ref.pathId, typ, onClause)
               check(
                 typ.typ.hasCardinality,
-                s"The foreach statement requires a type with cardinality but ${pid.format} does not",
+                s"The foreach statement requires a type with cardinality but ${ref.pathId.format} does not",
                 Messages.Error,
                 loc
               )
@@ -608,7 +608,6 @@ case class ValidationPass(
       case None =>
     checkDescription(c)
   }
-
 
   private def validateEpic(
     s: Epic,

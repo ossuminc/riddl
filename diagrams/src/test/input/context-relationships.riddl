@@ -1,10 +1,38 @@
 domain foo {
-  context A { ??? }
-  context B { ??? }
+  type AEvents is one of { A.AEvent1 }
+  context A {
+    command ACommand { ??? }
+    event AEvent1 { ??? }
+
+    entity AEntity {
+      record AData is { a01: Integer, a02: String }
+      state AState of record AData is { ??? }
+      handler AHandler is {
+        on command ACommand {
+          set field B.BEntity.BData.b01 to "initial value"
+          send event A.AEvent1 to inlet B.bInlet
+        }
+      }
+    }
+  }
+  context B {
+    command BCommand { ??? }
+    inlet bInlet is foo.AEvents
+    entity BEntity {
+      record BData is { b01: Integer, b02: String }
+      state BState of record BData
+      handler BHandler is {
+        on command BCommand {
+          "do nothing for now"
+        }
+      }
+    }
+  }
+  context C { ??? }
 }
 
 domain bar {
-  context C { ??? }
   context D { ??? }
   context E { ??? }
+  context F { ??? }
 }

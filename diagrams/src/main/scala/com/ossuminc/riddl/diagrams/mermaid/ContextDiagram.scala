@@ -1,8 +1,7 @@
 package com.ossuminc.riddl.diagrams.mermaid
 
-import com.ossuminc.riddl.language.AST.Context
+import com.ossuminc.riddl.language.AST.{Context, Processor}
 import com.ossuminc.riddl.diagrams.ContextDiagramData
-import com.ossuminc.riddl.diagrams.mermaid.FlowchartDiagramGenerator
 
 /** Context Diagram generator using a DataFlow Diagram from Mermaid
   *
@@ -58,47 +57,82 @@ case class ContextDiagram(context: Context, data: ContextDiagramData)
 
   emitClassDefs()
   emitDomainSubgraph()
+  makeClassAssignments()
 
   private def emitClassDefs(): Unit = {
     addLine("classDef default fill:#666,stroke:black,stroke-width:3px,color:white;")
     for {
-      context <- relatedContexts
-      css = getCssFor(context) if css.nonEmpty
+      ctxt <- context +: relatedContexts
     } do {
-      addLine(s"classDef ${context.id.value}_class $css; ")
+      val css: String = getCssFor(ctxt)
+      if css.nonEmpty then
+        addLine(s"classDef ${ctxt.id.value}_class $css; ")
+      else
+        addLine(s"classDef ${ctxt.id.value}_class color:white,stroke-width:3px;")
+      end if
+    }
+  }
+
+  private def makeClassAssignments(): Unit = {
+    for {
+      ctxt <- context +: relatedContexts
+    } do {
+      addLine(s"class ${ctxt.id.value} ${ctxt.id.value}_class")
     }
   }
 
   private def emitDomainSubgraph(): Unit = {
     addLine(s"subgraph ${data.domain.identify}")
     incr
+    makeNodes()
     makeRelationships()
     decr
     addLine("end")
-    makeClassAssignments()
   }
 
-  private def makeRelationships(): Unit = {
+  private def makeNode(processor: Processor[?,?]): String = {
+    val iconName = getIconFor(processor)
+    val faicon = if iconName.nonEmpty then "fa:" + iconName + "<br/>" else ""
+    val contextName: String = processor.id.value
+    val numWords = contextName.count(_.isSpaceChar) + 1
+    val spacedName =
+      if numWords > 4 then
+        var i = 0
+        for {
+          word <- contextName.split(' ')
+        } yield {
+          i = i + 1
+          if i == numWords then word
+          else if i % 3 == 0 then word + "<br/"
+          else word + " "
+        }.mkString
+      else
+        if contextName.length > 8 then
+          contextName
+        else
+          val numSpaces = (8 - contextName.length) / 2
+          val fix = "&nbsp;".repeat(numSpaces)
+          fix + contextName + fix
+        end if
+      end if
+    s"$contextName(($faicon$spacedName))"
+  }
+
+  private def makeNodes(): Unit = {
     for {
-      (context,relationship) <- data.relationships
+      aContext <- context +: relatedContexts
     } {
-      val iconName = getIconFor(context)
-      val faicon = if iconName.nonEmpty then "fa:" + iconName + "<br/>" else ""
-      val contextName = context.id.value
-      val numSpaces = if contextName.length < 8 then (8-contextName.length)/2 else 0
-      val fix = "&nbsp;".repeat(numSpaces)
-      val name = fix + contextName + fix 
-      val fullName = s"(($faicon$name))"
-      
+      val name = makeNode(aContext)
+      addLine(name)
     }
   }
 
-  private def makeClassAssignments(): Unit = {
+  private def makeRelationships(): Unit = {
+    val mainNodeName = context.id.value
     for {
-      context <- relatedContexts
-      css = getCssFor(context) if css.nonEmpty
-    } do {
-      addLine(s"class ${context.id.value} ${context.id.value}_class ")
+      (ctxt,relationship) <- data.relationships
+    } {
+      addIndent().append(mainNodeName).append("-->|").append(relationship).append("|").append(makeNode(ctxt)).nl
     }
   }
 }

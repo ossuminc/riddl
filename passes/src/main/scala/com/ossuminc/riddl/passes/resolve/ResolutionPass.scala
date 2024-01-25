@@ -192,16 +192,22 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
 
   private def resolveStatement(statement: Statement, parents: Seq[Definition]): Unit = {
     statement match {
-      case ss: SetStatement =>
-        resolveARef[Field](ss.field, parents)
-      case BecomeStatement(_, entity, _) =>
+      case SetStatement(_, field, _) =>
+        resolveARef[Field](field, parents)
+      case BecomeStatement(_, entity, handler) =>
         resolveARef[Entity](entity, parents)
+        resolveARef[Handler](handler, parents)
       case FocusStatement(_, group) =>
         resolveARef[Group](group, parents)
-      case ForEachStatement(_, pid, _) =>
-        resolveAPathId[Type](pid, parents)
-      case SendStatement(_, msg, _) =>
+      case ForEachStatement(_, ref, _) =>
+        ref match {
+          case ir: InletRef => resolveAPathId[Inlet](ir.pathId, parents)
+          case or: OutletRef => resolveAPathId[Outlet](or.pathId, parents)
+          case fr: FieldRef => resolveAPathId[Type](fr.pathId, parents)
+        }
+      case SendStatement(_, msg, portlet) =>
         resolveARef[Type](msg, parents)
+        resolveARef[Portlet](portlet, parents)
       case MorphStatement(_, entity, state, message) =>
         resolveARef[Entity](entity, parents)
         resolveARef[State](state, parents)

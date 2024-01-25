@@ -14,8 +14,9 @@ domain ignore {
       input PasteItem initiates command paste
     }
 
+    type StringInput = String
     page Editor {
-      input TextContent takes String
+      input TextContent takes type StringInput
     }
   }
 
