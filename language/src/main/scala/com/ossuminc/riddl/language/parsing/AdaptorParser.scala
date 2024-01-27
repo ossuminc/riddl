@@ -25,7 +25,7 @@ private[parsing] trait AdaptorParser {
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
     options[u, AdaptorOption](RiddlOptions.adaptorOptions) {
       case (loc, RiddlOption.technology, args) => AdaptorTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => AdaptorCssOption(loc, args)
+      case (loc, RiddlOption.css, args)      => AdaptorCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => AdaptorIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => AdaptorKindOption(loc, args)
     }

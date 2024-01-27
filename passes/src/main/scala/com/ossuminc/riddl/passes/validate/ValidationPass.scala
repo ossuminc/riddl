@@ -16,6 +16,8 @@ import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.utils.SeqHelpers.*
 
 import scala.collection.mutable
+import scala.util.control.NonFatal
+import scala.jdk.CollectionConverters.*
 
 object ValidationPass extends PassInfo {
   val name: String = "Validation"
@@ -595,17 +597,6 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, c)
     checkOptions[ContextOption](c.options, c.loc)
-    c.options.find(_.name == RiddlOption.color) match
-      case Some(option) =>
-        check(option.args.size == 1, "The 'color' option must have a single value", Messages.Error, option.loc)
-        option.args.headOption match
-          case Some(value) =>
-            val regex = "^([a-z]+)|(#\\p{XDigit}{6})$".r
-            if !regex.matches(value.s) then
-              messages.addError(value.loc, "The value of the color option must be a valid HTML color")
-          case None =>
-            messages.addError(option.loc, "The color option requires a single value but none provided")
-      case None =>
     checkDescription(c)
   }
 

@@ -201,22 +201,5 @@ class ContextValidationTest extends ValidatingTest {
           }
       }
     }
-    "detect bad color options" in {
-      val input =
-        """domain foo {
-          |  context bar {
-          |    options ( color("123456") )
-          |    ???
-          |  }
-          |}
-          |""".stripMargin
-      parseAndValidate(input, "detect bad color options", shouldFailOnErrors = false) { case (_, messages) =>
-        if messages.hasErrors then
-          val errs = messages.justErrors
-          errs.format must include("color option must be a valid HTML color")
-        else succeed
-      }
-
-    }
   }
 }

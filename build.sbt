@@ -1,7 +1,5 @@
-import com.ossuminc.sbt.OssumIncPlugin.autoImport.With.wartRemover
 import com.ossuminc.sbt.helpers.Publishing
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
-import com.ossuminc.sbt.helpers.WartRemover.Keys
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
 import wartremover.Wart
 import wartremover.Wart.*
@@ -59,7 +57,7 @@ lazy val language: Project = Module("language", "riddl-language")
     scalacOptions += "-explain",
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
-    libraryDependencies ++= Seq(Dep.fastparse, Dep.commons_io) ++ Dep.testing
+    libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
   )
   .dependsOn(utils)
 

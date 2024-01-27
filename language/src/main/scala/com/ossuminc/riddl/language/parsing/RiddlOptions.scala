@@ -10,14 +10,16 @@ object RiddlOptions {
     StringIn(
       RiddlOption.technology,
       RiddlOption.kind,
-      RiddlOption.color
+      RiddlOption.css,
+      RiddlOption.faicon
     ).!
   )
   def applicationOptions[u: P]: P[String] = keywords(
     StringIn(
       RiddlOption.technology,
       RiddlOption.kind,
-      RiddlOption.color
+      RiddlOption.css,
+      RiddlOption.faicon
     ).!
   )
 
@@ -28,8 +30,9 @@ object RiddlOptions {
       RiddlOption.service,
       RiddlOption.package_,
       RiddlOption.technology,
-      RiddlOption.color,
-      RiddlOption.kind
+      RiddlOption.css,
+      RiddlOption.kind,
+      RiddlOption.faicon
     ).!
   )
 
@@ -38,8 +41,9 @@ object RiddlOptions {
       RiddlOption.external,
       RiddlOption.package_,
       RiddlOption.technology,
-      RiddlOption.color,
-      RiddlOption.kind
+      RiddlOption.css,
+      RiddlOption.kind,
+      RiddlOption.faicon
     ).!
   )
 
@@ -55,16 +59,18 @@ object RiddlOptions {
       RiddlOption.kind,
       RiddlOption.message_queue,
       RiddlOption.technology,
-      RiddlOption.color
+      RiddlOption.css,
+      RiddlOption.faicon
     ).!
   )
 
   def epicOptions[u: P]: P[String] = keywords {
     StringIn(
       RiddlOption.technology,
-      RiddlOption.color,
+      RiddlOption.css,
       RiddlOption.sync,
-      RiddlOption.kind
+      RiddlOption.kind,
+      RiddlOption.faicon
     ).!
   }
 
@@ -72,7 +78,8 @@ object RiddlOptions {
     StringIn(
       RiddlOption.technology,
       RiddlOption.kind,
-      RiddlOption.color
+      RiddlOption.css,
+      RiddlOption.faicon
     ).!
   )
 
@@ -80,7 +87,8 @@ object RiddlOptions {
     StringIn(
       RiddlOption.technology,
       RiddlOption.kind,
-      RiddlOption.color,
+      RiddlOption.css,
+      RiddlOption.faicon,
       RiddlOption.parallel,
       RiddlOption.sequential
     ).!
@@ -90,7 +98,7 @@ object RiddlOptions {
   def aggregate[u: P]: P[Unit] = keyword(RiddlOption.aggregate)
   def async[u: P]: P[Unit] = keyword(RiddlOption.async)
   def available[u: P]: P[Unit] = keyword(RiddlOption.available)
-  def color[u: P]: P[Unit] = keyword(RiddlOption.color)
+  def css[u: P]: P[Unit] = keyword(RiddlOption.css)
   def concept[u: P]: P[Unit] = keyword(RiddlOption.concept)
   def consistent[u: P]: P[Unit] = keyword(RiddlOption.consistent)
   def device[u: P]: P[Unit] = keyword(RiddlOption.device)
@@ -120,9 +128,9 @@ object RiddlOption {
   final val aggregate = "aggregate"
   final val async = "async"
   final val available = "available"
-  final val color = "color"
   final val concept = "concept"
   final val consistent = "consistent"
+  final val css = "css"
   final val device = "device"
   final val external = "external"
   final val event_sourced = "event-sourced"

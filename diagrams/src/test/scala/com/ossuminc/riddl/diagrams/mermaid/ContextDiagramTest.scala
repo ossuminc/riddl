@@ -15,12 +15,12 @@ class ContextDiagramTest extends RunPassTestBase {
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match
         case Some(dpo: DiagramsPassOutput) =>
+          var failures = Seq.empty[String]  
           for {
             (context, data) <- dpo.contextDiagrams
             diagram = ContextDiagram(context, data)
           } {
             val lines = diagram.generate
-            info(lines.mkString("\n"))
             lines mustNot be(empty)
             val expected: Seq[String] = context.id.value match {
               case "A" =>
@@ -35,16 +35,21 @@ class ContextDiagramTest extends RunPassTestBase {
                   |
                   |flowchart TB
                   |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef A_class color:white,stroke-width:3px;
-                  |classDef B_class color:white,stroke-width:3px;
+                  |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
+                  |classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
+                  |classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
                   |subgraph Domain 'foo'
-                  |  A((&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-                  |  B((&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-                  |  A-->|Sets Field 'b01' in|B((&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-                  |  A-->|Sends to Inlet 'bInlet' in|B((&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
+                  |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
+                  |  B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
+                  |  C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
+                  |  A-->|Sets Field 'b01' in|B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
+                  |  A-->|Sends to Inlet 'bInlet' in|B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
+                  |  A-->|Uses Command 'CCommand' from|C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
+                  |  A-->|References Entity 'CEntity' in|C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
                   |end
                   |class A A_class
                   |class B B_class
+                  |class C C_class
                   |""".stripMargin.split("\n").toSeq
               case "B" =>
                 """---
@@ -58,11 +63,16 @@ class ContextDiagramTest extends RunPassTestBase {
                   |
                   |flowchart TB
                   |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef B_class color:white,stroke-width:3px;
+                  |classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
+                  |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
                   |subgraph Domain 'foo'
-                  |  B((&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
+                  |  B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
+                  |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
+                  |  B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
+                  |  B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
                   |end
                   |class B B_class
+                  |class A A_class
                   |""".stripMargin.split("\n").toSeq
               case "C" =>
                 """---
@@ -76,11 +86,15 @@ class ContextDiagramTest extends RunPassTestBase {
                   |
                   |flowchart TB
                   |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef C_class color:white,stroke-width:3px;
+                  |classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
+                  |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
                   |subgraph Domain 'foo'
-                  |  C((&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
+                  |  C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
+                  |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
+                  |  C-->|Sends to Inlet 'aInlet' in|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
                   |end
                   |class C C_class
+                  |class A A_class
                   |""".stripMargin.split("\n").toSeq
               case "D" =>
                 """---
@@ -94,53 +108,26 @@ class ContextDiagramTest extends RunPassTestBase {
                   |
                   |flowchart TB
                   |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef D_class color:white,stroke-width:3px;
+                  |classDef D_class fill:white,stroke:#333,stroke-width:3px,color:amber; 
                   |subgraph Domain 'bar'
-                  |  D((&nbsp;&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;))
+                  |  D((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;))
                   |end
                   |class D D_class
                   |""".stripMargin.split("\n").toSeq
-              case "E" =>
-                """---
-                  |title: Context Map For Context 'E'
-                  |init:
-                  |    theme: dark
-                  |flowchartConfig:
-                  |    defaultRenderer: dagre
-                  |    width: 100%
-                  |---
-                  |
-                  |flowchart TB
-                  |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef E_class color:white,stroke-width:3px;
-                  |subgraph Domain 'bar'
-                  |  E((&nbsp;&nbsp;&nbsp;E&nbsp;&nbsp;&nbsp;))
-                  |end
-                  |class E E_class
-                  |""".stripMargin.split("\n").toSeq
-              case "F" => 
-                """---
-                  |title: Context Map For Context 'F'
-                  |init:
-                  |    theme: dark
-                  |flowchartConfig:
-                  |    defaultRenderer: dagre
-                  |    width: 100%
-                  |---
-                  |
-                  |flowchart TB
-                  |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef F_class color:white,stroke-width:3px;
-                  |subgraph Domain 'bar'
-                  |  F((&nbsp;&nbsp;&nbsp;F&nbsp;&nbsp;&nbsp;))
-                  |end
-                  |class F F_class
-                  |""".stripMargin.split("\n").toSeq
               case x   => fail(s"Unknown Context $x")
             }
-            lines mustBe expected 
+            if lines != expected then
+              val failure = s"${context.id.value} failed "
+              info(failure)
+              info(lines.mkString("\n"))
+              failures = failures :+ failure  
+            end if  
+            // lines mustBe expected 
           }
-          succeed
+          if failures.nonEmpty then 
+            fail(s"Failures detected in generator output: ${failures.mkString("\n  ", "\n  ", "\n")}")
+          else  
+            succeed
         case None => fail("no DiagramsPassOutput")
       end match
     }

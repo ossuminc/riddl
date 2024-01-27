@@ -23,7 +23,7 @@ private[parsing] trait ApplicationParser {
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
     options[u, ApplicationOption](RiddlOptions.applicationOptions) {
       case (loc, RiddlOption.technology, args) => ApplicationTechnologyOption(loc, args)
-      case (loc, RiddlOption.color, args)      => ApplicationCssOption(loc, args)
+      case (loc, RiddlOption.css, args)      => ApplicationCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => ApplicationIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => ApplicationKindOption(loc, args)
     }

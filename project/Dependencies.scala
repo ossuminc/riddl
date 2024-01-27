@@ -1,4 +1,5 @@
-import sbt._
+import sbt.*
+import sbt.librarymanagement.ModuleID
 
 /** V - Dependency Versions object */
 
@@ -28,6 +29,7 @@ object Dep {
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val slf4j = "org.slf4j" % "slf4j-nop" % V.slf4j
+  val jacabi_w3c = "com.jcabi" % "jcabi-w3c" % "1.4.0"
 
   val testing: Seq[ModuleID] = Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
   val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)

@@ -7,10 +7,9 @@
 package com.ossuminc.riddl.diagrams
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST, At, Messages}
+import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
-import com.ossuminc.riddl.passes.symbols.Symbols.Parent
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
 
@@ -141,12 +140,12 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     val rel5 = makeOutletRelationships(context, processor.outlets)
     val rel6 = processor match {
       case a: Adaptor     => inferRelationship(context, a)
-      case a: Application => Seq.empty[ContextRelationship]
-      case c: Context     => Seq.empty[ContextRelationship]
+      case _: Application => Seq.empty[ContextRelationship]
+      case _: Context     => Seq.empty[ContextRelationship]
       case e: Entity      => makeHandlerRelationships(context, e.states.flatMap(_.handlers))
-      case p: Projector   => Seq.empty[ContextRelationship]
-      case r: Repository  => Seq.empty[ContextRelationship]
-      case s: Streamlet   => Seq.empty[ContextRelationship]
+      case _: Projector   => Seq.empty[ContextRelationship]
+      case _: Repository  => Seq.empty[ContextRelationship]
+      case _: Streamlet   => Seq.empty[ContextRelationship]
     }
     rel1 ++ rel2 ++ rel3 ++ rel4 ++ rel5 ++ rel6
   }
@@ -266,7 +265,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private def inferRelationship(context: Context, definition: Definition): Option[ContextRelationship] = {
     this.symTab.contextOf(definition) match {
       case Some(foreignContext) =>
-        if (foreignContext != context) then
+        if foreignContext != context then
           definition match {
             case a: Adaptor =>
               refMap.definitionOf[Context](a.context, a) match {

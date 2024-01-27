@@ -1,6 +1,8 @@
 domain foo {
-  type AEvents is one of { A.AEvent1 }
   context A {
+    options(css("fill:white,stroke:#333,stroke-width:3px,color:blue"), faicon("fa-house"))
+    type AEvents is one of { A.AEvent1, C.CEvent }
+    inlet aInlet is A.AEvents
     command ACommand { ??? }
     event AEvent1 { ??? }
 
@@ -11,13 +13,23 @@ domain foo {
         on command ACommand {
           set field B.BEntity.BData.b01 to "initial value"
           send event A.AEvent1 to inlet B.bInlet
+          tell command C.CCommand to entity C.CEntity
         }
       }
     }
   }
+//             case m: Type            => Some(foreignContext -> s"Uses ${m.identify} from")
+//                 case e: Entity          => Some(foreignContext -> s"References ${e.identify} in")
+//                 case f: Field           => Some(foreignContext -> s"Sets ${f.identify} in")
+//                 case i: Inlet           => Some(foreignContext -> s"Sends to ${i.identify} in")
+//                 case o: Outlet          => Some(foreignContext -> s"Takes from ${o.identify} in")
+//                 case p: Processor[?, ?] => Some(foreignContext -> s"Tells to ${p.identify} in")
+
   context B {
+    options(css("fill:white,stroke:#333,stroke-width:3px,color:green"), faicon("fa-house"))
     command BCommand { ??? }
-    inlet bInlet is foo.AEvents
+    inlet bInlet is A.AEvents
+    outlet bOutlet is A.AEvents
     entity BEntity {
       record BData is { b01: Integer, b02: String }
       state BState of record BData
@@ -28,11 +40,25 @@ domain foo {
       }
     }
   }
-  context C { ??? }
+  context C {
+    options(css("fill:white,stroke:#333,stroke-width:3px,color:purple"), faicon("fa-house"))
+    command CCommand is { ??? }
+    event CEvent is { ??? }
+    entity CEntity {
+      record CData is { c01: Integer, c02: String }
+      state BState of record BData
+      handler CHandler is {
+        on command CCommand {
+          send event C.CEvent to inlet A.aInlet
+        }
+      }
+    }
+  }
 }
 
 domain bar {
-  context D { ??? }
-  context E { ??? }
-  context F { ??? }
+  context D {
+    options(css("fill:white,stroke:#333,stroke-width:3px,color:amber"), faicon("fa-house"))
+    adaptor Dadaptor from context A is { ??? }
+  }
 }

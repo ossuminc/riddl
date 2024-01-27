@@ -7,13 +7,14 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.parsing.{
+  EmptyParserInput,
   FileParserInput,
   SourceParserInput,
   StringParserInput,
-  URLParserInput,
-  EmptyParserInput
+  URLParserInput
 }
-import com.ossuminc.riddl.utils.Logger 
+import com.ossuminc.riddl.utils.Logger
+import org.apache.commons.lang3.exception.ExceptionUtils
 
 import scala.collection.mutable
 import scala.io.AnsiColor.*
@@ -169,6 +170,11 @@ object Messages {
     message: String,
     loc: At = At.empty
   ): Message = { Message(loc, message) }
+
+  def exceptionToError(exception: Throwable, loc: At = At.empty, context: String = ""): Message = {
+    val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
+    Message(loc, s"While ${context}: $message")
+  }
 
   def severe(message: String, loc: At = At.empty): Message = {
     Message(loc, message, SevereError)

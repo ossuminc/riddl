@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.{ConstrainedOptionValue, *}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.parsing.RiddlOption
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import scala.math.abs
@@ -39,20 +40,43 @@ trait DefinitionValidation extends BasicValidation {
               s"Value `$value` for option `${option.name} is not one of the accepted values."
             )
           }
-        case _ => ()  
+        case ov: OptionValue if ov.name == RiddlOption.css =>
+          // TODO: The following doesn't work very well, internet call to W3C validator. need something simpler
+          // import com.jcabi.w3c.{ValidatorBuilder, ValidationResponse, Defect }
+          // val validator = new ValidatorBuilder().css
+          for { item <- option.args } do {
+            val css = s"p { $item ; }"
+
+            //          try {
+            //            val response: ValidationResponse  = validator.validate(css)
+            //            if !response.valid() then
+            //              def convertDefect(defect: Defect, kind: Messages.KindOfMessage ): Message = {
+            //                Message(option.loc, s"In css value '$item': ${defect.message()}", kind)
+            //              }
+            //              val msgs = response.errors().asScala.map(convertDefect(_,Messages.Error)) ++
+            //                response.warnings().asScala.map(convertDefect(_,Messages.Warning))
+            //              msgs.foreach(messages.add)
+            //            end if
+            //          } catch {
+            //            case NonFatal(exception) =>
+            //              val message: Message = Messages.exceptionToError(exception, option.loc)
+            //              messages.add(message)
+            //          }
+          }
+        case _ => ()
       }
     }
     this
   }
-  
+
   private def checkUniqueContent(definition: Definition): this.type = {
-    val allNamedValues = definition.namedValues 
+    val allNamedValues = definition.namedValues
     val allNames = allNamedValues.map(_.identify)
     if allNames.distinct.size < allNames.size then {
       val duplicates: Map[String, Seq[NamedValue]] =
         allNamedValues.groupBy(_.identify).filterNot(_._2.size < 2)
       if duplicates.nonEmpty then {
-        val details = duplicates.map { 
+        val details = duplicates.map {
             case (_: String, defs: Seq[NamedValue]) =>
               defs.map(_.identifyWithLoc).mkString(", and ")
           }
