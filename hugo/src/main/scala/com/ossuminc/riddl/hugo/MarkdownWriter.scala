@@ -6,8 +6,8 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.diagrams.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData, mermaid}
-import com.ossuminc.riddl.diagrams.mermaid.{EntityRelationshipDiagram, UseCaseDiagram, UseCaseDiagramSupport}
+import com.ossuminc.riddl.diagrams.{ContextDiagramData, DiagramsPass, DiagramsPassOutput, UseCaseDiagramData, mermaid}
+import com.ossuminc.riddl.diagrams.mermaid.{ContextDiagram, EntityRelationshipDiagram, UseCaseDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.Keywords
@@ -710,16 +710,20 @@ case class MarkdownWriter(
     this
   }
 
-  private def emitContextMap(focus: Context, parents: Seq[Definition]): this.type = {
-    h2("Context Map")
-    emitC4ContainerDiagram(focus, parents)
+  private def emitContextMap(context: Context, diagram: Option[ContextDiagram]): this.type = {
+    if diagram.nonEmpty then
+      h2("Context Map")
+      val lines = diagram.get.generate
+      emitMermaidDiagram(lines)
+    end if
+    this
   }
 
-  def emitContext(context: Context, stack: Seq[Definition]): this.type = {
+  def emitContext(context: Context, stack: Seq[Definition], diagram: Option[ContextDiagram]): this.type = {
     containerHead(context, "Context")
     val parents = passUtilities.makeStringParents(stack)
     emitDefDoc(context, parents)
-    emitContextMap(context, stack)
+    emitContextMap(context, diagram)
     emitOptions(context.options)
     emitTypesToc(context)
     toc("Entities", mkTocSeq(context.entities))

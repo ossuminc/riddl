@@ -53,7 +53,7 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
     "validate kalix-improving-template" in {
       val cwd = "/Users/reid/Code/Improving/kalix-improving-template"
       val config = "design/src/main/riddl/example.conf"
-      runOnLocalProject(cwd, config, "validate")
+      runOnLocalProject(cwd, config, "hugo")
     }
     "validate Improving.app" in {
       pending
@@ -64,7 +64,7 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
     "validate riddl-examples" in {
       val cwd = "/Users/reid/Code/Ossum/riddl-examples"
       val config = "src/riddl/dokn/dokn.conf"
-      runOnLocalProject(cwd, config, "validate")
+      runOnLocalProject(cwd, config, "hugo")
     }
   }
 }

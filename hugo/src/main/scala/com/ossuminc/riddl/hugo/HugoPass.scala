@@ -8,7 +8,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.TranslatingState
 import com.ossuminc.riddl.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.diagrams.mermaid.{RootOverviewDiagram, UseCaseDiagramSupport}
+import com.ossuminc.riddl.diagrams.mermaid.{ContextDiagram, RootOverviewDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -124,7 +124,9 @@ case class HugoPass(
           // These are all handled in emitHandler
           case f: Function => mkd.emitFunction(f, parents)
           case e: Entity   => mkd.emitEntity(e, parents)
-          case c: Context  => mkd.emitContext(c, stack)
+          case c: Context  =>
+            val maybeDiagram = diagrams.contextDiagrams.get(c).map(data => ContextDiagram(c, data))
+            mkd.emitContext(c, stack, maybeDiagram)
           case d: Domain =>
             val summary_link: Option[String] = for {
               summary <- makeMessageSummary(d)
