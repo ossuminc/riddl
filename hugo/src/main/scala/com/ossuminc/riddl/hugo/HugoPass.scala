@@ -27,8 +27,8 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo {
   val name: String = "hugo"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => HugoPass(in, out, HugoCommand.Options() )}
-  private val geekDoc_version = "v0.41.2"
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => HugoPass(in, out, HugoCommand.Options()) }
+  private val geekDoc_version = "v0.44.1"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL = java.net.URI
     .create(
@@ -124,7 +124,7 @@ case class HugoPass(
           // These are all handled in emitHandler
           case f: Function => mkd.emitFunction(f, parents)
           case e: Entity   => mkd.emitEntity(e, parents)
-          case c: Context  =>
+          case c: Context =>
             val maybeDiagram = diagrams.contextDiagrams.get(c).map(data => ContextDiagram(c, data))
             mkd.emitContext(c, stack, maybeDiagram)
           case d: Domain =>
@@ -145,14 +145,13 @@ case class HugoPass(
           case uc: UseCase =>
             mkd.emitUseCase(uc, stack, this)
 
-
           case _: OnOtherClause | _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Author |
-              _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Inlet |
-              _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: Root |
-              _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup =>
+              _: Enumerator | _: Field | _: Method | _: Term | _: Constant | _: Invariant | _: Inlet | _: Outlet |
+              _: Connector | _: SagaStep | _: User | _: Interaction | _: Root | _: Include[Definition] @unchecked |
+              _: Output | _: Input | _: Group | _: ContainedGroup =>
           // All of these are handled above in their containers content contribution
         }
-      case _: AST.NonDefinitionValues  =>
+      case _: AST.NonDefinitionValues =>
       // These aren't definitions so don't count for documentation generation (no names)
     }
   }
@@ -282,9 +281,12 @@ case class HugoPass(
     loadStaticAssets(inputPath, options)
   }
 
+  private def makeNavigation(root: Root, contentRoot: Path): Unit = {
+
+  }
+
   private def makeIndex(root: Root): Unit = {
     Timer.time("Index Creation") {
-
       val mdw = addFile(Seq.empty[String], "_index.md")
       mdw.fileHead("Index", 10, Option("The main index to the content"))
       mdw.h2("Landscape View")
@@ -295,7 +297,7 @@ case class HugoPass(
           mdw.addLine("Not Available")
       }
       mdw.h2("Domains")
-      val domains = root.domains
+      val domains = (root.domains ++ root.includes.flatMap(_.contents.filter[Domain]))
         .sortBy(_.id.value)
         .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
       mdw.list(domains)
