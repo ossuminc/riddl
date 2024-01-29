@@ -206,7 +206,7 @@ object CommandOptions {
           sortMessagesByLocation = sortMessages.getOrElse(false),
           groupMessagesByKind,
           noANSIMessages,
-          maxParallelParsing = maxParallel.getOrElse(4),
+          maxParallelParsing = maxParallel.getOrElse(1),
           maxIncludeWait = FiniteDuration(maxIncludeWait, "seconds"),
           warningsAreFatal = warnsAreFatal.getOrElse(false)
         )
