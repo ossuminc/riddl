@@ -15,7 +15,6 @@ import fastparse.MultiLineWhitespace.*
 
 import java.io.File
 import java.nio.file.{Files, Path}
-import java.util.concurrent.{ExecutorService, Executors}
 import scala.concurrent.ExecutionContext
 
 /** Top level parsing rules */
@@ -80,8 +79,8 @@ object TopLevelParser {
     withVerboseFailures: Boolean = false
   ): Either[Messages, Root] = {
     Timer.time(s"parse ${input.origin}", commonOptions.showTimes) {
-      val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
-      implicit val _: ExecutionContext = ExecutionContext.fromExecutorService(es)
+      // val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
+      implicit val _: ExecutionContext = ExecutionContext.Implicits.global
       val tlp = new TopLevelParser(input, commonOptions)
       tlp.parseRoot(withVerboseFailures)
     }
