@@ -11,7 +11,6 @@ import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.Timer
 import com.ossuminc.riddl.utils.SeqHelpers.*
-
 import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
@@ -19,7 +18,7 @@ import fastparse.Parsed.Success
 import java.io.File
 import java.nio.file.Files
 import scala.annotation.unused
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future, blocking}
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
@@ -100,33 +99,41 @@ trait ParsingContext extends ParsingErrors {
     }
   }
 
+  private def doIncludeParsing[CT <: RiddlValue](loc: At, str: LiteralString, rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): Seq[CT] = {
+    try {
+      val rpi = startNextSource(str)
+      fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
+        case Success(content, _) =>
+          if messagesNonEmpty then Seq.empty[CT]
+          else if content.isEmpty then
+            error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
+          end if
+          content
+        case failure: Failure =>
+          makeParseFailureError(failure, rpi)
+          Seq.empty[CT]
+      }
+    } catch {
+      case NonFatal(exception) =>
+        makeParseFailureError(exception, loc, s"while included '${str.s}'")
+        Seq.empty[CT]
+    }
+  }
+
   def doInclude[CT <: RiddlValue](
     loc: At,
     str: LiteralString
   )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
-    val future = Future[Seq[CT]] {
-      Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
-        try {
-          val rpi = startNextSource(str)
-          fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
-            case Success(content, _) =>
-              if messagesNonEmpty then Seq.empty[CT]
-              else if content.isEmpty then
-                error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
-              end if
-              content
-            case failure: Failure =>
-              makeParseFailureError(failure, rpi)
-              Seq.empty[CT]
-          }
-        } catch {
-          case NonFatal(exception) =>
-            makeParseFailureError(exception, loc, s"while included '${str.s}'")
-            Seq.empty[CT]
-        }
+    Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
+      val future: Future[Seq[CT]] = {
+        if commonOptions.maxParallelParsing > 1 then
+          Future { blocking { doIncludeParsing[CT](loc, str, rule) } }
+        else
+          Future.successful { doIncludeParsing[CT](loc, str, rule) }
+        end if
       }
+      AST.IncludeHolder[CT](loc, str.s, commonOptions.maxIncludeWait, future)
     }
-    AST.IncludeHolder[CT](loc, str.s, commonOptions.maxIncludeWait, future)
   }
 
   def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
