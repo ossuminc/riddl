@@ -28,7 +28,7 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |title: Context Map For Context 'A'
                   |init:
                   |    theme: dark
-                  |flowchartConfig:
+                  |flowchart:
                   |    defaultRenderer: dagre
                   |    width: 100%
                   |    useMaxWidth: true
@@ -36,30 +36,30 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |---
                   |
                   |flowchart TB
-                  |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
-                  |classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
-                  |classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
-                  |subgraph foo ["`Domain 'foo'`"]
-                  |  direction TB
-                  |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-                  |  B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-                  |  C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
-                  |  A-->|Sets Field 'b01' in|B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-                  |  A-->|Sends to Inlet 'bInlet' in|B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-                  |  A-->|Uses Command 'CCommand' from|C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
-                  |  A-->|References Entity 'CEntity' in|C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
-                  |end
-                  |class A A_class
-                  |class B B_class
-                  |class C C_class
+                  |  classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
+                  |  classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
+                  |  classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
+                  |  classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
+                  |  subgraph 'Domain 'foo''
+                  |    direction TB
+                  |    A((fa:fa-house<br/>Context 'A'))
+                  |    B((fa:fa-house<br/>Context 'B'))
+                  |    C((fa:fa-house<br/>Context 'C'))
+                  |    A-->|Sets Field 'b01' in|B((fa:fa-house<br/>Context 'B'))
+                  |    A-->|Sends to Inlet 'bInlet' in|B((fa:fa-house<br/>Context 'B'))
+                  |    A-->|Uses Command 'CCommand' from|C((fa:fa-house<br/>Context 'C'))
+                  |    A-->|References Entity 'CEntity' in|C((fa:fa-house<br/>Context 'C'))
+                  |  end
+                  |  class A A_class
+                  |  class B B_class
+                  |  class C C_class
                   |""".stripMargin.split("\n").toSeq
               case "B" =>
                 """---
                   |title: Context Map For Context 'B'
                   |init:
                   |    theme: dark
-                  |flowchartConfig:
+                  |flowchart:
                   |    defaultRenderer: dagre
                   |    width: 100%
                   |    useMaxWidth: true
@@ -67,25 +67,25 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |---
                   |
                   |flowchart TB
-                  |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
-                  |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
-                  |subgraph foo ["`Domain 'foo'`"]
-                  |  direction TB
-                  |  B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-                  |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-                  |  B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-                  |  B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-                  |end
-                  |class B B_class
-                  |class A A_class
+                  |  classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
+                  |  classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
+                  |  classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
+                  |  subgraph 'Domain 'foo''
+                  |    direction TB
+                  |    B((fa:fa-house<br/>Context 'B'))
+                  |    A((fa:fa-house<br/>Context 'A'))
+                  |    B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>Context 'A'))
+                  |    B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>Context 'A'))
+                  |  end
+                  |  class B B_class
+                  |  class A A_class
                   |""".stripMargin.split("\n").toSeq
               case "C" =>
                 """---
                   |title: Context Map For Context 'C'
                   |init:
                   |    theme: dark
-                  |flowchartConfig:
+                  |flowchart:
                   |    defaultRenderer: dagre
                   |    width: 100%
                   |    useMaxWidth: true
@@ -93,24 +93,24 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |---
                   |
                   |flowchart TB
-                  |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
-                  |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
-                  |subgraph foo ["`Domain 'foo'`"]
-                  |  direction TB
-                  |  C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
-                  |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-                  |  C-->|Sends to Inlet 'aInlet' in|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-                  |end
-                  |class C C_class
-                  |class A A_class
+                  |  classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
+                  |  classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
+                  |  classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
+                  |  subgraph 'Domain 'foo''
+                  |    direction TB
+                  |    C((fa:fa-house<br/>Context 'C'))
+                  |    A((fa:fa-house<br/>Context 'A'))
+                  |    C-->|Sends to Inlet 'aInlet' in|A((fa:fa-house<br/>Context 'A'))
+                  |  end
+                  |  class C C_class
+                  |  class A A_class
                   |""".stripMargin.split("\n").toSeq
               case "D" =>
                 """---
                   |title: Context Map For Context 'D'
                   |init:
                   |    theme: dark
-                  |flowchartConfig:
+                  |flowchart:
                   |    defaultRenderer: dagre
                   |    width: 100%
                   |    useMaxWidth: true
@@ -118,13 +118,13 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |---
                   |
                   |flowchart TB
-                  |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef D_class fill:white,stroke:#333,stroke-width:3px,color:red; 
-                  |subgraph bar ["`Domain 'bar'`"]
-                  |  direction TB
-                  |  D((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;))
-                  |end
-                  |class D D_class
+                  |  classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
+                  |  classDef D_class fill:white,stroke:#333,stroke-width:3px,color:red; 
+                  |  subgraph 'Domain 'bar''
+                  |    direction TB
+                  |    D((fa:fa-house<br/>Context 'D'))
+                  |  end
+                  |  class D D_class
                   |""".stripMargin.split("\n").toSeq
               case x   => fail(s"Unknown Context $x")
             }
