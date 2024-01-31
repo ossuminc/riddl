@@ -8,7 +8,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.TranslatingState
 import com.ossuminc.riddl.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.diagrams.mermaid.{ContextDiagram, RootOverviewDiagram, UseCaseDiagramSupport}
+import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -125,16 +125,17 @@ case class HugoPass(
           case f: Function => mkd.emitFunction(f, parents)
           case e: Entity   => mkd.emitEntity(e, parents)
           case c: Context =>
-            val maybeDiagram = diagrams.contextDiagrams.get(c).map(data => ContextDiagram(c, data))
+            val maybeDiagram = diagrams.contextDiagrams.get(c).map(data => ContextMapDiagram(c, data))
             mkd.emitContext(c, stack, maybeDiagram)
           case d: Domain =>
+            val diagram = DomainMapDiagram(d)
             val summary_link: Option[String] = for {
               summary <- makeMessageSummary(d)
               fileName = summary.filePath.getFileName.toString.dropRight(3).toLowerCase
             } yield {
               makeDocLink(d) + "/" + fileName
             }
-            mkd.emitDomain(d, parents, summary_link)
+            mkd.emitDomain(d, parents, summary_link, diagram)
 
           case a: Adaptor    => mkd.emitAdaptor(a, parents)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
@@ -289,13 +290,9 @@ case class HugoPass(
     Timer.time("Index Creation") {
       val mdw = addFile(Seq.empty[String], "_index.md")
       mdw.fileHead("Index", 10, Option("The main index to the content"))
-      mdw.h2("Landscape View")
-      makeSystemLandscapeView match {
-        case view: Seq[String] if view.nonEmpty =>
-          mdw.emitMermaidDiagram(view)
-        case _ => // no view, show nothing
-          mdw.addLine("Not Available")
-      }
+      mdw.h2("Root Overview")
+      val diagram = RootOverviewDiagram(root)
+      mdw.emitMermaidDiagram(diagram.generate)
       mdw.h2("Domains")
       val domains = (root.domains ++ root.includes.flatMap(_.contents.filter[Domain]))
         .sortBy(_.id.value)

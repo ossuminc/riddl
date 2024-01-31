@@ -68,8 +68,7 @@ case class DiagramsPassOutput(
   messages: Messages.Messages = Messages.empty,
   dataFlowDiagrams: Map[Context, DataFlowDiagramData] = Map.empty,
   userCaseDiagrams: Map[UseCase, UseCaseDiagramData] = Map.empty,
-  contextDiagrams: Map[Context, ContextDiagramData] = Map.empty,
-  domainDiagrams: Map[Domain, DomainDiagramData] = Map.empty
+  contextDiagrams: Map[Context, ContextDiagramData] = Map.empty
 ) extends PassOutput
 
 class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
@@ -324,21 +323,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   def postProcess(root: Root): Unit = {}
 
   def result: DiagramsPassOutput = {
-    val domains = contextDiagrams.values.toSeq.map(_.domain).distinct
-    val domainDiagrams: Map[Domain, DomainDiagramData] = {
-      for {
-        d <- domains
-        l = contextDiagrams.filter(_._2.domain == d).toSeq
-      } yield {
-        d -> l
-      }
-    }.toMap
     DiagramsPassOutput(
       messages.toMessages,
       dataFlowDiagrams.toMap,
       useCaseDiagrams.toMap,
-      contextDiagrams.toMap,
-      domainDiagrams
+      contextDiagrams.toMap
     )
   }
 }

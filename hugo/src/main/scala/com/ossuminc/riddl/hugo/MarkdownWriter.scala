@@ -7,7 +7,13 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.diagrams.{ContextDiagramData, DiagramsPass, DiagramsPassOutput, UseCaseDiagramData, mermaid}
-import com.ossuminc.riddl.diagrams.mermaid.{ContextDiagram, EntityRelationshipDiagram, UseCaseDiagram, UseCaseDiagramSupport}
+import com.ossuminc.riddl.diagrams.mermaid.{
+  ContextMapDiagram,
+  DomainMapDiagram,
+  EntityRelationshipDiagram,
+  UseCaseDiagram,
+  UseCaseDiagramSupport
+}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.Keywords
@@ -425,7 +431,7 @@ case class MarkdownWriter(
       }
     }
   }
-  
+
   def emitDescription(d: Option[Description], level: Int = 2): this.type = {
     d match {
       case None => this
@@ -663,9 +669,16 @@ case class MarkdownWriter(
     this
   }
 
-  def emitDomain(domain: Domain, parents: Seq[String], summary: Option[String]): this.type = {
+  def emitDomain(
+    domain: Domain,
+    parents: Seq[String],
+    summary: Option[String],
+    diagram: DomainMapDiagram
+  ): this.type = {
     containerHead(domain, "Domain")
     emitDefDoc(domain, parents)
+    heading("Domain Map")
+    emitMermaidDiagram(diagram.generate)
     toc("Subdomains", mkTocSeq(domain.domains))
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Applications", mkTocSeq(domain.applications))
@@ -710,7 +723,7 @@ case class MarkdownWriter(
     this
   }
 
-  private def emitContextMap(context: Context, diagram: Option[ContextDiagram]): this.type = {
+  private def emitContextMap(context: Context, diagram: Option[ContextMapDiagram]): this.type = {
     if diagram.nonEmpty then
       h2("Context Map")
       val lines = diagram.get.generate
@@ -719,7 +732,7 @@ case class MarkdownWriter(
     this
   }
 
-  def emitContext(context: Context, stack: Seq[Definition], diagram: Option[ContextDiagram]): this.type = {
+  def emitContext(context: Context, stack: Seq[Definition], diagram: Option[ContextMapDiagram]): this.type = {
     containerHead(context, "Context")
     val parents = passUtilities.makeStringParents(stack)
     emitDefDoc(context, parents)

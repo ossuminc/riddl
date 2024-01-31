@@ -58,7 +58,7 @@ domain foo {
 
 domain bar {
   context D {
-    options(css("fill:white,stroke:#333,stroke-width:3px,color:amber"), faicon("fa-house"))
+    options(css("fill:white,stroke:#333,stroke-width:3px,color:red"), faicon("fa-house"))
     adaptor Dadaptor from context A is { ??? }
   }
 }
