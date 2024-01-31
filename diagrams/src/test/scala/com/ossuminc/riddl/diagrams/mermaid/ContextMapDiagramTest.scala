@@ -6,7 +6,7 @@ import com.ossuminc.riddl.testkit.RunPassTestBase
 
 import java.nio.file.Path
 
-class ContextDiagramTest extends RunPassTestBase {
+class ContextMapDiagramTest extends RunPassTestBase {
 
   "ContextDiagram" should {
     "generate a simple diagram correctly" in {
@@ -18,7 +18,7 @@ class ContextDiagramTest extends RunPassTestBase {
           var failures = Seq.empty[String]  
           for {
             (context, data) <- dpo.contextDiagrams
-            diagram = ContextDiagram(context, data)
+            diagram = ContextMapDiagram(context, data)
           } {
             val lines = diagram.generate
             lines mustNot be(empty)
@@ -31,6 +31,8 @@ class ContextDiagramTest extends RunPassTestBase {
                   |flowchartConfig:
                   |    defaultRenderer: dagre
                   |    width: 100%
+                  |    useMaxWidth: true
+                  |    securityLevel: loose
                   |---
                   |
                   |flowchart TB
@@ -38,7 +40,8 @@ class ContextDiagramTest extends RunPassTestBase {
                   |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
                   |classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
                   |classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
-                  |subgraph Domain 'foo'
+                  |subgraph foo ["`Domain 'foo'`"]
+                  |  direction TB
                   |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
                   |  B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
                   |  C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
@@ -59,13 +62,16 @@ class ContextDiagramTest extends RunPassTestBase {
                   |flowchartConfig:
                   |    defaultRenderer: dagre
                   |    width: 100%
+                  |    useMaxWidth: true
+                  |    securityLevel: loose
                   |---
                   |
                   |flowchart TB
                   |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
                   |classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
                   |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
-                  |subgraph Domain 'foo'
+                  |subgraph foo ["`Domain 'foo'`"]
+                  |  direction TB
                   |  B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
                   |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
                   |  B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
@@ -82,13 +88,16 @@ class ContextDiagramTest extends RunPassTestBase {
                   |flowchartConfig:
                   |    defaultRenderer: dagre
                   |    width: 100%
+                  |    useMaxWidth: true
+                  |    securityLevel: loose
                   |---
                   |
                   |flowchart TB
                   |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
                   |classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
                   |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
-                  |subgraph Domain 'foo'
+                  |subgraph foo ["`Domain 'foo'`"]
+                  |  direction TB
                   |  C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
                   |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
                   |  C-->|Sends to Inlet 'aInlet' in|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
@@ -104,12 +113,15 @@ class ContextDiagramTest extends RunPassTestBase {
                   |flowchartConfig:
                   |    defaultRenderer: dagre
                   |    width: 100%
+                  |    useMaxWidth: true
+                  |    securityLevel: loose
                   |---
                   |
                   |flowchart TB
                   |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-                  |classDef D_class fill:white,stroke:#333,stroke-width:3px,color:amber; 
-                  |subgraph Domain 'bar'
+                  |classDef D_class fill:white,stroke:#333,stroke-width:3px,color:red; 
+                  |subgraph bar ["`Domain 'bar'`"]
+                  |  direction TB
                   |  D((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;))
                   |end
                   |class D D_class
