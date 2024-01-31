@@ -21,7 +21,7 @@ class RootOverviewDiagramTest extends RunPassTestBase {
           |title: Root Overview
           |init:
           |    theme: dark
-          |flowchartConfig:
+          |flowchart:
           |    defaultRenderer: dagre
           |    width: 100%
           |    useMaxWidth: true
@@ -29,30 +29,32 @@ class RootOverviewDiagramTest extends RunPassTestBase {
           |---
           |
           |flowchart TD
-          |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-          |classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
-          |classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
-          |classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
-          |subgraph foo
-          |  direction TB
-          |  A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-          |  B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-          |  C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
-          |  foo-->|contains|A((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;A&nbsp;&nbsp;&nbsp;))
-          |  foo-->|contains|B((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;B&nbsp;&nbsp;&nbsp;))
-          |  foo-->|contains|C((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;C&nbsp;&nbsp;&nbsp;))
-          |end
-          |class A A_class
-          |class B B_class
-          |class C C_class
-          |classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
-          |classDef D_class fill:white,stroke:#333,stroke-width:3px,color:red; 
-          |subgraph bar
-          |  direction TB
-          |  D((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;))
-          |  bar-->|contains|D((fa:fa-house<br/>&nbsp;&nbsp;&nbsp;D&nbsp;&nbsp;&nbsp;))
-          |end
-          |class D D_class
+          |  classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
+          |  classDef A_class fill:white,stroke:#333,stroke-width:3px,color:blue; 
+          |  classDef B_class fill:white,stroke:#333,stroke-width:3px,color:green; 
+          |  classDef C_class fill:white,stroke:#333,stroke-width:3px,color:purple; 
+          |  subgraph 'Domain 'foo''
+          |    direction TB
+          |    foo((Domain 'foo'))
+          |    A((fa:fa-house<br/>Context 'A'))
+          |    B((fa:fa-house<br/>Context 'B'))
+          |    C((fa:fa-house<br/>Context 'C'))
+          |    foo-->|contains|A((fa:fa-house<br/>Context 'A'))
+          |    foo-->|contains|B((fa:fa-house<br/>Context 'B'))
+          |    foo-->|contains|C((fa:fa-house<br/>Context 'C'))
+          |  end
+          |  class A A_class
+          |  class B B_class
+          |  class C C_class
+          |  classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
+          |  classDef D_class fill:white,stroke:#333,stroke-width:3px,color:red; 
+          |  subgraph 'Domain 'bar''
+          |    direction TB
+          |    bar((Domain 'bar'))
+          |    D((fa:fa-house<br/>Context 'D'))
+          |    bar-->|contains|D((fa:fa-house<br/>Context 'D'))
+          |  end
+          |  class D D_class
           |""".stripMargin.split('\n').toSeq
       lines mustBe expected
     }
