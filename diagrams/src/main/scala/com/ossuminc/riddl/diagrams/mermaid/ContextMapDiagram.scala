@@ -18,6 +18,7 @@ case class ContextMapDiagram(context: Context, data: ContextDiagramData)
   private def nodes: Seq[Processor[?, ?]] = context +: relatedContexts
   private def relationships: Seq[(Processor[_, _], String)] = data.relationships
 
+  emitDefaultClassDef()
   emitClassDefs(nodes)
   emitSubgraph(data.domain, context.id.value, nodes, relationships)
   emitClassAssignments(nodes)

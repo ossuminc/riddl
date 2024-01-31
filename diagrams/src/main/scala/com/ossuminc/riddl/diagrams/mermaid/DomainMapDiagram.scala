@@ -9,6 +9,7 @@ class DomainMapDiagram(domain: Domain)
   private def nodes = domain.contents.processors ++ domain.includes.flatMap(_.contents.processors)
   private def relationships: Seq[(Processor[_, _], String)] = nodes.zip(List.fill(nodes.size)("contains"))
 
+  emitDefaultClassDef()
   emitClassDefs(nodes)
   emitSubgraph(domain, domain.id.value, nodes, relationships)
   emitClassAssignments(nodes)

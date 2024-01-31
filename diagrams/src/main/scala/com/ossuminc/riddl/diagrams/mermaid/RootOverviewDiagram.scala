@@ -16,12 +16,12 @@ object RootOverviewDiagram {
 class RootOverviewDiagram(root: Root) extends FlowchartDiagramGenerator("Root Overview", "TD") {
 
   private val topLevelDomains = root.domains ++ root.includes.filter[Domain]
-
   for { domain <- topLevelDomains } do {
     val nodes: Seq[Definition] = domain.domains ++ domain.contexts ++ domain.applications ++ domain.epics
     val relationships = nodes.zip(Seq.fill[String](nodes.size)("contains"))
+    emitDefaultClassDef()
     emitClassDefs(nodes)
-    emitSubgraph(domain, domain.id.value, nodes, relationships)
+    emitSubgraph(domain, domain.id.value, domain +: nodes, relationships)
     emitClassAssignments(nodes)
   }
 
