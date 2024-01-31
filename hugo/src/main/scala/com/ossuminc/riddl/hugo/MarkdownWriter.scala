@@ -676,9 +676,9 @@ case class MarkdownWriter(
     diagram: DomainMapDiagram
   ): this.type = {
     containerHead(domain, "Domain")
+    emitDefDoc(domain, parents)
     heading("Domain Map")
     emitMermaidDiagram(diagram.generate)
-    emitDefDoc(domain, parents)
     toc("Subdomains", mkTocSeq(domain.domains))
     toc("Contexts", mkTocSeq(domain.contexts))
     toc("Applications", mkTocSeq(domain.applications))
@@ -735,8 +735,8 @@ case class MarkdownWriter(
   def emitContext(context: Context, stack: Seq[Definition], diagram: Option[ContextMapDiagram]): this.type = {
     containerHead(context, "Context")
     val parents = passUtilities.makeStringParents(stack)
-    emitContextMap(context, diagram)
     emitDefDoc(context, parents)
+    emitContextMap(context, diagram)
     emitOptions(context.options)
     emitTypesToc(context)
     toc("Entities", mkTocSeq(context.entities))
