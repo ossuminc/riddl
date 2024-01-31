@@ -8,12 +8,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.TranslatingState
 import com.ossuminc.riddl.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.diagrams.mermaid.{
-  ContextMapDiagram,
-  DomainMapDiagram,
-  RootOverviewDiagram,
-  UseCaseDiagramSupport
-}
+import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -33,7 +28,7 @@ import scala.collection.mutable
 object HugoPass extends PassInfo {
   val name: String = "hugo"
   val creator: PassCreator = { (in: PassInput, out: PassesOutput) => HugoPass(in, out, HugoCommand.Options()) }
-  private val geekDoc_version = "v0.41.2"
+  private val geekDoc_version = "v0.44.1"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL = java.net.URI
     .create(

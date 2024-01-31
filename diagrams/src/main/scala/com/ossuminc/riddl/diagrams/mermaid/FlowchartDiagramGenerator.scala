@@ -22,8 +22,8 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
 
   frontMatter()
   addLine(s"flowchart $direction")
-
-  def kind: String = "flowchartConfig"
+  incr // indent the content from subclass
+  def kind: String = "flowchart"
 
   def frontMatterItems: Map[String, String] = Map(
     "defaultRenderer" -> "dagre",
@@ -32,8 +32,11 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     "securityLevel" -> "loose"
   )
 
-  protected def emitClassDefs(nodes: Seq[Definition]): Unit = {
+  protected def emitDefaultClassDef(): Unit = {
     addLine("classDef default fill:#666,stroke:black,stroke-width:3px,color:white;")
+  }
+  
+  protected def emitClassDefs(nodes: Seq[Definition]): Unit = {
     for {
       node <- nodes
     } do {
@@ -68,8 +71,8 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     relationships: Seq[(Definition, String)],
     direction: String = "TB"
   ): Unit = {
-    val name = containingDefinition.id.value
-    addLine(s"subgraph $name")
+    val name = containingDefinition.identify
+    addLine(s"subgraph '${containingDefinition.identify}'")
     incr
     if direction.nonEmpty then addLine(s"direction $direction")
     emitNodes(nodes)
@@ -91,23 +94,24 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     val iconName = getIconFor(definition)
     val faicon = if iconName.nonEmpty then "fa:" + iconName + "<br/>" else ""
     val defName: String = definition.id.value
-    val numWords = defName.count(_.isSpaceChar) + 1
+    val displayName: String = definition.identify 
+    val numWords = displayName.count(_.isSpaceChar) + 1
     val spacedName =
       if numWords > 4 then
         var i = 0
         for {
-          word <- defName.split(' ')
+          word <- displayName.split(' ')
         } yield {
           i = i + 1
           if i == numWords then word
           else if i % 3 == 0 then word + "<br/"
           else word + " "
         }.mkString
-      else if defName.length > 8 then defName
+      else if displayName.length > 8 then displayName
       else
-        val numSpaces = (8 - defName.length) / 2
+        val numSpaces = (8 - displayName.length) / 2
         val fix = "&nbsp;".repeat(numSpaces)
-        fix + defName + fix
+        fix + displayName + fix
       end if
     s"$defName(($faicon$spacedName))"
   }
