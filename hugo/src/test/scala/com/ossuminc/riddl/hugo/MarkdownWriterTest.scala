@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.hugo
 
+import com.ossuminc.riddl.diagrams.mermaid.DomainMapDiagram
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
@@ -37,8 +38,10 @@ class MarkdownWriterTest extends HugoTestBase {
           root.contents mustNot be(empty)
           val domain = root.domains.head
           val mkd = makeMDW(output, PassesResult.empty)
-          mkd.emitDomain(domain, paths.dropRight(1), None)
+          val diagram = DomainMapDiagram(domain)
+          mkd.emitDomain(domain, paths.dropRight(1), None, diagram)
           val emitted = mkd.toString
+          info(emitted)
           val expected =
             """---
               |title: "TestDomain: Domain"
@@ -60,6 +63,26 @@ class MarkdownWriterTest extends HugoTestBase {
               |## *Description*
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
+              |
+              |## *Domain Map*
+              |{{< mermaid class="text-center">}}
+              |---
+              |title: Map For Domain 'TestDomain'
+              |init:
+              |    theme: dark
+              |flowchart:
+              |    defaultRenderer: dagre
+              |    width: 100%
+              |    useMaxWidth: true
+              |    securityLevel: loose
+              |---
+              |
+              |flowchart TB
+              |  classDef default fill:#666,stroke:black,stroke-width:3px,color:white;
+              |  subgraph 'Domain 'TestDomain''
+              |    direction TB
+              |  end
+              |{{< /mermaid >}}
               |
               |## *Types*
               |
