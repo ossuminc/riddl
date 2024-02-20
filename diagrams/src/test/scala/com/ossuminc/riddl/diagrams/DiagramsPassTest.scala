@@ -5,7 +5,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import org.scalatest.matchers.must.Matchers
 
-class DiagramsPassTest extends RunPassTestBase  {
+class DiagramsPassTest extends RunPassTestBase {
 
   "DiagramsPass" must {
     "do something" in {

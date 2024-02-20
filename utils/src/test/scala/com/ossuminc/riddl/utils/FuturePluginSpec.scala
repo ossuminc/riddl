@@ -12,8 +12,7 @@ import java.nio.file.Path
 
 class FuturePluginSpec
     extends PluginSpecBase(
-      svcClassPath =
-        Path.of("com/ossuminc/riddl/utils/FutureTestPlugin.class"),
+      svcClassPath = Path.of("com/ossuminc/riddl/utils/FutureTestPlugin.class"),
       implClassPath = Path
         .of("com/ossuminc/riddl/utils/FutureTestPlugin.class")
     ) {

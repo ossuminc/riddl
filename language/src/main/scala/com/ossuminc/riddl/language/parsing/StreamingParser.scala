@@ -90,8 +90,8 @@ private[parsing] trait StreamingParser {
   private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
     options[u, StreamletOption](StringIn(RiddlOption.technology, RiddlOption.css, RiddlOption.kind).!) {
       case (loc, RiddlOption.technology, args) => StreamletTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => StreamletCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)      => StreamletIconOption(loc, args)
+      case (loc, RiddlOption.css, args)        => StreamletCssOption(loc, args)
+      case (loc, RiddlOption.faicon, args)     => StreamletIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => StreamletKindOption(loc, args)
     }
   }

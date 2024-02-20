@@ -39,7 +39,7 @@ object Folding {
       top.contents.foldLeft(initial) { (next, value) =>
         value match {
           case c: Container[CT] @unchecked if c.nonEmpty => foldLeftWithStack(next, parents)(c)(f)
-          case v: RiddlValue                          => f(next, v, parents.toSeq)
+          case v: RiddlValue                             => f(next, v, parents.toSeq)
         }
       }
     } finally {

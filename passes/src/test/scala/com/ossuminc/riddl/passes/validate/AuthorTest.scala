@@ -20,8 +20,7 @@ class AuthorTest extends ValidatingTest {
     }
     "not supported in contexts" in {
       val input =
-        """domain foo is { context bar is { author FooBar is { ??? } } }"""
-          .stripMargin
+        """domain foo is { context bar is { author FooBar is { ??? } } }""".stripMargin
       parseDomainDefinition(input, identity) match {
         case Left(msgs) =>
           msgs.isOnlyIgnorable must be(false)
@@ -31,18 +30,19 @@ class AuthorTest extends ValidatingTest {
     }
     "must be defined" in {
       val input = s"""domain foo is { by author Bar }"""
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs) =>
-          val errs = msgs.justErrors
-          errs mustNot be(empty)
-          assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
-          assertValidationMessage(errs, Messages.Error,
-            "Path 'Bar' was not resolved, in Domain 'foo'\nand it should refer to an Author")
+      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) { case (_, _, msgs) =>
+        val errs = msgs.justErrors
+        errs mustNot be(empty)
+        assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
+        assertValidationMessage(
+          errs,
+          Messages.Error,
+          "Path 'Bar' was not resolved, in Domain 'foo'\nand it should refer to an Author"
+        )
       }
     }
     "referenced from Application" in {
-      val input = RiddlParserInput(
-                  """author Reid is {
+      val input = RiddlParserInput("""author Reid is {
                     |    name: "Reid Spencer"
                     |    email: "reid@ossum.biz"
                     |  }
@@ -95,7 +95,7 @@ class AuthorTest extends ValidatingTest {
         msgs.isOnlyIgnorable must be(true)
       }
     }
-      "referenced from Entity" in {
+    "referenced from Entity" in {
       val input = """domain Foo is {
                     |  author Reid is {
                     |    name: "Reid Spencer"

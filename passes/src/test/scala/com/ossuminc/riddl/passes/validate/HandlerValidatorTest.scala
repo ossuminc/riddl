@@ -80,7 +80,7 @@ class HandlerValidatorTest extends ValidatingTest {
           )
       }
     }
-   
+
     "allow message clauses to name the message and it resolves" in {
       val input =
         """domain entityTest is {
@@ -121,12 +121,11 @@ class HandlerValidatorTest extends ValidatingTest {
           |    }
           |  }
           |}""".stripMargin
-      parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) {
-        case (_, messages: Messages) =>
-          val warnings = messages.justWarnings.format
-          // info(warnings)
-          warnings mustNot be(empty)
-          warnings must include("commands should result in sending an event")
+      parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) { case (_, messages: Messages) =>
+        val warnings = messages.justWarnings.format
+        // info(warnings)
+        warnings mustNot be(empty)
+        warnings must include("commands should result in sending an event")
       }
     }
   }

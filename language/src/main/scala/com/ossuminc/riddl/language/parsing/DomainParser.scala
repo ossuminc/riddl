@@ -32,7 +32,7 @@ private[parsing] trait DomainParser {
       case (loc, RiddlOption.external, args)   => DomainExternalOption(loc, args)
       case (loc, RiddlOption.package_, args)   => DomainPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => DomainTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => DomainCssOption(loc, args)
+      case (loc, RiddlOption.css, args)        => DomainCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => DomainIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => DomainKindOption(loc, args)
     }

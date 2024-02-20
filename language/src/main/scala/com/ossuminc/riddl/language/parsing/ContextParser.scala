@@ -32,7 +32,7 @@ private[parsing] trait ContextParser {
       case (loc, RiddlOption.service, _)       => ServiceOption(loc)
       case (loc, RiddlOption.package_, args)   => ContextPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => ContextTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => ContextCssOption(loc, args)
+      case (loc, RiddlOption.css, args)        => ContextCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => ContextIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => ContextKindOption(loc, args)
     }

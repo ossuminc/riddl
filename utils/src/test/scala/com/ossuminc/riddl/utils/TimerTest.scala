@@ -34,10 +34,10 @@ class TimerTest extends AnyWordSpec with Matchers {
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = Timer.time( "MyStage", show = false) {
-          clock.updateInstant(_.plusSeconds(2))
-          123
-        }
+      val result = Timer.time("MyStage", show = false) {
+        clock.updateInstant(_.plusSeconds(2))
+        123
+      }
 
       result mustBe 123
 

@@ -154,7 +154,6 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
       }
     }
 
-
     "options at top level do not override in common object" in {
       val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")
       CommandOptions.loadCommonOptions(optionFile) match {
@@ -173,7 +172,8 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
         case Some(options) =>
           options.showTimes must be(true)
           CommandOptions.parseCommandOptions(remaining) match {
-            case Right(options) => options.inputFile mustBe
+            case Right(options) =>
+              options.inputFile mustBe
                 Some(Path.of("file.riddl"))
             case Left(messages) => fail(messages.format)
           }

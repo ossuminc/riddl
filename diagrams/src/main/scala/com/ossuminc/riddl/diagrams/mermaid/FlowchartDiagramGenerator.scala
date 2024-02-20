@@ -35,7 +35,7 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
   protected def emitDefaultClassDef(): Unit = {
     addLine("classDef default fill:#666,stroke:black,stroke-width:3px,color:white;")
   }
-  
+
   protected def emitClassDefs(nodes: Seq[Definition]): Unit = {
     for {
       node <- nodes
@@ -94,7 +94,7 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     val iconName = getIconFor(definition)
     val faicon = if iconName.nonEmpty then "fa:" + iconName + "<br/>" else ""
     val defName: String = definition.id.value
-    val displayName: String = definition.identify 
+    val displayName: String = definition.identify
     val numWords = displayName.count(_.isSpaceChar) + 1
     val spacedName =
       if numWords > 4 then

@@ -26,7 +26,7 @@ case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
     if this.source.origin == that.source.origin then { this.offset - that.offset }
     else { this.source.origin.compare(that.source.origin) }
   }
-  
+
   @targetName("plus")
   def +(int: Int): At = At(source, offset + int)
 

@@ -18,22 +18,22 @@ import scala.reflect.ClassTag
   *   The UseCaseDiagramData from the DiagramsPass for this
   */
 case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) extends SequenceDiagramGenerator {
-  
+
   private val participants: Seq[Definition] = ucdd.actors.values.toSeq.sortBy(_.kind)
   makeParticipants(participants)
   generateInteractions(ucdd.interactions)
   decr
   nl
-  
+
   def title: String = ucdd.name
-  
+
   def frontMatterItems: Map[String, String] = Map(
-      "theme" -> "dark",
-      "forceMenus" -> "true",
-      "wrap" -> "true",
-      "mirrorActors" -> "false",
-      "messageFontFamily" -> "monospace"
-    )
+    "theme" -> "dark",
+    "forceMenus" -> "true",
+    "wrap" -> "true",
+    "mirrorActors" -> "false",
+    "messageFontFamily" -> "monospace"
+  )
 
   private def makeParticipants(parts: Seq[Definition]): Unit = {
     parts.foreach { (part: Definition) =>

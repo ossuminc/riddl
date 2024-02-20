@@ -20,9 +20,7 @@ trait TranslatingOptions {
   def projectName: Option[String]
 }
 
-
 /** Base class of all Translators
-  *
   */
 abstract class TranslationPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
@@ -31,9 +29,9 @@ abstract class TranslationPass(input: PassInput, outputs: PassesOutput) extends 
   final def parseValidateTranslate(
     input: RiddlParserInput,
     log: Logger,
-    commonOptions: CommonOptions,
+    commonOptions: CommonOptions
   ): Either[Messages, PassesResult] = {
     val allPasses = Pass.standardPasses ++ passes
-    Riddl.parseAndValidate(input, commonOptions, shouldFailOnError=true, allPasses, log )
+    Riddl.parseAndValidate(input, commonOptions, shouldFailOnError = true, allPasses, log)
   }
 }

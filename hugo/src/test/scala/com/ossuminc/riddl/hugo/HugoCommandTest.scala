@@ -2,7 +2,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.testkit.RunCommandSpecBase
 
-class HugoCommandTest extends RunCommandSpecBase  {
+class HugoCommandTest extends RunCommandSpecBase {
 
   val inputFile = "testkit/src/test/input/rbbq.riddl"
   val hugoConfig = "testkit/src/test/input/hugo.conf"

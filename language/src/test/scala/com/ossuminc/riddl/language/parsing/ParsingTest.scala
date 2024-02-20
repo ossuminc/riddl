@@ -24,9 +24,9 @@ import scala.reflect.*
 
 /** A helper class for testing the parser */
 trait ParsingTest extends AnyWordSpec with Matchers {
-  
+
   protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
-  
+
   case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content), testingOptions)
 
   def parse[T <: RiddlValue, U <: RiddlValue](
@@ -60,7 +60,7 @@ trait ParsingTest extends AnyWordSpec with Matchers {
     extract: Root => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
-    tp.parseTopLevelDomain[TO](extract).map( x => (x, input))
+    tp.parseTopLevelDomain[TO](extract).map(x => (x, input))
   }
 
   def parseDomainDefinition[TO <: RiddlValue](

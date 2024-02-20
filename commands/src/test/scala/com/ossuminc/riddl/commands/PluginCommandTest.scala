@@ -8,7 +8,7 @@ package com.ossuminc.riddl.commands
 
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
-import com.ossuminc.riddl.utils.{Plugin,PluginSpecBase}
+import com.ossuminc.riddl.utils.{Plugin, PluginSpecBase}
 
 import pureconfig.ConfigSource
 import scopt.OParser
@@ -17,8 +17,7 @@ import java.nio.file.Path
 
 class PluginCommandTest
     extends PluginSpecBase(
-      svcClassPath =
-        Path.of("com/ossuminc/riddl/commands/CommandPlugin.class"),
+      svcClassPath = Path.of("com/ossuminc/riddl/commands/CommandPlugin.class"),
       implClassPath = Path
         .of("com/ossuminc/riddl/commands/ASimpleTestCommand.class"),
       moduleName = "commands",
@@ -49,7 +48,8 @@ class PluginCommandTest
       val plugin = p.asInstanceOf[ASimpleTestCommand]
       val reader = plugin.getConfigReader
       val path: Path = Path.of("commands/src/test/input/test.conf")
-      ConfigSource.file(path.toFile)
+      ConfigSource
+        .file(path.toFile)
         .load[ASimpleTestCommand.Options](reader) match {
         case Right(loadedOptions) => loadedOptions.arg1 mustBe "Success!"
         case Left(failures)       => fail(failures.prettyPrint())

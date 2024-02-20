@@ -26,8 +26,7 @@ object Tar {
       if fname.endsWith(".tar.gz") then {
         val gzis = new GzipCompressorInputStream(bis)
         Some(new TarArchiveInputStream(gzis))
-      } else if fname.endsWith(".tar") then
-        Some(new TarArchiveInputStream(bis))
+      } else if fname.endsWith(".tar") then Some(new TarArchiveInputStream(bis))
       else {
         None
       }
@@ -43,13 +42,13 @@ object Tar {
           if taris.canReadEntryData(tae) then {
             val path = destDir.resolve(Path.of(tae.getName))
             if tae.isDirectory then {
-              if !Files.isDirectory(path) then {Files.createDirectories(path)}
+              if !Files.isDirectory(path) then { Files.createDirectories(path) }
             } else {
               val parent = path.getParent
-              if !Files.isDirectory(parent) then {Files.createDirectories(parent)}
+              if !Files.isDirectory(parent) then { Files.createDirectories(parent) }
               val o = Files.newOutputStream(path)
-              try {IOUtils.copy(taris, o)}
-              finally {o.close()}
+              try { IOUtils.copy(taris, o) }
+              finally { o.close() }
               counter += 1
             }
           }

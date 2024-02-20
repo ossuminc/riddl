@@ -16,7 +16,7 @@ class ReportedIssuesTest extends ValidatingTest {
   )
 
   def checkOne(fileName: String): Assertion = {
-    checkOne(fileName){
+    checkOne(fileName) {
       case Left(messages) =>
         fail(messages.format)
       case Right(result) =>

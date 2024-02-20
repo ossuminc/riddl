@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.language.Messages.warnings
-import com.ossuminc.riddl.utils.{PathUtils,Logger,SysLogger,Zip} 
+import com.ossuminc.riddl.utils.{PathUtils, Logger, SysLogger, Zip}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.DirectoryFileFilter
 import org.apache.commons.io.filefilter.NotFileFilter

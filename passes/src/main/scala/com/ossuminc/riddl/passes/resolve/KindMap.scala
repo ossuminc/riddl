@@ -24,7 +24,7 @@ case class KindMap() {
     map.update(clazz, existing :+ definition)
   }
 
-  def definitionsOfKind[T <: Definition : ClassTag]: Seq[T] = {
+  def definitionsOfKind[T <: Definition: ClassTag]: Seq[T] = {
     val TClass = classTag[T].runtimeClass
     map.getOrElse(TClass, Seq.empty[T]).map(_.asInstanceOf[T])
   }

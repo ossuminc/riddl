@@ -42,8 +42,7 @@ object TextFileWriter {
         val endBrace = text.indexOf("}")
         if endBrace < 0 then { builder.append(text) }
         else {
-          val replacement = substitutions.get(text.substring(2, endBrace))
-            .orNull
+          val replacement = substitutions.get(text.substring(2, endBrace)).orNull
           if replacement != null then {
             builder.append(replacement)
             loop(text.substring(endBrace + 1))

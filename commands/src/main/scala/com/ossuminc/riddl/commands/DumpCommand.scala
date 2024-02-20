@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{Logger,StringHelpers}
+import com.ossuminc.riddl.utils.{Logger, StringHelpers}
 
 import java.nio.file.Path
 

@@ -27,8 +27,7 @@ trait FileBuilder {
     " ".repeat(indent_level * spaces_per_level)
   }
 
-  /**
-    * Increment the indent by one level
+  /** Increment the indent by one level
     * @return
     */
   def incr: this.type = {
@@ -36,8 +35,7 @@ trait FileBuilder {
     this
   }
 
-  /**
-    * Decrement the indent by one level
+  /** Decrement the indent by one level
     * @return
     */
   def decr: this.type = {
@@ -45,7 +43,6 @@ trait FileBuilder {
     indent_level -= 1
     this
   }
-
 
   /** Append a newline character
     * @return
@@ -56,9 +53,9 @@ trait FileBuilder {
   /** Append a string without indent or suffix
     *
     * @param str
-    * The string to append
+    *   The string to append
     * @return
-    * This object for call chaining
+    *   This object for call chaining
     */
   def add(str: String): this.type = {
     sb.append(str)
@@ -81,8 +78,7 @@ trait FileBuilder {
     */
   def addLine(line: String): this.type = { sb.append(s"$spc$line$new_line"); this }
 
-  /**
-    * Add just the indent spaces
+  /** Add just the indent spaces
     * @return
     *   This object for call chaining
     */

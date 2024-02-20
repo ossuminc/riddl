@@ -16,13 +16,10 @@ class OptionsValidationTest extends ValidatingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndValidate(input,"identify incorrect css test case") {
-         (root: Root, messages: Messages) =>
-          if messages.justErrors.nonEmpty then
-            fail(messages.justErrors.format)
-          else
-            succeed
-          end if 
+      parseAndValidate(input, "identify incorrect css test case") { (root: Root, messages: Messages) =>
+        if messages.justErrors.nonEmpty then fail(messages.justErrors.format)
+        else succeed
+        end if
       }
     }
   }

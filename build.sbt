@@ -4,17 +4,17 @@ import org.scoverage.coveralls.Imports.CoverallsKeys.*
 import wartremover.Wart
 import wartremover.Wart.*
 
-Global / onChangedBuildSource := ReloadOnSourceChanges
-(Global / excludeLintKeys) ++= Set(mainClass)
+Global / onChangedBuildSource := ReloadOnSourceChanges(Global / excludeLintKeys) ++= Set(mainClass)
 
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
 lazy val nonWarts: Seq[Wart] = Seq(
-  ToString, MutableDataStructures, GlobalExecutionContext
+  ToString,
+  MutableDataStructures,
+  GlobalExecutionContext
 )
-
 
 lazy val riddl: Project = Root("", "riddl", startYr = startYear)
   .configure(Publishing.configure, With.git, With.dynver)
@@ -41,7 +41,7 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
 lazy val Utils = config("utils")
 lazy val utils: Project = Module("utils", "riddl-utils")
   .enablePlugins(OssumIncPlugin)
-  .configure(With.typical, With.build_info, With.coverage(70)/*, With.native()*/)
+  .configure(With.typical, With.build_info, With.coverage(70) /*, With.native()*/ )
   .settings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",

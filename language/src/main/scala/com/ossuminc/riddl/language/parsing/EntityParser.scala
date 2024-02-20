@@ -34,7 +34,7 @@ private[parsing] trait EntityParser {
       case (loc, RiddlOption.kind, args)              => EntityKindOption(loc, args)
       case (loc, RiddlOption.message_queue, _)        => EntityMessageQueue(loc)
       case (loc, RiddlOption.technology, args)        => EntityTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)             => EntityCssOption(loc, args)
+      case (loc, RiddlOption.css, args)               => EntityCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)            => EntityIconOption(loc, args)
     }
   }

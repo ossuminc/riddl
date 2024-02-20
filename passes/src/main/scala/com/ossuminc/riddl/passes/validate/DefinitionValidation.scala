@@ -14,7 +14,7 @@ import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import scala.math.abs
 
-/** A Trait that defines typical Validation checkers for validating definitions  */
+/** A Trait that defines typical Validation checkers for validating definitions */
 trait DefinitionValidation extends BasicValidation {
 
   def symbols: SymbolsOutput
@@ -76,9 +76,9 @@ trait DefinitionValidation extends BasicValidation {
       val duplicates: Map[String, Seq[NamedValue]] =
         allNamedValues.groupBy(_.identify).filterNot(_._2.size < 2)
       if duplicates.nonEmpty then {
-        val details = duplicates.map {
-            case (_: String, defs: Seq[NamedValue]) =>
-              defs.map(_.identifyWithLoc).mkString(", and ")
+        val details = duplicates
+          .map { case (_: String, defs: Seq[NamedValue]) =>
+            defs.map(_.identifyWithLoc).mkString(", and ")
           }
           .mkString("", "\n  ", "\n")
         messages.addError(
@@ -172,7 +172,8 @@ trait DefinitionValidation extends BasicValidation {
           desc.loc
         )
       }
-    this  }
+    this
+  }
 
   def checkStreamletShape(proc: Streamlet): this.type = {
     val ins = proc.inlets.size

@@ -33,9 +33,8 @@ class ValidateExamplesTest extends ValidatingTest {
 
   "Enumerations" should {
     "enforce Enumerators to start with lower case" in {
-      validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") {
-        case (_, messages) =>
-          assertValidationMessage(messages, "style warnings")(_.kind.isStyle)
+      validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") { case (_, messages) =>
+        assertValidationMessage(messages, "style warnings")(_.kind.isStyle)
       }
     }
     "allow enumerators with values" in {

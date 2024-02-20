@@ -4,15 +4,16 @@ import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, RiddlValue, Root}
 import com.ossuminc.riddl.language.Messages.Messages
 import fastparse.*
-import fastparse.Parsed.{Failure,Success}
+import fastparse.Parsed.{Failure, Success}
 import org.scalatest.matchers.must.Matchers
 
 import scala.reflect.{ClassTag, classTag}
 import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext
 
-case class TestParser(override val input: RiddlParserInput, throwOnError: Boolean = false)(implicit ec: ExecutionContext)
-    extends TopLevelParser(input)(ec)
+case class TestParser(override val input: RiddlParserInput, throwOnError: Boolean = false)(implicit
+  ec: ExecutionContext
+) extends TopLevelParser(input)(ec)
     with Matchers {
 
   def expect[CT <: RiddlValue](
@@ -34,7 +35,6 @@ case class TestParser(override val input: RiddlParserInput, throwOnError: Boolea
         Left(messagesAsList)
     }
   }
-
 
   def parse[T <: RiddlValue, U <: RiddlValue](
     parser: P[?] => P[T],

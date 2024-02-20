@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 import java.nio.file.Path
-import scala.concurrent.duration.{FiniteDuration,DurationInt}
+import scala.concurrent.duration.{FiniteDuration, DurationInt}
 
 case class CommonOptions(
   showTimes: Boolean = false,

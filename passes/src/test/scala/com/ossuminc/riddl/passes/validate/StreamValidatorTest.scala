@@ -101,15 +101,14 @@ class StreamValidatorTest extends ValidatingTest {
                 |  }
                 | }
                 |} """.stripMargin
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (domain, _, messages) =>
-          domain.isEmpty mustBe false
-          messages.isEmpty mustBe false
-          messages.hasErrors mustBe false
-          messages.filter(_.message contains "is not needed since both ends") mustNot be(empty)
-          messages.exists(
-            _.message.startsWith("The persistence option on Connector 'c1'")
-          ) mustBe true
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
+        domain.isEmpty mustBe false
+        messages.isEmpty mustBe false
+        messages.hasErrors mustBe false
+        messages.filter(_.message contains "is not needed since both ends") mustNot be(empty)
+        messages.exists(
+          _.message.startsWith("The persistence option on Connector 'c1'")
+        ) mustBe true
       }
     }
   }

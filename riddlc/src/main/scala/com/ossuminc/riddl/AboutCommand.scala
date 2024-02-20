@@ -22,10 +22,7 @@ import java.nio.file.Path
 
 /** Unit Tests For FromCommand */
 object AboutCommand {
-  case class Options(
-    command: String = "about",
-    inputFile: Option[Path] = None,
-    targetCommand: Option[String] = None)
+  case class Options(command: String = "about", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
 }
 
@@ -33,17 +30,17 @@ class AboutCommand extends CommandPlugin[AboutCommand.Options]("about") {
   import AboutCommand.Options
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd(pluginName).action((_, c) => c.copy(command = pluginName))
+    cmd(pluginName)
+      .action((_, c) => c.copy(command = pluginName))
       .text("Print out information about RIDDL") -> AboutCommand.Options()
   }
 
-  override def getConfigReader: ConfigReader[AboutCommand.Options] = {
-    (cur: ConfigCursor) =>
-      for
-        topCur <- cur.asObjectCursor
-        topRes <- topCur.atKey(pluginName)
-        cmd <- topRes.asObjectCursor
-      yield { Options(cmd.path) }
+  override def getConfigReader: ConfigReader[AboutCommand.Options] = { (cur: ConfigCursor) =>
+    for
+      topCur <- cur.asObjectCursor
+      topRes <- topCur.atKey(pluginName)
+      cmd <- topRes.asObjectCursor
+    yield { Options(cmd.path) }
   }
 
   override def run(

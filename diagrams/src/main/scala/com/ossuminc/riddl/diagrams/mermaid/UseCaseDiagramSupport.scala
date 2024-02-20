@@ -21,5 +21,3 @@ trait UseCaseDiagramSupport {
   }
   def makeDocLink(definition: NamedValue): String
 }
-
-

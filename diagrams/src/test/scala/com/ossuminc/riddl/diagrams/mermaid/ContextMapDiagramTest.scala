@@ -15,7 +15,7 @@ class ContextMapDiagramTest extends RunPassTestBase {
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match
         case Some(dpo: DiagramsPassOutput) =>
-          var failures = Seq.empty[String]  
+          var failures = Seq.empty[String]
           for {
             (context, data) <- dpo.contextDiagrams
             diagram = ContextMapDiagram(context, data)
@@ -126,20 +126,19 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |  end
                   |  class D D_class
                   |""".stripMargin.split("\n").toSeq
-              case x   => fail(s"Unknown Context $x")
+              case x => fail(s"Unknown Context $x")
             }
             if lines != expected then
               val failure = s"${context.id.value} failed "
               info(failure)
               info(lines.mkString("\n"))
-              failures = failures :+ failure  
-            end if  
-            // lines mustBe expected 
+              failures = failures :+ failure
+            end if
+            // lines mustBe expected
           }
-          if failures.nonEmpty then 
+          if failures.nonEmpty then
             fail(s"Failures detected in generator output: ${failures.mkString("\n  ", "\n  ", "\n")}")
-          else  
-            succeed
+          else succeed
         case None => fail("no DiagramsPassOutput")
       end match
     }

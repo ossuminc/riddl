@@ -28,7 +28,6 @@ type PassCreator = (PassInput, PassesOutput) => Pass
 /** A sequence of PassCreator. This is used to run a set of passes */
 type PassesCreator = Seq[PassCreator]
 
-
 /** Information a pass must provide, basically its name
   */
 trait PassInfo {

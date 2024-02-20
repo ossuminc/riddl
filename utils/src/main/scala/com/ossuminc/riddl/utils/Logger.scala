@@ -52,8 +52,7 @@ trait Logger {
   private var nInfo = 0
 
   protected def highlight(level: Lvl, s: String): String = {
-    if !withHighlighting then
-      s"[$level] $s"
+    if !withHighlighting then s"[$level] $s"
     else
       val prefix = level match {
         case Logger.Severe  => s"$RED_B$BLACK"
@@ -64,10 +63,8 @@ trait Logger {
       val lines = s.split(nl)
       val head = s"$prefix$BOLD[$level] ${lines.head}$RESET"
       val tail = lines.tail.mkString(nl)
-      if tail.nonEmpty then
-        head + s"$nl$prefix$tail$RESET"
-      else
-        head
+      if tail.nonEmpty then head + s"$nl$prefix$tail$RESET"
+      else head
   }
 
   protected def write(level: Lvl, @unused s: String): Unit

@@ -16,9 +16,9 @@ import java.nio.file.Path
 import scala.collection.mutable
 
 case class PrettifyState(
-  commonOptions: CommonOptions = CommonOptions.empty ,
+  commonOptions: CommonOptions = CommonOptions.empty,
   options: PrettifyCommand.Options = PrettifyCommand.Options()
-)   extends TranslatingState[RiddlFileEmitter] {
+) extends TranslatingState[RiddlFileEmitter] {
 
   require(options.inputFile.nonEmpty, "No input file specified")
   require(options.outputDir.nonEmpty, "No output directory specified")

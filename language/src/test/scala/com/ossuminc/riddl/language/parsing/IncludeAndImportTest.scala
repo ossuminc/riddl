@@ -107,7 +107,7 @@ class IncludeAndImportTest extends ParsingTest {
       root.domains.head.includes.head.contents mustNot be(empty)
     }
     "warn about duplicate includes" in {
-      val path = Path.of("language/src/test/input/includes/duplicateInclude.riddl") 
+      val path = Path.of("language/src/test/input/includes/duplicateInclude.riddl")
       val input = RiddlParserInput(path)
       TopLevelParser.parseInput(input) match {
         case Right(_) =>
@@ -117,7 +117,7 @@ class IncludeAndImportTest extends ParsingTest {
           if errors.nonEmpty then fail(errors.format)
           val warnings = messages.justWarnings
           warnings.size mustBe 1
-          warnings.head.message must include ("Duplicate include origin detected in someTypes")
+          warnings.head.message must include("Duplicate include origin detected in someTypes")
           succeed
       }
 

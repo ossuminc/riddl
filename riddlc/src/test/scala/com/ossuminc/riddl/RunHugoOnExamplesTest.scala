@@ -19,8 +19,7 @@ import scala.annotation.unused
 
 // import java.nio.file.{Files, Path}
 
-class RunHugoOnExamplesTest
-    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo") {
+class RunHugoOnExamplesTest extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo") {
 
   override val outDir: Path = Path.of("riddlc/target/test/hugo-examples")
 

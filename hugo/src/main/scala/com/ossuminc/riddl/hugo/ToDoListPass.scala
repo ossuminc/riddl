@@ -74,7 +74,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
 
 object ToDoListPass extends PassInfo {
   val name: String = "ToDoList"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ToDoListPass(in, out, HugoCommand.Options() ) }
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ToDoListPass(in, out, HugoCommand.Options()) }
 }
 
 // val finder: Finder = Finder(root)

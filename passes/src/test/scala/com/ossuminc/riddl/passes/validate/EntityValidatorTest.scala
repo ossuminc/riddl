@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.*
+
 /** Unit Tests For EntityValidatorTest */
 class EntityValidatorTest extends ValidatingTest {
 
@@ -44,10 +45,9 @@ class EntityValidatorTest extends ValidatingTest {
           |  state bar of MultiState.fields is { handler x is {???} }
           |  handler fum is { ??? }
           |}""".stripMargin
-      parseAndValidateInContext[Entity](input) {
-        case (entity: Entity, _, msgs: Messages) =>
-          msgs.filter(_.kind.isError) mustBe empty
-          entity.states.size mustBe 2
+      parseAndValidateInContext[Entity](input) { case (entity: Entity, _, msgs: Messages) =>
+        msgs.filter(_.kind.isError) mustBe empty
+        entity.states.size mustBe 2
       }
     }
     "error for finite-state-machine entities without at least two states" in {
@@ -72,34 +72,33 @@ class EntityValidatorTest extends ValidatingTest {
                     |  record fields is { field: SomeType }
                     |  state foo of Hamburger.fields
                     |}""".stripMargin
-      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
-        case (_: Entity, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Entity 'Hamburger' has 1 state but no handlers."
-          )
-          assertValidationMessage(
-            msgs,
-            Error,
-            """Path 'SomeType' was not resolved, in Field 'field'
+      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Entity 'Hamburger' has 1 state but no handlers."
+        )
+        assertValidationMessage(
+          msgs,
+          Error,
+          """Path 'SomeType' was not resolved, in Field 'field'
               |and it should refer to a Type""".stripMargin
-          )
-          assertValidationMessage(
-            msgs,
-            MissingWarning,
-            "Record 'fields' should have a description"
-          )
-          assertValidationMessage(
-            msgs,
-            MissingWarning,
-            "Entity 'Hamburger' should have a description"
-          )
-          assertValidationMessage(
-            msgs,
-            MissingWarning,
-            "State 'foo' in Entity 'Hamburger' should have content"
-          )
+        )
+        assertValidationMessage(
+          msgs,
+          MissingWarning,
+          "Record 'fields' should have a description"
+        )
+        assertValidationMessage(
+          msgs,
+          MissingWarning,
+          "Entity 'Hamburger' should have a description"
+        )
+        assertValidationMessage(
+          msgs,
+          MissingWarning,
+          "State 'foo' in Entity 'Hamburger' should have content"
+        )
 
       }
     }

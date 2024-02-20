@@ -77,7 +77,7 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
   }.getOrElse(Seq.empty)
 
   private def generate(context: Context): String = {
-    sb.append("flowchart LR") ;  nl
+    sb.append("flowchart LR"); nl
     val parts = for
       connector <- context.connectors
       participants <- this.participants(connector)

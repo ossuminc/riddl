@@ -15,7 +15,7 @@ import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult, PassesCreator}
 import com.ossuminc.riddl.stats.StatsPass
 import com.ossuminc.riddl.diagrams.DiagramsPass
-import com.ossuminc.riddl.utils.Logger 
+import com.ossuminc.riddl.utils.Logger
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader

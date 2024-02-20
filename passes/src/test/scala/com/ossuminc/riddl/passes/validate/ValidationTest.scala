@@ -79,7 +79,7 @@ class ValidationTest extends ParsingTest {
       val apps = include.contents.filter[Application]
       apps mustNot be(empty)
       apps.head mustBe a[Application]
-      val app:Application = apps.head
+      val app: Application = apps.head
       app.terms mustNot be(empty)
       app.hasAuthors mustBe false
       app.hasAuthorRefs mustBe true

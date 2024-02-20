@@ -32,11 +32,13 @@ class ReadRiddlOptionsTest extends CommandTestBase {
 
     "make sure onchange doesn't accept empty strings" in {
       val expected = OnChangeCommand.Options()
-      intercept[TestFailedException](check(
-        new OnChangeCommand,
-        expected,
-        Path.of(s"$inputDir/onchangevalidation.conf")
-      ))
+      intercept[TestFailedException](
+        check(
+          new OnChangeCommand,
+          expected,
+          Path.of(s"$inputDir/onchangevalidation.conf")
+        )
+      )
 
     }
 

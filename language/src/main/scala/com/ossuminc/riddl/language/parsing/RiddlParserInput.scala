@@ -135,10 +135,9 @@ case class URLParserInput(url: URL) extends RiddlParserInput {
   // require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
   lazy val data: String = {
     val source: Source = Source.fromURL(url)
-    try { 
-      source.getLines().mkString("\n") 
-    }
-    finally { source.close() }
+    try {
+      source.getLines().mkString("\n")
+    } finally { source.close() }
   }
   assert(data.nonEmpty, s"Empty content from ${url.toExternalForm}")
   override def isEmpty: Boolean = data.isEmpty

@@ -24,11 +24,10 @@ object PrettifyCommand {
   val cmdName = "prettify"
   case class Options(
     inputFile: Option[Path] = None,
-    outputDir: Option[Path] =
-      Some(Path.of(System.getProperty("java.io.tmpdir"))),
+    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
     projectName: Option[String] = None,
-    singleFile: Boolean = true)
-    extends TranslationCommand.Options {
+    singleFile: Boolean = true
+  ) extends TranslationCommand.Options {
     def command: String = cmdName
 
   }
@@ -46,18 +45,21 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](cmdNam
   override def getOptions: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder.*
-    cmd(pluginName).children(
-      inputFile((v, c) => c.copy(inputFile = Option(v.toPath))),
-      outputDir((v, c) => c.copy(outputDir = Option(v.toPath))),
-      opt[String]("project-name")
-        .action((v, c) => c.copy(projectName = Option(v)))
-        .text("The name of the project to prettify"),
-      opt[Boolean]('s', name = "single-file")
-        .action((v, c) => c.copy(singleFile = v)).text(
-          """Resolve all includes and imports and write a single file with the
+    cmd(pluginName)
+      .children(
+        inputFile((v, c) => c.copy(inputFile = Option(v.toPath))),
+        outputDir((v, c) => c.copy(outputDir = Option(v.toPath))),
+        opt[String]("project-name")
+          .action((v, c) => c.copy(projectName = Option(v)))
+          .text("The name of the project to prettify"),
+        opt[Boolean]('s', name = "single-file")
+          .action((v, c) => c.copy(singleFile = v))
+          .text(
+            """Resolve all includes and imports and write a single file with the
             |same file name as the input placed in the out-dir""".stripMargin
-        )
-    ).text("""Parse and validate the input-file and then reformat it to a
+          )
+      )
+      .text("""Parse and validate the input-file and then reformat it to a
              |standard layout written to the output-dir.  """.stripMargin) ->
       PrettifyCommand.Options()
   }

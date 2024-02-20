@@ -83,14 +83,14 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
 
   def openContainer(container: Definition, parents: Seq[Definition]): Unit = {
     container match {
-      case epic: Epic         => openEpic(epic)
-      case uc: UseCase        => openUseCase(uc)
-      case domain: Domain     => openDomain(domain)
-      case adaptor: Adaptor   => openAdaptor(adaptor)
-      case typ: Type          => state.current.emitType(typ)
-      case function: Function => openFunction(function)
-      case st: State          => openState(st)
-      case step: SagaStep     => openSagaStep(step)
+      case epic: Epic           => openEpic(epic)
+      case uc: UseCase          => openUseCase(uc)
+      case domain: Domain       => openDomain(domain)
+      case adaptor: Adaptor     => openAdaptor(adaptor)
+      case typ: Type            => state.current.emitType(typ)
+      case function: Function   => openFunction(function)
+      case st: State            => openState(st)
+      case step: SagaStep       => openSagaStep(step)
       case streamlet: Streamlet => openStreamlet(streamlet)
       case processor: Processor[_, _] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
@@ -143,12 +143,12 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     parents: Seq[Definition]
   ): Unit = {
     container match {
-      case _: Type            => () // openContainer did all of it
-      case epic: Epic         => closeEpic(epic)
-      case uc: UseCase        => closeUseCase(uc)
-      case st: State          => state.withCurrent(_.closeDef(st))
-      case _: OnMessageClause => closeOnClause()
-      case _: Root                  => () // ignore
+      case _: Type               => () // openContainer did all of it
+      case epic: Epic            => closeEpic(epic)
+      case uc: UseCase           => closeUseCase(uc)
+      case st: State             => state.withCurrent(_.closeDef(st))
+      case _: OnMessageClause    => closeOnClause()
+      case _: Root               => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
         // Plant, Streamlet, Function, SagaStep
@@ -210,14 +210,14 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
           .add(" { ??? }")
           .add(nl)
       )
-    else 
-      useCase.contents.foreach {  
-        case si: SequentialInteractions => () // FIXME
-        case pi: ParallelInteractions => () // FIXME
-        case oi: OptionalInteractions => () // FIXME
+    else
+      useCase.contents.foreach {
+        case si: SequentialInteractions     => () // FIXME
+        case pi: ParallelInteractions       => () // FIXME
+        case oi: OptionalInteractions       => () // FIXME
         case twori: TwoReferenceInteraction => () // FIXME
-        case gi: GenericInteraction => () // FIXME
-        case _: Comment => ()
+        case gi: GenericInteraction         => () // FIXME
+        case _: Comment                     => ()
       }
     end if
   }
@@ -364,7 +364,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     @unused include: Include[T]
   ): Unit = {
     if !state.options.singleFile then {
-      include.origin  match {
+      include.origin match {
         case path: String if path.startsWith("http") =>
           val url = java.net.URI.create(path).toURL
           state.current.add(s"include \"$path\"")

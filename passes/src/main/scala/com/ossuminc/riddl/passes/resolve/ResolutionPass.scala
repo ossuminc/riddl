@@ -201,9 +201,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Group](group, parents)
       case ForEachStatement(_, ref, _) =>
         ref match {
-          case ir: InletRef => resolveAPathId[Inlet](ir.pathId, parents)
+          case ir: InletRef  => resolveAPathId[Inlet](ir.pathId, parents)
           case or: OutletRef => resolveAPathId[Outlet](or.pathId, parents)
-          case fr: FieldRef => resolveAPathId[Type](fr.pathId, parents)
+          case fr: FieldRef  => resolveAPathId[Type](fr.pathId, parents)
         }
       case SendStatement(_, msg, portlet) =>
         resolveARef[Type](msg, parents)

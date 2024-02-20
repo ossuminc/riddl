@@ -226,7 +226,7 @@ class ASTTest extends AnyWordSpec with Matchers {
           loc = At(),
           id = Identifier(At(), "foo"),
           options = options,
-          contents = states++types++handlers++functions++invariants,
+          contents = states ++ types ++ handlers ++ functions ++ invariants,
           description = None
         )
 

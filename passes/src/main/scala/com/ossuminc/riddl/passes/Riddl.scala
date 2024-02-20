@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.utils.{Logger,SysLogger}
+import com.ossuminc.riddl.utils.{Logger, SysLogger}
 import com.ossuminc.riddl.passes.PassesCreator
 
 import java.nio.file.Path

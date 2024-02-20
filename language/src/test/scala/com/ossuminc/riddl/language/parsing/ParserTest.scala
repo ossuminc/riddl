@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
 
 import java.nio.file.Path
-import scala.concurrent.ExecutionContext.Implicits.global 
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
@@ -266,7 +266,7 @@ class ParserTest extends ParsingTest {
                     Field(
                       (2, 50, rpi),
                       Identifier((2, 50, rpi), "x"),
-                      String_((2, 53, rpi), None, None),
+                      String_((2, 53, rpi), None, None)
                     )
                   )
                 )
@@ -319,15 +319,15 @@ class ParserTest extends ParsingTest {
         case Right((function, _)) =>
           function must matchPattern {
             case Function(
-              _,
-              Identifier(_, "foo"),
-              _,
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
-              _,
-              _,
-              _
-            ) =>
+                  _,
+                  Identifier(_, "foo"),
+                  _,
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
+                  _,
+                  _,
+                  _
+                ) =>
           }
       }
     }
@@ -343,7 +343,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
           val typ = domain.contexts.head.types.head
-          typ.typ mustBe Replica((3,18,rpi), Integer((3, 29, rpi)))
+          typ.typ mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
       }
     }
     "parse from a complex file" in {
@@ -366,12 +366,17 @@ class ParserTest extends ParsingTest {
           /* This is another way to do a comment, just like C/C++ */
           command DoAThing is { thingField: Integer }
            */
-          root.contents.startsWith(Seq(
-            LineComment((1,1,rpi),"Top Level Author"),
-            Author((2,1,rpi),Identifier((2,8,rpi),"Reid"),
-              LiteralString((2,23,rpi), "Reid"),
-              LiteralString((2,37,rpi), "reid@ossum.biz"))
-          ))
+          root.contents.startsWith(
+            Seq(
+              LineComment((1, 1, rpi), "Top Level Author"),
+              Author(
+                (2, 1, rpi),
+                Identifier((2, 8, rpi), "Reid"),
+                LiteralString((2, 23, rpi), "Reid"),
+                LiteralString((2, 37, rpi), "reid@ossum.biz")
+              )
+            )
+          )
       }
     }
   }

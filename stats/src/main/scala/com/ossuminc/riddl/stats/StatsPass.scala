@@ -29,7 +29,7 @@ object StatsPass extends PassInfo {
   *   The number of specifications that hve been completed
   * @param numContained
   *   The number of contained definitions
-  * @param numAuthors 
+  * @param numAuthors
   *   The number of defining authors
   * @param numTerms
   *   The number of term definitions
@@ -105,7 +105,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       sizes.foldLeft(0L)((a, b) => a + b)
     }
 
-    definition.contents.vitals.map { (vd: Definition) =>
+    definition.contents.vitals
+      .map { (vd: Definition) =>
         vd match {
           case a: Adaptor     => handlerStatements(a.handlers)
           case a: Application => handlerStatements(a.handlers)

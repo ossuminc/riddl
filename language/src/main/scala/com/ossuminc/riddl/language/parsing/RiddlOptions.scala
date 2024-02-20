@@ -94,7 +94,6 @@ object RiddlOptions {
     ).!
   )
 
-
   def aggregate[u: P]: P[Unit] = keyword(RiddlOption.aggregate)
   def async[u: P]: P[Unit] = keyword(RiddlOption.async)
   def available[u: P]: P[Unit] = keyword(RiddlOption.available)

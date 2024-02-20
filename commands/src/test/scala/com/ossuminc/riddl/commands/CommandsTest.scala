@@ -14,7 +14,6 @@ class CommandsTest extends CommandTestBase {
   val outputDir: String => String =
     (name: String) => s"riddlc/target/test/$name"
 
-
   "Commands" should {
     "handle dump" in {
       val args = common ++ Seq("dump", inputFile)

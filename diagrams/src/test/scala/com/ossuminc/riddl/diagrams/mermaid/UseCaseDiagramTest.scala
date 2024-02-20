@@ -17,7 +17,11 @@ class UseCaseDiagramTest extends RunPassTestBase {
     def makeDocLink(namedValue: NamedValue): String = {
       val parents = symTab.parentsOf(namedValue)
       val uri = new URI(
-        "http", "example.com", parents.map(_.id.value).mkString("//", "/", "/") + s"${namedValue.id.value}", null, null
+        "http",
+        "example.com",
+        parents.map(_.id.value).mkString("//", "/", "/") + s"${namedValue.id.value}",
+        null,
+        null
       )
       uri.toASCIIString
     }

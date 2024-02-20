@@ -178,14 +178,13 @@ trait TypeValidation extends DefinitionValidation {
   ): Unit = {
     checkTypeExpression(replica.of, typeDef, parents)
     replica.of match {
-      case _: Mapping | _: Sequence | _: Set  => // these are okay
+      case _: Mapping | _: Sequence | _: Set => // these are okay
       case _: Cardinality =>
         messages.addError(replica.loc, s"Replica type expressions may not have cardinality")
       case t: TypeExpression =>
         messages.addError(replica.loc, s"Type expression in Replica is not a replicable type")
     }
   }
-
 
   def checkTypeExpression(
     typ: TypeExpression,

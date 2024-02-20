@@ -282,8 +282,8 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
   val message: AggregateUseCaseTypeExpression =
     AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields)
 
-  val alias: AliasedTypeExpression = AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a",
-    "b", "foo")))
+  val alias: AliasedTypeExpression =
+    AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a", "b", "foo")))
 
   "Complex Expression Types" must {
     "Support Aggregation" in {

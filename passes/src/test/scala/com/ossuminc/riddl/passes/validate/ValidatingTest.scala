@@ -20,15 +20,13 @@ import scala.reflect.*
 abstract class ValidatingTest extends ParsingTest {
 
   protected def runStandardPasses(
-                                   model: Root,
-                                   options: CommonOptions,
-                                   shouldFailOnErrors: Boolean = false
+    model: Root,
+    options: CommonOptions,
+    shouldFailOnErrors: Boolean = false
   ): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(model, options)
-    if shouldFailOnErrors && result.messages.hasErrors then
-      Left(result.messages)
-    else
-      Right(result)
+    if shouldFailOnErrors && result.messages.hasErrors then Left(result.messages)
+    else Right(result)
   }
 
   def parseAndValidateAggregate(
@@ -139,7 +137,7 @@ abstract class ValidatingTest extends ParsingTest {
             if shouldFailOnErrors then fail(errors.format)
             else validation(root, errors)
           case Right(pr: PassesResult) =>
-            validation(root,  pr.messages)
+            validation(root, pr.messages)
         }
     }
   }
