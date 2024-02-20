@@ -49,7 +49,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   private object V {
     val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
     val scalacheck = "1.17.0" // NOTE: Synchronize with Helpers.V.scalacheck
-    val scalatest = "3.2.17" // NOTE: Synchronize with Helpers.V.scalatest
+    val scalatest = "3.2.18" // NOTE: Synchronize with Helpers.V.scalatest
     val riddl: String = SbtRiddlPluginBuildInfo.version
   }
 
