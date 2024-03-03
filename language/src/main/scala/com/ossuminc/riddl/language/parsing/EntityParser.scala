@@ -14,11 +14,11 @@ import Readability.*
 /** Parsing rules for entity definitions */
 private[parsing] trait EntityParser {
   this: FunctionParser
-    with HandlerParser
-    with ReferenceParser
-    with StatementParser
-    with StreamingParser
-    with TypeParser =>
+    & HandlerParser
+    & ReferenceParser
+    & StatementParser
+    & StreamingParser
+    & TypeParser =>
 
   private def entityOptions[X: P]: P[Seq[EntityOption]] = {
     options[X, EntityOption](

@@ -1,8 +1,6 @@
 import com.ossuminc.sbt.helpers.Publishing
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
-import wartremover.Wart
-import wartremover.Wart.*
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
@@ -10,10 +8,6 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
-
-lazy val nonWarts: Seq[Wart] = Seq(
-  ToString, MutableDataStructures, GlobalExecutionContext
-)
 
 
 lazy val riddl: Project = Root("", "riddl", startYr = startYear)

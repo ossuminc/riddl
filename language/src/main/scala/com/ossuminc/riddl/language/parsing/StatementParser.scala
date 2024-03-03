@@ -15,35 +15,35 @@ import Readability.*
 /** StatementParser Define actions that various constructs can take for modelling behavior in a message-passing system
   */
 private[parsing] trait StatementParser {
-  this: ReferenceParser with CommonParser =>
+  this: ReferenceParser & CommonParser =>
 
   private def arbitraryStatement[u: P]: P[ArbitraryStatement] = {
-    P(location ~ literalString).map(t => (ArbitraryStatement.apply _).tupled(t))
+    P(location ~ literalString).map(t => ArbitraryStatement.apply.tupled(t))
   }
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
     P(
       location ~ Keywords.error ~/ literalString
-    )./.map { tpl => (ErrorStatement.apply _).tupled(tpl) }
+    )./.map { tpl => ErrorStatement.apply.tupled(tpl) }
   }
 
   private def setStatement[u: P]: P[SetStatement] = {
     P(
       location ~ Keywords.set ~/ fieldRef ~/ Readability.to ~ literalString
-    )./.map { tpl => (SetStatement.apply _).tupled(tpl) }
+    )./.map { tpl => SetStatement.apply.tupled(tpl) }
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
       location ~ Keywords.send ~/ messageRef ~/
         Readability.to ~ (outletRef | inletRef)
-    )./.map { t => (SendStatement.apply _).tupled(t) }
+    )./.map { t => SendStatement.apply.tupled(t) }
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
       location ~ Keywords.tell ~/ messageRef ~/ Readability.to ~ processorRef
-    )./.map { t => (TellStatement.apply _).tupled(t) }
+    )./.map { t => TellStatement.apply.tupled(t) }
   }
 
   private def forEachStatement[u: P](set: StatementsSet): P[ForEachStatement] = {
@@ -71,7 +71,7 @@ private[parsing] trait StatementParser {
   }
 
   private def callStatement[u: P]: P[CallStatement] = {
-    P(location ~ Keywords.call ~/ functionRef)./.map { tpl => (CallStatement.apply _).tupled(tpl) }
+    P(location ~ Keywords.call ~/ functionRef)./.map { tpl => CallStatement.apply.tupled(tpl) }
   }
 
   private def stopStatement[u: P]: P[StopStatement] = {
@@ -102,31 +102,31 @@ private[parsing] trait StatementParser {
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
       location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~/ Readability.with_ ~ messageRef
-    )./.map { tpl => (MorphStatement.apply _).tupled(tpl) }
+    )./.map { tpl => MorphStatement.apply.tupled(tpl) }
   }
 
   private def becomeStatement[u: P]: P[BecomeStatement] = {
     P(
       location ~ Keywords.become ~/ entityRef ~ Readability.to ~ handlerRef
-    )./.map { tpl => (BecomeStatement.apply _).tupled(tpl) }
+    )./.map { tpl => BecomeStatement.apply.tupled(tpl) }
   }
 
   private def focusStatement[u: P]: P[FocusStatement] = {
     P(
       location ~ Keywords.focus ~/ Readability.on ~ groupRef
-    )./.map { tpl => (FocusStatement.apply _).tupled(tpl) }
+    )./.map { tpl => FocusStatement.apply.tupled(tpl) }
   }
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
     P(
       location ~ Keywords.reply ~/ Readability.with_.?./ ~ messageRef
-    )./.map { tpl => (ReplyStatement.apply _).tupled(tpl) }
+    )./.map { tpl => ReplyStatement.apply.tupled(tpl) }
   }
 
   private def returnStatement[u: P]: P[ReturnStatement] = {
     P(
       location ~ Keywords.return_ ~ literalString
-    )./.map(t => (ReturnStatement.apply _).tupled(t))
+    )./.map(t => ReturnStatement.apply.tupled(t))
   }
 
   def statement[u: P](set: StatementsSet): P[Statement] = {

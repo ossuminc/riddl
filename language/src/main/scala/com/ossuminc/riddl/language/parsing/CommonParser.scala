@@ -229,7 +229,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def term[u: P]: P[Term] = {
     P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description)./.map(tpl =>
-      (Term.apply _).tupled(tpl)
+      Term.apply.tupled(tpl)
     )
   }
 

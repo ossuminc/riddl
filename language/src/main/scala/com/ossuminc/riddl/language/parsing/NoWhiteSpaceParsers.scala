@@ -40,7 +40,7 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
   def markdownLine[u: P]: P[LiteralString] = {
     P(
       location ~ Punctuation.verticalBar ~~ toEndOfLine
-    ).map(tpl => (LiteralString.apply _).tupled(tpl))
+    ).map(tpl => LiteralString.apply.tupled(tpl))
   }
 
   // \\	The backslash character
@@ -82,5 +82,5 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
       location ~ Punctuation.quote ~/ (strChars | escape).rep.! ~
         Punctuation.quote
     )
-  }.map { tpl => (LiteralString.apply _).tupled(tpl) }
+  }.map { tpl => LiteralString.apply.tupled(tpl) }
 }

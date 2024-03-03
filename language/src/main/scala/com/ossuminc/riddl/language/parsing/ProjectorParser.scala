@@ -14,11 +14,11 @@ import Readability.*
 /** Unit Tests For FunctionParser */
 private[parsing] trait ProjectorParser {
   this: FunctionParser
-    with HandlerParser
-    with ReferenceParser
-    with StatementParser
-    with StreamingParser
-    with TypeParser =>
+    & HandlerParser
+    & ReferenceParser
+    & StatementParser
+    & StreamingParser
+    & TypeParser =>
 
   private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
     options[u, ProjectorOption](StringIn(RiddlOption.technology, RiddlOption.css, RiddlOption.kind).!) {

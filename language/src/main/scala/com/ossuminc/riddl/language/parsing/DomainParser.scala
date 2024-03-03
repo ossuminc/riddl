@@ -17,15 +17,15 @@ import scala.concurrent.{Await, Future}
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {
   this: ApplicationParser
-    with ContextParser
-    with EpicParser
-    with ReferenceParser
-    with SagaParser
-    with StreamingParser
-    with StatementParser
-    with TypeParser
-    with CommonParser
-    with ParsingContext =>
+    & ContextParser
+    & EpicParser
+    & ReferenceParser
+    & SagaParser
+    & StreamingParser
+    & StatementParser
+    & TypeParser
+    & CommonParser
+    & ParsingContext =>
 
   private def domainOptions[X: P]: P[Seq[DomainOption]] = {
     options[X, DomainOption](RiddlOptions.domainOptions) {

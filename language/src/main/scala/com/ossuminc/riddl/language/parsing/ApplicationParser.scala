@@ -13,12 +13,12 @@ import Readability.*
 
 private[parsing] trait ApplicationParser {
   this: StreamingParser
-    with FunctionParser
-    with ReferenceParser
-    with HandlerParser
-    with StatementParser
-    with TypeParser
-    with CommonParser =>
+    & FunctionParser
+    & ReferenceParser
+    & HandlerParser
+    & StatementParser
+    & TypeParser
+    & CommonParser =>
 
   private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
     options[u, ApplicationOption](RiddlOptions.applicationOptions) {

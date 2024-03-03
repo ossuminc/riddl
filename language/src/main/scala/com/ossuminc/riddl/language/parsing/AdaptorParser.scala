@@ -14,18 +14,13 @@ import com.ossuminc.riddl.language.AST
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {
-  this: HandlerParser
-    with FunctionParser
-    with StreamingParser
-    with StatementParser
-    with ReferenceParser
-    with TypeParser
-    with CommonParser =>
+  this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
+    CommonParser =>
 
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
     options[u, AdaptorOption](RiddlOptions.adaptorOptions) {
       case (loc, RiddlOption.technology, args) => AdaptorTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => AdaptorCssOption(loc, args)
+      case (loc, RiddlOption.css, args)        => AdaptorCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => AdaptorIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => AdaptorKindOption(loc, args)
     }
