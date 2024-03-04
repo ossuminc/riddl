@@ -31,4 +31,4 @@ The RIDDL syntax grammar is broken down into the following portions:
 * [root]({{< relref "root.md" >}}) - Top level root level ("file scope").
 * [domain]({{< relref "domain.md" >}}) - Defining domains
 * [context]({{< relref "context.md" >}}) - Defining contexts
-* [entity]({{< relref "entity.mid" >}}) - Defining entities
+* [entity]({{< relref "entity.md" >}}) - Defining entities
