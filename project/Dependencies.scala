@@ -10,7 +10,7 @@ object V {
   val fastparse = "3.0.2"
   val jgit = "6.5.0"
   val lang3 = "3.14.0"
-  val pureconfig = "0.17.5"
+  val pureconfig = "0.17.6"
   val scalacheck = "1.17.0"
   val scalatest = "3.2.17"
   val scopt = "4.1.0"
