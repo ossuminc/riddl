@@ -354,9 +354,9 @@ private[parsing] trait TypeParser extends CommonParser {
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        predefinedTypes | patternType | uniqueIdType |
-          enumeration | aliasedTypeExpression | aliasedTypeExpression | sequenceType | rangeType |
-          alternation | entityReferenceType | aliasedTypeExpression
+        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType | mappingFromTo | aSetType |
+          graphType | tableType | replicaType | rangeType | decimalType | alternation | aggregation |
+          aliasedTypeExpression | entityReferenceType
       )
     )
   }
