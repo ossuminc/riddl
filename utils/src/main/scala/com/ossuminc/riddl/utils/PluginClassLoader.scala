@@ -16,8 +16,8 @@ case class PluginClassLoader(urls: List[URL], parentClassLoader: ClassLoader)
   override protected def loadClass(
     name: String,
     resolve: Boolean
-  ): Class[_] = { // has the class loaded already?
-    var loadedClass: Class[_] = findLoadedClass(name)
+  ): Class[?] = { // has the class loaded already?
+    var loadedClass: Class[?] = findLoadedClass(name)
     if loadedClass == null then { loadedClass = super.loadClass(name, resolve) }
     if resolve then { // marked to resolve
       resolveClass(loadedClass)

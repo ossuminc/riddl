@@ -12,24 +12,24 @@ import fastparse.MultiLineWhitespace.*
 import Readability.*
 
 private[parsing] trait HandlerParser {
-  this: ReferenceParser with StatementParser with CommonParser =>
+  this: ReferenceParser & StatementParser & CommonParser =>
 
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
       location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
-    ).map(t => (OnOtherClause.apply _).tupled(t))
+    ).map(t => OnOtherClause.apply.tupled(t))
   }
 
   private def onInitClause[u: P](set: StatementsSet): P[OnInitClause] = {
     P(
       location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
-    ).map(t => (OnInitClause.apply _).tupled(t))
+    ).map(t => OnInitClause.apply.tupled(t))
   }
 
   private def onTermClause[u: P](set: StatementsSet): P[OnTerminationClause] = {
     P(
       location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
-    ).map(t => (OnTerminationClause.apply _).tupled(t))
+    ).map(t => OnTerminationClause.apply.tupled(t))
   }
 
   private def maybeName[u: P]: P[Option[Identifier]] = {
@@ -44,7 +44,7 @@ private[parsing] trait HandlerParser {
     location ~ Keywords.on ~ messageRef ~
       (Readability.from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
       briefly ~ description
-  }.map(tpl => (OnMessageClause.apply _).tupled(tpl))
+  }.map(tpl => OnMessageClause.apply.tupled(tpl))
 
   private def onClauses[u: P](set: StatementsSet): P[Seq[OnClause]] = {
     P(onInitClause(set) | onOtherClause(set) | onTermClause(set) | onMessageClause(set)).rep(0)

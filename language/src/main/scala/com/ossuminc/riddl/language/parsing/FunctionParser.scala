@@ -13,8 +13,7 @@ import Readability.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait FunctionParser {
-
-  this: ReferenceParser with TypeParser with StatementParser with CommonParser =>
+  this: ReferenceParser & TypeParser & StatementParser & CommonParser =>
 
   private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
     options[X, FunctionOption](StringIn(RiddlOption.tail_recursive).!) { case (loc, RiddlOption.tail_recursive, _) =>
@@ -23,7 +22,7 @@ private[parsing] trait FunctionParser {
   }
 
   private def functionInclude[x: P]: P[IncludeHolder[OccursInFunction]] = {
-    include[OccursInFunction, x](functionDefinitions(_))
+    include[OccursInFunction, x](using functionDefinitions(_))
   }
 
   def input[u: P]: P[Aggregation] = {

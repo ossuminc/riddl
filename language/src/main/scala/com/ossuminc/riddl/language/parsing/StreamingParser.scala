@@ -14,20 +14,20 @@ import com.ossuminc.riddl.language.At
 
 /** Unit Tests For StreamingParser */
 private[parsing] trait StreamingParser {
-  this: HandlerParser with ReferenceParser with StatementParser with FunctionParser with TypeParser =>
+  this: HandlerParser & ReferenceParser & StatementParser & FunctionParser & TypeParser =>
 
   def inlet[u: P]: P[Inlet] = {
     P(
       location ~ Keywords.inlet ~ identifier ~ is ~
         typeRef ~/ briefly ~ description
-    )./.map { tpl => (Inlet.apply _).tupled(tpl) }
+    )./.map { tpl => Inlet.apply.tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
       location ~ Keywords.outlet ~ identifier ~ is ~
         typeRef ~/ briefly ~ description
-    )./.map { tpl => (Outlet.apply _).tupled(tpl) }
+    )./.map { tpl => Outlet.apply.tupled(tpl) }
   }
 
   private def connectorOptions[X: P]: P[Seq[ConnectorOption]] = {

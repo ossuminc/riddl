@@ -52,7 +52,7 @@ trait ParsingContext extends ParsingErrors {
     }
   }
 
-  def location[u: P](implicit ctx: P[_]): P[At] = {
+  def location[u: P](implicit ctx: P[?]): P[At] = {
     // NOTE: This isn't strictly kosher because of the cast but as long as we
     // NOTE: always use a RiddlParserInput, should be safe enough. This is
     // NOTE: required because of includes and concurrent parsing

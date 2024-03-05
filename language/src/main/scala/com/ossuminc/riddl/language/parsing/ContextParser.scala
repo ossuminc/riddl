@@ -14,16 +14,16 @@ import Readability.*
 /** Parsing rules for Context definitions */
 private[parsing] trait ContextParser {
   this: HandlerParser
-    with AdaptorParser
-    with EntityParser
-    with FunctionParser
-    with ProjectorParser
-    with ReferenceParser
-    with RepositoryParser
-    with SagaParser
-    with StreamingParser
-    with StatementParser
-    with TypeParser =>
+    & AdaptorParser
+    & EntityParser
+    & FunctionParser
+    & ProjectorParser
+    & ReferenceParser
+    & RepositoryParser
+    & SagaParser
+    & StreamingParser
+    & StatementParser
+    & TypeParser =>
 
   private def contextOptions[X: P]: P[Seq[ContextOption]] = {
     options[X, ContextOption](RiddlOptions.contextOptions) {
