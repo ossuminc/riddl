@@ -9,7 +9,6 @@ enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
-
 lazy val riddl: Project = Root("", "riddl", startYr = startYear)
   .configure(Publishing.configure, With.git, With.dynver)
   .settings(
@@ -35,7 +34,7 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
 lazy val Utils = config("utils")
 lazy val utils: Project = Module("utils", "riddl-utils")
   .enablePlugins(OssumIncPlugin)
-  .configure(With.typical, With.build_info, With.coverage(70)/*, With.native()*/)
+  .configure(With.typical, With.build_info, With.coverage(70) /*, With.native()*/ )
   .settings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -48,7 +47,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical, With.coverage(65))
   .settings(
-    scalacOptions += "-explain",
+    scalacOptions ++= Seq("-explain", "--explain-types"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
