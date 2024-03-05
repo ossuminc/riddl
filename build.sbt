@@ -1,20 +1,15 @@
 import com.ossuminc.sbt.helpers.Publishing
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
-import wartremover.Wart
-import wartremover.Wart.*
 
-Global / onChangedBuildSource := ReloadOnSourceChanges(Global / excludeLintKeys) ++= Set(mainClass)
+
+Global / onChangedBuildSource := ReloadOnSourceChanges
+(Global / excludeLintKeys) ++= Set(mainClass)
+Global / scalaVersion := "3.3.3"
 
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
-
-lazy val nonWarts: Seq[Wart] = Seq(
-  ToString,
-  MutableDataStructures,
-  GlobalExecutionContext
-)
 
 lazy val riddl: Project = Root("", "riddl", startYr = startYear)
   .configure(Publishing.configure, With.git, With.dynver)
@@ -54,7 +49,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .enablePlugins(OssumIncPlugin)
   .configure(With.typical, With.coverage(65))
   .settings(
-    scalacOptions += "-explain",
+    scalacOptions ++= Seq("-explain","--explain-types"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
