@@ -244,7 +244,8 @@ object AST {
       with OccursInVitalDefinitions
       with OccursInProcessors
       with OccursInHandler
-      with OccursInGroup with Statement {
+      with OccursInGroup
+      with Statement {
     final inline override def isComment: Boolean = true
   }
 
@@ -2043,8 +2044,6 @@ object AST {
     *   An indication of whether this is an inbound or outbound adaptor.
     * @param context
     *   A reference to the bounded context from which messages are adapted
-    * @param options
-    *   The set of options for this Adaptor
     * @param contents
     *   The definitional contents of this Adaptor
     * @param brief
@@ -2057,7 +2056,6 @@ object AST {
     id: Identifier,
     direction: AdaptorDirection,
     context: ContextRef,
-    options: Seq[AdaptorOption] = Seq.empty,
     contents: Seq[OccursInAdaptor] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -2065,6 +2063,7 @@ object AST {
       with OccursInContext {
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
+    lazy val options: Seq[AdaptorOption] = contents.filter[AdaptorOption]
   }
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
@@ -2296,7 +2295,8 @@ object AST {
     * @param id
     *   The name of the handler.
     * @param contents
-    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received messages.
+    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received
+    *   messages.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -3748,8 +3748,6 @@ object AST {
     *   The location of the application in the source
     * @param id
     *   The unique identifier for the application
-    * @param options
-    *   The options for the application
     * @param contents
     *   The definitional content for this Context
     * @param brief
@@ -3760,7 +3758,6 @@ object AST {
   case class Application(
     loc: At,
     id: Identifier,
-    options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     contents: Seq[OccursInApplication] = Seq.empty,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
@@ -3768,9 +3765,8 @@ object AST {
       with WithGroups
       with OccursInDomain {
     override def isAppRelated: Boolean = true
-//    override lazy val contents: Seq[OccursInApplication] = {
-//      super.contents ++ types ++ groups ++ terms // ++ includes
-//    }
+    lazy val options: Seq[ApplicationOption] = contents.filter[ApplicationOption]
+
   }
 
   /** A reference to an Application using a path identifier

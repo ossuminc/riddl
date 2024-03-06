@@ -20,10 +20,10 @@ private[parsing] trait ApplicationParser {
     with TypeParser
     with CommonParser =>
 
-  private def applicationOptions[u: P]: P[Seq[ApplicationOption]] = {
-    options[u, ApplicationOption](RiddlOptions.applicationOptions) {
+  private def applicationOption[u: P]: P[ApplicationOption] = {
+    option[u, ApplicationOption](RiddlOptions.applicationOptions) {
       case (loc, RiddlOption.technology, args) => ApplicationTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => ApplicationCssOption(loc, args)
+      case (loc, RiddlOption.css, args)        => ApplicationCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => ApplicationIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => ApplicationKindOption(loc, args)
     }
@@ -129,7 +129,7 @@ private[parsing] trait ApplicationParser {
   private def applicationDefinition[u: P]: P[OccursInApplication] = {
     P(
       group | handler(StatementsSet.ApplicationStatements) | function |
-        inlet | outlet | term | typeDef | constant | authorRef | comment | applicationInclude
+        inlet | outlet | term | typeDef | constant | authorRef | comment | applicationInclude | applicationOption
     )
   }
 
@@ -141,22 +141,20 @@ private[parsing] trait ApplicationParser {
     include[OccursInApplication, u](applicationDefinitions(_))
   }
 
-  private def emptyApplication[u: P]: P[(Seq[ApplicationOption], Seq[OccursInApplication])] = {
-    undefined((Seq.empty[ApplicationOption], Seq.empty[OccursInApplication]))
+  private def emptyApplication[u: P]: P[Seq[OccursInApplication]] = {
+    undefined(Seq.empty[OccursInApplication])
   }
 
-  private def applicationBody[u: P]: P[(Seq[ApplicationOption], Seq[OccursInApplication])] = {
-    applicationOptions ~ applicationDefinitions
+  private def applicationBody[u: P]: P[Seq[OccursInApplication]] = {
+    emptyApplication | applicationDefinitions
   }
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ is ~ open ~
-        (emptyApplication | applicationBody) ~
-        close ~ briefly ~ description
-    ).map { case (loc, id, (options, contents), brief, description) =>
+      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInApplication](contents)
-      Application(loc, id, options, mergedContent, brief, description)
+      Application(loc, id, mergedContent, brief, description)
     }
   }
 }
