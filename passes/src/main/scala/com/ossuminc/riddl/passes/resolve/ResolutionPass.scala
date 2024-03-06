@@ -224,6 +224,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case _: ReturnStatement     => () // no references
       case _: IfThenElseStatement => () // no references
       case _: StopStatement       => () // no references
+      case _: Comment => () // no references 
     }
   }
 
