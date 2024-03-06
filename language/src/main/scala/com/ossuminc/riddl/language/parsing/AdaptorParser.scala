@@ -25,7 +25,7 @@ private[parsing] trait AdaptorParser {
   private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
     options[u, AdaptorOption](RiddlOptions.adaptorOptions) {
       case (loc, RiddlOption.technology, args) => AdaptorTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => AdaptorCssOption(loc, args)
+      case (loc, RiddlOption.css, args)        => AdaptorCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => AdaptorIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => AdaptorKindOption(loc, args)
     }
@@ -61,7 +61,7 @@ private[parsing] trait AdaptorParser {
       location ~ Keywords.adaptor ~/ identifier ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorOptions ~
         adaptorBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, direction, cRef, options, contents, brief, description) =>
+    ).map { case (loc, id, direction, cRef, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInAdaptor](contents)
       Adaptor(loc, id, direction, cRef, options, mergedContent, brief, description)
     }

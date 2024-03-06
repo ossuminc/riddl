@@ -2001,7 +2001,7 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** Base class of all options for the Adaptor definition */
-  sealed abstract class AdaptorOption(val name: String) extends OptionValue
+  sealed abstract class AdaptorOption(val name: String) extends OptionValue with OccursInAdaptor
 
   /** A common option that specifies the nature of the technology used to implement the definition */
   case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
