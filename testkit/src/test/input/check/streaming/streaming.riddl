@@ -20,7 +20,6 @@ context SensorMaintenance is {
   } explained as "Carries changes in the current weather forecast"
 
   connector TemperatureChanges is {
-    flows type Temperature
     from outlet SensorMaintenance.GetCurrentTemperature.OutTemp
     to inlet SensorMaintenance.AttenuateSensor.InTemp
   } explained as "Carries changes in the current temperature"

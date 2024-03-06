@@ -25,8 +25,8 @@ private[parsing] trait SagaParser {
     ).map(x => (SagaStep.apply _).tupled(x))
   }
 
-  private def sagaOptions[u: P]: P[Seq[SagaOption]] = {
-    options[u, SagaOption](RiddlOptions.sagaOptions) {
+  private def sagaOption[u: P]: P[SagaOption] = {
+    option[u, SagaOption](RiddlOptions.sagaOptions) {
       case (loc, RiddlOption.technology, args)                  => SagaTechnologyOption(loc, args)
       case (loc, RiddlOption.css, args)                         => SagaCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)                      => SagaIconOption(loc, args)
@@ -41,7 +41,7 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaDefinitions[u: P]: P[Seq[OccursInSaga]] = {
-    P(sagaStep | inlet | outlet | function | term | sagaInclude)./.rep(2)
+    P(sagaStep | inlet | outlet | function | term | sagaInclude | sagaOption)./.rep(2)
   }
 
   private type SagaBodyType = (
@@ -59,11 +59,10 @@ private[parsing] trait SagaParser {
 
   def saga[u: P]: P[Saga] = {
     P(
-      location ~ Keywords.saga ~ identifier ~ is ~ open ~
-        sagaOptions ~ sagaBody ~ close ~ briefly ~ description
-    ).map { case (location, identifier, options, (input, output, contents), briefly, description) =>
+      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ briefly ~ description
+    ).map { case (location, identifier, (input, output, contents), briefly, description) =>
       val mergedContent = mergeAsynchContent[OccursInSaga](contents)
-      Saga(location, identifier, options, input, output, mergedContent, briefly, description)
+      Saga(location, identifier, input, output, mergedContent, briefly, description)
     }
   }
 }

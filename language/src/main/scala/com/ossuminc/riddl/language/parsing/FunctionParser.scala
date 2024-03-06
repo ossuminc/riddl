@@ -16,12 +16,6 @@ private[parsing] trait FunctionParser {
 
   this: ReferenceParser with TypeParser with StatementParser with CommonParser =>
 
-  private def functionOptions[X: P]: P[Seq[FunctionOption]] = {
-    options[X, FunctionOption](StringIn(RiddlOption.tail_recursive).!) { case (loc, RiddlOption.tail_recursive, _) =>
-      TailRecursive(loc)
-    }
-  }
-
   private def functionInclude[x: P]: P[IncludeHolder[OccursInFunction]] = {
     include[OccursInFunction, x](functionDefinitions(_))
   }
@@ -71,11 +65,10 @@ private[parsing] trait FunctionParser {
     */
   def function[u: P]: P[Function] = {
     P(
-      location ~ Keywords.function ~/ identifier  ~ is ~ open ~
-        functionOptions ~ functionBody ~ close ~ briefly ~ description
-    )./.map { case (loc, id, options, (ins, outs, contents, statements), briefly, description) =>
+      location ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~/ close ~/ briefly ~/ description
+    )./.map { case (loc, id, (ins, outs, contents, statements), briefly, description) =>
       val mergedContent = mergeAsynchContent[OccursInFunction](contents)
-      Function(loc, id, options, ins, outs, mergedContent ++ statements, briefly, description)
+      Function(loc, id, ins, outs, mergedContent ++ statements, briefly, description)
     }
   }
 }

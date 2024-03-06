@@ -26,7 +26,6 @@ class StreamingParserTest extends ParsingTest {
       (row + 1, col + 1, rpi),
       Identifier((row + 1, col + 8, rpi), "GetWeatherForecast"),
       Source((row + 1, col + 1, rpi)),
-      List.empty[StreamletOption],
       List(
         Outlet(
           (row + 2, 3, rpi),
@@ -96,7 +95,6 @@ class StreamingParserTest extends ParsingTest {
       val expected = Context(
         loc = (3, 1, rpi),
         id = Identifier((3, 9, rpi), "SensorMaintenance"),
-        List(),
         List(
           Type(
             (4, 3, rpi),
@@ -116,7 +114,6 @@ class StreamingParserTest extends ParsingTest {
             (6, 3, rpi),
             Identifier((6, 10, rpi), "GetWeatherForecast"),
             Source((6, 3, rpi)),
-            List(),
             List(
               Outlet(
                 (7, 5, rpi),
@@ -144,7 +141,6 @@ class StreamingParserTest extends ParsingTest {
             (9, 4, rpi),
             Identifier((9, 9, rpi), "GetCurrentTemperature"),
             Flow((9, 4, rpi)),
-            Seq.empty[StreamletOption],
             List(
               Inlet(
                 (11, 5, rpi),
@@ -180,7 +176,6 @@ class StreamingParserTest extends ParsingTest {
             (15, 3, rpi),
             Identifier((15, 8, rpi), "AttenuateSensor"),
             Sink((15, 3, rpi)), 
-            Seq.empty[StreamletOption],
             List(
               Inlet(
                 (16, 5, rpi),

@@ -36,7 +36,7 @@ class ValidationTest extends ParsingTest {
     "parentOf" should {
       "find the parent of an existent child" in {
         val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
-        val domain = Domain(At(), Identifier(At(), "foo"), Seq.empty, Seq(aType))
+        val domain = Domain(At(), Identifier(At(), "foo"), Seq(aType))
         val root = Root(Seq(domain))
         val outputs = PassesOutput()
         val output = Pass.runSymbols(PassInput(root), outputs)
@@ -67,23 +67,30 @@ class ValidationTest extends ParsingTest {
       }
     }
     "handle includes" in {
-      val incls = sharedRoot.domains.head.includes
-      incls mustNot be(empty)
-      incls.head.contents mustNot be(empty)
-      incls.head.contents.head.getClass mustBe classOf[Application]
-      incls(1).contents.head.getClass mustBe classOf[Context]
+      sharedRoot.domains.headOption match {
+        case Some(domain) =>
+          val incls = domain.includes
+          incls mustNot be(empty)
+          incls.head.contents mustNot be(empty)
+          incls.head.contents.head.getClass mustBe classOf[Application]
+          incls(1).contents.head.getClass mustBe classOf[Context]
+        case None => fail("There should be a domain")
+      }
     }
     "have terms and author refs in applications" in {
-      val domain: Domain = sharedRoot.domains.head
-      val include = domain.includes.head
-      val apps = include.contents.filter[Application]
-      apps mustNot be(empty)
-      apps.head mustBe a[Application]
-      val app:Application = apps.head
-      app.terms mustNot be(empty)
-      app.hasAuthors mustBe false
-      app.hasAuthorRefs mustBe true
-      app.authorRefs mustNot be(empty)
+      sharedRoot.domains.headOption match {
+        case Some(domain) =>
+          val include = domain.includes.head
+          val apps = include.contents.filter[Application]
+          apps mustNot be(empty)
+          apps.head mustBe a[Application]
+          val app: Application = apps.head
+          app.terms mustNot be(empty)
+          app.hasAuthors mustBe false
+          app.hasAuthorRefs mustBe true
+          app.authorRefs mustNot be(empty)
+        case None => fail("There should be a domain")
+      }
     }
   }
 }

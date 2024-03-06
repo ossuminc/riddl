@@ -25,8 +25,8 @@ private[parsing] trait ContextParser {
     with StatementParser
     with TypeParser =>
 
-  private def contextOptions[X: P]: P[Seq[ContextOption]] = {
-    options[X, ContextOption](RiddlOptions.contextOptions) {
+  private def contextOption[X: P]: P[ContextOption] = {
+    option[X, ContextOption](RiddlOptions.contextOptions) {
       case (loc, RiddlOption.wrapper, _)       => ContextWrapperOption(loc)
       case (loc, RiddlOption.gateway, _)       => GatewayOption(loc)
       case (loc, RiddlOption.service, _)       => ServiceOption(loc)
@@ -46,7 +46,7 @@ private[parsing] trait ContextParser {
     P(
       typeDef | handler(StatementsSet.ContextStatements) | entity | authorRef |
         adaptor | function | saga | streamlet | projector | repository |
-        inlet | outlet | connector | term | contextInclude | comment
+        inlet | outlet | connector | term | contextInclude | comment | contextOption
     )
   }
 
@@ -62,14 +62,12 @@ private[parsing] trait ContextParser {
 
   def context[u: P]: P[Context] = {
     P(
-      location ~ Keywords.context ~/ identifier ~ is ~ open ~
-        contextOptions ~ contextBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, options, contents, brief, description) =>
+      location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInContext](contents)
       Context(
         loc,
         id,
-        options,
         mergedContent,
         brief,
         description

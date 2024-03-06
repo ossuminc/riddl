@@ -36,14 +36,13 @@ trait StreamingValidation extends TypeValidation {
   }
 
   private def checkConnectorPersistence(): Unit = {
-    connectors.foreach { connector =>
+    connectors.filterNot(_.isEmpty).foreach { connector =>
       val connParents = symbols.parentsOf(connector)
       symbols.contextOf(connector) match {
         case None => require(false, "Connector with no Context")
         case Some(pipeContext) =>
-          val maybeToInlet = connector.to.flatMap(inlet => resolvePath[Inlet](inlet.pathId, connector +: connParents))
-          val maybeFromOutlet =
-            connector.from.flatMap(outlet => resolvePath[Outlet](outlet.pathId, connector +: connParents))
+          val maybeToInlet = resolvePath[Inlet](connector.to.pathId, connector +: connParents)
+          val maybeFromOutlet = resolvePath[Outlet](connector.from.pathId, connector +: connParents)
           val maybeInletContext = maybeToInlet.flatMap(inlet => symbols.contextOf(inlet))
           val maybeOutletContext = maybeFromOutlet.flatMap(outlet => symbols.contextOf(outlet))
           val inletIsSameContext = maybeInletContext.nonEmpty &&
@@ -75,10 +74,8 @@ trait StreamingValidation extends TypeValidation {
     val connected: Seq[(Outlet, Inlet)] = for
       conn <- connectors
       parents = symbols.parentsOf(conn)
-      maybeInletRef = conn.to
-      inletRef <- maybeInletRef
-      maybeOutletRef = conn.from
-      outletRef <- maybeOutletRef
+      inletRef = conn.to
+      outletRef = conn.from
       inlet <- resolvePath[Inlet](inletRef.pathId, conn +: parents)
       outlet <- resolvePath[Outlet](outletRef.pathId, conn +: parents)
     yield {

@@ -60,7 +60,8 @@ domain Everything is {
     command ACommand is { ??? }
 
     entity Something is {
-      options (aggregate, transient)
+      option aggregate
+      option transient
       function misc is {
         requires { n: Nothing }
         returns { b: Boolean }
