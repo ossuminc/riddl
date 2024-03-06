@@ -131,9 +131,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   }
 
   private def resolveConnector(connector: Connector, parents: Seq[Definition]): Unit = {
-    resolveMaybeRef[Type](connector.flows, parents)
-    resolveMaybeRef[Outlet](connector.from, parents)
-    resolveMaybeRef[Inlet](connector.to, parents)
+    if connector.nonEmpty then
+      resolveARef[Outlet](connector.from, parents)
+      resolveARef[Inlet](connector.to, parents)
   }
 
   private def resolveType(typ: Type, parents: Seq[Definition]): Unit = {
@@ -224,7 +224,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case _: ReturnStatement     => () // no references
       case _: IfThenElseStatement => () // no references
       case _: StopStatement       => () // no references
-      case _: Comment => () // no references 
+      case _: Comment => () // no references
     }
   }
 

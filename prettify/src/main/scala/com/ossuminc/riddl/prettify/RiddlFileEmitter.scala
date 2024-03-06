@@ -250,7 +250,9 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitUndefined(): this.type = { add(" ???") }
 
   def emitOptions(optionDef: WithOptions[?]): this.type = {
-    if optionDef.options.nonEmpty then this.addLine(optionDef.format) else this
+    if optionDef.options.nonEmpty then
+      optionDef.options.map{ option => "option " + option.format + new_line}.foreach(addIndent); this
+    else this
   }
 
   def emit(): Path = {

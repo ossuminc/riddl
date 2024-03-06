@@ -23,6 +23,10 @@ object RiddlOptions {
     ).!
   )
 
+  def connectorOptions[u: P]: P[String] = keywords(
+    StringIn(RiddlOption.persistent, RiddlOption.technology, RiddlOption.kind).!
+  )
+
   def contextOptions[u: P]: P[String] = keywords(
     StringIn(
       RiddlOption.wrapper,
@@ -74,6 +78,10 @@ object RiddlOptions {
     ).!
   }
 
+  def projectorOptions[u: P]: P[String] = keywords(
+    StringIn(RiddlOption.technology, RiddlOption.css, RiddlOption.faicon, RiddlOption.kind).!
+  )
+
   def repositoryOptions[u: P]: P[String] = keywords(
     StringIn(
       RiddlOption.technology,
@@ -94,6 +102,9 @@ object RiddlOptions {
     ).!
   )
 
+  def streamletOptions[u: P]: P[String] = keywords(
+    StringIn(RiddlOption.technology, RiddlOption.css, RiddlOption.kind).!
+  )
 
   def aggregate[u: P]: P[Unit] = keyword(RiddlOption.aggregate)
   def async[u: P]: P[Unit] = keyword(RiddlOption.async)
@@ -148,7 +159,6 @@ object RiddlOption {
   final val sync = "sync"
   final val value = "final value"
   final val wrapper = "wrapper"
-  final val tail_recursive = "tail-recursive"
   final val technology = "technology"
   final val transient = "transient"
   final val user = "user"

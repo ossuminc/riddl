@@ -204,7 +204,6 @@ class ASTTest extends AnyWordSpec with Matchers {
           Function(
             At(),
             Identifier(At(), "my_func"),
-            Seq.empty,
             None,
             Option(
               Aggregation(
@@ -225,13 +224,12 @@ class ASTTest extends AnyWordSpec with Matchers {
         val entity = AST.Entity(
           loc = At(),
           id = Identifier(At(), "foo"),
-          options = options,
-          contents = states++types++handlers++functions++invariants,
+          contents = options ++ states ++ types ++ handlers ++ functions ++ invariants,
           description = None
         )
 
         entity.contents.toSet mustBe
-          (states.iterator ++ handlers ++ functions ++ invariants ++ types).toSet
+          (options ++ states ++ types ++ handlers ++ functions ++ invariants).toSet
       }
     }
   }

@@ -30,30 +30,33 @@ private[parsing] trait StreamingParser {
     )./.map { tpl => (Outlet.apply _).tupled(tpl) }
   }
 
-  private def connectorOptions[X: P]: P[Seq[ConnectorOption]] = {
-    options[X, ConnectorOption](
-      StringIn(RiddlOption.persistent, RiddlOption.technology, RiddlOption.kind).!
-    ) {
+  private def connectorOption[X: P]: P[ConnectorOption] = {
+    option[X, ConnectorOption](RiddlOptions.connectorOptions) {
       case (loc, RiddlOption.persistent, _)    => ConnectorPersistentOption(loc)
       case (loc, RiddlOption.technology, args) => ConnectorTechnologyOption(loc, args)
       case (loc, RiddlOption.kind, args)       => ConnectorKindOption(loc, args)
     }
   }
 
+  private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[ConnectorOption])] = {
+    P(
+        Readability.from ~ outletRef ~/
+        Readability.to ~ inletRef ~/
+        connectorOption.rep(0)
+    )
+  }
+
+  private def connectorBody[u:P]: P[(OutletRef,InletRef,Seq[ConnectorOption])] = {
+    P(
+      undefined((OutletRef.empty, InletRef.empty, Seq.empty)) | connectorDefinitions
+    )
+  }
+
   def connector[u: P]: P[Connector] = {
     P(
-      location ~ Keywords.connector ~/ identifier ~ is ~/ open ~
-        connectorOptions ~
-        (undefined((None, None, None)) |
-          (
-            (Keywords.flows ~ typeRef).? ~/
-              Readability.from ~ outletRef ~/
-              Readability.to ~ inletRef
-          ).map { case (typ, out, in) =>
-            (typ, Some(out), Some(in))
-          }) ~ close ~/ briefly ~ description
-    )./.map { case (loc, id, opts, (typ, out, in), brief, description) =>
-      Connector(loc, id, opts, typ, out, in, brief, description)
+      location ~ Keywords.connector ~/ identifier ~ is ~/ open ~ connectorBody ~/ close ~/ briefly ~/ description
+    )./.map { case (loc, id, (out, in, opts), brief, description) =>
+      Connector(loc, id, out, in, opts, brief, description)
     }
   }
 
@@ -77,18 +80,16 @@ private[parsing] trait StreamingParser {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
-        (handler(
-          StatementsSet.StreamStatements
-        ) | term | authorRef | comment | function | invariant | constant | typeDef |
-          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
+        ( handler(StatementsSet.StreamStatements) | term | authorRef | comment | function | invariant | constant |
+          typeDef | streamletOption | streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
           inlets ++ outlets ++ definitions
       }
     )
   }
 
-  private def streamletOptions[u: P]: P[Seq[StreamletOption]] = {
-    options[u, StreamletOption](StringIn(RiddlOption.technology, RiddlOption.css, RiddlOption.kind).!) {
+  private def streamletOption[u: P]: P[StreamletOption] = {
+    option[u, StreamletOption](RiddlOptions.streamletOptions) {
       case (loc, RiddlOption.technology, args) => StreamletTechnologyOption(loc, args)
       case (loc, RiddlOption.css, args)      => StreamletCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)      => StreamletIconOption(loc, args)
@@ -129,12 +130,12 @@ private[parsing] trait StreamingParser {
   ): P[Streamlet] = {
     P(
       location ~ keyword ~ identifier ~ is ~ open ~
-        streamletOptions ~ streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
+        streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
         close ~ briefly ~ description
-    )./.map { case (loc, id, options, contents, brief, description) =>
+    )./.map { case (loc, id, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
       val mergedContent = mergeAsynchContent[OccursInStreamlet](contents)
-      Streamlet(loc, id, shape, options, mergedContent, brief, description)
+      Streamlet(loc, id, shape, mergedContent, brief, description)
     }
   }
 

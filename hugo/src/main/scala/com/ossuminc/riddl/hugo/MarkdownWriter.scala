@@ -929,10 +929,7 @@ case class MarkdownWriter(
     leafHead(conn, weight = 20)
     emitDefDoc(conn, parents)
     if conn.from.nonEmpty && conn.to.nonEmpty then {
-      val prefix =
-        if conn.flows.nonEmpty then s"flows ${conn.flows.get.format}"
-        else ""
-      p(s"$prefix from ${conn.from.get.format} to ${conn.to.get.format}")
+      p(s"from ${conn.from.format} to ${conn.to.format}")
 
     }
     emitUsage(conn)

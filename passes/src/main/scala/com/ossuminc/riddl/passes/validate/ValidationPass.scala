@@ -335,25 +335,26 @@ case class ValidationPass(
     connector: Connector,
     parents: Seq[Definition]
   ): Unit = {
-    val refParents = connector +: parents
-    val maybeOutlet = checkMaybeRef[Outlet](connector.from, connector, refParents)
-    val maybeInlet = checkMaybeRef[Inlet](connector.to, connector, refParents)
-
-    (maybeOutlet, maybeInlet) match {
-      case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
-        val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
-        val inletType = resolvePath[Type](inlet.type_.pathId, inlet +: refParents)
-        if !areSameType(inletType, outletType) then {
-          messages.addError(
-            inlet.loc,
-            s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
-              s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} which are " +
-              s"not the same types"
-          )
-        }
-      case _ =>
-      // one of the two didn't resolve, already handled above.
-    }
+    if connector.nonEmpty then
+      val refParents = connector +: parents
+      val maybeOutlet = checkRef[Outlet](connector.from, connector, refParents)
+      val maybeInlet = checkRef[Inlet](connector.to, connector, refParents)
+  
+      (maybeOutlet, maybeInlet) match {
+        case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
+          val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
+          val inletType = resolvePath[Type](inlet.type_.pathId, inlet +: refParents)
+          if !areSameType(inletType, outletType) then {
+            messages.addError(
+              inlet.loc,
+              s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
+                s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} which are " +
+                s"not the same types"
+            )
+          }
+        case _ =>
+        // one of the two didn't resolve, already handled above.
+      }
   }
 
   private def validateAuthorInfo(

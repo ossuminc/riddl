@@ -1,6 +1,6 @@
 domain foo {
   context A {
-    options(css("fill:white,stroke:#333,stroke-width:3px,color:blue"), faicon("fa-house"))
+    option css("fill:white,stroke:#333,stroke-width:3px,color:blue") option faicon("fa-house")
     type AEvents is one of { A.AEvent1, C.CEvent }
     inlet aInlet is A.AEvents
     command ACommand { ??? }
@@ -26,7 +26,8 @@ domain foo {
 //                 case p: Processor[?, ?] => Some(foreignContext -> s"Tells to ${p.identify} in")
 
   context B {
-    options(css("fill:white,stroke:#333,stroke-width:3px,color:green"), faicon("fa-house"))
+    option css("fill:white,stroke:#333,stroke-width:3px,color:green")
+    option faicon("fa-house")
     command BCommand { ??? }
     inlet bInlet is A.AEvents
     outlet bOutlet is A.AEvents
@@ -41,7 +42,8 @@ domain foo {
     }
   }
   context C {
-    options(css("fill:white,stroke:#333,stroke-width:3px,color:purple"), faicon("fa-house"))
+    option css("fill:white,stroke:#333,stroke-width:3px,color:purple")
+    option faicon("fa-house")
     command CCommand is { ??? }
     event CEvent is { ??? }
     entity CEntity {
@@ -58,7 +60,8 @@ domain foo {
 
 domain bar {
   context D {
-    options(css("fill:white,stroke:#333,stroke-width:3px,color:red"), faicon("fa-house"))
+    option css("fill:white,stroke:#333,stroke-width:3px,color:red")
+    option faicon("fa-house")
     adaptor Dadaptor from context A is { ??? }
   }
 }

@@ -40,7 +40,7 @@ domain Everything is {
     type optional is agg?
 
     entity Something is {
-      options (aggregate, transient)
+      option aggregate option transient
 
       type somethingDate is Date
 
