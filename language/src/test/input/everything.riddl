@@ -73,8 +73,10 @@ domain Everything is {
       record someData is { field:  SomeType }
       state someState of Something.someData is {
         handler foo is {
+          // Handle the ACommand
           on command ACommand {
             if "Something arrives" then {
+              // we want to send an event
               send event Inebriated to outlet APlant.Source.Commands
             }
           }
