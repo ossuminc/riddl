@@ -244,6 +244,7 @@ case class ValidationPass(
             checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
           case StopStatement(loc) => ()
+          case _:Comment => ()
         }
       }
   }

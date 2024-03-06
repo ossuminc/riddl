@@ -208,7 +208,7 @@ object AST {
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
     def vitals: Contents[VitalDefinition[?, CV]] = container.filter[VitalDefinition[?, CV]]
-    def processors: Contents[Processor[?,CV]] = container.filter[Processor[?,CV]]
+    def processors: Contents[Processor[?, CV]] = container.filter[Processor[?, CV]]
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
@@ -243,7 +243,8 @@ object AST {
       with OccursAtRootScope
       with OccursInVitalDefinitions
       with OccursInProcessors
-      with OccursInGroup {
+      with OccursInHandler
+      with OccursInGroup with Statement {
     final inline override def isComment: Boolean = true
   }
 
@@ -1969,7 +1970,7 @@ object AST {
 
   case class ForEachStatement(
     loc: At,
-    ref: FieldRef | OutletRef | InletRef ,
+    ref: FieldRef | OutletRef | InletRef,
     do_ : Seq[Statement]
   ) extends Statement {
     override def kind: String = "Foreach Statement"
@@ -2017,7 +2018,7 @@ object AST {
 
   /** An [[AdaptorOption]] to specify the Font Awesome icon for this [[Adaptor]] in generated diagrams, etc. */
   case class AdaptorIconOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("faicon")
-  
+
   sealed trait AdaptorDirection extends RiddlValue {
     def loc: At
   }
@@ -2294,8 +2295,8 @@ object AST {
     *   The location of the handler definition
     * @param id
     *   The name of the handler.
-    * @param clauses
-    *   The set of [[OnMessageClause]] definitions that define how the entity responds to received messages.
+    * @param contents
+    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received messages.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2304,7 +2305,7 @@ object AST {
   case class Handler(
     loc: At,
     id: Identifier,
-    clauses: Seq[OnClause] = Seq.empty[OnClause],
+    contents: Seq[OccursInHandler] = Seq.empty[OccursInHandler],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Definition
@@ -2319,7 +2320,7 @@ object AST {
       with OccursInProjector {
     override def isEmpty: Boolean = clauses.isEmpty
 
-    override def contents: Seq[OccursInHandler] = clauses
+    def clauses: Seq[OnClause] = contents.filter[OnClause]
 
     def format: String = s"handler ${id.format}"
   }
@@ -2528,7 +2529,6 @@ object AST {
   /** An [[RepositoryOption]] to specify the Font Awesome icon for this [[Repository]] in generated diagrams, etc. */
   case class RepositoryIconOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("faicon")
 
-
   /** An [[RepositoryOption]] that specifies the kind of technology used to represent the entity */
   case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
       extends RepositoryOption("technology")
@@ -2671,7 +2671,6 @@ object AST {
 
   /** An [[ContextOption]] to specify the Font Awesome icon for this [[Context]] in generated diagrams, etc. */
   case class ContextIconOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("faicon")
-
 
   /** An [[ContextOption]] that specifies the kind of technology used to represent the entity */
   case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
@@ -3725,8 +3724,8 @@ object AST {
   /** An [[ApplicationOption]]  that specifies the css for this entity in generated diagrams, etc. */
   case class ApplicationCssOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("css")
 
-  
-  /** An [[ApplicationOption]]  that specifies the Font Awesome icon to use in generated diagrams for this application */
+  /** An [[ApplicationOption]] that specifies the Font Awesome icon to use in generated diagrams for this application
+    */
   case class ApplicationIconOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("faicon")
 
   /** An [[ApplicationOption]] that specifies the kind of technology used to represent the entity */
