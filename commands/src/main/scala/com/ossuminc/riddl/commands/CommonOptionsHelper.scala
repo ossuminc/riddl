@@ -135,6 +135,12 @@ object CommonOptionsHelper {
         .text(
           "Print all messages sorted by the file name and line number in which they occur."
         ),
+      opt[Boolean]('G', name = "group-messages-by-kind")
+        .optional()
+        .action((_,c) => c.copy(groupMessagesByKind = true))
+        .text(
+          "Print all messages by their severity kind"
+        ),
       opt[Int]('x', name = "max-parallel-processing")
         .optional()
         .action((v, c) => c.copy(maxParallelParsing = v))
