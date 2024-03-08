@@ -118,7 +118,7 @@ object CommandPlugin {
     }
   }
 
-  def runFromConfig(
+  def  runFromConfig(
     configFile: Option[Path],
     targetCommand: String,
     commonOptions: CommonOptions,
@@ -150,6 +150,7 @@ object CommandPlugin {
         }
       candidate.map(_ => PassesResult())
     }
+    handleCommandResult(result, commonOptions, log)
     result
   }
 
@@ -160,12 +161,12 @@ object CommandPlugin {
   ): Int = {
     result match {
       case Right(passesResult: PassesResult) =>
-        if commonOptions.quiet then {
+        if passesResult.commonOptions.quiet then {
           System.out.println(log.summary)
         } else {
-          Messages.logMessages(passesResult.messages, log, commonOptions)
+          Messages.logMessages(passesResult.messages, log, passesResult.commonOptions)
         }
-        if commonOptions.warningsAreFatal && passesResult.messages.hasWarnings then 1
+        if passesResult.commonOptions.warningsAreFatal && passesResult.messages.hasWarnings then 1
         else 0
       case Left(messages) =>
         if commonOptions.quiet then { highestSeverity(messages) + 1 }
