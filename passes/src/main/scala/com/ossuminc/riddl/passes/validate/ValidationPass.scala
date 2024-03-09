@@ -399,7 +399,7 @@ case class ValidationPass(
     checkContainer(parents, s)
     checkRefAndExamine[Type](s.typ, s, parents) { (typ: Type) =>
       typ.typ match {
-        case agg: Aggregation =>
+        case agg: AggregateTypeExpression =>
           if agg.fields.isEmpty && !s.isEmpty then {
             messages.addError(
               s.typ.loc,
@@ -409,6 +409,10 @@ case class ValidationPass(
           }
         case _ =>
       }
+      check(typ.id.value != s.id.value, 
+        s"${s.identify} and ${typ.identify} must not have the same name so path resolution can succeed", 
+        Messages.Error, s.loc
+      )
     }
     checkDescription(s)
   }

@@ -1,22 +1,33 @@
-package com.ossuminc.riddl.testkit
+package com.ossuminc.riddl
 
+import com.ossuminc.riddl.commands.CommandPlugin
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
+import com.ossuminc.riddl.testkit.ValidatingTest
 import org.scalatest.Assertion
 
 import java.nio.file.Path
 
 class ReportedIssuesTest extends ValidatingTest {
 
-  val dir = "testkit/src/test/input/issues"
+  val dir = "riddlc/src/test/input/issues"
 
   val options: CommonOptions = CommonOptions(
     showTimes = true,
     showWarnings = false
   )
 
+  def checkOneDir(configFile: String, command: String): Assertion = {
+    val commandArgs = Seq(
+      "from",
+      dir ++ "/" ++ configFile,
+      command
+    )
+    CommandPlugin.runMain(commandArgs.toArray) must be(0)
+  }
+
   def checkOne(fileName: String): Assertion = {
-    checkOne(fileName){
+    checkOne(fileName) {
       case Left(messages) =>
         fail(messages.format)
       case Right(result) =>
@@ -120,6 +131,9 @@ class ReportedIssuesTest extends ValidatingTest {
     }
     "495" in {
       checkOne("495.riddl")
+    }
+    "584" in {
+      checkOneDir("584/Foo.conf", "hugo")
     }
   }
 }
