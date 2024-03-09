@@ -42,8 +42,8 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def include[K <: RiddlValue, u: P](
     parser: P[?] => P[Seq[K]]
   ): P[IncludeHolder[K]] = {
-    P(location ~ Keywords.include ~/ location ~ literalString)./.map {
-      case (loc: At, loc2: At, str: LiteralString) => doInclude[K](loc2, str)(parser)
+    P(Keywords.include ~/ location ~ literalString)./.map {
+      case (loc: At, str: LiteralString) => doInclude[K](loc, str)(parser)
     }
   }
 
@@ -177,20 +177,16 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def options[u: P, TY <: RiddlValue](
+  def option[u: P, TY <: RiddlValue](
     validOptions: => P[String]
-  )(mapper: => (At, String, Seq[LiteralString]) => TY): P[Seq[TY]] = {
-    P(
-      (Keywords.options ~ Punctuation.roundOpen ~/
-        maybeOptionWithArgs(validOptions).rep(1, P(Punctuation.comma)) ~
-        Punctuation.roundClose).map(_.map { case (loc, opt, arg) =>
-        mapper(loc, opt, arg)
-      }) |
-        (Keywords.option ~/ Readability.is.? ~
-          maybeOptionWithArgs(validOptions)).map(tpl => Seq(mapper.tupled(tpl)))
-    ).?.map {
-      case Some(seq) => seq
-      case None      => Seq.empty[TY]
+  )(mapper: => (At, String, Seq[LiteralString]) => TY): P[TY] = {
+    P( Keywords.option ~/ Readability.is.? ~
+          location ~ validOptions ~
+          (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~
+            Punctuation.roundClose).?
+    ).map {
+      case (loc, option, params) =>
+        mapper(loc, option, params.getOrElse(Seq.empty[LiteralString]))
     }
   }
 

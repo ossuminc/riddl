@@ -85,130 +85,86 @@ object CommandOptions {
 
   implicit val commonOptionsReader: ConfigReader[CommonOptions] = { (cur: ConfigCursor) =>
     {
+      val default = CommonOptions()
       for
         topCur <- cur.asObjectCursor
         topRes <- topCur.atKey("common")
         objCur <- topRes.asObjectCursor
-        showTimes <- optional[Boolean](objCur, "show-times", false)(c => c.asBoolean)
-        showIncludeTimes <- optional[Boolean](objCur, "show-include-times", false)(c => c.asBoolean)
-        verbose <- optional(objCur, "verbose", false)(cc => cc.asBoolean)
-        dryRun <- optional(objCur, "dry-run", false)(cc => cc.asBoolean)
-        quiet <- optional(objCur, "quiet", false)(cc => cc.asBoolean)
-        debug <- optional(objCur, "debug", false)(cc => cc.asBoolean)
-        noANSIMessages <- optional(objCur, "no-ansi-messages", false)(cc => cc.asBoolean)
-        sortMessages <- optional(objCur, "sort-messages-by-location", noBool)(cc => cc.asBoolean.map(Option(_)))
+        showTimes <- optional(objCur, "show-times", default.showTimes)(c => c.asBoolean)
+        showIncludeTimes <- optional(objCur, "show-include-times", default.showIncludeTimes)(c => c.asBoolean)
+        verbose <- optional(objCur, "verbose", default.verbose)(cc => cc.asBoolean)
+        dryRun <- optional(objCur, "dry-run", default.dryRun)(cc => cc.asBoolean)
+        quiet <- optional(objCur, "quiet", default.quiet)(cc => cc.asBoolean)
+        debug <- optional(objCur, "debug", default.debug)(cc => cc.asBoolean)
+        noANSIMessages <- optional(objCur, "no-ansi-messages", default.noANSIMessages)(cc => cc.asBoolean)
+        sortMessages <- optional(objCur, "sort-messages-by-location", default.sortMessagesByLocation)(cc =>
+          cc.asBoolean
+        )
+        groupMessagesByKind <- optional(objCur, "group-messages-by-kind", default.groupMessagesByKind)(cc =>
+          cc.asBoolean
+        )
         suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        suppressStyleWarnings <- optional(objCur, "suppress-style-warnings", noBool) { cc =>
+        suppressStyleWarnings <- optional(objCur, "suppress-style-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        suppressMissingWarnings <- optional(objCur, "suppress-missing-warnings", noBool)(cc =>
           cc.asBoolean.map(Option(_))
-        }
-        suppressMissingWarnings <- optional(objCur, "suppress-missing-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        suppressUsageWarnings <- optional(objCur, "suppress-usage-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        suppressInfoMessages <- optional(objCur, "suppress-info-messages", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        hideWarnings <- optional(objCur, "hide-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        hideStyleWarnings <- optional(objCur, "hide-style-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        hideMissingWarnings <- optional(objCur, "hide-missing-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        hideUsageWarnings <- optional(objCur, "hide-usage-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        hideInfoMessages <- optional(objCur, "hide-info-messages", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        showWarnings <- optional(objCur, "show-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        showStyleWarnings <- optional(objCur, "show-style-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        showMissingWarnings <- optional(objCur, "show-missing-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        showUsageWarnings <- optional(objCur, "show-usage-warnings", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        showInfoMessages <- optional(objCur, "show-info-messages", noBool) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path]) { cc =>
+        )
+        suppressUsageWarnings <- optional(objCur, "suppress-usage-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        suppressInfoMessages <- optional(objCur, "suppress-info-messages", noBool)(cc => cc.asBoolean.map(Option(_)))
+        hideWarnings <- optional(objCur, "hide-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        hideStyleWarnings <- optional(objCur, "hide-style-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        hideMissingWarnings <- optional(objCur, "hide-missing-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        hideUsageWarnings <- optional(objCur, "hide-usage-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
+        hideInfoMessages <- optional(objCur, "hide-info-messages", noBool)(cc => cc.asBoolean.map(Option(_)))
+        showWarnings <- optional[Boolean](objCur, "show-warnings", default.showWarnings)(cc => cc.asBoolean)
+        showStyleWarnings <- optional[Boolean](objCur, "show-style-warnings", default.showStyleWarnings)(cc => 
+          cc.asBoolean)
+        showMissingWarnings <- optional[Boolean](objCur, "show-missing-warnings", default.showMissingWarnings)(cc =>
+          cc.asBoolean)
+        showUsageWarnings <- optional[Boolean](objCur, "show-usage-warnings", default.showUsageWarnings)(cc =>
+          cc.asBoolean)
+        showInfoMessages <- optional[Boolean](objCur, "show-info-messages", default.showInfoMessages)(cc =>
+          cc.asBoolean)
+        pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path])(cc =>
           cc.asString.map(f => Option(Path.of(f)))
-        }
-        maxParallel <- optional(objCur, "max-parallel-parsing", Some(4)) { cc =>
-          cc.asInt.map(Option(_))
-        }
-        maxIncludeWait <- optional[Int](objCur, "max-include-wait", 5) { cc => cc.asInt }
-        warnsAreFatal <- optional(objCur, "warnings-are-fatal", Option.empty[Boolean]) { cc =>
-          cc.asBoolean.map(Option(_))
-        }
-        groupMessagesByKind <- optional(objCur, "group-messages-by-kind", false) { cc => cc.asBoolean }
+        )
+        maxParallel <- optional[Int](objCur, "max-parallel-parsing", default.maxParallelParsing)(cc => cc.asInt)
+        maxIncludeWait <- optional[Long](objCur, "max-include-wait", default.maxIncludeWait.toSeconds)(cc => cc.asLong)
+        warnsAreFatal <- optional(objCur, "warnings-are-fatal", default.warningsAreFatal)(cc => cc.asBoolean)
       yield {
-        val default = CommonOptions()
         val shouldShowWarnings = suppressWarnings
           .map(!_)
-          .getOrElse(
-            hideWarnings
-              .map(!_)
-              .getOrElse(
-                showWarnings.getOrElse(
-                  default.showWarnings
-                )
-              )
-          )
+          .getOrElse(hideWarnings.map(!_).getOrElse(showWarnings))
         val shouldShowMissing = suppressMissingWarnings
           .map(!_)
-          .getOrElse(
-            hideMissingWarnings
-              .map(!_)
-              .getOrElse(
-                showMissingWarnings.getOrElse(default.showMissingWarnings)
-              )
-          )
+          .getOrElse(hideMissingWarnings.map(!_).getOrElse(showMissingWarnings))
         val shouldShowStyle = suppressStyleWarnings
           .map(!_)
-          .getOrElse(
-            hideStyleWarnings
-              .map(!_)
-              .getOrElse(showStyleWarnings.getOrElse(default.showStyleWarnings))
-          )
+          .getOrElse(hideStyleWarnings.map(!_).getOrElse(showStyleWarnings))
         val shouldShowUsage = suppressUsageWarnings
           .map(!_)
-          .getOrElse(hideUsageWarnings.map(!_).getOrElse(showUsageWarnings.getOrElse(default.showUsageWarnings)))
+          .getOrElse(hideUsageWarnings.map(!_).getOrElse(showUsageWarnings))
         val shouldShowInfos = suppressInfoMessages
           .map(!_)
-          .getOrElse(
-            hideInfoMessages
-              .map(!_)
-              .getOrElse(showInfoMessages.getOrElse(default.showInfoMessages))
-          )
+          .getOrElse(hideInfoMessages.map(!_).getOrElse(showInfoMessages))
         CommonOptions(
           showTimes,
           showIncludeTimes,
           verbose,
           dryRun,
           quiet,
-          showWarnings = shouldShowWarnings,
-          showMissingWarnings = shouldShowMissing,
-          showStyleWarnings = shouldShowStyle,
-          showUsageWarnings = shouldShowUsage,
-          showInfoMessages = shouldShowInfos,
+          shouldShowWarnings,
+          shouldShowMissing,
+          shouldShowStyle,
+          shouldShowUsage,
+          shouldShowInfos,
           debug,
           pluginsDir,
-          sortMessagesByLocation = sortMessages.getOrElse(false),
-          groupMessagesByKind,
-          noANSIMessages,
-          maxParallelParsing = maxParallel.getOrElse(1),
+          sortMessagesByLocation = sortMessages,
+          groupMessagesByKind = groupMessagesByKind,
+          noANSIMessages = noANSIMessages,
+          maxParallelParsing = maxParallel,
           maxIncludeWait = FiniteDuration(maxIncludeWait, "seconds"),
-          warningsAreFatal = warnsAreFatal.getOrElse(false)
+          warningsAreFatal = warnsAreFatal
         )
       }
     }

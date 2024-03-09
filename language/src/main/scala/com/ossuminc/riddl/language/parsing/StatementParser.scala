@@ -27,7 +27,7 @@ private[parsing] trait StatementParser {
     )./.map { tpl => (ErrorStatement.apply _).tupled(tpl) }
   }
 
-  private def setStatement[u: P]: P[SetStatement] = {
+  private def theSetStatement[u: P]: P[SetStatement] = {
     P(
       location ~ Keywords.set ~/ fieldRef ~/ Readability.to ~ literalString
     )./.map { tpl => (SetStatement.apply _).tupled(tpl) }
@@ -82,8 +82,8 @@ private[parsing] trait StatementParser {
 
   private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
     P(
-      sendStatement | arbitraryStatement | errorStatement | setStatement | tellStatement | callStatement |
-        stopStatement | ifThenElseStatement(set) | forEachStatement(set)
+      sendStatement | arbitraryStatement | errorStatement | theSetStatement | tellStatement | callStatement |
+        stopStatement | ifThenElseStatement(set) | forEachStatement(set) | comment
     )
   }
 

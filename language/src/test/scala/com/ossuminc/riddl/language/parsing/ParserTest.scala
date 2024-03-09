@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
 
 import java.nio.file.Path
-import scala.concurrent.ExecutionContext.Implicits.global 
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
@@ -80,7 +80,6 @@ class ParserTest extends ParsingTest {
             Domain(
               (1, 1, input),
               Identifier((1, 8, input), "foo"),
-              Seq.empty[DomainOption],
               contents = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
             )
           )
@@ -146,7 +145,12 @@ class ParserTest extends ParsingTest {
     }
     "allow options on context definitions" in {
       val input = RiddlParserInput(
-        "context bar is { options (service, wrapper, gateway ) ??? }"
+        """context bar is {
+          |  option service
+          |  option wrapper
+          |  option gateway
+          |}
+          |""".stripMargin
       )
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
@@ -157,9 +161,9 @@ class ParserTest extends ParsingTest {
             (1, 1, rpi),
             Identifier((1, 9, rpi), "bar"),
             Seq(
-              ServiceOption((1, 27, rpi)),
-              ContextWrapperOption((1, 36, rpi)),
-              GatewayOption((1, 45, rpi))
+              ServiceOption((2, 10, rpi)),
+              ContextWrapperOption((3, 10, rpi)),
+              GatewayOption((4, 10, rpi))
             )
           )
       }
@@ -242,7 +246,9 @@ class ParserTest extends ParsingTest {
     }
     "allow entity definitions" in {
       val input = RiddlParserInput("""entity Hamburger is {
-         |  options ( transient, aggregate ) type Foo is { x: String }
+         |  option transient
+         |  option aggregate
+         |  type Foo is { x: String }
          |  state BurgerState of type BurgerStruct {
          |  handler BurgerHandler is {} }
          |}
@@ -255,28 +261,20 @@ class ParserTest extends ParsingTest {
           val expected = Entity(
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Hamburger"),
-            Seq(EntityTransient((2, 13, rpi)), EntityIsAggregate((2, 24, rpi))),
             Seq(
+              EntityTransient((2, 10, rpi)),
+              EntityIsAggregate((3, 10, rpi)),
               Type(
-                (2, 36, rpi),
-                Identifier((2, 41, rpi), "Foo"),
+                (4, 3, rpi),
+                Identifier((4, 8, rpi), "Foo"),
                 Aggregation(
-                  (2, 48, rpi),
-                  List(
-                    Field(
-                      (2, 50, rpi),
-                      Identifier((2, 50, rpi), "x"),
-                      String_((2, 53, rpi), None, None),
-                    )
-                  )
-                )
-              ),
-              State(
-                (3, 3, rpi),
-                Identifier((3, 9, rpi), "BurgerState"),
-                TypeRef((3, 24, rpi), "type", PathIdentifier((3, 29, rpi), Seq("BurgerStruct"))),
-                Seq(Handler((4, 11, rpi), Identifier((4, 11, rpi), "BurgerHandler")))
-              )
+                  (4, 15, rpi),
+                  List(Field((4,17,rpi), Identifier((4,17,rpi), "x"), String_((4,20,rpi)))))
+                ),
+                State((5,3,rpi), Identifier((5,9,rpi), "BurgerState"),
+                  TypeRef((5,24,rpi), "type", PathIdentifier((5,29,rpi), List("BurgerStruct"))),
+                  List(Handler((6,11,rpi), Identifier((6,11,rpi), "BurgerHandler")))
+               )
             )
           )
           content mustBe expected
@@ -319,15 +317,14 @@ class ParserTest extends ParsingTest {
         case Right((function, _)) =>
           function must matchPattern {
             case Function(
-              _,
-              Identifier(_, "foo"),
-              _,
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
-              Some(Aggregation(_,Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
-              _,
-              _,
-              _
-            ) =>
+                  _,
+                  Identifier(_, "foo"),
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
+                  _,
+                  _,
+                  _
+                ) =>
           }
       }
     }
@@ -343,7 +340,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
           val typ = domain.contexts.head.types.head
-          typ.typ mustBe Replica((3,18,rpi), Integer((3, 29, rpi)))
+          typ.typ mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
       }
     }
     "parse from a complex file" in {
@@ -366,12 +363,17 @@ class ParserTest extends ParsingTest {
           /* This is another way to do a comment, just like C/C++ */
           command DoAThing is { thingField: Integer }
            */
-          root.contents.startsWith(Seq(
-            LineComment((1,1,rpi),"Top Level Author"),
-            Author((2,1,rpi),Identifier((2,8,rpi),"Reid"),
-              LiteralString((2,23,rpi), "Reid"),
-              LiteralString((2,37,rpi), "reid@ossum.biz"))
-          ))
+          root.contents.startsWith(
+            Seq(
+              LineComment((1, 1, rpi), "Top Level Author"),
+              Author(
+                (2, 1, rpi),
+                Identifier((2, 8, rpi), "Reid"),
+                LiteralString((2, 23, rpi), "Reid"),
+                LiteralString((2, 37, rpi), "reid@ossum.biz")
+              )
+            )
+          )
       }
     }
   }

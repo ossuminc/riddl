@@ -30,7 +30,7 @@ domain dokn is {
         inlet CompanyEvents_in is event dokn.Company.Company.CompanyEvent
 
         entity Company is {
-            options(event-sourced, available)
+            option event-sourced option available
 
             type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
             event CompanyAdded is { when: TimeStamp }
@@ -58,7 +58,7 @@ domain dokn is {
         outlet Driver_out is type DriverEvents
 
         entity Driver is {
-            options(event-sourced, available)
+            option event-sourced option available
 
             type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId }
             type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
@@ -95,7 +95,7 @@ domain dokn is {
 
     context Note is {
         entity Note is {
-            options(event-sourced, available)
+            option event-sourced option available
             record fields is {
               noteId: NoteId,
               locationId: type LocationId,
@@ -113,7 +113,7 @@ domain dokn is {
 
     context Media is {
         entity Media is {
-            options(consistent)
+            option consistent
             record fields is {
               mediaId: MediaId,
               path: String,
@@ -127,7 +127,7 @@ domain dokn is {
 
     context Location is {
         entity Location is {
-            options(event-sourced, available)
+            option event-sourced option available
 
             type AddDeliveryLocation is command  {
               geohash: Location, label: String

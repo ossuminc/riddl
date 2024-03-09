@@ -59,12 +59,8 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
 
   private[mermaid] def participants(connector: Connector): Seq[Definition] = {
     for {
-      flows <- connector.flows
-      to <- connector.to
-      from <- connector.from
-      typeDef <- pr.refMap.definitionOf[Type](flows, connector)
-      toDef <- pr.refMap.definitionOf[Inlet](to, connector)
-      fromDef <- pr.refMap.definitionOf[Outlet](from, connector)
+      toDef <- pr.refMap.definitionOf[Inlet](connector.to, connector)
+      fromDef <- pr.refMap.definitionOf[Outlet](connector.from, connector)
     } yield {
       val to_users: Seq[Definition] = pr.usage.getUsers(toDef).flatMap {
         case oc: OnClause => pr.symbols.parentOf(oc).flatMap(pr.symbols.parentOf)
@@ -77,7 +73,7 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
   }.getOrElse(Seq.empty)
 
   private def generate(context: Context): String = {
-    sb.append("flowchart LR") ;  nl
+    sb.append("flowchart LR"); nl
     val parts = for
       connector <- context.connectors
       participants <- this.participants(connector)
@@ -85,14 +81,10 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
     for part <- parts.distinct do makeNodeLabel(part)
     for {
       conn <- context.connectors
-      from <- conn.from
-      to <- conn.to
-      flows <- conn.flows
-      typeDef <- pr.refMap.definitionOf[Type](flows, conn)
-      toDef <- pr.refMap.definitionOf[Inlet](to, conn)
-      fromDef <- pr.refMap.definitionOf[Outlet](from, conn)
+      toDef <- pr.refMap.definitionOf[Inlet](conn.to, conn)
+      fromDef <- pr.refMap.definitionOf[Outlet](conn.from, conn)
     } do {
-      makeConnection(fromDef, toDef, false, typeDef.identify)
+      makeConnection(fromDef, toDef, false, fromDef.type_.identify)
     }
     sb.result()
   }

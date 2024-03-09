@@ -72,9 +72,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveOnClauses(oc, parentsAsSeq)
       case e: Entity =>
         e.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
+        resolveStateReferences(e, parentsAsSeq)
         addEntity(e)
       case s: State =>
-        resolveATypeRef(s.typ, parentsAsSeq)
+      // resolveATypeRef(s.typ, parentsAsSeq)
       case f: Function =>
         resolveFunction(f, parentsAsSeq)
       case i: Inlet =>
@@ -131,9 +132,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   }
 
   private def resolveConnector(connector: Connector, parents: Seq[Definition]): Unit = {
-    resolveMaybeRef[Type](connector.flows, parents)
-    resolveMaybeRef[Outlet](connector.from, parents)
-    resolveMaybeRef[Inlet](connector.to, parents)
+    if connector.nonEmpty then
+      resolveARef[Outlet](connector.from, parents)
+      resolveARef[Inlet](connector.to, parents)
   }
 
   private def resolveType(typ: Type, parents: Seq[Definition]): Unit = {
@@ -173,13 +174,19 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     }
   }
 
-  private def resolveOnMessageClause(mc: OnMessageClause, parents: Seq[Definition]): Unit = {
+  private def resolveOnMessageClause(mc: OnMessageClause, parents: Parents): Unit = {
     resolveARef[Type](mc.msg, parents)
     mc.from match
       case None => ()
       case Some(_, reference) =>
         resolveARef[Definition](reference, parents)
     resolveStatements(mc.statements, parents)
+  }
+
+  private def resolveStateReferences(e: Entity, parents: Parents): Unit = {
+    for { state: State <- e.states } do {
+      resolveATypeRef(state.typ, parents)
+    }
   }
 
   private def resolveOnClauses(oc: OnClause, parents: Seq[Definition]): Unit = {
@@ -201,9 +208,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Group](group, parents)
       case ForEachStatement(_, ref, _) =>
         ref match {
-          case ir: InletRef => resolveAPathId[Inlet](ir.pathId, parents)
+          case ir: InletRef  => resolveAPathId[Inlet](ir.pathId, parents)
           case or: OutletRef => resolveAPathId[Outlet](or.pathId, parents)
-          case fr: FieldRef => resolveAPathId[Type](fr.pathId, parents)
+          case fr: FieldRef  => resolveAPathId[Type](fr.pathId, parents)
         }
       case SendStatement(_, msg, portlet) =>
         resolveARef[Type](msg, parents)
@@ -224,6 +231,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case _: ReturnStatement     => () // no references
       case _: IfThenElseStatement => () // no references
       case _: StopStatement       => () // no references
+      case _: Comment             => () // no references
     }
   }
 
@@ -307,21 +315,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     parents.headOption match {
       case None =>
         // shouldn't happen
-        notResolved[T](pathId, parents)
+        notResolved[T](pathId, parents, "there are no parents of the found symbol")
         Seq.empty[Parent]
       case Some(parent) =>
         list match {
-          // List is empty so this is the NotFound case
           case Nil =>
-            notResolved[T](pathId, parents)
+            // List is empty so this is the NotFound case
+            notResolved[T](
+              pathId,
+              parents,
+              s"the sought name, '${pathId.value.last}', was not found in the symbol table,"
+            )
             Seq.empty
-          // List just has one component and the types are the same so this is the Resolved case
           case (d, pars) :: Nil if isSameKind[T](d) => // exact match
-            // Found
+            // List just has one component and the types are the same so this is the Resolved case
             resolved[T](pathId, parent, d)
             d +: pars
-          // List has one component but its the wrong type
           case (d, _) :: Nil =>
+            // List has one component but its the wrong type
             wrongType[T](pathId, parent, d)
             Seq.empty
           // List has multiple elements
@@ -432,8 +443,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     val pathIdStart = pathId.value.drop(1) // we already resolved the anchor
     var continue: Boolean = true
     for { soughtName: String <- pathIdStart if continue } do {
-      // Get the list of candidates for the
-      val candidates = findCandidates(stack)
+      // Get the list of candidates for potential matches to the name.
+      val candidates = findCandidates(stack, anchor_parents)
 
       // Now find the match, if any, and handle appropriately
       val maybeFound = candidates.find(candidate => findResolution(soughtName, candidate))
@@ -449,7 +460,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           notResolved[T](
             pathId,
             parents,
-            s"definition '$soughtName' was not found inside '${stack.head.identify}''"
+            s"definition '$soughtName' was not found inside ${stack.head.identify}"
           )
           continue = false
     }
@@ -483,7 +494,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case head :: Nil =>
         // shouldn't happen, but ...
         messages.addSevere(pathId.loc, s"Single path entry found, '${head.format}' should not be possible'")
-        notResolved[T](pathId, parents)
+        notResolved[T](pathId, parents, s"'${head.format}' should not be possible")
         Seq.empty
       case head :: tail =>
         // we have at least two names, let's find the first one
@@ -883,7 +894,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         // NOTE: An included file can include another file at the same definitional level.
         // NOTE: We need to recursively descend that stack.  An include in a nested definitional level
         // NOTE: will not be picked up by contents.includes because it would be inside another definition.
-        // NOTE: So we take the NamedValues from the contents as well as from
+        // NOTE: So we take the NamedValues from the contents as well as from the includes
         val nested = candidatesFromContainer(contents.includes)
         val current = contents.namedValues
         current ++ nested
@@ -892,11 +903,26 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case _ =>
         Seq.empty
     }
+  }
 
+  private def candidatesFromStateTypeRef(typeRef: TypeRef, parents: Parents): Contents[NamedValue] = {
+    val path: Seq[Definition] = resolveATypeRef(typeRef, parents)
+    path.headOption match {
+      case None => Seq.empty // not found
+      case Some(typ: Type) if typ.kind == "Record" =>
+        typ.typ match {
+          case agg: AggregateTypeExpression =>
+            agg.fields
+          case _ =>
+            Seq.empty
+        }
+      case Some(_) => Seq.empty
+    }
   }
 
   private def findCandidates(
-    parentStack: ParentStack
+    parentStack: ParentStack,
+    anchorParents: Parents
   ): Contents[NamedValue] = {
     if parentStack.isEmpty then {
       // Nothing in the parent stack so we're done searching and
@@ -909,9 +935,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         case Some(head) =>
           head match
             case st: State =>
-              // If we're at a state definition then it references a type for
-              // its fields so we need to push that typeRef's name on the name stack.
-              adjustStacksForPid[Type](st.typ.pathId, parentStack)
+              // At a state there are two kinds of things that could be referenced:
+              // the contained handlers and the fields of the state's data
+              val candidates = candidatesFromContainer(st.contents) ++
+                candidatesFromStateTypeRef(st.typ, st +: anchorParents)
+              candidates
             case oc: OnMessageClause =>
               // if we're at an onClause that references a named message then we
               // need to push that message's path on the name stack

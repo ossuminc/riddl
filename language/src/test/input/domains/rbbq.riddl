@@ -145,7 +145,7 @@ domain ReactiveBBQ is {
     } explained as "This is a retail store Location"
 
     entity Reservation is {
-     options ( aggregate )
+     option aggregate
      record fields is { value: ReservationValue }
      state reservation of Reservation.fields is {
        handler ofInputs is {}

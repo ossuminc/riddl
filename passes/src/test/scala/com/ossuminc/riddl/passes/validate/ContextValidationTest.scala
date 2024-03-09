@@ -16,23 +16,23 @@ class ContextValidationTest extends ValidatingTest {
   "Context" should {
     "allow options" in {
       val input =
-        """options (wrapper, service, gateway, package("foo"), technology("http")) ??? """
+        """option wrapper option service option gateway option package("foo") option technology("http")  """
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         msgs.filter(_.kind.isError) mustBe empty
         context.options.size mustBe 5
-        context.options must contain(ContextWrapperOption((2, 11, rpi)))
-        context.options must contain(GatewayOption((2, 29, rpi)))
-        context.options must contain(ServiceOption((2, 20, rpi)))
+        context.options must contain(ContextWrapperOption((2, 9, rpi)))
+        context.options must contain(GatewayOption((2, 39, rpi)))
+        context.options must contain(ServiceOption((2, 24, rpi)))
         context.options must contain(
           ContextPackageOption(
-            (2, 38, rpi),
-            Seq(LiteralString((2, 46, rpi), "foo"))
+            (2, 54, rpi),
+            Seq(LiteralString((2, 62, rpi), "foo"))
           )
         )
         context.options must contain(
           ContextTechnologyOption(
-            (2, 54, rpi),
-            Seq(LiteralString((2, 65, rpi), "http"))
+            (2, 76, rpi),
+            Seq(LiteralString((2, 87, rpi), "http"))
           )
         )
       }
@@ -154,7 +154,6 @@ class ContextValidationTest extends ValidatingTest {
           Projector(
             (2, 2, rpi),
             Identifier((2, 12, rpi), "foo"),
-            List(),
             List(
               Type(
                 (3, 3, rpi),

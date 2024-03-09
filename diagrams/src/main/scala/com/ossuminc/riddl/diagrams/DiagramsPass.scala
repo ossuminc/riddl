@@ -185,8 +185,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private def makeHandlerRelationships(context: Context, handlers: Seq[Handler]): Seq[ContextRelationship] = {
     for {
       h <- handlers
-      oc: OnClause <- h.clauses
-      omc: OnMessageClause = oc.asInstanceOf[OnMessageClause] if oc.isInstanceOf[OnMessageClause]
+      oc: OnClause <- h.clauses if oc.isInstanceOf[OnMessageClause]
+      omc: OnMessageClause = oc.asInstanceOf[OnMessageClause]
       relationship <- makeStatementRelationships(context, omc, omc.statements)
     } yield {
       relationship
