@@ -85,7 +85,8 @@ class EntityValidatorTest extends ValidatingTest {
           msgs,
           Error,
           """Path 'SomeType' was not resolved, in Field 'field'
-              |and it should refer to a Type""".stripMargin
+            |because the sought name, 'SomeType', was not found in the symbol table,
+            |and it should refer to a Type""".stripMargin
         )
         assertValidationMessage(
           msgs,
