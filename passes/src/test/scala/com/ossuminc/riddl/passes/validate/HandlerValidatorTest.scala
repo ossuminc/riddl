@@ -40,14 +40,31 @@ class HandlerValidatorTest extends ValidatingTest {
             msgs,
             Error,
             """Path 'EntityCommand' was not resolved, in OnMessageClause 'On command EntityCommand'
+              |because the sought name, 'EntityCommand', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
           )
           assertValidationMessage(
             msgs,
             Error,
             """Path 'EntityEvent' was not resolved, in OnMessageClause 'On event EntityEvent'
+              |because the sought name, 'EntityEvent', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
           )
+          assertValidationMessage(
+            msgs,
+            Error,
+            """Path 'HamburgerState.field1' was not resolved, in OnMessageClause 'On command EntityCommand'
+              |because definition 'field1' was not found inside State 'HamburgerState'
+              |and it should refer to a Field""".stripMargin
+          )
+          assertValidationMessage(
+            msgs,
+            Error,
+            """Path 'HamburgerState.field2' was not resolved, in OnMessageClause 'On event EntityEvent'
+              |because definition 'field2' was not found inside State 'HamburgerState'
+              |and it should refer to a Field""".stripMargin
+          )
+
       }
     }
 
@@ -75,12 +92,12 @@ class HandlerValidatorTest extends ValidatingTest {
             msgs,
             Error,
             """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'On event EntityContext.Incoming'
-              |because definition 'Incoming' was not found inside 'Context 'EntityContext'''
+              |because definition 'Incoming' was not found inside Context 'EntityContext'
               |and it should refer to a Type""".stripMargin
           )
       }
     }
-   
+
     "allow message clauses to name the message and it resolves" in {
       val input =
         """domain entityTest is {
@@ -121,12 +138,11 @@ class HandlerValidatorTest extends ValidatingTest {
           |    }
           |  }
           |}""".stripMargin
-      parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) {
-        case (_, messages: Messages) =>
-          val warnings = messages.justWarnings.format
-          // info(warnings)
-          warnings mustNot be(empty)
-          warnings must include("commands should result in sending an event")
+      parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) { case (_, messages: Messages) =>
+        val warnings = messages.justWarnings.format
+        // info(warnings)
+        warnings mustNot be(empty)
+        warnings must include("commands should result in sending an event")
       }
     }
   }

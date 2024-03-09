@@ -321,7 +321,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         list match {
           case Nil =>
             // List is empty so this is the NotFound case
-            notResolved[T](pathId, parents, s"the sought name, '${pathId.value.last}' was not found in symbol table")
+            notResolved[T](
+              pathId,
+              parents,
+              s"the sought name, '${pathId.value.last}', was not found in the symbol table,"
+            )
             Seq.empty
           case (d, pars) :: Nil if isSameKind[T](d) => // exact match
             // List just has one component and the types are the same so this is the Resolved case
@@ -909,7 +913,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         typ.typ match {
           case agg: AggregateTypeExpression =>
             agg.fields
-          case _                =>
+          case _ =>
             Seq.empty
         }
       case Some(_) => Seq.empty
