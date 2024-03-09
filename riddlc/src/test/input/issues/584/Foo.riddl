@@ -1,0 +1,3 @@
+domain FooDomain is {
+  include "Foo/foo"
+}
