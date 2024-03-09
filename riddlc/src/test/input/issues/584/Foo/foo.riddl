@@ -3,8 +3,8 @@ context FooContext is {
 
   entity Foo is {
       option is aggregate
-      record InitialFooData is {???}
-      record FinalFooStateData is {???}
+      record InitialFooData is { f1: Integer }
+      record FinalFooStateData is {f1: String }
       state InitialFooState of Foo.InitialFooData is {
         handler InitializeFoo is {
            on command FooStateChange {
