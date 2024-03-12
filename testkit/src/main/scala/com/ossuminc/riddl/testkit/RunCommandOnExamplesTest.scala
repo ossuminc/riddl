@@ -13,7 +13,8 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.language.Messages.warnings
-import com.ossuminc.riddl.utils.{PathUtils,Logger,SysLogger,Zip} 
+import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.utils.{Logger, PathUtils, SysLogger, Zip}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.DirectoryFileFilter
 import org.apache.commons.io.filefilter.NotFileFilter
@@ -167,8 +168,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
         outputDirOverride = Some(outputDir)
       )
       result match {
-        case Right(command) =>
-          onSuccess(commandName, name, path, command, outputDir) -> name
+        case Right(passesResult) =>
+          onSuccess(commandName, name, path, passesResult, outputDir) -> name
         case Left(messages) =>
           onFailure(commandName, name, path, messages, outputDir) -> name
       }
@@ -199,8 +200,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
         outputDirOverride = Some(outputDir)
       )
       result match {
-        case Right(command) =>
-          onSuccess(commandName, name, path, command, outputDir)
+        case Right(passesResult) =>
+          onSuccess(commandName, name, path, passesResult, outputDir)
         case Left(messages) =>
           onFailure(commandName, name, path, messages, outputDir)
 
@@ -223,7 +224,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     @unused commandName: String,
     @unused caseName: String,
     @unused configFile: Path,
-    @unused command: CommandPlugin[CommandOptions],
+    @unused command: PassesResult,
     @unused tempDir: Path
   ): Assertion = { succeed }
 

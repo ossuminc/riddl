@@ -8,6 +8,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.commands.CommandOptions
 import com.ossuminc.riddl.commands.CommandPlugin
+import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.hugo.HugoCommand
 import com.ossuminc.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.Assertion
@@ -42,14 +43,12 @@ class HugoPassTest
     commandName: String,
     name: String,
     configFile: Path,
-    command: CommandPlugin[CommandOptions],
+    passesResult: PassesResult,
     outputDir: Path
   ): Assertion = {
     if commandName == "hugo" then {
-      command.loadOptionsFrom(configFile) match {
-        case Right(_)     => runHugo(outputDir, tmpDir)
-        case Left(errors) => fail(errors.format)
-      }
+      if !passesResult.messages.hasErrors then runHugo(outputDir, tmpDir)
+      else fail(passesResult.messages.format)
     } else fail("wrong command!")
   }
 
