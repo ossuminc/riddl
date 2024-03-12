@@ -76,7 +76,7 @@ object CommandPlugin {
     commonOptions: CommonOptions = CommonOptions(),
     pluginsDir: Path = Plugin.pluginsDir,
     outputDirOverride: Option[Path] = None
-  ): Either[Messages, CommandPlugin[CommandOptions]] = {
+  ): Either[Messages, PassesResult] = {
     if commonOptions.verbose then {
       println(s"About to run $name with options from $optionsPath")
     }
@@ -89,7 +89,7 @@ object CommandPlugin {
               println(errors.format)
             }
             Left(errors)
-          case Right(_) => Right(cmd)
+          case Right(passesResult) => Right(passesResult)
         }
       }
     }
@@ -125,8 +125,8 @@ object CommandPlugin {
     log: Logger,
     commandName: String
   ): Either[Messages, PassesResult] = {
-    val result = CommandOptions.withInputFile(configFile, commandName) { path =>
-      val candidate = CommandPlugin
+    val result = CommandOptions.withInputFile[PassesResult](configFile, commandName) { path =>
+      CommandPlugin
         .loadCandidateCommands(path, commonOptions)
         .flatMap { names =>
           if names.contains(targetCommand) then {
@@ -138,17 +138,16 @@ object CommandPlugin {
                   println(errors.format)
                 }
                 Left(errors)
-              case result @ Right(_) => result.map(_ => ())
+              case result : Right[Messages,PassesResult] => result
             }
           } else {
-            Left[Messages, Unit](
+            Left[Messages, PassesResult](
               errors(
                 s"Command '$targetCommand' is not defined in $path"
               )
             )
           }
         }
-      candidate.map(_ => PassesResult())
     }
     handleCommandResult(result, commonOptions, log)
     result
