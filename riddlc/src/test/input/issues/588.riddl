@@ -1,5 +1,6 @@
 author Reid is { name: "Reid Spencer" email: "reid@ossuminc.com" }
 domain test588 {
+  by author Reid
   context TestGateway is {
     option gateway
     by author Reid
