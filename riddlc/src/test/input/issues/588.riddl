@@ -1,0 +1,15 @@
+domain test588 {
+  author Reid is { name: "Reid Spencer" email: "reid@ossuminc.com" }
+  context TestGateway is {
+    option gateway
+    by author Reid
+
+    // include "messages"
+    // include "handler"
+
+  } briefly "A gateway for testing Improving.app instances" explained as {
+  | The messages sent to this service will create various entities. This is
+  | typically done by the runScenario command which allows a testing scenario
+  | to be set up abstractly.
+  }
+}
