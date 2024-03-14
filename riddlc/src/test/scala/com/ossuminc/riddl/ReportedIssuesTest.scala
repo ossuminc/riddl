@@ -2,6 +2,7 @@ package com.ossuminc.riddl
 
 import com.ossuminc.riddl.commands.CommandPlugin
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.testkit.ValidatingTest
 import org.scalatest.Assertion
@@ -12,8 +13,9 @@ class ReportedIssuesTest extends ValidatingTest {
 
   val dir = "riddlc/src/test/input/issues"
 
-  val options: CommonOptions = CommonOptions(
+  val defaultOptions: CommonOptions = CommonOptions(
     showTimes = true,
+    showIncludeTimes = true,
     showWarnings = false
   )
 
@@ -26,8 +28,16 @@ class ReportedIssuesTest extends ValidatingTest {
     CommandPlugin.runMain(commandArgs.toArray) must be(0)
   }
 
+  def doOne(fileName: String, options: CommonOptions = defaultOptions)(
+    checkResult: Either[Messages.Messages, PassesResult] => Assertion
+  ): Assertion = {
+    val file = Path.of(dir, fileName).toFile
+    val either = Riddl.parseAndValidate(file, options)
+    checkResult(either)
+  }
+
   def checkOne(fileName: String): Assertion = {
-    checkOne(fileName) {
+    doOne(fileName, defaultOptions) {
       case Left(messages) =>
         fail(messages.format)
       case Right(result) =>
@@ -35,23 +45,9 @@ class ReportedIssuesTest extends ValidatingTest {
     }
   }
 
-  def checkOne(fileName: String)(checkResult: Either[Messages.Messages, PassesResult] => Assertion): Assertion = {
-    val file = Path.of(dir, fileName).toFile
-    val either = Riddl.parseAndValidate(file, options)
-    checkResult(either)
-  }
-
-  def doOne(fileName: String): Assertion = {
-    parseAndValidateFile(
-      Path.of(dir, fileName).toFile,
-      options
-    )
-    succeed
-  }
-
   "Reported Issues" should {
     "375" in {
-      checkOne("375.riddl") {
+      doOne("375.riddl") {
         case Left(messages) =>
           // info(messages.format)
           val errors = messages.justErrors
@@ -82,7 +78,7 @@ class ReportedIssuesTest extends ValidatingTest {
       }
     }
     "435" in {
-      checkOne("435.riddl") {
+      doOne("435.riddl") {
         case Left(messages) =>
           // info(messages.format)
           messages.size must be(1)
@@ -104,7 +100,7 @@ class ReportedIssuesTest extends ValidatingTest {
       checkOne("447.riddl")
     }
     "479" in {
-      checkOne("479.riddl") {
+      doOne("479.riddl") {
         case Left(messages) =>
           val errors = messages.justErrors
           errors.size mustBe 1
@@ -120,7 +116,7 @@ class ReportedIssuesTest extends ValidatingTest {
       checkOne("480b.riddl")
     }
     "486" in {
-      checkOne("486.riddl") {
+      doOne("486.riddl") {
         case Left(messages) =>
           val errors = messages.justErrors
           errors.size mustBe 1
@@ -136,7 +132,25 @@ class ReportedIssuesTest extends ValidatingTest {
       checkOneDir("584/Foo.conf", "hugo")
     }
     "588" in {
-      checkOne("588.riddl")
+      val warning_text = "Vital definitions should have an author reference"
+      doOne("588.riddl", defaultOptions.copy(showWarnings = true)) {
+        case Left(messages: Messages) =>
+          val warnings: Messages = messages.justWarnings
+          warnings.size must be > 1
+          warnings.find(_.message contains warning_text) match {
+            case Some(msg) => fail(s"Message with '$warning_text' found")
+            case None      => succeed
+          }
+        case Right(result: PassesResult) =>
+          val warnings: Messages = result.messages.justWarnings
+          warnings.size must be > 1
+          warnings.find(_.message contains warning_text) match {
+            case Some(msg) => 
+              fail(s"Message with '$warning_text' found")
+            case None      => 
+              succeed
+          }
+      }
     }
   }
 }
