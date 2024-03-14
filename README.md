@@ -1,5 +1,5 @@
 [![Code Build Status](https://github.com/ossuminc/riddl/actions/workflows/scala.yml/badge.svg)](https://github.com/ossuminc/riddl/actions/workflows/scala.yml/badge.svg)
-[![Documentation Build Status](https://github.com/ossuminc/riddl/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/ossuminc/riddl/actions/workflows/gh-pages.yml/badge.svg)
+[![Documentation Build Status](https://github.com/ossuminc/riddl/actions/workflows/hugo.yml/badge.svg)](https://github.com/ossuminc/riddl/actions/workflows/hugo.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/ossuminc/riddl/badge.svg?branch=main)](https://coveralls.io/github/ossuminc/riddl?branch=main)
 [![Maven Central](https://img.shields.io/maven-central/v/com.ossuminc/riddlc_3.svg)](https://maven-badges.herokuapp.com/maven-central/com.ossuminc/riddlc_3)
 

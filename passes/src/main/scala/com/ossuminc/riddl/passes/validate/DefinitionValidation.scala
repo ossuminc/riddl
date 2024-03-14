@@ -103,7 +103,7 @@ trait DefinitionValidation extends BasicValidation {
       .checkIdentifierLength(definition)
       .checkUniqueContent(definition)
       .check(
-        !definition.isVital || definition.hasAuthors,
+        !definition.isVital || definition.hasAuthorRefs,
         "Vital definitions should have an author reference",
         MissingWarning,
         definition.loc

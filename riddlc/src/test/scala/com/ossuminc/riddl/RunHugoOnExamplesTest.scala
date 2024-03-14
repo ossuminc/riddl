@@ -9,6 +9,7 @@ package com.ossuminc.riddl
 import com.ossuminc.riddl.commands.CommandOptions
 import com.ossuminc.riddl.commands.CommandPlugin
 import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.Assertion
 
@@ -16,8 +17,6 @@ import java.nio.file.Path
 import scala.annotation.unused
 
 /** Unit Tests To Run Riddlc On Examples */
-
-// import java.nio.file.{Files, Path}
 
 class RunHugoOnExamplesTest
     extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo") {
@@ -32,7 +31,7 @@ class RunHugoOnExamplesTest
     @unused commandName: String,
     @unused caseName: String,
     @unused configFile: Path,
-    @unused command: CommandPlugin[CommandOptions],
+    @unused passesResult: PassesResult,
     @unused tempDir: Path
   ): Assertion = {
     // TODO: check themes dir
