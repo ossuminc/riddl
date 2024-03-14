@@ -135,5 +135,8 @@ class ReportedIssuesTest extends ValidatingTest {
     "584" in {
       checkOneDir("584/Foo.conf", "hugo")
     }
+    "588" in {
+      checkOne("588.riddl")
+    }
   }
 }
