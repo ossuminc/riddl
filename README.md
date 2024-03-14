@@ -8,12 +8,17 @@
 [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://raw.githubusercontent.com/ossuminc/riddl/master/LICENSE)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
 [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
 [![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
 
 # RIDDL
 
