@@ -145,11 +145,23 @@ class ReportedIssuesTest extends ValidatingTest {
           val warnings: Messages = result.messages.justWarnings
           warnings.size must be > 1
           warnings.find(_.message contains warning_text) match {
-            case Some(msg) => 
+            case Some(msg) =>
               fail(s"Message with '$warning_text' found")
-            case None      => 
+            case None      =>
               succeed
           }
+      }
+    }
+    "592" in {
+      doOne("592.riddl") {
+        case Left(messages) =>
+          val errors = messages.justErrors
+          errors.find(_.message contains "but a Portlet was expected") match {
+            case Some(msg) => succeed
+            case None => fail("a wrong-type error was expected")
+          }
+        case Right(result) => 
+          fail("a wrong-type error was expected")
       }
     }
   }
