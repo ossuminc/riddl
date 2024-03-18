@@ -282,16 +282,19 @@ case class HugoPass(
     loadStaticAssets(inputPath, options)
   }
 
+  private def makeNavigation(root: Root, contentRoot: Path): Unit = {
+
+  }
+
   private def makeIndex(root: Root): Unit = {
     Timer.time("Index Creation") {
-
       val mdw = addFile(Seq.empty[String], "_index.md")
       mdw.fileHead("Index", 10, Option("The main index to the content"))
       mdw.h2("Root Overview")
       val diagram = RootOverviewDiagram(root)
       mdw.emitMermaidDiagram(diagram.generate)
       mdw.h2("Domains")
-      val domains = root.domains
+      val domains = (root.domains ++ root.includes.flatMap(_.contents.filter[Domain]))
         .sortBy(_.id.value)
         .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
       mdw.list(domains)

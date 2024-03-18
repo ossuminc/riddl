@@ -12,15 +12,13 @@ trait PassUtilities {
   def options: HugoCommand.Options
   val inputFile: Option[Path] = options.inputFile
   protected val messages: Messages.Accumulator
-
-  lazy val newline: String = System.getProperty("line.separator")
-
+  
   def makeFullName(definition: Definition): String = {
     val defs = outputs.symbols.parentsOf(definition).reverse :+ definition
     defs.map(_.id.format).mkString(".")
   }
 
-  def makeParents(stack: Seq[Definition]): Seq[Definition] = {
+  private def makeParents(stack: Seq[Definition]): Seq[Definition] = {
     // The stack goes from most nested to highest. We don't want to change the
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then
     // drop all the root containers (file includes) to finally end up at a domin
@@ -30,13 +28,6 @@ trait PassUtilities {
 
   def makeStringParents(stack: Seq[Definition]): Seq[String] = {
     makeParents(stack).map(_.id.format)
-  }
-
-  def makeBreadCrumbs(parents: Seq[Definition]): String = {
-    parents.map { defn =>
-      val link = makeDocLink(defn, parents.map(_.id.value))
-      s"[${defn.id.value}]($link)"
-    }.mkString("/")
   }
 
   def makeDocLink(definition: NamedValue): String = {
