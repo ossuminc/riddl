@@ -1,14 +1,14 @@
 domain Foo {
   context Container {
     command HandleMe is { x: String }
-    record SendMe is { x: String }
+    event SendMe is { x: String }
     event ProductEvent is { x: String }
     source ProductEventsSource is {
       outlet Events is type ProductEvent
     }
     handler X is {
       on command HandleMe {
-        send record SendMe to outlet ProductEventsSource
+        send event SendMe to outlet ProductEventsSource
       }
     }
   }
