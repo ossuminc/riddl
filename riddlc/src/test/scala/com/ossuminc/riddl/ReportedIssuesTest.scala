@@ -152,5 +152,13 @@ class ReportedIssuesTest extends ValidatingTest {
           }
       }
     }
+    "592" in {
+      doOne("592.riddl") {
+        case Left(messages) => 
+          fail(messages.format)
+        case Right(result) => 
+          succeed
+      }
+    }
   }
 }
