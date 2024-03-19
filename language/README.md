@@ -10,7 +10,9 @@ instructions below:
   - Select `intellij-idea-riddl-file-type-settings.zip` 
 
 * To load `intellij-idea-riddl-colour-scheme-settings.jar` into IntelliJ:
-  - Select `File -> Settings -> Colour Scheme` from IntelliJ menu
-  - From the gear icon beside the selector, select `Import Scheme -> Colour Scheme or Settings`
+  - Load the IntelliJ Settings dialog (`File -> Settings` or Settings gear on top right)
+  - Navigate to the `Editor -> Color Scheme` settings 
+  - Click the `Show Scheme Actions` gear icon to the right of the scheme selector
+  - Choose `Import Scheme...` from the pop up menu
   - Navigate to your cloned repository in the `language` folder
   - Select `intellij-idea-riddl-colour-scheme-settings.jar`
