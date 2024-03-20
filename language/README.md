@@ -10,6 +10,7 @@ instructions below:
   - Select `intellij-idea-riddl-file-type-settings.zip`
 
 * To load [intellij-idea-riddl-colour-scheme-settings.jar](intellij-idea-riddl-colour-scheme-settings.jar) into IntelliJ:
+  - NOTE: Using this colour scheme requires overriding Scala's default theme as only 1 scheme can be used in IDEA at a time
   - Load the IntelliJ Settings dialog (`File -> Settings` or Settings gear on top right)
   - Navigate to the `Editor -> Color Scheme` settings 
   - Click the `Show Scheme Actions` gear icon to the right of the scheme selector
