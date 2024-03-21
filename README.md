@@ -92,3 +92,31 @@ the use of a
 You can sign at that link or be prompted to do so when you submit your first
 Pull Request. 
 
+# IntelliJ File Type & Color Scheme Support
+
+The `language` directory contains two files that will improve the visual appeal of
+RIDDL source code in your IntelliJ IDEA. To load them, follow the instructions below:
+
+## File Type Support
+This will provide support for the `.riddl` file type which you should use for
+your RIDDL files. This is provided in [intellij-idea-riddl-file-type-settings.zip](intellij-idea-riddl-file-type-settings.zip)
+
+* To load into IntelliJ:
+  - Select `File -> Manage IDE Settings -> Import Settings...` from IntelliJ menu
+  - Navigate to your cloned repository in the `language` folder
+  - Select `intellij-idea-riddl-file-type-settings.zip`
+
+## Color Scheme Support
+Differentiating between keywords, readability words, definitions, punctuation, types, etc.
+is supported through the use of color scheme settings in this file:
+[intellij-idea-riddl-colour-scheme-settings.jar](intellij-idea-riddl-colour-scheme-settings.jar). Note that using this colour scheme
+requires overriding other themes as only 1 scheme can be used in IDEA at a time. You
+can switch themes in the Settings under `Editor --> Color Schemes`
+
+* To load into IntelliJ:
+  - Load the IntelliJ Settings dialog (`File -> Settings` or Settings gear on top right)
+  - Navigate to the `Editor -> Color Scheme` settings
+  - Click the `Show Scheme Actions` gear icon to the right of the scheme selector
+  - Choose `Import Scheme...` from the pop up menu
+  - Navigate to your cloned repository in the `language` folder
+  - Select `intellij-idea-riddl-colour-scheme-settings.jar`
