@@ -2532,6 +2532,7 @@ object AST {
     val accepted: Seq[String] = Seq("api", "database", "device", "file")
   }
 
+  case class RepositoryStructure
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
     * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
     * There is no specific technology implied other than the retention and retrieval of information. You should think of
