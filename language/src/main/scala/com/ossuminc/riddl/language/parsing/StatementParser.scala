@@ -130,6 +130,21 @@ private[parsing] trait StatementParser {
     )./.map(t => (ReturnStatement.apply _).tupled(t))
   }
 
+  private def schemaStatement[u:P]: P[SchemaStatement] = {}
+  private def
+  private def dataStatements[u:P]: P[Statement] = {
+    P(
+      //Statements to modify the storage: create, update, insert, append, remove
+      //Statements for reading the storage: read, query
+      //Statements for creating indices of various (abstract) kinds
+      //Statements for putting values into indices
+      //for example;  create record Table1Fields with index Table1Fields.id
+      //Statements or statement clauses that do their operational conditionally based on boolean expression
+      //Partial updates to record/node/document/etc.
+
+    )
+  }
+
   def statement[u: P](set: StatementsSet): P[Statement] = {
     set match {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
@@ -139,7 +154,8 @@ private[parsing] trait StatementParser {
         anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
       case StatementsSet.FunctionStatements   => anyDefStatements(set) | returnStatement
       case StatementsSet.ProjectorStatements  => anyDefStatements(set)
-      case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.RepositoryStatements =>
+        anyDefStatements(set) | replyStatement | dataStatements
       case StatementsSet.SagaStatements       => anyDefStatements(set) | returnStatement
       case StatementsSet.StreamStatements     => anyDefStatements(set)
     }
