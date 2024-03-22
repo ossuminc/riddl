@@ -23,7 +23,7 @@ private[parsing] trait ProjectorParser {
   private def projectorOption[u: P]: P[ProjectorOption] = {
     option[u, ProjectorOption](RiddlOptions.projectorOptions) {
       case (loc, RiddlOption.technology, args) => ProjectorTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => ProjectorCssOption(loc, args)
+      case (loc, RiddlOption.css, args)        => ProjectorCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => ProjectorIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => ProjectorKindOption(loc, args)
     }
@@ -33,10 +33,18 @@ private[parsing] trait ProjectorParser {
     include[OccursInProjector, u](projectorDefinitions(_))
   }
 
+  private def updates[u: P]: P[RepositoryRef] = {
+    P(
+      location ~ Keywords.updates ~ repositoryRef
+    ).map { case (_, ref) =>
+      ref
+    }
+  }
+
   private def projectorDefinitions[u: P]: P[Seq[OccursInProjector]] = {
     P(
-      typeDef | term | projectorInclude | handler(StatementsSet.ProjectorStatements) |
-        function | inlet | outlet | invariant | constant | typeDef | authorRef | comment | projectorOption
+      updates | typeDef | term | projectorInclude | handler(StatementsSet.ProjectorStatements) |
+        function | inlet | outlet | invariant | constant | authorRef | comment | projectorOption
     )./.rep(1)
   }
 
@@ -60,6 +68,7 @@ private[parsing] trait ProjectorParser {
       location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInProjector](contents)
+
       Projector(loc, id, mergedContent, brief, description)
     }
   }

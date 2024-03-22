@@ -244,7 +244,7 @@ case class ValidationPass(
             checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
           case StopStatement(loc) => ()
-          case _:Comment => ()
+          case _: Comment         => ()
         }
       }
   }
@@ -339,7 +339,7 @@ case class ValidationPass(
       val refParents = connector +: parents
       val maybeOutlet = checkRef[Outlet](connector.from, connector, refParents)
       val maybeInlet = checkRef[Inlet](connector.to, connector, refParents)
-  
+
       (maybeOutlet, maybeInlet) match {
         case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
           val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
@@ -409,9 +409,11 @@ case class ValidationPass(
           }
         case _ =>
       }
-      check(typ.id.value != s.id.value, 
-        s"${s.identify} and ${typ.identify} must not have the same name so path resolution can succeed", 
-        Messages.Error, s.loc
+      check(
+        typ.id.value != s.id.value,
+        s"${s.identify} and ${typ.identify} must not have the same name so path resolution can succeed",
+        Messages.Error,
+        s.loc
       )
     }
     checkDescription(s)

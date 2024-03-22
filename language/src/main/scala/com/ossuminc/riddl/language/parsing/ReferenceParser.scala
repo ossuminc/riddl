@@ -112,7 +112,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map(tpl => (ProjectorRef.apply _).tupled(tpl))
   }
 
-  private def repositoryRef[u: P]: P[RepositoryRef] = {
+  def repositoryRef[u: P]: P[RepositoryRef] = {
     P(location ~ Keywords.repository ~ pathIdentifier)
       .map(tpl => (RepositoryRef.apply _).tupled(tpl))
   }
@@ -152,7 +152,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
       .map { case (loc, keyword, pid) => GroupRef(loc, keyword, pid) }
   }
 
-  def authorRef[u:P]: P[AuthorRef] = {
+  def authorRef[u: P]: P[AuthorRef] = {
     P(
       location ~ by ~ Keywords.author ~ pathIdentifier
     ).map(tpl => (AuthorRef.apply _).tupled(tpl))

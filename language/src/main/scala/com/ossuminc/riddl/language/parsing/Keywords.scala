@@ -189,6 +189,7 @@ object Keywords {
   def true_[u: P]: P[Unit] = keyword(Keyword.true_)
   def type_[u: P]: P[Unit] = keyword(Keyword.type_)
   def url[u: P]: P[Unit] = keyword(Keyword.url)
+  def updates[u:P]: P[Unit] = keyword(Keyword.updates)
   def user[u: P]: P[Unit] = keyword(Keyword.user)
   def value[u: P]: P[Unit] = keyword(Keyword.value)
   def view[u: P]: P[Unit] = keyword(Keyword.view)
@@ -372,6 +373,7 @@ object Keyword {
   final val true_ = "true"
   final val type_ = "type"
   final val url = "url"
+  final val updates = "update"
   final val user = "user"
   final val value = "final value"
   final val view = "view"
