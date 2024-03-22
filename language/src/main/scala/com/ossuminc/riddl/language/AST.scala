@@ -6,8 +6,9 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.AST.{OccursInProjector, ProcessorRef}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
 import java.net.URL
 import java.nio.file.Path
@@ -337,11 +338,11 @@ object AST {
 
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
-    def terms: Contents[Term] = contents.filter[Term]
+    lazy val terms: Contents[Term] = contents.filter[Term]
   }
 
   sealed trait WithAuthorRefs extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
-    def authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
+    lazy val authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
 
     override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
   }
@@ -384,43 +385,43 @@ object AST {
   }
 
   sealed trait WithConstants extends Container[RiddlValue] with OccursInProcessors {
-    def constants: Contents[Constant] = contents.filter[Constant]
+    lazy val constants: Contents[Constant] = contents.filter[Constant]
   }
 
   sealed trait WithInvariants extends Container[RiddlValue] with OccursInProcessors {
-    def invariants: Contents[Invariant] = contents.filter[Invariant]
+    lazy val invariants: Contents[Invariant] = contents.filter[Invariant]
   }
 
   sealed trait WithFunctions extends Container[RiddlValue] with OccursInProcessors {
-    def functions: Contents[Function] = contents.filter[Function]
+    lazy val functions: Contents[Function] = contents.filter[Function]
   }
 
   sealed trait WithHandlers extends Container[RiddlValue] with OccursInProcessors {
-    def handlers: Contents[Handler] = contents.filter[Handler]
+    lazy val handlers: Contents[Handler] = contents.filter[Handler]
   }
 
   sealed trait WithInlets extends Container[RiddlValue] with OccursInProcessors {
-    def inlets: Contents[Inlet] = contents.filter[Inlet]
+    lazy val inlets: Contents[Inlet] = contents.filter[Inlet]
   }
 
   sealed trait WithOutlets extends Container[RiddlValue] with OccursInProcessors {
-    def outlets: Contents[Outlet] = contents.filter[Outlet]
+    lazy val outlets: Contents[Outlet] = contents.filter[Outlet]
   }
 
   sealed trait WithStates extends Container[RiddlValue] with OccursInEntity {
-    def states: Contents[State] = contents.filter[State]
+    lazy val states: Contents[State] = contents.filter[State]
   }
 
   sealed trait WithGroups extends Container[RiddlValue] with OccursInApplication {
-    def groups: Contents[Group] = contents.filter[Group]
+    lazy val groups: Contents[Group] = contents.filter[Group]
   }
 
   sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
-    def statements: Contents[Statement] = contents.filter[Statement]
+    lazy val statements: Contents[Statement] = contents.filter[Statement]
   }
 
   sealed trait WithContexts extends Container[RiddlValue] with OccursInDomain {
-    def contexts: Contents[Context] = contents.filter[Context]
+    lazy val contexts: Contents[Context] = contents.filter[Context]
   }
 
   sealed trait WithAuthors extends Container[RiddlValue] with OccursInDomain {
@@ -434,23 +435,23 @@ object AST {
   }
 
   sealed trait WithEpics extends Container[RiddlValue] with OccursInDomain {
-    def epics: Contents[Epic] = contents.filter[Epic]
+    lazy val epics: Contents[Epic] = contents.filter[Epic]
   }
 
   sealed trait WithApplications extends Container[RiddlValue] with OccursInDomain {
-    def applications: Contents[Application] = contents.filter[Application]
+    lazy val applications: Contents[Application] = contents.filter[Application]
   }
 
   sealed trait WithDomains extends Container[RiddlValue] with OccursInDomain {
-    def domains: Contents[Domain] = contents.filter[Domain]
+    lazy val domains: Contents[Domain] = contents.filter[Domain]
   }
 
   sealed trait WithProjectors extends Container[RiddlValue] with OccursInContext {
-    def projectors: Contents[Projector] = contents.filter[Projector]
+    lazy val projectors: Contents[Projector] = contents.filter[Projector]
   }
 
   sealed trait WithRepositories extends Container[RiddlValue] with OccursInContext {
-    def repositories: Contents[Repository] = contents.filter[Repository]
+    lazy val repositories: Contents[Repository] = contents.filter[Repository]
   }
 
   sealed trait WithEntities extends Container[RiddlValue] with OccursInContext {
@@ -2569,7 +2570,8 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class RepositoryRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
+  case class RepositoryRef(loc: At, pathId: PathIdentifier) extends Reference[Repository] with ProcessorRef[Projector]
+    with OccursInProjector {
     override def format: String = s"repository ${pathId.format}"
   }
 
@@ -2624,6 +2626,7 @@ object AST {
     description: Option[Description] = None
   ) extends Processor[ProjectorOption, OccursInProjector]
       with OccursInContext {
+    lazy val repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
     lazy val options: Seq[ProjectorOption] = contents.filter[ProjectorOption]
   }
 

@@ -54,8 +54,9 @@ private[parsing] trait StatementParser {
       case (loc, ref: FieldRef, statements)  => ForEachStatement(loc, ref, statements)
       case (loc, ref: InletRef, statements)  => ForEachStatement(loc, ref, statements)
       case (loc, ref: OutletRef, statements) => ForEachStatement(loc, ref, statements)
-      case (loc, ref: Reference[?], statements)  => error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
-        ForEachStatement(loc, FieldRef(ref.loc,ref.pathId), statements)
+      case (loc, ref: Reference[?], statements) =>
+        error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
+        ForEachStatement(loc, FieldRef(ref.loc, ref.pathId), statements)
     }
   }
 
@@ -137,7 +138,7 @@ private[parsing] trait StatementParser {
       case StatementsSet.EntityStatements =>
         anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
       case StatementsSet.FunctionStatements   => anyDefStatements(set) | returnStatement
-      case StatementsSet.ProjectorStatements  => anyDefStatements(set) | replyStatement
+      case StatementsSet.ProjectorStatements  => anyDefStatements(set)
       case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
       case StatementsSet.SagaStatements       => anyDefStatements(set) | returnStatement
       case StatementsSet.StreamStatements     => anyDefStatements(set)

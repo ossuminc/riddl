@@ -10,7 +10,6 @@ enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
-
 lazy val riddl: Project = Root("", "riddl", startYr = startYear)
   .configure(Publishing.configure, With.git, With.dynver)
   .settings(
@@ -35,8 +34,7 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
 
 lazy val Utils = config("utils")
 lazy val utils: Project = Module("utils", "riddl-utils")
-  .enablePlugins(OssumIncPlugin)
-  .configure(With.typical, With.build_info, With.coverage(70)/*, With.native()*/)
+  .configure(With.typical, With.build_info, With.coverage(70) /*, With.native()*/ )
   .settings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -46,10 +44,9 @@ lazy val utils: Project = Module("utils", "riddl-utils")
 
 val Language = config("language")
 lazy val language: Project = Module("language", "riddl-language")
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical, With.coverage(65))
   .settings(
-    scalacOptions ++= Seq("-explain","--explain-types"),
+    scalacOptions ++= Seq("-explain", "--explain-types"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
@@ -58,7 +55,6 @@ lazy val language: Project = Module("language", "riddl-language")
 
 val Passes = config("passes")
 lazy val passes = Module("passes", "riddl-passes")
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(30))
   .settings(
@@ -70,7 +66,6 @@ lazy val passes = Module("passes", "riddl-passes")
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(50))
   .settings(
@@ -85,7 +80,6 @@ lazy val commands: Project = Module("commands", "riddl-commands")
 val TestKit = config("testkit")
 
 lazy val testkit: Project = Module("testkit", "riddl-testkit")
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .settings(
     description := "A Testkit for testing RIDDL code, and a suite of those tests",
@@ -96,7 +90,6 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
 
 val Stats = config("stats")
 lazy val stats: Project = Module("stats", "riddl-stats")
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(50))
   .settings(
@@ -108,8 +101,6 @@ lazy val stats: Project = Module("stats", "riddl-stats")
 
 val Diagrams = config("diagrams")
 lazy val diagrams: Project = Module("diagrams", "riddl-diagrams")
-  .in(file("diagrams"))
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(50))
   .settings(
@@ -120,7 +111,6 @@ lazy val diagrams: Project = Module("diagrams", "riddl-diagrams")
 
 val Prettify = config("prettify")
 lazy val prettify = Module("prettify", "riddl-prettify")
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(65))
   .settings(
@@ -131,7 +121,6 @@ lazy val prettify = Module("prettify", "riddl-prettify")
 
 val Hugo = config("hugo")
 lazy val hugo: Project = Module("hugo", "riddl-hugo")
-  .enablePlugins(OssumIncPlugin)
   .configure(With.typical)
   .configure(With.coverage(50))
   .settings(
@@ -179,12 +168,9 @@ lazy val docsite = DocSite("doc", docOutput, docProjects)
   .dependsOn(hugo % "test->test", riddlc)
 
 val Riddlc = config("riddlc")
-lazy val riddlc: Project = Module("riddlc", "riddlc")
-  .enablePlugins(OssumIncPlugin)
+lazy val riddlc: Project = Program("riddlc", "riddlc")
   .configure(With.typical)
-  .enablePlugins(JavaAppPackaging, UniversalDeployPlugin)
-  .enablePlugins(MiniDependencyTreePlugin, GraalVMNativeImagePlugin)
-  .configure(With.coverage(10.0))
+  .configure(With.coverage(50.0))
   .dependsOn(
     utils % "compile->compile;test->test",
     commands,
@@ -207,8 +193,7 @@ lazy val riddlc: Project = Module("riddlc", "riddlc")
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 
-lazy val plugin = OssumIncPlugin.autoImport
-  .Plugin("sbt-riddl")
+lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info)
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",
