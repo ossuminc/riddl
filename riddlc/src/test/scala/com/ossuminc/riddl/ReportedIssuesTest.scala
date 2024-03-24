@@ -129,7 +129,7 @@ class ReportedIssuesTest extends ValidatingTest {
       checkOne("495.riddl")
     }
     "584" in {
-      checkOneDir("584/Foo.conf", "hugo")
+      checkOneDir("584/Foo.conf", "validate")
     }
     "588" in {
       val warning_text = "Vital definitions should have an author reference"

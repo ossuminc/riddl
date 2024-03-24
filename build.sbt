@@ -23,10 +23,8 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
     passes,
     commands,
     testkit,
-    diagrams,
     prettify,
     stats,
-    hugo,
     riddlc,
     docsite,
     plugin
@@ -119,22 +117,6 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   )
   .dependsOn(commands, testkit % "test->compile", utils)
 
-val Hugo = config("hugo")
-lazy val hugo: Project = Module("hugo", "riddl-hugo")
-  .configure(With.typical)
-  .configure(With.coverage(50))
-  .settings(
-    description := "The hugo command turns a RIDDL AST into source input for hugo static site generator",
-    Compile / unmanagedResourceDirectories += {
-      baseDirectory.value / "resources"
-    },
-    Test / parallelExecution := false,
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-  )
-  .dependsOn(passes % "compile->compile;test->test")
-  .dependsOn(commands, diagrams, stats)
-  .dependsOn(testkit % "test->compile")
-
 lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
@@ -142,9 +124,7 @@ lazy val docProjects = List(
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
-  (diagrams, Diagrams),
   (stats, Stats),
-  (hugo, Hugo),
   (riddlc, Riddlc)
 )
 
@@ -153,7 +133,9 @@ lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "a
 lazy val docsite = DocSite("doc", docOutput, docProjects)
   .settings(
     name := "riddl-doc",
-    description := "Generation of the documentation web site"
+    description := "Generation of the documentation web site",
+    libraryDependencies ++= Dep.testing
+
     /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
     mkdir -p themes/hugo-geekdoc/
     curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1
@@ -165,7 +147,6 @@ lazy val docsite = DocSite("doc", docOutput, docProjects)
     // ),
     // publishSite
   )
-  .dependsOn(hugo % "test->test", riddlc)
 
 val Riddlc = config("riddlc")
 lazy val riddlc: Project = Program("riddlc", "riddlc")
@@ -175,7 +156,6 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
     utils % "compile->compile;test->test",
     commands,
     passes,
-    hugo,
     testkit % "test->compile"
   )
   .settings(
