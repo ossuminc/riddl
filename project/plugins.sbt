@@ -1,4 +1,6 @@
-addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.9.2-0-868ced6e-20240326-1318")
+resolvers += s"GitHub Packages (ossuminc)" at s"https://maven.pkg.github.com/ossuminc/-"
+
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.9.3")
 
 // This enables sbt-bloop to create bloop config files for Metals editors
 // Uncomment locally if you use metals, otherwise don't slow down other
