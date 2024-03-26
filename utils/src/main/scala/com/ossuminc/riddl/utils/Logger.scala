@@ -21,6 +21,9 @@ object Logger {
   case object Severe extends Lvl
   case object Error extends Lvl
   case object Warning extends Lvl
+  case object Usage extends Lvl
+  case object Style extends Lvl
+  case object Missing extends Lvl
   case object Info extends Lvl
 
   val nl: String = System.getProperty("line.separator")
@@ -44,30 +47,37 @@ trait Logger {
 
   final def warn(s: => String): Unit = { write(Warning, s) }
 
+  final def usage(s: => String): Unit = { write(Usage, s) }
+  final def style(s: => String): Unit = { write(Style, s) }
+  final def missing(s: => String): Unit = { write(Missing, s) }
+
   final def info(s: => String): Unit = { write(Info, s) }
 
   private var nSevere = 0
   private var nError = 0
+  private var nMissing = 0
+  private var nStyle = 0
+  private var nUsage = 0
   private var nWarning = 0
   private var nInfo = 0
 
   protected def highlight(level: Lvl, s: String): String = {
-    if !withHighlighting then
-      s"[$level] $s"
+    if !withHighlighting then s"[$level] $s"
     else
       val prefix = level match {
         case Logger.Severe  => s"$RED_B$BLACK"
         case Logger.Error   => s"$RED"
         case Logger.Warning => s"$YELLOW"
+        case Logger.Usage   => s"$GREEN"
+        case Logger.Style   => s"$GREEN"
+        case Logger.Missing => s"$GREEN"
         case Logger.Info    => s"$BLUE"
       }
       val lines = s.split(nl)
       val head = s"$prefix$BOLD[$level] ${lines.head}$RESET"
       val tail = lines.tail.mkString(nl)
-      if tail.nonEmpty then
-        head + s"$nl$prefix$tail$RESET"
-      else
-        head
+      if tail.nonEmpty then head + s"$nl$prefix$tail$RESET"
+      else head
   }
 
   protected def write(level: Lvl, @unused s: String): Unit
@@ -77,6 +87,9 @@ trait Logger {
       case Severe  => nSevere += 1
       case Error   => nError += 1
       case Warning => nWarning += 1
+      case Style   => nStyle += 1
+      case Usage   => nUsage += 1
+      case Missing => nMissing += 1
       case Info    => nInfo += 1
     }
   }
@@ -85,6 +98,9 @@ trait Logger {
     s"""Severe Errors: $nSevere
        |Normal Errors: $nError
        |     Warnings: $nWarning
+       |        Usage: $nUsage
+       |        Style: $nStyle
+       |     Misasing: $nMissing
        |         Info: $nInfo
        |""".stripMargin
   }

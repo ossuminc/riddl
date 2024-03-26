@@ -178,6 +178,7 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info)
+  .configure(With.githubPackages)
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",
     buildInfoObject := "SbtRiddlPluginBuildInfo",

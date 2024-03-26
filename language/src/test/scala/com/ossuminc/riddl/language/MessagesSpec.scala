@@ -9,8 +9,8 @@ package com.ossuminc.riddl.language
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{Logger,StringLogger}
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, StringParserInput}
+import com.ossuminc.riddl.utils.{Logger, StringLogger}
 
 class MessagesSpec extends AnyWordSpec with Matchers {
 
@@ -106,13 +106,13 @@ class MessagesSpec extends AnyWordSpec with Matchers {
     }
   }
 
-  val i = Messages.info("info")
-  val sty = Messages.style("style")
-  val m = Messages.missing("missing")
-  val u = Messages.usage("usage")
-  val w = Messages.warning("warning")
-  val e = Messages.error("error")
-  val s = Messages.severe("severe")
+  private val i = Messages.info("info")
+  private val sty = Messages.style("style")
+  private val m = Messages.missing("missing")
+  private val u = Messages.usage("usage")
+  private val w = Messages.warning("warning")
+  private val e = Messages.error("error")
+  private val s = Messages.severe("severe")
 
   "Message" should {
     "know their kind" in {
@@ -130,39 +130,35 @@ class MessagesSpec extends AnyWordSpec with Matchers {
 
   "Messages" should {
     "filter for Warnings" in {
-      mix.justWarnings mustBe (Seq(sty, m, u, w))
+      mix.justWarnings mustBe Seq(sty, m, u, w)
     }
     "filter for Errors" in {
-      mix.justErrors mustBe (Seq(e, s))
+      mix.justErrors mustBe Seq(e, s)
     }
     "filter for StyleWarnings" in {
-      mix.justStyle mustBe (Seq(sty))
+      mix.justStyle mustBe Seq(sty)
     }
     "filter for MissingWarnings" in {
-      mix.justMissing mustBe (Seq(m))
+      mix.justMissing mustBe Seq(m)
     }
     "filter for UsageWarnings" in {
-      mix.justUsage mustBe (Seq(u))
+      mix.justUsage mustBe Seq(u)
+    }
+    "filter for InfoWarnings" in {
+      mix.justInfo mustBe Seq(i)
     }
     "log with retained order" in {
       val commonOptions = CommonOptions(groupMessagesByKind = false)
       val log = StringLogger()
       Messages.logMessages(mix, log, commonOptions)
       val content = log.toString()
-      val expected = """[34m[1m[info] Info: empty(1:1):[0m
-                       |[34minfo[0m
-                       |[33m[1m[warning] Style: empty(1:1):[0m
-                       |[33mstyle[0m
-                       |[33m[1m[warning] Missing: empty(1:1):[0m
-                       |[33mmissing[0m
-                       |[33m[1m[warning] Usage: empty(1:1):[0m
-                       |[33musage[0m
-                       |[33m[1m[warning] Warning: empty(1:1):[0m
-                       |[33mwarning[0m
-                       |[31m[1m[error] Error: empty(1:1):[0m
-                       |[31merror[0m
-                       |[41m[30m[1m[severe] Severe: empty(1:1):[0m
-                       |[41m[30msevere[0m
+      val expected = """[34m[1m[info] info[0m
+                       |[32m[1m[style] style[0m
+                       |[32m[1m[missing] missing[0m
+                       |[32m[1m[usage] usage[0m
+                       |[33m[1m[warning] warning[0m
+                       |[31m[1m[error] error[0m
+                       |[41m[30m[1m[severe] severe[0m
                        |""".stripMargin
       content mustBe expected
     }
@@ -173,33 +169,38 @@ class MessagesSpec extends AnyWordSpec with Matchers {
       val content = log.toString
       val expected =
         """[41m[30m[1m[severe] Severe Message Count: 1[0m
-          |[41m[30m[1m[severe] Severe: empty(1:1):[0m
-          |[41m[30msevere[0m
+          |[41m[30m[1m[severe] severe[0m
           |[31m[1m[error] Error Message Count: 1[0m
-          |[31m[1m[error] Error: empty(1:1):[0m
-          |[31merror[0m
-          |[33m[1m[warning] Usage Message Count: 1[0m
-          |[33m[1m[warning] Usage: empty(1:1):[0m
-          |[33musage[0m
-          |[33m[1m[warning] Missing Message Count: 1[0m
-          |[33m[1m[warning] Missing: empty(1:1):[0m
-          |[33mmissing[0m
-          |[33m[1m[warning] Style Message Count: 1[0m
-          |[33m[1m[warning] Style: empty(1:1):[0m
-          |[33mstyle[0m
+          |[31m[1m[error] error[0m
+          |[32m[1m[usage] Usage Message Count: 1[0m
+          |[32m[1m[usage] usage[0m
+          |[32m[1m[missing] Missing Message Count: 1[0m
+          |[32m[1m[missing] missing[0m
+          |[32m[1m[style] Style Message Count: 1[0m
+          |[32m[1m[style] style[0m
           |[34m[1m[info] Info Message Count: 1[0m
-          |[34m[1m[info] Info: empty(1:1):[0m
-          |[34minfo[0m
+          |[34m[1m[info] info[0m
           |""".stripMargin
       content mustBe expected
     }
 
-    "format should produce a correct string" in {
+    "format should produce a correct string for empty location" in {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
       val content = msg.format
-      val expected = """Warning: empty(1:2):
-                       |the_message""".stripMargin
+      val expected = "the_message"
+      content mustBe expected
+    }
+
+    "format should produce located output for non-empty location" in {
+      val at = At(1, 2, StringParserInput("test", "test"))
+      val msg = Message(at, "the_message", Warning)
+      val content = msg.format
+      val expected =
+        """test(1:2):
+          |the_message:
+          |test
+          | ^""".stripMargin
       content mustBe expected
     }
 
