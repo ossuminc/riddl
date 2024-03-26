@@ -133,7 +133,7 @@ object Messages {
           case fpi: FileParserInput =>
             val path = fpi.file.getAbsolutePath
             val index = path.lastIndexOf("riddl/")
-            kind.toString + ":" + path.substring(index + 6) + loc.toShort + nl
+            path.substring(index + 6)
           case spi: SourceParserInput => spi.source.descr
           case spi: StringParserInput => spi.origin
           case upi: URLParserInput    => upi.url.toString
@@ -142,13 +142,15 @@ object Messages {
         if source.isEmpty then {
           ""
         } else {
-          s"$kind: $source${loc.toShort}:$nl"
+          s"$source${loc.toShort}"
         }
       }
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
       if loc.isEmpty || headLine.isEmpty || errorLine.isEmpty then {
         s"$headLine$message$ctxt"
-      } else { s"$headLine$message:$nl$errorLine$ctxt" }
+      } else {
+        s"$headLine:$nl$message:$nl$errorLine$ctxt"
+      }
     }
   }
 
@@ -177,7 +179,7 @@ object Messages {
     loc: At = At.empty
   ): Message = { Message(loc, message) }
 
-  def exceptionToError(exception: Throwable, loc: At = At.empty, context: String = ""): Message = {
+  private def exceptionToError(exception: Throwable, loc: At = At.empty, context: String = ""): Message = {
     val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
     Message(loc, s"While $context: $message")
   }
@@ -238,9 +240,9 @@ object Messages {
   private def logMessage(message: Message, log: Logger): Unit = {
     message.kind match {
       case Info           => log.info(message.format)
-      case StyleWarning   => log.warn(message.format)
-      case MissingWarning => log.warn(message.format)
-      case UsageWarning   => log.warn(message.format)
+      case StyleWarning   => log.style(message.format)
+      case MissingWarning => log.missing(message.format)
+      case UsageWarning   => log.usage(message.format)
       case Warning        => log.warn(message.format)
       case Error          => log.error(message.format)
       case SevereError    => log.severe(message.format)
@@ -260,14 +262,20 @@ object Messages {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])
       if messages.nonEmpty then {
         kind match {
+          case UsageWarning =>
+            log.usage(s"""$kind Message Count: ${messages.length}""")
+          case StyleWarning =>
+            log.style(s"""$kind Message Count: ${messages.length}""")
+          case MissingWarning =>
+            log.missing(s"""$kind Message Count: ${messages.length}""")
+          case Warning => // everything else is a warning
+            log.warn(s"""$kind Message Count: ${messages.length}""")
           case Error =>
             log.error(s"""$kind Message Count: ${messages.length}""")
           case SevereError =>
             log.severe(s"""$kind Message Count: ${messages.length}""")
           case Info =>
             log.info(s"""$kind Message Count: ${messages.length}""")
-          case _ => // everything else is a warning
-            log.warn(s"""$kind Message Count: ${messages.length}""")
         }
         messages.foreach { (msg: Message) => logMessage(msg, log) }
       }

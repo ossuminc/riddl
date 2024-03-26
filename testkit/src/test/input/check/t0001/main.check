@@ -1,14 +1,16 @@
-Missing: testkit/src/test/input/check/t0001/main.riddl(1:1):
+testkit/src/test/input/check/t0001/main.riddl(1:1):
  Domain 'foo' in Root should have content:
  domain foo is {
  ^
-Missing: testkit/src/test/input/check/t0001/main.riddl(3:16):
+testkit/src/test/input/check/t0001/main.riddl(3:16):
  For Domain 'foo', description at main.riddl(3:16) is declared but empty
-Missing: testkit/src/test/input/check/t0001/main.riddl(1:1):
+ domain foo is {
+        ^
+testkit/src/test/input/check/t0001/main.riddl(1:1):
  Vital definitions should have an author reference:
  domain foo is {
  ^
-Usage: testkit/src/test/input/check/t0001/main.riddl(1:8):
+testkit/src/test/input/check/t0001/main.riddl(1:8):
  Models without any streaming data will exhibit minimal effect:
  domain foo is {
         ^
