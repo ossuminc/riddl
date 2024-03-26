@@ -157,7 +157,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
 
     "options at top level do not override in common object" in {
       val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")
-      CommandOptions.loadCommonOptions(optionFile) match {
+      CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Left(messages) => fail(messages.format)
         case Right(opts) =>
           opts.showWarnings mustBe false
@@ -183,7 +183,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
 
     "load message related common options from a file" in {
       val optionFile = Path.of("commands/src/test/input/message-options.conf")
-      CommandOptions.loadCommonOptions(optionFile) match {
+      CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Right(opts) =>
           opts.showTimes mustBe true
           opts.verbose mustBe true

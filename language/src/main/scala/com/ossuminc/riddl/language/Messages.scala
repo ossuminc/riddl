@@ -125,22 +125,28 @@ object Messages {
     }
 
     def format: String = {
-      val ctxt = if context.nonEmpty then { s"${nl}Context: $context" }
-      else ""
-      val source = loc.source match {
-        case fpi: FileParserInput =>
-          val path = fpi.file.getAbsolutePath
-          val index = path.lastIndexOf("riddl/")
-          path.substring(index + 6)
-        case spi: SourceParserInput => spi.source.descr
-        case spi: StringParserInput => spi.origin
-        case upi: URLParserInput    => upi.url.toString
-        case epi: EmptyParserInput  => epi.origin
+      val ctxt = if context.nonEmpty then {
+        s"${nl}Context: $context"
+      } else ""
+      val headLine = {
+        val source = loc.source match {
+          case fpi: FileParserInput =>
+            val path = fpi.file.getAbsolutePath
+            val index = path.lastIndexOf("riddl/")
+            kind.toString + ":" + path.substring(index + 6) + loc.toShort + nl
+          case spi: SourceParserInput => spi.source.descr
+          case spi: StringParserInput => spi.origin
+          case upi: URLParserInput    => upi.url.toString
+          case _: EmptyParserInput    => ""
+        }
+        if source.isEmpty then {
+          ""
+        } else {
+          s"$kind: $source${loc.toShort}:$nl"
+        }
       }
-      val sourceLine = loc.toShort
-      val headLine = s"$kind: $source$sourceLine:$nl"
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
-      if loc.isEmpty || source.isEmpty || errorLine.isEmpty then {
+      if loc.isEmpty || headLine.isEmpty || errorLine.isEmpty then {
         s"$headLine$message$ctxt"
       } else { s"$headLine$message:$nl$errorLine$ctxt" }
     }
@@ -173,7 +179,7 @@ object Messages {
 
   def exceptionToError(exception: Throwable, loc: At = At.empty, context: String = ""): Message = {
     val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
-    Message(loc, s"While ${context}: $message")
+    Message(loc, s"While $context: $message")
   }
 
   def severe(message: String, loc: At = At.empty): Message = {

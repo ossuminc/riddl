@@ -51,7 +51,7 @@ class ReadRiddlOptionsTest extends CommandTestBase {
       check(new ValidateCommand, expected)
     }
     "read common options" in {
-      CommandOptions.loadCommonOptions(Path.of(confFile)) match {
+      CommonOptionsHelper.loadCommonOptions(Path.of(confFile)) match {
         case Left(errors) => fail(errors.format)
         case Right(options) =>
           options.debug must be(true)
