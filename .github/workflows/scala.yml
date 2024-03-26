@@ -45,7 +45,9 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: code-coverage-report
-        path: "target/scala-2.12/scoverage-report/"
+        path: |
+          - **/target/scala-3.3.3/scoverage-report/scoverage.xml
+          - sbt-riddl/target/scala-2.12/scoverage-report/scoverage.xml
 
     - name: Test sbt-riddl plugin
       run: |
