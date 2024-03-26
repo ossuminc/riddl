@@ -20,8 +20,14 @@ object Plugin {
   final private[utils] val interfaceVersion: Int = 1
 
   final private val pluginDirEnvVarName = "RIDDL_PLUGINS_DIR"
-  final val pluginsDir: Path = Path
-    .of(Option(System.getenv(pluginDirEnvVarName)).getOrElse("plugins"))
+  final val pluginsDir: Path =
+    Path.of(
+      Option(System.getenv(pluginDirEnvVarName))
+        .getOrElse(
+          Option(System.getProperty("user.home")).map(d => d + "/.riddl/plugins")
+            .getOrElse("riddl-plugins")
+        )
+    )
 
   def loadPluginsFrom[T <: PluginInterface: ClassTag](
     pluginsDir: Path = pluginsDir

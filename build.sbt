@@ -1,4 +1,3 @@
-import com.ossuminc.sbt.helpers.Publishing
 import com.ossuminc.sbt.helpers.RootProjectInfo.Keys.{gitHubOrganization, gitHubRepository}
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
 
@@ -10,12 +9,13 @@ enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
-lazy val riddl: Project = Root("", "riddl", startYr = startYear)
-  .configure(Publishing.configure, With.git, With.dynver)
+lazy val riddl: Project = Root("riddl", startYr = startYear)
+  .configure(With.noPublishing, With.git, With.dynver)
   .settings(
-    ThisBuild / gitHubRepository := "riddl",
-    ThisBuild / gitHubOrganization := "ossuminc",
-    publish / skip := true
+//    ThisBuild / gitHubRepository := "riddl",
+//    ThisBuild / gitHubOrganization := "ossuminc",
+//    moduleName := "riddl",
+//    name := "riddl"
   )
   .aggregate(
     utils,
@@ -33,6 +33,7 @@ lazy val riddl: Project = Root("", "riddl", startYr = startYear)
 lazy val Utils = config("utils")
 lazy val utils: Project = Module("utils", "riddl-utils")
   .configure(With.typical, With.build_info, With.coverage(70) /*, With.native()*/ )
+  .configure(With.githubPackages)
   .settings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -43,6 +44,7 @@ lazy val utils: Project = Module("utils", "riddl-utils")
 val Language = config("language")
 lazy val language: Project = Module("language", "riddl-language")
   .configure(With.typical, With.coverage(65))
+  .configure(With.githubPackages)
   .settings(
     scalacOptions ++= Seq("-explain", "--explain-types"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
@@ -53,8 +55,8 @@ lazy val language: Project = Module("language", "riddl-language")
 
 val Passes = config("passes")
 lazy val passes = Module("passes", "riddl-passes")
-  .configure(With.typical)
-  .configure(With.coverage(30))
+  .configure(With.typical, With.coverage(30))
+  .configure(With.githubPackages)
   .settings(
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "AST Pass infrastructure and essential passes",
@@ -66,6 +68,7 @@ val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
   .configure(With.typical)
   .configure(With.coverage(50))
+  .configure(With.githubPackages)
   .settings(
     description := "RIDDL Command Infrastructure and basic command definitions",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
@@ -79,6 +82,7 @@ val TestKit = config("testkit")
 
 lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .configure(With.typical)
+  .configure(With.githubPackages)
   .settings(
     description := "A Testkit for testing RIDDL code, and a suite of those tests",
     libraryDependencies ++= Dep.testKitDeps
@@ -90,6 +94,7 @@ val Stats = config("stats")
 lazy val stats: Project = Module("stats", "riddl-stats")
   .configure(With.typical)
   .configure(With.coverage(50))
+  .configure(With.githubPackages)
   .settings(
     description := "Implementation of the Stats command which Hugo command depends upon",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
@@ -97,20 +102,11 @@ lazy val stats: Project = Module("stats", "riddl-stats")
   .dependsOn(commands % "compile->compile;test->test")
   .dependsOn(testkit % "test->compile")
 
-val Diagrams = config("diagrams")
-lazy val diagrams: Project = Module("diagrams", "riddl-diagrams")
-  .configure(With.typical)
-  .configure(With.coverage(50))
-  .settings(
-    description := "A Library of passes and utilities for generating diagrams from RIDDL AST",
-    libraryDependencies ++= Dep.testing
-  )
-  .dependsOn(language, passes, testkit % "test->compile")
-
 val Prettify = config("prettify")
 lazy val prettify = Module("prettify", "riddl-prettify")
   .configure(With.typical)
   .configure(With.coverage(65))
+  .configure(With.githubPackages)
   .settings(
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
@@ -152,11 +148,14 @@ val Riddlc = config("riddlc")
 lazy val riddlc: Project = Program("riddlc", "riddlc")
   .configure(With.typical)
   .configure(With.coverage(50.0))
+  .configure(With.githubPackages)
   .dependsOn(
     utils % "compile->compile;test->test",
     commands,
     passes,
-    testkit % "test->compile"
+    testkit % "test->compile",
+    stats,
+    prettify
   )
   .settings(
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
@@ -170,6 +169,10 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
       "--enable-url-protocols=https,http",
       "-H:ResourceConfigurationFiles=../../src/native-image.resources"
     ),
+//    libraryDependencySchemes ++= Seq(
+//      "com.ossuminc" %% "riddl-hugo" % VersionScheme.PVP,
+//      "com.ossuminc" %% "riddl-hugo-diagrams" % VersionScheme.PVP
+//    ),
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
 

@@ -55,10 +55,10 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       val config = "design/src/main/riddl/example.conf"
       runOnLocalProject(cwd, config, "validate")
     }
-    "validate Improving.app" in {
+    "Run hugo on Improving.app" in {
       val cwd = "/Users/reid/Code/improving.app/riddl"
       val config = "src/main/riddl/ImprovingApp.conf"
-      runOnLocalProject(cwd, config, "validate")
+      runOnLocalProject(cwd, config, "hugo")
     }
     "validate riddl-examples" in {
       val cwd = "/Users/reid/Code/Ossum/riddl-examples"
