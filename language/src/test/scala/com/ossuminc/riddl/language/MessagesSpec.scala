@@ -148,7 +148,7 @@ class MessagesSpec extends AnyWordSpec with Matchers {
       mix.justInfo mustBe Seq(i)
     }
     "log with retained order" in {
-      val commonOptions = CommonOptions(groupMessagesByKind = false)
+      val commonOptions = CommonOptions()
       val log = StringLogger()
       Messages.logMessages(mix, log, commonOptions)
       val content = log.toString()
