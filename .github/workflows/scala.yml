@@ -12,6 +12,8 @@ on:
 
 jobs:
   build:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
@@ -34,7 +36,6 @@ jobs:
 
     - name: Build, Run Test, Coverage
       env:
-        GITHUB_TOKEN: ${{ secrets.WORKFLOW_BUILD_TOKEN }}
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
         RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
