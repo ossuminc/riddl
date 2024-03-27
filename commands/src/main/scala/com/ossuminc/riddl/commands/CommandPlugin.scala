@@ -35,8 +35,7 @@ object CommandPlugin {
     pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, CommandPlugin[CommandOptions]] = {
     if commonOptions.verbose then { println(s"Loading command: $name") }
-    val loaded = Plugin
-      .loadPluginsFrom[CommandPlugin[CommandOptions]](pluginsDir)
+    val loaded = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]](pluginsDir)
     if loaded.isEmpty then { Left(errors(s"No command found for '$name'")) }
     else {
       loaded.find(_.pluginName == name) match {
@@ -215,7 +214,7 @@ object CommandPlugin {
 }
 
 /** The service interface for Riddlc command plugins */
-abstract class CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) extends PluginInterface {
+trait CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) extends PluginInterface {
   final override def pluginVersion: String = RiddlBuildInfo.version
 
   private val optionsClass: Class[?] = classTag[OPT].runtimeClass

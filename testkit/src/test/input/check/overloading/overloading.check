@@ -1,33 +1,33 @@
-Usage: testkit/src/test/input/check/overloading/overloading.riddl(1:8):
+testkit/src/test/input/check/overloading/overloading.riddl(1:8):
  Models without any streaming data will exhibit minimal effect:
  domain ignore = {
         ^
 
-Missing: testkit/src/test/input/check/overloading/overloading.riddl(2:1):
+testkit/src/test/input/check/overloading/overloading.riddl(2:1):
  Type 'Locale' should have a description:
  type Locale is String
  ^
-Missing: testkit/src/test/input/check/overloading/overloading.riddl(3:1):
+testkit/src/test/input/check/overloading/overloading.riddl(3:1):
  Type 'Keyboard' should have a description:
  type Keyboard is {locale: Locale}
  ^
-Missing: testkit/src/test/input/check/overloading/overloading.riddl(4:1):
+testkit/src/test/input/check/overloading/overloading.riddl(4:1):
  Type 'Device' should have a description:
  type Device is any of { Keyboard, Mouse, Monitor}
  ^
-Style: testkit/src/test/input/check/overloading/overloading.riddl(4:25):
+testkit/src/test/input/check/overloading/overloading.riddl(4:25):
  Enumerator 'Keyboard' overloads Type 'Keyboard' at overloading.riddl(3:1):
  type Device is any of { Keyboard, Mouse, Monitor}
                          ^
-Usage: testkit/src/test/input/check/overloading/overloading.riddl(3:1):
+testkit/src/test/input/check/overloading/overloading.riddl(3:1):
  Type 'Keyboard' is unused:
  type Keyboard is {locale: Locale}
  ^
-Usage: testkit/src/test/input/check/overloading/overloading.riddl(4:1):
+testkit/src/test/input/check/overloading/overloading.riddl(4:1):
  Type 'Device' is unused:
  type Device is any of { Keyboard, Mouse, Monitor}
  ^
-Missing: testkit/src/test/input/check/overloading/overloading.riddl(1:1):
+testkit/src/test/input/check/overloading/overloading.riddl(1:1):
  Vital definitions should have an author reference:
  domain ignore = {
  ^

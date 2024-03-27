@@ -119,8 +119,7 @@ class OnChangeCommand
             )
           } else Right(targetCmd)
         }
-        refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString)
-          .flatMap { rr =>
+        refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString).flatMap { rr =>
             val dur = Duration.create(rr)
             if dur.isFinite then { Right(dur.asInstanceOf[FiniteDuration]) }
             else {
@@ -130,10 +129,7 @@ class OnChangeCommand
               ))
             }
           }
-        maxCycles <-
-          optional(objCur, "max-cycles", OnChangeCommand.defaultMaxLoops)(
-            _.asInt
-          )
+        maxCycles <- optional(objCur, "max-cycles", OnChangeCommand.defaultMaxLoops)(_.asInt)
         interactive <- optional(objCur, "interactive", true)(_.asBoolean)
       yield {
         OnChangeCommand.Options(

@@ -17,7 +17,7 @@ class RiddlOptionsReadingTest extends AnyWordSpec with Matchers {
   "RiddlOptions Reading" must {
     "load repeat options from a file" in {
       val optionFile = Path.of("commands/src/test/input/repeat-options.conf")
-      CommandOptions.loadCommonOptions(optionFile) match {
+      CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Right(opts) =>
           opts.showTimes mustBe true
           opts.verbose mustBe true

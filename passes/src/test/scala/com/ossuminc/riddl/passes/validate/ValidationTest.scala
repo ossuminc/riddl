@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput}
+import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput, StringParserInput}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
 
@@ -17,11 +17,15 @@ import java.nio.file.Path
 class ValidationTest extends ParsingTest {
   "ValidationMessage#format" should {
     "produce a correct string" in {
+      val at = At(1, 2, StringParserInput("abcdefg","test"))
       val msg =
-        Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
+        Message(at, "the_message", Warning)
       val content = msg.format
-      val expected = """Warning: empty(1:2):
-                       |the_message""".stripMargin
+      val expected =
+        """test(1:2):
+          |the_message:
+          |abcdefg
+          | ^""".stripMargin
       content mustBe expected
     }
     "compare based on locations" in {
