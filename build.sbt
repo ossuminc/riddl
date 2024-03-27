@@ -11,13 +11,6 @@ lazy val startYear: Int = 2019
 
 lazy val riddl: Project = Root("riddl", startYr = startYear)
   .configure(With.noPublishing, With.git, With.dynver)
-lazy val riddl: Project = Root("", "riddl", startYr = startYear)
-  .configure(Publishing.configure, With.git, With.dynver)
-  .settings(
-    ThisBuild / gitHubRepository := "riddl",
-    ThisBuild / gitHubOrganization := "ossuminc",
-    publish / skip := true
-  )
   .aggregate(
     utils,
     language,
