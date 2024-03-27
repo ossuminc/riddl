@@ -23,6 +23,12 @@ jobs:
         java-version: '21'
         distribution: 'adopt-hotspot'
 
+    - name: Setup Hugo
+      uses: peaceiris/actions-hugo@v2
+      with:
+        hugo-version: 'latest'
+        extended: true
+
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
