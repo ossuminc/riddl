@@ -93,7 +93,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case p: Projector =>
         p.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-        p.repositories.foreach( ref => resolveARef[Repository](ref, parentsAsSeq))
+        p.repositories.foreach(ref => resolveARef[Repository](ref, parentsAsSeq))
       case r: Repository =>
         r.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
       case s: Saga =>
@@ -227,6 +227,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Function](func, parents)
       case ReplyStatement(_, message) =>
         resolveARef[Type](message, parents)
+      case _: DataStatement          => () // no references
       case _: ArbitraryStatement  => () // no references
       case _: ErrorStatement      => () // no references
       case _: ReturnStatement     => () // no references
