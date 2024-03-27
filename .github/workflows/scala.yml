@@ -23,24 +23,17 @@ jobs:
         java-version: '21'
         distribution: 'adopt-hotspot'
 
-    - name: Setup Hugo
-      uses: peaceiris/actions-hugo@v2
-      with:
-        hugo-version: 'latest'
-        extended: true
-
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
     - name: Build, Run Test, Coverage
-      run: |
-        which hugo
-        sbt -v clean coverage Test/compile test coverageAggregate coveralls
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.WORKFLOW_BUILD_TOKEN }}
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
         RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
+      run: |
+        sbt -v clean coverage Test/compile test coverageAggregate coveralls
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v3
