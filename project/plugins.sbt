@@ -1,6 +1,4 @@
-resolvers := Seq(s"GitHub Packages (ossuminc)" at s"https://maven.pkg.github.com/ossuminc/-") ++ resolvers.value
-
-addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.9.4")
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.9.5")
 
 // This enables sbt-bloop to create bloop config files for Metals editors
 // Uncomment locally if you use metals, otherwise don't slow down other
