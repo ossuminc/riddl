@@ -243,8 +243,11 @@ case class ValidationPass(
             checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
-          case StopStatement(loc) => ()
-          case _: Comment         => ()
+          case DataStatement(loc, keyword, instructions) =>
+            checkNonEmpty(keyword, "keyword", onClause, loc, Messages.Error, required = true)
+            checkNonEmptyValue(instructions, "instructions", onClause, loc, MissingWarning, required = false)
+          case StopStatement(_) => ()
+          case _: Comment       => ()
         }
       }
   }

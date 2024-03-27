@@ -59,13 +59,11 @@ object Keywords {
   def any[u: P]: P[Unit] = keyword(Keyword.any)
   def append[u: P]: P[Unit] = keyword(Keyword.append)
   def application[u: P]: P[Unit] = keyword(Keyword.application)
-  def arbitrary[u: P]: P[Unit] = keyword(Keyword.arbitrary)
   def author[u: P]: P[Unit] = keyword(Keyword.author)
   def become[u: P]: P[Unit] = keyword(Keyword.become)
   def benefit[u: P]: P[Unit] = keyword(Keyword.benefit)
   def briefly[u: P]: P[Unit] = keywords(StringIn(Keyword.briefly, Keyword.brief))
   def body[u: P]: P[Unit] = keyword(Keyword.body)
-  def but[u: P]: P[Unit] = keyword(Keyword.but)
   def call[u: P]: P[Unit] = keyword(Keyword.call)
   def case_[u: P]: P[Unit] = keyword(Keyword.case_)
   def capability[u: P]: P[Unit] = keyword(Keyword.capability)
@@ -83,7 +81,6 @@ object Keywords {
   def details[u: P]: P[Unit] = keyword(Keyword.details)
   def do_[u: P]: P[Unit] = keyword(Keyword.do_)
   def domain[u: P]: P[Unit] = keyword(Keyword.domain)
-  def each[u: P]: P[Unit] = keyword(Keyword.each)
   def else_[u: P]: P[Unit] = keyword(Keyword.else_)
   def email[u: P]: P[Unit] = keyword(Keyword.email)
   def end_[u: P]: P[Unit] = keyword(Keyword.end_)
@@ -94,26 +91,23 @@ object Keywords {
   def example[u: P]: P[Unit] = keyword(Keyword.example)
   def execute[u: P]: P[Unit] = keyword(Keyword.execute)
   def explained[u: P]: P[Unit] = keyword(Keyword.explained)
-  def false_[u: P]: P[Unit] = keyword(Keyword.false_)
   def field[u: P]: P[Unit] = keyword(Keyword.field)
   def fields[u: P]: P[Unit] = keyword(Keyword.fields)
   def file[u: P]: P[Unit] = keyword(Keyword.file)
   def flow[u: P]: P[Unit] = keyword(Keyword.flow)
-  def flows[u: P]: P[Unit] = keyword(Keyword.flows)
   def focus[u: P]: P[Unit] = keyword(Keyword.focus)
   def for_[u: P]: P[Unit] = keyword(Keyword.for_)
   def foreach[u: P]: P[Unit] = keyword(Keyword.foreach)
   def form[u: P]: P[Unit] = keyword(Keyword.form)
   def from[u: P]: P[Unit] = keyword(Keyword.from)
   def function[u: P]: P[Unit] = keyword(Keyword.function)
-  def given_[u: P]: P[Unit] = keyword(Keyword.given_)
   def graph[u: P]: P[Unit] = keyword(Keyword.graph)
   def group[u: P]: P[Unit] = keyword(Keyword.group)
   def handler[u: P]: P[Unit] = keyword(Keyword.handler)
   def if_[u: P]: P[Unit] = keyword(Keyword.if_)
   def import_[u: P]: P[Unit] = keyword(Keyword.import_)
   def include[u: P]: P[Unit] = keyword(Keyword.include)
-  def insert[u: P]: P[Unit] = keyword(Keyword.insert)
+  def index[u: P]: P[Unit] = keyword(Keyword.index)
   def init[u: P]: P[Unit] = keyword(Keyword.init)
   def inlet[u: P]: P[Unit] = keyword(Keyword.inlet)
   def inlets[u: P]: P[Unit] = keyword(Keyword.inlets)
@@ -126,7 +120,6 @@ object Keywords {
   def message[u: P]: P[Unit] = keyword(Keyword.message)
   def morph[u: P]: P[Unit] = keyword(Keyword.morph)
   def name[u: P]: P[Unit] = keyword(Keyword.name)
-  def new_[u: P]: P[Unit] = keyword(Keyword.new_)
   def on[u: P]: P[Unit] = keyword(Keyword.on)
   def onInit[u: P]: P[Unit] = keyword("on init")
   def onOther[u: P]: P[Unit] = keyword("on other")
@@ -148,7 +141,6 @@ object Keywords {
   def query[u: P]: P[Unit] = keyword(Keyword.query)
   def range[u: P]: P[Unit] = keyword(Keyword.range)
   def reference[u: P]: P[Unit] = keyword(Keyword.reference)
-  def remove[u: P]: P[Unit] = keyword(Keyword.remove)
   def replica[u: P]: P[Unit] = keyword(Keyword.replica)
   def reply[u: P]: P[Unit] = keyword(Keyword.reply)
   def repository[u: P]: P[Unit] = keyword(Keyword.repository)
@@ -160,12 +152,10 @@ object Keywords {
   def return_[u: P]: P[Unit] = keyword(Keyword.return_)
   def returns[u: P]: P[Unit] = keyword(Keyword.returns)
   def reverted[u: P]: P[Unit] = keyword(Keyword.reverted)
-  def role[u: P]: P[Unit] = keyword(Keyword.role)
   def router[u: P]: P[Unit] = keyword(Keyword.router)
   def saga[u: P]: P[Unit] = keyword(Keyword.saga)
-  def scenario[u: P]: P[Unit] = keyword(Keyword.scenario)
-  def see[u: P]: P[Unit] = keyword(Keyword.see)
-  def selects[u:P]: P[Unit] = keyword(Keyword.selects)
+  def schema[u: P]: P[Unit] = keywords(Keyword.schema)
+  def selects[u: P]: P[Unit] = keyword(Keyword.selects)
   def send[u: P]: P[Unit] = keyword(Keyword.send)
   def sequence[u: P]: P[Unit] = keyword(Keyword.sequence)
   def set[u: P]: P[Unit] = keyword(Keyword.set)
@@ -185,17 +175,13 @@ object Keywords {
   def term[u: P]: P[Unit] = keyword(Keyword.term)
   def then_[u: P]: P[Unit] = keyword(Keyword.then_)
   def title[u: P]: P[Unit] = keyword(Keyword.title)
-  def transmit[u: P]: P[Unit] = keyword(Keyword.transmit)
-  def true_[u: P]: P[Unit] = keyword(Keyword.true_)
   def type_[u: P]: P[Unit] = keyword(Keyword.type_)
   def url[u: P]: P[Unit] = keyword(Keyword.url)
-  def updates[u:P]: P[Unit] = keyword(Keyword.updates)
+  def updates[u: P]: P[Unit] = keyword(Keyword.updates)
   def user[u: P]: P[Unit] = keyword(Keyword.user)
   def value[u: P]: P[Unit] = keyword(Keyword.value)
-  def view[u: P]: P[Unit] = keyword(Keyword.view)
   def void[u: P]: P[Unit] = keyword(Keyword.void)
   def when[u: P]: P[Unit] = keyword(Keyword.when)
-  def yields[u: P]: P[Unit] = keyword(Keyword.yields)
 
   final val definition_keywords: Seq[P[Unit] => P[Unit]] = Seq(
     adaptor,
@@ -301,6 +287,7 @@ object Keyword {
   final val if_ = "if"
   final val import_ = "import"
   final val include = "include"
+  final val index = "index"
   final val insert = "insert"
   final val init = "init"
   final val inlet = "inlet"
@@ -348,6 +335,7 @@ object Keyword {
   final val router = "router"
   final val saga = "saga"
   final val scenario = "scenario"
+  final val schema = "schema"
   final val see = "see"
   final val selects = "selects"
   final val send = "send"

@@ -484,10 +484,13 @@ object AST {
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
 
+  /** The list of definitions to which a reference cannot be made  */
   type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
+  
+  /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     IncludeHolder[?] | TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
-    AdaptorDirection | UserStory | MethodArgument
+    AdaptorDirection | UserStory | MethodArgument | Schema 
 
   /** Base trait of values defined at the root (top of file) scope */
   sealed trait OccursAtRootScope extends RiddlValue
@@ -1970,7 +1973,7 @@ object AST {
     func: FunctionRef
   ) extends Statement {
     override def kind: String = "Call Statement"
-    def format: String = "scall ${func.format}"
+    def format: String = "call ${func.format}"
   }
 
   case class ForEachStatement(
@@ -1999,8 +2002,16 @@ object AST {
     loc: At
   ) extends Statement {
     override def kind: String = "Stop Statement"
-    def format: String = "scall ${func.format}"
+    def format: String = "stop ${func.format}"
+  }
 
+  case class DataStatement(
+    loc: At,
+    keyword: String,
+    instructions: LiteralString
+  ) extends Statement {
+    override def kind: String = "Data Statement"
+    def format: String = s"$keyword \"${instructions.s}"
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
@@ -2532,7 +2543,37 @@ object AST {
     val accepted: Seq[String] = Seq("api", "database", "device", "file")
   }
 
-  case class RepositoryStructure
+  enum RepositorySchemaKind:
+    case Other, Flat, Relational, TimeSeries, Graphical, Hierarchical, Star, Document, Columnar, Vector
+
+  /** The repository schema defined as an identifier of the schema, a general kind of intended schema,
+    * and the representation of the schema as data node types (vertices, tables, vectors, etc.), a
+    * list of named connections between pairs of the data nodes (foreign keys, parent/child, arbitrary
+    * graph nodes, etc.), and indices on specific fields of the data nodes.
+    * @param loc
+    * The location at which the schema occurs
+    * @param id
+    * The name of this schema
+    * @param schemaKind
+    * One of the RepositorySchemaKinds for a general sense of the repository intention
+    * @param data
+    * A list of the named primary data nodes (tables, vectors, vertices)
+    * @param connectors
+    * A list of named relations between primary data nodes
+    * #indices
+    * A list of fields in the ((data)) or ((connectors) that are considered indexed for faster retrieval
+    */
+  case class Schema(
+    loc: At,
+    id: Identifier,
+    schemaKind: RepositorySchemaKind = RepositorySchemaKind.Other,
+    data: Map[LiteralString, TypeRef],
+    connectors: Map[LiteralString, (TypeRef, TypeRef)],
+    indices: Seq[FieldRef]
+  ) extends OccursInRepository {
+    def format: String = s"schema ${id.format} is $schemaKind"
+  }
+
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
     * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
     * There is no specific technology implied other than the retention and retrieval of information. You should think of
@@ -2571,8 +2612,10 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class RepositoryRef(loc: At, pathId: PathIdentifier) extends Reference[Repository] with ProcessorRef[Projector]
-    with OccursInProjector {
+  case class RepositoryRef(loc: At, pathId: PathIdentifier)
+      extends Reference[Repository]
+      with ProcessorRef[Projector]
+      with OccursInProjector {
     override def format: String = s"repository ${pathId.format}"
   }
 

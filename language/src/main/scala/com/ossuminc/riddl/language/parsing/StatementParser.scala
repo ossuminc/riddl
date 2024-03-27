@@ -130,19 +130,14 @@ private[parsing] trait StatementParser {
     )./.map(t => (ReturnStatement.apply _).tupled(t))
   }
 
-  private def schemaStatement[u:P]: P[SchemaStatement] = {}
-  private def
-  private def dataStatements[u:P]: P[Statement] = {
+  private def dataStatements[u:P]: P[DataStatement] = {
     P(
-      //Statements to modify the storage: create, update, insert, append, remove
-      //Statements for reading the storage: read, query
-      //Statements for creating indices of various (abstract) kinds
-      //Statements for putting values into indices
-      //for example;  create record Table1Fields with index Table1Fields.id
-      //Statements or statement clauses that do their operational conditionally based on boolean expression
-      //Partial updates to record/node/document/etc.
-
-    )
+      location ~ StringIn("create", "read", "update", "delete", "remove", "append", "query").! ~
+        Readability.on ~ literalString
+    ).map {
+      case (loc, keyword, litStr) =>
+        DataStatement(loc, keyword, litStr)
+    }
   }
 
   def statement[u: P](set: StatementsSet): P[Statement] = {
