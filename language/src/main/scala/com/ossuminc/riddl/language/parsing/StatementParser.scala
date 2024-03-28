@@ -130,6 +130,16 @@ private[parsing] trait StatementParser {
     )./.map(t => (ReturnStatement.apply _).tupled(t))
   }
 
+  private def dataStatements[u:P]: P[DataStatement] = {
+    P(
+      location ~ StringIn("create", "read", "update", "delete", "remove", "append", "query").! ~
+        Readability.on ~ literalString
+    ).map {
+      case (loc, keyword, litStr) =>
+        DataStatement(loc, keyword, litStr)
+    }
+  }
+
   def statement[u: P](set: StatementsSet): P[Statement] = {
     set match {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
@@ -139,7 +149,8 @@ private[parsing] trait StatementParser {
         anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
       case StatementsSet.FunctionStatements   => anyDefStatements(set) | returnStatement
       case StatementsSet.ProjectorStatements  => anyDefStatements(set)
-      case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.RepositoryStatements =>
+        anyDefStatements(set) | replyStatement | dataStatements
       case StatementsSet.SagaStatements       => anyDefStatements(set) | returnStatement
       case StatementsSet.StreamStatements     => anyDefStatements(set)
     }
