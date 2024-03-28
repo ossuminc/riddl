@@ -65,16 +65,16 @@ private[parsing] trait RepositoryParser {
   private def schema[u: P]: P[Schema] = {
     P(
       location ~ Keywords.schema ~ identifier ~ Readability.is ~ schemaKind ~
-        (Readability.of ~ literalString ~ Readability.as ~ typeRef).rep(1) ~
-        (Readability.with_ ~ literalString ~ Readability.as ~ (typeRef ~ Readability.to ~ typeRef)).rep(0) ~
+        (Readability.of ~ identifier ~ Readability.as ~ typeRef).rep(1) ~
+        (Readability.with_ ~ identifier ~ Readability.as ~ (typeRef ~ Readability.to ~ typeRef)).rep(0) ~
         (Keywords.index ~ Readability.on ~ fieldRef).rep(0)
-    ).map {
-      case (at, id, kind, records, relations, indices)=> Schema(
+    ).map { case (at, id, kind, records, relations, indices) =>
+      Schema(
         at,
         id,
         kind,
-        Map.from[LiteralString, TypeRef](records),
-        Map.from[LiteralString, (TypeRef, TypeRef)](relations),
+        Map.from[Identifier, TypeRef](records),
+        Map.from[Identifier, (TypeRef, TypeRef)](relations),
         indices
       )
     }

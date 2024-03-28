@@ -361,7 +361,7 @@ object Keyword {
   final val true_ = "true"
   final val type_ = "type"
   final val url = "url"
-  final val updates = "update"
+  final val updates = "updates"
   final val user = "user"
   final val value = "final value"
   final val view = "view"

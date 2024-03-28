@@ -484,13 +484,13 @@ object AST {
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
 
-  /** The list of definitions to which a reference cannot be made  */
+  /** The list of definitions to which a reference cannot be made */
   type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
-  
+
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     IncludeHolder[?] | TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
-    AdaptorDirection | UserStory | MethodArgument | Schema 
+    AdaptorDirection | UserStory | MethodArgument | Schema
 
   /** Base trait of values defined at the root (top of file) scope */
   sealed trait OccursAtRootScope extends RiddlValue
@@ -2546,29 +2546,28 @@ object AST {
   enum RepositorySchemaKind:
     case Other, Flat, Relational, TimeSeries, Graphical, Hierarchical, Star, Document, Columnar, Vector
 
-  /** The repository schema defined as an identifier of the schema, a general kind of intended schema,
-    * and the representation of the schema as data node types (vertices, tables, vectors, etc.), a
-    * list of named connections between pairs of the data nodes (foreign keys, parent/child, arbitrary
-    * graph nodes, etc.), and indices on specific fields of the data nodes.
+  /** The repository schema defined as an identifier of the schema, a general kind of intended schema, and the
+    * representation of the schema as data node types (vertices, tables, vectors, etc.), a list of named connections
+    * between pairs of the data nodes (foreign keys, parent/child, arbitrary graph nodes, etc.), and indices on specific
+    * fields of the data nodes.
     * @param loc
-    * The location at which the schema occurs
+    *   The location at which the schema occurs
     * @param id
-    * The name of this schema
+    *   The name of this schema
     * @param schemaKind
-    * One of the RepositorySchemaKinds for a general sense of the repository intention
+    *   One of the RepositorySchemaKinds for a general sense of the repository intention
     * @param data
-    * A list of the named primary data nodes (tables, vectors, vertices)
+    *   A list of the named primary data nodes (tables, vectors, vertices)
     * @param connectors
-    * A list of named relations between primary data nodes
-    * #indices
-    * A list of fields in the ((data)) or ((connectors) that are considered indexed for faster retrieval
+    *   A list of named relations between primary data nodes #indices A list of fields in the ((data)) or ((connectors)
+    *   that are considered indexed for faster retrieval
     */
   case class Schema(
     loc: At,
     id: Identifier,
     schemaKind: RepositorySchemaKind = RepositorySchemaKind.Other,
-    data: Map[LiteralString, TypeRef],
-    connectors: Map[LiteralString, (TypeRef, TypeRef)],
+    data: Map[Identifier, TypeRef],
+    connectors: Map[Identifier, (TypeRef, TypeRef)],
     indices: Seq[FieldRef]
   ) extends OccursInRepository {
     def format: String = s"schema ${id.format} is $schemaKind"
