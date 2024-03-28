@@ -2005,13 +2005,25 @@ object AST {
     def format: String = "stop ${func.format}"
   }
 
-  case class DataStatement(
+  case class ReadStatement(
     loc: At,
     keyword: String,
-    instructions: LiteralString
+    what: LiteralString,
+    from: TypeRef,
+    where: LiteralString
   ) extends Statement {
-    override def kind: String = "Data Statement"
-    def format: String = s"$keyword \"${instructions.s}"
+    override def kind: String = "Read Statement"
+    def format: String = s"$keyword ${what.format} from ${from.format} where ${where.s}"
+  }
+
+  case class WriteStatement(
+    loc: At,
+    keyword: String,
+    what: LiteralString,
+    to: TypeRef
+  ) extends Statement {
+    override def kind: String = "Write Statement"
+    def format: String = s"$keyword ${what.format} to ${to.format}"
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR

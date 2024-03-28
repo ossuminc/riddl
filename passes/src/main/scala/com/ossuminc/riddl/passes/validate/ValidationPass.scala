@@ -243,9 +243,15 @@ case class ValidationPass(
             checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
-          case DataStatement(loc, keyword, instructions) =>
-            checkNonEmpty(keyword, "keyword", onClause, loc, Messages.Error, required = true)
-            checkNonEmptyValue(instructions, "instructions", onClause, loc, MissingWarning, required = false)
+          case ReadStatement(loc, keyword, what, from, where) =>
+            checkNonEmpty(keyword, "read keyword", onClause, loc, Messages.Error, required = true)
+            checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
+            checkTypeRef(from, onClause, parents)
+            checkNonEmptyValue(where, "where", onClause, loc, MissingWarning, required = false)
+          case WriteStatement(loc, keyword, what, to) =>
+            checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
+            checkTypeRef(to, onClause, parents)
+            checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
           case StopStatement(_) => ()
           case _: Comment       => ()
         }
@@ -520,6 +526,7 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, r)
     checkDescription(r)
+    checkNonEmpty(r.contents.filter[Schema], "schema", r, r.loc, MissingWarning, required = false)
   }
 
   private def validateAdaptor(
