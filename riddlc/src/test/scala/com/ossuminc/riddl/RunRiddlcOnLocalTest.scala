@@ -44,8 +44,7 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       val config = "src/riddl/FooBarSuccess/FooBar.conf"
       runOnLocalProject(cwd, config, "validate")
     }
-    "run hugo on OffTheTop" in {
-      pending // FIXME: unpendify
+    "validate on OffTheTop" in {
       val cwd = "/Users/reid/Code/Improving/OffTheTop"
       val config = "design/src/main/riddl/OffTheTop.conf"
       runOnLocalProject(cwd, config, "validate")
@@ -55,10 +54,10 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       val config = "design/src/main/riddl/example.conf"
       runOnLocalProject(cwd, config, "validate")
     }
-    "Run hugo on Improving.app" in {
+    "validate on Improving.app" in {
       val cwd = "/Users/reid/Code/improving.app/riddl"
       val config = "src/main/riddl/ImprovingApp.conf"
-      runOnLocalProject(cwd, config, "validate") // FIXME: make this run hugo
+      runOnLocalProject(cwd, config, "validate")
     }
     "validate riddl-examples" in {
       val cwd = "/Users/reid/Code/Ossum/riddl-examples"

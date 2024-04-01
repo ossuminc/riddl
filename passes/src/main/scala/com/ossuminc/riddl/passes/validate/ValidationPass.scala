@@ -252,8 +252,9 @@ case class ValidationPass(
             checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
             checkTypeRef(to, onClause, parents)
             checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-          case StopStatement(_) => ()
-          case _: Comment       => ()
+          case _: CodeStatement  => ()
+          case _: StopStatement  => ()
+          case _: Comment        => ()
         }
       }
   }

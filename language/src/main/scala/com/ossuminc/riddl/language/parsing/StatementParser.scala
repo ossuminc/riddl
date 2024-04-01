@@ -81,13 +81,6 @@ private[parsing] trait StatementParser {
     )./.map { (loc: At) => StopStatement(loc) }
   }
 
-  private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
-    P(
-      sendStatement | arbitraryStatement | errorStatement | theSetStatement | tellStatement | callStatement |
-        stopStatement | ifThenElseStatement(set) | forEachStatement(set) | comment
-    )
-  }
-
   enum StatementsSet:
     case AdaptorStatements,
       ApplicationStatements,
@@ -147,6 +140,26 @@ private[parsing] trait StatementParser {
       WriteStatement(loc, keyword, what, to)
     }
   }
+
+  private def backTickElipsis[u: P]: P[Unit] = { P("```") }
+
+  private def codeStatement[u: P]: P[CodeStatement] = {
+    P(
+      location ~ backTickElipsis ~ location ~
+        StringIn("scala", "java", "python", "mojo").! ~
+        until3('`', '`', '`')
+    ).map { case (loc1, loc2, lang, contents) =>
+      CodeStatement(loc1, LiteralString(loc2, lang), contents)
+    }
+  }
+
+  private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
+    P(
+      sendStatement | arbitraryStatement | errorStatement | theSetStatement | tellStatement | callStatement |
+        stopStatement | ifThenElseStatement(set) | forEachStatement(set) | codeStatement | comment
+    )
+  }
+
 
   def statement[u: P](set: StatementsSet): P[Statement] = {
     set match {
