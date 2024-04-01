@@ -2026,6 +2026,14 @@ object AST {
     def format: String = s"$keyword ${what.format} to ${to.format}"
   }
 
+  case class CodeStatement(
+    loc: At,
+    language: LiteralString,
+    body: String
+  ) extends Statement {
+    def format: String = s"```${language.s}$body```"
+  }
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** Base class of all options for the Adaptor definition */

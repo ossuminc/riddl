@@ -227,6 +227,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Function](func, parents)
       case ReplyStatement(_, message) =>
         resolveARef[Type](message, parents)
+      case _: CodeStatement       => () // no references 
       case _: ReadStatement       => () // no references
       case _: WriteStatement      => () // no references
       case _: ArbitraryStatement  => () // no references
