@@ -16,7 +16,7 @@ private[parsing] trait FunctionParser {
   this: ReferenceParser & TypeParser & StatementParser & CommonParser =>
 
   private def functionInclude[x: P]: P[IncludeHolder[OccursInFunction]] = {
-    include[OccursInFunction, x](using functionDefinitions(_))
+    include[OccursInFunction, x](functionDefinitions(_))
   }
 
   def input[u: P]: P[Aggregation] = {

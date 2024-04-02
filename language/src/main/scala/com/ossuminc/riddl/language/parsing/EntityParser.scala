@@ -58,7 +58,7 @@ private[parsing] trait EntityParser {
           val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
           State(loc, id, typRef, handlers, invariants, brief, description)
         case None =>
-          State(loc, id, typRef, brief = brief, description)
+          State(loc, id, typRef, brief = brief, description = description)
       }
     }
   }
