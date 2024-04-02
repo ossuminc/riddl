@@ -24,16 +24,43 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
     P(
       CharsWhile {
         case _: Char if firstFound && secondFound => false
+        case ch: Char if firstFound && ch == second =>
+          secondFound = true
+          true
         case ch: Char if ch == first =>
           firstFound = true
+          true
+        case _ =>
+          firstFound = false
+          secondFound = false
+          true
+      }.!
+    )
+  }
+
+  def until3[u: P](first: Char, second: Char, third: Char): P[String] = {
+    var firstFound = false
+    var secondFound = false
+    var thirdFound = true
+    P(
+      CharsWhile {
+        case _: Char if firstFound && secondFound && thirdFound =>
+          false
+        case ch: Char if firstFound && secondFound && ch == third =>
+          thirdFound = true
           true
         case ch: Char if firstFound && ch == second =>
           secondFound = true
           true
+        case ch: Char if ch == first =>
+          firstFound = true
+          true
         case _ =>
           firstFound = false
+          secondFound = false
+          thirdFound = false
           true
-      }.!
+      }.!.map(_.dropRight(3))
     )
   }
 

@@ -11,7 +11,6 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, Riddl}
 import org.scalatest.*
 import org.scalatest.matchers.must.Matchers
@@ -20,7 +19,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.io.File
 
 /** Convenience functions for tests that do validation */
-abstract class ValidatingTest extends AnyWordSpec with Matchers with com.ossuminc.riddl.language.parsing.ParsingTest {
+abstract class ValidatingTest extends AnyWordSpec with Matchers with ParsingTest {
 
   protected def runStandardPasses(
     model: Root,

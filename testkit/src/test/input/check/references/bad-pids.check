@@ -1,79 +1,80 @@
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(7:5):
+testkit/src/test/input/check/references/bad-pids.riddl(7:5):
  Entity 'FooEntity' should have a description:
      entity FooEntity is {
      ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(11:7):
+testkit/src/test/input/check/references/bad-pids.riddl(11:7):
  State 'FooExample' should have a description:
        state FooExample of FooExampleState is {
        ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(12:17):
+testkit/src/test/input/check/references/bad-pids.riddl(12:17):
  Handler 'HandleFoo' should have a description:
          handler HandleFoo is {
                  ^
-Usage: testkit/src/test/input/check/references/bad-pids.riddl(7:5):
+testkit/src/test/input/check/references/bad-pids.riddl(7:5):
  Entity 'FooEntity' is unused:
      entity FooEntity is {
      ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(7:5):
+testkit/src/test/input/check/references/bad-pids.riddl(7:5):
  Vital definitions should have an author reference:
      entity FooEntity is {
      ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(4:5):
+testkit/src/test/input/check/references/bad-pids.riddl(4:5):
  Type 'Foo' should have a description:
      type Foo is {
      ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(3:5):
+testkit/src/test/input/check/references/bad-pids.riddl(3:5):
  Command 'DoFoo' should have a description:
      command DoFoo is {foo: Foo}
      ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(1:1):
+testkit/src/test/input/check/references/bad-pids.riddl(1:1):
  Domain 'foo' should have a description:
  domain foo {
  ^
-Usage: testkit/src/test/input/check/references/bad-pids.riddl(3:5):
+testkit/src/test/input/check/references/bad-pids.riddl(3:5):
  Command 'DoFoo' is unused:
      command DoFoo is {foo: Foo}
      ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(2:3):
+testkit/src/test/input/check/references/bad-pids.riddl(2:3):
  Context 'ExampleContext' should have a description:
    context ExampleContext is {
    ^
-Error: testkit/src/test/input/check/references/bad-pids.riddl(13:22):
+testkit/src/test/input/check/references/bad-pids.riddl(13:22):
  Path 'DooFoo' was not resolved, in OnMessageClause 'On command DooFoo'
+ because the sought name, 'DooFoo', was not found in the symbol table,
  and it should refer to a Type:
            on command DooFoo {
                       ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(1:1):
+testkit/src/test/input/check/references/bad-pids.riddl(1:1):
  Vital definitions should have an author reference:
  domain foo {
  ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(13:11):
+testkit/src/test/input/check/references/bad-pids.riddl(13:11):
  OnMessageClause 'On command DooFoo' should have a description:
            on command DooFoo {
            ^
-Usage: testkit/src/test/input/check/references/bad-pids.riddl(1:8):
+testkit/src/test/input/check/references/bad-pids.riddl(1:8):
  Models without any streaming data will exhibit minimal effect:
  domain foo {
         ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(8:7):
+testkit/src/test/input/check/references/bad-pids.riddl(8:7):
  Record 'FooExampleState' should have a description:
        record FooExampleState is {
        ^
-Style: testkit/src/test/input/check/references/bad-pids.riddl(1:1):
+testkit/src/test/input/check/references/bad-pids.riddl(1:1):
  Domain 'foo' overloads:
    Field 'foo' at bad-pids.riddl(3:23),
    Field 'foo' at bad-pids.riddl(9:9):
  domain foo {
  ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(2:3):
+testkit/src/test/input/check/references/bad-pids.riddl(2:3):
  Vital definitions should have an author reference:
    context ExampleContext is {
    ^
-Missing: testkit/src/test/input/check/references/bad-pids.riddl(13:11):
+testkit/src/test/input/check/references/bad-pids.riddl(13:11):
  Processing for commands should result in sending an event:
            on command DooFoo {
            ^
-Error: testkit/src/test/input/check/references/bad-pids.riddl(14:23):
+testkit/src/test/input/check/references/bad-pids.riddl(14:23):
  Path 'FooExamplexxxx.garbage' was not resolved, in OnMessageClause 'On command DooFoo'
  because the PathId is invalid since it's first element, FooExamplexxxx, does not exist in the model
  and it should refer to a Field:

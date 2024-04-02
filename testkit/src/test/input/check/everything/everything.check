@@ -1,292 +1,298 @@
-Missing: testkit/src/test/input/check/everything/everything.riddl(1:1):
+testkit/src/test/input/check/everything/everything.riddl(1:1):
  Domain 'Everything' should have a description:
  domain Everything is {
  ^
-Style: testkit/src/test/input/check/everything/everything.riddl(30:5):
+testkit/src/test/input/check/everything/everything.riddl(30:5):
  Type 'alt' should start with a capital letter:
      type alt is one of { enum or stamp or url }
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(51:7):
+testkit/src/test/input/check/everything/everything.riddl(51:7):
  Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(40:5):
+testkit/src/test/input/check/everything/everything.riddl(40:5):
  Type 'optional' should have a description:
      type optional is agg?
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(8:20):
+testkit/src/test/input/check/everything/everything.riddl(8:20):
  Inlet 'Commands' overloads Outlet 'Commands' at everything.riddl(7:24):
      sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
                     ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(6:3):
+testkit/src/test/input/check/everything/everything.riddl(6:3):
  Context 'APlant' should have a description:
    context APlant is {
    ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(45:7):
+testkit/src/test/input/check/everything/everything.riddl(45:7):
  Type 'somethingDate' should have a description:
        type somethingDate is Date
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(19:5):
+testkit/src/test/input/check/everything/everything.riddl(19:5):
  Type 'num' should have a description:
      type num is Number             // Define num as a Number
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(19:5):
+testkit/src/test/input/check/everything/everything.riddl(19:5):
  Type 'num' should start with a capital letter:
      type num is Number             // Define num as a Number
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(24:5):
+testkit/src/test/input/check/everything/everything.riddl(24:5):
  Type 'stamp' should have a description:
      type stamp is TimeStamp        // Define stamp as a TimeStamp
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(32:5):
+testkit/src/test/input/check/everything/everything.riddl(32:5):
  Type 'agg' should have a description:
      type agg is {
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(22:5):
+testkit/src/test/input/check/everything/everything.riddl(22:5):
  Type 'dat' should start with a capital letter:
      type dat is Date               // Define dat as a Date
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(38:5):
+testkit/src/test/input/check/everything/everything.riddl(38:5):
  Type 'oneOrMore' is unused:
      type oneOrMore is many agg
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(3:3):
+testkit/src/test/input/check/everything/everything.riddl(3:3):
  Type 'SomeType' should have a description:
    type SomeType is String
    ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(49:7):
+testkit/src/test/input/check/everything/everything.riddl(49:7):
  State 'someState' in Entity 'Something' should have content:
        state someState of type Everything.StateType is { ??? }
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(42:5):
+testkit/src/test/input/check/everything/everything.riddl(42:5):
  Entity 'Something' should have a description:
      entity Something is {
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(27:5):
+testkit/src/test/input/check/everything/everything.riddl(27:5):
  Type 'PeachType' is unused:
      type PeachType is { a: Integer }
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(22:5):
+testkit/src/test/input/check/everything/everything.riddl(22:5):
  Type 'dat' should have a description:
      type dat is Date               // Define dat as a Date
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(21:5):
+testkit/src/test/input/check/everything/everything.riddl(21:5):
  Type 'ident' should have a description:
      type ident is UUID             // Define ident as an Id
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(71:15):
+testkit/src/test/input/check/everything/everything.riddl(71:15):
  Handler 'fee' should have a description:
        handler fee is {
                ^
-Style: testkit/src/test/input/check/everything/everything.riddl(38:5):
+testkit/src/test/input/check/everything/everything.riddl(38:5):
  Type 'oneOrMore' should start with a capital letter:
      type oneOrMore is many agg
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(4:3):
+testkit/src/test/input/check/everything/everything.riddl(4:3):
  Command 'DoAThing' should have a description:
    type DoAThing is command { thingField: Integer }
    ^
-Style: testkit/src/test/input/check/everything/everything.riddl(23:5):
+testkit/src/test/input/check/everything/everything.riddl(23:5):
  Type 'tim' should start with a capital letter:
      type tim is Time               // Define tim as a Time
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(72:9):
+testkit/src/test/input/check/everything/everything.riddl(72:9):
  OnMessageClause 'On event ItHappened' should have a description:
          on event ItHappened {
          ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(18:5):
+testkit/src/test/input/check/everything/everything.riddl(18:5):
  Type 'str' should have a description:
      type str is String             // Define str as a String
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(30:5):
+testkit/src/test/input/check/everything/everything.riddl(30:5):
  Type 'alt' is unused:
      type alt is one of { enum or stamp or url }
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(28:5):
+testkit/src/test/input/check/everything/everything.riddl(28:5):
  Type 'enum' should start with a capital letter:
      type enum is any of { Apple Pear Peach(21) Persimmon(42) }
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(22:5):
+testkit/src/test/input/check/everything/everything.riddl(22:5):
  Type 'dat' is unused:
      type dat is Date               // Define dat as a Date
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(42:5):
+testkit/src/test/input/check/everything/everything.riddl(42:5):
  Vital definitions should have an author reference:
      entity Something is {
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(47:7):
+testkit/src/test/input/check/everything/everything.riddl(47:7):
  Command 'ACommand' should have a description:
        command ACommand is { ??? }
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(14:3):
+testkit/src/test/input/check/everything/everything.riddl(14:3):
  Type 'StateType' should have a description:
    type StateType is { someField1: SomeType }
    ^
-Warning: testkit/src/test/input/check/everything/everything.riddl(68:7):
+testkit/src/test/input/check/everything/everything.riddl(68:7):
  Inlet 'SOT_In' is not connected:
        inlet SOT_In is SomeOtherThing.ItHappened
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(51:7):
+testkit/src/test/input/check/everything/everything.riddl(51:7):
  Vital definitions should have an author reference:
        function whenUnderTheInfluence is {
        ^
-Style: testkit/src/test/input/check/everything/everything.riddl(39:5):
+testkit/src/test/input/check/everything/everything.riddl(39:5):
  Type 'zeroOrMore' should start with a capital letter:
      type zeroOrMore is agg*
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(59:15):
+testkit/src/test/input/check/everything/everything.riddl(59:15):
  Handler 'foo' should have a description:
        handler foo is {
                ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(16:3):
+testkit/src/test/input/check/everything/everything.riddl(16:3):
  Vital definitions should have an author reference:
    context full is {
    ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(30:5):
+testkit/src/test/input/check/everything/everything.riddl(30:5):
  Type 'alt' should have a description:
      type alt is one of { enum or stamp or url }
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(20:5):
+testkit/src/test/input/check/everything/everything.riddl(20:5):
  Type 'boo' should have a description:
      type boo is Boolean            // Define boo as a Boolean
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(69:7):
+testkit/src/test/input/check/everything/everything.riddl(69:7):
  Event 'ItHappened' should have a description:
        type ItHappened is event { when: String }
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(7:5):
+testkit/src/test/input/check/everything/everything.riddl(7:5):
  Vital definitions should have an author reference:
      source Source is { outlet Commands is DoAThing } described by "Data Source"
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(6:3):
+testkit/src/test/input/check/everything/everything.riddl(6:3):
  Vital definitions should have an author reference:
    context APlant is {
    ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(23:5):
+testkit/src/test/input/check/everything/everything.riddl(23:5):
  Type 'tim' is unused:
      type tim is Time               // Define tim as a Time
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(18:5):
+testkit/src/test/input/check/everything/everything.riddl(18:5):
  Type 'str' is unused:
      type str is String             // Define str as a String
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(40:5):
+testkit/src/test/input/check/everything/everything.riddl(40:5):
  Type 'optional' is unused:
      type optional is agg?
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(1:1):
+testkit/src/test/input/check/everything/everything.riddl(1:1):
  Vital definitions should have an author reference:
  domain Everything is {
  ^
-Style: testkit/src/test/input/check/everything/everything.riddl(40:5):
+testkit/src/test/input/check/everything/everything.riddl(40:5):
  Type 'optional' should start with a capital letter:
      type optional is agg?
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(25:5):
+testkit/src/test/input/check/everything/everything.riddl(25:5):
  Type 'url' should start with a capital letter:
      type url is URL
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(28:5):
+testkit/src/test/input/check/everything/everything.riddl(28:5):
  Type 'enum' should have a description:
      type enum is any of { Apple Pear Peach(21) Persimmon(42) }
      ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(39:5):
+testkit/src/test/input/check/everything/everything.riddl(39:5):
  Type 'zeroOrMore' is unused:
      type zeroOrMore is agg*
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(51:7):
+testkit/src/test/input/check/everything/everything.riddl(51:7):
  Function 'whenUnderTheInfluence' should have a description:
        function whenUnderTheInfluence is {
        ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(67:5):
+testkit/src/test/input/check/everything/everything.riddl(67:5):
  Entity 'SomeOtherThing' is unused:
      entity SomeOtherThing is {
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(67:5):
+testkit/src/test/input/check/everything/everything.riddl(67:5):
  Vital definitions should have an author reference:
      entity SomeOtherThing is {
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(34:7):
+testkit/src/test/input/check/everything/everything.riddl(34:7):
  Field identifier 'id' is too short. The minimum length is 3:
        id is ident,
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(67:5):
+testkit/src/test/input/check/everything/everything.riddl(67:5):
  Entity 'SomeOtherThing' should have a description:
      entity SomeOtherThing is {
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(23:5):
+testkit/src/test/input/check/everything/everything.riddl(23:5):
  Type 'tim' should have a description:
      type tim is Time               // Define tim as a Time
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(25:5):
+testkit/src/test/input/check/everything/everything.riddl(25:5):
  Type 'url' should have a description:
      type url is URL
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(45:7):
+testkit/src/test/input/check/everything/everything.riddl(45:7):
  Type 'somethingDate' should start with a capital letter:
        type somethingDate is Date
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(16:3):
+testkit/src/test/input/check/everything/everything.riddl(16:3):
  Context 'full' should have a description:
    context full is {
    ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(27:5):
+testkit/src/test/input/check/everything/everything.riddl(27:5):
  Type 'PeachType' should have a description:
      type PeachType is { a: Integer }
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(32:5):
+testkit/src/test/input/check/everything/everything.riddl(32:5):
  Type 'agg' should start with a capital letter:
      type agg is {
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(20:5):
+testkit/src/test/input/check/everything/everything.riddl(20:5):
  Type 'boo' should start with a capital letter:
      type boo is Boolean            // Define boo as a Boolean
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(60:9):
+testkit/src/test/input/check/everything/everything.riddl(60:9):
  OnMessageClause 'On command ACommand' should have a description:
          on command ACommand {
          ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(42:5):
+testkit/src/test/input/check/everything/everything.riddl(42:5):
  Entity 'Something' is unused:
      entity Something is {
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(21:5):
+testkit/src/test/input/check/everything/everything.riddl(21:5):
  Type 'ident' should start with a capital letter:
      type ident is UUID             // Define ident as an Id
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(38:5):
+testkit/src/test/input/check/everything/everything.riddl(38:5):
  Type 'oneOrMore' should have a description:
      type oneOrMore is many agg
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(70:7):
+testkit/src/test/input/check/everything/everything.riddl(70:7):
  State 'otherThingState' in Entity 'SomeOtherThing' should have content:
        state otherThingState of type Everything.StateType is { ??? }
        ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(20:5):
+testkit/src/test/input/check/everything/everything.riddl(20:5):
  Type 'boo' is unused:
      type boo is Boolean            // Define boo as a Boolean
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(27:25):
+testkit/src/test/input/check/everything/everything.riddl(27:25):
  Field identifier 'a' is too short. The minimum length is 3:
      type PeachType is { a: Integer }
                          ^
-Usage: testkit/src/test/input/check/everything/everything.riddl(45:7):
+testkit/src/test/input/check/everything/everything.riddl(45:7):
  Type 'somethingDate' is unused:
        type somethingDate is Date
        ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(39:5):
+testkit/src/test/input/check/everything/everything.riddl(39:5):
  Type 'zeroOrMore' should have a description:
      type zeroOrMore is agg*
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(18:5):
+testkit/src/test/input/check/everything/everything.riddl(18:5):
  Type 'str' should start with a capital letter:
      type str is String             // Define str as a String
      ^
-Missing: testkit/src/test/input/check/everything/everything.riddl(8:5):
+testkit/src/test/input/check/everything/everything.riddl(8:5):
  Vital definitions should have an author reference:
      sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
      ^
-Style: testkit/src/test/input/check/everything/everything.riddl(24:5):
+testkit/src/test/input/check/everything/everything.riddl(24:5):
  Type 'stamp' should start with a capital letter:
      type stamp is TimeStamp        // Define stamp as a TimeStamp
      ^
+testkit/src/test/input/check/everything/everything.riddl(73:21):
+ Path 'SomeOtherThing.otherThingState.someField1' was not resolved, in OnMessageClause 'On event ItHappened'
+ because definition 'someField1' was not found inside State 'otherThingState'
+ and it should refer to a Field:
+           set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"
+                     ^

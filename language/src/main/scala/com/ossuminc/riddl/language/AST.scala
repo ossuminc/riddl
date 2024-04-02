@@ -6,8 +6,9 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.AST.{OccursInProjector, ProcessorRef}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
 import java.net.URL
 import java.nio.file.Path
@@ -208,7 +209,7 @@ object AST {
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
     def vitals: Contents[VitalDefinition[?, CV]] = container.filter[VitalDefinition[?, CV]]
-    def processors: Contents[Processor[?,CV]] = container.filter[Processor[?,CV]]
+    def processors: Contents[Processor[?, CV]] = container.filter[Processor[?, CV]]
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
@@ -243,7 +244,9 @@ object AST {
       with OccursAtRootScope
       with OccursInVitalDefinitions
       with OccursInProcessors
-      with OccursInGroup {
+      with OccursInHandler
+      with OccursInGroup
+      with Statement {
     final inline override def isComment: Boolean = true
   }
 
@@ -335,11 +338,11 @@ object AST {
 
   /** Added to definitions that support a list of term definitions */
   sealed trait WithTerms extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
-    def terms: Contents[Term] = contents.filter[Term]
+    lazy val terms: Contents[Term] = contents.filter[Term]
   }
 
   sealed trait WithAuthorRefs extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
-    def authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
+    lazy val authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
 
     override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
   }
@@ -369,7 +372,7 @@ object AST {
       }
     }
 
-    override def isEmpty: Boolean = options.isEmpty && super.isEmpty
+    override def isEmpty: Boolean = super.isEmpty && options.isEmpty
 
     override def hasOptions: Boolean = options.nonEmpty
   }
@@ -382,43 +385,43 @@ object AST {
   }
 
   sealed trait WithConstants extends Container[RiddlValue] with OccursInProcessors {
-    def constants: Contents[Constant] = contents.filter[Constant]
+    lazy val constants: Contents[Constant] = contents.filter[Constant]
   }
 
   sealed trait WithInvariants extends Container[RiddlValue] with OccursInProcessors {
-    def invariants: Contents[Invariant] = contents.filter[Invariant]
+    lazy val invariants: Contents[Invariant] = contents.filter[Invariant]
   }
 
   sealed trait WithFunctions extends Container[RiddlValue] with OccursInProcessors {
-    def functions: Contents[Function] = contents.filter[Function]
+    lazy val functions: Contents[Function] = contents.filter[Function]
   }
 
   sealed trait WithHandlers extends Container[RiddlValue] with OccursInProcessors {
-    def handlers: Contents[Handler] = contents.filter[Handler]
+    lazy val handlers: Contents[Handler] = contents.filter[Handler]
   }
 
   sealed trait WithInlets extends Container[RiddlValue] with OccursInProcessors {
-    def inlets: Contents[Inlet] = contents.filter[Inlet]
+    lazy val inlets: Contents[Inlet] = contents.filter[Inlet]
   }
 
   sealed trait WithOutlets extends Container[RiddlValue] with OccursInProcessors {
-    def outlets: Contents[Outlet] = contents.filter[Outlet]
+    lazy val outlets: Contents[Outlet] = contents.filter[Outlet]
   }
 
   sealed trait WithStates extends Container[RiddlValue] with OccursInEntity {
-    def states: Contents[State] = contents.filter[State]
+    lazy val states: Contents[State] = contents.filter[State]
   }
 
   sealed trait WithGroups extends Container[RiddlValue] with OccursInApplication {
-    def groups: Contents[Group] = contents.filter[Group]
+    lazy val groups: Contents[Group] = contents.filter[Group]
   }
 
   sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
-    def statements: Contents[Statement] = contents.filter[Statement]
+    lazy val statements: Contents[Statement] = contents.filter[Statement]
   }
 
   sealed trait WithContexts extends Container[RiddlValue] with OccursInDomain {
-    def contexts: Contents[Context] = contents.filter[Context]
+    lazy val contexts: Contents[Context] = contents.filter[Context]
   }
 
   sealed trait WithAuthors extends Container[RiddlValue] with OccursInDomain {
@@ -432,23 +435,23 @@ object AST {
   }
 
   sealed trait WithEpics extends Container[RiddlValue] with OccursInDomain {
-    def epics: Contents[Epic] = contents.filter[Epic]
+    lazy val epics: Contents[Epic] = contents.filter[Epic]
   }
 
   sealed trait WithApplications extends Container[RiddlValue] with OccursInDomain {
-    def applications: Contents[Application] = contents.filter[Application]
+    lazy val applications: Contents[Application] = contents.filter[Application]
   }
 
   sealed trait WithDomains extends Container[RiddlValue] with OccursInDomain {
-    def domains: Contents[Domain] = contents.filter[Domain]
+    lazy val domains: Contents[Domain] = contents.filter[Domain]
   }
 
   sealed trait WithProjectors extends Container[RiddlValue] with OccursInContext {
-    def projectors: Contents[Projector] = contents.filter[Projector]
+    lazy val projectors: Contents[Projector] = contents.filter[Projector]
   }
 
   sealed trait WithRepositories extends Container[RiddlValue] with OccursInContext {
-    def repositories: Contents[Repository] = contents.filter[Repository]
+    lazy val repositories: Contents[Repository] = contents.filter[Repository]
   }
 
   sealed trait WithEntities extends Container[RiddlValue] with OccursInContext {
@@ -481,10 +484,13 @@ object AST {
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
 
+  /** The list of definitions to which a reference cannot be made */
   type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
+
+  /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     IncludeHolder[?] | TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
-    AdaptorDirection | UserStory | MethodArgument
+    AdaptorDirection | UserStory | MethodArgument | Schema
 
   /** Base trait of values defined at the root (top of file) scope */
   sealed trait OccursAtRootScope extends RiddlValue
@@ -1740,6 +1746,8 @@ object AST {
     *
     * @param loc
     *   The location in the source where the reference to the type is made
+    * @param keyword
+    *   The keyword used to designate the type at the point of reference
     * @param pathId
     *   The path identifier of the reference type
     */
@@ -1750,6 +1758,7 @@ object AST {
   ) extends Reference[Type] {
     override def format: String = s"$keyword ${pathId.format}"
   }
+  object TypeRef { def empty: TypeRef = TypeRef() }
 
   case class FieldRef(
     loc: At = At.empty,
@@ -1964,12 +1973,12 @@ object AST {
     func: FunctionRef
   ) extends Statement {
     override def kind: String = "Call Statement"
-    def format: String = "scall ${func.format}"
+    def format: String = "call ${func.format}"
   }
 
   case class ForEachStatement(
     loc: At,
-    ref: FieldRef | OutletRef | InletRef ,
+    ref: FieldRef | OutletRef | InletRef,
     do_ : Seq[Statement]
   ) extends Statement {
     override def kind: String = "Foreach Statement"
@@ -1993,14 +2002,42 @@ object AST {
     loc: At
   ) extends Statement {
     override def kind: String = "Stop Statement"
-    def format: String = "scall ${func.format}"
+    def format: String = "stop ${func.format}"
+  }
 
+  case class ReadStatement(
+    loc: At,
+    keyword: String,
+    what: LiteralString,
+    from: TypeRef,
+    where: LiteralString
+  ) extends Statement {
+    override def kind: String = "Read Statement"
+    def format: String = s"$keyword ${what.format} from ${from.format} where ${where.s}"
+  }
+
+  case class WriteStatement(
+    loc: At,
+    keyword: String,
+    what: LiteralString,
+    to: TypeRef
+  ) extends Statement {
+    override def kind: String = "Write Statement"
+    def format: String = s"$keyword ${what.format} to ${to.format}"
+  }
+
+  case class CodeStatement(
+    loc: At,
+    language: LiteralString,
+    body: String
+  ) extends Statement {
+    def format: String = s"```${language.s}$body```"
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** Base class of all options for the Adaptor definition */
-  sealed abstract class AdaptorOption(val name: String) extends OptionValue
+  sealed abstract class AdaptorOption(val name: String) extends OptionValue with OccursInAdaptor
 
   /** A common option that specifies the nature of the technology used to implement the definition */
   case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
@@ -2017,7 +2054,7 @@ object AST {
 
   /** An [[AdaptorOption]] to specify the Font Awesome icon for this [[Adaptor]] in generated diagrams, etc. */
   case class AdaptorIconOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("faicon")
-  
+
   sealed trait AdaptorDirection extends RiddlValue {
     def loc: At
   }
@@ -2042,8 +2079,6 @@ object AST {
     *   An indication of whether this is an inbound or outbound adaptor.
     * @param context
     *   A reference to the bounded context from which messages are adapted
-    * @param options
-    *   The set of options for this Adaptor
     * @param contents
     *   The definitional contents of this Adaptor
     * @param brief
@@ -2056,7 +2091,6 @@ object AST {
     id: Identifier,
     direction: AdaptorDirection,
     context: ContextRef,
-    options: Seq[AdaptorOption] = Seq.empty,
     contents: Seq[OccursInAdaptor] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -2064,6 +2098,7 @@ object AST {
       with OccursInContext {
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
+    lazy val options: Seq[AdaptorOption] = contents.filter[AdaptorOption]
   }
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
@@ -2079,13 +2114,6 @@ object AST {
     */
   sealed abstract class FunctionOption(val name: String) extends OptionValue
 
-  /** A function option to mark a function as being tail recursive
-    *
-    * @param loc
-    *   The location of the tail recursive option
-    */
-  case class TailRecursive(loc: At) extends FunctionOption("tail-recursive")
-
   /** A function definition which can be part of a bounded context or an entity.
     *
     * @param loc
@@ -2096,8 +2124,6 @@ object AST {
     *   An optional type expression that names and types the fields of the input of the function
     * @param output
     *   An optional type expression that names and types the fields of the output of the function
-    * @param options
-    *   The options for this function that might affect how it behaves
     * @param contents
     *   The set of types, functions, statements, authors, includes and terms that define this FUnction
     * @param brief
@@ -2108,7 +2134,6 @@ object AST {
   case class Function(
     loc: At,
     id: Identifier,
-    options: Seq[FunctionOption] = Seq.empty,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
     contents: Contents[OccursInFunction] = Seq.empty,
@@ -2123,6 +2148,8 @@ object AST {
 
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty &&
       output.isEmpty
+
+    lazy val options: Seq[FunctionOption] = Seq.empty[FunctionOption]
 
     final override inline def kind: String = "Function"
   }
@@ -2294,8 +2321,9 @@ object AST {
     *   The location of the handler definition
     * @param id
     *   The name of the handler.
-    * @param clauses
-    *   The set of [[OnMessageClause]] definitions that define how the entity responds to received messages.
+    * @param contents
+    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received
+    *   messages.
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2304,7 +2332,7 @@ object AST {
   case class Handler(
     loc: At,
     id: Identifier,
-    clauses: Seq[OnClause] = Seq.empty[OnClause],
+    contents: Seq[OccursInHandler] = Seq.empty[OccursInHandler],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Definition
@@ -2319,7 +2347,7 @@ object AST {
       with OccursInProjector {
     override def isEmpty: Boolean = clauses.isEmpty
 
-    override def contents: Seq[OccursInHandler] = clauses
+    def clauses: Seq[OnClause] = contents.filter[OnClause]
 
     def format: String = s"handler ${id.format}"
   }
@@ -2478,8 +2506,6 @@ object AST {
     *   The location in the input
     * @param id
     *   The name of the entity
-    * @param options
-    *   The options for this Entity
     * @param contents
     *   The definitional content of this entity: handlers, states, functions, invariants, etc.
     * @param brief
@@ -2490,18 +2516,13 @@ object AST {
   case class Entity(
     loc: At,
     id: Identifier,
-    options: Seq[EntityOption] = Seq.empty,
     contents: Seq[OccursInEntity] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description]
   ) extends Processor[EntityOption, OccursInEntity]
       with WithStates
       with OccursInContext {
-
-//    override lazy val contents: Seq[OccursInEntity] = {
-//      super.contents ++ states ++ types ++ handlers ++ functions ++
-//        invariants ++ terms ++ inlets ++ outlets
-//    }
+    lazy val options: Seq[EntityOption] = contents.filter[EntityOption]
 
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
 
@@ -2520,14 +2541,13 @@ object AST {
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
 
-  sealed abstract class RepositoryOption(final val name: String) extends OptionValue
+  sealed abstract class RepositoryOption(final val name: String) extends OptionValue with OccursInRepository
 
   /** An [[RepositoryOption]]  that specifies the css for this entity in generated diagrams, etc. */
   case class RepositoryCssOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("css")
 
   /** An [[RepositoryOption]] to specify the Font Awesome icon for this [[Repository]] in generated diagrams, etc. */
   case class RepositoryIconOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("faicon")
-
 
   /** An [[RepositoryOption]] that specifies the kind of technology used to represent the entity */
   case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
@@ -2543,6 +2563,36 @@ object AST {
     val accepted: Seq[String] = Seq("api", "database", "device", "file")
   }
 
+  enum RepositorySchemaKind:
+    case Other, Flat, Relational, TimeSeries, Graphical, Hierarchical, Star, Document, Columnar, Vector
+
+  /** The repository schema defined as an identifier of the schema, a general kind of intended schema, and the
+    * representation of the schema as data node types (vertices, tables, vectors, etc.), a list of named connections
+    * between pairs of the data nodes (foreign keys, parent/child, arbitrary graph nodes, etc.), and indices on specific
+    * fields of the data nodes.
+    * @param loc
+    *   The location at which the schema occurs
+    * @param id
+    *   The name of this schema
+    * @param schemaKind
+    *   One of the RepositorySchemaKinds for a general sense of the repository intention
+    * @param data
+    *   A list of the named primary data nodes (tables, vectors, vertices)
+    * @param connectors
+    *   A list of named relations between primary data nodes #indices A list of fields in the ((data)) or ((connectors)
+    *   that are considered indexed for faster retrieval
+    */
+  case class Schema(
+    loc: At,
+    id: Identifier,
+    schemaKind: RepositorySchemaKind = RepositorySchemaKind.Other,
+    data: Map[Identifier, TypeRef],
+    connectors: Map[Identifier, (TypeRef, TypeRef)],
+    indices: Seq[FieldRef]
+  ) extends OccursInRepository {
+    def format: String = s"schema ${id.format} is $schemaKind"
+  }
+
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
     * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
     * There is no specific technology implied other than the retention and retrieval of information. You should think of
@@ -2555,8 +2605,6 @@ object AST {
     *   Location in the source of the Repository
     * @param id
     *   The unique identifier for this Repository
-    * @param options
-    *   RiddlOptions that can be used by the translators
     * @param contents
     *   The definitional content of this Repository: types, handlers, inlets, outlets, etc.
     * @param brief
@@ -2567,17 +2615,13 @@ object AST {
   case class Repository(
     loc: At,
     id: Identifier,
-    options: Seq[RepositoryOption] = Seq.empty[RepositoryOption],
     contents: Contents[OccursInRepository] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Processor[RepositoryOption, OccursInRepository]
       with OccursInContext {
     override def kind: String = "Repository"
-
-//    override lazy val contents: Seq[OccursInRepository] = {
-//      super.contents ++ types ++ handlers ++ inlets ++ outlets ++ terms ++ constants
-//    }
+    lazy val options: Seq[RepositoryOption] = contents.filter[RepositoryOption]
   }
 
   /** A reference to a repository definition
@@ -2587,13 +2631,16 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
-  case class RepositoryRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
+  case class RepositoryRef(loc: At, pathId: PathIdentifier)
+      extends Reference[Repository]
+      with ProcessorRef[Projector]
+      with OccursInProjector {
     override def format: String = s"repository ${pathId.format}"
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// PROJECTOR
 
-  sealed abstract class ProjectorOption(final val name: String) extends OptionValue
+  sealed abstract class ProjectorOption(final val name: String) extends OptionValue with OccursInProjector
 
   /** An [[ProjectorOption]]  that specifies the css for this entity in generated diagrams, etc. */
   case class ProjectorCssOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("css")
@@ -2627,8 +2674,6 @@ object AST {
     *   Location in the source of the Projector
     * @param id
     *   The unique identifier for this Projector
-    * @param options
-    *   RiddlOptions that can be used by the translators
     * @param contents
     *   The content of this Projectors' definition
     * @param brief
@@ -2639,15 +2684,13 @@ object AST {
   case class Projector(
     loc: At,
     id: Identifier,
-    options: Seq[ProjectorOption] = Seq.empty[ProjectorOption],
     contents: Contents[OccursInProjector] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Processor[ProjectorOption, OccursInProjector]
       with OccursInContext {
-//    override lazy val contents: Seq[OccursInProjector] = {
-//      super.contents ++ handlers ++ invariants ++ terms
-//    }
+    lazy val repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
+    lazy val options: Seq[ProjectorOption] = contents.filter[ProjectorOption]
   }
 
   /** A reference to an context's projector definition
@@ -2664,14 +2707,13 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
 
   /** Base trait for all options a Context can have. */
-  sealed abstract class ContextOption(final val name: String) extends OptionValue
+  sealed abstract class ContextOption(final val name: String) extends OptionValue with OccursInContext
 
   /** An [[ContextOption]]  that specifies the css for this entity in generated diagrams, etc. */
   case class ContextCssOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("css")
 
   /** An [[ContextOption]] to specify the Font Awesome icon for this [[Context]] in generated diagrams, etc. */
   case class ContextIconOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("faicon")
-
 
   /** An [[ContextOption]] that specifies the kind of technology used to represent the entity */
   case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
@@ -2722,8 +2764,6 @@ object AST {
     *   The location of the bounded context definition
     * @param id
     *   The name of the context
-    * @param options
-    *   The options for the context
     * @param contents
     *   The definitional content for this Context
     * @param brief
@@ -2734,7 +2774,6 @@ object AST {
   case class Context(
     loc: At,
     id: Identifier,
-    options: Seq[ContextOption] = Seq.empty[ContextOption],
     contents: Contents[OccursInContext] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -2747,14 +2786,10 @@ object AST {
       with WithAdaptors
       with WithSagas
       with OccursInDomain {
-//    override lazy val contents: Seq[OccursInContext] = super.contents ++
-//      types ++
-//      terms ++ handlers ++  ++ inlets ++
-//      outlets ++ connections
-
+    lazy val options: Seq[ContextOption] = contents.filter[ContextOption]
     override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
-
   }
+
   object Context {
     lazy val empty: Context = Context(At.empty, Identifier.empty)
   }
@@ -2772,7 +2807,7 @@ object AST {
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// STREAMLET
 
-  sealed abstract class StreamletOption(final val name: String) extends OptionValue
+  sealed abstract class StreamletOption(final val name: String) extends OptionValue with OccursInStreamlet
 
   /** An [[StreamletOption]]  that specifies the css for this entity in generated diagrams, etc. */
   case class StreamletCssOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("css")
@@ -2872,13 +2907,29 @@ object AST {
   /** An [[ConnectorOption]]  to provide the software package name for the connector */
   case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
 
+  /** A connector between an [[com.ossuminc.riddl.language.AST.Outlet]] and an [[com.ossuminc.riddl.language.AST.Inlet]]
+    * that flows a particular [[com.ossuminc.riddl.language.AST.Type]].
+    * @param loc
+    *   The location at which the connector is defined
+    * @param id
+    *   The unique identifier of the connector
+    * @param from
+    *   The origin Outlet of the connector
+    * @param to
+    *   THe destination Inlet of the connector
+    * @param options
+    *   Options applied to the connector
+    * @param brief
+    *   A brief description (one sentence) for use in documentation
+    * @param description
+    *   An optional description of the connector
+    */
   case class Connector(
     loc: At,
     id: Identifier,
+    from: OutletRef = OutletRef.empty,
+    to: InletRef = InletRef.empty,
     options: Seq[ConnectorOption] = Seq.empty[ConnectorOption],
-    flows: Option[TypeRef] = Option.empty[TypeRef],
-    from: Option[OutletRef] = Option.empty[OutletRef],
-    to: Option[InletRef] = Option.empty[InletRef],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description]
   ) extends LeafDefinition
@@ -2886,6 +2937,8 @@ object AST {
       with WithOptions[ConnectorOption] {
 
     override def format: String = s"Connector"
+
+    override def isEmpty: Boolean = super.isEmpty && from.isEmpty && to.isEmpty
   }
 
   sealed trait StreamletShape extends RiddlValue {
@@ -2944,8 +2997,6 @@ object AST {
     *   The name of the processor
     * @param shape
     *   The shape of the processor's inputs and outputs
-    * @param options
-    *   The options for thsi Streamlet
     * @param contents
     *   The definitional content for this Context
     * @param description
@@ -2955,17 +3006,13 @@ object AST {
     loc: At,
     id: Identifier,
     shape: StreamletShape,
-    options: Seq[StreamletOption] = Seq.empty[StreamletOption],
     contents: Contents[OccursInStreamlet] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends Processor[StreamletOption, OccursInStreamlet]
       with OccursInContext {
-//    override def contents: Seq[OccursInStreamlets] = super.contents ++
-//      inlets ++ outlets ++ handlers ++ terms ++ constants
-
+    lazy val options: Seq[StreamletOption] = contents.filter[StreamletOption]
     final override def kind: String = shape.getClass.getSimpleName
-
     shape match {
       case Source(_) =>
         require(
@@ -3034,6 +3081,7 @@ object AST {
   case class InletRef(loc: At, pathId: PathIdentifier) extends PortletRef[Inlet] {
     override def format: String = s"inlet ${pathId.format}"
   }
+  object InletRef { def empty: InletRef = InletRef(At.empty, PathIdentifier.empty) }
 
   /** A reference to an [[Outlet]]
     *
@@ -3045,6 +3093,7 @@ object AST {
   case class OutletRef(loc: At, pathId: PathIdentifier) extends PortletRef[Outlet] {
     override def format: String = s"outlet ${pathId.format}"
   }
+  object OutletRef { def empty: OutletRef = OutletRef(At.empty, PathIdentifier.empty) }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// SAGA
 
@@ -3076,7 +3125,7 @@ object AST {
   }
 
   /** Base trait for all options applicable to a saga. */
-  sealed abstract class SagaOption(final val name: String) extends OptionValue
+  sealed abstract class SagaOption(final val name: String) extends OptionValue with OccursInSaga
 
   /** An [[SagaOption]]  that specifies the css for this entity in generated diagrams, etc. */
   case class SagaCssOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("css")
@@ -3119,8 +3168,6 @@ object AST {
     *   The location of the Saga definition
     * @param id
     *   The name of the saga
-    * @param options
-    *   The options of the saga
     * @param input
     *   A definition of the aggregate input values needed to invoke the saga, if any.
     * @param output
@@ -3135,7 +3182,6 @@ object AST {
   case class Saga(
     loc: At,
     id: Identifier,
-    options: Seq[SagaOption] = Seq.empty[SagaOption],
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
     contents: Contents[OccursInSaga] = Seq.empty,
@@ -3145,6 +3191,8 @@ object AST {
       with WithSagaSteps
       with OccursInContext
       with OccursInDomain {
+
+    lazy val options: Seq[SagaOption] = contents.filter[SagaOption]
 
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
       input.isEmpty && output.isEmpty
@@ -3518,7 +3566,6 @@ object AST {
   case class Epic(
     loc: At,
     id: Identifier,
-    options: Seq[EpicOption] = Seq.empty[EpicOption],
     userStory: Option[UserStory] = Option.empty[UserStory],
     shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
     contents: Seq[OccursInEpic] = Seq.empty,
@@ -3527,9 +3574,8 @@ object AST {
   ) extends VitalDefinition[EpicOption, OccursInEpic]
       with WithUseCases
       with OccursInDomain {
-//    override def contents: Seq[OccursInEpic] = {
-//      super.contents ++ cases ++ terms
-//    }
+
+    lazy val options: Seq[EpicOption] = contents.filter[EpicOption]
 
     override def isEmpty: Boolean = {
       contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
@@ -3658,7 +3704,7 @@ object AST {
     override def format: String = s"$kind ${id.value} $verbAlias ${putOut.format}"
   }
 
-  /** A reference to an View using a path identifier
+  /** A reference to an Output using a path identifier
     *
     * @param loc
     *   The location of the ViewRef in the source code
@@ -3669,7 +3715,8 @@ object AST {
     def format: String = s"$keyword ${pathId.format}"
   }
 
-  /** A Give is a UI Element to allow the user to 'give' some data to the application. It is analogous to a form in HTML
+  /** An Input is a UI Element to allow the user to provide some data to the application. It is analogous to a form in
+    * HTML
     *
     * @param loc
     *   Location of the Give
@@ -3720,13 +3767,13 @@ object AST {
     def format: String = s"$keyword ${pathId.format}"
   }
 
-  sealed trait ApplicationOption(final val name: String) extends OptionValue
+  sealed trait ApplicationOption(final val name: String) extends OptionValue with OccursInApplication
 
   /** An [[ApplicationOption]]  that specifies the css for this entity in generated diagrams, etc. */
   case class ApplicationCssOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("css")
 
-  
-  /** An [[ApplicationOption]]  that specifies the Font Awesome icon to use in generated diagrams for this application */
+  /** An [[ApplicationOption]] that specifies the Font Awesome icon to use in generated diagrams for this application
+    */
   case class ApplicationIconOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("faicon")
 
   /** An [[ApplicationOption]] that specifies the kind of technology used to represent the entity */
@@ -3749,8 +3796,6 @@ object AST {
     *   The location of the application in the source
     * @param id
     *   The unique identifier for the application
-    * @param options
-    *   The options for the application
     * @param contents
     *   The definitional content for this Context
     * @param brief
@@ -3761,7 +3806,6 @@ object AST {
   case class Application(
     loc: At,
     id: Identifier,
-    options: Seq[ApplicationOption] = Seq.empty[ApplicationOption],
     contents: Seq[OccursInApplication] = Seq.empty,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
@@ -3769,9 +3813,8 @@ object AST {
       with WithGroups
       with OccursInDomain {
     override def isAppRelated: Boolean = true
-//    override lazy val contents: Seq[OccursInApplication] = {
-//      super.contents ++ types ++ groups ++ terms // ++ includes
-//    }
+    lazy val options: Seq[ApplicationOption] = contents.filter[ApplicationOption]
+
   }
 
   /** A reference to an Application using a path identifier
@@ -3789,7 +3832,7 @@ object AST {
 
   /** Base trait for all options a Domain can have.
     */
-  sealed abstract class DomainOption(final val name: String) extends OptionValue
+  sealed abstract class DomainOption(final val name: String) extends OptionValue with OccursInDomain
 
   /** An [[DomainOption]] to specify the css for this [[Domain]] in generated diagrams, etc. */
   case class DomainCssOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("css")
@@ -3849,8 +3892,6 @@ object AST {
     *   The location of the domain definition
     * @param id
     *   The name of the domain
-    * @param options
-    *   RiddlOptions for the domain
     * @param contents
     *   The definitional content for this Context
     * @param brief
@@ -3861,7 +3902,6 @@ object AST {
   case class Domain(
     loc: At,
     id: Identifier,
-    options: Seq[DomainOption] = Seq.empty[DomainOption],
     contents: Seq[OccursInDomain] = Seq.empty,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
@@ -3876,7 +3916,9 @@ object AST {
       with WithEpics
       with WithSagas
       with WithDomains
-      with OccursInDomain
+      with OccursInDomain {
+    lazy val options: Seq[DomainOption] = contents.filter[DomainOption]
+  }
 
   /** A reference to a domain definition
     *

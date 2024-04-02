@@ -1,5 +1,5 @@
 [![Code Build Status](https://github.com/ossuminc/riddl/actions/workflows/scala.yml/badge.svg)](https://github.com/ossuminc/riddl/actions/workflows/scala.yml/badge.svg)
-[![Documentation Build Status](https://github.com/ossuminc/riddl/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/ossuminc/riddl/actions/workflows/gh-pages.yml/badge.svg)
+[![Documentation Build Status](https://github.com/ossuminc/riddl/actions/workflows/hugo.yml/badge.svg)](https://github.com/ossuminc/riddl/actions/workflows/hugo.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/ossuminc/riddl/badge.svg?branch=main)](https://coveralls.io/github/ossuminc/riddl?branch=main)
 [![Maven Central](https://img.shields.io/maven-central/v/com.ossuminc/riddlc_3.svg)](https://maven-badges.herokuapp.com/maven-central/com.ossuminc/riddlc_3)
 
@@ -7,12 +7,18 @@
 [![Scala Steward badge](https://img.shields.io/badge/Scala_Steward-helping-blue.svg?style=flat&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAQCAMAAAARSr4IAAAAVFBMVEUAAACHjojlOy5NWlrKzcYRKjGFjIbp293YycuLa3pYY2LSqql4f3pCUFTgSjNodYRmcXUsPD/NTTbjRS+2jomhgnzNc223cGvZS0HaSD0XLjbaSjElhIr+AAAAAXRSTlMAQObYZgAAAHlJREFUCNdNyosOwyAIhWHAQS1Vt7a77/3fcxxdmv0xwmckutAR1nkm4ggbyEcg/wWmlGLDAA3oL50xi6fk5ffZ3E2E3QfZDCcCN2YtbEWZt+Drc6u6rlqv7Uk0LdKqqr5rk2UCRXOk0vmQKGfc94nOJyQjouF9H/wCc9gECEYfONoAAAAASUVORK5CYII=)](https://scala-steward.org)
 [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)](https://raw.githubusercontent.com/ossuminc/riddl/master/LICENSE)
 
-[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
-[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
-[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
-[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
-[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
-[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=reactific_riddl&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=reactific_riddl)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=ossuminc_riddl&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=ossuminc_riddl)
 
 # RIDDL
 
@@ -86,3 +92,31 @@ the use of a
 You can sign at that link or be prompted to do so when you submit your first
 Pull Request. 
 
+# IntelliJ File Type & Color Scheme Support
+
+The `language` directory contains two files that will improve the visual appeal of
+RIDDL source code in your IntelliJ IDEA. To load them, follow the instructions below:
+
+## File Type Support
+This will provide support for the `.riddl` file type which you should use for
+your RIDDL files. This is provided in [intellij-idea-riddl-file-type-settings.zip](intellij-idea-riddl-file-type-settings.zip)
+
+* To load into IntelliJ:
+  - Select `File -> Manage IDE Settings -> Import Settings...` from IntelliJ menu
+  - Navigate to your cloned repository in the `language` folder
+  - Select `intellij-idea-riddl-file-type-settings.zip`
+
+## Color Scheme Support
+Differentiating between keywords, readability words, definitions, punctuation, types, etc.
+is supported through the use of color scheme settings in this file:
+[intellij-idea-riddl-colour-scheme-settings.jar](intellij-idea-riddl-colour-scheme-settings.jar). Note that using this colour scheme
+requires overriding other themes as only 1 scheme can be used in IDEA at a time. You
+can switch themes in the Settings under `Editor --> Color Schemes`
+
+* To load into IntelliJ:
+  - Load the IntelliJ Settings dialog (`File -> Settings` or Settings gear on top right)
+  - Navigate to the `Editor -> Color Scheme` settings
+  - Click the `Show Scheme Actions` gear icon to the right of the scheme selector
+  - Choose `Import Scheme...` from the pop up menu
+  - Navigate to your cloned repository in the `language` folder
+  - Select `intellij-idea-riddl-colour-scheme-settings.jar`

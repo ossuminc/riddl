@@ -20,29 +20,37 @@ private[parsing] trait ProjectorParser {
     & StreamingParser
     & TypeParser =>
 
-  private def projectionOptions[u: P]: P[Seq[ProjectorOption]] = {
-    options[u, ProjectorOption](StringIn(RiddlOption.technology, RiddlOption.css, RiddlOption.kind).!) {
+  private def projectorOption[u: P]: P[ProjectorOption] = {
+    option[u, ProjectorOption](RiddlOptions.projectorOptions) {
       case (loc, RiddlOption.technology, args) => ProjectorTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => ProjectorCssOption(loc, args)
+      case (loc, RiddlOption.css, args)        => ProjectorCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => ProjectorIconOption(loc, args)
       case (loc, RiddlOption.kind, args)       => ProjectorKindOption(loc, args)
     }
   }
 
-  private def projectionInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
-    include[OccursInProjector, u](projectionDefinitions(_))
+  private def projectorInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
+    include[OccursInProjector, u](projectorDefinitions(_))
   }
 
-  private def projectionDefinitions[u: P]: P[Seq[OccursInProjector]] = {
+  private def updates[u: P]: P[RepositoryRef] = {
     P(
-      typeDef | term | projectionInclude | handler(StatementsSet.ProjectorStatements) |
-        function | inlet | outlet | invariant | constant | typeDef | authorRef | comment
+      location ~ Keywords.updates ~ repositoryRef
+    ).map { case (_, ref) =>
+      ref
+    }
+  }
+
+  private def projectorDefinitions[u: P]: P[Seq[OccursInProjector]] = {
+    P(
+      updates | typeDef | term | projectorInclude | handler(StatementsSet.ProjectorStatements) |
+        function | inlet | outlet | invariant | constant | authorRef | comment | projectorOption
     )./.rep(1)
   }
 
-  private def projectionBody[u: P]: P[Seq[OccursInProjector]] = {
+  private def projectorBody[u: P]: P[Seq[OccursInProjector]] = {
     P(
-      undefined(Seq.empty[OccursInProjector]) | projectionDefinitions
+      undefined(Seq.empty[OccursInProjector]) | projectorDefinitions
     )
   }
 
@@ -57,11 +65,11 @@ private[parsing] trait ProjectorParser {
     */
   def projector[u: P]: P[Projector] = {
     P(
-      location ~ Keywords.projector ~/ identifier ~ is ~ open ~
-        projectionOptions ~ projectionBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, options, contents, brief, description) =>
+      location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInProjector](contents)
-      Projector(loc, id, options, mergedContent, brief, description)
+
+      Projector(loc, id, mergedContent, brief, description)
     }
   }
 }

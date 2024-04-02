@@ -11,7 +11,7 @@ class OptionsValidationTest extends ValidatingTest {
       val input: String =
         """domain ignore {
           |  context invalid {
-          |    options(css("fill:#333", "color:white"))
+          |    option css("fill:#333", "color:white")
           |    type JustHereToConformToSyntax = String
           |  }
           |}

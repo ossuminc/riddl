@@ -27,8 +27,8 @@ private[parsing] trait DomainParser {
     & CommonParser
     & ParsingContext =>
 
-  private def domainOptions[X: P]: P[Seq[DomainOption]] = {
-    options[X, DomainOption](RiddlOptions.domainOptions) {
+  private def domainOption[X: P]: P[DomainOption] = {
+    option[X, DomainOption](RiddlOptions.domainOptions) {
       case (loc, RiddlOption.external, args)   => DomainExternalOption(loc, args)
       case (loc, RiddlOption.package_, args)   => DomainPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => DomainTechnologyOption(loc, args)
@@ -54,7 +54,7 @@ private[parsing] trait DomainParser {
   private def domainDefinitions[u: P]: P[Seq[OccursInDomain]] = {
     P(
       author | authorRef | typeDef | context | user | epic | saga | domain | term |
-        constant | application | importDef | domainInclude | comment
+        constant | application | importDef | domainInclude | comment | domainOption
     )./.rep(1)
   }
 
@@ -64,12 +64,11 @@ private[parsing] trait DomainParser {
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/
-        domainOptions ~/ domainBody ~ close ~/
+      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~/
         briefly ~ description
-    ).map { case (loc, id, options, contents, brief, description) =>
+    ).map { case (loc, id, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInDomain](contents)
-      Domain(loc, id, options, mergedContent, brief, description)
+      Domain(loc, id, mergedContent, brief, description)
     }
   }
 }

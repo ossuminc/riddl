@@ -17,8 +17,8 @@ private[parsing] trait AdaptorParser {
   this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
     CommonParser =>
 
-  private def adaptorOptions[u: P]: P[Seq[AdaptorOption]] = {
-    options[u, AdaptorOption](RiddlOptions.adaptorOptions) {
+  private def adaptorOption[u: P]: P[AdaptorOption] = {
+    option[u, AdaptorOption](RiddlOptions.adaptorOptions) {
       case (loc, RiddlOption.technology, args) => AdaptorTechnologyOption(loc, args)
       case (loc, RiddlOption.css, args)        => AdaptorCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)     => AdaptorIconOption(loc, args)
@@ -32,7 +32,7 @@ private[parsing] trait AdaptorParser {
 
   private def adaptorDefinitions[u: P]: P[Seq[OccursInAdaptor]] = {
     P(
-      (handler(StatementsSet.AdaptorStatements) | function | inlet |
+      (handler(StatementsSet.AdaptorStatements) | function | inlet | adaptorOption |
         outlet | adaptorInclude | term | constant | authorRef | comment)./.rep(1)
     )
   }
@@ -54,11 +54,10 @@ private[parsing] trait AdaptorParser {
   def adaptor[u: P]: P[Adaptor] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~
-        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorOptions ~
-        adaptorBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, direction, cRef, options, contents, brief, description) =>
+        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, direction, cRef, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInAdaptor](contents)
-      Adaptor(loc, id, direction, cRef, options, mergedContent, brief, description)
+      Adaptor(loc, id, direction, cRef, mergedContent, brief, description)
     }
   }
 }

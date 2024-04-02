@@ -20,10 +20,8 @@ private[parsing] trait EntityParser {
     & StreamingParser
     & TypeParser =>
 
-  private def entityOptions[X: P]: P[Seq[EntityOption]] = {
-    options[X, EntityOption](
-      RiddlOptions.entityOptions
-    ) {
+  private def entityOption[X: P]: P[EntityOption] = {
+    option[X, EntityOption](RiddlOptions.entityOptions) {
       case (loc, RiddlOption.event_sourced, _)        => EntityEventSourced(loc)
       case (loc, RiddlOption.value, _)                => EntityValueOption(loc)
       case (loc, RiddlOption.aggregate, _)            => EntityIsAggregate(loc)
@@ -34,7 +32,7 @@ private[parsing] trait EntityParser {
       case (loc, RiddlOption.kind, args)              => EntityKindOption(loc, args)
       case (loc, RiddlOption.message_queue, _)        => EntityMessageQueue(loc)
       case (loc, RiddlOption.technology, args)        => EntityTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)             => EntityCssOption(loc, args)
+      case (loc, RiddlOption.css, args)               => EntityCssOption(loc, args)
       case (loc, RiddlOption.faicon, args)            => EntityIconOption(loc, args)
     }
   }
@@ -72,7 +70,7 @@ private[parsing] trait EntityParser {
   private def entityDefinitions[u: P]: P[Seq[OccursInEntity]] = {
     P(
       handler(StatementsSet.EntityStatements) | function | invariant | state | entityInclude | inlet | outlet |
-        typeDef | term | authorRef | comment | constant
+        typeDef | term | authorRef | comment | constant | entityOption
     )./.rep(1)
   }
 
@@ -84,11 +82,10 @@ private[parsing] trait EntityParser {
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/
-        entityOptions ~ entityBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, options, contents, brief, description) =>
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, contents, brief, description) =>
       val mergedContent = mergeAsynchContent[OccursInEntity](contents)
-      Entity(loc, id, options, mergedContent, brief, description)
+      Entity(loc, id, mergedContent, brief, description)
     }
   }
 }

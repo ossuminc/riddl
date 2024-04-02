@@ -13,9 +13,9 @@ domain ignore1 is {
       inlet in is command Something
      }
     saga name is {
-      options(parallel)
       requires: { p1: String, p2: String }
       returns: {s: String }
+      option parallel
       step One is {
         send command Something to inlet blah.in
       } reverted by {

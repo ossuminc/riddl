@@ -12,6 +12,8 @@ on:
 
 jobs:
   build:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
@@ -33,19 +35,20 @@ jobs:
       uses: coursier/cache-action@v6
 
     - name: Build, Run Test, Coverage
-      run: |
-        which hugo
-        sbt -v clean coverage Test/compile test coverageAggregate coveralls
       env:
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
         RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
+      run: |
+        sbt -v clean coverage Test/compile test coverageAggregate coveralls
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v3
       with:
         name: code-coverage-report
-        path: "target/scala-2.12/scoverage-report/"
+        path: |
+          - **/target/scala-3.3.3/scoverage-report/scoverage.xml
+          - sbt-riddl/target/scala-2.12/scoverage-report/scoverage.xml
 
     - name: Test sbt-riddl plugin
       run: |

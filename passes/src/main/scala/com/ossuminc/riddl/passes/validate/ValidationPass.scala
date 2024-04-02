@@ -243,7 +243,18 @@ case class ValidationPass(
             checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
             checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
-          case StopStatement(loc) => ()
+          case ReadStatement(loc, keyword, what, from, where) =>
+            checkNonEmpty(keyword, "read keyword", onClause, loc, Messages.Error, required = true)
+            checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
+            checkTypeRef(from, onClause, parents)
+            checkNonEmptyValue(where, "where", onClause, loc, MissingWarning, required = false)
+          case WriteStatement(loc, keyword, what, to) =>
+            checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
+            checkTypeRef(to, onClause, parents)
+            checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
+          case _: CodeStatement  => ()
+          case _: StopStatement  => ()
+          case _: Comment        => ()
         }
       }
   }
@@ -334,25 +345,26 @@ case class ValidationPass(
     connector: Connector,
     parents: Seq[Definition]
   ): Unit = {
-    val refParents = connector +: parents
-    val maybeOutlet = checkMaybeRef[Outlet](connector.from, connector, refParents)
-    val maybeInlet = checkMaybeRef[Inlet](connector.to, connector, refParents)
+    if connector.nonEmpty then
+      val refParents = connector +: parents
+      val maybeOutlet = checkRef[Outlet](connector.from, connector, refParents)
+      val maybeInlet = checkRef[Inlet](connector.to, connector, refParents)
 
-    (maybeOutlet, maybeInlet) match {
-      case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
-        val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
-        val inletType = resolvePath[Type](inlet.type_.pathId, inlet +: refParents)
-        if !areSameType(inletType, outletType) then {
-          messages.addError(
-            inlet.loc,
-            s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
-              s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} which are " +
-              s"not the same types"
-          )
-        }
-      case _ =>
-      // one of the two didn't resolve, already handled above.
-    }
+      (maybeOutlet, maybeInlet) match {
+        case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
+          val outletType = resolvePath[Type](outlet.type_.pathId, outlet +: refParents)
+          val inletType = resolvePath[Type](inlet.type_.pathId, inlet +: refParents)
+          if !areSameType(inletType, outletType) then {
+            messages.addError(
+              inlet.loc,
+              s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
+                s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} which are " +
+                s"not the same types"
+            )
+          }
+        case _ =>
+        // one of the two didn't resolve, already handled above.
+      }
   }
 
   private def validateAuthorInfo(
@@ -397,7 +409,7 @@ case class ValidationPass(
     checkContainer(parents, s)
     checkRefAndExamine[Type](s.typ, s, parents) { (typ: Type) =>
       typ.typ match {
-        case agg: Aggregation =>
+        case agg: AggregateTypeExpression =>
           if agg.fields.isEmpty && !s.isEmpty then {
             messages.addError(
               s.typ.loc,
@@ -407,6 +419,12 @@ case class ValidationPass(
           }
         case _ =>
       }
+      check(
+        typ.id.value != s.id.value,
+        s"${s.identify} and ${typ.identify} must not have the same name so path resolution can succeed",
+        Messages.Error,
+        s.loc
+      )
     }
     checkDescription(s)
   }
@@ -509,6 +527,7 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, r)
     checkDescription(r)
+    checkNonEmpty(r.contents.filter[Schema], "schema", r, r.loc, MissingWarning, required = false)
   }
 
   private def validateAdaptor(

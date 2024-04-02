@@ -13,26 +13,20 @@ import java.io.File
 import java.nio.file.Path
 
 object InputFileCommandPlugin {
-  case class Options(
-    inputFile: Option[Path] = None,
-    command: String = "unspecified")
-      extends CommandOptions
+  case class  Options(inputFile: Option[Path] = None, command: String = "unspecified") extends CommandOptions
 }
 
-/** An abstract command definition helper class for commands that only take a
-  * single input file parameter
+/** An abstract command definition helper class for commands that only take a single input file parameter
   * @param name
   *   The name of the command
   */
-abstract class InputFileCommandPlugin(
-  name: String)
-    extends CommandPlugin[InputFileCommandPlugin.Options](name) {
+abstract class InputFileCommandPlugin(name: String) extends CommandPlugin[InputFileCommandPlugin.Options](name) {
   import InputFileCommandPlugin.Options
   def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd(name).children(arg[File]("input-file").action((f, opt) =>
-      opt.copy(command = name, inputFile = Some(f.toPath))
-    )) -> InputFileCommandPlugin.Options()
+    cmd(name).children(
+      arg[File]("input-file").action((f, opt) => opt.copy(command = name, inputFile = Some(f.toPath)))
+    ) -> InputFileCommandPlugin.Options()
   }
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>

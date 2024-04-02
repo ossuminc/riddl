@@ -27,7 +27,7 @@ private[parsing] trait StatementParser {
     )./.map { tpl => ErrorStatement.apply.tupled(tpl) }
   }
 
-  private def setStatement[u: P]: P[SetStatement] = {
+  private def theSetStatement[u: P]: P[SetStatement] = {
     P(
       location ~ Keywords.set ~/ fieldRef ~/ Readability.to ~ literalString
     )./.map { tpl => SetStatement.apply.tupled(tpl) }
@@ -54,8 +54,9 @@ private[parsing] trait StatementParser {
       case (loc, ref: FieldRef, statements)  => ForEachStatement(loc, ref, statements)
       case (loc, ref: InletRef, statements)  => ForEachStatement(loc, ref, statements)
       case (loc, ref: OutletRef, statements) => ForEachStatement(loc, ref, statements)
-      case (loc, ref: Reference[?], statements)  => error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
-        ForEachStatement(loc, FieldRef(ref.loc,ref.pathId), statements)
+      case (loc, ref: Reference[?], statements) =>
+        error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
+        ForEachStatement(loc, FieldRef(ref.loc, ref.pathId), statements)
     }
   }
 
@@ -78,13 +79,6 @@ private[parsing] trait StatementParser {
     P(
       location ~ Keywords.stop
     )./.map { (loc: At) => StopStatement(loc) }
-  }
-
-  private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
-    P(
-      sendStatement | arbitraryStatement | errorStatement | setStatement | tellStatement | callStatement |
-        stopStatement | ifThenElseStatement(set) | forEachStatement(set)
-    )
   }
 
   enum StatementsSet:
@@ -129,6 +123,44 @@ private[parsing] trait StatementParser {
     )./.map(t => ReturnStatement.apply.tupled(t))
   }
 
+  private def readStatement[u: P]: P[ReadStatement] = {
+    P(
+      location ~ StringIn("read", "get", "query", "find", "select").! ~ literalString ~
+        Readability.from ~ typeRef ~ Keywords.where ~ literalString
+    ).map { case (loc, keyword, what, from, where) =>
+      ReadStatement(loc, keyword, what, from, where)
+    }
+  }
+
+  private def writeStatement[u: P]: P[WriteStatement] = {
+    P(
+      location ~ StringIn("write", "put", "create", "update", "delete", "remove", "append", "insert", "modify").! ~
+        literalString ~ Readability.to ~ typeRef
+    ).map { case (loc, keyword, what, to) =>
+      WriteStatement(loc, keyword, what, to)
+    }
+  }
+
+  private def backTickElipsis[u: P]: P[Unit] = { P("```") }
+
+  private def codeStatement[u: P]: P[CodeStatement] = {
+    P(
+      location ~ backTickElipsis ~ location ~
+        StringIn("scala", "java", "python", "mojo").! ~
+        until3('`', '`', '`')
+    ).map { case (loc1, loc2, lang, contents) =>
+      CodeStatement(loc1, LiteralString(loc2, lang), contents)
+    }
+  }
+
+  private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
+    P(
+      sendStatement | arbitraryStatement | errorStatement | theSetStatement | tellStatement | callStatement |
+        stopStatement | ifThenElseStatement(set) | forEachStatement(set) | codeStatement | comment
+    )
+  }
+
+
   def statement[u: P](set: StatementsSet): P[Statement] = {
     set match {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
@@ -136,11 +168,12 @@ private[parsing] trait StatementParser {
       case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
       case StatementsSet.EntityStatements =>
         anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
-      case StatementsSet.FunctionStatements   => anyDefStatements(set) | returnStatement
-      case StatementsSet.ProjectorStatements  => anyDefStatements(set) | replyStatement
-      case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
-      case StatementsSet.SagaStatements       => anyDefStatements(set) | returnStatement
-      case StatementsSet.StreamStatements     => anyDefStatements(set)
+      case StatementsSet.FunctionStatements  => anyDefStatements(set) | returnStatement
+      case StatementsSet.ProjectorStatements => anyDefStatements(set)
+      case StatementsSet.RepositoryStatements =>
+        anyDefStatements(set) | replyStatement | readStatement | writeStatement
+      case StatementsSet.SagaStatements   => anyDefStatements(set) | returnStatement
+      case StatementsSet.StreamStatements => anyDefStatements(set)
     }
   }
 

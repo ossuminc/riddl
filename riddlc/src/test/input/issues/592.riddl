@@ -1,0 +1,16 @@
+domain Foo {
+  context Container {
+    command HandleMe is { x: String }
+    event SendMe is { x: String }
+    event SendOther is { x: String }
+    type ProductEvent is one of { SendMe, SendOther }
+    source ProductEventsSource is {
+      outlet Events is type ProductEvent
+    }
+    handler X is {
+      on command HandleMe {
+        send event SendMe to outlet ProductEventsSource
+      }
+    }
+  }
+}

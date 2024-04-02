@@ -166,8 +166,8 @@ private[parsing] trait EpicParser {
     ).?.map { (x: Option[Seq[java.net.URL]]) => x.getOrElse(Seq.empty[java.net.URL]) }
   }
 
-  private def epicOptions[u: P]: P[Seq[EpicOption]] = {
-    options[u, EpicOption](RiddlOptions.epicOptions) {
+  private def epicOption[u: P]: P[EpicOption] = {
+    option[u, EpicOption](RiddlOptions.epicOptions) {
       case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
       case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
       case (loc, RiddlOption.css, args)      => EpicCssOption(loc, args)
@@ -181,7 +181,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicDefinitions[u: P]: P[Seq[OccursInEpic]] = {
-    P(useCase | term | epicInclude | comment | authorRef).rep(1)
+    P(useCase | term | epicInclude | comment | authorRef | epicOption).rep(1)
   }
 
   private type EpicBody = (
@@ -205,11 +205,10 @@ private[parsing] trait EpicParser {
 
   def epic[u: P]: P[Epic] = {
     P(
-      location ~ Keywords.epic ~/ identifier ~ is ~ open ~
-        epicOptions ~ epicBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, options, (userStory, shownBy, contents), briefly, description) =>
+      location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ briefly ~ description
+    ).map { case (loc, id, (userStory, shownBy, contents), briefly, description) =>
       val mergedContent = mergeAsynchContent[OccursInEpic](contents)
-      Epic(loc, id, options, userStory, shownBy, mergedContent, briefly, description)
+      Epic(loc, id, userStory, shownBy, mergedContent, briefly, description)
     }
   }
 }

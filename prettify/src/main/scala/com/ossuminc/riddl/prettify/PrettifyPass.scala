@@ -306,16 +306,13 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         file
           .addIndent()
           .add {
-            val flows =
-              if conn.flows.nonEmpty then s"flows ${conn.flows.get.format} "
-              else ""
             val from =
-              if conn.from.nonEmpty then s"from ${conn.from.get.format} "
-              else ""
+              if conn.from.nonEmpty then s"from ${conn.from.format} "
+              else "from empty"
             val to =
-              if conn.to.nonEmpty then s"to ${conn.to.get.format}"
-              else ""
-            flows + from + to
+              if conn.to.nonEmpty then s"to ${conn.to.format}"
+              else "to empty"
+            from + to
           }
           .nl
           .addIndent()
