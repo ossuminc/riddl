@@ -42,6 +42,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
+    scalacOptions ++= Seq("-rewrite", "-source:3.4-migration"),
     scalacOptions ++= Seq("-explain", "--explain-types"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
