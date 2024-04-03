@@ -1,5 +1,5 @@
 domain dokn is {
-    type Address = {
+    type Address is {
         line1: String,
         line2: String,
         line3: String,
@@ -15,9 +15,9 @@ domain dokn is {
        "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
     )
     type LoadingMethod = any of { dock, tailgate, forklift, none }
-    type CompanyId = Id(dokn.Company.Company)
-    type DriverId = MobileNumber
-    type NoteId = Id(dokn.Note.Note)
+    type CompanyId is Id(dokn.Company.Company)
+    type DriverId is MobileNumber
+    type NoteId is Id(dokn.Note.Note)
     type MediaId is Id(dokn.Media.Media)
     type LocationId is Id(dokn.Location.Location)
     type NoteList is reference to dokn.Note.Note*

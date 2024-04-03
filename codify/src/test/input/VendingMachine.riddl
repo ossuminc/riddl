@@ -1,0 +1,46 @@
+domain VendingMachine {
+  context Transactions {
+    entity Machine {
+        command InsertCoin(amount: Money)
+        command SelectItem(item: Item)
+
+      state Idle {
+        handler CustomerInteraction {
+          on InsertCoin(amount: Money) {
+            "Validate coin"
+            "Update machine balance"
+            morph entity Machine to AwaitingSelection
+          }
+        }
+      }
+
+      state AwaitingSelection {
+        handler CustomerInteraction {
+          on SelectItem(item: Item) {
+            "Check if item is available"
+            "Check if inserted money is sufficient"
+            morph entity Machine to DispensingItem
+          }
+        }
+      }
+
+      state DispensingItem {
+        handler CustomerInteraction {
+          on DispenseItem {
+            // Activate mechanism to dispense the selected item
+            morph entity Machine to DispensingChange
+          }
+        }
+      }
+
+      state DispensingChange {
+        handler CustomerInteraction {
+          on DispenseChange {
+            // Calculate and return change
+            morph entity Machine to Idle
+          }
+        }
+      }
+    }
+  }
+}
