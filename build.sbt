@@ -19,6 +19,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     testkit,
     prettify,
     stats,
+    codify,
     riddlc,
     docsite,
     plugin
@@ -107,6 +108,17 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   )
   .dependsOn(commands, testkit % "test->compile", utils)
 
+val Codify = config("codify")
+lazy val codify = Module("codify", "riddl-codify")
+  .configure(With.typical)
+  .configure(With.coverage(65))
+  .configure(With.publishing)
+  .settings(
+    description := "Implementation for the RIDDL codify command, that replaces statements with code",
+    libraryDependencies ++= Dep.testing :+ Dep.openAISC
+  )
+  .dependsOn(commands, testkit % "test->compile", utils)
+
 lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
@@ -114,6 +126,7 @@ lazy val docProjects = List(
   (commands, Commands),
   (testkit, TestKit),
   (prettify, Prettify),
+  (codify, Codify),
   (stats, Stats),
   (riddlc, Riddlc)
 )
