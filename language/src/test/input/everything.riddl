@@ -9,7 +9,7 @@ domain Everything is {
   type SomeType is String // <-- that's a type
 
   /* This is another way to do a comment, just like C/C++ */
-  command DoAThing is { thingField: Integer }
+  command DoAThing(thingField: Integer)
 
   context APlant is {
     source Source is { outlet Commands is type DoAThing } described by "Data Source"
@@ -57,7 +57,7 @@ domain Everything is {
     type zeroOrMore is agg*
     type optional is agg?
 
-    command ACommand is { ??? }
+    command ACommand()
 
     entity Something is {
       option aggregate
@@ -71,7 +71,7 @@ domain Everything is {
 
       event Inebriated is { ??? }
 
-      record someData is { field:  SomeType }
+      record someData(field:  SomeType)
       state someState of Something.someData is {
         handler foo is {
           // Handle the ACommand
