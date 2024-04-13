@@ -39,7 +39,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
 
-  def include[K <: RiddlValue, u: P](
+  def include[u:P, K <: RiddlValue](
     parser: P[?] => P[Seq[K]]
   ): P[IncludeHolder[K]] = {
     P(Keywords.include ~/ location ~ literalString)./.map {
@@ -225,7 +225,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def term[u: P]: P[Term] = {
     P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description)./.map(tpl =>
-      (Term.apply _).tupled(tpl)
+      Term.apply.tupled(tpl)
     )
   }
 

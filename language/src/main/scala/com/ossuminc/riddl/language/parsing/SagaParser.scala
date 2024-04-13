@@ -14,15 +14,14 @@ import Readability.*
 /** SagaParser Implements the parsing of saga definitions in context definitions.
   */
 private[parsing] trait SagaParser {
-
-  this: ReferenceParser with FunctionParser with StreamingParser with StatementParser with CommonParser =>
+  this: ReferenceParser & FunctionParser & StreamingParser & StatementParser & CommonParser =>
 
   private def sagaStep[u: P]: P[SagaStep] = {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         briefly ~ description
-    ).map(x => (SagaStep.apply _).tupled(x))
+    ).map(x => SagaStep.apply.tupled(x))
   }
 
   private def sagaOption[u: P]: P[SagaOption] = {
@@ -37,7 +36,7 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaInclude[u: P]: P[IncludeHolder[OccursInSaga]] = {
-    include[OccursInSaga, u](sagaDefinitions(_))
+    include[u, OccursInSaga](sagaDefinitions(_))
   }
 
   private def sagaDefinitions[u: P]: P[Seq[OccursInSaga]] = {

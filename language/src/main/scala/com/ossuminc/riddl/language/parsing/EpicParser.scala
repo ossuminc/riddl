@@ -13,7 +13,7 @@ import Readability.*
 import java.net.URL
 
 private[parsing] trait EpicParser {
-  this: CommonParser with ReferenceParser =>
+  this: CommonParser & ReferenceParser =>
 
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
@@ -177,7 +177,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
-    include[OccursInEpic, u](epicDefinitions(_))
+    include[u, OccursInEpic](epicDefinitions(_))
   }
 
   private def epicDefinitions[u: P]: P[Seq[OccursInEpic]] = {

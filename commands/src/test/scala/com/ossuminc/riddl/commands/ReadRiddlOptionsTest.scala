@@ -5,7 +5,7 @@ import org.scalatest.exceptions.TestFailedException
 import java.nio.file.Path
 
 /** Unit Tests For ReadRiddlOptionsTest */
-class ReadRiddlOptionsTest extends CommandTestBase {
+class xReadRiddlOptionsTest extends CommandTestBase {
 
   "RiddlOptions" should {
     "read for dump" in {

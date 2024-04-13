@@ -129,7 +129,7 @@ case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: 
 case class InMemoryLogger(override val withHighlighting: Boolean = false) extends Logger {
   case class Line(level: Logger.Lvl, msg: String)
 
-  private[this] val buffer = ArrayBuffer[Line]()
+  private val buffer = ArrayBuffer[Line]()
 
   /** Returns an Iterator of all lines logged to this logger, oldest-first */
   def lines(): Iterator[Line] = buffer.iterator

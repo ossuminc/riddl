@@ -41,7 +41,7 @@ class TopLevelParser(
     with ParsingContext {
 
   private def rootInclude[u: P]: P[IncludeHolder[OccursAtRootScope]] = {
-    include[OccursAtRootScope, u](rootValues(_))
+    include[u, OccursAtRootScope](rootValues(_))
   }
 
   private def rootValues[u: P]: P[Seq[OccursAtRootScope]] = {

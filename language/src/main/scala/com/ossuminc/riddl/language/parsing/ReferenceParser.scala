@@ -15,32 +15,32 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   private def adaptorRef[u: P]: P[AdaptorRef] = {
     P(location ~ Keywords.adaptor ~ pathIdentifier)
-      .map(tpl => (AdaptorRef.apply _).tupled(tpl))
+      .map(tpl => AdaptorRef.apply.tupled(tpl))
   }
 
   private def commandRef[u: P]: P[CommandRef] = {
     P(location ~ Keywords.command ~ pathIdentifier)
-      .map(tpl => (CommandRef.apply _).tupled(tpl))
+      .map(tpl => CommandRef.apply.tupled(tpl))
   }
 
   private def eventRef[u: P]: P[EventRef] = {
     P(location ~ Keywords.event ~ pathIdentifier)
-      .map(tpl => (EventRef.apply _).tupled(tpl))
+      .map(tpl => EventRef.apply.tupled(tpl))
   }
 
   private def queryRef[u: P]: P[QueryRef] = {
     P(location ~ Keywords.query ~ pathIdentifier)
-      .map(tpl => (QueryRef.apply _).tupled(tpl))
+      .map(tpl => QueryRef.apply.tupled(tpl))
   }
 
   private def resultRef[u: P]: P[ResultRef] = {
     P(location ~ Keywords.result ~ pathIdentifier)
-      .map(tpl => (ResultRef.apply _).tupled(tpl))
+      .map(tpl => ResultRef.apply.tupled(tpl))
   }
 
   private def recordRef[u: P]: P[RecordRef] = {
     P(location ~ Keywords.record ~ pathIdentifier)
-      .map(tpl => (RecordRef.apply _).tupled(tpl))
+      .map(tpl => RecordRef.apply.tupled(tpl))
   }
 
   def messageRef[u: P]: P[MessageRef] = {
@@ -49,22 +49,22 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   def entityRef[u: P]: P[EntityRef] = {
     P(location ~ Keywords.entity ~ pathIdentifier)
-      .map(tpl => (EntityRef.apply _).tupled(tpl))
+      .map(tpl => EntityRef.apply.tupled(tpl))
   }
 
   def functionRef[u: P]: P[FunctionRef] = {
     P(location ~ Keywords.function ~ pathIdentifier)
-      .map(tpl => (FunctionRef.apply _).tupled(tpl))
+      .map(tpl => FunctionRef.apply.tupled(tpl))
   }
 
   def handlerRef[u: P]: P[HandlerRef] = {
     P(location ~ Keywords.handler ~ pathIdentifier)
-      .map(tpl => (HandlerRef.apply _).tupled(tpl))
+      .map(tpl => HandlerRef.apply.tupled(tpl))
   }
 
   def stateRef[u: P]: P[StateRef] = {
     P(location ~ Keywords.state ~ pathIdentifier)
-      .map(tpl => (StateRef.apply _).tupled(tpl))
+      .map(tpl => StateRef.apply.tupled(tpl))
   }
 
   def typeRef[u: P]: P[TypeRef] = {
@@ -78,63 +78,63 @@ private[parsing] trait ReferenceParser extends CommonParser {
 
   def fieldRef[u: P]: P[FieldRef] = {
     P(location ~ Keywords.field ~ pathIdentifier)
-      .map(tpl => (FieldRef.apply _).tupled(tpl))
+      .map(tpl => FieldRef.apply.tupled(tpl))
   }
 
   def constantRef[u: P]: P[ConstantRef] = {
     P(location ~ Keywords.constant ~ pathIdentifier)
-      .map(tpl => (ConstantRef.apply _).tupled(tpl))
+      .map(tpl => ConstantRef.apply.tupled(tpl))
   }
 
   def contextRef[u: P]: P[ContextRef] = {
     P(location ~ Keywords.context ~ pathIdentifier)
-      .map(tpl => (ContextRef.apply _).tupled(tpl))
+      .map(tpl => ContextRef.apply.tupled(tpl))
   }
 
   def outletRef[u: P]: P[OutletRef] = {
     P(location ~ Keywords.outlet ~ pathIdentifier)
-      .map(tpl => (OutletRef.apply _).tupled(tpl))
+      .map(tpl => OutletRef.apply.tupled(tpl))
   }
 
   def inletRef[u: P]: P[InletRef] = {
     P(location ~ Keywords.inlet ~ pathIdentifier)
-      .map(tpl => (InletRef.apply _).tupled(tpl))
+      .map(tpl => InletRef.apply.tupled(tpl))
   }
 
   private def streamletRef[u: P]: P[StreamletRef] = {
     P(
       location ~ Keywords.streamlets ~ pathIdentifier
-    ).map(tpl => (StreamletRef.apply _).tupled(tpl))
+    ).map(tpl => StreamletRef.apply.tupled(tpl))
   }
 
   private def projectorRef[u: P]: P[ProjectorRef] = {
     P(location ~ Keywords.projector ~ pathIdentifier)
-      .map(tpl => (ProjectorRef.apply _).tupled(tpl))
+      .map(tpl => ProjectorRef.apply.tupled(tpl))
   }
 
   def repositoryRef[u: P]: P[RepositoryRef] = {
     P(location ~ Keywords.repository ~ pathIdentifier)
-      .map(tpl => (RepositoryRef.apply _).tupled(tpl))
+      .map(tpl => RepositoryRef.apply.tupled(tpl))
   }
 
   private def sagaRef[u: P]: P[SagaRef] = {
     P(location ~ Keywords.saga ~ pathIdentifier)
-      .map(tpl => (SagaRef.apply _).tupled(tpl))
+      .map(tpl => SagaRef.apply.tupled(tpl))
   }
 
   def epicRef[u: P]: P[EpicRef] = {
     P(location ~ Keywords.epic ~ pathIdentifier)
-      .map(tpl => (EpicRef.apply _).tupled(tpl))
+      .map(tpl => EpicRef.apply.tupled(tpl))
   }
 
   def userRef[u: P]: P[UserRef] = {
     P(location ~ Keywords.user ~ pathIdentifier)
-      .map(tpl => (UserRef.apply _).tupled(tpl))
+      .map(tpl => UserRef.apply.tupled(tpl))
   }
 
   private def applicationRef[u: P]: P[ApplicationRef] = {
     P(location ~ Keywords.application ~ pathIdentifier)
-      .map(tpl => (ApplicationRef.apply _).tupled(tpl))
+      .map(tpl => ApplicationRef.apply.tupled(tpl))
   }
 
   def outputRef[u: P]: P[OutputRef] = {
@@ -155,7 +155,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
   def authorRef[u: P]: P[AuthorRef] = {
     P(
       location ~ by ~ Keywords.author ~ pathIdentifier
-    ).map(tpl => (AuthorRef.apply _).tupled(tpl))
+    ).map(tpl => AuthorRef.apply.tupled(tpl))
   }
 
   def processorRef[u: P]: P[ProcessorRef[Processor[?, ?]]] = {
