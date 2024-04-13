@@ -1,29 +1,20 @@
-// #everything
-// RIDDL is about defining domains so ...
 domain Everything is {
 
   type SomeType is String
   type DoAThing is command { thingField: Integer }
 
-  // Channels are defined to flow messages between entities. They are defined
-  // in domain scope because they can cross contexts too.
-
   context APlant is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
     connector AChannel is {
-      from  outlet Source.Commands  to inlet Sink.Commands
+      from  outlet APlant.Source.Commands  to inlet APlant.Sink.Commands
     } explained as "A Channel"
   }
 
   type StateType is { someField1: SomeType }
 
-
-  // Domains are composed of bounded contexts so ...
   context full is {
-    // Contexts can contain many kinds of definitions
 
-    // 8 pre-defined types, shown as re-names
     type str is String             // Define str as a String
     type num is Number             // Define num as a Number
     type boo is Boolean            // Define boo as a Boolean
@@ -33,38 +24,27 @@ domain Everything is {
     type stamp is TimeStamp        // Define stamp as a TimeStamp
     type url is URL
 
-    // Enumerations have a value chosen from a list of identifiers
     type PeachType is { a: Integer }
     type enum is any of { Apple Pear Peach(21) Persimmon(42) }
 
-    // Alternations select one type from a list of types
     type alt is one of { enum or stamp or url }
 
-    // Aggregations combine several types and give each a field name identifier
     type agg is {
       key is num,
       id is ident,
       time is TimeStamp
     }
 
-    // Types can have cardinality requirements similar to regular expressions
     type oneOrMore is many agg
     type zeroOrMore is agg*
     type optional is agg?
 
-    // Commands, Events, Queries and Results are defined in terms of some
-    // type, previously defined. Commands yield events. Queries yield results.
-
-
-
-    // Entities are the main objects that contexts define. They can be
-    // persistent (long lived) or aggregate (they consume commands and queries)
     entity Something is {
-      options (aggregate, transient)
+      option aggregate option transient
 
       type somethingDate is Date
 
-      command ACommand is {}
+      command ACommand is { ??? }
 
       state someState of type Everything.StateType is { ??? }
 
@@ -79,7 +59,7 @@ domain Everything is {
       handler foo is {
         on command ACommand {
           send event full.SomeOtherThing.ItHappened to
-            inlet Everything.full.SomeOtherThing.SOT_in
+            inlet SomeOtherThing.SOT_In
         }
       }
     }
@@ -90,11 +70,9 @@ domain Everything is {
       state otherThingState of type Everything.StateType is { ??? }
       handler fee is {
         on event ItHappened {
-          set field SomeOtherThing.otherThingState.nameField1 to "field ItHappened.when"
+          set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"
         }
       }
     }
   }
 }
-
-// #everything

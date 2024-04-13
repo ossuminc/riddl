@@ -1,72 +1,68 @@
-Style: saga.riddl(6:18): Field identifier 'a' is too short. The minimum length is 3:
-       requires { a: Integer described by "a"} returns { b: Integer described by "b"} body ???
-                  ^
-Style: saga.riddl(9:18): Field identifier 'c' is too short. The minimum length is 3:
-       requires { c: Integer described by "c"} returns { d: Integer described by "d"} body ???
-                  ^
-Missing: saga.riddl(4:5): Command 'UndoSomething' should have a description:
+testkit/src/test/input/check/saga/saga.riddl(4:5):
+ Command 'UndoSomething' should have a description:
      type UndoSomething = command { ??? }
      ^
-Missing: saga.riddl(3:5): Command 'Something' should have a description:
+testkit/src/test/input/check/saga/saga.riddl(3:5):
+ Command 'Something' should have a description:
      type Something = command { ??? }
      ^
-Style: saga.riddl(9:57): Field identifier 'd' is too short. The minimum length is 3:
-       requires { c: Integer described by "c"} returns { d: Integer described by "d"} body ???
-                                                         ^
-Style: saga.riddl(6:57): Field identifier 'b' is too short. The minimum length is 3:
-       requires { a: Integer described by "a"} returns { b: Integer described by "b"} body ???
-                                                         ^
-Missing: saga.riddl(1:1): Vital definitions should have an author reference:
+testkit/src/test/input/check/saga/saga.riddl(1:1):
+ Vital definitions should have an author reference:
  domain ignore1 is {
  ^
-Missing: saga.riddl(2:3): Vital definitions should have an author reference:
+testkit/src/test/input/check/saga/saga.riddl(2:3):
+ Vital definitions should have an author reference:
    context ignore2 is {
    ^
-Missing: saga.riddl(5:5): Vital definitions should have an author reference:
+testkit/src/test/input/check/saga/saga.riddl(5:5):
+ Vital definitions should have an author reference:
      function AnotherThing {
      ^
-Missing: saga.riddl(8:5): Vital definitions should have an author reference:
+testkit/src/test/input/check/saga/saga.riddl(8:5):
+ Vital definitions should have an author reference:
      function UndoAnotherThing {
      ^
-Missing: saga.riddl(12:5): Entity 'blah' must define at least one state:
+testkit/src/test/input/check/saga/saga.riddl(12:5):
+ Entity 'blah' must define at least one state:
      entity blah is {
      ^
-Missing: saga.riddl(12:5): Entity 'blah' should have a description:
+testkit/src/test/input/check/saga/saga.riddl(12:5):
+ Entity 'blah' should have a description:
      entity blah is {
      ^
-Missing: saga.riddl(12:5): Vital definitions should have an author reference:
+testkit/src/test/input/check/saga/saga.riddl(12:5):
+ Vital definitions should have an author reference:
      entity blah is {
      ^
-Missing: saga.riddl(15:5): Saga 'name' should have a description:
+testkit/src/test/input/check/saga/saga.riddl(15:5):
+ Saga 'name' should have a description:
      saga name is {
      ^
-Missing: saga.riddl(15:5): Vital definitions should have an author reference:
+testkit/src/test/input/check/saga/saga.riddl(15:5):
+ Vital definitions should have an author reference:
      saga name is {
      ^
-Style: saga.riddl(13:13): Inlet identifier 'in' is too short. The minimum length is 3:
+testkit/src/test/input/check/saga/saga.riddl(13:13):
+ Inlet identifier 'in' is too short. The minimum length is 3:
        inlet in is command Something
              ^
-Style: saga.riddl(17:19): Field identifier 'p1' is too short. The minimum length is 3:
-       requires: { p1: String, p2: String }
-                   ^
-Style: saga.riddl(17:31): Field identifier 'p2' is too short. The minimum length is 3:
-       requires: { p1: String, p2: String }
-                               ^
-Style: saga.riddl(18:17): Field identifier 's' is too short. The minimum length is 3:
-       returns: {s: String }
-                 ^
-Usage: saga.riddl(12:5): Entity 'blah' is unused:
+testkit/src/test/input/check/saga/saga.riddl(12:5):
+ Entity 'blah' is unused:
      entity blah is {
      ^
-Warning: saga.riddl(13:7): Inlet 'in' is not connected:
+testkit/src/test/input/check/saga/saga.riddl(13:7):
+ Inlet 'in' is not connected:
        inlet in is command Something
        ^
-Usage: saga.riddl(4:5): Command 'UndoSomething' is unused:
+testkit/src/test/input/check/saga/saga.riddl(4:5):
+ Command 'UndoSomething' is unused:
      type UndoSomething = command { ??? }
      ^
-Usage: saga.riddl(5:5): Function 'AnotherThing' is unused:
+testkit/src/test/input/check/saga/saga.riddl(5:5):
+ Function 'AnotherThing' is unused:
      function AnotherThing {
      ^
-Usage: saga.riddl(8:5): Function 'UndoAnotherThing' is unused:
+testkit/src/test/input/check/saga/saga.riddl(8:5):
+ Function 'UndoAnotherThing' is unused:
      function UndoAnotherThing {
      ^

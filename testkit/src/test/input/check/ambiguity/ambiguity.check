@@ -1,53 +1,70 @@
-Missing: ambiguity.riddl(3:5): Entity 'Product' in Context 'ProductInventory' should have content:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(3:5):
+ Entity 'Product' in Context 'ProductInventory' should have content:
      entity Product is {???}
      ^
-Missing: ambiguity.riddl(9:3): Type 'Alias' should have a description:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(9:3):
+ Type 'Alias' should have a description:
    type Alias = Id(Product)
    ^
-Missing: ambiguity.riddl(1:1): Domain 'Inventory' should have a description:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(1:1):
+ Domain 'Inventory' should have a description:
  domain Inventory is {
  ^
-Missing: ambiguity.riddl(5:3): Context 'Vendor' should have a description:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(5:3):
+ Context 'Vendor' should have a description:
    context Vendor is {
    ^
-Style: ambiguity.riddl(6:5): Entity 'Product' overloads Entity 'Product' at ambiguity.riddl(3:5):
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
+ Entity 'Product' overloads Entity 'Product' at ambiguity.riddl(3:5):
      entity Product is {???}
      ^
-Missing: ambiguity.riddl(2:3): Context 'ProductInventory' should have a description:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(2:3):
+ Context 'ProductInventory' should have a description:
    context ProductInventory is {
    ^
-Error: ambiguity.riddl(9:19): Path reference 'Product' is ambiguous. Definitions are:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(9:19):
+ Path reference 'Product' is ambiguous. Definitions are:
    Inventory.ProductInventory.Product (ambiguity.riddl(3:5))
    Inventory.Vendor.Product (ambiguity.riddl(6:5)):
    type Alias = Id(Product)
                    ^
-Missing: ambiguity.riddl(6:5): Entity 'Product' in Context 'Vendor' should have content:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
+ Entity 'Product' in Context 'Vendor' should have content:
      entity Product is {???}
      ^
-Usage: ambiguity.riddl(3:5): Entity 'Product' is unused:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(3:5):
+ Entity 'Product' is unused:
      entity Product is {???}
      ^
-Usage: ambiguity.riddl(6:5): Entity 'Product' is unused:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
+ Entity 'Product' is unused:
      entity Product is {???}
      ^
-Usage: ambiguity.riddl(9:3): Type 'Alias' is unused:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(9:3):
+ Type 'Alias' is unused:
    type Alias = Id(Product)
    ^
-Missing: ambiguity.riddl(1:1): Vital definitions should have an author reference:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(1:1):
+ Vital definitions should have an author reference:
  domain Inventory is {
  ^
-Missing: ambiguity.riddl(2:3): Vital definitions should have an author reference:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(2:3):
+ Vital definitions should have an author reference:
    context ProductInventory is {
    ^
-Missing: ambiguity.riddl(3:5): Vital definitions should have an author reference:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(3:5):
+ Vital definitions should have an author reference:
      entity Product is {???}
      ^
-Missing: ambiguity.riddl(5:3): Vital definitions should have an author reference:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(5:3):
+ Vital definitions should have an author reference:
    context Vendor is {
    ^
-Missing: ambiguity.riddl(6:5): Vital definitions should have an author reference:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
+ Vital definitions should have an author reference:
      entity Product is {???}
      ^
-Usage: ambiguity.riddl(1:8): Models without any streaming data will exhibit minimal effect:
+testkit/src/test/input/check/ambiguity/ambiguity.riddl(1:8):
+ Models without any streaming data will exhibit minimal effect:
  domain Inventory is {
         ^

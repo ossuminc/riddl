@@ -1,3 +1,8 @@
-Usage: simpleDomain.riddl(1:8): Models without any streaming data will exhibit minimal effect:
- domain foo by author foo.Nada is {
+testkit/src/test/input/check/domain/simpleDomain.riddl(1:8):
+ Models without any streaming data will exhibit minimal effect:
+ domain foo is {
         ^
+testkit/src/test/input/check/domain/simpleDomain.riddl(1:1):
+ Vital definitions should have an author reference:
+ domain foo is {
+ ^

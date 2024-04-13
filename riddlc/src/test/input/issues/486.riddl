@@ -1,0 +1,12 @@
+domain test {
+  application ksoTemplateApp {
+  type ProductOfferingText is String(3,80)
+    page PricingPage { output PricingPageText showsksoTemplateApp.ProductOfferingText } described as {
+        | The line above should not compile. First, there should be a space between shows and ksoTemplateApp.
+        | Second, there should be a record keyword between shows and ksoTemplateApp.
+        | Third, there should not be a space between  ksoTemplateApp. and ProductOfferingText.
+        | The correct syntax is expected to be:
+        | page PricingPage{ output PricingPageText shows record ksoTempateApp.ProductOfferingText }
+    }
+  }
+}

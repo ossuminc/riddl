@@ -1,0 +1,5 @@
+
+contest Baz {
+ type something is Integer
+ smash_mouth
+}

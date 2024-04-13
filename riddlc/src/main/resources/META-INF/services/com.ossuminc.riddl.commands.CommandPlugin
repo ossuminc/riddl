@@ -1,0 +1,4 @@
+com.ossuminc.riddl.AboutCommand
+com.ossuminc.riddl.HelpCommand
+com.ossuminc.riddl.VersionCommand
+com.ossuminc.riddl.InfoCommand

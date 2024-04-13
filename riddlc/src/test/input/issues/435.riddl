@@ -1,0 +1,9 @@
+// Test case for Issue 435
+
+domain Foo {
+  include "435_oops"
+
+  context Bar {
+    type pertinent = Foo.Baz.something
+  }
+}

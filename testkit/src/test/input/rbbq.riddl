@@ -1,9 +1,5 @@
-// #everything
-// #domains
 domain ReactiveBBQ is {
-// #domains
 
-  // Create some types with better names than just "Id"
   type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
     "Unique identifier for a customer"
   }
@@ -25,8 +21,6 @@ domain ReactiveBBQ is {
   }
 
 
-  // #Kitchen
-  // The Kitchen context pertains to
   context Kitchen is {
     type IP4Address is { a: Number, b: Number, c: Number, d: Number}
     type OrderViewType is {
@@ -64,9 +58,7 @@ domain ReactiveBBQ is {
     |1. Kitchen ignores drink items on order
     |1.
   }
-  // #Kitchen
 
-  // #Loyalty
   context Loyalty is {
     type AccrualEvent is {
       when is TimeStamp,
@@ -92,13 +84,11 @@ domain ReactiveBBQ is {
       }
     }
 
-    adaptor PaymentAdapter from context Payment is {
+    adaptor PaymentAdapter from context ReactiveBBQ.Payment is {
       ???
     }
   }
-  // #Loyalty
 
-  // #Order
   context Order is {
     entity Order is {
       option is aggregate
@@ -111,9 +101,7 @@ domain ReactiveBBQ is {
       }
     }
   }
-  // #Order
 
-  // #Payment
   context Payment is {
     entity Payment is {
       option is aggregate
@@ -127,9 +115,7 @@ domain ReactiveBBQ is {
       }
     }
   }
-  // #Payment
 
-  // #Menu
   context Menu is {
     entity MenuItem is {
       record fields is { something: String }
@@ -146,9 +132,7 @@ domain ReactiveBBQ is {
       }
     }
   }
-  // #Menu
 
-  // #Reservation
   context Reservation is {
     type ReservationValue is {
       partyName is String,
@@ -165,14 +149,13 @@ domain ReactiveBBQ is {
     } explained as "This is a retail store Location"
 
     entity Reservation is {
-     options ( aggregate )
+     option aggregate
      record fields is { value: ReservationValue }
      state reservation of Reservation.fields is {
        handler ofInputs is {}
      }
     }
   }
-  // #Reservation
 } explained as {
   |# brief
   | Reactive BBQ Domain Definition
@@ -183,4 +166,4 @@ domain ReactiveBBQ is {
   |Reactive BBQ employees to define the requirements. This domain specification
   |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
 }
-// #everything
+// #end-of-domain

@@ -10,17 +10,17 @@ domain dokn is {
         postalCode: String
     }
     type MobileNumber = Pattern("\\(([0-9]{3})\\)([0-9]{3})-([0-9]{4})")
-    //https:emailregex.com RFC 5322 Official Standard
+
     type EmailAddress = Pattern(
        "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
     )
     type LoadingMethod = any of { dock, tailgate, forklift, none }
-    type CompanyId = Id(Company.Company)
+    type CompanyId = Id(dokn.Company.Company)
     type DriverId = MobileNumber
-    type NoteId = Id(Note.Note)
-    type MediaId is Id(Media.Media)
-    type LocationId is Id(Location.Location)
-    type NoteList is reference to Note.Note*
+    type NoteId = Id(dokn.Note.Note)
+    type MediaId is Id(dokn.Media.Media)
+    type LocationId is Id(dokn.Location.Location)
+    type NoteList is reference to dokn.Note.Note*
 
     context Company is {
         connector CompanyEvents is {
@@ -30,11 +30,11 @@ domain dokn is {
         inlet CompanyEvents_in is event dokn.Company.Company.CompanyEvent
 
         entity Company is {
-            options(event-sourced, available)
+            option event-sourced option available
 
             type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
-            type CompanyAdded is event { ??? }
-            type CompanyEvent is one of { type CompanyAdded }
+            event CompanyAdded is { when: TimeStamp }
+            type CompanyEvent is one of { event CompanyAdded }
 
             record fields is {
               companyId: CompanyId,
@@ -58,7 +58,7 @@ domain dokn is {
         outlet Driver_out is type DriverEvents
 
         entity Driver is {
-            options(event-sourced, available)
+            option event-sourced option available
 
             type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId }
             type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
@@ -95,11 +95,11 @@ domain dokn is {
 
     context Note is {
         entity Note is {
-            options(event-sourced, available)
+            option event-sourced option available
             record fields is {
               noteId: NoteId,
-              locationId: LocationId,
-              companyId: CompanyId,
+              locationId: type LocationId,
+              companyId: type CompanyId,
               text: String,
               upvoteCount: Integer,
               downvoteCount: Integer,
@@ -113,7 +113,7 @@ domain dokn is {
 
     context Media is {
         entity Media is {
-            options(consistent)
+            option consistent
             record fields is {
               mediaId: MediaId,
               path: String,
@@ -127,38 +127,38 @@ domain dokn is {
 
     context Location is {
         entity Location is {
-            options(event-sourced, available)
+            option event-sourced option available
 
             type AddDeliveryLocation is command  {
               geohash: Location, label: String
             }
-            type DeliveryLocationAdded is event  { }
+            type DeliveryLocationAdded is event  { ??? }
 
             type ChangeLocationName is command { newName: String }
             type LocationNameChanged is event { newName: String }
 
-            type ReportTicketReceived is command {}
-            type TicketReportedAtLocation is event {}
+            type ReportTicketReceived is command { ??? }
+            type TicketReportedAtLocation is event { ??? }
 
             type ModifyNotesAtLocation is command { cid: CompanyId, note: String }
             type NotesForLocationModified is event { note: String }
 
             type LocationAddressReceived is event { newAddress: dokn.Address }
 
-            type getLocationDetails is query  {}
+            type getLocationDetails is query  { ??? }
             type LocationDetails is result  { ??? }
 
             type getLocationNotes is query { cid: CompanyId }
             type LocationNotes is result { notes: NoteList }
 
             record fields is {
-              locationId: LocationId,
-              geohash: Location,
+              locationId: type LocationId,
+              geohash:  Location,
               label: String ,
-              address: Address,
-              notes: NoteList,
+              address: type Address,
+              notes: type NoteList,
               ticketCount: Integer,
-              loadingMethod: LoadingMethod
+              loadingMethod: type LoadingMethod
             }
             state LocationBase of Location.fields is {
               handler Base is {
