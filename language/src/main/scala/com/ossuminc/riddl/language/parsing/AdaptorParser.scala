@@ -27,7 +27,7 @@ private[parsing] trait AdaptorParser {
   }
 
   private def adaptorInclude[u: P]: P[IncludeHolder[OccursInAdaptor]] = {
-    include[OccursInAdaptor, u](adaptorDefinitions(_))
+    include[u, OccursInAdaptor](adaptorDefinitions(_))
   }
 
   private def adaptorDefinitions[u: P]: P[Seq[OccursInAdaptor]] = {

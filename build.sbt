@@ -30,6 +30,7 @@ lazy val utils: Project = Module("utils", "riddl-utils")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
+    scalacOptions += "--no-warnings",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     description := "Various utilities used throughout riddl libraries",
@@ -42,8 +43,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
-    scalacOptions ++= Seq("-rewrite", "-source:3.4-migration"),
-    scalacOptions ++= Seq("-explain", "--explain-types"),
+    scalacOptions ++= Seq("-explain", "--explain-types", "--no-warnings"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
@@ -84,6 +84,7 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
+    scalacOptions += "--no-warnings",
     description := "A Testkit for testing RIDDL code, and a suite of those tests",
     libraryDependencies ++= Dep.testKitDeps
   )
@@ -110,6 +111,7 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
+    scalacOptions += "--no-warnings",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )

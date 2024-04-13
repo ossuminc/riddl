@@ -99,7 +99,9 @@ trait ParsingContext extends ParsingErrors {
     }
   }
 
-  private def doIncludeParsing[CT <: RiddlValue](loc: At, str: LiteralString, rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): Seq[CT] = {
+  private def doIncludeParsing[CT <: RiddlValue](loc: At, str: LiteralString, rule: P[?] => P[Seq[CT]])(implicit
+    ctx: P[?]
+  ): Seq[CT] = {
     try {
       val rpi = startNextSource(str)
       fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
@@ -126,10 +128,8 @@ trait ParsingContext extends ParsingErrors {
   )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
     Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
       val future: Future[Seq[CT]] = {
-        if commonOptions.maxParallelParsing > 1 then
-          Future { blocking { doIncludeParsing[CT](loc, str, rule) } }
-        else
-          Future.successful { doIncludeParsing[CT](loc, str, rule) }
+        if commonOptions.maxParallelParsing > 1 then Future { blocking { doIncludeParsing[CT](loc, str, rule) } }
+        else Future.successful { doIncludeParsing[CT](loc, str, rule) }
         end if
       }
       AST.IncludeHolder[CT](loc, str.s, commonOptions.maxIncludeWait, future)

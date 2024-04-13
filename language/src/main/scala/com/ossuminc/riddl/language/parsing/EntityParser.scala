@@ -20,8 +20,8 @@ private[parsing] trait EntityParser {
     & StreamingParser
     & TypeParser =>
 
-  private def entityOption[X: P]: P[EntityOption] = {
-    option[X, EntityOption](RiddlOptions.entityOptions) {
+  private def entityOption[u: P]: P[EntityOption] = {
+    option[u, EntityOption](RiddlOptions.entityOptions) {
       case (loc, RiddlOption.event_sourced, _)        => EntityEventSourced(loc)
       case (loc, RiddlOption.value, _)                => EntityValueOption(loc)
       case (loc, RiddlOption.aggregate, _)            => EntityIsAggregate(loc)
@@ -63,8 +63,8 @@ private[parsing] trait EntityParser {
     }
   }
 
-  private def entityInclude[X: P]: P[IncludeHolder[OccursInEntity]] = {
-    include[OccursInEntity, X](entityDefinitions(_))
+  private def entityInclude[u: P]: P[IncludeHolder[OccursInEntity]] = {
+    include[u, OccursInEntity](entityDefinitions(_))
   }
 
   private def entityDefinitions[u: P]: P[Seq[OccursInEntity]] = {

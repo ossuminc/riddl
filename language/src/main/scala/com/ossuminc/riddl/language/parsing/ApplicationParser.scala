@@ -138,7 +138,7 @@ private[parsing] trait ApplicationParser {
   }
 
   private def applicationInclude[u: P]: P[IncludeHolder[OccursInApplication]] = {
-    include[OccursInApplication, u](applicationDefinitions(_))
+    include[u, OccursInApplication](applicationDefinitions(_))
   }
 
   private def emptyApplication[u: P]: P[Seq[OccursInApplication]] = {

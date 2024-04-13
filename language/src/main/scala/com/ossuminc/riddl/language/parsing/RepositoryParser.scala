@@ -30,8 +30,8 @@ private[parsing] trait RepositoryParser {
     }
   }
 
-  private def repositoryInclude[x: P]: P[IncludeHolder[OccursInRepository]] = {
-    include[OccursInRepository, x](repositoryDefinitions(_))
+  private def repositoryInclude[u: P]: P[IncludeHolder[OccursInRepository]] = {
+    include[u, OccursInRepository](repositoryDefinitions(_))
   }
 
   private def schemaKind[u: P]: P[RepositorySchemaKind] = {

@@ -30,7 +30,7 @@ private[parsing] trait ProjectorParser {
   }
 
   private def projectorInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
-    include[OccursInProjector, u](projectorDefinitions(_))
+    include[u, OccursInProjector](projectorDefinitions(_))
   }
 
   private def updates[u: P]: P[RepositoryRef] = {

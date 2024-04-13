@@ -107,7 +107,7 @@ class StreamValidatorTest extends ValidatingTest {
           domain.contents.size mustBe 2
           messages.isEmpty mustBe false
           messages.hasErrors mustBe false
-          messages.filter(_.message contains "is not needed since both ends") mustNot be(empty)
+          messages.filter(_.message.contains("is not needed since both ends")) mustNot be(empty)
           messages.exists(
             _.message.startsWith("The persistence option on Connector 'c1'")
           ) mustBe true

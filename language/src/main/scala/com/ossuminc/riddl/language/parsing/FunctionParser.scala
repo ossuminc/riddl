@@ -15,8 +15,8 @@ import Readability.*
 private[parsing] trait FunctionParser {
   this: ReferenceParser & TypeParser & StatementParser & CommonParser =>
 
-  private def functionInclude[x: P]: P[IncludeHolder[OccursInFunction]] = {
-    include[OccursInFunction, x](functionDefinitions(_))
+  private def functionInclude[u: P]: P[IncludeHolder[OccursInFunction]] = {
+    include[u, OccursInFunction](functionDefinitions(_))
   }
 
   def input[u: P]: P[Aggregation] = {

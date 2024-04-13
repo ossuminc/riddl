@@ -25,8 +25,8 @@ private[parsing] trait ContextParser {
     & StatementParser
     & TypeParser =>
 
-  private def contextOption[X: P]: P[ContextOption] = {
-    option[X, ContextOption](RiddlOptions.contextOptions) {
+  private def contextOption[u: P]: P[ContextOption] = {
+    option[u, ContextOption](RiddlOptions.contextOptions) {
       case (loc, RiddlOption.wrapper, _)       => ContextWrapperOption(loc)
       case (loc, RiddlOption.gateway, _)       => GatewayOption(loc)
       case (loc, RiddlOption.service, _)       => ServiceOption(loc)
@@ -38,8 +38,8 @@ private[parsing] trait ContextParser {
     }
   }
 
-  private def contextInclude[X: P]: P[IncludeHolder[OccursInContext]] = {
-    include[OccursInContext, X](contextDefinitions(_))
+  private def contextInclude[u: P]: P[IncludeHolder[OccursInContext]] = {
+    include[u, OccursInContext](contextDefinitions(_))
   }
 
   private def contextDefinition[u: P]: P[OccursInContext] = {

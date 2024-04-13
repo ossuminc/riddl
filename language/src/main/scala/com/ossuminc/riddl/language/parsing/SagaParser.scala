@@ -36,7 +36,7 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaInclude[u: P]: P[IncludeHolder[OccursInSaga]] = {
-    include[OccursInSaga, u](sagaDefinitions(_))
+    include[u, OccursInSaga](sagaDefinitions(_))
   }
 
   private def sagaDefinitions[u: P]: P[Seq[OccursInSaga]] = {
