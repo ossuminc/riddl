@@ -16,6 +16,10 @@
 # Compile the test code
 > Test/compile
 
+
 ## Try running the test case
 > test
+
+## Placed here to allow pausing for manual inspect. Uncomment to use
+# $ pause
 
