@@ -193,7 +193,8 @@ class MessagesSpec extends AnyWordSpec with Matchers {
     }
 
     "format should produce located output for non-empty location" in {
-      val at = At(1, 2, RiddlParserInput("test", "test"))
+      val rip: RiddlParserInput = RiddlParserInput("test", "test")
+      val at = At(1, 2, rip)
       val msg = Message(at, "the_message", Warning)
       val content = msg.format
       val expected =
