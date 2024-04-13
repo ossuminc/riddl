@@ -93,7 +93,7 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
                      |am a
                      |String
                      |""".stripMargin
-      SourceParserInput(Source.fromString(string), "string").data mustBe string
+      RiddlParserInput(Source.fromString(string)).data mustBe string
     }
   }
 
