@@ -17,18 +17,18 @@ import scala.concurrent.{Await, Future}
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {
   this: ApplicationParser
-    with ContextParser
-    with EpicParser
-    with ReferenceParser
-    with SagaParser
-    with StreamingParser
-    with StatementParser
-    with TypeParser
-    with CommonParser
-    with ParsingContext =>
+    & ContextParser
+    & EpicParser
+    & ReferenceParser
+    & SagaParser
+    & StreamingParser
+    & StatementParser
+    & TypeParser
+    & CommonParser
+    & ParsingContext =>
 
-  private def domainOption[X: P]: P[DomainOption] = {
-    option[X, DomainOption](RiddlOptions.domainOptions) {
+  private def domainOption[u: P]: P[DomainOption] = {
+    option[u, DomainOption](RiddlOptions.domainOptions) {
       case (loc, RiddlOption.external, args)   => DomainExternalOption(loc, args)
       case (loc, RiddlOption.package_, args)   => DomainPackageOption(loc, args)
       case (loc, RiddlOption.technology, args) => DomainTechnologyOption(loc, args)
@@ -39,7 +39,7 @@ private[parsing] trait DomainParser {
   }
 
   private def domainInclude[u: P]: P[IncludeHolder[OccursInDomain]] = {
-    include[OccursInDomain, u](domainDefinitions(_))
+    include[u,OccursInDomain](domainDefinitions(_))
   }
 
   private def user[u: P]: P[User] = {

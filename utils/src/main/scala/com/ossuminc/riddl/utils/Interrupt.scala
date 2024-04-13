@@ -23,7 +23,7 @@ final class Interrupt extends (() => Boolean) {
   private case class Started(onThread: Thread) extends State
   private case class CancelledOrLate(that: Interrupt) extends State
 
-  private[this] var state: AnyRef = NotStarted
+  private var state: AnyRef = NotStarted
 
   /** This is the signal to cancel the execution of the logic. Returns whether the cancellation signal was successfully
     * issued or not.
@@ -43,7 +43,7 @@ final class Interrupt extends (() => Boolean) {
 
   // Initializes right before execution of logic and
   // allows to not run the logic at all if already cancelled.
-  private[this] def enter(): Boolean = this.synchronized {
+  private def enter(): Boolean = this.synchronized {
     state match {
       case NotStarted =>
         state = Started(Thread.currentThread)
@@ -54,7 +54,7 @@ final class Interrupt extends (() => Boolean) {
 
   // Cleans up after the logic has executed
   // Prevents cancellation to occur "too late"
-  private[this] def exit(): Boolean = this.synchronized {
+  private def exit(): Boolean = this.synchronized {
     state match {
       case _: this.type => false
       case Started(_: Thread) =>

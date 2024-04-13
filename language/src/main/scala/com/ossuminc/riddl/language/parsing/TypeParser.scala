@@ -19,7 +19,7 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.reference ~ Readability.to.? ~/
         maybe(Keyword.entity) ~ pathIdentifier
-    ).map { tpl => (EntityReferenceTypeExpression.apply _).tupled(tpl) }
+    ).map { tpl => EntityReferenceTypeExpression.apply.tupled(tpl) }
   }
 
   private def stringType[u: P]: P[String_] = {
@@ -209,14 +209,14 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ PredefTypes.Currency ~/
         (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose)
-    ).map { tpl => (Currency.apply _).tupled(tpl) }
+    ).map { tpl => Currency.apply.tupled(tpl) }
   }
 
   private def urlType[u: P]: P[URL] = {
     P(
       location ~ PredefTypes.URL ~/
         (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
-    ).map { tpl => (URL.apply _).tupled(tpl) }
+    ).map { tpl => URL.apply.tupled(tpl) }
   }
 
   private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
@@ -290,7 +290,7 @@ private[parsing] trait TypeParser extends CommonParser {
       location ~ PredefType.Decimal ~/ Punctuation.roundOpen ~
         integer ~ Punctuation.comma ~ integer ~
         Punctuation.roundClose
-    )./.map(tpl => (Decimal.apply _).tupled(tpl))
+    )./.map(tpl => Decimal.apply.tupled(tpl))
   }
 
   private def patternType[u: P]: P[Pattern] = {
@@ -299,7 +299,7 @@ private[parsing] trait TypeParser extends CommonParser {
         (literalStrings |
           Punctuation.undefinedMark.!.map(_ => Seq.empty[LiteralString])) ~
         Punctuation.roundClose./
-    ).map(tpl => (Pattern.apply _).tupled(tpl))
+    ).map(tpl => Pattern.apply.tupled(tpl))
   }
 
   private def uniqueIdType[u: P]: P[UniqueId] = {
@@ -315,7 +315,7 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def enumerator[u: P]: P[Enumerator] = {
     P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
-      (Enumerator.apply _).tupled(tpl)
+      Enumerator.apply.tupled(tpl)
     }
   }
 
@@ -327,7 +327,7 @@ private[parsing] trait TypeParser extends CommonParser {
   def enumeration[u: P]: P[Enumeration] = {
     P(
       location ~ Keywords.any ~ Readability.of.? ~/ open ~/ enumerators ~ close./
-    ).map(enums => (Enumeration.apply _).tupled(enums))
+    ).map(enums => Enumeration.apply.tupled(enums))
   }
 
   private def alternation[u: P]: P[Alternation] = {
@@ -336,7 +336,7 @@ private[parsing] trait TypeParser extends CommonParser {
         (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close./
     ).map { x =>
-      (Alternation.apply _).tupled(x)
+      Alternation.apply.tupled(x)
     }
   }
 
@@ -364,14 +364,14 @@ private[parsing] trait TypeParser extends CommonParser {
   def field[u: P]: P[Field] = {
     P(
       location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description
-    ).map(tpl => (Field.apply _).tupled(tpl))
+    ).map(tpl => Field.apply.tupled(tpl))
   }
 
   def arguments[u: P]: P[Seq[MethodArgument]] = {
     P(
       (
         location ~ identifier.map(_.value) ~ Punctuation.colon ~ fieldTypeExpression
-      ).map(tpl => (MethodArgument.apply _).tupled(tpl))
+      ).map(tpl => MethodArgument.apply.tupled(tpl))
     ).rep(min = 0, Punctuation.comma)
   }
 
@@ -379,7 +379,7 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
         is ~ fieldTypeExpression ~ briefly ~ description
-    ).map(tpl => (Method.apply _).tupled(tpl))
+    ).map(tpl => Method.apply.tupled(tpl))
   }
 
   private def aggregateContent[u: P]: P[RiddlValue] = {
@@ -436,7 +436,7 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
         Readability.to ~ typeExpression
-    ).map(tpl => (Mapping.apply _).tupled(tpl))
+    ).map(tpl => Mapping.apply.tupled(tpl))
   }
 
   /** Parses sets, i.e.
@@ -447,7 +447,7 @@ private[parsing] trait TypeParser extends CommonParser {
   private def aSetType[u: P]: P[Set] = {
     P(
       location ~ Keywords.set ~ Readability.of ~ typeExpression
-    )./.map { tpl => (Set.apply _).tupled(tpl) }
+    )./.map { tpl => Set.apply.tupled(tpl) }
   }
 
   /** Parses sequences, i.e.
@@ -458,14 +458,12 @@ private[parsing] trait TypeParser extends CommonParser {
   private def sequenceType[u: P]: P[Sequence] = {
     P(
       location ~ Keywords.sequence ~ Readability.of ~ typeExpression
-    )./.map { tpl => (Sequence.apply _).tupled(tpl) }
+    )./.map { tpl => Sequence.apply.tupled(tpl) }
   }
 
   /** Parses graphs whose nodes can be any type */
   private def graphType[u: P]: P[Graph] = {
-    P(location ~ Keywords.graph ~ Readability.of ~ typeExpression)./.map { tpl =>
-      (Graph.apply _).tupled(tpl)
-    }
+    P(location ~ Keywords.graph ~ Readability.of ~ typeExpression)./.map { tpl => Graph.apply.tupled(tpl) }
   }
 
   /** Parses tables of at least one dimension of cells of an arbitrary type */
@@ -473,13 +471,13 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.table ~ Readability.of ~ typeExpression ~ Readability.of ~ Punctuation.squareOpen ~
         integer.rep(1, ",") ~ Punctuation.squareClose
-    )./.map { tpl => (Table.apply _).tupled(tpl) }
+    )./.map { tpl => Table.apply.tupled(tpl) }
   }
 
   private def replicaType[x: P]: P[Replica] = {
     P(
       location ~ Keywords.replica ~ Readability.of ~ replicaTypeExpression
-    ).map { tpl => (Replica.apply _).tupled(tpl) }
+    ).map { tpl => Replica.apply.tupled(tpl) }
   }
 
   private def replicaTypeExpression[u: P]: P[TypeExpression] = {
@@ -496,7 +494,7 @@ private[parsing] trait TypeParser extends CommonParser {
       location ~ Keywords.range ~ Punctuation.roundOpen ~/
         integer.?.map(_.getOrElse(0L)) ~ Punctuation.comma ~
         integer.?.map(_.getOrElse(Long.MaxValue)) ~ Punctuation.roundClose./
-    ).map { tpl => (RangeType.apply _).tupled(tpl) }
+    ).map { tpl => RangeType.apply.tupled(tpl) }
   }
 
   private def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
@@ -533,9 +531,18 @@ private[parsing] trait TypeParser extends CommonParser {
     )
   }
 
+  private def scalaAggregateDefinition[u:P]: P[Aggregation] = {
+    P(
+      location ~ Punctuation.roundOpen ~ field.rep(0,",") ~ Punctuation.roundClose
+    ).map {
+      case (location, fields) => Aggregation(location, fields)
+    }
+  }
+  
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
-      location ~ aggregateUseCase ~/ identifier ~ is ~ (aliasedTypeExpression | aggregation) ~ briefly ~
+      location ~ aggregateUseCase ~/ identifier ~
+        (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ briefly ~
         description
     ).map { case (loc, useCase, id, ateOrAgg, brief, description) =>
       ateOrAgg match {
@@ -568,7 +575,7 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
         Punctuation.equalsSign ~ literalString ~ briefly ~ description
-    ).map { tpl => (Constant.apply _).tupled(tpl) }
+    ).map { tpl => Constant.apply.tupled(tpl) }
   }
 
 }

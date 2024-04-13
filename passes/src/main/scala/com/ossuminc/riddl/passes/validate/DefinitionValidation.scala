@@ -30,10 +30,10 @@ trait DefinitionValidation extends BasicValidation {
       option: OptionValue <- options
     } {
       option match {
-        case cov: OptionValue with ConstrainedOptionValue =>
+        case cov: ConstrainedOptionValue =>
           val acceptable: Seq[String] = cov.accepted
           for {
-            value <- cov.args if !acceptable.contains(value)
+            value <- cov.args if !acceptable.contains(value.s)
           } {
             messages.addWarning(
               value.loc,

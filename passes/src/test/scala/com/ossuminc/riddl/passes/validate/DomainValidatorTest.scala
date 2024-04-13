@@ -92,7 +92,7 @@ class DomainValidatorTest extends ValidatingTest {
         domain.contents mustNot be(empty)
         messages mustNot be(empty)
         messages.isOnlyIgnorable mustBe true
-        messages.find(_.message contains "Singly nested") mustNot be(empty)
+        messages.find(_.message.contains("Singly nested")) mustNot be(empty)
       }
     }
   }
