@@ -29,6 +29,8 @@ lazy val utils: Project = Module("utils", "riddl-utils")
   .configure(With.typical, With.build_info, With.coverage(70) /*, With.native()*/ )
   .configure(With.publishing)
   .settings(
+    scalaVersion := "3.4.1",
+    scalacOptions += "--no-warnings",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     description := "Various utilities used throughout riddl libraries",
@@ -40,7 +42,8 @@ lazy val language: Project = Module("language", "riddl-language")
   .configure(With.typical, With.coverage(65))
   .configure(With.publishing)
   .settings(
-    scalacOptions ++= Seq("-explain", "--explain-types"),
+    scalaVersion := "3.4.1",
+    scalacOptions ++= Seq("-explain", "--explain-types", "--no-warnings"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
@@ -52,6 +55,7 @@ lazy val passes = Module("passes", "riddl-passes")
   .configure(With.typical, With.coverage(30))
   .configure(With.publishing)
   .settings(
+    scalaVersion := "3.4.1",
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "AST Pass infrastructure and essential passes",
     libraryDependencies ++= Dep.testing
@@ -64,6 +68,7 @@ lazy val commands: Project = Module("commands", "riddl-commands")
   .configure(With.coverage(50))
   .configure(With.publishing)
   .settings(
+    scalaVersion := "3.4.1",
     description := "RIDDL Command Infrastructure and basic command definitions",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   )
@@ -78,6 +83,8 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .configure(With.typical)
   .configure(With.publishing)
   .settings(
+    scalaVersion := "3.4.1",
+    scalacOptions += "--no-warnings",
     description := "A Testkit for testing RIDDL code, and a suite of those tests",
     libraryDependencies ++= Dep.testKitDeps
   )
@@ -90,6 +97,7 @@ lazy val stats: Project = Module("stats", "riddl-stats")
   .configure(With.coverage(50))
   .configure(With.publishing)
   .settings(
+    scalaVersion := "3.4.1",
     description := "Implementation of the Stats command which Hugo command depends upon",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
@@ -102,6 +110,8 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   .configure(With.coverage(65))
   .configure(With.publishing)
   .settings(
+    scalaVersion := "3.4.1",
+    scalacOptions += "--no-warnings",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
@@ -123,6 +133,7 @@ lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "a
 lazy val docsite = DocSite("doc", docOutput, docProjects)
   .settings(
     name := "riddl-doc",
+    scalaVersion := "3.4.1",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
 
@@ -152,6 +163,7 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
     prettify
   )
   .settings(
+    scalaVersion := "3.4.1",
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     maintainer := "reid@ossuminc.com",

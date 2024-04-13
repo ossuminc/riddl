@@ -14,11 +14,11 @@ import Readability.*
 /** Unit Tests For FunctionParser */
 private[parsing] trait ProjectorParser {
   this: FunctionParser
-    with HandlerParser
-    with ReferenceParser
-    with StatementParser
-    with StreamingParser
-    with TypeParser =>
+    & HandlerParser
+    & ReferenceParser
+    & StatementParser
+    & StreamingParser
+    & TypeParser =>
 
   private def projectorOption[u: P]: P[ProjectorOption] = {
     option[u, ProjectorOption](RiddlOptions.projectorOptions) {
@@ -30,7 +30,7 @@ private[parsing] trait ProjectorParser {
   }
 
   private def projectorInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
-    include[OccursInProjector, u](projectorDefinitions(_))
+    include[u, OccursInProjector](projectorDefinitions(_))
   }
 
   private def updates[u: P]: P[RepositoryRef] = {

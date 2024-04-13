@@ -14,14 +14,14 @@ import Readability.*
 /** Parsing rules for entity definitions */
 private[parsing] trait EntityParser {
   this: FunctionParser
-    with HandlerParser
-    with ReferenceParser
-    with StatementParser
-    with StreamingParser
-    with TypeParser =>
+    & HandlerParser
+    & ReferenceParser
+    & StatementParser
+    & StreamingParser
+    & TypeParser =>
 
-  private def entityOption[X: P]: P[EntityOption] = {
-    option[X, EntityOption](RiddlOptions.entityOptions) {
+  private def entityOption[u: P]: P[EntityOption] = {
+    option[u, EntityOption](RiddlOptions.entityOptions) {
       case (loc, RiddlOption.event_sourced, _)        => EntityEventSourced(loc)
       case (loc, RiddlOption.value, _)                => EntityValueOption(loc)
       case (loc, RiddlOption.aggregate, _)            => EntityIsAggregate(loc)
@@ -58,13 +58,13 @@ private[parsing] trait EntityParser {
           val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
           State(loc, id, typRef, handlers, invariants, brief, description)
         case None =>
-          State(loc, id, typRef, brief = brief, description)
+          State(loc, id, typRef, brief = brief, description = description)
       }
     }
   }
 
-  private def entityInclude[X: P]: P[IncludeHolder[OccursInEntity]] = {
-    include[OccursInEntity, X](entityDefinitions(_))
+  private def entityInclude[u: P]: P[IncludeHolder[OccursInEntity]] = {
+    include[u, OccursInEntity](entityDefinitions(_))
   }
 
   private def entityDefinitions[u: P]: P[Seq[OccursInEntity]] = {

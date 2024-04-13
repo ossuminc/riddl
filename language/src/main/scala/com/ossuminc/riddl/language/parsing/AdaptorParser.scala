@@ -14,13 +14,8 @@ import com.ossuminc.riddl.language.AST
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {
-  this: HandlerParser
-    with FunctionParser
-    with StreamingParser
-    with StatementParser
-    with ReferenceParser
-    with TypeParser
-    with CommonParser =>
+  this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
+    CommonParser =>
 
   private def adaptorOption[u: P]: P[AdaptorOption] = {
     option[u, AdaptorOption](RiddlOptions.adaptorOptions) {
@@ -32,7 +27,7 @@ private[parsing] trait AdaptorParser {
   }
 
   private def adaptorInclude[u: P]: P[IncludeHolder[OccursInAdaptor]] = {
-    include[OccursInAdaptor, u](adaptorDefinitions(_))
+    include[u, OccursInAdaptor](adaptorDefinitions(_))
   }
 
   private def adaptorDefinitions[u: P]: P[Seq[OccursInAdaptor]] = {

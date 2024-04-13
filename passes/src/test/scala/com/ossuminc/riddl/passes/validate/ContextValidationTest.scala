@@ -195,7 +195,7 @@ class ContextValidationTest extends ValidatingTest {
           c.includes mustNot be(empty)
           val inc = c.includes.head
           inc.contents.head match {
-            case t: Term => t.format contains "foo"
+            case t: Term => t.format.contains("foo")
             case _       => fail("test case should have term 'foo'")
           }
       }
