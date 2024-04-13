@@ -16,6 +16,59 @@ import scala.collection.Searching
 import scala.io.Source
 import scala.language.implicitConversions
 
+/** Primary interface to setting up a RIDDL Parser's input. The idea here is to use one of the apply methods in this
+  * companion object to construct a RiddlParserInput for a specific input source (file, path, Source, data string, URL,
+  * etc.)
+  */
+object RiddlParserInput {
+
+  val empty: RiddlParserInput = EmptyParserInput()
+
+  /** Set up a parser input for parsing directly from a String
+    * @#param
+    *   data The UTF-8 string to be parsed
+    */
+  implicit def apply(data: String): RiddlParserInput = {
+    StringParserInput(data)
+  }
+
+  /** Set up a parser input for parsing directly from a Scala Source
+    * @param source
+    *   The Source from which UTF-8 text will be read and parsed
+    */
+  implicit def apply(source: Source): RiddlParserInput = {
+    SourceParserInput(source, source.descr)
+  }
+
+  /** Set up a parser input for parsing directly from a Java File
+    * @param file
+    *   The java.io.File from which UTF-8 text will be read and parsed.
+    */
+  implicit def apply(file: File): RiddlParserInput = {
+    FileParserInput(file)
+  }
+
+  /** Set up a parser input for parsing directly from a file at a specific Path
+    * @param path
+    *   THe java.nio.path.Path from which UTF-8 text will be read and parsed.
+    */
+  implicit def apply(path: Path): RiddlParserInput = {
+    FileParserInput(path.toFile)
+  }
+
+  /** Set up a parser input for parsing directly from a file at a specific URL
+    * @param url
+    *   The java.net.URL from which UTF-8 text will be read and parsed.
+    */
+  implicit def apply(url: URL): RiddlParserInput = URLParserInput(url)
+
+  /** Set up a parser input for parsing directly from a file at a specific URI
+    * @param uri
+    *   The java.net.URI from which UTF-8 text will be read and parsed.
+    */
+  implicit def apply(uri: URI): RiddlParserInput = URIParserInput(uri)
+}
+
 /** Same as fastparse.IndexedParserInput but with Location support */
 abstract class RiddlParserInput extends ParserInput {
   def origin: String
@@ -103,7 +156,7 @@ case class EmptyParserInput() extends RiddlParserInput {
   def from: String = ""
 }
 
-case class StringParserInput(
+private[parsing] case class StringParserInput(
   data: String,
   origin: String = At.defaultSourceName
 ) extends RiddlParserInput {
@@ -112,7 +165,7 @@ case class StringParserInput(
   def from: String = origin
 }
 
-case class FileParserInput(file: File) extends RiddlParserInput {
+private[parsing] case class FileParserInput(file: File) extends RiddlParserInput {
 
   lazy val data: String = {
     val source: Source = Source.fromFile(file)
@@ -131,7 +184,7 @@ case class FileParserInput(file: File) extends RiddlParserInput {
   }
 }
 
-case class URIParserInput(uri: URI) extends RiddlParserInput {
+private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
   lazy val data: String = {
     val source: Source = Source.fromURI(uri)
     try { source.getLines().mkString("\n") }
@@ -143,7 +196,7 @@ case class URIParserInput(uri: URI) extends RiddlParserInput {
   def from: String = uri.toString
 }
 
-case class URLParserInput(url: URL) extends RiddlParserInput {
+private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
   // require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
   lazy val data: String = {
     val source: Source = Source.fromURL(url)
@@ -158,7 +211,7 @@ case class URLParserInput(url: URL) extends RiddlParserInput {
   def from: String = url.toString
 }
 
-case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
+private[parsing] case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
 
   lazy val data: String =
     try { source.mkString }
@@ -167,26 +220,4 @@ case class SourceParserInput(source: Source, origin: String) extends RiddlParser
 
   def from: String = source.descr
 
-}
-
-object RiddlParserInput {
-
-  val empty: RiddlParserInput = EmptyParserInput()
-
-  implicit def apply(
-    data: String
-  ): RiddlParserInput = { StringParserInput(data) }
-
-  implicit def apply(source: Source): RiddlParserInput = {
-    SourceParserInput(source, source.descr)
-  }
-  implicit def apply(file: File): RiddlParserInput = { FileParserInput(file) }
-
-  implicit def apply(path: Path): RiddlParserInput = {
-    FileParserInput(path.toFile)
-  }
-
-  implicit def apply(url: URL): RiddlParserInput = URLParserInput(url)
-
-  implicit def apply(uri: URI): RiddlParserInput = URIParserInput(uri)
 }

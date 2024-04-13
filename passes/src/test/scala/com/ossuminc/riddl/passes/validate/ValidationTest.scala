@@ -17,12 +17,12 @@ import java.nio.file.Path
 class ValidationTest extends ParsingTest {
   "ValidationMessage#format" should {
     "produce a correct string" in {
-      val at = At(1, 2, StringParserInput("abcdefg","test"))
+      val at = At(1, 2, RiddlParserInput("abcdefg"))
       val msg =
         Message(at, "the_message", Warning)
       val content = msg.format
       val expected =
-        """test(1:2):
+        """empty(1:2):
           |the_message:
           |abcdefg
           | ^""".stripMargin
