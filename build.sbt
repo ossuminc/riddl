@@ -17,8 +17,8 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     passes,
     commands,
     testkit,
-    prettify,
     stats,
+    prettify,
     riddlc,
     docsite,
     plugin
@@ -113,8 +113,8 @@ lazy val docProjects = List(
   (passes, Passes),
   (commands, Commands),
   (testkit, TestKit),
-  (prettify, Prettify),
   (stats, Stats),
+  (prettify, Prettify),
   (riddlc, Riddlc)
 )
 
