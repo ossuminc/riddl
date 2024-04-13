@@ -32,6 +32,10 @@ object RiddlParserInput {
     StringParserInput(data)
   }
 
+  implicit def apply(data: String, origin: String): RiddlParserInput = {
+    StringParserInput(data, origin)
+  }
+
   /** Set up a parser input for parsing directly from a Scala Source
     * @param source
     *   The Source from which UTF-8 text will be read and parsed
@@ -85,6 +89,8 @@ abstract class RiddlParserInput extends ParserInput {
   override def isReachable(index: Int): Boolean = index < length
 
   def checkTraceable(): Unit = ()
+
+  def from: String
 
   private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
@@ -150,6 +156,8 @@ case class EmptyParserInput() extends RiddlParserInput {
 
   override def offsetOf(line: Int): Int = { line * 80 }
   override def lineOf(offset: Int): Int = { offset / 80 }
+
+  def from: String = ""
 }
 
 private[parsing] case class StringParserInput(
@@ -158,6 +166,7 @@ private[parsing] case class StringParserInput(
 ) extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
   override def isEmpty: Boolean = data.isEmpty
+  def from: String = origin
 }
 
 private[parsing] case class FileParserInput(file: File) extends RiddlParserInput {
@@ -171,6 +180,12 @@ private[parsing] case class FileParserInput(file: File) extends RiddlParserInput
   val root: File = file.getParentFile
   def origin: String = file.getName
   def this(path: Path) = this(path.toFile)
+
+  override def from: String = {
+    val path = file.getAbsolutePath
+    val index = path.lastIndexOf("riddl/")
+    path.substring(index + 6)
+  }
 }
 
 private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
@@ -182,6 +197,7 @@ private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
   override def isEmpty: Boolean = data.isEmpty
   val root: File = new File(uri.getPath)
   def origin: String = uri.toString
+  def from: String = uri.toString
 }
 
 private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
@@ -196,6 +212,7 @@ private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
   override def isEmpty: Boolean = data.isEmpty
   val root: File = new File(url.getFile)
   def origin: String = url.toString
+  def from: String = url.toString
 }
 
 private[parsing] case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
@@ -204,4 +221,7 @@ private[parsing] case class SourceParserInput(source: Source, origin: String) ex
     try { source.mkString }
     finally { source.close() }
   val root: File = new File(System.getProperty("user.dir"))
+
+  def from: String = source.descr
+
 }

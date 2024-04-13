@@ -15,11 +15,11 @@ import Readability.*
 private[parsing] trait RepositoryParser {
 
   this: HandlerParser
-    with ReferenceParser
-    with StatementParser
-    with StreamingParser
-    with FunctionParser
-    with TypeParser =>
+    & ReferenceParser
+    & StatementParser
+    & StreamingParser
+    & FunctionParser
+    & TypeParser =>
 
   private def repositoryOption[u: P]: P[RepositoryOption] = {
     option[u, RepositoryOption](RiddlOptions.repositoryOptions) {
@@ -30,8 +30,8 @@ private[parsing] trait RepositoryParser {
     }
   }
 
-  private def repositoryInclude[x: P]: P[IncludeHolder[OccursInRepository]] = {
-    include[OccursInRepository, x](repositoryDefinitions(_))
+  private def repositoryInclude[u: P]: P[IncludeHolder[OccursInRepository]] = {
+    include[u, OccursInRepository](repositoryDefinitions(_))
   }
 
   private def schemaKind[u: P]: P[RepositorySchemaKind] = {

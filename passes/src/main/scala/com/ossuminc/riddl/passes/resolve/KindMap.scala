@@ -14,7 +14,7 @@ import scala.reflect.{ClassTag, classTag}
 /** Mapping from implementation class to the instances of definitions */
 case class KindMap() {
 
-  private val map: mutable.HashMap[Class[_], Seq[Definition]] = mutable.HashMap.empty
+  private val map: mutable.HashMap[Class[?], Seq[Definition]] = mutable.HashMap.empty
 
   def size: Int = map.size
 

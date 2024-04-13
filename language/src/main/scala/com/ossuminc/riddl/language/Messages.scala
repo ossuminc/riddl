@@ -6,13 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.parsing.{
-  EmptyParserInput,
-  FileParserInput,
-  SourceParserInput,
-  StringParserInput,
-  URLParserInput
-}
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.Logger
 import org.apache.commons.lang3.exception.ExceptionUtils
 
@@ -129,16 +123,7 @@ object Messages {
         s"${nl}Context: $context"
       } else ""
       val headLine = {
-        val source = loc.source match {
-          case fpi: FileParserInput =>
-            val path = fpi.file.getAbsolutePath
-            val index = path.lastIndexOf("riddl/")
-            path.substring(index + 6)
-          case spi: SourceParserInput => spi.source.descr
-          case spi: StringParserInput => spi.origin
-          case upi: URLParserInput    => upi.url.toString
-          case _: EmptyParserInput    => ""
-        }
+        val source = loc.source.from
         if source.isEmpty then {
           ""
         } else {
