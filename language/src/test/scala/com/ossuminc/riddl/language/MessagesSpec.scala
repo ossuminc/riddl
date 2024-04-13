@@ -9,7 +9,7 @@ package com.ossuminc.riddl.language
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{RiddlParserInput, StringParserInput}
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{Logger, StringLogger}
 
 class MessagesSpec extends AnyWordSpec with Matchers {
@@ -193,7 +193,7 @@ class MessagesSpec extends AnyWordSpec with Matchers {
     }
 
     "format should produce located output for non-empty location" in {
-      val at = At(1, 2, StringParserInput("test", "test"))
+      val at = At(1, 2, RiddlParserInput("test", "test"))
       val msg = Message(at, "the_message", Warning)
       val content = msg.format
       val expected =

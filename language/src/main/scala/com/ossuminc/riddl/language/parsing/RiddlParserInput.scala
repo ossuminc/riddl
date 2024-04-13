@@ -32,6 +32,10 @@ object RiddlParserInput {
     StringParserInput(data)
   }
 
+  implicit def apply(data: String, origin: String): RiddlParserInput = {
+    StringParserInput(data, origin)
+  }
+
   /** Set up a parser input for parsing directly from a Scala Source
     * @param source
     *   The Source from which UTF-8 text will be read and parsed
