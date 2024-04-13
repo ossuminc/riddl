@@ -33,6 +33,8 @@ abstract class RiddlParserInput extends ParserInput {
 
   def checkTraceable(): Unit = ()
 
+  def from: String
+
   private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
   private[language] def offsetOf(line: Int): Int = {
@@ -97,6 +99,8 @@ case class EmptyParserInput() extends RiddlParserInput {
 
   override def offsetOf(line: Int): Int = { line * 80 }
   override def lineOf(offset: Int): Int = { offset / 80 }
+
+  def from: String = ""
 }
 
 case class StringParserInput(
@@ -105,6 +109,7 @@ case class StringParserInput(
 ) extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
   override def isEmpty: Boolean = data.isEmpty
+  def from: String = origin
 }
 
 case class FileParserInput(file: File) extends RiddlParserInput {
@@ -118,6 +123,12 @@ case class FileParserInput(file: File) extends RiddlParserInput {
   val root: File = file.getParentFile
   def origin: String = file.getName
   def this(path: Path) = this(path.toFile)
+
+  override def from: String = {
+    val path = file.getAbsolutePath
+    val index = path.lastIndexOf("riddl/")
+    path.substring(index + 6)
+  }
 }
 
 case class URIParserInput(uri: URI) extends RiddlParserInput {
@@ -129,21 +140,22 @@ case class URIParserInput(uri: URI) extends RiddlParserInput {
   override def isEmpty: Boolean = data.isEmpty
   val root: File = new File(uri.getPath)
   def origin: String = uri.toString
+  def from: String = uri.toString
 }
 
 case class URLParserInput(url: URL) extends RiddlParserInput {
   // require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
   lazy val data: String = {
     val source: Source = Source.fromURL(url)
-    try { 
-      source.getLines().mkString("\n") 
-    }
-    finally { source.close() }
+    try {
+      source.getLines().mkString("\n")
+    } finally { source.close() }
   }
   assert(data.nonEmpty, s"Empty content from ${url.toExternalForm}")
   override def isEmpty: Boolean = data.isEmpty
   val root: File = new File(url.getFile)
   def origin: String = url.toString
+  def from: String = url.toString
 }
 
 case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
@@ -152,6 +164,9 @@ case class SourceParserInput(source: Source, origin: String) extends RiddlParser
     try { source.mkString }
     finally { source.close() }
   val root: File = new File(System.getProperty("user.dir"))
+
+  def from: String = source.descr
+
 }
 
 object RiddlParserInput {

@@ -133,6 +133,7 @@ lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "a
 lazy val docsite = DocSite("doc", docOutput, docProjects)
   .settings(
     name := "riddl-doc",
+    scalaVersion := "3.4.1",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
 
