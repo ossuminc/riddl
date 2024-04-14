@@ -124,6 +124,7 @@ lazy val codify = Module("codify", "riddl-codify")
   .configure(With.coverage(65))
   .configure(With.publishing)
   .settings(
+    scalaVersion := "3.4.1",
     description := "Implementation for the RIDDL codify command, that replaces statements with code",
     libraryDependencies ++= Dep.testing :+ Dep.openAISC
   )
