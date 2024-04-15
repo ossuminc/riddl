@@ -1,43 +1,52 @@
 domain VendingMachine {
   context Transactions {
     entity Machine {
+        record Money(amount: Real)
+        record Item(which: Integer)
         command InsertCoin(amount: Money)
         command SelectItem(item: Item)
+        command DispenseItem(item: Item)
+        command DIspenseChange(change: Money)
 
-      state Idle {
+        record IdleState is { ??? }
+        record AwaitingSelectionState is { ??? }
+        record DispensingItemState is { ??? }
+        record DispensingChangeState is { ??? }
+
+      state Idle of IdleState {
         handler CustomerInteraction {
-          on InsertCoin(amount: Money) {
+          on command InsertCoin {
             "Validate coin"
             "Update machine balance"
-            morph entity Machine to AwaitingSelection
+            morph entity Machine to state AwaitingSelection with record AwaitingSelectionState
           }
         }
       }
 
-      state AwaitingSelection {
+      state AwaitingSelection of AwaitingSelectionState {
         handler CustomerInteraction {
-          on SelectItem(item: Item) {
+          on command SelectItem {
             "Check if item is available"
             "Check if inserted money is sufficient"
-            morph entity Machine to DispensingItem
+            morph entity Machine to state DispensingItem with record DispensingItemState
           }
         }
       }
 
-      state DispensingItem {
+      state DispensingItem of DispensingItemState {
         handler CustomerInteraction {
-          on DispenseItem {
+          on command DispenseItem {
             // Activate mechanism to dispense the selected item
-            morph entity Machine to DispensingChange
+            morph entity Machine to state DispensingChange with record DispensingChangeState
           }
         }
       }
 
-      state DispensingChange {
+      state DispensingChange of DispensingChangeState {
         handler CustomerInteraction {
-          on DispenseChange {
+          on command DispenseChange {
             // Calculate and return change
-            morph entity Machine to Idle
+            morph entity Machine to state Idle with record IdleState
           }
         }
       }
