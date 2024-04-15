@@ -1,10 +1,11 @@
 package com.ossuminc.riddl.codify
 
+import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.testkit.ValidatingTest 
+import com.ossuminc.riddl.testkit.ValidatingTest
 
-import java.nio.file.Path 
+import java.nio.file.Path
 
 class CodifyPassTest extends ValidatingTest {
 
@@ -13,6 +14,8 @@ class CodifyPassTest extends ValidatingTest {
   }
 
   "CodifyPass" must {
+
+    val commonOptions = CommonOptions()
 
     "run" in {
       val rpi = input("VendingMachine.riddl")
@@ -23,7 +26,13 @@ class CodifyPassTest extends ValidatingTest {
           info(messages.justWarnings.format)
           succeed
         case Right(root) =>
-          succeed
+          runStandardPasses(root, commonOptions) match
+            case Left(messages) =>
+              val errors = messages.justErrors
+              if errors.nonEmpty then fail(errors.format)
+              info(messages.justWarnings.format)
+              succeed
+            case Right(passesResult) =>
       }
     }
   }

@@ -6,11 +6,11 @@
 
 package com.ossuminc.riddl.codify
 
-import com.ossuminc.riddl.commands.{CommandOptions, InputFileCommandPlugin, PassCommand, PassCommandOptions}
+import com.ossuminc.riddl.commands.{CommandOptions, PassCommand, PassCommandOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.Pass.standardPasses
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassesCreator, PassesOutput, PassesResult, Riddl}
+import com.ossuminc.riddl.passes.{Pass, PassesCreator}
 import com.ossuminc.riddl.utils.Logger
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
@@ -52,7 +52,7 @@ class CodifyCommand extends PassCommand[CodifyCommand.Options](CodifyCommand.cmd
       orgIdRes <- objCur.atKey("org-id").map(_.asString)
       orgId <- orgIdRes
     yield {
-      Options(Some(Path.of(inFile)), Some(URI.create(endPoint)), Some(apiKey), Some(orgId) )
+      Options(Some(Path.of(inFile)), Some(URI.create(endPoint)), Some(apiKey), Some(orgId))
     }
   }
 

@@ -7,7 +7,7 @@ package com.ossuminc.riddl.codify
 
 import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.Messages.{Messages, error}
 import com.ossuminc.riddl.passes.{
   PassCreator,
   PassInfo,
@@ -20,6 +20,8 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.symbols.Symbols.ParentStack
 import com.ossuminc.riddl.passes.validate.ValidationPass
+
+import scala.collection.mutable
 
 object CodifyPass extends PassInfo {
   val name: String = "codify"
@@ -41,13 +43,28 @@ case class CodifyPass(input: PassInput, outputs: PassesOutput) extends Translati
   requires(ResolutionPass)
   requires(ValidationPass)
 
+  val handlers: mutable.HashMap[Processor[?, ?], Handler] = mutable.HashMap.empty[Processor[?, ?], Handler]
+
   protected def process(
     definition: RiddlValue,
     parents: ParentStack
-  ): Unit = ()
+  ): Unit = {
+    definition match {
+      case s: State =>
+        val proc = parents.find(_.isProcessor).get.asInstanceOf[Processor[?, ?]]
+        handlers.addAll(s.handlers.map(proc -> _))
+      case h: Handler =>
+        val proc = parents.find(_.isProcessor).get.asInstanceOf[Processor[?, ?]]
+        handlers.addOne(proc -> h)
+      case _ => ()
+    }
+  }
 
   private var newRootAST: Root = ???
 
+  def getStatements(h: Handler, p: Processor[?,?]): Seq[Statement] = {
+
+  }
   def postProcess(root: Root): Unit = {
     // TODO: Postprocess root to transform it into newRootAST
     newRootAST = root

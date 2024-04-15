@@ -128,7 +128,7 @@ lazy val codify = Module("codify", "riddl-codify")
     description := "Implementation for the RIDDL codify command, that replaces statements with code",
     libraryDependencies ++= Dep.testing :+ Dep.openAISC
   )
-  .dependsOn(commands, testkit % "test->compile", utils)
+  .dependsOn(language, passes, commands, testkit % "test->compile", utils)
 
 lazy val docProjects = List(
   (utils, Utils),
