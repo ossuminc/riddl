@@ -87,5 +87,16 @@ class PluginCommandTest
       val rc = CommandPlugin.runMain(args)
       rc must not(be(0))
     }
+
+    "load plugin from ivy2 " in {
+      pending
+      val plugins = Plugin.loadPluginsFromIvyCache[CommandPlugin[?]]()
+      if plugins.isEmpty then succeed
+      else
+        plugins.foreach { p =>
+          info(s"Found: ${p.pluginName} @ ${p.pluginVersion}")
+        }
+    }
+
   }
 }
