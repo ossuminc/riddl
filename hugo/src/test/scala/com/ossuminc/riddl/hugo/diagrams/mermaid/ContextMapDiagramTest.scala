@@ -10,7 +10,7 @@ class ContextMapDiagramTest extends RunPassTestBase {
 
   "ContextDiagram" should {
     "generate a simple diagram correctly" in {
-      val input = RiddlParserInput(Path.of("diagrams/src/test/input/context-relationships.riddl"))
+      val input = RiddlParserInput(Path.of("hugo/src/test/input/context-relationships.riddl"))
       val result = runPassesWith(input, DiagramsPass.creator)
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match
