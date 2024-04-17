@@ -17,6 +17,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     analyses,
     prettify,
     commands,
+    hugo,
     testkit,
     riddlc,
     docsite,
@@ -81,7 +82,6 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
-    scalacOptions += "--no-warnings",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
@@ -121,6 +121,20 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
     commands % "compile->compile;test->test;compile->test"
   )
 
+val Hugo = config("hugo")
+lazy val hugo = Module("hugo", "riddl-hugo")
+  .configure(With.typical)
+  .configure(With.coverage(65))
+  .configure(With.publishing)
+  .settings(
+    scalaVersion := "3.4.1",
+    description := "Implementation for the RIDDL prettify command, a code reformatter",
+    libraryDependencies ++= Dep.testing
+  )
+  .dependsOn(utils, language, passes % "compile->compile;test->test", commands, testkit % "test->compile")
+
+
+
 lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
@@ -129,6 +143,7 @@ lazy val docProjects = List(
   (prettify, Prettify),
   (commands, Commands),
   (testkit, TestKit),
+  (hugo, Hugo),
   (riddlc, Riddlc)
 )
 
