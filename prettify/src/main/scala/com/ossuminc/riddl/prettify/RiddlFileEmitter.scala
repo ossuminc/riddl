@@ -261,7 +261,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     filePath
   }
 
-  def emitStreamlets(proc: Processor[_, _]): this.type = {
+  def emitStreamlets(proc: Processor[?, ?]): this.type = {
     proc.inlets.foreach { (inlet: Inlet) =>
       addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
     }
