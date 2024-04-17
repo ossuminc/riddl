@@ -3,7 +3,6 @@ import com.ossuminc.sbt.OssumIncPlugin
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
-Global / scalaVersion := "3.3.3"
 
 enablePlugins(OssumIncPlugin)
 
@@ -15,10 +14,10 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     utils,
     language,
     passes,
+    analyses,
+    prettify,
     commands,
     testkit,
-    stats,
-    prettify,
     riddlc,
     docsite,
     plugin
@@ -43,7 +42,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
-    scalacOptions ++= Seq("-explain", "--explain-types", "--no-warnings"),
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
@@ -56,53 +55,24 @@ lazy val passes = Module("passes", "riddl-passes")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
     description := "AST Pass infrastructure and essential passes",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(language % "compile->compile;test->test")
+  .dependsOn(utils, language % "compile->compile;test->test")
 
-val Commands = config("commands")
-lazy val commands: Project = Module("commands", "riddl-commands")
+val Analyses = config("analyses")
+lazy val analyses: Project = Module("analyses", "riddl-analyses")
   .configure(With.typical)
   .configure(With.coverage(50))
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
-    description := "RIDDL Command Infrastructure and basic command definitions",
-    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
-  )
-  .dependsOn(
-    utils % "compile->compile;test->test",
-    passes % "compile->compile;test->test"
-  )
-
-val TestKit = config("testkit")
-
-lazy val testkit: Project = Module("testkit", "riddl-testkit")
-  .configure(With.typical)
-  .configure(With.publishing)
-  .settings(
-    scalaVersion := "3.4.1",
-    scalacOptions += "--no-warnings",
-    description := "A Testkit for testing RIDDL code, and a suite of those tests",
-    libraryDependencies ++= Dep.testKitDeps
-  )
-  .dependsOn(language % "compile->test;compile->compile;test->test")
-  .dependsOn(commands % "compile->compile;test->test")
-
-val Stats = config("stats")
-lazy val stats: Project = Module("stats", "riddl-stats")
-  .configure(With.typical)
-  .configure(With.coverage(50))
-  .configure(With.publishing)
-  .settings(
-    scalaVersion := "3.4.1",
-    description := "Implementation of the Stats command which Hugo command depends upon",
+    description := "Implementation of various AST analyses passes other libraries may use",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(commands % "compile->compile;test->test")
-  .dependsOn(testkit % "test->compile")
+  .dependsOn(utils, language, passes % "compile->compile;test->test")
 
 val Prettify = config("prettify")
 lazy val prettify = Module("prettify", "riddl-prettify")
@@ -115,16 +85,50 @@ lazy val prettify = Module("prettify", "riddl-prettify")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(commands, testkit % "test->compile", utils)
+  .dependsOn(utils, language, passes % "compile->compile;test->test")
+
+val Commands = config("commands")
+lazy val commands: Project = Module("commands", "riddl-commands")
+  .configure(With.typical)
+  .configure(With.coverage(50))
+  .configure(With.publishing)
+  .settings(
+    scalaVersion := "3.4.1",
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
+    description := "RIDDL Command Infrastructure and basic command definitions",
+    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
+  )
+  .dependsOn(
+    utils % "compile->compile;test->test",
+    language % "compile->compile;test->test",
+    passes % "compile->compile;test->test",
+    analyses,
+    prettify
+  )
+
+val TestKit = config("testkit")
+lazy val testkit: Project = Module("testkit", "riddl-testkit")
+  .configure(With.typical)
+  .configure(With.publishing)
+  .settings(
+    scalaVersion := "3.4.1",
+    scalacOptions += "--no-warnings",
+    description := "A Testkit for testing RIDDL code, and a suite of those tests",
+    libraryDependencies ++= Dep.testKitDeps
+  )
+  .dependsOn(
+    language % "compile->test;compile->compile;test->test",
+    commands % "compile->compile;test->test;compile->test"
+  )
 
 lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
   (passes, Passes),
+  (analyses, Analyses),
+  (prettify, Prettify),
   (commands, Commands),
   (testkit, TestKit),
-  (stats, Stats),
-  (prettify, Prettify),
   (riddlc, Riddlc)
 )
 
@@ -155,12 +159,13 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
   .configure(With.coverage(50.0))
   .configure(With.publishing)
   .dependsOn(
-    utils % "compile->compile;test->test",
-    commands,
+    utils,
+    language,
     passes,
-    testkit % "test->compile",
-    stats,
-    prettify
+    analyses,
+    prettify,
+    commands,
+    testkit % "test->compile"
   )
   .settings(
     scalaVersion := "3.4.1",

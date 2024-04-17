@@ -15,6 +15,7 @@ import com.ossuminc.riddl.language.Messages.highestSeverity
 import com.ossuminc.riddl.language.Messages.severes
 import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.commands.CommonOptionsHelper
 import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import scopt.OParser
@@ -117,7 +118,7 @@ object CommandPlugin {
     }
   }
 
-  def  runFromConfig(
+  def runFromConfig(
     configFile: Option[Path],
     targetCommand: String,
     commonOptions: CommonOptions,
@@ -137,7 +138,7 @@ object CommandPlugin {
                   println(errors.format)
                 }
                 Left(errors)
-              case result : Right[Messages,PassesResult] => result
+              case result: Right[Messages, PassesResult] => result
             }
           } else {
             Left[Messages, PassesResult](
@@ -195,8 +196,7 @@ object CommandPlugin {
 
   def runMain(args: Array[String], log: Logger = SysLogger()): Int = {
     try {
-      val (common, remaining) = com.ossuminc.riddl.commands.CommonOptionsHelper
-        .parseCommonOptions(args)
+      val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
         case Some(commonOptions) =>
           handleCommandRun(remaining, commonOptions)

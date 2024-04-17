@@ -1,6 +1,12 @@
+com.ossuminc.riddl.commands.AboutCommand
 com.ossuminc.riddl.commands.DumpCommand
 com.ossuminc.riddl.commands.FromCommand
-com.ossuminc.riddl.commands.ParseCommand
-com.ossuminc.riddl.commands.RepeatCommand
-com.ossuminc.riddl.commands.ValidateCommand
+com.ossuminc.riddl.commands.HelpCommand
+com.ossuminc.riddl.commands.InfoCommand
 com.ossuminc.riddl.commands.OnChangeCommand
+com.ossuminc.riddl.commands.ParseCommand
+com.ossuminc.riddl.commands.PrettifyCommand
+com.ossuminc.riddl.commands.RepeatCommand
+com.ossuminc.riddl.commands.StatsCommand
+com.ossuminc.riddl.commands.ValidateCommand
+com.ossuminc.riddl.commands.VersionCommand

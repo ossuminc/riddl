@@ -24,7 +24,8 @@ object Plugin {
     Path.of(
       Option(System.getenv(pluginDirEnvVarName))
         .getOrElse(
-          Option(System.getProperty("user.home")).map(d => d + "/.riddl/plugins")
+          Option(System.getProperty("user.home"))
+            .map(d => d + "/.riddl/plugins")
             .getOrElse("riddl-plugins")
         )
     )
@@ -34,6 +35,12 @@ object Plugin {
   ): List[T] = {
     val clazz = classTag[T].runtimeClass.asInstanceOf[Class[T]]
     loadSpecificPluginsFrom[T](clazz, pluginsDir)
+  }
+
+  def loadPluginsFromIvyCache[T <: PluginInterface: ClassTag](): List[T] = {
+    val home = System.getProperty("user.dir")
+    val ivy1: Path = Path.of(home, ".ivy2", "local", "com.ossuminc")
+    List.empty
   }
 
   def getClassLoader(pluginsDir: Path = pluginsDir): ClassLoader = {
