@@ -25,19 +25,6 @@ private[parsing] trait ContextParser {
     & StatementParser
     & TypeParser =>
 
-  private def contextOption[u: P]: P[ContextOption] = {
-    option[u, ContextOption](RiddlOptions.contextOptions) {
-      case (loc, RiddlOption.wrapper, _)       => ContextWrapperOption(loc)
-      case (loc, RiddlOption.gateway, _)       => GatewayOption(loc)
-      case (loc, RiddlOption.service, _)       => ServiceOption(loc)
-      case (loc, RiddlOption.package_, args)   => ContextPackageOption(loc, args)
-      case (loc, RiddlOption.technology, args) => ContextTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => ContextCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)     => ContextIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => ContextKindOption(loc, args)
-    }
-  }
-
   private def contextInclude[u: P]: P[IncludeHolder[OccursInContext]] = {
     include[u, OccursInContext](contextDefinitions(_))
   }
@@ -46,7 +33,7 @@ private[parsing] trait ContextParser {
     P(
       typeDef | handler(StatementsSet.ContextStatements) | entity | authorRef |
         adaptor | function | saga | streamlet | projector | repository |
-        inlet | outlet | connector | term | contextInclude | comment | contextOption
+        inlet | outlet | connector | term | contextInclude | comment | option
     )
   }
 

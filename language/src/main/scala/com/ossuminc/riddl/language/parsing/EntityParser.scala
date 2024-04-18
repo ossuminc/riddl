@@ -19,24 +19,7 @@ private[parsing] trait EntityParser {
     & StatementParser
     & StreamingParser
     & TypeParser =>
-
-  private def entityOption[u: P]: P[EntityOption] = {
-    option[u, EntityOption](RiddlOptions.entityOptions) {
-      case (loc, RiddlOption.event_sourced, _)        => EntityEventSourced(loc)
-      case (loc, RiddlOption.value, _)                => EntityValueOption(loc)
-      case (loc, RiddlOption.aggregate, _)            => EntityIsAggregate(loc)
-      case (loc, RiddlOption.transient, _)            => EntityTransient(loc)
-      case (loc, RiddlOption.consistent, _)           => EntityIsConsistent(loc)
-      case (loc, RiddlOption.available, _)            => EntityIsAvailable(loc)
-      case (loc, RiddlOption.finite_state_machine, _) => EntityIsFiniteStateMachine(loc)
-      case (loc, RiddlOption.kind, args)              => EntityKindOption(loc, args)
-      case (loc, RiddlOption.message_queue, _)        => EntityMessageQueue(loc)
-      case (loc, RiddlOption.technology, args)        => EntityTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)               => EntityCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)            => EntityIconOption(loc, args)
-    }
-  }
-
+  
   private def stateDefinitions[u: P]: P[Seq[OccursInState]] = {
     P(handler(StatementsSet.EntityStatements) | invariant).rep(0)
   }
@@ -70,7 +53,7 @@ private[parsing] trait EntityParser {
   private def entityDefinitions[u: P]: P[Seq[OccursInEntity]] = {
     P(
       handler(StatementsSet.EntityStatements) | function | invariant | state | entityInclude | inlet | outlet |
-        typeDef | term | authorRef | comment | constant | entityOption
+        typeDef | term | authorRef | comment | constant | option
     )./.rep(1)
   }
 
