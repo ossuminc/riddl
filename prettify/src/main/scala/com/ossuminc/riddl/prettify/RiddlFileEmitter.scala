@@ -249,7 +249,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitUndefined(): this.type = { add(" ???") }
 
-  def emitOptions(optionDef: WithOptions[?]): this.type = {
+  def emitOptions(optionDef: WithOptions): this.type = {
     if optionDef.options.nonEmpty then
       optionDef.options.map{ option => "option " + option.format + new_line}.foreach(addIndent); this
     else this
@@ -261,7 +261,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     filePath
   }
 
-  def emitStreamlets(proc: Processor[?, ?]): this.type = {
+  def emitStreamlets(proc: Processor[?]): this.type = {
     proc.inlets.foreach { (inlet: Inlet) =>
       addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
     }

@@ -87,7 +87,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   protected def process(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
     definition match
       case c: Context =>
-        val aggregates = c.entities.filter(_.hasOption[EntityIsAggregate])
+        val aggregates = c.entities.filter(_.hasOption("aggregate"))
         val relationships = makeRelationships(c)
         val domain = parents.head.asInstanceOf[Domain]
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates, relationships))
@@ -110,7 +110,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     }
   }
 
-  private def findProcessors(processor: Processor[?, ?]): Seq[Processor[?, ?]] = {
+  private def findProcessors(processor: Processor[?]): Seq[Processor[?]] = {
     val containedProcessors = processor match {
       case a: Adaptor     => a.contents.processors
       case a: Application => a.contents.processors
@@ -128,7 +128,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
 
   private def makeProcessorRelationships(
     context: Context,
-    processor: Processor[?, ?]
+    processor: Processor[?]
   ): Seq[ContextRelationship] = {
     val rel1 = makeTypeRelationships(context, processor.types, processor)
     val rel2 = makeFunctionRelationships(context, processor.functions)
@@ -271,13 +271,13 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
                   else None
                 case None => None
               }
-            case m: Type            => Some(foreignContext -> s"Uses ${m.identify} from")
-            case e: Entity          => Some(foreignContext -> s"References ${e.identify} in")
-            case f: Field           => Some(foreignContext -> s"Sets ${f.identify} in")
-            case i: Inlet           => Some(foreignContext -> s"Sends to ${i.identify} in")
-            case o: Outlet          => Some(foreignContext -> s"Takes from ${o.identify} in")
-            case p: Processor[?, ?] => Some(foreignContext -> s"Tells to ${p.identify} in")
-            case _                  => None
+            case m: Type         => Some(foreignContext -> s"Uses ${m.identify} from")
+            case e: Entity       => Some(foreignContext -> s"References ${e.identify} in")
+            case f: Field        => Some(foreignContext -> s"Sets ${f.identify} in")
+            case i: Inlet        => Some(foreignContext -> s"Sends to ${i.identify} in")
+            case o: Outlet       => Some(foreignContext -> s"Takes from ${o.identify} in")
+            case p: Processor[?] => Some(foreignContext -> s"Tells to ${p.identify} in")
+            case _               => None
           }
         else None
         end if

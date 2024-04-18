@@ -19,16 +19,7 @@ private[parsing] trait ApplicationParser {
     & StatementParser
     & TypeParser
     & CommonParser =>
-
-  private def applicationOption[u: P]: P[ApplicationOption] = {
-    option[u, ApplicationOption](RiddlOptions.applicationOptions) {
-      case (loc, RiddlOption.technology, args) => ApplicationTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)        => ApplicationCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)     => ApplicationIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => ApplicationKindOption(loc, args)
-    }
-  }
-
+  
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
       location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description
@@ -129,7 +120,7 @@ private[parsing] trait ApplicationParser {
   private def applicationDefinition[u: P]: P[OccursInApplication] = {
     P(
       group | handler(StatementsSet.ApplicationStatements) | function |
-        inlet | outlet | term | typeDef | constant | authorRef | comment | applicationInclude | applicationOption
+        inlet | outlet | term | typeDef | constant | authorRef | comment | applicationInclude | option
     )
   }
 

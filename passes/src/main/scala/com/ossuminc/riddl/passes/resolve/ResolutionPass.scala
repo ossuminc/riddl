@@ -222,7 +222,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Type](message, parents)
       case TellStatement(_, msg, processorRef) =>
         resolveARef[Type](msg, parents)
-        resolveARef[Processor[?, ?]](processorRef, parents)
+        resolveARef[Processor[?]](processorRef, parents)
       case CallStatement(_, func) =>
         resolveARef[Function](func, parents)
       case ReplyStatement(_, message) =>

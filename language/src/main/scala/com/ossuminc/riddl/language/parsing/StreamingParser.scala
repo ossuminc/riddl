@@ -29,24 +29,16 @@ private[parsing] trait StreamingParser {
         typeRef ~/ briefly ~ description
     )./.map { tpl => Outlet.apply.tupled(tpl) }
   }
-
-  private def connectorOption[X: P]: P[ConnectorOption] = {
-    option[X, ConnectorOption](RiddlOptions.connectorOptions) {
-      case (loc, RiddlOption.persistent, _)    => ConnectorPersistentOption(loc)
-      case (loc, RiddlOption.technology, args) => ConnectorTechnologyOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => ConnectorKindOption(loc, args)
-    }
-  }
-
-  private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[ConnectorOption])] = {
+  
+  private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
     P(
         Readability.from ~ outletRef ~/
         Readability.to ~ inletRef ~/
-        connectorOption.rep(0)
+        option.rep(0)
     )
   }
 
-  private def connectorBody[u:P]: P[(OutletRef,InletRef,Seq[ConnectorOption])] = {
+  private def connectorBody[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
     P(
       undefined((OutletRef.empty, InletRef.empty, Seq.empty)) | connectorDefinitions
     )
@@ -81,20 +73,11 @@ private[parsing] trait StreamingParser {
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
         ( handler(StatementsSet.StreamStatements) | term | authorRef | comment | function | invariant | constant |
-          typeDef | streamletOption | streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
+          typeDef | option | streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
           inlets ++ outlets ++ definitions
       }
     )
-  }
-
-  private def streamletOption[u: P]: P[StreamletOption] = {
-    option[u, StreamletOption](RiddlOptions.streamletOptions) {
-      case (loc, RiddlOption.technology, args) => StreamletTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => StreamletCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)      => StreamletIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => StreamletKindOption(loc, args)
-    }
   }
 
   private def streamletBody[u: P](

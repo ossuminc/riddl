@@ -165,23 +165,13 @@ private[parsing] trait EpicParser {
         httpUrl.rep(0, Punctuation.comma) ~ close
     ).?.map { (x: Option[Seq[java.net.URL]]) => x.getOrElse(Seq.empty[java.net.URL]) }
   }
-
-  private def epicOption[u: P]: P[EpicOption] = {
-    option[u, EpicOption](RiddlOptions.epicOptions) {
-      case (loc, RiddlOption.sync, _)          => EpicSynchronousOption(loc)
-      case (loc, RiddlOption.technology, args) => EpicTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => EpicCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)     => EpicIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => EpicKindOption(loc, args)
-    }
-  }
-
+  
   private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
     include[u, OccursInEpic](epicDefinitions(_))
   }
 
   private def epicDefinitions[u: P]: P[Seq[OccursInEpic]] = {
-    P(useCase | term | epicInclude | comment | authorRef | epicOption).rep(1)
+    P(useCase | term | epicInclude | comment | authorRef | option).rep(1)
   }
 
   private type EpicBody = (

@@ -83,7 +83,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case st: State          => openState(st)
       case step: SagaStep     => openSagaStep(step)
       case streamlet: Streamlet => openStreamlet(streamlet)
-      case processor: Processor[_, _] =>
+      case processor: Processor[_] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
       case handler: Handler =>
         state.withCurrent(_.openDef(handler))

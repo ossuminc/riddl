@@ -9,7 +9,6 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.{ConstrainedOptionValue, *}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.RiddlOption
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import scala.math.abs
@@ -40,7 +39,7 @@ trait DefinitionValidation extends BasicValidation {
               s"Value `$value` for option `${option.name} is not one of the accepted values."
             )
           }
-        case ov: OptionValue if ov.name == RiddlOption.css =>
+        case ov: OptionValue if ov.name == "css" =>
           // TODO: The following doesn't work very well, internet call to W3C validator. need something simpler
           // import com.jcabi.w3c.{ValidatorBuilder, ValidationResponse, Defect }
           // val validator = new ValidatorBuilder().css

@@ -22,7 +22,7 @@ trait StreamingValidation extends TypeValidation {
   val outlets: Seq[Outlet] = resolution.kindMap.definitionsOfKind[Outlet]
   val streamlets: Seq[Streamlet] = resolution.kindMap.definitionsOfKind[Streamlet]
   val connectors: Seq[Connector] = resolution.kindMap.definitionsOfKind[Connector]
-  val processors: Seq[Processor[?,?]] = resolution.kindMap.definitionsOfKind[Processor[?,?]]
+  val processors: Seq[Processor[?]] = resolution.kindMap.definitionsOfKind[Processor[?]]
 
   private def checkStreamingUsage(loc: At): Unit = {
     if inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty then {
@@ -50,7 +50,7 @@ trait StreamingValidation extends TypeValidation {
           val outletIsSameContext = maybeOutletContext.nonEmpty &&
             (pipeContext == maybeOutletContext.fold(Context.empty)(identity))
 
-          if connector.hasOption[ConnectorPersistentOption] then {
+          if connector.hasOption("persistent") then {
             if outletIsSameContext && inletIsSameContext then {
               val message =
                 s"The persistence option on ${connector.identify} is not needed " +

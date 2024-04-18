@@ -23,24 +23,13 @@ private[parsing] trait SagaParser {
         briefly ~ description
     ).map(x => SagaStep.apply.tupled(x))
   }
-
-  private def sagaOption[u: P]: P[SagaOption] = {
-    option[u, SagaOption](RiddlOptions.sagaOptions) {
-      case (loc, RiddlOption.technology, args)                  => SagaTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)                         => SagaCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)                      => SagaIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)                        => SagaKindOption(loc, args)
-      case (loc, option, _) if option == RiddlOption.parallel   => ParallelOption(loc)
-      case (loc, option, _) if option == RiddlOption.sequential => SequentialOption(loc)
-    }
-  }
-
+  
   private def sagaInclude[u: P]: P[IncludeHolder[OccursInSaga]] = {
     include[u, OccursInSaga](sagaDefinitions(_))
   }
 
   private def sagaDefinitions[u: P]: P[Seq[OccursInSaga]] = {
-    P(sagaStep | inlet | outlet | function | term | sagaInclude | sagaOption)./.rep(2)
+    P(sagaStep | inlet | outlet | function | term | sagaInclude | option)./.rep(2)
   }
 
   private type SagaBodyType = (

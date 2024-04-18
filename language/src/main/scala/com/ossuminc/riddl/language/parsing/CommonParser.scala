@@ -177,16 +177,15 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def option[u: P, TY <: RiddlValue](
-    validOptions: => P[String]
-  )(mapper: => (At, String, Seq[LiteralString]) => TY): P[TY] = {
+  
+  def option[u: P]: P[OptionValue] = {
     P( Keywords.option ~/ Readability.is.? ~
-          location ~ validOptions ~
+          location ~ CharsWhile(ch => ch.isLower | ch.isDigit | ch == '_' | ch == '-').!  ~
           (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~
             Punctuation.roundClose).?
     ).map {
       case (loc, option, params) =>
-        mapper(loc, option, params.getOrElse(Seq.empty[LiteralString]))
+        OptionValue(loc, option, params.getOrElse(Seq.empty[LiteralString]))
     }
   }
 
