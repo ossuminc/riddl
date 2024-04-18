@@ -9,7 +9,6 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
-import com.ossuminc.riddl.language.parsing.RiddlOption
 import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -55,7 +54,7 @@ case class ValidationPass(
       outlets,
       connectors,
       streamlets,
-      resolution.kindMap.definitionsOfKind[Processor[?, ?]]
+      resolution.kindMap.definitionsOfKind[Processor[?]]
     )
   }
 
@@ -214,7 +213,7 @@ case class ValidationPass(
               checkCrossContextReference(handlerRef.pathId, handler, onClause)
             }
           case TellStatement(loc, msg, processorRef) =>
-            val maybeProc = checkRef[Processor[?, ?]](processorRef, onClause, parents)
+            val maybeProc = checkRef[Processor[?]](processorRef, onClause, parents)
             maybeProc.foreach { entity =>
               checkCrossContextReference(processorRef.pathId, entity, onClause)
             }
@@ -434,7 +433,6 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, f)
-    checkOptions[FunctionOption](f.options, f.loc)
     checkDescription(f)
   }
 
@@ -456,7 +454,7 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, e)
-    checkOptions[EntityOption](e.options, e.loc)
+    checkOptions[OptionValue](e.options, e.loc)
     if e.states.isEmpty && !e.isEmpty then {
       messages.add(
         Message(
@@ -471,7 +469,7 @@ case class ValidationPass(
         Message(e.loc, s"${e.identify} has only empty handlers", Messages.MissingWarning)
       )
     }
-    if e.hasOption[EntityIsFiniteStateMachine] && e.states.sizeIs < 2 then {
+    if e.hasOption("finite-state-machine") && e.states.sizeIs < 2 then {
       messages.add(
         Message(
           e.loc,
@@ -615,7 +613,7 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, c)
-    checkOptions[ContextOption](c.options, c.loc)
+    checkOptions[OptionValue](c.options, c.loc)
     checkDescription(c)
   }
 
@@ -861,7 +859,7 @@ case class ValidationPass(
       case SendMessageInteraction(_, from, msg, to, _, _) =>
         checkMessageRef(msg, useCase, parents, Seq(msg.messageKind))
         checkRef[Definition](from, useCase, parents)
-        checkRef[Processor[?, ?]](to, useCase, parents)
+        checkRef[Processor[?]](to, useCase, parents)
       case _: VagueInteraction =>
       // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>

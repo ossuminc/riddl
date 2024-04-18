@@ -129,7 +129,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     if parents.size >= maximum_depth then maximum_depth = parents.size + 1
 
     val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
-      case vd: VitalDefinition[?, ?] =>
+      case vd: VitalDefinition[?] =>
         (vd.options.size, vd.authorRefs.size, vd.terms.size, vd.includes.size)
       case _ => (0, 0, 0, 0)
     }
@@ -240,7 +240,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       + 1 // Terms
 
     v match {
-      case p: Processor[?, ?] =>
+      case p: Processor[?] =>
         val specsForProcessor = specsForDefinition
           + 1 // Types
           + 1 // Constants
@@ -317,7 +317,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     if d.hasBriefDescription then result += 1
     result
 
-  private def processorCount(p: Processor[?, ?]): Int =
+  private def processorCount(p: Processor[?]): Int =
     var result: Int = definitionCount(p)
     if p.handlers.nonEmpty then result += 1
     if p.functions.nonEmpty then result += 1
@@ -328,7 +328,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
 
   private def completedCount(v: RiddlValue): Int = {
     v match {
-      case p: Processor[?, ?] =>
+      case p: Processor[?] =>
         val countForProcessor = processorCount(p)
         p match {
           case a: Application =>

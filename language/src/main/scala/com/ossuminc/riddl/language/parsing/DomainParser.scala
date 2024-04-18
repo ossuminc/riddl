@@ -27,17 +27,6 @@ private[parsing] trait DomainParser {
     & CommonParser
     & ParsingContext =>
 
-  private def domainOption[u: P]: P[DomainOption] = {
-    option[u, DomainOption](RiddlOptions.domainOptions) {
-      case (loc, RiddlOption.external, args)   => DomainExternalOption(loc, args)
-      case (loc, RiddlOption.package_, args)   => DomainPackageOption(loc, args)
-      case (loc, RiddlOption.technology, args) => DomainTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)      => DomainCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)     => DomainIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => DomainKindOption(loc, args)
-    }
-  }
-
   private def domainInclude[u: P]: P[IncludeHolder[OccursInDomain]] = {
     include[u,OccursInDomain](domainDefinitions(_))
   }
@@ -54,7 +43,7 @@ private[parsing] trait DomainParser {
   private def domainDefinitions[u: P]: P[Seq[OccursInDomain]] = {
     P(
       author | authorRef | typeDef | context | user | epic | saga | domain | term |
-        constant | application | importDef | domainInclude | comment | domainOption
+        constant | application | importDef | domainInclude | comment | option
     )./.rep(1)
   }
 

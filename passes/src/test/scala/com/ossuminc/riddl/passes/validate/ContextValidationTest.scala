@@ -20,21 +20,11 @@ class ContextValidationTest extends ValidatingTest {
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         msgs.filter(_.kind.isError) mustBe empty
         context.options.size mustBe 5
-        context.options must contain(ContextWrapperOption((2, 9, rpi)))
-        context.options must contain(GatewayOption((2, 39, rpi)))
-        context.options must contain(ServiceOption((2, 24, rpi)))
-        context.options must contain(
-          ContextPackageOption(
-            (2, 54, rpi),
-            Seq(LiteralString((2, 62, rpi), "foo"))
-          )
-        )
-        context.options must contain(
-          ContextTechnologyOption(
-            (2, 76, rpi),
-            Seq(LiteralString((2, 87, rpi), "http"))
-          )
-        )
+        context.options must contain(OptionValue((2, 9, rpi), "wrapper", Seq.empty))
+        context.options must contain(OptionValue((2, 39, rpi), "gateway", Seq.empty))
+        context.options must contain(OptionValue((2, 24, rpi), "service", Seq.empty))
+        context.options must contain(OptionValue((2, 54, rpi), "package", Seq(LiteralString((2, 62, rpi), "foo"))))
+        context.options must contain(OptionValue((2, 76, rpi), "technology", Seq(LiteralString((2, 87, rpi), "http"))))
       }
     }
     "allow types" in {

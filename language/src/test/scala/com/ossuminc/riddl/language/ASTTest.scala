@@ -75,15 +75,6 @@ class ASTTest extends AnyWordSpec with Matchers {
     "have kind 'Boolean'" in { Bool(At()).kind mustBe "Boolean" }
   }
 
-  "Entity RiddlOptions" should {
-    "have correct names" in {
-      EntityIsAggregate(At()).name mustBe "aggregate"
-      EntityTransient(At()).name mustBe "transient"
-      EntityIsConsistent(At()).name mustBe "consistent"
-      EntityIsAvailable(At()).name mustBe "available"
-    }
-  }
-
   val actor: User = User(
     At.empty,
     Identifier(At.empty, "user"),
@@ -186,11 +177,6 @@ class ASTTest extends AnyWordSpec with Matchers {
   "Entity" should {
     "contents" should {
       "contain all contents" in {
-        val options = Seq(
-          EntityIsAggregate(At()),
-          EntityTransient(At()),
-          EntityKindOption(At(), Seq(LiteralString(At(), "concept")))
-        )
         val states = Seq(
           State(
             At(),
@@ -204,13 +190,7 @@ class ASTTest extends AnyWordSpec with Matchers {
           Function(
             At(),
             Identifier(At(), "my_func"),
-            None,
-            Option(
-              Aggregation(
-                At(),
-                Seq(Field(At(), Identifier(At(), "a"), Bool(At())))
-              )
-            )
+            None
           )
         )
 
@@ -220,6 +200,11 @@ class ASTTest extends AnyWordSpec with Matchers {
         val types = Seq(
           Type(At(), Identifier(At(), "mytype"), Bool(At())),
           Type(At(), Identifier(At(), "mytype2"), Bool(At()))
+        )
+        val options = Seq(
+          OptionValue(At(), "aggregate", Seq.empty),
+          OptionValue(At(), "transient", Seq.empty),
+          OptionValue(At(), "kind", Seq(LiteralString(At(), "concept")))
         )
         val entity = AST.Entity(
           loc = At(),

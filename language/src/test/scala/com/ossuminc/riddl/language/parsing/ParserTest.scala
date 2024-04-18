@@ -161,9 +161,9 @@ class ParserTest extends ParsingTest {
             (1, 1, rpi),
             Identifier((1, 9, rpi), "bar"),
             Seq(
-              ServiceOption((2, 10, rpi)),
-              ContextWrapperOption((3, 10, rpi)),
-              GatewayOption((4, 10, rpi))
+              OptionValue((2, 10, rpi), "service", Seq.empty),
+              OptionValue((3, 10, rpi), "wrapper", Seq.empty),
+              OptionValue((4, 10, rpi), "gateway", Seq.empty)
             )
           )
       }
@@ -262,8 +262,8 @@ class ParserTest extends ParsingTest {
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Hamburger"),
             Seq(
-              EntityTransient((2, 10, rpi)),
-              EntityIsAggregate((3, 10, rpi)),
+              OptionValue((2, 10, rpi), "transient", Seq.empty),
+              OptionValue((3, 10, rpi), "aggregate", Seq.empty),
               Type(
                 (4, 3, rpi),
                 Identifier((4, 8, rpi), "Foo"),
