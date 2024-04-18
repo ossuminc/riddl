@@ -52,7 +52,6 @@ class MarkdownWriterTest extends HugoTestBase {
               |geekdocAnchor: true
               |geekdocToC: 4
               |geekdocCollapseSection: true
-              |geekdocFilePath: no-such-file
               |---
               |
               |## *Domain 'TestDomain'*

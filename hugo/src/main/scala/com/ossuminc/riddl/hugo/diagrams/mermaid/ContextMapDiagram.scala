@@ -15,8 +15,8 @@ case class ContextMapDiagram(context: Context, data: ContextDiagramData)
     extends FlowchartDiagramGenerator(s"Context Map For ${context.identify}", "TB") {
 
   private def relatedContexts = data.relationships.map(_._1).distinct
-  private def nodes: Seq[Processor[?, ?]] = context +: relatedContexts
-  private def relationships: Seq[(Processor[?, ?], String)] = data.relationships
+  private def nodes: Seq[Processor[?]] = context +: relatedContexts
+  private def relationships: Seq[(Processor[?], String)] = data.relationships
 
   emitDefaultClassDef()
   emitClassDefs(nodes)

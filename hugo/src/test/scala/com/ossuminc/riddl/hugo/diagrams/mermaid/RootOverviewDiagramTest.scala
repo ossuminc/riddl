@@ -10,13 +10,14 @@ class RootOverviewDiagramTest extends RunPassTestBase {
 
   "ContextDiagram" should {
     "generate a simple diagram correctly" in {
-      val input = RiddlParserInput(Path.of("diagrams/src/test/input/context-relationships.riddl"))
+      val input = RiddlParserInput(Path.of("hugo/src/test/input/context-relationships.riddl"))
       val result = runPassesWith(input, DiagramsPass.creator)
       val diagram = RootOverviewDiagram(result.root)
       val lines = diagram.generate
       lines mustNot be(empty)
-      info(lines.mkString("\n"))
-      val expected: Seq[String] =
+      val actual = lines.mkString("\n")
+      info(actual)
+      val expected: String =
         """---
           |title: Root Overview
           |init:
@@ -54,9 +55,8 @@ class RootOverviewDiagramTest extends RunPassTestBase {
           |    D((fa:fa-house<br/>Context 'D'))
           |    bar-->|contains|D((fa:fa-house<br/>Context 'D'))
           |  end
-          |  class D D_class
-          |""".stripMargin.split('\n').toSeq
-      lines mustBe expected
+          |  class D D_class""".stripMargin
+      actual mustBe expected
     }
   }
 }

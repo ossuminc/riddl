@@ -19,7 +19,43 @@ import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.analyses.{KindStats, StatsOutput, StatsPass}
-import com.ossuminc.riddl.language.parsing.Keywords.{adaptor, application, author, case_, command, connector, constant, context, entity, epic, field, flow, function, group, handler, inlet, input, invariant, outlet, output, pipe, projector, query, record, replica, reply, repository, result, saga, sink, source, state, streamlet, term, user}
+import com.ossuminc.riddl.language.parsing.Keywords.{
+  adaptor,
+  application,
+  author,
+  case_,
+  command,
+  connector,
+  constant,
+  context,
+  entity,
+  epic,
+  field,
+  flow,
+  function,
+  group,
+  handler,
+  inlet,
+  input,
+  invariant,
+  outlet,
+  output,
+  pipe,
+  projector,
+  query,
+  record,
+  replica,
+  reply,
+  repository,
+  result,
+  saga,
+  sink,
+  source,
+  state,
+  streamlet,
+  term,
+  user
+}
 import com.ossuminc.riddl.utils.{TextFileWriter, Timer}
 
 import java.nio.file.Path
@@ -132,7 +168,7 @@ trait MarkdownWriter
       d.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
     if d.isVital then {
-      val authors = d.asInstanceOf[VitalDefinition[?, ?]].authorRefs
+      val authors = d.asInstanceOf[VitalDefinition[?]].authorRefs
       emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
     }
     val path = (parents.map(_.id.value) :+ d.id.value).mkString(".")
@@ -143,7 +179,7 @@ trait MarkdownWriter
 
   // This substitutions domain contains context referenced
 
-  private   final val definition_keywords: Seq[String] = Seq(
+  private final val definition_keywords: Seq[String] = Seq(
     Keyword.adaptor,
     Keyword.application,
     Keyword.author,
@@ -510,20 +546,14 @@ trait MarkdownWriter
     }
   }
 
-  protected def emitVitalDefinitionDetails[OV <: OptionValue, CT <: RiddlValue](
-    vd: VitalDefinition[OV, CT],
-    stack: Parents
-  ): Unit = {
+  protected def emitVitalDefinitionDetails[CT <: RiddlValue](vd: VitalDefinition[CT], stack: Parents): Unit = {
     h2(vd.identify)
     emitDefDoc(vd, stack)
     emitOptions(vd.options)
     emitTerms(vd.terms)
     emitUsage(vd)
   }
-  protected def emitProcessorDetails[OV <: OptionValue, DEF <: RiddlValue](
-    processor: Processor[OV, DEF],
-    stack: Parents
-  ): Unit = {
+  protected def emitProcessorDetails[CT <: RiddlValue](processor: Processor[CT], stack: Parents): Unit = {
     if processor.types.nonEmpty then emitTypes(processor, stack)
     if processor.constants.nonEmpty then emitConstants(processor, stack)
     if processor.functions.nonEmpty then emitFunctions(processor, stack)

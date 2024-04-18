@@ -37,7 +37,6 @@ class AdaptorWriterTest extends WriterTest {
               |geekdocAnchor: true
               |geekdocToC: 4
               |geekdocCollapseSection: true
-              |geekdocFilePath: no-such-file
               |---
               |
               |## *Adaptor 'FromTwo'*

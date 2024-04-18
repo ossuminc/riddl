@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.diagrams.mermaid
 
-import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Processor}
+import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Processor, VitalDefinition}
 
 /** Flowchart generator abstraction * Example output: * {{{ * --- * title: "Context Diagram For Domain Foo" * init: *
   * theme: dark * flowchartConfig: * defaultRenderer: dagre * width: 100% * --- * flowchart LR * classDef default
@@ -36,12 +36,12 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     addLine("classDef default fill:#666,stroke:black,stroke-width:3px,color:white;")
   }
 
-  protected def emitClassDefs(nodes: Seq[Definition]): Unit = {
+  protected def emitClassDefs(nodes: Seq[VitalDefinition[?]]): Unit = {
     for {
       node <- nodes
     } do {
       val css: String = getCssFor(node)
-      if css.nonEmpty then addLine(s"classDef ${node.id.value}_class $css; ")
+      if css.nonEmpty then addLine(s"classDef ${node.id.value}_class $css;")
       else addLine(s"classDef ${node.id.value}_class color:white,stroke-width:3px;")
       end if
     }
@@ -57,8 +57,8 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
 
   protected def emitGraph(
     startNodeName: String,
-    nodes: Seq[Definition],
-    relationships: Seq[(Definition, String)]
+    nodes: Seq[VitalDefinition[?]],
+    relationships: Seq[(VitalDefinition[?], String)]
   ): Unit = {
     emitNodes(nodes)
     emitRelationships(startNodeName, relationships)
@@ -67,8 +67,8 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
   protected def emitSubgraph(
     containingDefinition: Definition,
     startNodeName: String,
-    nodes: Seq[Definition],
-    relationships: Seq[(Definition, String)],
+    nodes: Seq[VitalDefinition[?]],
+    relationships: Seq[(VitalDefinition[?], String)],
     direction: String = "TB"
   ): Unit = {
     val name = containingDefinition.identify
@@ -81,7 +81,7 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     addLine("end")
   }
 
-  protected def emitNodes(nodes: Seq[Definition]): Unit = {
+  protected def emitNodes(nodes: Seq[VitalDefinition[?]]): Unit = {
     for {
       processor <- nodes
     } {
@@ -90,7 +90,7 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     }
   }
 
-  protected def makeNode(definition: Definition): String = {
+  protected def makeNode(definition: VitalDefinition[?]): String = {
     val iconName = getIconFor(definition)
     val faicon = if iconName.nonEmpty then "fa:" + iconName + "<br/>" else ""
     val defName: String = definition.id.value
@@ -116,7 +116,7 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     s"$defName(($faicon$spacedName))"
   }
 
-  protected def emitRelationships(mainNodeName: String, relationships: Seq[(Definition, String)]): Unit = {
+  protected def emitRelationships(mainNodeName: String, relationships: Seq[(VitalDefinition[?], String)]): Unit = {
     for {
       (definition, relationship) <- relationships
     } {

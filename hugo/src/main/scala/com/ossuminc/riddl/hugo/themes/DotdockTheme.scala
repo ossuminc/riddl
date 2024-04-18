@@ -53,7 +53,7 @@ case class DotdockTheme(
 
   def emitMermaidDiagram(lines: Seq[String]): Unit = ???
   
-  def processorIndex(processor: Processor[?,?]): Unit = ???
+  def processorIndex(processor: Processor[?]): Unit = ???
 
 
   // Members declared in com.ossuminc.riddl.hugo.themes.ThemeWriter 

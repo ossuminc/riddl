@@ -59,7 +59,7 @@ trait EntityWriter { this: MarkdownWriter =>
     containerHead(entity, "Entity")
     emitDefDoc(entity, parents)
     emitOptions(entity.options)
-    if entity.hasOption[EntityIsFiniteStateMachine] then {
+    if entity.hasOption("finite-state-machine") then {
       h2("Finite State Machine")
       emitFiniteStateMachine(entity)
     }

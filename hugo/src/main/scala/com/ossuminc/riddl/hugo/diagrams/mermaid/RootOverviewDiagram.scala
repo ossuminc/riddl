@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.diagrams.mermaid
 
-import com.ossuminc.riddl.language.AST.{Definition, Domain, Root}
+import com.ossuminc.riddl.language.AST.{Domain, Root, VitalDefinition}
 
 object RootOverviewDiagram {
   private val containerStyles: Seq[String] = Seq(
@@ -17,7 +17,7 @@ class RootOverviewDiagram(root: Root) extends FlowchartDiagramGenerator("Root Ov
 
   private val topLevelDomains = root.domains ++ root.includes.filter[Domain]
   for { domain <- topLevelDomains } do {
-    val nodes: Seq[Definition] = domain.domains ++ domain.contexts ++ domain.applications ++ domain.epics
+    val nodes: Seq[VitalDefinition[?]] = domain.domains ++ domain.contexts ++ domain.applications ++ domain.epics
     val relationships = nodes.zip(Seq.fill[String](nodes.size)("contains"))
     emitDefaultClassDef()
     emitClassDefs(nodes)

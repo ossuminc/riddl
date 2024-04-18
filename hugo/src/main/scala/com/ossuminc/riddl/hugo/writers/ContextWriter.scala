@@ -2,7 +2,7 @@ package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.hugo.diagrams.mermaid
 import com.ossuminc.riddl.hugo.diagrams.mermaid.ContextMapDiagram
-import com.ossuminc.riddl.language.AST.{Context, ContextOption, Definition, OccursInContext}
+import com.ossuminc.riddl.language.AST.{Context, Definition, OccursInContext}
 
 trait ContextWriter { this: MarkdownWriter =>
 
@@ -26,7 +26,7 @@ trait ContextWriter { this: MarkdownWriter =>
     definitionToc("Sagas", context.sagas)
     definitionToc("Streamlets", context.streamlets)
     list("Connectors", context.connectors)
-    emitProcessorDetails[ContextOption, OccursInContext](context, parents)
+    emitProcessorDetails[OccursInContext](context, parents)
     // TODO: generate a diagram for the processors and pipes
   }
 

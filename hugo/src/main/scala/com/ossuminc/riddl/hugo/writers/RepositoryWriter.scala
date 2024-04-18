@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.language.AST.{OccursInRepository, Repository, RepositoryOption}
+import com.ossuminc.riddl.language.AST.{OccursInRepository, Repository}
 import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 
 trait RepositoryWriter { this: MarkdownWriter =>
@@ -15,7 +15,7 @@ trait RepositoryWriter { this: MarkdownWriter =>
     containerHead(repository, "Repository")
     emitDefDoc(repository, parents)
     emitSchema(repository)
-    emitProcessorDetails[RepositoryOption, OccursInRepository](repository, parents)
+    emitProcessorDetails[OccursInRepository](repository, parents)
   }
 
 }

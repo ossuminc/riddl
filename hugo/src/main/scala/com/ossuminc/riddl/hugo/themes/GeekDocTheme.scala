@@ -63,9 +63,10 @@ case class GeekDocTheme(
         cont.brief.fold(cont.id.format + " has no brief description.")(_.s)
       ),
       Map(
-        "geekdocCollapseSection" -> "true",
-        "geekdocFilePath" ->
+        "geekdocCollapseSection" -> "true"
+        /* FIXME: "geekdocFilePath" ->
           s"${makeFilePath(cont).getOrElse("no-such-file")}"
+         */
       )
     )
   }
@@ -107,7 +108,7 @@ case class GeekDocTheme(
     }
   }
 
-  def processorIndex(processor: Processor[?, ?]): Unit = {
+  def processorIndex(processor: Processor[?]): Unit = {
     if processor.authorRefs.nonEmpty then toc("Authors", processor.authorRefs.map(_.format))
     h2("Index")
     p("{{< toc-tree >}}")

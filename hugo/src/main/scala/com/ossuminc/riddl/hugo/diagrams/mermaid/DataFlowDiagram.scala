@@ -42,7 +42,7 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
           case _: Outlet          => "[\\" -> "\\]"
           case _: Inlet           => "[/" -> "/]"
           case _: Streamlet       => "[[" -> "]]"
-          case _: Processor[?, ?] => "[{" -> "}]"
+          case _: Processor[?] => "[{" -> "}]"
           case _: Definition      => "[" -> "]"
         }
         addIndent(s"${definition.id.value}$left\"$id\"$right")
