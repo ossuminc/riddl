@@ -91,6 +91,7 @@ abstract class RiddlParserInput extends ParserInput {
   def checkTraceable(): Unit = ()
 
   def from: String
+  def path: Option[Path] = None
 
   private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
@@ -186,6 +187,10 @@ private[parsing] case class FileParserInput(file: File) extends RiddlParserInput
     val index = path.lastIndexOf("riddl/")
     path.substring(index + 6)
   }
+
+  override def path: Option[Path] = {
+    Some(file.getAbsoluteFile.toPath)
+  }
 }
 
 private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
@@ -198,6 +203,9 @@ private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
   val root: File = new File(uri.getPath)
   def origin: String = uri.toString
   def from: String = uri.toString
+  override def path: Option[Path] = {
+    Some(root.toPath)
+  }
 }
 
 private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
@@ -213,6 +221,7 @@ private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
   val root: File = new File(url.getFile)
   def origin: String = url.toString
   def from: String = url.toString
+  override def path: Option[Path] = Some(root.toPath)
 }
 
 private[parsing] case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
@@ -223,5 +232,6 @@ private[parsing] case class SourceParserInput(source: Source, origin: String) ex
   val root: File = new File(System.getProperty("user.dir"))
 
   def from: String = source.descr
+  override def path: Option[Path] = Some(root.toPath)
 
 }

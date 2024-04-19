@@ -3451,7 +3451,6 @@ object AST {
     description: Option[Description] = None
   ) extends Processor[OccursInApplication]
       with WithGroups
-      with WithOptions
       with OccursInDomain {
     override def isAppRelated: Boolean = true
   }
