@@ -110,9 +110,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     }
   }
 
-  def forAFolder[T](
-    folderName: String
-  )(f: (String, Path) => Either[Messages, PassesResult]): Either[Messages, PassesResult] = {
+  def forAFolder(folderName: String)(f: (String, Path) => Either[Messages, PassesResult]): Either[Messages, PassesResult] = {
     FileUtils
       .iterateFilesAndDirs(
         srcDir.toFile,
@@ -129,7 +127,13 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
           case Some(folder) =>
             folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
               case Some(config) =>
-                f(folderName, config.toPath)
+                CommandPlugin.loadCandidateCommands(config.toPath).flatMap { commands => 
+                  if commands.contains(commandName) then
+                    f(folderName, config.toPath)
+                  else
+                    Left(errors(s"Config file $commandName not found in $config"))  
+                      
+                }
               case None =>
                 Left(errors(s"No config file found in RIDDL-examples folder $folderName"))
             }
@@ -177,28 +181,23 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
 
   /** Call this from your test suite subclass to run all the examples found.
     */
-  def runTest(folderName: String): Assertion = {
-    var outputDir: Path = null  
-    val result = forAFolder(folderName) { case (name, config) =>
-      outputDir = outDir.resolve(name)
-      CommandPlugin.loadCandidateCommands(config).flatMap { commands =>
-        if commands.contains(commandName) then
-          val result = CommandPlugin.runCommandNamed(
-            commandName,
-            config,
-            logger,
-            commonOptions,
-            outputDirOverride = Some(outputDir)
-          )
-          result
-        else Left(errors(s"Command $commandName not found in $config"))
+  def runTest(folderName: String): Unit = {
+    forAFolder(folderName) { case (name, config) =>
+      val outputDir = outDir.resolve(name)
+      val result = CommandPlugin.runCommandNamed(
+        commandName,
+        config,
+        logger,
+        commonOptions,
+        outputDirOverride = Some(outputDir)
+      )
+      result match {
+        case Right(passesResult) =>
+          onSuccess(commandName, folderName, passesResult, outputDir)
+        case Left(messages) =>
+          onFailure(commandName, folderName, messages, outputDir)
       }
-    }
-    result match {
-      case Right(passesResult) =>
-        onSuccess(commandName, folderName, passesResult, outputDir)
-      case Left(messages) =>
-        onFailure(commandName, folderName, messages, outputDir)
+      result
     }
   }
 

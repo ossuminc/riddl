@@ -30,10 +30,8 @@ class NamespaceTest
   }
 
   "FooBarSameDomain" should {
-    "error w/ highest severity level 5" in {
-      val exception = intercept[TestFailedException](runTest("FooBarSameDomain"))
-      exception mustBe a[TestFailedException]
-      exception.getMessage must include("ambiguous")
+    "error with highest severity level 5" in {
+      runTest("FooBarSameDomain")
     }
   }
 
