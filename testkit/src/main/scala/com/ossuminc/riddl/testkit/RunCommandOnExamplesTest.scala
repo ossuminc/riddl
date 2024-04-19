@@ -112,44 +112,33 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
 
   def forAFolder[T](
     folderName: String
-  )(f: (String, Path) => T): Either[Messages, T] = FileUtils
-    .iterateFilesAndDirs(
-      srcDir.toFile,
-      DirectoryFileFilter.DIRECTORY,
-      new NotFileFilter(TrueFileFilter.INSTANCE)
-    )
-    .asScala
-    .toSeq
-    .find(file => file.isDirectory && file.getName == "riddl") match {
-    case Some(riddlDir) =>
-      riddlDir.listFiles.toSeq
-        .filter(file => file.isDirectory)
-        .find(_.getName.endsWith(folderName)) match {
-        case Some(folder) =>
-          println(folder.listFiles.toSeq)
-          folder.listFiles.toSeq.find(_.getName.endsWith(".conf")) match {
-            case Some(config) =>
-              CommandPlugin
-                .loadCandidateCommands(config.toPath)
-                .flatMap { cmds =>
-                  if cmds.contains(commandName) then {
-                    Right(f(folderName, config.toPath))
-                  } else {
-                    Left(errors(s"Command $commandName not found in $config"))
-                  }
-                }
-            case None =>
-              Left(
-                errors(
-                  s"No config file found in RIDDL-examples folder $folderName"
-                )
-              )
-          }
-        case None =>
-          Left(errors(s"RIDDL-examples folder $folderName not found"))
-      }
-    case None =>
-      Left(errors(s"riddl-examples/riddl top level folder not found"))
+  )(f: (String, Path) => Either[Messages, PassesResult]): Either[Messages, PassesResult] = {
+    FileUtils
+      .iterateFilesAndDirs(
+        srcDir.toFile,
+        DirectoryFileFilter.DIRECTORY,
+        new NotFileFilter(TrueFileFilter.INSTANCE)
+      )
+      .asScala
+      .toSeq
+      .find(file => file.isDirectory && file.getName == "riddl") match {
+      case Some(riddlDir) =>
+        riddlDir.listFiles.toSeq
+          .filter(file => file.isDirectory)
+          .find(_.getName.endsWith(folderName)) match {
+          case Some(folder) =>
+            folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
+              case Some(config) =>
+                f(folderName, config.toPath)
+              case None =>
+                Left(errors(s"No config file found in RIDDL-examples folder $folderName"))
+            }
+          case None =>
+            Left(errors(s"RIDDL-examples folder $folderName not found"))
+        }
+      case None => 
+        Left(errors(s"riddl-examples/riddl top level folder not found"))
+    }
   }
 
   def outputDir = ""
@@ -169,9 +158,9 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
       )
       result match {
         case Right(passesResult) =>
-          onSuccess(commandName, name, path, passesResult, outputDir) -> name
+          onSuccess(commandName, name, passesResult, outputDir) -> name
         case Left(messages) =>
-          onFailure(commandName, name, path, messages, outputDir) -> name
+          onFailure(commandName, name, messages, outputDir) -> name
       }
     }
     for result <- results do {
@@ -188,24 +177,28 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
 
   /** Call this from your test suite subclass to run all the examples found.
     */
-  def runTest(folderName: String): Unit = {
-    forAFolder(folderName) { case (name, path) =>
-      val outputDir = outDir.resolve(name)
-
-      val result = CommandPlugin.runCommandNamed(
-        commandName,
-        path,
-        logger,
-        commonOptions,
-        outputDirOverride = Some(outputDir)
-      )
-      result match {
-        case Right(passesResult) =>
-          onSuccess(commandName, name, path, passesResult, outputDir)
-        case Left(messages) =>
-          onFailure(commandName, name, path, messages, outputDir)
-
+  def runTest(folderName: String): Assertion = {
+    var outputDir: Path = null  
+    val result = forAFolder(folderName) { case (name, config) =>
+      outputDir = outDir.resolve(name)
+      CommandPlugin.loadCandidateCommands(config).flatMap { commands =>
+        if commands.contains(commandName) then
+          val result = CommandPlugin.runCommandNamed(
+            commandName,
+            config,
+            logger,
+            commonOptions,
+            outputDirOverride = Some(outputDir)
+          )
+          result
+        else Left(errors(s"Command $commandName not found in $config"))
       }
+    }
+    result match {
+      case Right(passesResult) =>
+        onSuccess(commandName, folderName, passesResult, outputDir)
+      case Left(messages) =>
+        onFailure(commandName, folderName, messages, outputDir)
     }
   }
 
@@ -214,8 +207,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     *   The name of the command that succeeded
     * @param caseName
     *   The name of the test case
-    * @param configFile
-    *   The configuration file that was run
+    * @param result
+    *   The PassesResult from running the passes
     * @param tempDir
     *   THe Path to the temporary directory containing the source
     * @return
@@ -223,8 +216,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
   def onSuccess(
     @unused commandName: String,
     @unused caseName: String,
-    @unused configFile: Path,
-    @unused command: PassesResult,
+    @unused result: PassesResult,
     @unused tempDir: Path
   ): Assertion = { succeed }
 
@@ -234,8 +226,6 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     *   The name of the command that failed
     * @param caseName
     *   The name of the test case that was running
-    * @param configFile
-    *   The path to the config file that was used
     * @param messages
     *   The messages generated from the failure
     * @param tempDir
@@ -245,7 +235,6 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
   def onFailure(
     @unused commandName: String,
     @unused caseName: String,
-    @unused configFile: Path,
     @unused messages: Messages,
     @unused tempDir: Path
   ): Assertion = { fail(messages.format) }

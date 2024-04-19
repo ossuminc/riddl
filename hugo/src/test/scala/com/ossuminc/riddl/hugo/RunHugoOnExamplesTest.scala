@@ -17,24 +17,27 @@ import java.nio.file.Path
 import scala.annotation.unused
 
 /** Unit Tests To Run Riddlc On Examples */
-class RunHugoOnExamplesTest
-    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo") {
+class RunHugoOnExamplesTest extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo") {
 
   val validTestNames = Seq("ReactiveBBQ", "dokn", "ReactiveSummit")
-  
+
   override def validateTestName(name: String): Boolean = validTestNames.exists(name.endsWith)
-  
-  "Run Hugo On Examples" should { 
-    "correctly process ReactiveBBQ" in { 
-      runTest("ReactiveBBQ") 
+
+  "Run Hugo On Examples" should {
+    "correctly process ReactiveBBQ" in {
+      runTest("ReactiveBBQ")
+    }
+    "correctly process dokn" in {
+      runTest("dokn")
     }
   }
 
-  override def onSuccess(@unused commandName: String,
-                         @unused caseName: String,
-                         @unused configFile: Path,
-                         @unused passesResult: PassesResult,
-                         @unused tempDir: Path): Assertion = {
+  override def onSuccess(
+    @unused commandName: String,
+    @unused caseName: String,
+    @unused passesResult: PassesResult,
+    @unused tempDir: Path
+  ): Assertion = {
     // TODO: check themes dir
     // TODO: check config.toml setting values
     // TODO: check options

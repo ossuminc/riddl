@@ -37,7 +37,6 @@ class HugoPassTest
   override def onSuccess(
     commandName: String,
     name: String,
-    configFile: Path,
     passesResult: PassesResult,
     outputDir: Path
   ): Assertion = {

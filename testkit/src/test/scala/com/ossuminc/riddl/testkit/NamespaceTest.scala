@@ -21,7 +21,6 @@ class NamespaceTest
   override def onFailure(
     @unused commandName: String,
     @unused caseName: String,
-    @unused configFile: Path,
     @unused messages: Messages,
     @unused tempDir: Path
   ): Assertion = {
