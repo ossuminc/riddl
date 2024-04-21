@@ -14,7 +14,7 @@ trait EntityWriter { this: MarkdownWriter =>
   ): this.type = {
     h2(state.identify)
     emitDefDoc(state, parents)
-    val maybeType = refMap.definitionOf[Type](state.typ.pathId, state)
+    val maybeType = generator.refMap.definitionOf[Type](state.typ.pathId, state)
     val fields = maybeType match {
       case Some(typ: AggregateTypeExpression) => typ.fields
       case Some(_)                            => Seq.empty[Field]
@@ -48,7 +48,7 @@ trait EntityWriter { this: MarkdownWriter =>
     parents: Seq[Definition]
   ): Unit = {
     h2("Entity Relationships")
-    val erd = EntityRelationshipDiagram(refMap)
+    val erd = EntityRelationshipDiagram(generator.refMap)
     val lines = erd.generate(name, fields, parents)
     emitMermaidDiagram(lines)
   }

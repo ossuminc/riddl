@@ -1,8 +1,9 @@
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
-import com.ossuminc.riddl.hugo.{HugoCommand, PassUtilities}
-import com.ossuminc.riddl.language.{AST, CommonOptions}
+import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.hugo.diagrams.mermaid.UseCaseDiagramSupport
+import com.ossuminc.riddl.language.{AST, CommonOptions, Messages}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
@@ -10,7 +11,7 @@ import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import java.nio.file.Path
 
-object DotdockTheme {
+object DotdockWriter {
   val name = "DotDock"
 }
 
@@ -18,24 +19,27 @@ object DotdockTheme {
   *
   * @param filePath
   *   Path to the file being written
-  * @param input: PassInput
-  *   The input to the passes run
-  * @param outputs: PassOutput
-  *  The outputs from the pass runs
+  * @param input:
+  *   PassInput The input to the passes run
+  * @param outputs:
+  *   PassOutput The outputs from the pass runs
   * @param options
-  *  The HugoCommand options
+  *   The HugoCommand options
   */
-case class DotdockTheme(
+case class DotdockWriter(
   filePath: Path,
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoCommand.Options
+  options: HugoCommand.Options,
+  commonOptions: CommonOptions
 ) extends MarkdownWriter {
-  final val name: String = DotdockTheme.name
+  final val name: String = DotdockWriter.name
 
-  def themeName: String = DotdockTheme.name
+  lazy val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
 
-  // Members declared in com.ossuminc.riddl.hugo.themes.DotdockTheme 
+  def themeName: String = DotdockWriter.name
+
+  // Members declared in com.ossuminc.riddl.hugo.themes.DotdockTheme
   def fileHead(
     title: String,
     weight: Int,
@@ -52,12 +56,11 @@ case class DotdockTheme(
   def notAvailable(thing: String, title: String = "Unavailable"): Unit = ???
 
   def emitMermaidDiagram(lines: Seq[String]): Unit = ???
-  
+
   def processorIndex(processor: Processor[?]): Unit = ???
 
+  // Members declared in com.ossuminc.riddl.hugo.themes.ThemeWriter
 
-  // Members declared in com.ossuminc.riddl.hugo.themes.ThemeWriter 
-  
   def emitHeaderPage: Unit = {
     // Create a _header.md page in content folder. Its content is what you get in the logo placeholder (top left of the screen).
   }

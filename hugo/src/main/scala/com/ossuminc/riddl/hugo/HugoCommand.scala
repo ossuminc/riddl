@@ -14,7 +14,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesCreator, PassesOutput, PassesResult}
 import com.ossuminc.riddl.analyses.StatsPass
-import com.ossuminc.riddl.hugo.themes.{DotdockTheme, GeekDocTheme}
+import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
 import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.analyses.DiagramsPass
@@ -136,8 +136,8 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
           .action((v, c) => c.copy(hugoThemeName = Option(v)))
           .text("optional hugo theme name to use")
           .validate {
-            case "geekdoc" | "GeekDoc" => Right(Some(GeekDocTheme.name))
-            case "dotdoc" | "Dotdock"  => Right(Some(DotdockTheme.name))
+            case "geekdoc" | "GeekDoc" => Right(Some(GeekDocWriter.name))
+            case "dotdoc" | "Dotdock"  => Right(Some(DotdockWriter.name))
           },
         opt[Boolean]('e', name = "erase-output")
           .text("Erase entire output directory before putting out files")

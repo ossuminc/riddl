@@ -14,7 +14,7 @@ trait EpicWriter { this: MarkdownWriter =>
     if epic.userStory.nonEmpty then {
       val userPid = epic.userStory.getOrElse(UserStory()).user.pathId
       val parent = parents.head
-      val maybeUser = refMap.definitionOf[User](userPid, parent)
+      val maybeUser = generator.refMap.definitionOf[User](userPid, parent)
       h2("User Story")
       maybeUser match {
         case None => p(s"Unresolvable User id: ${userPid.format}")
@@ -43,18 +43,18 @@ trait EpicWriter { this: MarkdownWriter =>
     emitDefDoc(u, parents)
   }
 
-  def emitUseCase(uc: UseCase, parents: Parents, sds: UseCaseDiagramSupport): Unit = {
+  def emitUseCase(uc: UseCase, parents: Parents): Unit = {
     leafHead(uc, weight = 20)
     emitDefDoc(uc, parents)
     h2("Sequence Diagram")
     parents.headOption match
       case Some(p1) =>
         val epic = p1.asInstanceOf[Epic]
-        outputs.outputOf[DiagramsPassOutput](DiagramsPass.name) match
+        generator.outputs.outputOf[DiagramsPassOutput](DiagramsPass.name) match
           case Some(dpo) =>
             dpo.userCaseDiagrams.get(uc) match
               case Some(useCaseDiagramData: UseCaseDiagramData) =>
-                val ucd = UseCaseDiagram(sds, useCaseDiagramData)
+                val ucd = UseCaseDiagram(generator, useCaseDiagramData)
                 val lines = ucd.generate
                 emitMermaidDiagram(lines)
 

@@ -9,7 +9,6 @@ package com.ossuminc.riddl.hugo.writers
 import com.ossuminc.riddl.hugo.diagrams.mermaid.*
 import com.ossuminc.riddl.hugo.diagrams.mermaid
 import com.ossuminc.riddl.hugo.writers.{AdaptorWriter, DomainWriter}
-import com.ossuminc.riddl.hugo.PassUtilities
 import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
@@ -19,43 +18,8 @@ import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.analyses.{KindStats, StatsOutput, StatsPass}
-import com.ossuminc.riddl.language.parsing.Keywords.{
-  adaptor,
-  application,
-  author,
-  case_,
-  command,
-  connector,
-  constant,
-  context,
-  entity,
-  epic,
-  field,
-  flow,
-  function,
-  group,
-  handler,
-  inlet,
-  input,
-  invariant,
-  outlet,
-  output,
-  pipe,
-  projector,
-  query,
-  record,
-  replica,
-  reply,
-  repository,
-  result,
-  saga,
-  sink,
-  source,
-  state,
-  streamlet,
-  term,
-  user
-}
+import com.ossuminc.riddl.hugo.themes.ThemeGenerator
+import com.ossuminc.riddl.language.parsing.Keywords.{adaptor, application, author, case_, command, connector, constant, context, entity, epic, field, flow, function, group, handler, inlet, input, invariant, outlet, output, pipe, projector, query, record, replica, reply, repository, result, saga, sink, source, state, streamlet, term, user}
 import com.ossuminc.riddl.utils.{TextFileWriter, Timer}
 
 import java.nio.file.Path
@@ -77,8 +41,10 @@ trait MarkdownWriter
     with SagaWriter
     with StreamletWriter
     with SummariesWriter
-    with PassUtilities {
+{
 
+  def generator: ThemeGenerator
+  
   private case class Level(name: String, href: String, children: Seq[Level]) {
     override def toString: String = {
       s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
@@ -88,7 +54,7 @@ trait MarkdownWriter
   private def makeData(container: Definition, parents: Seq[String]): Level = {
     Level(
       container.identify,
-      makeDocLink(container, parents),
+      generator.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
         container.definitions
@@ -99,12 +65,12 @@ trait MarkdownWriter
   }
 
   protected def emitUsage(definition: Definition): this.type = {
-    usage.getUsers(definition) match {
+    generator.usage.getUsers(definition) match {
       case users: Seq[Definition] if users.nonEmpty =>
         listOf("Used By", users)
       case _ => h2("Used By None")
     }
-    usage.getUses(definition) match {
+    generator.usage.getUses(definition) match {
       case usages: Seq[NamedValue] if usages.nonEmpty => listOf("Uses", usages)
       case _                                          => h2("Uses Nothing")
     }
@@ -173,7 +139,7 @@ trait MarkdownWriter
     }
     val path = (parents.map(_.id.value) :+ d.id.value).mkString(".")
     emitTableRow(italic("Definition Path"), path)
-    val link = makeSourceLink(d)
+    val link = generator.makeSourceLink(d)
     emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
   }
 
@@ -226,18 +192,18 @@ trait MarkdownWriter
       val pathId = rMatch.group(3)
 
       def doSub(line: String, definition: NamedValue, isAmbiguous: Boolean = false): String = {
-        val docLink = makeDocLink(definition)
+        val docLink = generator.makeDocLink(definition)
         val substitution =
           if isAmbiguous then s"($kind $pathId (ambiguous))[$docLink]"
           else s" ($kind $pathId)[$docLink]"
         line.substring(0, rMatch.start) + substitution + line.substring(rMatch.end)
       }
 
-      refMap.definitionOf[Definition](pathId) match {
+      generator.refMap.definitionOf[Definition](pathId) match {
         case Some(definition) => doSub(line, definition)
         case None =>
           val names = pathId.split('.').toSeq
-          symbolsOutput.lookupSymbol[Definition](names) match
+          generator.symbolsOutput.lookupSymbol[Definition](names) match
             case Nil                => line
             case ::((head, _), Nil) => doSub(line, definition = head)
             case ::((head, _), _)   => doSub(line, definition = head, isAmbiguous = true)
@@ -293,16 +259,16 @@ trait MarkdownWriter
     parents.headOption match
       case None => ""
       case Some(parent) =>
-        val resolved = refMap.definitionOf[Definition](pid, parent)
+        val resolved = generator.refMap.definitionOf[Definition](pid, parent)
         resolved match
           case None => s"unresolved path: ${pid.format}"
           case Some(res) =>
-            val slink = makeSourceLink(res)
+            val slink = generator.makeSourceLink(res)
             resolved match
               case None => s"unresolved path: ${pid.format}"
               case Some(definition) =>
-                val pars = makeStringParents(parents.drop(1))
-                val link = makeDocLink(definition, pars)
+                val pars = generator.makeStringParents(parents.drop(1))
+                val link = generator.makeDocLink(definition, pars)
                 s"[${resolved.head.identify}]($link) [{{< icon \"gdoc_code\" >}}]($slink)"
   }
 
@@ -313,7 +279,7 @@ trait MarkdownWriter
     parents.headOption match
       case None => s"unresolved path: ${pid.format}"
       case Some(parent) =>
-        refMap.definitionOf[Definition](pid, parent) match {
+        generator.refMap.definitionOf[Definition](pid, parent) match {
           case None                   => s"unresolved path: ${pid.format}"
           case Some(defn: Definition) => defn.id.format
         }

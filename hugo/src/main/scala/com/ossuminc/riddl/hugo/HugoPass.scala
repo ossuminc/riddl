@@ -19,14 +19,15 @@ import com.ossuminc.riddl.passes.symbols.Symbols.ParentStack
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.analyses.StatsPass
 import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, Zip}
-import com.ossuminc.riddl.hugo.themes.*
+import com.ossuminc.riddl.hugo.themes.{ThemeGenerator, ThemeWriter}
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
-import diagrams.mermaid.{RootOverviewDiagram, UseCaseDiagramSupport}
+import diagrams.mermaid.RootOverviewDiagram
 
 import java.io.File
 import java.net.URL
 import java.nio.file.*
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 object HugoPass extends PassInfo {
   val name: String = "hugo"
@@ -47,11 +48,10 @@ case class HugoOutput(
 case class HugoPass(
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoCommand.Options
+  options: HugoCommand.Options,
+  commonOptions: CommonOptions = CommonOptions()
 ) extends Pass(input, outputs)
-    with PassUtilities
     with TranslatingState[MarkdownWriter]
-    with UseCaseDiagramSupport
     with Summarizer {
 
   requires(SymbolsPass)
@@ -66,6 +66,8 @@ case class HugoPass(
 
   val root: Root = input.root
   val name: String = HugoPass.name
+
+  private val generator = ThemeGenerator(options, input, outputs, messages)
 
   options.inputFile match {
     case Some(inFile) =>
@@ -83,13 +85,7 @@ case class HugoPass(
       next.resolve(par)
     }
     val path = parDir.resolve(fileName)
-    val mdw: MarkdownWriter = options.hugoThemeName match {
-      case Some(GeekDocTheme.name) | None => GeekDocTheme(path, input, outputs, options)
-      case Some(DotdockTheme.name)        => DotdockTheme(path, input, outputs, options)
-      case Some(s) =>
-        messages.addWarning((0, 0), s"Hugo theme named '$s' is not supported, using GeekDoc ")
-        GeekDocTheme(path, input, outputs, options)
-    }
+    val mdw: MarkdownWriter = ThemeWriter(path, input, outputs, options, commonOptions)
     addFile(mdw)
     mdw
   }
@@ -112,7 +108,7 @@ case class HugoPass(
           case e: Entity      => mkd.emitEntity(e, stack)
           case e: Epic        => mkd.emitEpic(e, stack)
           case f: Function    => mkd.emitFunction(f, stack)
-          case u: UseCase     => mkd.emitUseCase(u, stack, this)
+          case u: UseCase     => mkd.emitUseCase(u, stack)
           case p: Projector   => mkd.emitProjector(p, stack)
           case r: Repository  => mkd.emitRepository(r, stack)
           case s: Saga        => mkd.emitSaga(s, stack)
@@ -273,7 +269,7 @@ case class HugoPass(
   ): Unit = {
     import java.nio.charset.StandardCharsets
     import java.nio.file.Files
-    val content = configTemplate(options, author)
+    val content = generator.makeTomlFile(options, author)
     val outFile = options.configFile
     Files.write(outFile, content.getBytes(StandardCharsets.UTF_8))
   }
@@ -283,7 +279,7 @@ case class HugoPass(
     stack: Seq[Definition]
   ): MarkdownWriter = {
     addDir(c.id.format)
-    val pars = makeStringParents(stack)
+    val pars = generator.makeStringParents(stack)
     makeWriter(pars :+ c.id.format, "_index.md")
   }
 
@@ -291,170 +287,7 @@ case class HugoPass(
     d: Definition,
     stack: Seq[Definition]
   ): MarkdownWriter = {
-    val pars = makeStringParents(stack)
+    val pars = generator.makeStringParents(stack)
     makeWriter(pars, d.id.format + ".md")
-  }
-
-  // scalastyle:off method.length
-  private def configTemplate(
-    options: HugoCommand.Options,
-    author: Option[Author]
-  ): String = {
-    val auth: Author = author.getOrElse(
-      Author(
-        1 -> 1,
-        id = Identifier(1 -> 1, "unknown"),
-        name = LiteralString(1 -> 1, "Not Provided"),
-        email = LiteralString(1 -> 1, "somebody@somewere.tld")
-      )
-    )
-    val themes: String = {
-      options.themes.map(_._1).mkString("[ \"", "\", \"", "\" ]")
-    }
-    val baseURL: String = options.baseUrl
-      .fold("https://example.prg/")(_.toString)
-    val srcURL: String = options.sourceURL.fold("")(_.toString)
-    val editPath: String = options.editPath.getOrElse("")
-    val siteLogoPath: String = options.siteLogoPath.getOrElse("images/logo.png")
-    val legalPath: String = "/legal"
-    val privacyPath: String = "/privacy"
-    val siteTitle = options.siteTitle.getOrElse("Unspecified Site Title")
-    val siteName = options.projectName.getOrElse("Unspecified Project Name")
-    val siteDescription = options.siteDescription
-      .getOrElse("Unspecified Project Description")
-
-    s"""######################## Hugo Configuration ####################
-       |
-       |# Configure GeekDocs
-       |baseUrl = "$baseURL"
-       |languageCode = "en-us"
-       |title = "$siteTitle"
-       |name = "$siteName"
-       |description = "$siteDescription"
-       |tags = ["docs", "documentation", "responsive", "simple", "riddl"]
-       |min_version = "0.83.0"
-       |theme = $themes
-       |
-       |# Author information from config
-       |[author]
-       |    name = "${auth.name.s}"
-       |    email = "${auth.email.s}"
-       |    homepage = "${auth.url.getOrElse(java.net.URI.create("https://example.org/").toURL)}"
-       |
-       |# Required to get well formatted code blocks
-       |pygmentsUseClasses = true
-       |pygmentsCodeFences = true
-       |disablePathToLower = true
-       |enableGitInfo      = true
-       |pygmentsStyle      =  "monokailight"
-       |
-       |# Required if you want to render robots.txt template
-       |enableRobotsTXT = true
-       |
-       |
-       |# markup(down?) rendering configuration
-       |[markup.goldmark.renderer]
-       |  # Needed for mermaid shortcode
-       |  unsafe = true
-       |[markup.tableOfContents]
-       |  startLevel = 1
-       |  endLevel = 9
-       |[markup.goldmark.extensions]
-       |  definitionList = true
-       |  footnote = true
-       |  linkify = true
-       |  strikethrough = true
-       |  table = true
-       |  taskList = true
-       |  typographer = true
-       |
-       |
-       |[taxonomies]
-       |  tag = "tags"
-       |
-       |[params]
-       |  # (Optional, default 6) Set how many table of contents levels to be showed on page.
-       |  # Use false to hide ToC, note that 0 will default to 6 (https://gohugo.io/functions/default/)
-       |  # You can also specify this parameter per page in front matter.
-       |  geekdocToC = false
-       |
-       |  # (Optional, default static/brand.svg) Set the path to a logo for the Geekdoc
-       |  # relative to your 'static/' folder.
-       |  geekdocLogo = "$siteLogoPath"
-       |
-       |  # (Optional, default false) Render menu from data file in 'data/menu/main.yaml'.
-       |  # See also https://geekdocs.de/usage/menus/#bundle-menu.
-       |  geekdocMenuBundle = false
-       |
-       |  # (Optional, default false) Collapse all menu entries, can not be overwritten
-       |  # per page if enabled. Can be enabled per page via `geekdocCollapseSection`.
-       |  geekdocCollapseAllSections = false
-       |
-       |  # (Optional, default true) Show page navigation links at the bottom of each
-       |  # docs page (bundle menu only).
-       |  geekdocNextPrev = true
-       |
-       |  # (Optional, default true) Show a breadcrumb navigation bar at the top of each docs page.
-       |  # You can also specify this parameter per page in front matter.
-       |  geekdocBreadcrumb = true
-       |
-       |  # (Optional, default none) Set source repository location. Used for 'Edit page' links.
-       |  # You can also specify this parameter per page in front matter.
-       |  geekdocRepo = "$srcURL"
-       |
-       |  # (Optional, default none) Enable 'Edit page' links. Requires 'GeekdocRepo' param
-       |  # and path must point to 'content' directory of repo.
-       |  # You can also specify this parameter per page in front matter.
-       |  geekdocEditPath = "$editPath"
-       |
-       |  # (Optional, default true) Enables search function with flexsearch.
-       |  # Index is built on the fly and might slow down your website.
-       |  geekdocSearch = true
-       |
-       |  # (Optional, default false) Display search results with the parent folder as prefix. This
-       |  # option allows you to distinguish between files with the same name in different folders.
-       |  # NOTE: This parameter only applies when 'geekdocSearch = true'.
-       |  geekdocSearchShowParent = true
-       |
-       |  # (Optional, default none) Add a link to your Legal Notice page to the site footer.
-       |  # It can be either a remote url or a local file path relative to your content directory.
-       |  geekdocLegalNotice = "$legalPath"
-       |
-       |  # (Optional, default none) Add a link to your Privacy Policy page to the site footer.
-       |  # It can be either a remote url or a local file path relative to your content directory.
-       |  geekdocPrivacyPolicy = "$privacyPath"
-       |
-       |  # (Optional, default true) Add an anchor link to headlines.
-       |  geekdocAnchor = true
-       |
-       |  # (Optional, default true) Copy anchor url to clipboard on click.
-       |  geekdocAnchorCopy = true
-       |
-       |  # (Optional, default true) Enable or disable image lazy loading for images rendered
-       |  # by the 'img' shortcode.
-       |  geekdocImageLazyLoading = true
-       |
-       |  # (Optional, default false) Set HTMl <base> to .Site.BaseURL if enabled. It might be required
-       |  # if a subdirectory is used within Hugos BaseURL.
-       |  # See https://developer.mozilla.org/de/docs/Web/HTML/Element/base.
-       |  geekdocOverwriteHTMLBase = false
-       |
-       |  # (Optional, default false) Auto-decrease brightness of images and add a slightly grayscale to avoid
-       |  # bright spots while using the dark mode.
-       |  geekdocDarkModeDim = true
-       |
-       |  # (Optional, default true) Display a "Back to top" link in the site footer.
-       |  geekdocBackToTop = true
-       |
-       |  # (Optional, default false) Enable or disable adding tags for post pages automatically to the
-       |  # navigation sidebar.
-       |  geekdocTagsToMenu = true
-       |
-       |  # (Optional, default 'title') Configure how to sort file-tree menu entries. Possible options are 'title',
-       |  # 'linktitle', 'date', 'publishdate', 'expirydate' or 'lastmod'. Every option can be used with a reverse
-       |  # modifier as well e.g. 'title_reverse'.
-       |  geekdocFileTreeSortBy = "title"
-       |
-       |""".stripMargin
   }
 }

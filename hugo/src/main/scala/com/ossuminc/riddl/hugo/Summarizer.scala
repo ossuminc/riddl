@@ -1,10 +1,13 @@
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.language.AST.{Domain, Root}
+import com.ossuminc.riddl.language.AST.{Definition, Domain, PathIdentifier, Root}
 import com.ossuminc.riddl.utils.Timer
 import diagrams.mermaid.RootOverviewDiagram
 
-trait Summarizer { this: HugoPass =>
+import scala.reflect.ClassTag
+
+trait Summarizer {
+  this: HugoPass =>
 
   def summarize(): Unit = {
     makeIndex(root)
