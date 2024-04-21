@@ -5,8 +5,10 @@
  */
 
 package com.ossuminc.riddl.hugo
+import com.ossuminc.riddl.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInput, PassesOutput, PassesResult}
 
 import java.nio.file.Path
@@ -30,9 +32,10 @@ case class GlossaryPass(
   input: PassInput,
   outputs: PassesOutput,
   options: HugoCommand.Options
-) extends CollectingPass[GlossaryEntry](input, outputs)
-    with PassUtilities {
+) extends CollectingPass[GlossaryEntry](input, outputs) {
 
+  private val generator = ThemeGenerator(options, input, outputs, messages)
+  
   // Members declared in com.ossuminc.riddl.passes.CollectingPass
   protected def collect(
     definition: RiddlValue,
@@ -53,16 +56,16 @@ case class GlossaryPass(
 
   private def makeGlossaryEntry(
     d: Definition,
-    stack: Seq[Definition]
+    stack: Symbols.Parents
   ): GlossaryEntry = {
-    val parents = makeStringParents(stack)
+    val parents = generator.makeStringParents(stack)
     val entry = GlossaryEntry(
       d.id.value,
       d.kind,
       d.brief.map(_.s).getOrElse("-- undefined --"),
       parents :+ d.id.value,
-      makeDocLink(d, parents),
-      makeSourceLink(d)
+      generator.makeDocLink(d, parents),
+      generator.makeSourceLink(d)
     )
     entry
   }

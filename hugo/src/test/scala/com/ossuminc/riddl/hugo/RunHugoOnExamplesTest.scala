@@ -17,7 +17,8 @@ import java.nio.file.Path
 import scala.annotation.unused
 
 /** Unit Tests To Run Riddlc On Examples */
-class RunHugoOnExamplesTest extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo") {
+class RunHugoOnExamplesTest
+    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo", shouldDelete = false) {
 
   val validTestNames = Seq("ReactiveBBQ", "dokn", "ReactiveSummit")
 
@@ -26,6 +27,7 @@ class RunHugoOnExamplesTest extends RunCommandOnExamplesTest[HugoCommand.Options
   "Run Hugo On Examples" should {
     "correctly process ReactiveBBQ" in {
       runTest("ReactiveBBQ")
+
     }
     "correctly process dokn" in {
       runTest("dokn")

@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.FileBuilder
 
+
 import scala.reflect.ClassTag
 
 /** A class to generate the sequence diagrams for an Epic's Use Case

@@ -1,6 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.writers.{MarkdownWriter, ThemeWriter}
+import com.ossuminc.riddl.hugo.writers.MarkdownWriter
+import com.ossuminc.riddl.hugo.themes.ThemeWriter
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.utils.TextFileWriter
 
@@ -136,7 +137,7 @@ trait MarkdownBasics extends TextFileWriter with ThemeWriter { this: MarkdownWri
   ): Unit = {
     heading(kind, level)
     val refs = items.map { definition =>
-      makeDocAndParentsLinks(definition)
+      generator.makeDocAndParentsLinks(definition)
     }
     list(refs)
   }
@@ -151,7 +152,7 @@ trait MarkdownBasics extends TextFileWriter with ThemeWriter { this: MarkdownWri
         }
         sb.append(description.lines.map(line => s"$ndnt$listItem${line.s}\n"))
   }
-  
+
   def definitionToc(kindOfThing: String, list:Seq[Definition], level:Int = 2): Unit = {
     val strList = list.map(c => c.id.value)
     toc(kindOfThing, strList, level)

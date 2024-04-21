@@ -3,25 +3,27 @@ package com.ossuminc.riddl.hugo.themes
 import com.ossuminc.riddl.hugo.HugoCommand
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 
 import java.nio.file.Path
 import java.net.URL
 
-object GeekDocTheme {
+object GeekDocWriter {
   val name: String = "GeekDoc"
 }
 
 /** Theme extension to the MardownWriter for the Hugo GeekDoc theme */
-case class GeekDocTheme(
+case class GeekDocWriter(
   filePath: Path,
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoCommand.Options
+  options: HugoCommand.Options,
+  commonOptions: CommonOptions
 ) extends MarkdownWriter {
 
-  def themeName: String = GeekDocTheme.name
-
+  val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
+  
   private val geekDoc_version = "v0.44.1"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL =
@@ -30,6 +32,8 @@ case class GeekDocTheme(
         s"https://github.com/thegeeklab/hugo-geekdoc/releases/download/$geekDoc_version/$geekDoc_file"
       )
       .toURL
+
+  def themeName: String = GeekDocWriter.name
 
   def fileHead(
     title: String,

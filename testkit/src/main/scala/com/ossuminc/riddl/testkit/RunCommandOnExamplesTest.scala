@@ -43,7 +43,8 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   *   The name of the command to run.
   */
 abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlugin[OPT]](
-  val commandName: String
+  val commandName: String,
+  shouldDelete: Boolean = true
 ) extends AnyWordSpec
     with Matchers
     with BeforeAndAfterAll {
@@ -76,7 +77,10 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
   }
 
   override def afterAll(): Unit = {
-    FileUtils.forceDeleteOnExit(tmpDir.toFile)
+    if shouldDelete then
+      FileUtils.forceDeleteOnExit(tmpDir.toFile)
+    else
+      info(s"Leaving ${tmpDir} undeleted")
   }
 
   private final val suffix = "conf"
@@ -127,12 +131,12 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
           case Some(folder) =>
             folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
               case Some(config) =>
-                CommandPlugin.loadCandidateCommands(config.toPath).flatMap { commands => 
+                CommandPlugin.loadCandidateCommands(config.toPath).flatMap { commands =>
                   if commands.contains(commandName) then
                     f(folderName, config.toPath)
                   else
-                    Left(errors(s"Config file $commandName not found in $config"))  
-                      
+                    Left(errors(s"Config file $commandName not found in $config"))
+
                 }
               case None =>
                 Left(errors(s"No config file found in RIDDL-examples folder $folderName"))
@@ -140,7 +144,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
           case None =>
             Left(errors(s"RIDDL-examples folder $folderName not found"))
         }
-      case None => 
+      case None =>
         Left(errors(s"riddl-examples/riddl top level folder not found"))
     }
   }

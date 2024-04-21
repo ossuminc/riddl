@@ -5,6 +5,7 @@
  */
 package com.ossuminc.riddl.hugo
 
+import com.ossuminc.riddl.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
@@ -24,9 +25,10 @@ case class ToDoListOutput(
 ) extends CollectingPassOutput[ToDoItem]
 
 case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCommand.Options)
-    extends CollectingPass[ToDoItem](input, outputs)
-    with PassUtilities {
+    extends CollectingPass[ToDoItem](input, outputs) {
 
+  private val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
+  
   protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
     definition match {
       case _: Root | _: Interaction | _: Include[Definition] @unchecked =>
@@ -39,9 +41,9 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
         val item = d.identify
         val authors = AST.findAuthors(d, pars)
         val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)
-        val prnts = makeStringParents(pars)
+        val prnts = generator.makeStringParents(pars)
         val path = (prnts :+ d.id.value).mkString(".")
-        val link = makeDocLink(d, prnts)
+        val link = generator. makeDocLink(d, prnts)
         auths.map(auth => ToDoItem(item, auth, path, link))
       case _ =>
         Seq.empty[ToDoItem]

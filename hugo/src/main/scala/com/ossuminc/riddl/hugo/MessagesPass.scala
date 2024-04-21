@@ -1,5 +1,6 @@
 package com.ossuminc.riddl.hugo
 
+import com.ossuminc.riddl.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
@@ -44,13 +45,14 @@ case class MessageOutput(
 //
 
 case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCommand.Options)
-    extends CollectingPass[MessageInfo](input, outputs)
-    with PassUtilities {
+    extends CollectingPass[MessageInfo](input, outputs) {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
 
   private val usages = outputs.usage
+  
+  private val generator = ThemeGenerator(options, input, outputs, messages)
 
   def name: String = MessagesPass.name
 
@@ -59,12 +61,12 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
       case t: Type =>
         val result = t.typ match {
           case _: AggregateUseCaseTypeExpression =>
-            val pars = makeStringParents(parents.toSeq)
-            val link = makeDocLink(t, pars)
+            val pars = generator.makeStringParents(parents.toSeq)
+            val link = generator.makeDocLink(t, pars)
             val users = usages.getUsers(t)
             val userLinks = users
               .map { definition =>
-                s"[${definition.id.value}](${makeDocLink(definition, pars)})"
+                s"[${definition.id.value}](${generator.makeDocLink(definition, pars)})"
               }
               .mkString(", ")
             val description: String = t.brief.map(_.s).getOrElse("No description provided.")

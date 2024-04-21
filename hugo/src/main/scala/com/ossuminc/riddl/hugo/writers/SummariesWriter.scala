@@ -13,7 +13,7 @@ trait SummariesWriter { this: MarkdownWriter =>
       Some("Statistical information about the RIDDL model documented")
     )
 
-    val stats = outputs.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
+    val stats = generator.outputs.outputOf[StatsOutput](StatsPass.name).getOrElse(StatsOutput())
     emitTableHead(
       Seq(
         "Category" -> 'L',
