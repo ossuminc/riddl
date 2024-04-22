@@ -88,7 +88,8 @@ trait SummariesWriter { this: MarkdownWriter =>
     }
   }
 
-  def emitMessageSummary(domain: Domain, messages: Seq[MessageInfo]): Unit = {
+  def emitMessageSummary(domain: Domain, messages: Seq[MessageInfo], kind: String): Unit = {
+    h3(kind + " Messages")
     emitTableHead(
       Seq(
         "Name" -> 'C',

@@ -61,7 +61,7 @@ abstract class PassCommand[OPT <: PassCommandOptions : ClassTag](name: String) e
     }
   }
 
-  override final def run(
+  override def run(
     originalOptions: OPT,
     commonOptions: CommonOptions,
     log: Logger,

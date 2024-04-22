@@ -67,7 +67,7 @@ case class HugoPass(
   val root: Root = input.root
   val name: String = HugoPass.name
 
-  private val generator = ThemeGenerator(options, input, outputs, messages)
+  protected val generator = ThemeGenerator(options, input, outputs, messages)
 
   options.inputFile match {
     case Some(inFile) =>
@@ -96,7 +96,8 @@ case class HugoPass(
       // We only process containers here since they start their own
       // documentation section. Everything else is a leaf or a detail
       // on the container's index page.
-      case container: Definition =>
+      case container: VitalDefinition[?] =>
+        
         // Create the writer for this container
         val mkd: MarkdownWriter = setUpContainer(container, stack)
 
@@ -108,20 +109,23 @@ case class HugoPass(
           case e: Entity      => mkd.emitEntity(e, stack)
           case e: Epic        => mkd.emitEpic(e, stack)
           case f: Function    => mkd.emitFunction(f, stack)
-          case u: UseCase     => mkd.emitUseCase(u, stack)
           case p: Projector   => mkd.emitProjector(p, stack)
           case r: Repository  => mkd.emitRepository(r, stack)
           case s: Saga        => mkd.emitSaga(s, stack)
           case s: Streamlet   => mkd.emitStreamlet(s, stack)
-
-          // ignore the non-processors
-          case _: Function | _: Handler | _: State | _: OnOtherClause | _: OnInitClause | _: OnMessageClause |
-              _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
-              _: Invariant | _: Inlet | _: Outlet | _: Connector | _: SagaStep | _: User | _: Interaction | _: Root |
-              _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type =>
-          // All of these are handled above in their containers content output
         }
-      case _: AST.NonDefinitionValues =>
+
+      case u: UseCase     => setUpContainer(u, stack).emitUseCase(u, stack)
+      case c: Connector   => setUpContainer(c, stack).emitConnector(c, stack)
+
+      // ignore the non-processors
+      case _: Function | _: Handler | _: State | _: OnOtherClause | _: OnInitClause | _: OnMessageClause |
+          _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
+          _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root |
+          _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type =>
+        ()
+      // All of these are handled above in their containers content output
+      case _: AST.NonDefinitionValues => ()
       // These aren't definitions so don't count for documentation generation (no names)
     }
   }

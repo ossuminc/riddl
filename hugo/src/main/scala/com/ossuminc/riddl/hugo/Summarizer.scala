@@ -10,16 +10,15 @@ trait Summarizer {
   this: HugoPass =>
 
   def summarize(): Unit = {
-    makeIndex(root)
-    makeGlossary()
-    makeToDoList()
+    makeIndex()
+    makeMessageSummary()
     makeStatistics()
-
-    // TODO: makeUsers()
-    if options.withMessageSummary then for d <- root.domains do makeMessageSummary(d)
+    makeGlossary()
+    makeUsers()
+    makeToDoList()
   }
 
-  private def makeIndex(root: Root): Unit = {
+  private def makeIndex(): Unit = {
     Timer.time("Index Creation") {
 
       val mdw = this.makeWriter(Seq.empty[String], "_index.md")
@@ -53,6 +52,11 @@ trait Summarizer {
           Seq.empty[String]
         }
       }
+      val messageSummary = {
+        if options.withMessageSummary then {
+          Seq("[Message Summary](message")
+        }
+      }
       mdw.list(glossary ++ todoList ++ statistics)
     }
   }
@@ -69,7 +73,6 @@ trait Summarizer {
       }
     }
   }
-
 
   private def makeGlossary(): Unit = {
     if options.withGlossary then {
@@ -98,23 +101,32 @@ trait Summarizer {
       }
   }
 
-  private def makeMessageSummary(domain: Domain): Unit = {
-    Timer.time(s"Messages Summary for ${domain.identify}") {
-      val fileName = s"${domain.id.value}-messages.md"
-      val mdw = makeWriter(Seq(domain.id.value), fileName)
-      mdw.fileHead(
-        s"${domain.identify} Message Summary",
-        25,
-        Some(s"Message Summary for ${domain.identify}")
-      )
-      outputs.outputOf[MessageOutput](MessagesPass.name) match {
-        case Some(mo) =>
-          val infos = mo.collected.filter(_.link.contains(domain.id.value.toLowerCase))
-          mdw.emitMessageSummary(domain, infos)
-        case None =>
-          mdw.emitMessageSummary(domain, Seq.empty)
+  private def makeUsers(): Unit = {}
 
-      }
+  private def makeMessageSummary(): Unit = {
+    Timer.time(s"Messages Summaries for ${root.domains.size} Domains ") {
+      if options.withMessageSummary then
+        for { domain <- root.domains } do {
+          val path = generator.makeDocLink(domain)
+          val fileName = s"${domain.id.value}-messages.md"
+          val mdw = makeWriter(Seq(domain.id.value), fileName)
+          mdw.fileHead(
+            s"${domain.identify} Message Summary",
+            25,
+            Some(s"Message Summary for ${domain.identify}")
+          )
+          outputs.outputOf[MessageOutput](MessagesPass.name) match {
+            case Some(mo) =>
+              val map = mo.collected.filter(_.link.contains(domain.id.value.toLowerCase)).groupBy(_.kind)
+              for { (kind, infos) <- map } do {
+                mdw.h3(s"$kind Messages")
+                mdw.emitMessageSummary(domain, infos, kind)
+              }
+            case None =>
+              mdw.p(s"No message definitions in ${domain.identify}")
+          }
+        }
+      end if
     }
   }
 }

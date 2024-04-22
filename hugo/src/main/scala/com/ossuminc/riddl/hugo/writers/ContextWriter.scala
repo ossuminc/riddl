@@ -20,7 +20,6 @@ trait ContextWriter { this: MarkdownWriter =>
     emitVitalDefinitionDetails(context, parents)
     emitContextMap(context, maybeDiagram)
     emitOptions(context.options)
-    emitTypes(context, context +: parents )
     definitionToc("Entities", context.entities)
     definitionToc("Adaptors", context.adaptors)
     definitionToc("Sagas", context.sagas)
