@@ -749,7 +749,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     val t = definition.asInstanceOf[T]
     refMap.add[T](pathId, pidDirectParent, t)
     associateUsage(pidDirectParent, t)
-    if commonOptions.verbose then
+    if commonOptions.debug then
       messages.add(
         Messages.info(
           s"Path Identifier ${pathId.format} in ${pidDirectParent.identify} resolved to ${definition.identify}",

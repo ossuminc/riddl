@@ -2,12 +2,9 @@ package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.hugo.HugoCommand
-import com.ossuminc.riddl.hugo.diagrams.mermaid.UseCaseDiagramSupport
-import com.ossuminc.riddl.language.{AST, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{AST, CommonOptions}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
-import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import java.nio.file.Path
 
