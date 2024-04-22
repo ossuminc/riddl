@@ -4,10 +4,8 @@ import com.ossuminc.riddl.hugo.HugoCommand
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.passes.symbols.Symbols
 
 import java.nio.file.Path
-import scala.reflect.ClassTag
 
 case class GeekDocGenerator(
   options: HugoCommand.Options,
@@ -112,12 +110,6 @@ case class GeekDocGenerator(
        |min_version = "0.83.0"
        |theme = $themes
        |
-       |# Author information from config
-       |[author]
-       |    name = "${auth.name.s}"
-       |    email = "${auth.email.s}"
-       |    homepage = "${auth.url.getOrElse(java.net.URI.create("https://example.org/").toURL)}"
-       |
        |# Required to get well formatted code blocks
        |pygmentsUseClasses = true
        |pygmentsCodeFences = true
@@ -149,7 +141,15 @@ case class GeekDocGenerator(
        |[taxonomies]
        |  tag = "tags"
        |
+       |# Author information from config
+       |[params.author]
+       |    name = "${auth.name.s}"
+       |    email = "${auth.email.s}"
+       |    homepage = "${auth.url.getOrElse(java.net.URI.create("https://example.org/").toURL)}"
+       |    
+       |# Geekdoc parameters 
        |[params]
+       |       
        |  # (Optional, default 6) Set how many table of contents levels to be showed on page.
        |  # Use false to hide ToC, note that 0 will default to 6 (https://gohugo.io/functions/default/)
        |  # You can also specify this parameter per page in front matter.

@@ -5,21 +5,29 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsPass}
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.passes.{
+  CollectingPass,
+  CollectingPassOutput,
+  PassCreator,
+  PassInfo,
+  PassInput,
+  PassOutput,
+  PassesOutput
+}
 
 import scala.collection.mutable
 
 /** Information about message types collected by the MessagesPass
- *
- * @param message
+  *
+  * @param message
   *   The type of the message - shows the fields of the message, with their brief descriptions if any
- * @param link
- *    The documentation link to the message type
+  * @param link
+  *   The documentation link to the message type
   * @param users
   *   shows the places from which this message is used with full path identification, and each path component is a link
   *   to the documentation for that definition.
   * @param description
- *    Brief description of the message
+  *   Brief description of the message
   */
 case class MessageInfo(
   message: String,
@@ -51,7 +59,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
   requires(ResolutionPass)
 
   private val usages = outputs.usage
-  
+
   private val generator = ThemeGenerator(options, input, outputs, messages)
 
   def name: String = MessagesPass.name
@@ -68,7 +76,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
               .map { definition =>
                 s"[${definition.id.value}](${generator.makeDocLink(definition, pars)})"
               }
-              .mkString(", ")
+              .mkString(" <br> ")
             val description: String = t.brief.map(_.s).getOrElse("No description provided.")
             val mi = MessageInfo(t.identify, link, userLinks, description)
             Seq(mi)
@@ -84,12 +92,12 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
   def postProcess(root: Root): Unit = ()
 
   override def result: MessageOutput = {
-    val sortedList = collectedValues.sortBy(_.message).toSeq 
+    val sortedList = collectedValues.sortBy(_.message).toSeq
     MessageOutput(messages.toMessages, sortedList)
   }
 }
 
 object MessagesPass extends PassInfo {
   val name: String = "Messages"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => MessagesPass(in, out, HugoCommand.Options())}
+  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => MessagesPass(in, out, HugoCommand.Options()) }
 }

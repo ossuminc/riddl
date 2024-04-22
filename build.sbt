@@ -133,8 +133,6 @@ lazy val hugo = Module("hugo", "riddl-hugo")
   )
   .dependsOn(utils, language, passes % "compile->compile;test->test", commands, testkit % "test->compile")
 
-
-
 lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
@@ -180,7 +178,8 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
     analyses,
     prettify,
     commands,
-    testkit % "test->compile"
+    testkit % "test->compile",
+    hugo
   )
   .settings(
     scalaVersion := "3.4.1",
