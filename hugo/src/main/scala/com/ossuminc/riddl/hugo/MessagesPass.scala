@@ -3,17 +3,9 @@ package com.ossuminc.riddl.hugo
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
-import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsPass}
-import com.ossuminc.riddl.passes.{
-  CollectingPass,
-  CollectingPassOutput,
-  PassCreator,
-  PassInfo,
-  PassInput,
-  PassOutput,
-  PassesOutput
-}
+import com.ossuminc.riddl.passes.resolve.ResolutionPass
+import com.ossuminc.riddl.passes.symbols.SymbolsPass
+import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
 
 import scala.collection.mutable
 
@@ -30,6 +22,7 @@ import scala.collection.mutable
   *   Brief description of the message
   */
 case class MessageInfo(
+  kind: String,
   message: String,
   link: String,
   users: String,
@@ -78,7 +71,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
               }
               .mkString(" <br> ")
             val description: String = t.brief.map(_.s).getOrElse("No description provided.")
-            val mi = MessageInfo(t.identify, link, userLinks, description)
+            val mi = MessageInfo(t.kind, t.id.value, link, userLinks, description)
             Seq(mi)
           case _ =>
             Seq.empty[MessageInfo]

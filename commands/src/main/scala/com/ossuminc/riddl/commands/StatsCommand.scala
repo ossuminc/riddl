@@ -8,11 +8,11 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.commands.*
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.analyses.StatsPass
+import com.ossuminc.riddl.analyses.{StatsOutput, StatsPass}
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
 
@@ -22,11 +22,11 @@ import java.nio.file.Path
 object StatsCommand {
   val cmdName: String = "stats"
   case class Options(
-    inputFile: Option[Path] = None
+    inputFile: Option[Path] = None,
+    outputDir: Option[Path] = None
   ) extends PassCommandOptions
       with CommandOptions {
     def command: String = cmdName
-    def outputDir: Option[Path] = None
   }
 }
 
@@ -41,7 +41,9 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
       topRes <- topCur.atKey(pluginName)
       objCur <- topRes.asObjectCursor
       inFileRes <- objCur.atKey("input-file").map(_.asString)
+      outDirRes <- objCur.atKey("output-dir").map(_.asString)
       inFile <- inFileRes
+      outDir <- outDirRes
     yield {
       Options(inputFile = Some(Path.of(inFile)))
     }
@@ -63,7 +65,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
 
   // Members declared in com.ossuminc.riddl.commands.PassCommand
   def overrideOptions(options: Options, newOutputDir: Path): Options = {
-    options // we don't support overriding the output dir
+    options.copy(outputDir = Some(newOutputDir))
   }
 
   override def replaceInputFile(
@@ -82,6 +84,23 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
 
   override def getPasses(log: Logger, commonOptions: CommonOptions, options: Options): PassesCreator = {
     standardPasses :+ StatsPass.creator
+  }
+
+  override def run(
+    originalOptions: Options,
+    commonOptions: CommonOptions,
+    log: Logger,
+    outputDirOverride: Option[Path]
+  ): Either[Messages, PassesResult] = {
+    val result = super.run(originalOptions, commonOptions, log, outputDirOverride) 
+    result match {
+      case Left(messages) =>
+        Messages.logMessages(messages, log, commonOptions)
+      case Right(passesResult) =>
+        val stats = passesResult.outputOf[StatsOutput](StatsPass.name)
+        println(stats)
+    }
+    result 
   }
 
 }

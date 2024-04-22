@@ -155,6 +155,10 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
           .text("Generate a To Do list")
           .optional()
           .action((v, c) => c.copy(withTODOList = v)),
+        opt[Boolean]('e', name = "with-message-summary")
+          .text("Generate a message summary for each domain")
+          .optional()
+          .action((v, c) => c.copy(withMessageSummary = v)),
         opt[Boolean]('e', name = "with-graphical-toc")
           .text("Generate a graphically navigable table of contents")
           .optional()
