@@ -12,7 +12,7 @@ trait RepositoryWriter { this: MarkdownWriter =>
     repository: Repository,
     parents: Parents
   ): Unit = {
-    containerHead(repository, "Repository")
+    containerHead(repository)
     emitDefDoc(repository, parents)
     emitSchema(repository)
     emitProcessorDetails[OccursInRepository](repository, parents)

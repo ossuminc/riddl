@@ -6,17 +6,15 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.*
 import com.ossuminc.riddl.passes.symbols.*
 import com.ossuminc.riddl.analyses.*
-import com.ossuminc.riddl.hugo.HugoCommand
 import com.ossuminc.riddl.hugo.diagrams.mermaid.UseCaseDiagramSupport
-
+import com.ossuminc.riddl.hugo.HugoPass 
 import java.nio.file.Path
-import scala.reflect.ClassTag
 
 trait ThemeGenerator extends UseCaseDiagramSupport {
 
   def input: PassInput
 
-  def options: HugoCommand.Options
+  def options: HugoPass.Options
 
   def outputs: PassesOutput
 
@@ -37,7 +35,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
   
   def makeSourceLink(definition: Definition): String
 
-  def makeTomlFile(options: HugoCommand.Options, author: Option[Author]): String
+  def makeTomlFile(options: HugoPass.Options, author: Option[Author]): String
 
   protected def makeParents(parents: Symbols.Parents): Seq[Definition] = {
     // The stack goes from most nested to highest. We don't want to change the
@@ -100,7 +98,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
 }
 
 object ThemeGenerator {
-  def apply(options: HugoCommand.Options, inputs: PassInput, outputs: PassesOutput, messages: Messages.Accumulator): ThemeGenerator = {
+  def apply(options: HugoPass.Options, inputs: PassInput, outputs: PassesOutput, messages: Messages.Accumulator): ThemeGenerator = {
     options.hugoThemeName match {
       case None                            => GeekDocGenerator(options, inputs, outputs, messages)
       case Some(GeekDocWriter.name) | None => GeekDocGenerator(options, inputs, outputs, messages)

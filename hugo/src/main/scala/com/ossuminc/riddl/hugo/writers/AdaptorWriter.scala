@@ -6,7 +6,7 @@ import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 trait AdaptorWriter { this: MarkdownWriter =>
 
   def emitAdaptor(adaptor: Adaptor, parents: Parents): Unit = {
-    containerHead(adaptor, "Adaptor")
+    containerHead(adaptor)
     emitVitalDefinitionDetails(adaptor, parents)
     h2(s"Direction: ${adaptor.direction.format} ${adaptor.context.format}")
     emitProcessorDetails[OccursInAdaptor](adaptor, parents)

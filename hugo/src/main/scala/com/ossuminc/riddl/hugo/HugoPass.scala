@@ -6,19 +6,21 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.passes.translate.TranslatingState
-import com.ossuminc.riddl.hugo.diagrams.mermaid.*
-import com.ossuminc.riddl.hugo.utils.TreeCopyFileVisitor
+import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.passes.translate.TranslatingState
+import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.passes.Pass.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
-import com.ossuminc.riddl.passes.symbols.SymbolsPass
-import com.ossuminc.riddl.passes.symbols.Symbols.ParentStack
+import com.ossuminc.riddl.passes.symbols.{SymbolsPass, Symbols}
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.analyses.StatsPass
-import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, Zip}
+import com.ossuminc.riddl.passes.translate.TranslatingOptions
+import com.ossuminc.riddl.command.PassCommandOptions
+import com.ossuminc.riddl.analyses.{StatsPass, DiagramsPass}
+import com.ossuminc.riddl.hugo.diagrams.mermaid.*
+import com.ossuminc.riddl.hugo.utils.TreeCopyFileVisitor
 import com.ossuminc.riddl.hugo.themes.{ThemeGenerator, ThemeWriter}
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import diagrams.mermaid.RootOverviewDiagram
@@ -27,11 +29,85 @@ import java.io.File
 import java.net.URL
 import java.nio.file.*
 import scala.collection.mutable
-import scala.reflect.ClassTag
 
-object HugoPass extends PassInfo {
+object HugoPass extends PassInfo[HugoPass.Options] {
   val name: String = "hugo"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => HugoPass(in, out, HugoCommand.Options()) }
+  def creator(options: HugoPass.Options): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    HugoPass(in, out, options)
+  }
+
+  /** Options for the HugoPass/Command */
+  case class Options(
+    override val inputFile: Option[Path] = None,
+    override val outputDir: Option[Path] = None,
+    override val projectName: Option[String] = None,
+    hugoThemeName: Option[String] = None,
+    enterpriseName: Option[String] = None,
+    eraseOutput: Boolean = false,
+    siteTitle: Option[String] = None,
+    siteDescription: Option[String] = None,
+    siteLogoPath: Option[String] = Some("images/logo.png"),
+    siteLogoURL: Option[URL] = None,
+    baseUrl: Option[URL] = Option(java.net.URI.create("https://example.com/").toURL),
+    themes: Seq[(String, Option[URL])] = Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url)),
+    sourceURL: Option[URL] = None,
+    editPath: Option[String] = Some("edit/main/src/main/riddl"),
+    viewPath: Option[String] = Some("blob/main/src/main/riddl"),
+    withGlossary: Boolean = true,
+    withTODOList: Boolean = true,
+    withGraphicalTOC: Boolean = false,
+    withStatistics: Boolean = true,
+    withMessageSummary: Boolean = true
+  ) extends TranslatingOptions
+      with PassCommandOptions
+      with PassOptions {
+
+    def command: String = "hugo"
+
+    def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
+
+    def contentRoot: Path = outputRoot.resolve("content")
+
+    def staticRoot: Path = outputRoot.resolve("static")
+
+    def themesRoot: Path = outputRoot.resolve("themes")
+
+    def configFile: Path = outputRoot.resolve("config.toml")
+  }
+
+  def getPasses(
+    options: HugoPass.Options
+  ): PassesCreator = {
+    val glossary: PassesCreator =
+      if options.withGlossary then
+        Seq({ (input: PassInput, outputs: PassesOutput) => GlossaryPass(input, outputs, options) })
+      else Seq.empty
+
+    val messages: PassesCreator =
+      if options.withMessageSummary then
+        Seq({ (input: PassInput, outputs: PassesOutput) => MessagesPass(input, outputs, options) })
+      else Seq.empty
+
+    val stats: PassesCreator =
+      if options.withStatistics then Seq({ (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) })
+      else Seq.empty
+
+    val toDo: PassesCreator =
+      if options.withTODOList then
+        Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options) })
+      else Seq.empty
+
+    val diagrams: PassesCreator =
+      Seq({ (input: PassInput, outputs: PassesOutput) => DiagramsPass(input, outputs) })
+
+    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ diagrams ++ Seq(
+      { (input: PassInput, outputs: PassesOutput) =>
+        val _ = PassesResult(input, outputs, Messages.empty)
+        HugoPass(input, outputs, options)
+      }
+    )
+  }
+
   private val geekDoc_version = "v0.44.1"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL = java.net.URI
@@ -48,7 +124,7 @@ case class HugoOutput(
 case class HugoPass(
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoCommand.Options,
+  options: HugoPass.Options,
   commonOptions: CommonOptions = CommonOptions()
 ) extends Pass(input, outputs)
     with TranslatingState[MarkdownWriter]
@@ -90,14 +166,13 @@ case class HugoPass(
     mdw
   }
 
-  override def process(value: AST.RiddlValue, parents: ParentStack): Unit = {
+  override def process(value: AST.RiddlValue, parents: Symbols.ParentStack): Unit = {
     val stack = parents.toSeq
     value match {
       // We only process containers here since they start their own
       // documentation section. Everything else is a leaf or a detail
       // on the container's index page.
       case container: VitalDefinition[?] =>
-        
         // Create the writer for this container
         val mkd: MarkdownWriter = setUpContainer(container, stack)
 
@@ -105,18 +180,20 @@ case class HugoPass(
           case a: Adaptor     => mkd.emitAdaptor(a, stack)
           case a: Application => mkd.emitApplication(a, stack)
           case c: Context     => mkd.emitContext(c, stack)
-          case d: Domain      => mkd.emitDomain(d, stack)
-          case e: Entity      => mkd.emitEntity(e, stack)
-          case e: Epic        => mkd.emitEpic(e, stack)
-          case f: Function    => mkd.emitFunction(f, stack)
-          case p: Projector   => mkd.emitProjector(p, stack)
-          case r: Repository  => mkd.emitRepository(r, stack)
-          case s: Saga        => mkd.emitSaga(s, stack)
-          case s: Streamlet   => mkd.emitStreamlet(s, stack)
+          case d: Domain =>
+            mkd.emitDomain(d, stack)
+            makeMessageSummary(stack, d)
+          case e: Entity     => mkd.emitEntity(e, stack)
+          case e: Epic       => mkd.emitEpic(e, stack)
+          case f: Function   => mkd.emitFunction(f, stack)
+          case p: Projector  => mkd.emitProjector(p, stack)
+          case r: Repository => mkd.emitRepository(r, stack)
+          case s: Saga       => mkd.emitSaga(s, stack)
+          case s: Streamlet  => mkd.emitStreamlet(s, stack)
         }
 
-      case u: UseCase     => setUpContainer(u, stack).emitUseCase(u, stack)
-      case c: Connector   => setUpContainer(c, stack).emitConnector(c, stack)
+      case u: UseCase   => setUpContainer(u, stack).emitUseCase(u, stack)
+      case c: Connector => setUpContainer(c, stack).emitConnector(c, stack)
 
       // ignore the non-processors
       case _: Function | _: Handler | _: State | _: OnOtherClause | _: OnInitClause | _: OnMessageClause |
@@ -172,7 +249,7 @@ case class HugoPass(
     }
   }
 
-  private def loadThemes(options: HugoCommand.Options): Unit = {
+  private def loadThemes(options: HugoPass.Options): Unit = {
     for (name, url) <- options.themes if url.nonEmpty do {
       val destDir = options.themesRoot.resolve(name)
       loadATheme(url.getOrElse(java.net.URI.create("").toURL), destDir)
@@ -181,7 +258,7 @@ case class HugoPass(
 
   private def loadStaticAssets(
     inputPath: Option[Path],
-    options: HugoCommand.Options
+    options: HugoPass.Options
   ): Unit = {
     inputPath match {
       case Some(path) =>
@@ -268,7 +345,7 @@ case class HugoPass(
   }
 
   private def writeConfigToml(
-    options: HugoCommand.Options,
+    options: HugoPass.Options,
     author: Option[Author]
   ): Unit = {
     import java.nio.charset.StandardCharsets

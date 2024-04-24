@@ -1,5 +1,6 @@
 package com.ossuminc.riddl.prettify
 
+import com.ossuminc.riddl.command.PassCommandOptions
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.language.{AST, Messages}
@@ -8,54 +9,67 @@ import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
+import com.ossuminc.riddl.passes.translate.TranslatingOptions
+import com.ossuminc.riddl.command.TranslationCommand
 
 import java.nio.file.Path
 import scala.annotation.unused
 
-object PrettifyPass extends PassInfo {
+object PrettifyPass extends PassInfo[PrettifyPass.Options] {
   val name: String = "prettify"
-  val creator: PassCreator = { 
-    (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, PrettifyState()) 
+  def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    PrettifyPass(in, out, PrettifyState(options))
   }
 
+  /** Options for the PrettifyPass and PrettifyCommand */
+  case class Options(
+    inputFile: Option[Path] = None,
+    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
+    projectName: Option[String] = None,
+    singleFile: Boolean = true
+  ) extends TranslationCommand.Options with PassOptions with PassCommandOptions {
+    def command: String = name
+  }
+  
   /** A function to translate between a definition and the keyword that introduces them.
     *
     * @param definition
-    * The definition to look up
+    *   The definition to look up
     *
     * @return
-    * A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
+    *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
     */
   def keyword(definition: Definition): String = {
     definition match {
-      case _: Adaptor => Keyword.adaptor
-      case _: UseCase => Keyword.case_
-      case _: Context => Keyword.context
-      case _: Connector => Keyword.connector
-      case _: Domain => Keyword.domain
-      case _: Entity => Keyword.entity
+      case _: Adaptor    => Keyword.adaptor
+      case _: UseCase    => Keyword.case_
+      case _: Context    => Keyword.context
+      case _: Connector  => Keyword.connector
+      case _: Domain     => Keyword.domain
+      case _: Entity     => Keyword.entity
       case _: Enumerator => ""
-      case _: Field => ""
-      case _: Function => Keyword.function
-      case _: Handler => Keyword.handler
-      case _: Inlet => Keyword.inlet
-      case _: Invariant => Keyword.invariant
-      case _: Outlet => Keyword.outlet
-      case s: Streamlet => s.shape.keyword
-      case _: Root => "root"
-      case _: Saga => Keyword.saga
-      case _: SagaStep => Keyword.step
-      case _: State => Keyword.state
-      case _: Epic => Keyword.epic
-      case _: Term => Keyword.term
-      case _: Type => Keyword.type_
-      case _ => "unknown"
+      case _: Field      => ""
+      case _: Function   => Keyword.function
+      case _: Handler    => Keyword.handler
+      case _: Inlet      => Keyword.inlet
+      case _: Invariant  => Keyword.invariant
+      case _: Outlet     => Keyword.outlet
+      case s: Streamlet  => s.shape.keyword
+      case _: Root       => "root"
+      case _: Saga       => Keyword.saga
+      case _: SagaStep   => Keyword.step
+      case _: State      => Keyword.state
+      case _: Epic       => Keyword.epic
+      case _: Term       => Keyword.term
+      case _: Type       => Keyword.type_
+      case _             => "unknown"
     }
   }
 }
+
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState = PrettifyState())
-  extends HierarchyPass(input, outputs) {
+    extends HierarchyPass(input, outputs) {
 
   requires(SymbolsPass)
   requires(ResolutionPass)
@@ -74,14 +88,14 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
 
   def openContainer(container: Definition, parents: Seq[Definition]): Unit = {
     container match {
-      case epic: Epic         => openEpic(epic)
-      case uc: UseCase        => openUseCase(uc)
-      case domain: Domain     => openDomain(domain)
-      case adaptor: Adaptor   => openAdaptor(adaptor)
-      case typ: Type          => state.current.emitType(typ)
-      case function: Function => openFunction(function)
-      case st: State          => openState(st)
-      case step: SagaStep     => openSagaStep(step)
+      case epic: Epic           => openEpic(epic)
+      case uc: UseCase          => openUseCase(uc)
+      case domain: Domain       => openDomain(domain)
+      case adaptor: Adaptor     => openAdaptor(adaptor)
+      case typ: Type            => state.current.emitType(typ)
+      case function: Function   => openFunction(function)
+      case st: State            => openState(st)
+      case step: SagaStep       => openSagaStep(step)
       case streamlet: Streamlet => openStreamlet(streamlet)
       case processor: Processor[_] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
@@ -100,17 +114,17 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case _: Root       => () // ignore
       case _: Enumerator => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
-           _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
-           _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
+          _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
+          _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
         () // not  containers
 
     }
   }
 
   def processLeaf(
-                   definition: LeafDefinition,
-                   parents: Seq[Definition]
-                 ): Unit = {
+    definition: LeafDefinition,
+    parents: Seq[Definition]
+  ): Unit = {
     definition match {
       case onClause: OnClause => processOnClause(onClause)
       case invariant: Invariant =>
@@ -130,16 +144,16 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   def closeContainer(
-                      container: Definition,
-                      parents: Seq[Definition]
-                    ): Unit = {
+    container: Definition,
+    parents: Seq[Definition]
+  ): Unit = {
     container match {
-      case _: Type            => () // openContainer did all of it
-      case epic: Epic         => closeEpic(epic)
-      case uc: UseCase        => closeUseCase(uc)
-      case st: State          => state.withCurrent(_.closeDef(st))
-      case _: OnMessageClause => closeOnClause()
-      case _: Root                  => () // ignore
+      case _: Type               => () // openContainer did all of it
+      case epic: Epic            => closeEpic(epic)
+      case uc: UseCase           => closeUseCase(uc)
+      case st: State             => state.withCurrent(_.closeDef(st))
+      case _: OnMessageClause    => closeOnClause()
+      case _: Root               => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
         // Plant, Streamlet, Function, SagaStep
@@ -148,8 +162,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def openDomain(
-                          domain: Domain
-                        ): Unit = {
+    domain: Domain
+  ): Unit = {
     val s0: PrettifyState = state.withCurrent(_.openDef(domain))
     domain.authors.foldLeft[PrettifyState](s0) { (st: PrettifyState, author) =>
       val s1: PrettifyState = st.withCurrent(
@@ -187,8 +201,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def closeEpic(
-                         story: Epic
-                       ): Unit = {
+    story: Epic
+  ): Unit = {
     state.withCurrent(_.closeDef(story))
   }
 
@@ -203,12 +217,12 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       )
     else
       useCase.contents.foreach {
-        case si: SequentialInteractions => () // FIXME
-        case pi: ParallelInteractions => () // FIXME
-        case oi: OptionalInteractions => () // FIXME
+        case si: SequentialInteractions     => () // FIXME
+        case pi: ParallelInteractions       => () // FIXME
+        case oi: OptionalInteractions       => () // FIXME
         case twori: TwoReferenceInteraction => () // FIXME
-        case gi: GenericInteraction => () // FIXME
-        case _: Comment => ()
+        case gi: GenericInteraction         => () // FIXME
+        case _: Comment                     => ()
       }
     end if
   }
@@ -222,8 +236,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def openAdaptor(
-                           adaptor: Adaptor
-                         ): Unit = {
+    adaptor: Adaptor
+  ): Unit = {
     state.withCurrent(
       _.addIndent(PrettifyPass.keyword(adaptor))
         .add(" ")
@@ -244,16 +258,16 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def openStreamlet(
-                             streamlet: Streamlet
-                           ): Unit = {
+    streamlet: Streamlet
+  ): Unit = {
     state.withCurrent { file =>
       file.openDef(streamlet).emitStreamlets(streamlet)
     }
   }
 
   private def processOnClause(
-                               onClause: OnClause
-                             ): Unit = {
+    onClause: OnClause
+  ): Unit = {
     onClause match {
       case omc: OnMessageClause =>
         state.withCurrent(
@@ -288,8 +302,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def doConnector(
-                           conn: Connector
-                         ): Unit = {
+    conn: Connector
+  ): Unit = {
     state.withCurrent { file =>
       file
         .openDef(conn)
@@ -313,8 +327,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def openFunction[TCD <: Definition](
-                                               function: Function
-                                             ): Unit = {
+    function: Function
+  ): Unit = {
     state.withCurrent(_.openDef(function))
     function.input.foreach(te => state.withCurrent(_.addIndent("requires ").emitTypeExpression(te).nl))
     function.output.foreach(te => state.withCurrent(_.addIndent("returns  ").emitTypeExpression(te).nl))
@@ -322,8 +336,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def openState(
-                         riddl_state: State
-                       ): Unit = {
+    riddl_state: State
+  ): Unit = {
     state.withCurrent { st =>
       st.addIndent()
         .add(
@@ -338,8 +352,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def openSagaStep(
-                            step: SagaStep
-                          ): Unit = {
+    step: SagaStep
+  ): Unit = {
     state.withCurrent(
       _.openDef(step)
         .emitCodeBlock(step.doStatements)
@@ -349,10 +363,10 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def openInclude[T <: Definition](
-                                            @unused include: Include[T]
-                                          ): Unit = {
+    @unused include: Include[T]
+  ): Unit = {
     if !state.options.singleFile then {
-      include.origin  match {
+      include.origin match {
         case path: String if path.startsWith("http") =>
           val url = java.net.URI.create(path).toURL
           state.current.add(s"include \"$path\"")
@@ -369,8 +383,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
   }
 
   private def closeInclude[T <: Definition](
-                                             @unused include: Include[T]
-                                           ): Unit = {
+    @unused include: Include[T]
+  ): Unit = {
     if !state.options.singleFile then { state.popFile() }
   }
 }

@@ -11,7 +11,7 @@ class RootOverviewDiagramTest extends RunPassTestBase {
   "ContextDiagram" should {
     "generate a simple diagram correctly" in {
       val input = RiddlParserInput(Path.of("hugo/src/test/input/context-relationships.riddl"))
-      val result = runPassesWith(input, DiagramsPass.creator)
+      val result = runPassesWith(input, DiagramsPass.creator())
       val diagram = RootOverviewDiagram(result.root)
       val lines = diagram.generate
       lines mustNot be(empty)

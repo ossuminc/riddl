@@ -6,10 +6,10 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.CommandOptions.commandOptionsParser
-import com.ossuminc.riddl.commands.CommonOptionsHelper.commonOptionsParser
-import com.ossuminc.riddl.commands.CommandOptions
-import com.ossuminc.riddl.commands.CommandPlugin
+import com.ossuminc.riddl.command.CommandOptions.commandOptionsParser
+import com.ossuminc.riddl.command.CommonOptionsHelper.commonOptionsParser
+import com.ossuminc.riddl.command.CommandOptions
+import com.ossuminc.riddl.command.CommandPlugin
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult

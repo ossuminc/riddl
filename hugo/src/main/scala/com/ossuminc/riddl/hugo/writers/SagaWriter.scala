@@ -18,7 +18,7 @@ trait SagaWriter { this: MarkdownWriter =>
   }
 
   def emitSaga(saga: Saga, parents: Parents): Unit = {
-    containerHead(saga, "Saga")
+    containerHead(saga)
     emitDefDoc(saga, parents)
     emitOptions(saga.options)
     emitInputOutput(saga.input, saga.output)

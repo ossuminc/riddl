@@ -45,7 +45,7 @@ case class MessageOutput(
 // a set of tabs:
 //
 
-case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCommand.Options)
+case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)
     extends CollectingPass[MessageInfo](input, outputs) {
 
   requires(SymbolsPass)
@@ -90,7 +90,9 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoCo
   }
 }
 
-object MessagesPass extends PassInfo {
+object MessagesPass extends PassInfo[HugoPass.Options] {
   val name: String = "Messages"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => MessagesPass(in, out, HugoCommand.Options()) }
+  def creator(options: HugoPass.Options): PassCreator = {
+    (in: PassInput, out: PassesOutput) => MessagesPass(in, out, options)
+  }
 }

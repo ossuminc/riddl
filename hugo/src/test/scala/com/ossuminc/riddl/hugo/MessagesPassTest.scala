@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.passes.Pass
-import com.ossuminc.riddl.testkit.ValidatingTest
+import com.ossuminc.riddl.passes.validate.ValidatingTest
 
 class MessagesPassTest extends ValidatingTest {
 
@@ -14,7 +14,7 @@ class MessagesPassTest extends ValidatingTest {
           val errors = pr.messages.justErrors.format
           fail(errors)
         else
-          val pass = new MessagesPass(pr.input, pr.outputs, HugoCommand.Options())
+          val pass = new MessagesPass(pr.input, pr.outputs, HugoPass.Options())
           val output: MessageOutput = Pass.runPass[MessageOutput](pr.input, pr.outputs, pass)
           output.collected.size must be(6)
       }

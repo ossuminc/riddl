@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.themes
 
-import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
@@ -22,7 +22,7 @@ trait ThemeWriter {
     extras: Map[String, String] = Map.empty[String, String]
   ): Unit
 
-  def containerHead(cont: Definition, titleSuffix: String): Unit
+  def containerHead(cont: Definition): Unit
 
   def leafHead(definition: Definition, weight: Int): Unit
 
@@ -38,7 +38,7 @@ object ThemeWriter {
     path: Path,
     input: PassInput,
     outputs: PassesOutput,
-    options: HugoCommand.Options,
+    options: HugoPass.Options,
     commonOptions: CommonOptions
   ): MarkdownWriter = {
     options.hugoThemeName match {

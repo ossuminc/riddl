@@ -6,8 +6,8 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.CommandOptions.optional
-import com.ossuminc.riddl.commands.TranslationCommand
+import com.ossuminc.riddl.command.CommandOptions.optional
+import com.ossuminc.riddl.command.TranslationCommand
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesCreator}
@@ -22,30 +22,21 @@ import java.nio.file.Path
 
 object PrettifyCommand {
   val cmdName = "prettify"
-  case class Options(
-    override val inputFile: Option[Path] = None,
-    override val outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
-    override val projectName: Option[String] = None,
-    override val singleFile: Boolean = true
-  ) extends TranslationCommand.Options
-      with PrettifyOptions {
-    def command: String = cmdName
-  }
 }
 
 /** A command to Prettify RIDDL Source */
-class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](PrettifyCommand.cmdName) {
+class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyCommand.cmdName) {
 
-  import PrettifyCommand.Options
+  import PrettifyPass.Options
 
-  def overrideOptions(options: PrettifyCommand.Options, newOutputDir: Path): PrettifyCommand.Options = {
+  def overrideOptions(options: PrettifyPass.Options, newOutputDir: Path): PrettifyPass.Options = {
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  override def getOptions: (OParser[Unit, PrettifyCommand.Options], PrettifyCommand.Options) = {
-    val builder = OParser.builder[PrettifyCommand.Options]
+  override def getOptions: (OParser[Unit, PrettifyPass.Options], PrettifyPass.Options) = {
+    val builder = OParser.builder[PrettifyPass.Options]
     import builder.*
-    cmd(pluginName)
+    cmd(PrettifyCommand.cmdName)
       .children(
         inputFile((v, c) => c.copy(inputFile = Option(v.toPath))),
         outputDir((v, c) => c.copy(outputDir = Option(v.toPath))),
@@ -61,10 +52,10 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
       )
       .text("""Parse and validate the input-file and then reformat it to a
              |standard layout written to the output-dir.  """.stripMargin) ->
-      PrettifyCommand.Options()
+      PrettifyPass.Options()
   }
 
-  override def getConfigReader: ConfigReader[PrettifyCommand.Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader: ConfigReader[PrettifyPass.Options] = { (cur: ConfigCursor) =>
     for
       topCur <- cur.asObjectCursor
       cmdCur <- topCur.atKey(PrettifyCommand.cmdName)
@@ -80,7 +71,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
         }
       singleFileRes <- objCur.atKey("single-file")
       singleFile <- singleFileRes.asBoolean
-    yield PrettifyCommand.Options(
+    yield PrettifyPass.Options(
       Option(Path.of(inputPath)),
       Option(Path.of(outputPath)),
       Option(projectName),
@@ -91,11 +82,11 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
   override def getPasses(
     log: Logger,
     commonOptions: CommonOptions,
-    options: PrettifyCommand.Options
+    options: PrettifyPass.Options
   ): PassesCreator = {
     standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
-        val state = PrettifyState(commonOptions, options)
+        val state = PrettifyState(options)
         PrettifyPass(input, outputs, state)
       }
     )

@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
-import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.language.{AST, CommonOptions}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
@@ -27,7 +27,7 @@ case class DotdockWriter(
   filePath: Path,
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoCommand.Options,
+  options: HugoPass.Options,
   commonOptions: CommonOptions
 ) extends MarkdownWriter {
   final val name: String = DotdockWriter.name
@@ -44,7 +44,7 @@ case class DotdockWriter(
     extras: Map[String, String] = Map.empty[String, String]
   ): Unit = ???
 
-  def containerHead(cont: AST.Definition, titleSuffix: String): Unit = ???
+  def containerHead(cont: AST.Definition): Unit = ???
 
   def leafHead(definition: Definition, weight: Int): Unit = ???
 

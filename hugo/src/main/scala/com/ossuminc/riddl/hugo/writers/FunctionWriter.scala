@@ -6,7 +6,7 @@ import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 trait FunctionWriter { this: MarkdownWriter =>
 
   def emitFunction(function: Function, parents: Parents): Unit = {
-    containerHead(function, "Function")
+    containerHead(function)
     h2(function.identify)
     emitVitalDefinitionDetails(function, parents)
     emitInputOutput(function.input, function.output)

@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.themes
 
-import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
@@ -8,7 +8,7 @@ import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import java.nio.file.Path
 
 case class GeekDocGenerator(
-  options: HugoCommand.Options,
+  options: HugoPass.Options,
   input: PassInput,
   outputs: PassesOutput,
   messages: Messages.Accumulator
@@ -74,7 +74,7 @@ case class GeekDocGenerator(
   }
 
   // scalastyle:off method.length
-  def makeTomlFile(options: HugoCommand.Options, author: Option[Author]): String = {
+  def makeTomlFile(options: HugoPass.Options, author: Option[Author]): String = {
     val auth: Author = author.getOrElse(
       Author(
         1 -> 1,

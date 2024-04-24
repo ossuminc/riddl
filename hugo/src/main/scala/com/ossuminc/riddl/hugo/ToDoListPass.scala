@@ -24,7 +24,7 @@ case class ToDoListOutput(
   collected: Seq[ToDoItem] = Seq.empty
 ) extends CollectingPassOutput[ToDoItem]
 
-case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCommand.Options)
+case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)
     extends CollectingPass[ToDoItem](input, outputs) {
 
   private val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
@@ -74,9 +74,11 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoCo
   def postProcess(root: Root): Unit = ()
 }
 
-object ToDoListPass extends PassInfo {
+object ToDoListPass extends PassInfo[HugoPass.Options] {
   val name: String = "ToDoList"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ToDoListPass(in, out, HugoCommand.Options() ) }
+  def creator(options: HugoPass.Options): PassCreator = { 
+    (in: PassInput, out: PassesOutput) => ToDoListPass(in, out, options ) 
+  }
 }
 
 // val finder: Finder = Finder(root)

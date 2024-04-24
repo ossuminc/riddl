@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
+import com.ossuminc.riddl.command.{CommonOptionsHelper, CommandPlugin, CommandOptions}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

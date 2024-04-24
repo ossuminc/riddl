@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.commands
+package com.ossuminc.riddl.command
 
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages
@@ -15,7 +15,6 @@ import com.ossuminc.riddl.language.Messages.highestSeverity
 import com.ossuminc.riddl.language.Messages.severes
 import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.commands.CommonOptionsHelper
 import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import scopt.OParser

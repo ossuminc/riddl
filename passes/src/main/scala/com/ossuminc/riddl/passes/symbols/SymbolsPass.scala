@@ -9,15 +9,17 @@ package com.ossuminc.riddl.passes.symbols
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.symbols.Symbols.*
-import com.ossuminc.riddl.passes.{Pass, PassInfo, PassInput, PassOutput, PassesOutput, PassCreator}
+import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
 
 import scala.annotation.unused
 import scala.collection.mutable
 
-object SymbolsPass extends PassInfo {
+object SymbolsPass extends PassInfo[PassOptions] {
   val name: String = "Symbols"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => SymbolsPass(in, out) }
+  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    SymbolsPass(in, out)
+  }
 }
 
 /** Symbol Table for Validation and other purposes. This symbol table is built from the AST model after syntactic
@@ -42,7 +44,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   private def rootLessParents(parents: Parents): Parents = {
     parents.filter {
-      case _: Root              => false // Roots don't have names and don't matter
+      case _: Root                       => false // Roots don't have names and don't matter
       case x: Definition if x.isImplicit => false // Parents with no names don't count
       case _                             => true // Everything else is fair game
     }
@@ -50,9 +52,9 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   def process(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case _: Root              => // NOTE: Root doesn't have any names
+      case _: Root                         => // NOTE: Root doesn't have any names
       case nv: NamedValue if nv.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
-      case namedValue: NamedValue  => // NOTE: Anything with a name goes in symbol table
+      case namedValue: NamedValue => // NOTE: Anything with a name goes in symbol table
         val name = namedValue.id.value
         if name.nonEmpty then {
           val parentsCopy: Parents = rootLessParents(parents.toSeq)

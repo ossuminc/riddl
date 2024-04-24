@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.commands
+package com.ossuminc.riddl.command
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
@@ -28,6 +28,14 @@ trait CommandOptions {
     f: Path => Either[Messages, S]
   ): Either[Messages, S] = {
     CommandOptions.withInputFile(inputFile, command)(f)
+  }
+  
+  def check: Messages = {
+    if inputFile.isEmpty then {
+      Messages.errors("An input path was not provided.")
+    } else {
+      Messages.empty
+    }
   }
 }
 

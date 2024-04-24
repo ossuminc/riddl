@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.CommandOptions.optional
+import com.ossuminc.riddl.command.CommandOptions.optional
+import com.ossuminc.riddl.command.{CommandOptions,CommandPlugin}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors

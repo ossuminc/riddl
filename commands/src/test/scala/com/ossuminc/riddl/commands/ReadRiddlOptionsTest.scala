@@ -1,12 +1,14 @@
 package com.ossuminc.riddl.commands
 
+import com.ossuminc.riddl.command.{CommandTestBase,InputFileCommandPlugin,CommonOptionsHelper}
+import com.ossuminc.riddl.language.Messages.Messages
 import org.scalatest.exceptions.TestFailedException
 
 import java.nio.file.Path
 
 /** Unit Tests For ReadRiddlOptionsTest */
-class xReadRiddlOptionsTest extends CommandTestBase {
-
+class ReadRiddlOptionsTest extends CommandTestBase("commands/src/test/input/") {
+  
   "RiddlOptions" should {
     "read for dump" in {
       val expected = InputFileCommandPlugin

@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.commands
+package com.ossuminc.riddl.command
 
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
 import com.ossuminc.riddl.utils.{RiddlBuildInfo, SysLogger}
-import com.ossuminc.riddl.commands.CommandOptions.optional 
+import com.ossuminc.riddl.command.CommandOptions.optional 
 import scopt.DefaultOEffectSetup
 import scopt.DefaultOParserSetup
 import scopt.OParser

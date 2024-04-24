@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.themes
 
-import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.diagrams.mermaid.UseCaseDiagramSupport
 import com.ossuminc.riddl.language.AST.{Author, Definition, NamedValue, PathIdentifier, UseCase}
 import com.ossuminc.riddl.language.Messages
@@ -9,7 +9,7 @@ import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import scala.reflect.ClassTag
 
 case class DotdockGenerator(
-  options: HugoCommand.Options,
+  options: HugoPass.Options,
   input: PassInput,
   outputs: PassesOutput,
   messages: Messages.Accumulator
@@ -21,5 +21,5 @@ case class DotdockGenerator(
 
   def makeDocAndParentsLinks(definition: NamedValue): String = "" // TODO: implement makeDocAndParentsLink
   
-  def makeTomlFile(options: HugoCommand.Options, author: Option[Author]): String = "" // TODO: implement makeTomlFile
+  def makeTomlFile(options: HugoPass.Options, author: Option[Author]): String = "" // TODO: implement makeTomlFile
 }

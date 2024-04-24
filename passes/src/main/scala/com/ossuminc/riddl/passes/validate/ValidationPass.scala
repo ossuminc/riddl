@@ -8,8 +8,8 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.language.Messages.{Message, MissingWarning, StyleWarning, error, missing}
-import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.utils.SeqHelpers.*
@@ -18,9 +18,11 @@ import scala.collection.mutable
 import scala.util.control.NonFatal
 import scala.jdk.CollectionConverters.*
 
-object ValidationPass extends PassInfo {
+object ValidationPass extends PassInfo[PassOptions] {
   val name: String = "Validation"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ValidationPass(in, out) }
+  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    ValidationPass(in, out)
+  }
 }
 
 /** The ValidationPass
@@ -251,9 +253,9 @@ case class ValidationPass(
             checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
             checkTypeRef(to, onClause, parents)
             checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-          case _: CodeStatement  => ()
-          case _: StopStatement  => ()
-          case _: Comment        => ()
+          case _: CodeStatement => ()
+          case _: StopStatement => ()
+          case _: Comment       => ()
         }
       }
   }
