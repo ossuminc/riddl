@@ -44,23 +44,17 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
     parents: Seq[Definition]
   ): String = {
     val typeName = makeTypeName(to.typeEx, parents)
-    if typeName.nonEmpty then {
-      to.typeEx match {
-        case _: OneOrMore =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--|{ " + typeName + " : references" }
-        case _: ZeroOrMore =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--o{ " + typeName + " : references" }
-        case _: Optional =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--o| " + typeName + " : references" }
-        case _: AliasedTypeExpression | _: EntityReferenceTypeExpression | _: UniqueId =>
-          if typeName.isEmpty then typeName
-          else { from + " ||--|| " + typeName + " : references" }
+    if typeName.nonEmpty then
+      val connector = to.typeEx match
+        case _: OneOrMore                     => from + " ||--|{ " + typeName
+        case _: ZeroOrMore                    => from + " ||--o{ " + typeName
+        case _: Optional                      => from + " ||--o| " + typeName
+        case _: AliasedTypeExpression         => from + " ||--|| " + typeName
+        case _: EntityReferenceTypeExpression => from + " ||--|| " + typeName
+        case _: UniqueId                      => from + " ||--|| " + typeName
         case _ => ""
-      }
-    } else { typeName }
+      connector + " : references"  
+    else typeName
   }
 
   def generate(

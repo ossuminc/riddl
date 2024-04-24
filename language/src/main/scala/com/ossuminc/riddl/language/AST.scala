@@ -275,11 +275,7 @@ object AST {
       .map(_.format)
       .mkString("(", ", ", ")")
   }
-
-  sealed trait ConstrainedOptionValue extends OptionValue {
-    def accepted: Seq[String]
-  }
-
+  
   sealed trait NamedValue extends RiddlValue with WithIdentifier
 
   sealed trait NamedContainer[CV <: RiddlValue] extends NamedValue with Container[CV]

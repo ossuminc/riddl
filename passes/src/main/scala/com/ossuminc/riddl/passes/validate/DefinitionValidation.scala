@@ -6,67 +6,17 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.AST.{ConstrainedOptionValue, *}
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 import scala.math.abs
 
-/** A Trait that defines typical Validation checkers for validating definitions  */
+/** A Trait that defines typical Validation checkers for validating definitions */
 trait DefinitionValidation extends BasicValidation {
 
   def symbols: SymbolsOutput
-
-  def checkOptions[T <: OptionValue](options: Seq[T], loc: At): this.type = {
-    check(
-      options.sizeIs == options.distinct.size,
-      "RiddlOptions should not be repeated",
-      Error,
-      loc
-    )
-    for {
-      option: OptionValue <- options
-    } {
-      option match {
-        case cov: ConstrainedOptionValue =>
-          val acceptable: Seq[String] = cov.accepted
-          for {
-            value <- cov.args if !acceptable.contains(value.s)
-          } {
-            messages.addWarning(
-              value.loc,
-              s"Value `$value` for option `${option.name} is not one of the accepted values."
-            )
-          }
-        case ov: OptionValue if ov.name == "css" =>
-          // TODO: The following doesn't work very well, internet call to W3C validator. need something simpler
-          // import com.jcabi.w3c.{ValidatorBuilder, ValidationResponse, Defect }
-          // val validator = new ValidatorBuilder().css
-          for { item <- option.args } do {
-            val css = s"p { $item ; }"
-
-            //          try {
-            //            val response: ValidationResponse  = validator.validate(css)
-            //            if !response.valid() then
-            //              def convertDefect(defect: Defect, kind: Messages.KindOfMessage ): Message = {
-            //                Message(option.loc, s"In css value '$item': ${defect.message()}", kind)
-            //              }
-            //              val msgs = response.errors().asScala.map(convertDefect(_,Messages.Error)) ++
-            //                response.warnings().asScala.map(convertDefect(_,Messages.Warning))
-            //              msgs.foreach(messages.add)
-            //            end if
-            //          } catch {
-            //            case NonFatal(exception) =>
-            //              val message: Message = Messages.exceptionToError(exception, option.loc)
-            //              messages.add(message)
-            //          }
-          }
-        case _ => ()
-      }
-    }
-    this
-  }
 
   private def checkUniqueContent(definition: Definition): this.type = {
     val allNamedValues = definition.namedValues
@@ -75,9 +25,9 @@ trait DefinitionValidation extends BasicValidation {
       val duplicates: Map[String, Seq[NamedValue]] =
         allNamedValues.groupBy(_.identify).filterNot(_._2.size < 2)
       if duplicates.nonEmpty then {
-        val details = duplicates.map {
-            case (_: String, defs: Seq[NamedValue]) =>
-              defs.map(_.identifyWithLoc).mkString(", and ")
+        val details = duplicates
+          .map { case (_: String, defs: Seq[NamedValue]) =>
+            defs.map(_.identifyWithLoc).mkString(", and ")
           }
           .mkString("", "\n  ", "\n")
         messages.addError(
@@ -171,7 +121,8 @@ trait DefinitionValidation extends BasicValidation {
           desc.loc
         )
       }
-    this  }
+    this
+  }
 
   def checkStreamletShape(proc: Streamlet): this.type = {
     val ins = proc.inlets.size
