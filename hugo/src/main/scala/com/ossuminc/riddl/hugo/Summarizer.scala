@@ -32,32 +32,11 @@ trait Summarizer {
         .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
       mdw.list(domains)
       mdw.h2("Indices")
-      val glossary =
-        if options.withGlossary then {
-          Seq("[Glossary](glossary)")
-        } else {
-          Seq.empty[String]
-        }
-      val todoList = {
-        if options.withTODOList then {
-          Seq("[To Do List](todolist)")
-        } else {
-          Seq.empty[String]
-        }
-      }
-      val statistics = {
-        if options.withStatistics then {
-          Seq("[Statistics](statistics)")
-        } else {
-          Seq.empty[String]
-        }
-      }
-      val messageSummary = {
-        if options.withMessageSummary then {
-          Seq("[Message Summary](message")
-        }
-      }
-      mdw.list(glossary ++ todoList ++ statistics)
+      val glossary = if options.withGlossary then Seq("[Glossary](glossary)") else Seq.empty[String]
+      val todoList = if options.withTODOList then Seq("[To Do List](todolist)") else Seq.empty[String]
+      val statistics = if options.withStatistics then Seq("[Statistics](statistics)") else Seq.empty[String]
+      val messageSummary = if options.withMessageSummary then Seq("[Message Summary](message") else Seq.empty[String]
+      mdw.list(glossary ++ todoList ++ statistics ++ messageSummary)
     }
   }
 
@@ -101,7 +80,9 @@ trait Summarizer {
       }
   }
 
-  private def makeUsers(): Unit = {}
+  private def makeUsers(): Unit = {
+    // TODO: Implement a page for use case users
+  }
 
   protected def makeMessageSummary(parents: Symbols.Parents, domain: Domain): Unit = {
     if options.withMessageSummary then

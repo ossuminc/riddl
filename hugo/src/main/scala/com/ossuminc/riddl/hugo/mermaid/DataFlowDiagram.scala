@@ -63,17 +63,17 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
       toDef <- pr.refMap.definitionOf[Inlet](connector.to, connector)
       fromDef <- pr.refMap.definitionOf[Outlet](connector.from, connector)
     } yield {
-      val to_users: Seq[Definition] = pr.usage.getUsers(toDef).flatMap {
+      val toUsers: Seq[Definition] = pr.usage.getUsers(toDef).flatMap {
         case oc: OnClause => pr.symbols.parentOf(oc).flatMap(pr.symbols.parentOf)
         case e: Entity    => Seq.empty
         case _            => Seq.empty // FIXME: unfinished cases here
       }
-      val from_users = pr.usage.getUsers(fromDef)
-      (Seq(fromDef, toDef) ++ to_users ++ from_users).distinct.filterNot(_.isInstanceOf[Connector])
+      val fromUsers = pr.usage.getUsers(fromDef)
+      (Seq(fromDef, toDef) ++ toUsers ++ fromUsers).distinct.filterNot(_.isInstanceOf[Connector])
     }
   }.getOrElse(Seq.empty)
 
-  private def generate(context: Context): String = {
+  def generate(context: Context): String = {
     sb.append("flowchart LR"); nl
     val parts = for
       connector <- context.connectors

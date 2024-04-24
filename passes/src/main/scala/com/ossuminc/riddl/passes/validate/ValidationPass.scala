@@ -456,7 +456,6 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, e)
-    checkOptions[OptionValue](e.options, e.loc)
     if e.states.isEmpty && !e.isEmpty then {
       messages.add(
         Message(
@@ -615,7 +614,6 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, c)
-    checkOptions[OptionValue](c.options, c.loc)
     checkDescription(c)
   }
 
