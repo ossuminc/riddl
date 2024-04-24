@@ -35,8 +35,7 @@ trait Summarizer {
       val glossary = if options.withGlossary then Seq("[Glossary](glossary)") else Seq.empty[String]
       val todoList = if options.withTODOList then Seq("[To Do List](todolist)") else Seq.empty[String]
       val statistics = if options.withStatistics then Seq("[Statistics](statistics)") else Seq.empty[String]
-      val messageSummary = if options.withMessageSummary then Seq("[Message Summary](message") else Seq.empty[String]
-      mdw.list(glossary ++ todoList ++ statistics ++ messageSummary)
+      mdw.list(glossary ++ todoList ++ statistics)
     }
   }
 
