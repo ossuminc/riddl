@@ -67,10 +67,8 @@ case class GeekDocWriter(
         cont.brief.fold(cont.id.format + " has no brief description.")(_.s)
       ),
       Map(
-        "geekdocCollapseSection" -> "true"
-        /* FIXME: "geekdocFilePath" ->
-          s"${makeFilePath(cont).getOrElse("no-such-file")}"
-         */
+        "geekdocCollapseSection" -> "true",
+        // FIXME: "geekdocFilePath" -> s"${generator.makeFilePath(cont).getOrElse("no-such-file")}" 
       )
     )
   }
