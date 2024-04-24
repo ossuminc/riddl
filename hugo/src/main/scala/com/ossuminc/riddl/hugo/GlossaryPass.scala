@@ -31,7 +31,7 @@ case class GlossaryOutput(
 case class GlossaryPass(
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoCommand.Options
+  options: HugoPass.Options
 ) extends CollectingPass[GlossaryEntry](input, outputs) {
 
   private val generator = ThemeGenerator(options, input, outputs, messages)

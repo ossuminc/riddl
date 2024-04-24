@@ -8,7 +8,7 @@ import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 trait EpicWriter { this: MarkdownWriter =>
 
   def emitEpic(epic: Epic, parents: Parents): Unit = {
-    containerHead(epic, "Epic")
+    containerHead(epic)
     h2(epic.identify)
     emitBriefly(epic, parents)
     if epic.userStory.nonEmpty then {

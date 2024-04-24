@@ -1,8 +1,8 @@
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.testkit.RunCommandSpecBase
+import com.ossuminc.riddl.command.CommandTestBase
 
-class HugoCommandTest extends RunCommandSpecBase  {
+class HugoCommandTest extends CommandTestBase  {
 
   val inputFile = "hugo/src/test/input/rbbq.riddl"
   val hugoConfig = "hugo/src/test/input/hugo.conf"
@@ -21,7 +21,7 @@ class HugoCommandTest extends RunCommandSpecBase  {
         outputDir("hugo"),
         "--hugo-theme-name", "GeekDoc"
       )
-      runWith(args)
+      runCommand(args)
     }
     "handle hugo from config" in {
       val args = Seq(
@@ -32,7 +32,7 @@ class HugoCommandTest extends RunCommandSpecBase  {
         hugoConfig,
         "hugo"
       )
-      runWith(args)
+      runCommand(args)
     }
   }
 }

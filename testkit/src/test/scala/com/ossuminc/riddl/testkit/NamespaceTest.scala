@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.testkit
 
-import com.ossuminc.riddl.commands.ASimpleTestCommand
+import com.ossuminc.riddl.command.ASimpleTestCommand
 import com.ossuminc.riddl.language.Messages.*
 
 import java.nio.file.Path

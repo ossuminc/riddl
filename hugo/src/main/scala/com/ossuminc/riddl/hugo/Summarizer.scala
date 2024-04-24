@@ -1,6 +1,7 @@
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.language.AST.{Definition, Domain, PathIdentifier, Root}
+import com.ossuminc.riddl.language.AST.{Domain, Root}
+import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.utils.Timer
 import diagrams.mermaid.RootOverviewDiagram
 
@@ -11,7 +12,6 @@ trait Summarizer {
 
   def summarize(): Unit = {
     makeIndex()
-    makeMessageSummary()
     makeStatistics()
     makeGlossary()
     makeUsers()
@@ -103,30 +103,20 @@ trait Summarizer {
 
   private def makeUsers(): Unit = {}
 
-  private def makeMessageSummary(): Unit = {
-    Timer.time(s"Messages Summaries for ${root.domains.size} Domains ") {
-      if options.withMessageSummary then
-        for { domain <- root.domains } do {
-          val path = generator.makeDocLink(domain)
-          val fileName = s"${domain.id.value}-messages.md"
-          val mdw = makeWriter(Seq(domain.id.value), fileName)
-          mdw.fileHead(
-            s"${domain.identify} Message Summary",
-            25,
-            Some(s"Message Summary for ${domain.identify}")
-          )
-          outputs.outputOf[MessageOutput](MessagesPass.name) match {
-            case Some(mo) =>
-              val map = mo.collected.filter(_.link.contains(domain.id.value.toLowerCase)).groupBy(_.kind)
-              for { (kind, infos) <- map } do {
-                mdw.h3(s"$kind Messages")
-                mdw.emitMessageSummary(domain, infos, kind)
-              }
-            case None =>
-              mdw.p(s"No message definitions in ${domain.identify}")
+  protected def makeMessageSummary(parents: Symbols.Parents, domain: Domain): Unit = {
+    if options.withMessageSummary then
+      val fileName = s"messages-summary.md"
+      val stringParents = generator.makeStringParents(parents)
+      val mdw = makeWriter(stringParents, fileName)
+      mdw.fileHead(s"Message Summary", 25, Some(s"Message Summary for ${domain.identify}"))
+      outputs.outputOf[MessageOutput](MessagesPass.name) match {
+        case Some(mo) =>
+          val map = mo.collected.filter(_.link.contains(domain.id.value.toLowerCase)).groupBy(_.kind)
+          for { (kind, infos) <- map } do {
+            mdw.emitMessageSummary(domain, infos, kind)
           }
-        }
-      end if
-    }
+        case None =>
+          mdw.p(s"No message definitions in ${domain.identify}")
+      }
   }
 }

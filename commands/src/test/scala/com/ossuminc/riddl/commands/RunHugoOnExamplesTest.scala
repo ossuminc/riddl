@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.hugo
+package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.CommandOptions
-import com.ossuminc.riddl.commands.CommandPlugin
-import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.command.{CommandOptions, CommandPlugin}
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.testkit.RunCommandOnExamplesTest
+import com.ossuminc.riddl.hugo.HugoPass 
 import org.scalatest.Assertion
 
 import java.nio.file.Path
@@ -18,7 +17,7 @@ import scala.annotation.unused
 
 /** Unit Tests To Run Riddlc On Examples */
 class RunHugoOnExamplesTest
-    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand]("hugo", shouldDelete = false) {
+    extends RunCommandOnExamplesTest[HugoPass.Options, HugoCommand]("hugo", shouldDelete = false) {
 
   val validTestNames = Seq("ReactiveBBQ", "dokn", "ReactiveSummit")
 

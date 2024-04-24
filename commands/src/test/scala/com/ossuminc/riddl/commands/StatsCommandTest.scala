@@ -1,17 +1,17 @@
 package com.ossuminc.riddl.commands
 
+import com.ossuminc.riddl.command.CommandTestBase
 
 import java.nio.file.Path
 
 /** Unit Tests For StatsCommandTest */
-class StatsCommandTest extends CommandTestBase {
+class StatsCommandTest extends CommandTestBase("commands/src/test/input") {
 
   val inputFile = "testkit/src/test/input/rbbq.riddl"
 
   "StatsCommand" should {
     "run correctly" in {
-      pending // FIXME
-      val args = common ++ Seq("stats", "-input-file", inputFile)
+      val args = common ++ Seq("stats", "--input-file", inputFile)
       runCommand(args)
     }
 

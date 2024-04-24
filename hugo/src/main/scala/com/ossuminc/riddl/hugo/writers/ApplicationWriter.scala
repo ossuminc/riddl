@@ -9,7 +9,7 @@ trait ApplicationWriter { this: MarkdownWriter =>
     application: Application,
     parents: Parents
   ): Unit = {
-    containerHead(application, "Application")
+    containerHead(application)
     emitVitalDefinitionDetails(application, parents)
     emitDefDoc(application, parents)
     for group <- application.groups do {

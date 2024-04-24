@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.commands
+package com.ossuminc.riddl.command
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser

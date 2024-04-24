@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.testkit
+package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.PrettifyCommand
 import com.ossuminc.riddl.testkit.RunCommandSpecBase
+import com.ossuminc.riddl.prettify.PrettifyPass 
 
 import java.nio.file.Path
 
@@ -26,7 +26,7 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     "load prettify options" in {
       val cmd = new PrettifyCommand
       val conf = Path.of("prettify/src/test/input/prettify.conf")
-      val expected = PrettifyCommand.Options(
+      val expected = PrettifyPass.Options(
         inputFile = Some(Path.of("nada.riddl")),
         outputDir = Some(Path.of("prettify/target/prettify/")),
         projectName = Some("Nada"),

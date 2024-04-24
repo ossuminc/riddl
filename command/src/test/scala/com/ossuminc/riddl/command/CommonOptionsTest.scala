@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.commands
+package com.ossuminc.riddl.command
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-import scala.concurrent.duration.DurationInt
 import java.nio.file.Path
+import scala.concurrent.duration.DurationInt
 
 class CommonOptionsTest extends AnyWordSpec with Matchers {
   "CommonOptions" should {
@@ -167,14 +167,13 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
     }
 
     "empty args are eliminated" in {
-      val opts = Array("--show-times", "parse", "", "  ", "file.riddl")
+      val opts = Array("--show-times", "test",  "", "  ", "file.riddl", "arg1")
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options) =>
           options.showTimes must be(true)
           CommandOptions.parseCommandOptions(remaining) match {
-            case Right(options) => options.inputFile mustBe
-                Some(Path.of("file.riddl"))
+            case Right(options) => options.inputFile mustBe Some(Path.of("file.riddl"))
             case Left(messages) => fail(messages.format)
           }
         case _ => fail("Failed to parse options")
@@ -182,7 +181,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
     }
 
     "load message related common options from a file" in {
-      val optionFile = Path.of("commands/src/test/input/message-options.conf")
+      val optionFile = Path.of("command/src/test/input/message-options.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Right(opts) =>
           opts.showTimes mustBe true

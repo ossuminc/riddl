@@ -9,7 +9,7 @@ trait DomainWriter { this: MarkdownWriter =>
   def emitDomain(domain: Domain, parents: Parents): Unit = {
     val diagram = DomainMapDiagram(domain)
 
-    containerHead(domain, "Domain")
+    containerHead(domain)
     emitVitalDefinitionDetails(domain, parents)
     h2("Domain Map")
     emitMermaidDiagram(diagram.generate)

@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.GeekDocWriter
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -14,7 +14,7 @@ import java.nio.file.Path
 class WriterTest extends AnyWordSpec with Matchers {
 
   def makeMDW(filePath: Path, passesResult: PassesResult): MarkdownWriter = {
-    GeekDocWriter(filePath, passesResult.input, passesResult.outputs, HugoCommand.Options(), CommonOptions())
+    GeekDocWriter(filePath, passesResult.input, passesResult.outputs, HugoPass.Options(), CommonOptions())
   }
 
   def runPasses(

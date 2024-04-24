@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.themes
 
-import com.ossuminc.riddl.hugo.HugoCommand
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
@@ -18,7 +18,7 @@ case class GeekDocWriter(
   filePath: Path,
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoCommand.Options,
+  options: HugoPass.Options,
   commonOptions: CommonOptions
 ) extends MarkdownWriter {
 
@@ -58,10 +58,10 @@ case class GeekDocWriter(
     sb.append(headTemplate)
   }
 
-  def containerHead(cont: Definition, titleSuffix: String): Unit = {
+  def containerHead(cont: Definition): Unit = {
 
     fileHead(
-      cont.id.format + s": $titleSuffix",
+      cont.id.format,
       containerWeight,
       Option(
         cont.brief.fold(cont.id.format + " has no brief description.")(_.s)

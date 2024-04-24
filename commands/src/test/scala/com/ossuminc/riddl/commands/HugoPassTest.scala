@@ -4,18 +4,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.hugo
+package com.ossuminc.riddl.commands
 
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.testkit.RunCommandOnExamplesTest
 import org.scalatest.Assertion
 
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.collection.mutable.ArrayBuffer
 
 class HugoPassTest
-    extends RunCommandOnExamplesTest[HugoCommand.Options, HugoCommand](
+    extends RunCommandOnExamplesTest[HugoPass.Options, HugoCommand](
       commandName = "hugo"
     ) {
 
@@ -61,7 +61,7 @@ class HugoPassTest
     if !Files.exists(outputDir) then { Files.createDirectories(outputDir) }
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
-    val command = "hugo"
+    val command = "hugo --enableGitInfo=false"
     println(s"Running hugo with cwd=$cwdFile, tmpDir=$tmpDir")
     val proc = Process(command, cwd = Option(cwdFile))
     proc.!<(logger) match {

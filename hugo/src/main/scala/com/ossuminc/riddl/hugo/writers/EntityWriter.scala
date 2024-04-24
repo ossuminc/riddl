@@ -56,7 +56,7 @@ trait EntityWriter { this: MarkdownWriter =>
   private def emitFiniteStateMachine(@unused entity: Entity): Unit = ()
 
   def emitEntity(entity: Entity, parents: Parents): Unit = {
-    containerHead(entity, "Entity")
+    containerHead(entity)
     emitDefDoc(entity, parents)
     emitOptions(entity.options)
     if entity.hasOption("finite-state-machine") then {

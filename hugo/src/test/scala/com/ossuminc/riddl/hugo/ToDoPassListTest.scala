@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.testkit.ValidatingTest
+import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.Pass
 
 class ToDoPassListTest extends ValidatingTest {
@@ -14,7 +14,7 @@ class ToDoPassListTest extends ValidatingTest {
           val errors = pr.messages.justErrors.format
           fail(errors)
         else
-          val pass = new ToDoListPass(pr.input, pr.outputs, HugoCommand.Options())
+          val pass = new ToDoListPass(pr.input, pr.outputs, HugoPass.Options())
           val output: ToDoListOutput = Pass.runPass[ToDoListOutput](pr.input, pr.outputs, pass)
           output.collected.size must be(32)
       }

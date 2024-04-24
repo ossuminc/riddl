@@ -330,7 +330,9 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   }
 }
 
-object DiagramsPass extends PassInfo {
+object DiagramsPass extends PassInfo[PassOptions] {
   val name: String = "Diagrams"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => DiagramsPass(in, out) }
+  def creator(options: PassOptions = PassOptions.empty): PassCreator = { 
+    (in: PassInput, out: PassesOutput) => DiagramsPass(in, out)
+  }
 }

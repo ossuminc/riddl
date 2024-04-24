@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.resolve
 import com.ossuminc.riddl.language.AST.{Entity, *}
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
-import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 
@@ -23,9 +23,11 @@ case class ResolutionOutput(
   usage: Usages = Usages.empty
 ) extends PassOutput {}
 
-object ResolutionPass extends PassInfo {
+object ResolutionPass extends PassInfo[PassOptions] {
   val name: String = "Resolution"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => ResolutionPass(in, out) }
+  def creator(options: PassOptions = PassOptions.empty): PassCreator = {
+    (in: PassInput, out: PassesOutput) => ResolutionPass(in, out)
+  }
 }
 
 /** The Reference Resolution Pass */
@@ -227,7 +229,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveARef[Function](func, parents)
       case ReplyStatement(_, message) =>
         resolveARef[Type](message, parents)
-      case _: CodeStatement       => () // no references 
+      case _: CodeStatement       => () // no references
       case _: ReadStatement       => () // no references
       case _: WriteStatement      => () // no references
       case _: ArbitraryStatement  => () // no references

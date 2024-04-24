@@ -10,6 +10,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{Logger, StringHelpers}
+import com.ossuminc.riddl.command.{CommandPlugin,CommandOptions,CommonOptionsHelper}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader

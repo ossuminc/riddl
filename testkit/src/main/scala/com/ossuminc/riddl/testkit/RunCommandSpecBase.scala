@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.testkit
 
-import com.ossuminc.riddl.commands.CommandPlugin
+import com.ossuminc.riddl.command.CommandPlugin
 import org.scalatest.*
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers

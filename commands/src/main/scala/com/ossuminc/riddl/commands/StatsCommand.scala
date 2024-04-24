@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.*
+import com.ossuminc.riddl.command.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.Pass.standardPasses
@@ -16,17 +16,22 @@ import com.ossuminc.riddl.analyses.{StatsOutput, StatsPass}
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
 
-import java.io.File
+import java.io.{File, PrintStream}
+import java.nio.charset.Charset
 import java.nio.file.Path
 
 object StatsCommand {
   val cmdName: String = "stats"
   case class Options(
     inputFile: Option[Path] = None,
-    outputDir: Option[Path] = None
   ) extends PassCommandOptions
-      with CommandOptions {
+      with PassOptions {
     def command: String = cmdName
+    override def check: Messages = {
+      val result = super.check
+      result.dropWhile(_.message.contains("output directory"))
+    }
+    def outputDir: Option[Path] = None
   }
 }
 
@@ -41,9 +46,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
       topRes <- topCur.atKey(pluginName)
       objCur <- topRes.asObjectCursor
       inFileRes <- objCur.atKey("input-file").map(_.asString)
-      outDirRes <- objCur.atKey("output-dir").map(_.asString)
       inFile <- inFileRes
-      outDir <- outDirRes
     yield {
       Options(inputFile = Some(Path.of(inFile)))
     }
@@ -53,20 +56,17 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     import builder.*
     cmd(StatsCommand.cmdName)
       .children(
-        arg[File]("input-file")
-          .action { (file, opt) =>
-            opt.copy(inputFile = Some(file.toPath))
-          }
-          .text("The main input file on which to generate statistics.")
+        opt[File]('I', "input-file").action { (file, opt) =>
+          opt.copy(inputFile = Some(file.toPath))
+        }
+        .text("The main input file on which to generate statistics.")
       )
       .text("Loads a configuration file and executes the command in it") ->
       StatsCommand.Options()
   }
 
   // Members declared in com.ossuminc.riddl.commands.PassCommand
-  def overrideOptions(options: Options, newOutputDir: Path): Options = {
-    options.copy(outputDir = Some(newOutputDir))
-  }
+  def overrideOptions(options: Options, newOutputDir: Path): Options = { options }
 
   override def replaceInputFile(
     opts: Options,
@@ -83,7 +83,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
   }
 
   override def getPasses(log: Logger, commonOptions: CommonOptions, options: Options): PassesCreator = {
-    standardPasses :+ StatsPass.creator
+    standardPasses :+ StatsPass.creator(options)
   }
 
   override def run(
@@ -92,15 +92,15 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    val result = super.run(originalOptions, commonOptions, log, outputDirOverride) 
+    val result = super.run(originalOptions, commonOptions, log, outputDirOverride)
     result match {
       case Left(messages) =>
         Messages.logMessages(messages, log, commonOptions)
       case Right(passesResult) =>
         val stats = passesResult.outputOf[StatsOutput](StatsPass.name)
-        println(stats)
+        System.out.println(stats)
     }
-    result 
+    result
   }
 
 }

@@ -8,15 +8,17 @@ package com.ossuminc.riddl.analyses
 import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 
 import scala.collection.mutable
 
-object StatsPass extends PassInfo {
+object StatsPass extends PassInfo[PassOptions] {
   val name: String = "stats"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => StatsPass(in, out) }
+  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    StatsPass(in, out)
+  }
 }
 
 /** @param isEmpty
@@ -29,7 +31,7 @@ object StatsPass extends PassInfo {
   *   The number of specifications that hve been completed
   * @param numContained
   *   The number of contained definitions
-  * @param numAuthors 
+  * @param numAuthors
   *   The number of defining authors
   * @param numTerms
   *   The number of term definitions
@@ -105,7 +107,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       sizes.foldLeft(0L)((a, b) => a + b)
     }
 
-    definition.contents.vitals.map { (vd: Definition) =>
+    definition.contents.vitals
+      .map { (vd: Definition) =>
         vd match {
           case a: Adaptor     => handlerStatements(a.handlers)
           case a: Application => handlerStatements(a.handlers)

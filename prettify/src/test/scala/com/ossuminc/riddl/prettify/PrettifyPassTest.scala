@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.testkit
+package com.ossuminc.riddl.prettify
 
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
 import com.ossuminc.riddl.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
-import com.ossuminc.riddl.commands.PrettifyCommand
 import com.ossuminc.riddl.testkit.RiddlFilesTestBase
 import org.scalatest.Assertion
 
@@ -19,15 +18,15 @@ import java.io.File
 import java.nio.file.Path
 
 /** Test The PrettifyPass's ability to generate consistent output */
-class PrettifyTest extends RiddlFilesTestBase {
+class PrettifyPassTest extends RiddlFilesTestBase {
 
   def checkAFile(rootDir: Path, file: File): Assertion = { checkAFile(file) }
 
   def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
-        val options = PrettifyCommand.Options(inputFile = Some(Path.of("aFile")))
-        val state = PrettifyState(CommonOptions(), options)
+        val options = PrettifyPass.Options(inputFile = Some(Path.of("aFile")))
+        val state = PrettifyState(options)
         PrettifyPass(input, outputs, state)
       }
     )

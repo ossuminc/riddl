@@ -4,16 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.hugo
+package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.CommandOptions.optional
-import com.ossuminc.riddl.commands.{CommandOptions, PassCommand, PassCommandOptions}
+import com.ossuminc.riddl.command.CommandOptions.optional
+import com.ossuminc.riddl.command.{CommandOptions, PassCommand, PassCommandOptions}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesCreator, PassesOutput, PassesResult}
 import com.ossuminc.riddl.analyses.StatsPass
+import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
 import com.ossuminc.riddl.utils.Logger
@@ -26,82 +27,10 @@ import java.net.URL
 import java.nio.file.Path
 import scala.annotation.unused
 
-/** Unit Tests For HugoCommand */
-object HugoCommand {
-  case class Options(
-    override val inputFile: Option[Path] = None,
-    override val outputDir: Option[Path] = None,
-    override val projectName: Option[String] = None,
-    hugoThemeName: Option[String] = None,
-    enterpriseName: Option[String] = None,
-    eraseOutput: Boolean = false,
-    siteTitle: Option[String] = None,
-    siteDescription: Option[String] = None,
-    siteLogoPath: Option[String] = Some("images/logo.png"),
-    siteLogoURL: Option[URL] = None,
-    baseUrl: Option[URL] = Option(java.net.URI.create("https://example.com/").toURL),
-    themes: Seq[(String, Option[URL])] = Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url)),
-    sourceURL: Option[URL] = None,
-    editPath: Option[String] = Some("edit/main/src/main/riddl"),
-    viewPath: Option[String] = Some("blob/main/src/main/riddl"),
-    withGlossary: Boolean = true,
-    withTODOList: Boolean = true,
-    withGraphicalTOC: Boolean = false,
-    withStatistics: Boolean = true,
-    withMessageSummary: Boolean = true
-  ) extends PassCommandOptions
-      with TranslatingOptions {
-    def command: String = "hugo"
 
-    def outputRoot: Path = outputDir.getOrElse(Path.of("")).toAbsolutePath
+class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
 
-    def contentRoot: Path = outputRoot.resolve("content")
-
-    def staticRoot: Path = outputRoot.resolve("static")
-
-    def themesRoot: Path = outputRoot.resolve("themes")
-
-    def configFile: Path = outputRoot.resolve("config.toml")
-  }
-
-  def getPasses(
-    options: Options
-  ): PassesCreator = {
-    val glossary: PassesCreator =
-      if options.withGlossary then
-        Seq({ (input: PassInput, outputs: PassesOutput) => GlossaryPass(input, outputs, options) })
-      else Seq.empty
-
-    val messages: PassesCreator =
-      if options.withMessageSummary then
-        Seq({ (input: PassInput, outputs: PassesOutput) => MessagesPass(input, outputs, options) })
-      else Seq.empty
-
-    val stats: PassesCreator =
-      if options.withStatistics then Seq({ (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) })
-      else Seq.empty
-
-    val toDo: PassesCreator =
-      if options.withTODOList then
-        Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options) })
-      else Seq.empty
-
-    val diagrams: PassesCreator =
-      Seq({ (input: PassInput, outputs: PassesOutput) => DiagramsPass(input, outputs) })
-
-    standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ diagrams ++ Seq(
-      { (input: PassInput, outputs: PassesOutput) =>
-        val _ = PassesResult(input, outputs, Messages.empty)
-        HugoPass(input, outputs, options)
-      }
-    )
-  }
-
-}
-
-class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
-
-  import HugoCommand.Options
+  import HugoPass.Options
 
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -183,7 +112,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
         opt[String]('n', "site-logo-url")
           .action((s, c) => c.copy(siteLogoURL = Option(java.net.URI(s).toURL)))
           .text("URL from which to copy the site logo.")
-      ) -> HugoCommand.Options()
+      ) -> HugoPass.Options()
   }
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
@@ -272,7 +201,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
           }
         }
       }
-      HugoCommand.Options(
+      HugoPass.Options(
         Option(Path.of(inputPath)),
         Option(Path.of(outputPath)),
         Option(projectName),
@@ -305,7 +234,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
     commonOptions: CommonOptions,
     options: Options
   ): PassesCreator = {
-    HugoCommand.getPasses(options)
+    HugoPass.getPasses(options)
   }
 
   override def replaceInputFile(
@@ -316,7 +245,7 @@ class HugoCommand extends PassCommand[HugoCommand.Options]("hugo") {
   override def loadOptionsFrom(
     configFile: Path,
     commonOptions: CommonOptions
-  ): Either[Messages, HugoCommand.Options] = {
+  ): Either[Messages, HugoPass.Options] = {
     super.loadOptionsFrom(configFile, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
