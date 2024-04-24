@@ -72,7 +72,7 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
     direction: String = "TB"
   ): Unit = {
     val name = containingDefinition.identify
-    addLine(s"subgraph '${containingDefinition.identify}'")
+    addLine(s"subgraph '$name'")
     incr
     if direction.nonEmpty then addLine(s"direction $direction")
     emitNodes(nodes)
