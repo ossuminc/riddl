@@ -19,11 +19,11 @@ import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
 import com.ossuminc.riddl.command.PassCommandOptions
 import com.ossuminc.riddl.analyses.{StatsPass, DiagramsPass}
-import com.ossuminc.riddl.hugo.diagrams.mermaid.*
+import com.ossuminc.riddl.hugo.mermaid.*
+import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.hugo.utils.TreeCopyFileVisitor
 import com.ossuminc.riddl.hugo.themes.{ThemeGenerator, ThemeWriter}
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
-import diagrams.mermaid.RootOverviewDiagram
 
 import java.io.File
 import java.net.URL

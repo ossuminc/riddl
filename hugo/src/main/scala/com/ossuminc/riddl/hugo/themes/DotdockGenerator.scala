@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.HugoPass
-import com.ossuminc.riddl.hugo.diagrams.mermaid.UseCaseDiagramSupport
+import com.ossuminc.riddl.hugo.mermaid.UseCaseDiagramSupport
 import com.ossuminc.riddl.language.AST.{Author, Definition, NamedValue, PathIdentifier, UseCase}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}

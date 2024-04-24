@@ -1,10 +1,11 @@
-package com.ossuminc.riddl.hugo.diagrams.mermaid
+package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.language.AST.NamedValue
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.testkit.RunPassTestBase
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.analyses.{DiagramsPass,DiagramsPassOutput}
+import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
+import com.ossuminc.riddl.hugo.mermaid.UseCaseDiagramSupport
 
 import java.nio.file.Path
 import java.net.URI

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.hugo.diagrams.d3
+package com.ossuminc.riddl.hugo.d3
 
 import com.ossuminc.riddl.utils.PathUtils
 

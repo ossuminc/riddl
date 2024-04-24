@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.diagrams.mermaid
-import com.ossuminc.riddl.hugo.diagrams.mermaid.ContextMapDiagram
+import com.ossuminc.riddl.hugo.mermaid
+import com.ossuminc.riddl.hugo.mermaid.ContextMapDiagram
 import com.ossuminc.riddl.language.AST.{Context, Definition, OccursInContext}
 
 trait ContextWriter { this: MarkdownWriter =>

@@ -1,9 +1,9 @@
 package com.ossuminc.riddl.hugo
 
+import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.language.AST.{Domain, Root}
 import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.utils.Timer
-import diagrams.mermaid.RootOverviewDiagram
 
 import scala.reflect.ClassTag
 

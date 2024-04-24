@@ -1,4 +1,4 @@
-package com.ossuminc.riddl.hugo.diagrams.mermaid
+package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Processor, VitalDefinition}
 

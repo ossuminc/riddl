@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.diagrams.mermaid.DomainMapDiagram
+import com.ossuminc.riddl.hugo.mermaid.DomainMapDiagram
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.hugo.{GlossaryEntry, HugoTestBase}
 import com.ossuminc.riddl.language.AST.Root
@@ -45,7 +45,7 @@ class MarkdownWriterTest extends HugoTestBase {
           info(emitted)
           val expected =
             """---
-              |title: "TestDomain: Domain"
+              |title: "TestDomain"
               |weight: 10
               |draft: "false"
               |description: "Just For Testing"

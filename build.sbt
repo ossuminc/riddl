@@ -19,9 +19,9 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     command,
     analyses,
     prettify,
-    commands,
     hugo,
     testkit,
+    commands,
     riddlc,
     docsite,
     plugin
@@ -120,7 +120,7 @@ lazy val prettify = Module("prettify", "riddl-prettify")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-   .dependsOn(utils, language, comptest(passes), command, testKitDep)
+  .dependsOn(utils, language, comptest(passes), command, testKitDep)
 
 val Hugo = config("hugo")
 lazy val hugo = Module("hugo", "riddl-hugo")
@@ -129,6 +129,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.publishing)
   .settings(
     scalaVersion := "3.4.1",
+    scalacOptions += "-explain-cyclic",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
@@ -219,7 +220,6 @@ lazy val docsite = DocSite("doc", docOutput, docProjects)
     // ),
     // publishSite
   )
-
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info)
