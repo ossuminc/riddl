@@ -1,6 +1,7 @@
-package com.ossuminc.riddl.hugo.diagrams.mermaid
+package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.analyses.DiagramsPass
+import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.testkit.RunPassTestBase
 

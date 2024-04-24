@@ -1,4 +1,4 @@
-package com.ossuminc.riddl.hugo
+package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.CommandTestBase
 

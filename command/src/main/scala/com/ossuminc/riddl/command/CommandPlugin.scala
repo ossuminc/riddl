@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.{At, CommonOptions}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.SevereError
@@ -193,6 +193,25 @@ object CommandPlugin {
         handleCommandResult(result, commonOptions, log)
   }
 
+  def runMainForTest(args: Array[String]): Either[Messages,PassesResult] = {
+    try {
+      val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
+      common match
+        case Some(commonOptions) =>
+          val log: Logger = if commonOptions.quiet then StringLogger() else SysLogger()
+          if remaining.isEmpty then
+            Left(List(Messages.error("No command argument was provided")))
+          else  
+            val name = remaining.head
+            CommandPlugin.runCommandWithArgs(name, remaining, log, commonOptions)
+        case None =>
+          Left(List(Messages.error("Option parsing failed, terminating.")))
+    } catch {
+      case NonFatal(exception) =>
+        Left(List(Messages.severe("Exception Thrown:", exception, At.empty)))
+    }
+  }
+  
   def runMain(args: Array[String], log: Logger = SysLogger()): Int = {
     try {
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
@@ -310,7 +329,7 @@ trait CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) ext
     }
   }
 
-  type OptionPlacer[V] = (V, OPT) => OPT
+  private type OptionPlacer[V] = (V, OPT) => OPT
   protected val builder: OParserBuilder[OPT] = OParser.builder[OPT]
   import builder.*
 

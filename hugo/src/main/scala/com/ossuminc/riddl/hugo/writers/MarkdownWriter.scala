@@ -6,12 +6,11 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.diagrams.mermaid.*
-import com.ossuminc.riddl.hugo.diagrams.mermaid
+import com.ossuminc.riddl.hugo.mermaid.*
+import com.ossuminc.riddl.hugo.mermaid
 import com.ossuminc.riddl.hugo.writers.{AdaptorWriter, DomainWriter}
 import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.Symbols.Parents
@@ -19,7 +18,7 @@ import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.analyses.{KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
-import com.ossuminc.riddl.language.parsing.Keywords.{adaptor, application, author, case_, command, connector, constant, context, entity, epic, field, flow, function, group, handler, inlet, input, invariant, outlet, output, pipe, projector, query, record, replica, reply, repository, result, saga, sink, source, state, streamlet, term, user}
+import com.ossuminc.riddl.language.parsing.Keywords.*
 import com.ossuminc.riddl.utils.{TextFileWriter, Timer}
 
 import java.nio.file.Path

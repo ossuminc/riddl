@@ -30,7 +30,7 @@ class AdaptorWriterTest extends WriterTest {
           info(result)
           result mustNot be(empty)
           val expected = """---
-              |title: "FromTwo: Adaptor"
+              |title: "FromTwo"
               |weight: 10
               |draft: "false"
               |description: "FromTwo has no brief description."

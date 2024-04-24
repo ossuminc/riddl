@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.hugo.diagrams.mermaid
+package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.analyses.UseCaseDiagramData
 import com.ossuminc.riddl.language.AST.*

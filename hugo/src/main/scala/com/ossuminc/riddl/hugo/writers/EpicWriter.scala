@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
-import com.ossuminc.riddl.hugo.diagrams.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
+import com.ossuminc.riddl.hugo.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.language.AST.{Definition, Epic, UseCase, User, UserStory}
 import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 

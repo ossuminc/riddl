@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.hugo
+package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.CommandPlugin
 import com.ossuminc.riddl.language.parsing.ParsingTest
@@ -12,8 +12,8 @@ import com.ossuminc.riddl.language.parsing.ParsingTest
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ParsingTest {
 
-  val regressionsFolder = "hugo/src/test/input/regressions/"
-  val output = "hugo/target/regressions/"
+  val regressionsFolder = "commands/src/test/input/regressions/"
+  val output = "commands/target/regressions/"
 
   "Regressions" should {
     "not produce a MatchError" in {
@@ -27,8 +27,10 @@ class RegressionTests extends ParsingTest {
         "--with-todo-list=true",
         regressionsFolder + source
       )
-      val result = CommandPlugin.runMain(args)
-      result mustBe 0
+      CommandPlugin.runMainForTest(args) match {
+        case Left(messages) => fail(messages.format)
+        case Right(pr) => succeed
+      }
     }
   }
 }

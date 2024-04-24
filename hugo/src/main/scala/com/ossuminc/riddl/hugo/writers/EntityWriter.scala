@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.diagrams.mermaid.EntityRelationshipDiagram
+import com.ossuminc.riddl.hugo.mermaid.EntityRelationshipDiagram
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 

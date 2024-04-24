@@ -6,8 +6,8 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.*
 import com.ossuminc.riddl.passes.symbols.*
 import com.ossuminc.riddl.analyses.*
-import com.ossuminc.riddl.hugo.diagrams.mermaid.UseCaseDiagramSupport
-import com.ossuminc.riddl.hugo.HugoPass 
+import com.ossuminc.riddl.hugo.HugoPass
+import com.ossuminc.riddl.hugo.mermaid.UseCaseDiagramSupport
 import java.nio.file.Path
 
 trait ThemeGenerator extends UseCaseDiagramSupport {
