@@ -40,6 +40,20 @@ lazy val utils: Project = Module("utils", "riddl-utils")
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
 
+val Lexer = config("lexer")
+lazy val lexer: Project = Module("lexer", "riddl-lexer")
+  .configure(With.typical, With.coverage(65))
+  .configure(With.publishing)
+  .settings(
+    scalaVersion := "3.4.1",
+    javacOptions ++= Seq(),
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
+    coverageExcludedPackages := "<empty>;.*BuildInfo;.*Terminals",
+    description := "Abstract Syntax Tree and basic RIDDL language parser",
+    libraryDependencies ++= Dep.testing ++ Seq(Dep.jflex)
+  )
+  .dependsOn(utils)
+
 val Language = config("language")
 lazy val language: Project = Module("language", "riddl-language")
   .configure(With.typical, With.coverage(65))

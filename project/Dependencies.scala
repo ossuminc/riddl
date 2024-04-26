@@ -8,6 +8,7 @@ object V {
   val compress = "1.24.0"
   val config = "1.4.2"
   val fastparse = "3.0.2"
+  val jflex = "1.9.1"
   val jgit = "6.5.0"
   val lang3 = "3.14.0"
   val pureconfig = "0.17.6"
@@ -21,6 +22,7 @@ object Dep {
   val compress = "org.apache.commons" % "commons-compress" % V.compress
   val commons_io = "commons-io" % "commons-io" % V.commons_io
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
+  val jflex = "de.jflex" % "jflex" % "1.9.1"
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
   val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3
   val pureconfig = "com.github.pureconfig" %% "pureconfig-core" % V.pureconfig
