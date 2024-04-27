@@ -46,13 +46,11 @@ class AdaptorWriterTest extends WriterTest {
               || _Authors_ |  |
               || _Definition Path_ | Root.Adaptors.One.FromTwo |
               || _View Source Link_ | [adaptors.riddl(4:5)]() |
+              || _Used By_ | None |
+              || _Uses_ | None |
               |
               |## *RiddlOptions*
               |* css("background: blue")
-              |
-              |## *Used By None*
-              |
-              |## *Uses Nothing*
               |
               |## *Direction: from context Two*
               |
@@ -64,10 +62,8 @@ class AdaptorWriterTest extends WriterTest {
               || _Briefly_ | Brief description missing. |
               || _Definition Path_ | FromTwo.Root.Adaptors.One.Adaptation |
               || _View Source Link_ | [adaptors.riddl(6:15)]() |
-              |
-              |## *Used By None*
-              |
-              |## *Uses Nothing*
+              || _Used By_ | None |
+              || _Uses_ | None |
               |
               |####  On event Adaptors.Two.DidIt
               |```

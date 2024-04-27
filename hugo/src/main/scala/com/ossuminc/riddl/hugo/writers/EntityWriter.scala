@@ -11,7 +11,7 @@ trait EntityWriter { this: MarkdownWriter =>
   private def emitState(
     state: State,
     parents: Parents
-  ): this.type = {
+  ): Unit = {
     h2(state.identify)
     emitDefDoc(state, parents)
     val maybeType = generator.refMap.definitionOf[Type](state.typ.pathId, state)
@@ -24,13 +24,11 @@ trait EntityWriter { this: MarkdownWriter =>
     h2("Fields")
     emitFields(fields)
     for h <- state.handlers do emitHandler(h, state +: parents)
-    emitUsage(state)
   }
 
   def emitHandler(handler: Handler, parents: Parents, level: Int = 3): Unit = {
     heading(handler.identify, level)
     emitDefDoc(handler, parents)
-    emitUsage(handler)
     handler.clauses.foreach { clause =>
       clause match {
         case oic: OnInitClause => heading("Initialize", level + 1)
@@ -57,8 +55,7 @@ trait EntityWriter { this: MarkdownWriter =>
 
   def emitEntity(entity: Entity, parents: Parents): Unit = {
     containerHead(entity)
-    emitDefDoc(entity, parents)
-    emitOptions(entity.options)
+    emitVitalDefinitionDetails(entity, parents)
     if entity.hasOption("finite-state-machine") then {
       h2("Finite State Machine")
       emitFiniteStateMachine(entity)
@@ -69,8 +66,6 @@ trait EntityWriter { this: MarkdownWriter =>
     for handler <- entity.handlers do emitHandler(handler, entity +: parents)
     for function <- entity.functions do emitFunction(function, entity +: parents)
     emitProcessorDetails(entity, parents)
-    emitUsage(entity)
-    emitTerms(entity.terms)
   }
 
 }

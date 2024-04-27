@@ -24,7 +24,6 @@ trait SagaWriter { this: MarkdownWriter =>
     emitInputOutput(saga.input, saga.output)
     emitSagaSteps(saga.sagaSteps)
     // emitProcessorDetails(saga, parents)
-    emitUsage(saga)
     emitTerms(saga.terms)
   }
 }

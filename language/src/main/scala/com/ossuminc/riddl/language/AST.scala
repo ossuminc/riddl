@@ -14,6 +14,7 @@ import java.net.URL
 import java.nio.file.Path
 import scala.concurrent.Future
 import scala.reflect.{ClassTag, classTag}
+import scala.annotation.tailrec
 
 /** Abstract Syntax Tree This object defines the model for processing RIDDL and producing a raw AST from it. This raw
   * AST has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
@@ -275,7 +276,7 @@ object AST {
       .map(_.format)
       .mkString("(", ", ", ")")
   }
-  
+
   sealed trait NamedValue extends RiddlValue with WithIdentifier
 
   sealed trait NamedContainer[CV <: RiddlValue] extends NamedValue with Container[CV]
@@ -3525,5 +3526,26 @@ object AST {
         .getOrElse(Seq.empty[AuthorRef])
     }
   }
+
+  def getAuthors(domain: Domain): Contents[Author] = {
+    val nested = domain.includes.flatMap(_.contents.filter[Author])
+    domain.authors ++ domain.domains.flatMap(getAuthors) ++ nested
+  }
+
+  def getAuthors(root: Root): Contents[Author] = {
+    root.domains.flatMap(getAuthors)
+  }
+
+  def getUsers(domain: Domain): Contents[User] = {
+    val nested = domain.includes.flatMap(_.contents.filter[User])
+    domain.users ++ domain.domains.flatMap(getUsers) ++ nested
+  }
+
+  def getUsers(root: Root): Contents[User] = {
+    root.domains.flatMap(getUsers)
+  }
+  
+  extension (optLit: Option[LiteralString])
+    def format: String = optLit.map(_.format).getOrElse("N/A")
 
 }

@@ -23,7 +23,7 @@ case class GeekDocWriter(
 ) extends MarkdownWriter {
 
   val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
-  
+
   private val geekDoc_version = "v0.44.1"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL =
@@ -67,8 +67,8 @@ case class GeekDocWriter(
         cont.brief.fold(cont.id.format + " has no brief description.")(_.s)
       ),
       Map(
-        "geekdocCollapseSection" -> "true",
-        // FIXME: "geekdocFilePath" -> s"${generator.makeFilePath(cont).getOrElse("no-such-file")}" 
+        "geekdocCollapseSection" -> "true"
+        // FIXME: "geekdocFilePath" -> s"${generator.makeFilePath(cont).getOrElse("no-such-file")}"
       )
     )
   }
@@ -82,7 +82,6 @@ case class GeekDocWriter(
           .fold(definition.id.format + " has no brief description.")(_.s)
       )
     )
-    tbd(definition)
   }
 
   def notAvailable(thing: String, title: String = "Unavailable"): Unit = {

@@ -1,6 +1,7 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
+import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.{Domain, Root}
 import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.utils.Timer
@@ -15,12 +16,13 @@ trait Summarizer {
     makeStatistics()
     makeGlossary()
     makeUsers()
+    makeAuthors()
     makeToDoList()
   }
 
   private def makeIndex(): Unit = {
     Timer.time("Index Creation") {
-
+      
       val mdw = this.makeWriter(Seq.empty[String], "_index.md")
       mdw.fileHead("Index", 10, Option("The main index to the content"))
       mdw.h2("Root Overview")
@@ -32,14 +34,18 @@ trait Summarizer {
         .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
       mdw.list(domains)
       mdw.h2("Indices")
+      val authors = Seq("[Authors](authors)")
+      val users = Seq("[Users](users)")
       val glossary = if options.withGlossary then Seq("[Glossary](glossary)") else Seq.empty[String]
       val todoList = if options.withTODOList then Seq("[To Do List](todolist)") else Seq.empty[String]
       val statistics = if options.withStatistics then Seq("[Statistics](statistics)") else Seq.empty[String]
-      val messageSummary = if options.withMessageSummary then Seq("[Message Summary](message") else Seq.empty[String]
-      mdw.list(glossary ++ todoList ++ statistics ++ messageSummary)
+      val messageSummary = if options.withMessageSummary then Seq("[Message Summary](messages-summary)") else Seq.empty[String]
+      mdw.list(authors ++ users ++ glossary ++ todoList ++ statistics ++ messageSummary)
     }
   }
 
+  private val authorsWeight = 950
+  private val usersWeight = 960
   private val glossaryWeight = 970
   private val toDoWeight = 980
   private val statsWeight = 990
@@ -79,9 +85,17 @@ trait Summarizer {
         }
       }
   }
-
+  
   private def makeUsers(): Unit = {
-    // TODO: Implement a page for use case users
+    val users = AST.getUsers(root) 
+    val mdw = makeWriter(Seq.empty[String], fileName = "users.md")
+    mdw.emitUsers(usersWeight, users)
+  }
+  
+  private def makeAuthors(): Unit = {
+    val authors = root.authors ++ AST.getAuthors(root)
+    val mdw = makeWriter(Seq.empty[String], fileName = "authors.md")
+    mdw.emitAuthors(authorsWeight, authors)
   }
 
   protected def makeMessageSummary(parents: Symbols.Parents, domain: Domain): Unit = {

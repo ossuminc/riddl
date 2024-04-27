@@ -39,11 +39,10 @@ trait MarkdownWriter
     with RepositoryWriter
     with SagaWriter
     with StreamletWriter
-    with SummariesWriter
-{
+    with SummariesWriter {
 
   def generator: ThemeGenerator
-  
+
   private case class Level(name: String, href: String, children: Seq[Level]) {
     override def toString: String = {
       s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
@@ -61,19 +60,6 @@ trait MarkdownWriter
           .map(makeData(_, newParents))
       }
     )
-  }
-
-  protected def emitUsage(definition: Definition): this.type = {
-    generator.usage.getUsers(definition) match {
-      case users: Seq[Definition] if users.nonEmpty =>
-        listOf("Used By", users)
-      case _ => h2("Used By None")
-    }
-    generator.usage.getUses(definition) match {
-      case usages: Seq[NamedValue] if usages.nonEmpty => listOf("Uses", usages)
-      case _                                          => h2("Uses Nothing")
-    }
-    this
   }
 
   private def emitC4ContainerDiagram(
@@ -123,23 +109,34 @@ trait MarkdownWriter
     })
   }
 
-  protected def emitBriefly(
-    d: Definition,
+  protected def emitVitalDefTable(
+    definition: Definition,
     parents: Parents,
     @unused level: Int = 2
   ): Unit = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
     val brief: String =
-      d.brief.map(_.s).getOrElse("Brief description missing.").trim
+      definition.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
-    if d.isVital then {
-      val authors = d.asInstanceOf[VitalDefinition[?]].authorRefs
+    if definition.isVital then {
+      val authors = definition.asInstanceOf[VitalDefinition[?]].authorRefs
       emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
     }
-    val path = (parents.map(_.id.value) :+ d.id.value).mkString(".")
+    val path = (parents.map(_.id.value) :+ definition.id.value).mkString(".")
     emitTableRow(italic("Definition Path"), path)
-    val link = generator.makeSourceLink(d)
-    emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
+    val link = generator.makeSourceLink(definition)
+    emitTableRow(italic("View Source Link"), s"[${definition.loc}]($link)")
+
+    val users: String = generator.usage.getUsers(definition) match {
+      case users: Seq[Definition] if users.nonEmpty => users.map(_.identify).mkString(", ")
+      case _                                        => "None"
+    }
+    emitTableRow(italic("Used By"), users)
+    val uses = generator.usage.getUses(definition) match {
+      case uses: Seq[NamedValue] if uses.nonEmpty => uses.map(_.identify).mkString(", ")
+      case _ => "None"
+    }
+    emitTableRow(italic("Uses"), uses)
   }
 
   // This substitutions domain contains context referenced
@@ -239,7 +236,7 @@ trait MarkdownWriter
     parents: Parents,
     level: Int = 2
   ): this.type = {
-    emitBriefly(definition, parents, level)
+    emitVitalDefTable(definition, parents, level)
     emitDescription(definition.description, level)
   }
 
@@ -396,7 +393,6 @@ trait MarkdownWriter
     h4(typ.identify)
     emitDefDoc(typ, parents)
     emitTypeExpression(typ.typ, typ +: parents)
-    emitUsage(typ)
   }
 
   protected def emitTypes(definition: Definition & WithTypes, parents: Parents, level: Int = 2): Unit = {
@@ -516,7 +512,6 @@ trait MarkdownWriter
     emitDefDoc(vd, stack)
     emitOptions(vd.options)
     emitTerms(vd.terms)
-    emitUsage(vd)
   }
   protected def emitProcessorDetails[CT <: RiddlValue](processor: Processor[CT], stack: Parents): Unit = {
     if processor.types.nonEmpty then emitTypes(processor, stack)

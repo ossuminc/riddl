@@ -10,7 +10,7 @@ trait EpicWriter { this: MarkdownWriter =>
   def emitEpic(epic: Epic, parents: Parents): Unit = {
     containerHead(epic)
     h2(epic.identify)
-    emitBriefly(epic, parents)
+    emitVitalDefTable(epic, parents)
     if epic.userStory.nonEmpty then {
       val userPid = epic.userStory.getOrElse(UserStory()).user.pathId
       val parent = parents.head
@@ -32,7 +32,6 @@ trait EpicWriter { this: MarkdownWriter =>
     emitDescription(epic.description)
     emitOptions(epic.options)
     list("Visualizations", epic.shownBy.map(u => s"($u)[$u]"))
-    emitUsage(epic)
     emitTerms(epic.terms)
     definitionToc("Use Cases", epic.cases)
   }
