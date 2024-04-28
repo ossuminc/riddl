@@ -102,11 +102,12 @@ case class GeekDocWriter(
   }
 
   def codeBlock(items: Seq[Statement]): Unit = {
-    if items.nonEmpty then {
+    if items.nonEmpty then
       sb.append(s"```")
       sb.append(items.map(_.format).mkString(new_line, new_line, new_line))
       sb.append(s"```$new_line")
-    }
+    else
+      mono("No statements defined.")
   }
 
   def processorIndex(processor: Processor[?]): Unit = {

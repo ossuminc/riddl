@@ -21,9 +21,9 @@ trait EntityWriter { this: MarkdownWriter =>
       case None                               => Seq.empty[Field]
     }
     emitERD(state.id.format, fields, parents)
-    h2("Fields")
+    h3("Fields")
     emitFields(fields)
-    for h <- state.handlers do emitHandler(h, state +: parents)
+    for h <- state.handlers do emitHandler(h, state +: parents,4)
   }
 
   def emitHandler(handler: Handler, parents: Parents, level: Int = 3): Unit = {
@@ -43,9 +43,9 @@ trait EntityWriter { this: MarkdownWriter =>
   private def emitERD(
     name: String,
     fields: Seq[Field],
-    parents: Seq[Definition]
+    parents: Seq[Definition],
   ): Unit = {
-    h2("Entity Relationships")
+    h3("Entity Relationships")
     val erd = EntityRelationshipDiagram(generator.refMap)
     val lines = erd.generate(name, fields, parents)
     emitMermaidDiagram(lines)

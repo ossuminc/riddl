@@ -111,16 +111,18 @@ trait MarkdownWriter
 
   protected def emitVitalDefTable(
     definition: Definition,
-    parents: Parents,
-    @unused level: Int = 2
+    parents: Parents
   ): Unit = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
     val brief: String =
       definition.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
     if definition.isVital then {
-      val authors = definition.asInstanceOf[VitalDefinition[?]].authorRefs
-      emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
+      val parent = definition.asInstanceOf[VitalDefinition[?]]
+      val authors: Seq[Author] = parent.authorRefs.flatMap { (authorRef: AuthorRef) =>
+        generator.refMap.definitionOf[Author](authorRef.pathId, parent)
+      }
+      emitTableRow(italic("Authors"), authors.map(_.name.format).mkString(", "))
     }
     val path = (parents.map(_.id.value) :+ definition.id.value).mkString(".")
     emitTableRow(italic("Definition Path"), path)
@@ -134,7 +136,7 @@ trait MarkdownWriter
     emitTableRow(italic("Used By"), users)
     val uses = generator.usage.getUses(definition) match {
       case uses: Seq[NamedValue] if uses.nonEmpty => uses.map(_.identify).mkString(", ")
-      case _ => "None"
+      case _                                      => "None"
     }
     emitTableRow(italic("Uses"), uses)
   }
@@ -236,7 +238,7 @@ trait MarkdownWriter
     parents: Parents,
     level: Int = 2
   ): this.type = {
-    emitVitalDefTable(definition, parents, level)
+    emitVitalDefTable(definition, parents)
     emitDescription(definition.description, level)
   }
 
