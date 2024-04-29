@@ -18,7 +18,11 @@ import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Processor, Vital
   * To| F((fa:fa-car<br/>Automobile)) * A -->|Relates To| G * end * * class A Aclass * class B Bclass * class C Cclass *
   * class D Dclass * class E Eclass * class F Fclass * class G Gclass * }}} *
   */
-trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") extends MermaidDiagramGenerator {
+trait FlowchartDiagramGenerator(
+  val title: String,
+  direction: String = "LR",
+  renderer: String = "dagre"
+) extends MermaidDiagramGenerator {
 
   frontMatter()
   addLine(s"flowchart $direction")
@@ -26,7 +30,7 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
   def kind: String = "flowchart"
 
   def frontMatterItems: Map[String, String] = Map(
-    "defaultRenderer" -> "dagre",
+    "defaultRenderer" -> s"$renderer",
     "width" -> "100%",
     "useMaxWidth" -> "true",
     "securityLevel" -> "loose"
@@ -65,14 +69,13 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
   }
 
   protected def emitSubgraph(
-    containingDefinition: Definition,
+    subgraphName: String,
     startNodeName: String,
     nodes: Seq[VitalDefinition[?]],
     relationships: Seq[(VitalDefinition[?], String)],
     direction: String = "TB"
   ): Unit = {
-    val name = containingDefinition.identify
-    addLine(s"subgraph '$name'")
+    addLine(s"subgraph '$subgraphName'")
     incr
     if direction.nonEmpty then addLine(s"direction $direction")
     emitNodes(nodes)
@@ -89,6 +92,8 @@ trait FlowchartDiagramGenerator(val title: String, direction: String = "LR") ext
       addLine(name)
     }
   }
+
+  def name(definition: VitalDefinition[?], suffix: String): String = s"${definition.id.value}-$suffix"
 
   protected def makeNode(definition: VitalDefinition[?]): String = {
     val iconName = getIconFor(definition)

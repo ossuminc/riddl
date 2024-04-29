@@ -146,10 +146,10 @@ case class GeekDocGenerator(
        |    name = "${auth.name.s}"
        |    email = "${auth.email.s}"
        |    homepage = "${auth.url.getOrElse(java.net.URI.create("https://example.org/").toURL)}"
-       |    
-       |# Geekdoc parameters 
+       |
+       |# Geekdoc parameters
        |[params]
-       |       
+       |
        |  # (Optional, default 6) Set how many table of contents levels to be showed on page.
        |  # Use false to hide ToC, note that 0 will default to 6 (https://gohugo.io/functions/default/)
        |  # You can also specify this parameter per page in front matter.

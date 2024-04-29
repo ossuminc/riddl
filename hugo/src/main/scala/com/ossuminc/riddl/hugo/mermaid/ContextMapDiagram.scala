@@ -20,6 +20,6 @@ case class ContextMapDiagram(context: Context, data: ContextDiagramData)
 
   emitDefaultClassDef()
   emitClassDefs(nodes)
-  emitSubgraph(data.domain, context.id.value, nodes, relationships)
+  emitSubgraph(data.domain.identify, context.id.value, nodes, relationships)
   emitClassAssignments(nodes)
 }

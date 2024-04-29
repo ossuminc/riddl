@@ -12,7 +12,6 @@ trait StreamletWriter { this: MarkdownWriter =>
       p(s"from ${conn.from.format} to ${conn.to.format}")
 
     }
-    emitUsage(conn)
   }
 
   def emitStreamlet(streamlet: Streamlet, parents: Parents): Unit = {

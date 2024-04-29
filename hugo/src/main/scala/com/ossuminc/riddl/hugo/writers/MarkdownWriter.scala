@@ -8,20 +8,14 @@ package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.hugo.mermaid.*
 import com.ossuminc.riddl.hugo.mermaid
-import com.ossuminc.riddl.hugo.writers.{AdaptorWriter, DomainWriter}
-import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
+import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
-import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.Symbols.Parents
-import com.ossuminc.riddl.passes.symbols.SymbolsOutput
-import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.analyses.{KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
-import com.ossuminc.riddl.language.parsing.Keywords.*
-import com.ossuminc.riddl.utils.{TextFileWriter, Timer}
+import com.ossuminc.riddl.language.parsing.Keywords.{domain, *}
+import com.ossuminc.riddl.utils.TextFileWriter
 
-import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.immutable.Seq
 
@@ -39,14 +33,44 @@ trait MarkdownWriter
     with RepositoryWriter
     with SagaWriter
     with StreamletWriter
-    with SummariesWriter
-{
+    with SummariesWriter {
 
   def generator: ThemeGenerator
-  
+
   private case class Level(name: String, href: String, children: Seq[Level]) {
     override def toString: String = {
       s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
+    }
+  }
+
+  def makeRootIndex(root: Root, indent: Int = 0): Unit = {
+    for { topLevelDomain <- root.domains.sortBy(_.id.value) } do makeDomainIndex(topLevelDomain, indent)
+  }
+
+  private def makeDomainIndex(domain: Domain, indent: Int = 0): Unit = {
+    val link = generator.makeDocLink(domain)
+    val spaces = " ".repeat(indent)
+    p(s"$spaces* [${domain.identify}]($link)")
+    for { nestedDomain <- AST.getDomains(domain).sortBy(_.id.value) } do makeDomainIndex(nestedDomain, indent + 2)
+    for { application <- AST.getApplications(domain).sortBy(_.id.value) } do {
+      val link = generator.makeDocLink(application)
+      val spaces = " ".repeat(indent + 2)
+      p(s"$spaces* [${application.identify}]($link)")
+    }
+    for { epic <- AST.getEpics(domain).sortBy(_.id.value)} do {
+      val link = generator.makeDocLink(epic)
+      val spaces = " ".repeat(indent + 2)
+      p(s"$spaces* [${epic.identify}]($link)")
+    }
+    for { context <- AST.getContexts(domain).sortBy(_.id.value) } do {
+      val link = generator.makeDocLink(context)
+      val spaces = " ".repeat(indent + 2)
+      p(s"$spaces* [${context.identify}]($link)")
+      for { entity <- AST.getEntities(context).sortBy(_.id.value) } do {
+        val link = generator.makeDocLink(entity)
+        val spaces = " ".repeat(indent + 4)
+        p(s"$spaces* [${entity.identify}]($link)")
+      }
     }
   }
 
@@ -63,20 +87,7 @@ trait MarkdownWriter
     )
   }
 
-  protected def emitUsage(definition: Definition): this.type = {
-    generator.usage.getUsers(definition) match {
-      case users: Seq[Definition] if users.nonEmpty =>
-        listOf("Used By", users)
-      case _ => h2("Used By None")
-    }
-    generator.usage.getUses(definition) match {
-      case usages: Seq[NamedValue] if usages.nonEmpty => listOf("Uses", usages)
-      case _                                          => h2("Uses Nothing")
-    }
-    this
-  }
-
-  private def emitC4ContainerDiagram(
+  def emitC4ContainerDiagram(
     definition: Context,
     parents: Seq[Definition]
   ): Unit = {
@@ -123,23 +134,36 @@ trait MarkdownWriter
     })
   }
 
-  protected def emitBriefly(
-    d: Definition,
-    parents: Parents,
-    @unused level: Int = 2
+  protected def emitVitalDefTable(
+    definition: Definition,
+    parents: Parents
   ): Unit = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
     val brief: String =
-      d.brief.map(_.s).getOrElse("Brief description missing.").trim
+      definition.brief.map(_.s).getOrElse("Brief description missing.").trim
     emitTableRow(italic("Briefly"), brief)
-    if d.isVital then {
-      val authors = d.asInstanceOf[VitalDefinition[?]].authorRefs
-      emitTableRow(italic("Authors"), authors.map(_.format).mkString(", "))
+    if definition.isVital then {
+      val parent = definition.asInstanceOf[VitalDefinition[?]]
+      val authors: Seq[Author] = parent.authorRefs.flatMap { (authorRef: AuthorRef) =>
+        generator.refMap.definitionOf[Author](authorRef.pathId, parent)
+      }
+      emitTableRow(italic("Authors"), authors.map(_.name.format).mkString(", "))
     }
-    val path = (parents.map(_.id.value) :+ d.id.value).mkString(".")
+    val path = (parents.map(_.id.value) :+ definition.id.value).mkString(".")
     emitTableRow(italic("Definition Path"), path)
-    val link = generator.makeSourceLink(d)
-    emitTableRow(italic("View Source Link"), s"[${d.loc}]($link)")
+    val link = generator.makeSourceLink(definition)
+    emitTableRow(italic("View Source Link"), s"[${definition.loc}]($link)")
+
+    val users: String = generator.usage.getUsers(definition) match {
+      case users: Seq[Definition] if users.nonEmpty => users.map(_.identify).mkString(", ")
+      case _                                        => "None"
+    }
+    emitTableRow(italic("Used By"), users)
+    val uses = generator.usage.getUses(definition) match {
+      case uses: Seq[NamedValue] if uses.nonEmpty => uses.map(_.identify).mkString(", ")
+      case _                                      => "None"
+    }
+    emitTableRow(italic("Uses"), uses)
   }
 
   // This substitutions domain contains context referenced
@@ -239,7 +263,7 @@ trait MarkdownWriter
     parents: Parents,
     level: Int = 2
   ): this.type = {
-    emitBriefly(definition, parents, level)
+    emitVitalDefTable(definition, parents)
     emitDescription(definition.description, level)
   }
 
@@ -396,7 +420,6 @@ trait MarkdownWriter
     h4(typ.identify)
     emitDefDoc(typ, parents)
     emitTypeExpression(typ.typ, typ +: parents)
-    emitUsage(typ)
   }
 
   protected def emitTypes(definition: Definition & WithTypes, parents: Parents, level: Int = 2): Unit = {
@@ -516,7 +539,6 @@ trait MarkdownWriter
     emitDefDoc(vd, stack)
     emitOptions(vd.options)
     emitTerms(vd.terms)
-    emitUsage(vd)
   }
   protected def emitProcessorDetails[CT <: RiddlValue](processor: Processor[CT], stack: Parents): Unit = {
     if processor.types.nonEmpty then emitTypes(processor, stack)

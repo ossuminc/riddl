@@ -11,7 +11,6 @@ trait FunctionWriter { this: MarkdownWriter =>
     emitVitalDefinitionDetails(function, parents)
     emitInputOutput(function.input, function.output)
     codeBlock(function.statements)
-    emitUsage(function)
     emitTerms(function.terms)
   }
 

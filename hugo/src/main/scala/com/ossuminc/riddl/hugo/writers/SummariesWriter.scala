@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.hugo.{GlossaryEntry, MessageInfo, ToDoItem}
-import com.ossuminc.riddl.language.AST.Domain
+import com.ossuminc.riddl.language.AST.{Domain, User, Author}
 import com.ossuminc.riddl.analyses.{KindStats, StatsOutput, StatsPass}
 
 trait SummariesWriter { this: MarkdownWriter =>
@@ -86,6 +86,38 @@ trait SummariesWriter { this: MarkdownWriter =>
       for { item <- info.map { item => item.item -> s"[${item.path}](${item.link})" } } do
         emitTableRow(item._1, item._2)
     }
+  }
+  
+  def emitUsers(weight: Int, users: Seq[User]): Unit = {
+    fileHead("Users", weight, Some("A list of the users defined for epics"))
+    h2("Users")
+    for { user <- users } do 
+      h3(user.identify)
+      list(
+        Seq(
+          s"Is a: ${user.is_a.format}",
+          s"Brief: ${user.brief.format}"
+        )
+      )
+      user.description.foreach(d => p(d.lines.map(_.format).mkString("\n")))
+  }
+  
+  def emitAuthors(weight: Int, authors: Seq[Author]): Unit = {
+    fileHead("Authors", weight, Some("A list of the authors of this specification model"))
+    h2("Authors")
+    for {author <- authors} do
+      h3(author.id.format)
+      list(
+        Seq(
+          s"Name: ${author.name.format}",
+          s"Title: ${author.title.format}",
+          s"Organization: ${author.organization.format}",
+          s"URL: ${author.url.map(_.toString)}",
+          s"Email: ${author.email.format}",
+          s"Brief: ${author.brief.format}"
+        )
+      )
+      author.description.foreach(d => p(d.lines.map(_.format).mkString("\n")))
   }
 
   def emitMessageSummary(domain: Domain, messages: Seq[MessageInfo], kind: String): Unit = {

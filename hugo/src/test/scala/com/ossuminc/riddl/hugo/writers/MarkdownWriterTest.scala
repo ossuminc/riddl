@@ -61,14 +61,12 @@ class MarkdownWriterTest extends HugoTestBase {
               || _Authors_ |  |
               || _Definition Path_ | Root.TestDomain |
               || _View Source Link_ | [empty(1:1)]() |
+              || _Used By_ | None |
+              || _Uses_ | None |
               |
               |## *Description*
               |A test domain for ensuring that documentation for domains is
               |generated sufficiently.
-              |
-              |## *Used By None*
-              |
-              |## *Uses Nothing*
               |
               |## *Domain Map*
               |{{< mermaid class="text-center">}}
@@ -100,16 +98,14 @@ class MarkdownWriterTest extends HugoTestBase {
               || _Briefly_ | Brief description missing. |
               || _Definition Path_ | TestDomain.Root.MyString |
               || _View Source Link_ | [empty(3:3)]() |
+              || _Used By_ | None |
+              || _Uses_ | None |
               |
               |## *Description*
               |Just a renamed string
               |
               |## *Type*
               |String
-              |
-              |## *Used By None*
-              |
-              |## *Uses Nothing*
               |
               |## *Author*
               |* _Name_: Reid Spencer
