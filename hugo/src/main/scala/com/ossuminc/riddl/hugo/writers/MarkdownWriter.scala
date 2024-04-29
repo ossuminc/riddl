@@ -8,20 +8,14 @@ package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.hugo.mermaid.*
 import com.ossuminc.riddl.hugo.mermaid
-import com.ossuminc.riddl.hugo.writers.{AdaptorWriter, DomainWriter}
-import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
+import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
-import com.ossuminc.riddl.passes.resolve.{ReferenceMap, Usages}
 import com.ossuminc.riddl.passes.symbols.Symbols.Parents
-import com.ossuminc.riddl.passes.symbols.SymbolsOutput
-import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.analyses.{KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
-import com.ossuminc.riddl.language.parsing.Keywords.*
-import com.ossuminc.riddl.utils.{TextFileWriter, Timer}
+import com.ossuminc.riddl.language.parsing.Keywords.{domain, *}
+import com.ossuminc.riddl.utils.TextFileWriter
 
-import java.nio.file.Path
 import scala.annotation.unused
 import scala.collection.immutable.Seq
 
@@ -49,6 +43,37 @@ trait MarkdownWriter
     }
   }
 
+  def makeRootIndex(root: Root, indent: Int = 0): Unit = {
+    for { topLevelDomain <- root.domains.sortBy(_.id.value) } do makeDomainIndex(topLevelDomain, indent)
+  }
+
+  private def makeDomainIndex(domain: Domain, indent: Int = 0): Unit = {
+    val link = generator.makeDocLink(domain)
+    val spaces = " ".repeat(indent)
+    p(s"$spaces* [${domain.identify}]($link)")
+    for { nestedDomain <- AST.getDomains(domain).sortBy(_.id.value) } do makeDomainIndex(nestedDomain, indent + 2)
+    for { application <- AST.getApplications(domain).sortBy(_.id.value) } do {
+      val link = generator.makeDocLink(application)
+      val spaces = " ".repeat(indent + 2)
+      p(s"$spaces* [${application.identify}]($link)")
+    }
+    for { epic <- AST.getEpics(domain).sortBy(_.id.value)} do {
+      val link = generator.makeDocLink(epic)
+      val spaces = " ".repeat(indent + 2)
+      p(s"$spaces* [${epic.identify}]($link)")
+    }
+    for { context <- AST.getContexts(domain).sortBy(_.id.value) } do {
+      val link = generator.makeDocLink(context)
+      val spaces = " ".repeat(indent + 2)
+      p(s"$spaces* [${context.identify}]($link)")
+      for { entity <- AST.getEntities(context).sortBy(_.id.value) } do {
+        val link = generator.makeDocLink(entity)
+        val spaces = " ".repeat(indent + 4)
+        p(s"$spaces* [${entity.identify}]($link)")
+      }
+    }
+  }
+
   private def makeData(container: Definition, parents: Seq[String]): Level = {
     Level(
       container.identify,
@@ -62,7 +87,7 @@ trait MarkdownWriter
     )
   }
 
-  private def emitC4ContainerDiagram(
+  def emitC4ContainerDiagram(
     definition: Context,
     parents: Seq[Definition]
   ): Unit = {

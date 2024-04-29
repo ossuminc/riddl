@@ -2,7 +2,7 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.AST.{Domain, Root}
+import com.ossuminc.riddl.language.AST.{Domain, Root, Context, Entity}
 import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.utils.Timer
 
@@ -22,25 +22,22 @@ trait Summarizer {
 
   private def makeIndex(): Unit = {
     Timer.time("Index Creation") {
-      
+
       val mdw = this.makeWriter(Seq.empty[String], "_index.md")
       mdw.fileHead("Index", 10, Option("The main index to the content"))
       mdw.h2("Root Overview")
       val diagram = RootOverviewDiagram(root)
       mdw.emitMermaidDiagram(diagram.generate)
-      mdw.h2("Domains")
-      val domains = root.domains
-        .sortBy(_.id.value)
-        .map(d => s"[${d.id.value}](${d.id.value.toLowerCase}/)")
-      mdw.list(domains)
-      mdw.h2("Indices")
+      mdw.h2("Index")
       val authors = Seq("[Authors](authors)")
       val users = Seq("[Users](users)")
       val glossary = if options.withGlossary then Seq("[Glossary](glossary)") else Seq.empty[String]
       val todoList = if options.withTODOList then Seq("[To Do List](todolist)") else Seq.empty[String]
       val statistics = if options.withStatistics then Seq("[Statistics](statistics)") else Seq.empty[String]
-      val messageSummary = if options.withMessageSummary then Seq("[Message Summary](messages-summary)") else Seq.empty[String]
+      val messageSummary =
+        if options.withMessageSummary then Seq("[Message Summary](messages-summary)") else Seq.empty[String]
       mdw.list(authors ++ users ++ glossary ++ todoList ++ statistics ++ messageSummary)
+      mdw.makeRootIndex(root)
     }
   }
 
@@ -85,13 +82,13 @@ trait Summarizer {
         }
       }
   }
-  
+
   private def makeUsers(): Unit = {
-    val users = AST.getUsers(root) 
+    val users = AST.getUsers(root)
     val mdw = makeWriter(Seq.empty[String], fileName = "users.md")
     mdw.emitUsers(usersWeight, users)
   }
-  
+
   private def makeAuthors(): Unit = {
     val authors = root.authors ++ AST.getAuthors(root)
     val mdw = makeWriter(Seq.empty[String], fileName = "authors.md")

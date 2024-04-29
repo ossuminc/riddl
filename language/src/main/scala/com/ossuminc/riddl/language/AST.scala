@@ -3513,6 +3513,7 @@ object AST {
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
+  // FIXME: complete this: def findDomains(root: Root): Map[]
   def findAuthors(
     defn: RiddlValue,
     parents: Seq[Container[RiddlValue]]
@@ -3525,6 +3526,30 @@ object AST {
         .map(_.asInstanceOf[WithAuthorRefs].authorRefs)
         .getOrElse(Seq.empty[AuthorRef])
     }
+  }
+
+  def getTopLevelDomains(root: Root): Contents[Domain] = {
+    (root.domains ++ root.includes.flatMap(_.contents.filter[Domain]))
+  }
+  
+  def getDomains(domain: Domain): Contents[Domain] = {
+    domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
+  }
+
+  def getContexts(domain: Domain): Contents[Context] = {
+    domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
+  }
+
+  def getApplications(domain: Domain): Contents[Application] = {
+    domain.applications ++ domain.includes.flatMap(_.contents.filter[Application])
+  }
+
+  def getEpics(domain: Domain): Contents[Epic] = {
+    domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
+  }
+
+  def getEntities(context: Context): Contents[Entity] = {
+    context.entities ++ context.includes.flatMap(_.contents.filter[Entity])
   }
 
   def getAuthors(domain: Domain): Contents[Author] = {
@@ -3544,8 +3569,7 @@ object AST {
   def getUsers(root: Root): Contents[User] = {
     root.domains.flatMap(getUsers)
   }
-  
-  extension (optLit: Option[LiteralString])
-    def format: String = optLit.map(_.format).getOrElse("N/A")
+
+  extension (optLit: Option[LiteralString]) def format: String = optLit.map(_.format).getOrElse("N/A")
 
 }
