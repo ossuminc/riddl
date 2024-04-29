@@ -3513,7 +3513,6 @@ object AST {
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
-  // FIXME: complete this: def findDomains(root: Root): Map[]
   def findAuthors(
     defn: RiddlValue,
     parents: Seq[Container[RiddlValue]]

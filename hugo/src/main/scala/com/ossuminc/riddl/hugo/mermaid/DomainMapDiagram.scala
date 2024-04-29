@@ -11,7 +11,7 @@ class DomainMapDiagram(domain: Domain)
 
   emitDefaultClassDef()
   emitClassDefs(nodes)
-  emitSubgraph(domain, domain.id.value, nodes, relationships)
+  emitSubgraph(domain.identify, domain.id.value, nodes, relationships)
   emitClassAssignments(nodes)
 
 }
