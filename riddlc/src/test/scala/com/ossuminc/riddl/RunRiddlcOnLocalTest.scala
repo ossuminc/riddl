@@ -44,11 +44,6 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       val config = "src/riddl/FooBarSuccess/FooBar.conf"
       runOnLocalProject(cwd, config, "validate")
     }
-    "validate on OffTheTop" in {
-      val cwd = "/Users/reid/Code/Improving/OffTheTop"
-      val config = "design/src/main/riddl/OffTheTop.conf"
-      runOnLocalProject(cwd, config, "validate")
-    }
     "validate kalix-improving-template" in {
       val cwd = "/Users/reid/Code/Improving/kalix-improving-template"
       val config = "design/src/main/riddl/example.conf"
