@@ -28,12 +28,17 @@ type PassCreator = (PassInput, PassesOutput) => Pass
 /** A sequence of PassCreator. This is used to run a set of passes */
 type PassesCreator = Seq[PassCreator]
 
+trait PassOptions
+
+object PassOptions {
+  val empty: PassOptions = new PassOptions {}
+}
 
 /** Information a pass must provide, basically its name
   */
-trait PassInfo {
+trait PassInfo[OPT <: PassOptions] {
   def name: String
-  def creator: PassCreator
+  def creator(options: OPT): PassCreator
 }
 
 /** Information that a Pass must produce, currently just any messages it generated. Passes should derive their own
@@ -156,7 +161,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * @param passInfo
     *   The pass's companion object from which this function will obtain the pass's name
     */
-  protected final def requires(passInfo: PassInfo): Unit = {
+  protected final def requires[OPT <: PassOptions](passInfo: PassInfo[OPT]): Unit = {
     require(out.hasPassOutput(passInfo.name), s"Required pass '${passInfo.name}' was not run prior to $name'")
   }
 
@@ -236,7 +241,7 @@ object Pass {
     * resolve path references, and validate the input. Only after these three have passed successfull should the model
     * be considered processable by other passes
     */
-  val standardPasses: PassesCreator = Seq(SymbolsPass.creator, ResolutionPass.creator, ValidationPass.creator)
+  val standardPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
   /** Run a set of passes against some input to obtain a result
     *

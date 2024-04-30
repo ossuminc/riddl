@@ -14,6 +14,7 @@ import java.net.URL
 import java.nio.file.Path
 import scala.concurrent.Future
 import scala.reflect.{ClassTag, classTag}
+import scala.annotation.tailrec
 
 /** Abstract Syntax Tree This object defines the model for processing RIDDL and producing a raw AST from it. This raw
   * AST has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
@@ -208,8 +209,8 @@ object AST {
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
-    def vitals: Contents[VitalDefinition[?, CV]] = container.filter[VitalDefinition[?, CV]]
-    def processors: Contents[Processor[?, CV]] = container.filter[Processor[?, CV]]
+    def vitals: Contents[VitalDefinition[CV]] = container.filter[VitalDefinition[CV]]
+    def processors: Contents[Processor[CV]] = container.filter[Processor[CV]]
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
@@ -267,18 +268,13 @@ object AST {
   }
 
   /** Base trait for option values for any option of a definition. */
-  sealed trait OptionValue extends RiddlValue with OccursInVitalDefinitions with OccursInProcessors {
-    def name: String
-
-    def args: Seq[LiteralString] = Seq.empty[LiteralString]
-
+  case class OptionValue(loc: At, name: String, args: Seq[LiteralString] = Seq.empty)
+      extends RiddlValue
+      with OccursInVitalDefinitions
+      with OccursInProcessors {
     override def format: String = name + args
       .map(_.format)
       .mkString("(", ", ", ")")
-  }
-
-  sealed trait ConstrainedOptionValue extends OptionValue {
-    def accepted: Seq[String]
   }
 
   sealed trait NamedValue extends RiddlValue with WithIdentifier
@@ -349,19 +345,13 @@ object AST {
 
   /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
     * queried, and formatted.
-    *
-    * @tparam T
-    *   The sealed base trait of the permitted options for this definition
     */
-  sealed trait WithOptions[T <: OptionValue] extends Container[RiddlValue] {
-    def options: Contents[OptionValue]
+  sealed trait WithOptions extends Container[RiddlValue] {
+    lazy val options: Contents[OptionValue] = contents.filter[OptionValue]
 
-    def hasOption[OPT <: T: ClassTag]: Boolean = options
-      .exists(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
+    def hasOption(name: String): Boolean = options.exists(_.name == name)
 
-    def getOptionValue[OPT <: T: ClassTag]: Option[Seq[LiteralString]] = options
-      .find(_.getClass == implicitly[ClassTag[OPT]].runtimeClass)
-      .map(_.args)
+    def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
 
     override def format: String = {
       options.size match {
@@ -605,12 +595,12 @@ object AST {
   }
 
   /** A definition that */
-  sealed trait VitalDefinition[OPT <: OptionValue, CT <: RiddlValue]
+  sealed trait VitalDefinition[CT <: RiddlValue]
       extends Definition
       with Container[CT]
       with WithComments
       with WithDocumentation
-      with WithOptions[OPT]
+      with WithOptions
       with WithAuthorRefs
       with WithIncludes[CT]
       with WithTerms {
@@ -632,8 +622,8 @@ object AST {
   /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
     * handlers, functions, and take messages directly with a reference).
     */
-  sealed trait Processor[OPT <: OptionValue, CT <: RiddlValue]
-      extends VitalDefinition[OPT, CT]
+  sealed trait Processor[CT <: RiddlValue]
+      extends VitalDefinition[CT]
       with WithTypes
       with WithConstants
       with WithInvariants
@@ -731,7 +721,7 @@ object AST {
     * @tparam T
     *   The kind of reference needed
     */
-  sealed trait ProcessorRef[+T <: Processor[?, ?]] extends Reference[T]
+  sealed trait ProcessorRef[+T <: Processor[?]] extends Reference[T]
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// ROOT
 
@@ -1962,7 +1952,7 @@ object AST {
   case class TellStatement(
     loc: At,
     msg: MessageRef,
-    processorRef: ProcessorRef[Processor[?, ?]]
+    processorRef: ProcessorRef[Processor[?]]
   ) extends Statement {
     override def kind: String = "Tell Statement"
     def format: String = s"tell ${msg.format} to ${processorRef.format}"
@@ -2037,24 +2027,6 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** Base class of all options for the Adaptor definition */
-  sealed abstract class AdaptorOption(val name: String) extends OptionValue with OccursInAdaptor
-
-  /** A common option that specifies the nature of the technology used to implement the definition */
-  case class AdaptorTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("technology")
-
-  /** A common option that specifies details about an aspect of */
-  case class AdaptorKindOption(loc: At, override val args: Seq[LiteralString])
-      extends AdaptorOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("")
-  }
-
-  /** An [[AdaptorOption]] to specify the css for this adaptor in generated diagrams, etc. */
-  case class AdaptorCssOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("css")
-
-  /** An [[AdaptorOption]] to specify the Font Awesome icon for this [[Adaptor]] in generated diagrams, etc. */
-  case class AdaptorIconOption(loc: At, override val args: Seq[LiteralString]) extends AdaptorOption("faicon")
-
   sealed trait AdaptorDirection extends RiddlValue {
     def loc: At
   }
@@ -2094,25 +2066,15 @@ object AST {
     contents: Seq[OccursInAdaptor] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[AdaptorOption, OccursInAdaptor]
-      with OccursInContext {
-
-    override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
-    lazy val options: Seq[AdaptorOption] = contents.filter[AdaptorOption]
-  }
+  ) extends Processor[OccursInAdaptor]
+      with OccursInContext
+      with WithOptions {}
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
     override def format: String = s"adaptor ${pathId.format}"
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTION
-
-  /** Base class of all function options
-    *
-    * @param name
-    *   The name of the option
-    */
-  sealed abstract class FunctionOption(val name: String) extends OptionValue
 
   /** A function definition which can be part of a bounded context or an entity.
     *
@@ -2139,7 +2101,7 @@ object AST {
     contents: Contents[OccursInFunction] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[FunctionOption, OccursInFunction]
+  ) extends VitalDefinition[OccursInFunction]
       with WithTypes
       with WithFunctions
       with WithStatements
@@ -2148,8 +2110,6 @@ object AST {
 
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty &&
       output.isEmpty
-
-    lazy val options: Seq[FunctionOption] = Seq.empty[FunctionOption]
 
     final override inline def kind: String = "Function"
   }
@@ -2414,92 +2374,6 @@ object AST {
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ENTITY
 
-  /** Abstract base class of options for entities
-    *
-    * @param name
-    *   the name of the option
-    */
-  sealed abstract class EntityOption(val name: String) extends OccursInEntity with OptionValue
-
-  /** An [[EntityOption]] that indicates that this entity should store its state in an event sourced fashion.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityEventSourced(loc: At) extends EntityOption("event sourced")
-
-  /** An [[EntityOption]] that indicates that this entity should store only the latest value without using event
-    * sourcing. In other words, the history of changes is not stored.
-    *
-    * @param loc
-    *   The location of the option
-    */
-  case class EntityValueOption(loc: At) extends EntityOption("value")
-
-  /** An [[EntityOption]] that indicates that this entity should not persist its state and is only available in
-    * transient memory. All entity values will be lost when the service is stopped.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityTransient(loc: At) extends EntityOption("transient")
-
-  /** An [[EntityOption]] that indicates that this entity is an aggregate root entity through which all commands and
-    * queries are sent on behalf of the aggregated entities.
-    *
-    * @param loc
-    *   The location of the option
-    */
-  case class EntityIsAggregate(loc: At) extends EntityOption("aggregate")
-
-  /** An [[EntityOption]] that indicates that this entity favors consistency over availability in the CAP theorem.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsConsistent(loc: At) extends EntityOption("consistent")
-
-  /** A [[EntityOption]] that indicates that this entity favors availability over consistency in the CAP theorem.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsAvailable(loc: At) extends EntityOption("available")
-
-  /** An [[EntityOption]] that indicates that this entity is intended to implement a finite state machine.
-    *
-    * @param loc
-    *   The location of the option.
-    */
-  case class EntityIsFiniteStateMachine(loc: At) extends EntityOption("finite state machine")
-
-  /** An [[EntityOption]] that indicates that this entity should allow receipt of commands and queries via a message
-    * queue.
-    *
-    * @param loc
-    *   The location at which this option occurs.
-    */
-  case class EntityMessageQueue(loc: At) extends EntityOption("message queue")
-
-  /** An [[EntityOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class EntityCssOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("css")
-
-  /** An [[EntityOption]] to specify the Font Awesome icon for this [[Entity]] in generated diagrams, etc. */
-  case class EntityIconOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("faicon")
-
-  /** An [[EntityOption]] that specifies the kind of technology used to represent the entity */
-  case class EntityTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EntityOption("technology")
-
-  /** An [[EntityOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class EntityKindOption(loc: At, override val args: Seq[LiteralString])
-      extends EntityOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("device", "user", "concept", "machine", "digital")
-  }
-
   /** Definition of an Entity
     *
     * @param loc
@@ -2519,14 +2393,10 @@ object AST {
     contents: Seq[OccursInEntity] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description]
-  ) extends Processor[EntityOption, OccursInEntity]
+  ) extends Processor[OccursInEntity]
       with WithStates
-      with OccursInContext {
-    lazy val options: Seq[EntityOption] = contents.filter[EntityOption]
-
-    override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
-
-  }
+      with WithOptions
+      with OccursInContext {}
 
   /** A reference to an entity
     *
@@ -2540,28 +2410,6 @@ object AST {
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
-
-  sealed abstract class RepositoryOption(final val name: String) extends OptionValue with OccursInRepository
-
-  /** An [[RepositoryOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class RepositoryCssOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("css")
-
-  /** An [[RepositoryOption]] to specify the Font Awesome icon for this [[Repository]] in generated diagrams, etc. */
-  case class RepositoryIconOption(loc: At, override val args: Seq[LiteralString]) extends RepositoryOption("faicon")
-
-  /** An [[RepositoryOption]] that specifies the kind of technology used to represent the entity */
-  case class RepositoryTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends RepositoryOption("technology")
-
-  /** An [[RepositoryOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class RepositoryKindOption(loc: At, override val args: Seq[LiteralString])
-      extends RepositoryOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("api", "database", "device", "file")
-  }
 
   enum RepositorySchemaKind:
     case Other, Flat, Relational, TimeSeries, Graphical, Hierarchical, Star, Document, Columnar, Vector
@@ -2618,10 +2466,10 @@ object AST {
     contents: Contents[OccursInRepository] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[RepositoryOption, OccursInRepository]
-      with OccursInContext {
+  ) extends Processor[OccursInRepository]
+      with OccursInContext
+      with WithOptions {
     override def kind: String = "Repository"
-    lazy val options: Seq[RepositoryOption] = contents.filter[RepositoryOption]
   }
 
   /** A reference to a repository definition
@@ -2639,28 +2487,6 @@ object AST {
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// PROJECTOR
-
-  sealed abstract class ProjectorOption(final val name: String) extends OptionValue with OccursInProjector
-
-  /** An [[ProjectorOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class ProjectorCssOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("css")
-
-  /** An [[ProjectorOption]] to specify the Font Awesome icon for this [[Projector]] in generated diagrams, etc. */
-  case class ProjectorIconOption(loc: At, override val args: Seq[LiteralString]) extends ProjectorOption("faicon")
-
-  /** An [[ProjectorOption]] that specifies the kind of technology used to represent the entity */
-  case class ProjectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends ProjectorOption("technology")
-
-  /** An [[ProjectorOption]] that indicates the general kind of projector being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class ProjectorKindOption(loc: At, override val args: Seq[LiteralString])
-      extends ProjectorOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("message queue", "stream")
-  }
 
   /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view.
     * The concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data
@@ -2687,10 +2513,10 @@ object AST {
     contents: Contents[OccursInProjector] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[ProjectorOption, OccursInProjector]
-      with OccursInContext {
+  ) extends Processor[OccursInProjector]
+      with OccursInContext
+      with WithOptions {
     lazy val repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
-    lazy val options: Seq[ProjectorOption] = contents.filter[ProjectorOption]
   }
 
   /** A reference to an context's projector definition
@@ -2705,55 +2531,6 @@ object AST {
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
-
-  /** Base trait for all options a Context can have. */
-  sealed abstract class ContextOption(final val name: String) extends OptionValue with OccursInContext
-
-  /** An [[ContextOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class ContextCssOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("css")
-
-  /** An [[ContextOption]] to specify the Font Awesome icon for this [[Context]] in generated diagrams, etc. */
-  case class ContextIconOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("faicon")
-
-  /** An [[ContextOption]] that specifies the kind of technology used to represent the entity */
-  case class ContextTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("technology")
-
-  /** An [[ContextOption]] that indicates the general kind of context being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class ContextKindOption(loc: At, override val args: Seq[LiteralString])
-      extends ContextOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("microservice", "gateway", "router", "api")
-  }
-
-  /** A [[ContextOption]] that provides the name of the software package the Context is implemented within */
-  case class ContextPackageOption(loc: At, override val args: Seq[LiteralString]) extends ContextOption("package")
-
-  /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
-    * external system and is therefore at the boundary of the context map
-    *
-    * @param loc
-    *   The location of the wrapper option
-    */
-  case class ContextWrapperOption(loc: At) extends ContextOption("wrapper")
-
-  /** A context's "service" option. This option suggests the bounded context is intended to be a DDD service, similar to
-    * a wrapper but without any persistent state and more of a stateless service aspect to its nature
-    *
-    * @param loc
-    *   The location at which the option occurs
-    */
-  case class ServiceOption(loc: At) extends ContextOption("service")
-
-  /** A context's "gateway" option that suggests the bounded context is intended to be an application gateway to the
-    * model. Gateway's provide authentication and authorization access to external systems, usually user applications.
-    *
-    * @param loc
-    *   The location of the gateway option
-    */
-  case class GatewayOption(loc: At) extends ContextOption("gateway")
 
   /** A bounded context definition. Bounded contexts provide a definitional boundary on the language used to describe
     * some aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a
@@ -2777,7 +2554,7 @@ object AST {
     contents: Contents[OccursInContext] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[ContextOption, OccursInContext]
+  ) extends Processor[OccursInContext]
       with WithProjectors
       with WithRepositories
       with WithEntities
@@ -2785,10 +2562,8 @@ object AST {
       with WithConnectors
       with WithAdaptors
       with WithSagas
-      with OccursInDomain {
-    lazy val options: Seq[ContextOption] = contents.filter[ContextOption]
-    override def isEmpty: Boolean = contents.isEmpty && options.isEmpty
-  }
+      with WithOptions
+      with OccursInDomain {}
 
   object Context {
     lazy val empty: Context = Context(At.empty, Identifier.empty)
@@ -2806,28 +2581,6 @@ object AST {
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// STREAMLET
-
-  sealed abstract class StreamletOption(final val name: String) extends OptionValue with OccursInStreamlet
-
-  /** An [[StreamletOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class StreamletCssOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("css")
-
-  /** An [[StreamletOption]] to specify the Font Awesome icon for this [[Streamlet]] in generated diagrams, etc. */
-  case class StreamletIconOption(loc: At, override val args: Seq[LiteralString]) extends StreamletOption("faicon")
-
-  /** An [[StreamletOption]] that specifies the kind of technology used to represent the entity */
-  case class StreamletTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends StreamletOption("technology")
-
-  /** An [[StreamletOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class StreamletKindOption(loc: At, override val args: Seq[LiteralString])
-      extends StreamletOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("stream")
-  }
 
   /** A sealed trait for Inlets and Outlets */
   sealed trait Portlet extends LeafDefinition with OccursInProcessors
@@ -2882,31 +2635,6 @@ object AST {
     def format: String = s"outlet ${id.format} is ${type_.format}"
   }
 
-  sealed abstract class ConnectorOption(final val name: String) extends OptionValue
-
-  /** An [[ConnectorOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class ConnectorCssOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("css")
-
-  /** An [[ConnectorOption]] to specify the Font Awesome icon for this [[Connector]] in generated diagrams, etc. */
-  case class ConnectorIconOption(loc: At, override val args: Seq[LiteralString]) extends ConnectorOption("faicon")
-
-  /** An [[ConnectorOption]] that specifies the kind of technology used to represent the entity */
-  case class ConnectorTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends ConnectorOption("technology")
-
-  /** An [[ConnectorOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class ConnectorKindOption(loc: At, override val args: Seq[LiteralString])
-      extends ConnectorOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("message queue", "pub/sub")
-  }
-
-  /** An [[ConnectorOption]]  to provide the software package name for the connector */
-  case class ConnectorPersistentOption(loc: At) extends ConnectorOption("package")
-
   /** A connector between an [[com.ossuminc.riddl.language.AST.Outlet]] and an [[com.ossuminc.riddl.language.AST.Inlet]]
     * that flows a particular [[com.ossuminc.riddl.language.AST.Type]].
     * @param loc
@@ -2917,8 +2645,6 @@ object AST {
     *   The origin Outlet of the connector
     * @param to
     *   THe destination Inlet of the connector
-    * @param options
-    *   Options applied to the connector
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2929,16 +2655,15 @@ object AST {
     id: Identifier,
     from: OutletRef = OutletRef.empty,
     to: InletRef = InletRef.empty,
-    options: Seq[ConnectorOption] = Seq.empty[ConnectorOption],
+    options: Seq[OptionValue] = Seq.empty[OptionValue],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = Option.empty[Description]
   ) extends LeafDefinition
-      with OccursInContext
-      with WithOptions[ConnectorOption] {
-
+      with OccursInContext {
+    def hasOption(name: String): Boolean = options.exists(_.name == name)
     override def format: String = s"Connector"
 
-    override def isEmpty: Boolean = super.isEmpty && from.isEmpty && to.isEmpty
+    override def isEmpty: Boolean = super.isEmpty && from.isEmpty && to.isEmpty && options.isEmpty
   }
 
   sealed trait StreamletShape extends RiddlValue {
@@ -3009,9 +2734,9 @@ object AST {
     contents: Contents[OccursInStreamlet] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends Processor[StreamletOption, OccursInStreamlet]
+  ) extends Processor[OccursInStreamlet]
+      with WithOptions
       with OccursInContext {
-    lazy val options: Seq[StreamletOption] = contents.filter[StreamletOption]
     final override def kind: String = shape.getClass.getSimpleName
     shape match {
       case Source(_) =>
@@ -3124,42 +2849,6 @@ object AST {
     def format: String = s"step ${id.format}"
   }
 
-  /** Base trait for all options applicable to a saga. */
-  sealed abstract class SagaOption(final val name: String) extends OptionValue with OccursInSaga
-
-  /** An [[SagaOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class SagaCssOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("css")
-
-  /** An [[SagaOption]] to specify the Font Awesome icon for this [[Saga]] in generated diagrams, etc. */
-  case class SagaIconOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("faicon")
-
-  /** An [[SagaOption]] that specifies the kind of technology used to represent the entity */
-  case class SagaTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends SagaOption("technology")
-
-  /** An [[SagaOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class SagaKindOption(loc: At, override val args: Seq[LiteralString])
-      extends SagaOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("distributed transaction", "workflow")
-  }
-
-  /** A [[SagaOption]] that indicates sequential (serial) execution of the saga actions.
-    *
-    * @param loc
-    *   The location of the sequential option
-    */
-  case class SequentialOption(loc: At) extends SagaOption("sequential")
-
-  /** A [[SagaOption]] that indicates parallel execution of the saga actions.
-    *
-    * @param loc
-    *   The location of the parallel option
-    */
-  case class ParallelOption(loc: At) extends SagaOption("parallel")
-
   /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define
     * a computing action based on a variety of related commands that must all succeed atomically or have their effects
     * undone.
@@ -3187,15 +2876,13 @@ object AST {
     contents: Contents[OccursInSaga] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[SagaOption, OccursInSaga]
+  ) extends VitalDefinition[OccursInSaga]
       with WithSagaSteps
+      with WithOptions
       with OccursInContext
       with OccursInDomain {
 
-    lazy val options: Seq[SagaOption] = contents.filter[SagaOption]
-
-    override def isEmpty: Boolean = super.isEmpty && options.isEmpty &&
-      input.isEmpty && output.isEmpty
+    override def isEmpty: Boolean = super.isEmpty && input.isEmpty && output.isEmpty
 
   }
 
@@ -3520,30 +3207,6 @@ object AST {
     override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
   }
 
-  /** The base trait of all option values that pretain to Epics */
-  sealed abstract class EpicOption(final val name: String) extends OptionValue
-
-  /** An [[EpicOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class EpicCssOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("css")
-
-  /** An [[EpicOption]] to specify the Font Awesome icon for this [[Epic]] in generated diagrams, etc. */
-  case class EpicIconOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("faicon")
-
-  /** An [[EpicOption]] that specifies the kind of technology used to represent the entity */
-  case class EpicTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends EpicOption("technology")
-
-  /** An [[EpicOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class EpicKindOption(loc: At, override val args: Seq[LiteralString])
-      extends EpicOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("feature")
-  }
-
-  case class EpicSynchronousOption(loc: At) extends EpicOption("synch")
-
   /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an overall story about user interactions
     * with the system. This define functionality from the perspective of users (men or machines) interactions with the
     * system that is part of their role.
@@ -3571,15 +3234,12 @@ object AST {
     contents: Seq[OccursInEpic] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
-  ) extends VitalDefinition[EpicOption, OccursInEpic]
+  ) extends VitalDefinition[OccursInEpic]
       with WithUseCases
+      with WithOptions
       with OccursInDomain {
 
-    lazy val options: Seq[EpicOption] = contents.filter[EpicOption]
-
-    override def isEmpty: Boolean = {
-      contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
-    }
+    override def isEmpty: Boolean = contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
 
     override def format: String = s"$kind ${id.format}"
   }
@@ -3767,29 +3427,6 @@ object AST {
     def format: String = s"$keyword ${pathId.format}"
   }
 
-  sealed trait ApplicationOption(final val name: String) extends OptionValue with OccursInApplication
-
-  /** An [[ApplicationOption]]  that specifies the css for this entity in generated diagrams, etc. */
-  case class ApplicationCssOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("css")
-
-  /** An [[ApplicationOption]] that specifies the Font Awesome icon to use in generated diagrams for this application
-    */
-  case class ApplicationIconOption(loc: At, override val args: Seq[LiteralString]) extends ApplicationOption("faicon")
-
-  /** An [[ApplicationOption]] that specifies the kind of technology used to represent the entity */
-  case class ApplicationTechnologyOption(loc: At, override val args: Seq[LiteralString])
-      extends ApplicationOption("technology")
-
-  /** An [[ApplicationOption]] that indicates the general kind of entity being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class ApplicationKindOption(loc: At, override val args: Seq[LiteralString])
-      extends ApplicationOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq("UI", "Automation", "Device", "Controls")
-  }
-
   /** An application from which a person, robot, or other active agent (the user) will obtain information, or to which
     * that user will provided information.
     * @param loc
@@ -3809,12 +3446,10 @@ object AST {
     contents: Seq[OccursInApplication] = Seq.empty,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends Processor[ApplicationOption, OccursInApplication]
+  ) extends Processor[OccursInApplication]
       with WithGroups
       with OccursInDomain {
     override def isAppRelated: Boolean = true
-    lazy val options: Seq[ApplicationOption] = contents.filter[ApplicationOption]
-
   }
 
   /** A reference to an Application using a path identifier
@@ -3829,60 +3464,6 @@ object AST {
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// DOMAIN
-
-  /** Base trait for all options a Domain can have.
-    */
-  sealed abstract class DomainOption(final val name: String) extends OptionValue with OccursInDomain
-
-  /** An [[DomainOption]] to specify the css for this [[Domain]] in generated diagrams, etc. */
-  case class DomainCssOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("css")
-
-  /** An [[DomainOption]] to specify the Font Awesome icon for this [[Domain]] in generated diagrams, etc. */
-  case class DomainIconOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("faicon")
-
-  /** An [[DomainOption]] that specifies the kind of technology used to represent the entity */
-  case class DomainTechnologyOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("technology")
-
-  /** An [[DomainOption]] that indicates the general kind of domain being defined. This option takes a value which
-    * provides the kind. Examples of useful kinds are "device", "user", "concept", "machine", and similar kinds of
-    * entities. This entity option may be used by downstream AST processors, especially code generators.
-    */
-  case class DomainKindOption(loc: At, override val args: Seq[LiteralString])
-      extends DomainOption("kind")
-      with ConstrainedOptionValue {
-    val accepted: Seq[String] = Seq(
-      "accommodation",
-      "administrative",
-      "agricultural",
-      "healthcare",
-      "entertainment",
-      "clothing",
-      "construction",
-      "education",
-      "electronics",
-      "engineering",
-      "finance",
-      "forestry",
-      "fuel",
-      "information",
-      "insurance",
-      "publishing",
-      "manufacturing",
-      "logistics",
-      "process control",
-      "transportation"
-    )
-  }
-
-  /** A context's "wrapper" option. This option suggests the bounded context is to be used as a wrapper around an
-    * external system and is therefore at the boundary of the context map
-    *
-    * @param loc
-    *   The location of the wrapper option
-    */
-  case class DomainPackageOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("package")
-
-  case class DomainExternalOption(loc: At, override val args: Seq[LiteralString]) extends DomainOption("external")
 
   /** The definition of a domain. Domains are the highest building block in RIDDL and may be nested inside each other to
     * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies
@@ -3905,7 +3486,7 @@ object AST {
     contents: Seq[OccursInDomain] = Seq.empty,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
-  ) extends VitalDefinition[DomainOption, OccursInDomain]
+  ) extends VitalDefinition[OccursInDomain]
       with OccursAtRootScope
       with WithTypes
       with WithAuthors
@@ -3916,9 +3497,8 @@ object AST {
       with WithEpics
       with WithSagas
       with WithDomains
-      with OccursInDomain {
-    lazy val options: Seq[DomainOption] = contents.filter[DomainOption]
-  }
+      with WithOptions
+      with OccursInDomain {}
 
   /** A reference to a domain definition
     *
@@ -3946,5 +3526,49 @@ object AST {
         .getOrElse(Seq.empty[AuthorRef])
     }
   }
+
+  def getTopLevelDomains(root: Root): Contents[Domain] = {
+    (root.domains ++ root.includes.flatMap(_.contents.filter[Domain]))
+  }
+  
+  def getDomains(domain: Domain): Contents[Domain] = {
+    domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
+  }
+
+  def getContexts(domain: Domain): Contents[Context] = {
+    domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
+  }
+
+  def getApplications(domain: Domain): Contents[Application] = {
+    domain.applications ++ domain.includes.flatMap(_.contents.filter[Application])
+  }
+
+  def getEpics(domain: Domain): Contents[Epic] = {
+    domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
+  }
+
+  def getEntities(context: Context): Contents[Entity] = {
+    context.entities ++ context.includes.flatMap(_.contents.filter[Entity])
+  }
+
+  def getAuthors(domain: Domain): Contents[Author] = {
+    val nested = domain.includes.flatMap(_.contents.filter[Author])
+    domain.authors ++ domain.domains.flatMap(getAuthors) ++ nested
+  }
+
+  def getAuthors(root: Root): Contents[Author] = {
+    root.domains.flatMap(getAuthors)
+  }
+
+  def getUsers(domain: Domain): Contents[User] = {
+    val nested = domain.includes.flatMap(_.contents.filter[User])
+    domain.users ++ domain.domains.flatMap(getUsers) ++ nested
+  }
+
+  def getUsers(root: Root): Contents[User] = {
+    root.domains.flatMap(getUsers)
+  }
+
+  extension (optLit: Option[LiteralString]) def format: String = optLit.map(_.format).getOrElse("N/A")
 
 }

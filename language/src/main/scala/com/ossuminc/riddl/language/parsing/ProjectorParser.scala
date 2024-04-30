@@ -20,15 +20,6 @@ private[parsing] trait ProjectorParser {
     & StreamingParser
     & TypeParser =>
 
-  private def projectorOption[u: P]: P[ProjectorOption] = {
-    option[u, ProjectorOption](RiddlOptions.projectorOptions) {
-      case (loc, RiddlOption.technology, args) => ProjectorTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)        => ProjectorCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)     => ProjectorIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => ProjectorKindOption(loc, args)
-    }
-  }
-
   private def projectorInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
     include[u, OccursInProjector](projectorDefinitions(_))
   }
@@ -44,7 +35,7 @@ private[parsing] trait ProjectorParser {
   private def projectorDefinitions[u: P]: P[Seq[OccursInProjector]] = {
     P(
       updates | typeDef | term | projectorInclude | handler(StatementsSet.ProjectorStatements) |
-        function | inlet | outlet | invariant | constant | authorRef | comment | projectorOption
+        function | inlet | outlet | invariant | constant | authorRef | comment | option
     )./.rep(1)
   }
 

@@ -1,0 +1,96 @@
+domain Everything is {
+
+  type SomeType is String
+  command DoAThing is { thingField: Integer }
+
+  context APlant is {
+    source Source is { outlet Commands is DoAThing } described by "Data Source"
+    sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
+    connector AChannel is {
+      from outlet APlant.Source.Commands to inlet APlant.Sink.Commands
+    } explained as "A Channel"
+  }
+
+  user Author is "human" briefly "An exemplar"
+
+  epic WritingABook is {
+    user Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
+    case primary is { ??? }
+  } described as "A simple authoring story"
+
+  context full is {
+
+    inlet input is type DoAThing
+    connector foo is {
+       from outlet Everything.APlant.Source.Commands to inlet full.input
+    }
+
+    type str is String             // Define str as a String
+    type num is Number             // Define num as a Number
+    type boo is Boolean            // Define boo as a Boolean
+    type ident is Id(Something)    // Define ident as an Id
+    type dat is Date               // Define dat as a Date
+    type tim is Time               // Define tim as a Time
+    type stamp is TimeStamp        // Define stamp as a TimeStamp
+    type url is URL
+
+    type PeachType is { a: Integer }
+    type enum is any of { Apple Pear Peach(23)  Persimmon(24) }
+
+    type alt is one of { enum or stamp or url }
+
+    type agg is {
+      key: num,
+      id: ident,
+      time is TimeStamp
+    }
+
+    type oneOrMore is many agg
+    type zeroOrMore is agg*
+    type optional is agg?
+
+    command ACommand is { ??? }
+
+    entity Something is {
+      option aggregate option transient
+
+      type somethingDate is Date
+
+      event Inebriated is { ??? }
+
+      record fields is { field:  SomeType }
+      state someState of Something.fields is {
+        handler foo is {
+          on command ACommand {
+            "if and(Something arrives, misc()) then"
+              send event Inebriated to inlet Everything.full.input
+            "end"
+          }
+        }
+      }
+
+      function whenUnderTheInfluence is {
+        requires {n: Nothing}
+        returns {b: Boolean}
+        body ???
+      }
+    }
+
+    entity SomeOtherThing is {
+      type ItHappened is event { field: String }
+      record fields is { field: String }
+      state otherThingState of SomeOtherThing.fields is {
+        handler fee is {
+          on event ItHappened {
+             set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
+          }
+        }
+      }
+    }
+    function misc is {
+      requires { n: Nothing }
+      returns { b: Boolean }
+      body ???
+    }
+  }
+}

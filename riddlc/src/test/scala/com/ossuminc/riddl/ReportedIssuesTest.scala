@@ -1,6 +1,6 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.commands.CommandPlugin
+import com.ossuminc.riddl.command.CommandPlugin
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}

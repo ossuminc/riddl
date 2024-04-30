@@ -1,0 +1,169 @@
+domain ReactiveBBQ is {
+
+  type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
+    "Unique identifier for a customer"
+  }
+
+  type OrderId is Id(ReactiveBBQ.Order.Order) described as {
+    |# brief
+    |Unique identifier for a customer's order
+    |# see
+    |* [OrderId](http://www.example.com/show/details/on/OrderId)
+  }
+
+  type Empty = Nothing
+
+  context Customer is {
+    entity Customer is {
+      state main of ReactiveBBQ.Empty is { ??? }
+      handler input is { ??? }
+    }
+  }
+
+
+  context Kitchen is {
+    type IP4Address is { a: Number, b: Number, c: Number, d: Number}
+    type OrderViewType is {
+      address:  type IP4Address
+    }
+    entity OrderViewer is {
+     option is kind("device")
+     record fields is { field: type OrderViewType }
+     state OrderState of OrderViewer.fields is {
+       handler input is { ??? }
+     }
+    } explained as {
+      |# brief
+      |This is an OrderViewer
+      |# details
+      |The OrderViewer is the device in the kitchen, probably a touch screen,
+      |that the cooks use to view the sequence of orders to cook
+      |# see
+      |* http://foo.com/
+    }
+  } explained as {
+    |# brief
+    |The kitchen is where food is prepared
+    |# details
+    |The kitchen bounded context provides the ability for the kitchen staff
+    |to interact with orders they are preparing. The kitchen is a client of
+    |the orders bounded context and interacts with that context alone
+    |the outstanding orders to be prepared. Everything else that happens in
+    |the kitchen is out of scope for the restaurant automation software.
+    |Consequently, this bounded context is pretty minimal.
+    |### Subject-Verb-Object Statements
+    |1. Kitchen displays orders
+    |1. Order is sent to Kitchen for display
+    |1. Order sends order status changes to Kitchen
+    |1. Kitchen ignores drink items on order
+    |1.
+  }
+
+  context Loyalty is {
+    type AccrualEvent is {
+      when is TimeStamp,
+      who is CustomerId,
+      pointsAccrued is Number,
+      fromOrder is OrderId
+    }
+    type AwardEvent is {
+      when is TimeStamp,
+      who is CustomerId,
+      pointsAwarded is Number,
+      toOrder is OrderId
+    }
+    type RewardEvent is one of { AccrualEvent or AwardEvent }
+    entity RewardsAccount is {
+      record fields is {
+        id is CustomerId,
+        points is Number,
+        rewardEvents is many optional RewardEvent
+      }
+      state RewardState of RewardsAccount.fields is {
+        handler Inputs is { ??? }
+      }
+    }
+
+    adaptor PaymentAdapter from context ReactiveBBQ.Payment is {
+      ???
+    }
+  }
+
+  context Order is {
+    entity Order is {
+      option is aggregate
+      record fields is {
+        orderId is OrderId,
+        customerId is CustomerId
+      }
+      state OrderState of Order.fields is {
+        handler foo  is {}
+      }
+    }
+  }
+
+  context Payment is {
+    entity Payment is {
+      option is aggregate
+      record fields is {
+        orderId is OrderId,
+        amount is Number,
+        cardToken is String
+      }
+      state PaymentState of Payment.fields is {
+        handler foo is { ??? }
+      }
+    }
+  }
+
+  context Menu is {
+    entity MenuItem is {
+      record fields is { something: String }
+      state MenuState of MenuItem.fields is {
+        handler foo is {}
+      }
+    }
+    type MenuItemRef is reference to entity MenuItem
+    entity Menu is {
+      option is aggregate
+      record fields is { items: many MenuItemRef }
+      state typical of Menu.fields is {
+        handler foo is { ??? }
+      }
+    }
+  }
+
+  context Reservation is {
+    type ReservationValue is {
+      partyName is String,
+      phoneNumber is String,
+      location is Id(Location),
+      time is Time,
+      date is Date
+    }
+    entity Location is {
+      record fields is { name: String }
+      state typical of Location.fields is {
+        handler foo is {}
+      }
+    } explained as "This is a retail store Location"
+
+    entity Reservation is {
+     option aggregate
+     record fields is { value: ReservationValue }
+     state reservation of Reservation.fields is {
+       handler ofInputs is {}
+     }
+    }
+  }
+} explained as {
+  |# brief
+  | Reactive BBQ Domain Definition
+  |#details
+  |This domain definition is designed to be instructive in the RIDDL language.
+  |It uses the case study from the Lightbend Reactive Architecture course as
+  |the basis for defining the domain. The course uses a set of interviews with
+  |Reactive BBQ employees to define the requirements. This domain specification
+  |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+}
+// #end-of-domain

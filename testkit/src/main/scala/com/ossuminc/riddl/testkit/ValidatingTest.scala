@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, Riddl}
 import org.scalatest.*
 import org.scalatest.matchers.must.Matchers

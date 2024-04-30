@@ -12,7 +12,6 @@ object V {
   val lang3 = "3.14.0"
   val openAISC = "1.0.0.RC.1"
   val pureconfig = "0.17.6"
-  val riddl_hugo = "0.2.0-2-95f3c45a"
   val scalacheck = "1.17.0"
   val scalatest = "3.2.18"
   val scopt = "4.1.0"
@@ -27,7 +26,6 @@ object Dep {
   val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3
   val openAISC = "io.cequence" %% "openai-scala-client" % V.openAISC
   val pureconfig = "com.github.pureconfig" %% "pureconfig-core" % V.pureconfig
-  val riddl_hugo = "com.ossuminc" %% "riddl-hugo" % V.riddl_hugo
   val scalactic = "org.scalactic" %% "scalactic" % V.scalatest
   val scalatest = "org.scalatest" %% "scalatest" % V.scalatest
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
