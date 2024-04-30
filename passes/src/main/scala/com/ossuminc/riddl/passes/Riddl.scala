@@ -36,7 +36,8 @@ object Riddl {
     logger: Logger = SysLogger()
   ): Either[Messages, PassesResult] = {
     TopLevelParser.parseInput(input, commonOptions) match {
-      case Left(messages) => Left(messages)
+      case Left(messages) => 
+        Left(messages)
       case Right(root) =>
         val input = PassInput(root, commonOptions)
         val result = Pass.runThesePasses(input, passes, logger)

@@ -31,11 +31,11 @@ class EntityValidatorTest extends ValidatingTest {
           val numMissing =
             msgs.count(_.kind.isMissing)
           numMissing mustBe 3
-          entity.options must contain(EntityIsFiniteStateMachine((3, 9, rpi)))
-          entity.options must contain(EntityMessageQueue((4, 9, rpi)))
-          entity.options must contain(EntityIsAggregate((5, 9, rpi)))
-          entity.options must contain(EntityTransient((6, 9, rpi)))
-          entity.options must contain(EntityIsAvailable((7, 9, rpi)))
+          entity.options must contain(OptionValue((3, 9, rpi), "finite-state-machine"))
+          entity.options must contain(OptionValue((4, 9, rpi),"message-queue"))
+          entity.options must contain(OptionValue((5, 9, rpi), "aggregate"))
+          entity.options must contain(OptionValue((6, 9, rpi), "transient"))
+          entity.options must contain(OptionValue((7, 9, rpi), "available"))
       }
     }
 

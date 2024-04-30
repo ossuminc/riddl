@@ -1,31 +1,41 @@
-/*
- * Copyright 2019 Ossum, Inc.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 package com.ossuminc.riddl.prettify
 
+import com.ossuminc.riddl.command.PassCommandOptions
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.{Messages, nl}
-import com.ossuminc.riddl.language.parsing.{Keyword, Readability}
+import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.language.{AST, Messages}
-import com.ossuminc.riddl.passes.{HierarchyPass, PassCreator, PassInfo, PassInput, PassOutput, PassesOutput}
+import com.ossuminc.riddl.language.Messages.nl
+import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
+import com.ossuminc.riddl.passes.translate.TranslatingOptions
+import com.ossuminc.riddl.command.TranslationCommand
 
 import java.nio.file.Path
 import scala.annotation.unused
 
-object PrettifyPass extends PassInfo {
+object PrettifyPass extends PassInfo[PrettifyPass.Options] {
   val name: String = "prettify"
-  val creator: PassCreator = { (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, PrettifyState()) }
+  def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    PrettifyPass(in, out, PrettifyState(options))
+  }
 
+  /** Options for the PrettifyPass and PrettifyCommand */
+  case class Options(
+    inputFile: Option[Path] = None,
+    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
+    projectName: Option[String] = None,
+    singleFile: Boolean = true
+  ) extends TranslationCommand.Options with PassOptions with PassCommandOptions {
+    def command: String = name
+  }
+  
   /** A function to translate between a definition and the keyword that introduces them.
     *
     * @param definition
     *   The definition to look up
+    *
     * @return
     *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
     */
@@ -57,11 +67,6 @@ object PrettifyPass extends PassInfo {
   }
 }
 
-case class PrettifyOutput(
-  messages: Messages = Messages.empty,
-  state: PrettifyState
-) extends PassOutput
-
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState = PrettifyState())
     extends HierarchyPass(input, outputs) {
@@ -83,16 +88,16 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
 
   def openContainer(container: Definition, parents: Seq[Definition]): Unit = {
     container match {
-      case epic: Epic         => openEpic(epic)
-      case uc: UseCase        => openUseCase(uc)
-      case domain: Domain     => openDomain(domain)
-      case adaptor: Adaptor   => openAdaptor(adaptor)
-      case typ: Type          => state.current.emitType(typ)
-      case function: Function => openFunction(function)
-      case st: State          => openState(st)
-      case step: SagaStep     => openSagaStep(step)
+      case epic: Epic           => openEpic(epic)
+      case uc: UseCase          => openUseCase(uc)
+      case domain: Domain       => openDomain(domain)
+      case adaptor: Adaptor     => openAdaptor(adaptor)
+      case typ: Type            => state.current.emitType(typ)
+      case function: Function   => openFunction(function)
+      case st: State            => openState(st)
+      case step: SagaStep       => openSagaStep(step)
       case streamlet: Streamlet => openStreamlet(streamlet)
-      case processor: Processor[_, _] =>
+      case processor: Processor[_] =>
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
       case handler: Handler =>
         state.withCurrent(_.openDef(handler))
@@ -143,12 +148,12 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     parents: Seq[Definition]
   ): Unit = {
     container match {
-      case _: Type            => () // openContainer did all of it
-      case epic: Epic         => closeEpic(epic)
-      case uc: UseCase        => closeUseCase(uc)
-      case st: State          => state.withCurrent(_.closeDef(st))
-      case _: OnMessageClause => closeOnClause()
-      case _: Root                  => () // ignore
+      case _: Type               => () // openContainer did all of it
+      case epic: Epic            => closeEpic(epic)
+      case uc: UseCase           => closeUseCase(uc)
+      case st: State             => state.withCurrent(_.closeDef(st))
+      case _: OnMessageClause    => closeOnClause()
+      case _: Root               => () // ignore
       case container: Definition =>
         // Applies To: Domain, Context, Entity, Adaptor, Interactions, Saga,
         // Plant, Streamlet, Function, SagaStep
@@ -210,14 +215,14 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
           .add(" { ??? }")
           .add(nl)
       )
-    else 
-      useCase.contents.foreach {  
-        case si: SequentialInteractions => () // FIXME
-        case pi: ParallelInteractions => () // FIXME
-        case oi: OptionalInteractions => () // FIXME
+    else
+      useCase.contents.foreach {
+        case si: SequentialInteractions     => () // FIXME
+        case pi: ParallelInteractions       => () // FIXME
+        case oi: OptionalInteractions       => () // FIXME
         case twori: TwoReferenceInteraction => () // FIXME
-        case gi: GenericInteraction => () // FIXME
-        case _: Comment => ()
+        case gi: GenericInteraction         => () // FIXME
+        case _: Comment                     => ()
       }
     end if
   }
@@ -361,7 +366,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     @unused include: Include[T]
   ): Unit = {
     if !state.options.singleFile then {
-      include.origin  match {
+      include.origin match {
         case path: String if path.startsWith("http") =>
           val url = java.net.URI.create(path).toURL
           state.current.add(s"include \"$path\"")

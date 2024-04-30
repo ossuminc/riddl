@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.prettify
 
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.commands.TranslatingState
+import com.ossuminc.riddl.passes.translate.TranslatingState
 
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -16,10 +16,9 @@ import java.nio.file.Path
 import scala.collection.mutable
 
 case class PrettifyState(
-  commonOptions: CommonOptions = CommonOptions.empty ,
-  options: PrettifyCommand.Options = PrettifyCommand.Options()
+  options: PrettifyPass.Options = PrettifyPass.Options()
 )   extends TranslatingState[RiddlFileEmitter] {
-
+  
   require(options.inputFile.nonEmpty, "No input file specified")
   require(options.outputDir.nonEmpty, "No output directory specified")
 

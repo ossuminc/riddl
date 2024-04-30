@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.commands.CommandPlugin
+import com.ossuminc.riddl.command.CommandPlugin
 
 /** RIDDL Main Program */
 object RIDDLC {

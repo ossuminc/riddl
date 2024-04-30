@@ -20,15 +20,13 @@ import scala.reflect.*
 abstract class ValidatingTest extends ParsingTest {
 
   protected def runStandardPasses(
-                                   model: Root,
-                                   options: CommonOptions,
-                                   shouldFailOnErrors: Boolean = false
+    model: Root,
+    options: CommonOptions,
+    shouldFailOnErrors: Boolean = false
   ): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(model, options)
-    if shouldFailOnErrors && result.messages.hasErrors then
-      Left(result.messages)
-    else
-      Right(result)
+    if shouldFailOnErrors && result.messages.hasErrors then Left(result.messages)
+    else Right(result)
   }
 
   def parseAndValidateAggregate(
@@ -139,7 +137,7 @@ abstract class ValidatingTest extends ParsingTest {
             if shouldFailOnErrors then fail(errors.format)
             else validation(root, errors)
           case Right(pr: PassesResult) =>
-            validation(root,  pr.messages)
+            validation(root, pr.messages)
         }
     }
   }
@@ -177,8 +175,8 @@ abstract class ValidatingTest extends ParsingTest {
     }
   }
 
-  private def defaultFail(msgs: Messages): Assertion = {
-    fail(msgs.map(_.format).mkString("\n"))
+  private def defaultFail(pr: PassesResult): Assertion = {
+    fail(pr.messages.map(_.format).mkString("\n"))
   }
 
   def parseAndValidateTestInput(
@@ -188,7 +186,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (Root, Messages) => Assertion = (_, msgs) => defaultFail(msgs)
+    validation: (Root, PassesResult) => Assertion = (_, msgs) => defaultFail(msgs)
   ): Assertion = {
     val file = new File(directory + fileName)
     TopLevelParser.parseFile(file) match {
@@ -199,8 +197,8 @@ abstract class ValidatingTest extends ParsingTest {
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
-          case Right(ao) =>
-            validation(root, ao.messages)
+          case Right(pr) =>
+            validation(root, pr)
         }
     }
   }

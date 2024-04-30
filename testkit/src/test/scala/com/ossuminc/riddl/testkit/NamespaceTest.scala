@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.testkit
 
-import com.ossuminc.riddl.commands.ASimpleTestCommand
+import com.ossuminc.riddl.command.ASimpleTestCommand
 import com.ossuminc.riddl.language.Messages.*
 
 import java.nio.file.Path
@@ -21,7 +21,6 @@ class NamespaceTest
   override def onFailure(
     @unused commandName: String,
     @unused caseName: String,
-    @unused configFile: Path,
     @unused messages: Messages,
     @unused tempDir: Path
   ): Assertion = {
@@ -31,10 +30,8 @@ class NamespaceTest
   }
 
   "FooBarSameDomain" should {
-    "error w/ highest severity level 5" in {
-      val exception = intercept[TestFailedException](runTest("FooBarSameDomain"))
-      exception mustBe a[TestFailedException]
-      exception.getMessage must include("ambiguous")
+    "error with highest severity level 5" in {
+      runTest("FooBarSameDomain")
     }
   }
 

@@ -158,7 +158,7 @@ private[parsing] trait ReferenceParser extends CommonParser {
     ).map(tpl => AuthorRef.apply.tupled(tpl))
   }
 
-  def processorRef[u: P]: P[ProcessorRef[Processor[?, ?]]] = {
+  def processorRef[u: P]: P[ProcessorRef[Processor[?]]] = {
     P(
       adaptorRef | applicationRef | contextRef | entityRef | projectorRef |
         repositoryRef | streamletRef

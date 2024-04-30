@@ -21,15 +21,6 @@ private[parsing] trait RepositoryParser {
     & FunctionParser
     & TypeParser =>
 
-  private def repositoryOption[u: P]: P[RepositoryOption] = {
-    option[u, RepositoryOption](RiddlOptions.repositoryOptions) {
-      case (loc, RiddlOption.technology, args) => RepositoryTechnologyOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => RepositoryKindOption(loc, args)
-      case (loc, RiddlOption.css, args)        => RepositoryCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)     => RepositoryIconOption(loc, args)
-    }
-  }
-
   private def repositoryInclude[u: P]: P[IncludeHolder[OccursInRepository]] = {
     include[u, OccursInRepository](repositoryDefinitions(_))
   }
@@ -82,7 +73,7 @@ private[parsing] trait RepositoryParser {
 
   private def repositoryDefinitions[u: P]: P[Seq[OccursInRepository]] = {
     P(
-      typeDef | schema | handler(StatementsSet.RepositoryStatements) | repositoryOption |
+      typeDef | schema | handler(StatementsSet.RepositoryStatements) | option |
         function | term | repositoryInclude | inlet | outlet | constant | authorRef | comment
     ).rep(0)
   }

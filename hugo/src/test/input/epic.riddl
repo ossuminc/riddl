@@ -1,0 +1,32 @@
+domain ignore {
+
+  user UseIt is "for testing"
+
+  application a1sauce {
+    command edit is { ??? }
+    command cut is { ??? }
+    command copy is { ??? }
+    command paste is { ??? }
+    menu Main is {
+      input EditItem initiates command edit
+      input CutItem initiates command cut
+      input CopyItem initiates command copy
+      input PasteItem initiates command paste
+    }
+
+    type StringInput = String
+    page Editor {
+      input TextContent takes type StringInput
+    }
+  }
+
+  epic useIt {
+    user UseIt wants to "exercise this epic" so that "use cases can be validated"
+    case Foo is {
+      user UseIt wants to "edit a document" so that "it can be saved"
+      step user UseIt selects input a1sauce.Main.EditItem
+      step focus user UseIt on page Editor
+      step take input TextContent from user UseIt
+    }
+  }
+}

@@ -1,12 +1,12 @@
 package com.ossuminc.riddl.prettify
 
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers.must.Matchers
-
-import java.nio.file.Files
-import java.nio.file.Path
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.nio.file.{Files, Path}
+
 
 /** Tests For RiddlFileEmitter */
 class RiddlFileEmitterTest extends AnyWordSpec with Matchers {

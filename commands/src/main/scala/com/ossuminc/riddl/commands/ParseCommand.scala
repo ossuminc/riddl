@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.command.InputFileCommandPlugin
 
 import java.nio.file.Path
 

@@ -17,22 +17,13 @@ private[parsing] trait AdaptorParser {
   this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
     CommonParser =>
 
-  private def adaptorOption[u: P]: P[AdaptorOption] = {
-    option[u, AdaptorOption](RiddlOptions.adaptorOptions) {
-      case (loc, RiddlOption.technology, args) => AdaptorTechnologyOption(loc, args)
-      case (loc, RiddlOption.css, args)        => AdaptorCssOption(loc, args)
-      case (loc, RiddlOption.faicon, args)     => AdaptorIconOption(loc, args)
-      case (loc, RiddlOption.kind, args)       => AdaptorKindOption(loc, args)
-    }
-  }
-
   private def adaptorInclude[u: P]: P[IncludeHolder[OccursInAdaptor]] = {
     include[u, OccursInAdaptor](adaptorDefinitions(_))
   }
 
   private def adaptorDefinitions[u: P]: P[Seq[OccursInAdaptor]] = {
     P(
-      (handler(StatementsSet.AdaptorStatements) | function | inlet | adaptorOption |
+      (handler(StatementsSet.AdaptorStatements) | function | inlet | option |
         outlet | adaptorInclude | term | constant | authorRef | comment)./.rep(1)
     )
   }

@@ -169,6 +169,10 @@ object Messages {
     Message(loc, s"While $context: $message")
   }
 
+  def severe(message: String, exception: Throwable, loc: At): Message = {
+    val message2 = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
+    Message(loc, message + ": " + message2, SevereError)
+  }
   def severe(message: String, loc: At = At.empty): Message = {
     Message(loc, message, SevereError)
   }
