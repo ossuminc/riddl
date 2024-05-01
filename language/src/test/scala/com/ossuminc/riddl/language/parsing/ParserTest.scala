@@ -269,12 +269,15 @@ class ParserTest extends ParsingTest {
                 Identifier((4, 8, rpi), "Foo"),
                 Aggregation(
                   (4, 15, rpi),
-                  List(Field((4,17,rpi), Identifier((4,17,rpi), "x"), String_((4,20,rpi)))))
-                ),
-                State((5,3,rpi), Identifier((5,9,rpi), "BurgerState"),
-                  TypeRef((5,24,rpi), "type", PathIdentifier((5,29,rpi), List("BurgerStruct"))),
-                  List(Handler((6,11,rpi), Identifier((6,11,rpi), "BurgerHandler")))
-               )
+                  List(Field((4, 17, rpi), Identifier((4, 17, rpi), "x"), String_((4, 20, rpi))))
+                )
+              ),
+              State(
+                (5, 3, rpi),
+                Identifier((5, 9, rpi), "BurgerState"),
+                TypeRef((5, 24, rpi), "type", PathIdentifier((5, 29, rpi), List("BurgerStruct"))),
+                List(Handler((6, 11, rpi), Identifier((6, 11, rpi), "BurgerHandler")))
+              )
             )
           )
           content mustBe expected
@@ -321,6 +324,7 @@ class ParserTest extends ParsingTest {
                   Identifier(_, "foo"),
                   Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
                   Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
+                  _,
                   _,
                   _,
                   _

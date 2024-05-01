@@ -20,10 +20,10 @@ private[parsing] trait HandlerParser {
     ).map(t => OnOtherClause.apply.tupled(t))
   }
 
-  private def onInitClause[u: P](set: StatementsSet): P[OnInitClause] = {
+  private def onInitClause[u: P](set: StatementsSet): P[OnInitializationClause] = {
     P(
       location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
-    ).map(t => OnInitClause.apply.tupled(t))
+    ).map(t => OnInitializationClause.apply.tupled(t))
   }
 
   private def onTermClause[u: P](set: StatementsSet): P[OnTerminationClause] = {

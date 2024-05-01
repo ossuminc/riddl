@@ -34,7 +34,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
       case _: Root | _: Interaction | _: Include[Definition] @unchecked =>
         // None of these kinds of definitions contribute to the TODO List because they have a weird name
         Seq.empty[ToDoItem]
-      case ad: Definition if ad.isImplicit => Seq.empty[ToDoItem]
+      case ad: Definition if ad.isAnonymous => Seq.empty[ToDoItem]
       // Implicit definitions don't have a name so there's no word to define in the glossary
       case d: Definition if d.isEmpty =>
         val pars = parents.toSeq
