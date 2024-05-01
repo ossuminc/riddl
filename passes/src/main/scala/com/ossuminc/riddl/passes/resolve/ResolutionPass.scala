@@ -66,7 +66,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveType(t, parentsAsSeq)
       case mc: OnMessageClause =>
         resolveOnMessageClause(mc, parentsAsSeq)
-      case ic: OnInitClause =>
+      case ic: OnInitializationClause =>
         resolveOnClauses(ic, parentsAsSeq)
       case tc: OnTerminationClause =>
         resolveOnClauses(tc, parentsAsSeq)
@@ -308,7 +308,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     list.forall { item => isSameKind[T](item._1) } &&
     list
       .map { item =>
-        item._2.filterNot(_.isImplicit)
+        item._2.filterNot(_.isAnonymous)
       }
       .forall(_ == list.head)
   }
@@ -811,7 +811,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       definitions.size
     val expectedClass = classTag[T].runtimeClass
     definitions.headOption match {
-      case Some(head) if head.isImplicit && allDifferent =>
+      case Some(head) if head.isAnonymous && allDifferent =>
         // pick the one that is the right type or the first one
         list.find(_._1.getClass == expectedClass) match {
           case Some((defn, parents)) => defn +: parents

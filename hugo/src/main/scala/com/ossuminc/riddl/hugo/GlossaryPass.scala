@@ -42,7 +42,7 @@ case class GlossaryPass(
     parents: mutable.Stack[Definition]
   ): Seq[GlossaryEntry] = {
     definition match {
-      case ad: Definition if ad.isImplicit => Seq.empty[GlossaryEntry]
+      case ad: Definition if ad.isAnonymous => Seq.empty[GlossaryEntry]
       // Implicit definitions don't have a name so there's no word to define in the glossary
       case d: Definition =>
         // everything else does

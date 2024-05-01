@@ -31,7 +31,7 @@ trait EntityWriter { this: MarkdownWriter =>
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       clause match {
-        case oic: OnInitClause => heading("Initialize", level + 1)
+        case oic: OnInitializationClause => heading("Initialize", level + 1)
         case omc: OnMessageClause => heading(" On " + omc.msg.format, level + 1)
         case otc: OnTerminationClause => heading("Terminate", level + 1)
         case ooc: OnOtherClause => heading("Other", level + 1)

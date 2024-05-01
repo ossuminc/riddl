@@ -99,14 +99,60 @@ class ASTTest extends AnyWordSpec with Matchers {
     LiteralString.empty,
     LiteralString.empty
   )
+  val brief: Option[LiteralString] = Some(LiteralString(At.empty, "brief"))
+  val description: Option[Description] = Some(BlockDescription(At.empty, Seq(LiteralString(At.empty, "Description"))))
+  val entityRef: EntityRef = EntityRef(At.empty, PathIdentifier(At.empty, Seq("Entity")))
+  val aggregate: AggregateUseCaseTypeExpression = AggregateUseCaseTypeExpression(
+    At.empty,
+    CommandCase,
+    Seq(Field(At(), Identifier(At(), "foo"), String_(At(), None, None)))
+  )
+  val command: Type = Type(At.empty, Identifier(At(), "command"), aggregate)
+  val type_ : Type = Type(
+    At.empty,
+    Identifier(At(), "Str"),
+    AliasedTypeExpression(At(), "command", PathIdentifier(At(), Seq("command")))
+  )
+  val typeRef: TypeRef = TypeRef(At.empty, "type", PathIdentifier(At(), Seq("Str")))
 
-  val sagastep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagastep"))
-  val state: State =
-    State(At.empty, Identifier(At.empty, "state"), TypeRef())
-  val storycase: UseCase =
-    UseCase(At.empty, Identifier(At.empty, "storycase"))
+  val fieldRef: FieldRef = FieldRef(At(), PathIdentifier(At(), Seq("command", "foo")))
+  val messageRef: CommandRef = CommandRef(At(), PathIdentifier(At(), Seq("command")))
+  val statements: Seq[Statement] = Seq(
+    ArbitraryStatement(At.empty, LiteralString(At.empty, "arbitrary")),
+    BecomeStatement(At.empty, entityRef, HandlerRef(At(), PathIdentifier(At(), Seq("Entity")))),
+    CallStatement(At.empty, FunctionRef(At(), PathIdentifier(At(), Seq("Lambda")))),
+    CodeStatement(At.empty, language = LiteralString(At.empty, "scala"), body = "def f[A](x: A): A"),
+    ErrorStatement(At.empty, LiteralString(At.empty, "error message")),
+    FocusStatement(At.empty, GroupRef(At.empty, "panel", PathIdentifier(At.empty, Seq("panel")))),
+    ForEachStatement(At.empty, fieldRef, Seq.empty),
+    IfThenElseStatement(At.empty, LiteralString.empty, Seq.empty, Seq.empty),
+    MorphStatement(At.empty, entityRef, StateRef(At.empty, PathIdentifier(At(), Seq("state"))), messageRef),
+    ReadStatement(At.empty, "read", LiteralString(At(), "something"), typeRef, LiteralString(At(), "foo")),
+    ReplyStatement(At.empty, messageRef),
+    ReturnStatement(At.empty, LiteralString(At(), "result")),
+    StopStatement(At.empty),
+    TellStatement(At.empty, messageRef, entityRef),
+    WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
+  )
+  val function: Function =
+    Function(At.empty, Identifier(At(), "Lambda"), None, None, Seq.empty, statements, brief, description)
+  val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
+  val onClauses: Seq[OnClause] = Seq(
+    OnInitializationClause(At.empty, statements, brief, description),
+    OnMessageClause(At.empty, messageRef, None, statements, brief, description),
+    OnOtherClause(At.empty, statements, brief, description),
+    OnTerminationClause(At.empty, statements, brief, description)
+  )
+  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), onClauses, brief, description)
+  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Seq(handler), brief, description)
+  val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
+  val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
+  val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
+  val stateRef: StateRef = StateRef(At.empty, PathIdentifier(At(), Seq("state")))
+  val storyCase: UseCase = UseCase(At.empty, Identifier(At.empty, "story-case"))
   val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"))
   val term: Term = Term(At.empty, Identifier(At.empty, "term"))
+
   "User" should {
     "have a test" in {
       actor.format mustBe s"user ${actor.id.format} is ${actor.is_a.format}"
@@ -117,7 +163,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   val context: AST.Context = Context(At(), Identifier(At(), "test"))
 
   "Adaptor" should {
-    "have a test" in {
+    "pass simple tests" in {
       adaptor.loc mustBe At.empty
       adaptor.id.value mustBe "adaptor"
       adaptor.direction mustBe InboundAdaptor(At.empty)
@@ -125,7 +171,13 @@ class ASTTest extends AnyWordSpec with Matchers {
     }
   }
   // TODO: Finish the pending cases
-  "Application" should { "have a test" in { pending } }
+  "Application" should {
+    "have a test" in {
+      application.loc mustBe At.empty
+      application.id.value mustBe "application"
+      application.contents.filter[AuthorRef] mustBe Seq(authorRef)
+    }
+  }
   "Author" should {
     "be sane" in {
       author.isEmpty mustBe true
@@ -218,11 +270,21 @@ class ASTTest extends AnyWordSpec with Matchers {
       }
     }
   }
-  "Example" should { "have a test" in { pending } }
-  "Field" should { "have a test" in { pending } }
-  "Function" should { "have a test" in { pending } }
+  "Function" should {
+    "be structurally correct" in {
+      function.id.value mustBe "Lambda"
+      function.statements mustBe statements
+      function.input mustBe empty
+      function.output mustBe empty
+      function.brief mustBe brief
+      function.description mustBe description
+    }
+  }
   "Group" should { "have a test" in { pending } }
-  "Handler" should { "have a test" in { pending } }
+  "Handler" should { "have a test" in {
+    handler.contents mustBe onClauses
+    handler.id.value mustBe "handler"
+  } }
 
   "Include" should {
     "identify as root container, etc" in {
@@ -258,11 +320,13 @@ class ASTTest extends AnyWordSpec with Matchers {
     }
   }
 
-  "Saga" should { "have a test" in { pending } }
+  "Saga" should { "have a test" in {
+    
+  } }
   "SagaStep" should { "have a test" in { pending } }
   "State" should { "format correctly" in { state.format mustBe "state state" } }
-  "UseCase" should {
-    "format correctly" in { storycase.format mustBe "case storycase" }
+  "Story Case" should {
+    "format correctly" in { storyCase.format mustBe "case story-case" }
   }
 
   "Term" should {

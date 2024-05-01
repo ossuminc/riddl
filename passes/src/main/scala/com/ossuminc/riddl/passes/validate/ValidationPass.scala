@@ -86,7 +86,7 @@ case class ValidationPass(
       case omc: OnMessageClause =>
         validateOnMessageClause(omc, parentsAsSeq)
         validateStatements(omc.statements, omc, parentsAsSeq)
-      case oic: OnInitClause =>
+      case oic: OnInitializationClause =>
         checkDefinition(parentsAsSeq, oic)
         validateStatements(oic.statements, oic, parentsAsSeq)
       case otc: OnTerminationClause =>

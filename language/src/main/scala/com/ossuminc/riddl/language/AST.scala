@@ -16,18 +16,17 @@ import scala.concurrent.Future
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.tailrec
 
-/** Abstract Syntax Tree This object defines the model for processing RIDDL and producing a raw AST from it. This raw
+/** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax Tree. This raw
   * AST has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
-  * produced from parsing are syntactically correct but have no semantic validation. The Transformation passes convert
-  * RawAST model to AST model which is referentially and semantically consistent (or the user gets an error).
+  * produced from parsing are syntactically correct but have no semantic validation.
   */
 object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES
 
   /** The root trait of all parsed values. If a parser returns something, its a RiddlValue. Every node in the AST is a
-    * RiddlNode. Subclasses implement the defs in various ways because this is the most abstract notion of what is
-    * parsed.
+    * RiddlNode. Subclasses implement the definitions in various ways because this is the most abstract notion of what
+    * is parsed.
     */
   sealed trait RiddlValue {
 
@@ -42,42 +41,52 @@ object AST {
 
     def isAnonymous: Boolean = true
 
-    /** Determine if this value contains other values or not */
+    /** Determine if this [[RiddlValue]] contains other values or not */
     def isContainer: Boolean = false
 
-    /** Determine if this value is the top most container, appearing at the root of the AST */
+    /** Determine if this [[RiddlValue]] is the top most container, appearing at the root of the AST */
     def isRootContainer: Boolean = false
 
-    /** Determine if this node has definitions it contains */
+    /** Determine if this [[RiddlValue]] has definitions it contains */
     def hasDefinitions: Boolean = false
 
-    /** Determine if this value is a definition or not */
+    /** Determine if this [[RiddlValue]] is a definition or not */
     def isDefinition: Boolean = false
 
-    /** determine if this node is empty or not. Non-containers are always empty */
+    /** determine if this [[RiddlValue]] is empty or not. Non-containers are always empty */
     def isEmpty: Boolean = true
 
-    /** determines if this node is a comment or not */
+    /** determines if this [[RiddlValue]] is a comment or not */
     def isComment: Boolean = false
 
+    /** determines if this node is a vital node or not */
     def isVital: Boolean = false
 
+    /** determines if this [[RiddlValue]] is a processor (handles messages) or not */
     def isProcessor: Boolean = false
 
+    /** determines if this [[RiddlValue]] has any options set or not */
     def hasOptions: Boolean = false
 
+    /** determines if this [[RiddlValue]]defines any [[Author]]s or not */
     def hasAuthors: Boolean = false
 
+    /** determines if this [[RiddlValue]] references any [[Author]]s or not */
     def hasAuthorRefs: Boolean = false
 
+    /** determines if this [[RiddlValue]] contains any type definitions */
     def hasTypes: Boolean = false
 
+    /** determines if this [[RiddlValue]] has any includes in it */
     def hasIncludes: Boolean = false
 
+    /** determines if this [[RiddlValue]] defines a description */
     def hasDescription: Boolean = false
 
+    /** determines if this [[RiddlValue]] defines a brief description */
     def hasBriefDescription: Boolean = false
 
+    /** implements the nonEmpty function based on the isEmpty function  */
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
     ) final def nonEmpty: Boolean = !isEmpty
@@ -97,9 +106,12 @@ object AST {
   case class LiteralString(loc: At, s: String) extends RiddlValue {
     override def format = s"\"$s\""
 
+    /** Only empty if the string is empty too */
     override def isEmpty: Boolean = s.isEmpty
   }
+
   object LiteralString {
+    /** definition of the empty LiteralString */
     val empty: LiteralString = LiteralString(At.empty, "")
   }
 
@@ -108,15 +120,17 @@ object AST {
     * @param loc
     *   The location in the input where the identifier starts
     * @param value
-    *   The parsed value of the identifier
+    *   The parsed value of the [[Identifier]]
     */
   case class Identifier(loc: At, value: String) extends RiddlValue {
+    /** Convert to a printable form */
     override def format: String = value
 
     override def isEmpty: Boolean = value.isEmpty
   }
 
   object Identifier {
+    /** Definition of the empty [[Identifier]] */
     val empty: Identifier = Identifier(At.empty, "")
   }
 
@@ -135,6 +149,7 @@ object AST {
   }
 
   object PathIdentifier {
+    /** The empty [[PathIdentifier]] */
     val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
   }
 
@@ -142,8 +157,10 @@ object AST {
     * description part.
     */
   sealed trait Description extends RiddlValue {
+    /** All kinds of [[Description]] have a location provided by an [[At]] value. */
     def loc: At
 
+    /** All kinds of [[Description]] must be able to yield the lines of markdown equivalent */
     def lines: Seq[LiteralString]
 
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
@@ -154,6 +171,7 @@ object AST {
 
   /** Companion class for Description only to define the empty value */
   object Description {
+    /** The empty [[Description]] definition */
     lazy val empty: Description = new Description {
       val loc: At = At.empty
       val lines = Seq.empty[LiteralString]
@@ -161,7 +179,7 @@ object AST {
     }
   }
 
-  /** An alternative to Description to define the description as a block of strings */
+  /** An implementation of a [[Description]] that implements the lines directly as [[LiteralString]] */
   case class BlockDescription(
     loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString]
@@ -169,7 +187,7 @@ object AST {
     def format: String = ""
   }
 
-  /** An alternative to Description to define the description in a Markdown file */
+  /** An implementation of [[Description]] that provides the description in a Markdown file */
   case class FileDescription(loc: At, file: Path) extends Description {
     lazy val lines: Seq[LiteralString] = {
       val src = scala.io.Source.fromFile(file.toFile)
@@ -178,9 +196,9 @@ object AST {
     def format: String = file.toAbsolutePath.toString
   }
 
-  /** An alternative to Description to define the description with a URL */
+  /** An implementation of [[Description]] that provides the description at a URL */
   case class URLDescription(loc: At, url: java.net.URL) extends Description {
-    lazy val lines: Seq[LiteralString] = Seq.empty[LiteralString]
+    lazy val lines: Seq[LiteralString] = Seq.empty[LiteralString] // FIXME: Implement with a URL fetch
 
     /** Format the node to a string */
     override def format: String = url.toExternalForm
@@ -195,51 +213,77 @@ object AST {
     override def hasBriefDescription: Boolean = brief.exists(_.s.nonEmpty)
   }
 
-  /** Base trait of all values that have an optional Description */
+  /** Base trait of all [[RiddlValue]]s that have an optional Description */
   sealed trait DescribedValue extends RiddlValue {
     def description: Option[Description]
     override def hasDescription: Boolean = description.exists(_.hasDescription)
   }
 
+  /** A frequently use type alias for a Seq of [[RiddlValue]] */
   type Contents[+CV <: RiddlValue] = Seq[CV]
 
+  /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
   extension [CV <: RiddlValue](container: Contents[CV])
+    /** Extract the elements of the [[Contents]] that have identifiers (are definitions, essentially) */
     def identified: Contents[CV] = container.filter(_.isIdentified)
+
+    /** Extract the elements of the [[Contents]] that are the type of the type parameter T
+      *
+      * @tparam T
+      *   THe kind of [[RiddlValue]] sought in the [[Contents]]
+      * @return
+      *   The Seq of type `T` found in the [[Contents]]
+      */
     def filter[T <: RiddlValue: ClassTag]: Contents[T] = {
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
-    def vitals: Contents[VitalDefinition[CV]] = container.filter[VitalDefinition[CV]]
-    def processors: Contents[Processor[CV]] = container.filter[Processor[CV]]
+    /** Returns the elements of the [[Contents]] that are [[VitalDefinition]]s */
+    def vitals: Contents[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
+
+    /** Returns the elememts of the [[Contents]] that are [[Processor]]s */
+    def processors: Contents[Processor[?]] = container.filter[Processor[?]]
+
+    /** Find the first element of the [[Contents]] that has the provided `name`  */
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
+
+    /** Find the first element of the [[Contents]] that  */
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
-    def includes: Contents[Include[CV]] = container.filter[Include[CV]].map(_.asInstanceOf[Include[CV]])
+
+    /**  Returns the [[Include]] elements of [[Contents]] */
+    def includes: Contents[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
+
+    /** find the elements of the [[Contents]] that are [[Definition]]s */
     def definitions: Contents[Definition] = container.filter[Definition].map(_.asInstanceOf[Definition])
 
-  /** Base trait of any definition that is also a ContainerValue
+  /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
     *
     * @tparam CV
-    *   The kind of contained value that is contained by the container which must be a RiddlValue
+    *   The kind of contained value that is contained within.
     */
   sealed trait Container[+CV <: RiddlValue] extends RiddlValue {
     def contents: Contents[CV]
 
     override def isEmpty: Boolean = contents.isEmpty
 
+    /** Force all subclasses to return true as they are containers */
     final inline override def isContainer: Boolean = true
 
+    /** Extract by type from the contents */
     final def filter[T <: RiddlValue: ClassTag]: Contents[T] = contents.filter[T]
 
+    /** Find the first element of the contents with the name `name` */
     final def find(name: String): Option[CV] = contents.find(name)
 
-    /** The list of contained definitions */
+    /** The list of contained [[Definition]]s */
     final def definitions: Contents[Definition] = contents.definitions
 
+    /** The list of contained [[NamedValue]]s */
     final def namedValues: Contents[CV & NamedValue] = contents.namedValues
-
   }
 
+  /** This trait represents the base trait of all comments recognized by the parser */
   sealed trait Comment
       extends RiddlValue
       with OccursAtRootScope
@@ -251,8 +295,8 @@ object AST {
     final inline override def isComment: Boolean = true
   }
 
-  /** The AST Representation of a comment in the input. Comments can only occur after the closing brace, }, of a
-    * definition. The comment is stored within the [[Definition]]
+  /** The AST Representation of a single line comment in the input. LineComments can only occur after the closing 
+    * brace, }, of a definition. The comment is stored within the [[Definition]]
     *
     * @param loc
     *   Location in the input of the // comment introducer
@@ -263,11 +307,27 @@ object AST {
     def format: String = "//" + text + "\n"
 
   }
+
+  /** The AST representation of a comment that can span across lines and is inline with the definitions.
+    * 
+    * @param loc
+    *   The locaiton at which the comment occurs
+    * @param lines
+    *   The lines of the comment without line terminators
+    */
   case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment {
     def format: String = lines.mkString("/*", "\n * ", "*/")
   }
 
-  /** Base trait for option values for any option of a definition. */
+  /** Base trait for option values for any option of a definition.
+    * 
+    * @param loc
+    *   The location at which the OptionValue occurs
+    * @param name
+    *   The name of the option
+    * @param args
+    *   THe arguments of the option as [[LiteralString]] which may be empty
+    */
   case class OptionValue(loc: At, name: String, args: Seq[LiteralString] = Seq.empty)
       extends RiddlValue
       with OccursInVitalDefinitions
@@ -277,12 +337,18 @@ object AST {
       .mkString("(", ", ", ")")
   }
 
+  /** A [[RiddlValue]] that is named via the [[WithIdentifier]] trait */
   sealed trait NamedValue extends RiddlValue with WithIdentifier
 
+  /** A [[Container]] that is also a [[NamedValue]] */
   sealed trait NamedContainer[CV <: RiddlValue] extends NamedValue with Container[CV]
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
+  ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
 
+  /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]], 
+    * [[Definition]] and any other thing that needs to be identified by name. 
+    */
   sealed trait WithIdentifier extends RiddlValue {
 
     /** the name/identifier of this value. All definitions have one */
@@ -292,9 +358,7 @@ object AST {
 
     /** This one has an identifier so it is never anonymous */
     override final inline def isAnonymous: Boolean = id.value.isEmpty
-
-    final def isImplicit: Boolean = isAnonymous
-
+    
     /** Convert the identifier into its string format */
     def identify: String = {
       if id.isEmpty then {
@@ -2099,12 +2163,12 @@ object AST {
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
     contents: Contents[OccursInFunction] = Seq.empty,
+    statements: Seq[Statement] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[OccursInFunction]
       with WithTypes
       with WithFunctions
-      with WithStatements
       with OccursInFunction
       with OccursInProcessors {
 
@@ -2199,7 +2263,7 @@ object AST {
     * @param description
     *   An optional description of the on clause.
     */
-  case class OnInitClause(
+  case class OnInitializationClause(
     loc: At,
     statements: Seq[Statement] = Seq.empty[Statement],
     brief: Option[LiteralString] = Option.empty[LiteralString],
@@ -3513,6 +3577,15 @@ object AST {
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
+  /** Find the authors for some definition
+    *
+    * @param defn
+    *   The definition whose [[AST.Author]]s we are seeking
+    * @param parents
+    *   The parents of the definition whose [[AST.Author]]s we are seeking
+    * @return
+    *   The list of [[AST.Author]]s of definition
+    */
   def findAuthors(
     defn: RiddlValue,
     parents: Seq[Container[RiddlValue]]
@@ -3527,18 +3600,46 @@ object AST {
     }
   }
 
+  /**
+    * Get all the top level domain definitions even if they are in include statements
+    * @param root
+    *   The model's [[AST.Root]] node.
+    * @return
+    *   A Seq of [[AST.Domain]]s as a [[AST.Contents]] extension
+    */
   def getTopLevelDomains(root: Root): Contents[Domain] = {
     (root.domains ++ root.includes.flatMap(_.contents.filter[Domain]))
   }
-  
+
+  /**
+    * Get all the first level nested domains of a domain even if they are in include statements
+    * @param domain
+    *   The parent [[AST.Domain]] whose subdomains will be returned
+    * @return
+    *   The subdomains of the provided domain as a [[AST.Contents]] extension
+    */
   def getDomains(domain: Domain): Contents[Domain] = {
     domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
   }
 
+  /**
+    * Get the bounded contexts defined in a domain even if they are in includes of that domain
+    * @param domain
+    *   The domain whose contexts should be returned
+    * @return
+    *   A Seq of Context expressed as a [[AST.Contents]] extension
+    */
   def getContexts(domain: Domain): Contents[Context] = {
     domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
   }
 
+  /**
+    * Get all the applications defined in a domain even if they are in includes of that domain
+    * @param domain
+    *   The domain whose applications should be returned
+    * @return
+    *   A Seq of [[AST.Application]] expressed as a [[AST.Contents]] extension
+    */
   def getApplications(domain: Domain): Contents[Application] = {
     domain.applications ++ domain.includes.flatMap(_.contents.filter[Application])
   }
@@ -3565,8 +3666,15 @@ object AST {
     domain.users ++ domain.domains.flatMap(getUsers) ++ nested
   }
 
+  /**
+    * Get the [[AST.User]] definitions found at the [[AST.Root]] level or in its [[AST.Include]]s
+    * @param root
+    *   The [[AST.Root]] node to examine
+    * @return
+    *   A Seq of [[AST.User]] expressed as a [[AST.Contents]] extension
+    */
   def getUsers(root: Root): Contents[User] = {
-    root.domains.flatMap(getUsers)
+    root.domains.flatMap(getUsers) ++ root.includes.flatMap(_.contents.filter[User])
   }
 
   extension (optLit: Option[LiteralString]) def format: String = optLit.map(_.format).getOrElse("N/A")

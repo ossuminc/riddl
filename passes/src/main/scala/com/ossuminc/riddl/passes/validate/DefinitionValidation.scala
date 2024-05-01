@@ -44,7 +44,7 @@ trait DefinitionValidation extends BasicValidation {
     definition: Definition
   ): this.type = {
     check(
-      definition.id.nonEmpty | definition.isImplicit,
+      definition.id.nonEmpty | definition.isAnonymous,
       "Definitions may not have empty names",
       Error,
       definition.loc

@@ -114,8 +114,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case _: Root       => () // ignore
       case _: Enumerator => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
-          _: OnInitClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
-          _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
+           _: OnInitializationClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
+           _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
         () // not  containers
 
     }
@@ -273,7 +273,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(
           _.addIndent("on ").emitMessageRef(omc.msg).emitCodeBlock(omc.statements)
         )
-      case oic: OnInitClause =>
+      case oic: OnInitializationClause =>
         state.withCurrent(
           _.addIndent("on init ").emitCodeBlock(oic.statements)
         )

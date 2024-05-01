@@ -44,16 +44,16 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   private def rootLessParents(parents: Parents): Parents = {
     parents.filter {
-      case _: Root                       => false // Roots don't have names and don't matter
-      case x: Definition if x.isImplicit => false // Parents with no names don't count
-      case _                             => true // Everything else is fair game
+      case _: Root                        => false // Roots don't have names and don't matter
+      case x: Definition if x.isAnonymous => false // Parents with no names don't count
+      case _                              => true // Everything else is fair game
     }
   }
 
   def process(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case _: Root                         => // NOTE: Root doesn't have any names
-      case nv: NamedValue if nv.isImplicit => // Implicit (nameless) things, like includes, don't go in symbol table
+      case nv: NamedValue if nv.isAnonymous => //Nameless things, like includes, don't go in symbol table
       case namedValue: NamedValue => // NOTE: Anything with a name goes in symbol table
         val name = namedValue.id.value
         if name.nonEmpty then {
