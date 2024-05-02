@@ -13,8 +13,10 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 import scala.collection.mutable
 import scala.io.AnsiColor.*
 
+/** This module handles everything needed to deal with the message output of the `riddlc` compiler */
 object Messages {
 
+  /** A sealed base trait for the kinds of messages that can be created each with their own existence test */
   sealed trait KindOfMessage extends Ordered[KindOfMessage] {
     def isSevereError: Boolean = false
 
@@ -38,12 +40,14 @@ object Messages {
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
 
+  /** A case object for the Info kind of message */
   case object Info extends KindOfMessage {
     override def isInfo: Boolean = true
     override def toString: String = "Info"
     def severity = 0
   }
 
+  /** A case object for the Style kind of warning message */
   case object StyleWarning extends KindOfMessage {
     override def isWarning: Boolean = true
 
@@ -53,6 +57,7 @@ object Messages {
     def severity = 1
   }
 
+  /** A case object for the Missing kind of warning message */
   case object MissingWarning extends KindOfMessage {
     override def isWarning: Boolean = true
 
@@ -63,6 +68,7 @@ object Messages {
     def severity = 2
   }
 
+  /** A case object for the Usage kind of warning message */
   case object UsageWarning extends KindOfMessage {
     override def isWarning: Boolean = true
 
@@ -76,6 +82,7 @@ object Messages {
 
   }
 
+  /** A case object for the generic kind of warning message */
   case object Warning extends KindOfMessage {
     override def isWarning: Boolean = true
 
@@ -83,6 +90,7 @@ object Messages {
     def severity = 4
   }
 
+  /** A case object for Error messages */
   case object Error extends KindOfMessage {
     override def isError: Boolean = true
 
@@ -90,6 +98,7 @@ object Messages {
     def severity = 5
   }
 
+  /** A case object for Severe Error messages */
   case object SevereError extends KindOfMessage {
     override def isError: Boolean = true
 
@@ -99,8 +108,20 @@ object Messages {
     def severity = 6
   }
 
+  /** The system's notion of a newline for sensible error message termination */
   val nl: String = System.lineSeparator()
 
+  /** A Message instance
+    *
+    * @param loc
+    *   THe location in the model that generated the message
+    * @param message
+    *   The message text itself (may be multiple lines)
+    * @param kind
+    *   The kind of message as one of the case objects of [[KindOfMessage]]
+    * @param context
+    *   Additional context that indicates the conditions that produced the message
+    */
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
 
@@ -118,6 +139,7 @@ object Messages {
       else comparison
     }
 
+    /** A standard way of formatting the message */
     def format: String = {
       val ctxt = if context.nonEmpty then {
         s"${nl}Context: $context"
@@ -139,81 +161,99 @@ object Messages {
     }
   }
 
+  /** Generate a style warning */
   def style(message: String, loc: At = At.empty): Message = {
     Message(loc, message, StyleWarning)
   }
 
+  /** Generate a missing warning */
   def missing(message: String, loc: At = At.empty): Message = {
     Message(loc, message, MissingWarning)
   }
 
+  /** Generate a usage warning */
   def usage(message: String, loc: At = At.empty): Message = {
     Message(loc, message, UsageWarning)
   }
 
+  /** Generate an informative message */
   def info(message: String, loc: At = At.empty): Message = {
     Message(loc, message, Info)
   }
 
+  /** Generate a generic warning */
   def warning(message: String, loc: At = At.empty): Message = {
     Message(loc, message, Warning)
   }
 
+  /** Generate an error message */
   def error(
     message: String,
     loc: At = At.empty
   ): Message = { Message(loc, message) }
 
+  /** Generate an error message resulting from an exception received */
   private def exceptionToError(exception: Throwable, loc: At = At.empty, context: String = ""): Message = {
     val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
     Message(loc, s"While $context: $message")
   }
 
+  /** Generate a severe error message based on an exception received */
   def severe(message: String, exception: Throwable, loc: At): Message = {
     val message2 = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
     Message(loc, message + ": " + message2, SevereError)
   }
+
+  /** Generate a severe error message */
   def severe(message: String, loc: At = At.empty): Message = {
     Message(loc, message, SevereError)
   }
 
+  /** Generate a [[scala.List]] with a single error message in it */
   def errors(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message))
   }
 
+  /** Generate a [[scala.LIst]] with a single warning message in it */
   def warnings(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message, Warning))
   }
 
+  /** Generate a [[scala.List]] with a single server error message in it */
   def severes(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message, Messages.SevereError))
   }
 
   type Messages = List[Message]
 
-  implicit class MessagesAuxiliary(msgs: Messages) {
-    def format: String = { msgs.map(_.format).mkString(System.lineSeparator()) }
+  /** Extensions to [[scala.List[Message] ]] */
+  extension (msgs: Messages) {
+    def format: String = {
+      msgs.map(_.format).mkString(System.lineSeparator())
+    }
     def isOnlyWarnings: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
     def isOnlyIgnorable: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
-    def hasErrors: Boolean = { msgs.nonEmpty && msgs.exists(_.kind >= Error) }
-    def hasWarnings: Boolean = { msgs.nonEmpty && msgs.exists(_.kind < Error) }
+    def hasErrors: Boolean = {
+      msgs.nonEmpty && msgs.exists(_.kind >= Error)
+    }
+    def hasWarnings: Boolean = {
+      msgs.nonEmpty && msgs.exists(_.kind < Error)
+    }
     def justInfo: Messages = msgs.filter(_.isInfo)
     def justMissing: Messages = msgs.filter(_.isMissing)
     def justStyle: Messages = msgs.filter(_.isStyle)
     def justUsage: Messages = msgs.filter(_.isUsage)
     def justWarnings: Messages = msgs.filter(m => m.kind < Error && m.kind > Info)
     def justErrors: Messages = msgs.filter(_.kind >= Error)
+    def highestSeverity: Int = msgs.foldLeft(0) { case (n, m) => Math.max(m.kind.severity, n) }
   }
 
+  /** Canonical definition of an empty message list */
   val empty: Messages = List.empty[Message]
-
-  def highestSeverity(messages: Messages): Int = {
-    messages.foldLeft(0) { case (n, m) => Math.max(m.kind.severity, n) }
-  }
 
   def logMessages(
     messages: Messages,
@@ -223,7 +263,7 @@ object Messages {
     val list = if options.sortMessagesByLocation then messages.sorted else messages
     if options.groupMessagesByKind then { logMessagesByGroup(list, options, log) }
     else { logMessagesRetainingOrder(list, log) }
-    highestSeverity(list)
+    list.highestSeverity
   }
 
   private def logMessage(message: Message, log: Logger): Unit = {
@@ -289,6 +329,7 @@ object Messages {
     }
   }
 
+  /** A utility to help accumulate error messages with regards to the settings in the [[CommonOptions]] */
   case class Accumulator(commonOptions: CommonOptions) {
     private val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
 

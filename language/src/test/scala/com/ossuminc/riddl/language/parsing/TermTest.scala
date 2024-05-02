@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term}
+import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term, NamedValue}
 import com.ossuminc.riddl.language.{At, Finder}
 class TermTest extends ParsingTest {
 
@@ -16,6 +16,7 @@ class TermTest extends ParsingTest {
                     |  term one is described by "uno"
                     |  context bar is {
                     |    term two is described by "dos"
+                    |    entity foo is { ??? }
                     |  }
                     |}""".stripMargin
       parseTopLevelDomain(input, identity) match {
@@ -37,6 +38,12 @@ class TermTest extends ParsingTest {
             None,
             Some(BlockDescription(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
           )
+          val result: Finder#DefWithParents  =  finder.findEmpty
+          result.size mustBe 1
+          result.head match {
+            case (entity,_) =>
+              entity.asInstanceOf[NamedValue].id.value mustBe "foo"
+          }
       }
     }
   }
