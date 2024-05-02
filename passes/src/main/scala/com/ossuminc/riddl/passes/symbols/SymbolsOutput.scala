@@ -54,6 +54,14 @@ case class SymbolsOutput(
     }
   }
 
+  /**
+    * Find the bounded context in which a give named value is defined
+    * @param namedValue
+    * The [[com.ossuminc.riddl.language.AST.NamedValue]] whose [[com.ossuminc.riddl.language.AST.Context]] should be
+    * determined
+    * @return
+    * An [[scala.Option]] either providing `Some[Context]`, if found, or `None`, if not.
+    */
   def contextOf(namedValue: NamedValue): Option[Context] = {
     namedValue match {
       case c: Context =>

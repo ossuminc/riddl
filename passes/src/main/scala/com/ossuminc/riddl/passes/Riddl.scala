@@ -18,6 +18,16 @@ import java.nio.file.Path
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
+  /** Run the standard passes after parsing
+    * 
+    * @param root
+    * The root object of the model which is the product of parsing
+    * @param options
+    * The common options to use for the validation
+    * @param shouldFailOnError
+    * Whether this should just return the Left[Messages] if an error occurs in them, or not
+    * @return
+    */
   def validate(
     root: Root,
     options: CommonOptions = CommonOptions.empty,
@@ -28,6 +38,22 @@ object Riddl {
     else Right(result)
   }
 
+  /** Parse and validate some [[com.ossuminc.riddl.language.parsing.RiddlParserInput]]
+    * 
+    * @param input
+    * The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input to the parser
+    * @param commonOptions
+    * The [[com.ossuminc.riddl.language.CommonOptions]] to use during parsing and validation
+    * @param shouldFailOnError
+    * If set to true if the parsing succeeds and the validation generates errors in which case the errors will 
+    * simply be returned, otherwise the PassesResult will be returned. 
+    * @param passes
+    * The set of passes to be run after parsing. It defaults to the standard passes: symbols, 
+    * reference resolution, validation 
+    * @param logger
+    * The logger to which messages should be logged
+    * @return
+    */
   def parseAndValidate(
     input: RiddlParserInput,
     commonOptions: CommonOptions = CommonOptions.empty,
@@ -46,6 +72,7 @@ object Riddl {
     }
   }
 
+  /** Same as [[Riddl.parseAndValidate()]] but with a Java Path as the input instead */
   def parseAndValidatePath(
     path: Path,
     commonOptions: CommonOptions = CommonOptions.empty,

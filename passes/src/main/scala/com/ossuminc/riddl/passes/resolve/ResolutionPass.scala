@@ -30,7 +30,31 @@ object ResolutionPass extends PassInfo[PassOptions] {
   }
 }
 
-/** The Reference Resolution Pass */
+/** The Reference Resolution Pass. This pass traverses the entire model and resolves every reference it finds into
+  * the `refmap` in its output. See [[ReferenceMap]] for details. This resolution must be done before validation
+  * to make sure there are no cycles in the references.  While it is at it, it also tracks which definition uses
+  * which other definition. See [[Usages]] for details.  It also keeps a `kindMap`. See [[KindMap]] for details.
+  *
+  * Reference Resolution is the process of turning a [[com.ossuminc.riddl.language.AST.PathIdentifier]] into the 
+  * [[com.ossuminc.riddl.language.AST.Definition]] that is referenced by the 
+  * [[com.ossuminc.riddl.language.AST.PathIdentifier]]. There are several ways to resolve a reference:
+  *
+  * 1. If its already in the [[ReferenceMap]] then use that resolution
+  * 1. A single identifier in the path is looked up in the symbol table and if it uniquely matches only one definition
+  *    then that definition is the resolved definition.
+  * 1. If there are multiple identifiers in the [[com.ossuminc.riddl.language.AST.PathIdentifier]] then we attempt to
+  *    anchor the search using the first
+  *    identifier. Anchoring is done by (a) checking to see if it is the "Root" node in which case that is the anchor,
+  *    (b) checking to see if the first identifier is the name of one of the parent nodes from the location of the
+  *    reference, and finally (c) looking up the first identifier in the symbol table and if it is unique then using
+  *    that as the anchor. Once the anchor is determined, it is simply a matter of walking down tree of nodes 
+  *    from the anchor, one name at a time. 
+  **
+  * @param input
+  * The input to the original pass.
+  * @param outputs
+  * THe outputs from preceding passes, which should only be the [[com.ossuminc.riddl.passes.symbols.SymbolsPass]] output.
+  */
 case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) with UsageResolution {
 
   override def name: String = ResolutionPass.name
