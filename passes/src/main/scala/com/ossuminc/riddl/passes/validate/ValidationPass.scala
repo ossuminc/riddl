@@ -306,8 +306,8 @@ case class ValidationPass(
       )
     checkTypeExpression(m.typeEx, m, parents)
     for arg <- m.args do
-      checkTypeExpression(arg.value, m, parents)
-      if arg.key.matches("^[^a-z].*") then
+      checkTypeExpression(arg.typeEx, m, parents)
+      if arg.name.matches("^[^a-z].*") then
         messages.add(
           Messages.style(
             "Method argument names should begin with a lower case letter",

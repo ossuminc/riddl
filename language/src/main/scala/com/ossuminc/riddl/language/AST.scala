@@ -15,9 +15,10 @@ import java.nio.file.Path
 import scala.concurrent.Future
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.tailrec
+import scala.io.{Codec, BufferedSource}
 
-/** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax Tree. This raw
-  * AST has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
+/** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax Tree. This raw AST
+  * has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
   * produced from parsing are syntactically correct but have no semantic validation.
   */
 object AST {
@@ -36,7 +37,7 @@ object AST {
     /** Format the node to a string in a form suitable for use in error messages */
     def format: String
 
-    /** Whether or not this instance has an id: Identifier field or not */
+    /** Whether or not this instance has an id: [[Identifier]] field or not */
     def isIdentified: Boolean = false
 
     def isAnonymous: Boolean = true
@@ -86,7 +87,7 @@ object AST {
     /** determines if this [[RiddlValue]] defines a brief description */
     def hasBriefDescription: Boolean = false
 
-    /** implements the nonEmpty function based on the isEmpty function  */
+    /** implements the nonEmpty function based on the isEmpty function */
     @deprecatedOverriding(
       "nonEmpty is defined as !isEmpty; override isEmpty instead"
     ) final def nonEmpty: Boolean = !isEmpty
@@ -111,6 +112,7 @@ object AST {
   }
 
   object LiteralString {
+
     /** definition of the empty LiteralString */
     val empty: LiteralString = LiteralString(At.empty, "")
   }
@@ -123,6 +125,7 @@ object AST {
     *   The parsed value of the [[Identifier]]
     */
   case class Identifier(loc: At, value: String) extends RiddlValue {
+
     /** Convert to a printable form */
     override def format: String = value
 
@@ -130,6 +133,7 @@ object AST {
   }
 
   object Identifier {
+
     /** Definition of the empty [[Identifier]] */
     val empty: Identifier = Identifier(At.empty, "")
   }
@@ -149,6 +153,7 @@ object AST {
   }
 
   object PathIdentifier {
+
     /** The empty [[PathIdentifier]] */
     val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
   }
@@ -157,6 +162,7 @@ object AST {
     * description part.
     */
   sealed trait Description extends RiddlValue {
+
     /** All kinds of [[Description]] have a location provided by an [[At]] value. */
     def loc: At
 
@@ -171,6 +177,7 @@ object AST {
 
   /** Companion class for Description only to define the empty value */
   object Description {
+
     /** The empty [[Description]] definition */
     lazy val empty: Description = new Description {
       val loc: At = At.empty
@@ -189,18 +196,17 @@ object AST {
 
   /** An implementation of [[Description]] that provides the description in a Markdown file */
   case class FileDescription(loc: At, file: Path) extends Description {
-    lazy val lines: Seq[LiteralString] = {
-      val src = scala.io.Source.fromFile(file.toFile)
+    lazy val lines: Seq[LiteralString] =
+      val src = scala.io.Source.fromFile(file.toFile)(Codec.UTF8)
       src.getLines().toSeq.map(LiteralString(loc, _))
-    }
     def format: String = file.toAbsolutePath.toString
   }
 
   /** An implementation of [[Description]] that provides the description at a URL */
   case class URLDescription(loc: At, url: java.net.URL) extends Description {
-    lazy val lines: Seq[LiteralString] = Seq.empty[LiteralString] // FIXME: Implement with a URL fetch
-
-    /** Format the node to a string */
+    lazy val lines: Seq[LiteralString] =
+      val source = scala.io.Source.fromURL(url)(Codec.UTF8)
+      source.getLines().toSeq.map(LiteralString(loc.copy(), _))
     override def format: String = url.toExternalForm
   }
 
@@ -225,7 +231,7 @@ object AST {
   /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
   extension [CV <: RiddlValue](container: Contents[CV])
     /** Extract the elements of the [[Contents]] that have identifiers (are definitions, essentially) */
-    def identified: Contents[CV] = container.filter(_.isIdentified)
+    private def identified: Contents[CV] = container.filter(_.isIdentified)
 
     /** Extract the elements of the [[Contents]] that are the type of the type parameter T
       *
@@ -238,20 +244,21 @@ object AST {
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
     }
+
     /** Returns the elements of the [[Contents]] that are [[VitalDefinition]]s */
     def vitals: Contents[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
 
     /** Returns the elememts of the [[Contents]] that are [[Processor]]s */
     def processors: Contents[Processor[?]] = container.filter[Processor[?]]
 
-    /** Find the first element of the [[Contents]] that has the provided `name`  */
+    /** Find the first element of the [[Contents]] that has the provided `name` */
     def find(name: String): Option[CV] =
       identified.find(d => d.isIdentified && d.asInstanceOf[WithIdentifier].id.value == name)
 
-    /** Find the first element of the [[Contents]] that  */
+    /** Find the first element of the [[Contents]] that */
     def namedValues: Contents[CV & NamedValue] = container.filter(_.isIdentified).map(_.asInstanceOf[CV & NamedValue])
 
-    /**  Returns the [[Include]] elements of [[Contents]] */
+    /** Returns the [[Include]] elements of [[Contents]] */
     def includes: Contents[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
 
     /** find the elements of the [[Contents]] that are [[Definition]]s */
@@ -295,8 +302,8 @@ object AST {
     final inline override def isComment: Boolean = true
   }
 
-  /** The AST Representation of a single line comment in the input. LineComments can only occur after the closing 
-    * brace, }, of a definition. The comment is stored within the [[Definition]]
+  /** The AST Representation of a single line comment in the input. LineComments can only occur after the closing brace,
+    * }, of a definition. The comment is stored within the [[Definition]]
     *
     * @param loc
     *   Location in the input of the // comment introducer
@@ -309,7 +316,7 @@ object AST {
   }
 
   /** The AST representation of a comment that can span across lines and is inline with the definitions.
-    * 
+    *
     * @param loc
     *   The locaiton at which the comment occurs
     * @param lines
@@ -320,7 +327,7 @@ object AST {
   }
 
   /** Base trait for option values for any option of a definition.
-    * 
+    *
     * @param loc
     *   The location at which the OptionValue occurs
     * @param name
@@ -332,9 +339,7 @@ object AST {
       extends RiddlValue
       with OccursInVitalDefinitions
       with OccursInProcessors {
-    override def format: String = name + args
-      .map(_.format)
-      .mkString("(", ", ", ")")
+    override def format: String = "option " + name + args.map(_.format).mkString("(", ", ", ")")
   }
 
   /** A [[RiddlValue]] that is named via the [[WithIdentifier]] trait */
@@ -346,8 +351,8 @@ object AST {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
   ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
 
-  /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]], 
-    * [[Definition]] and any other thing that needs to be identified by name. 
+  /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]],
+    * [[Definition]] and any other thing that needs to be identified by name.
     */
   sealed trait WithIdentifier extends RiddlValue {
 
@@ -358,7 +363,7 @@ object AST {
 
     /** This one has an identifier so it is never anonymous */
     override final inline def isAnonymous: Boolean = id.value.isEmpty
-    
+
     /** Convert the identifier into its string format */
     def identify: String = {
       if id.isEmpty then {
@@ -371,12 +376,19 @@ object AST {
     def identifyWithLoc: String = s"$identify at $loc"
   }
 
+  /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
   sealed trait WithDocumentation extends RiddlValue {
+
+    /** The optional brief description as a single (short) line of text */
     def brief: Option[LiteralString]
 
+    /** The optional [[Description]] which can be provided in several such as [[BlockDescription]], [[FileDescription]],
+      * or [[URLDescription]]
+      */
     def description: Option[Description]
   }
 
+  /** A trait that includes the `comments` field to extract the comments from the contents */
   sealed trait WithComments
       extends Container[RiddlValue]
       with OccursInVitalDefinitions
@@ -401,6 +413,7 @@ object AST {
     lazy val terms: Contents[Term] = contents.filter[Term]
   }
 
+  /** A trait that provides the [[AuthorRef]] to indicate who authored the definition */
   sealed trait WithAuthorRefs extends Container[RiddlValue] with OccursInVitalDefinitions with OccursInProcessors {
     lazy val authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
 
@@ -417,15 +430,6 @@ object AST {
 
     def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
 
-    override def format: String = {
-      options.size match {
-        case 0 => ""
-        case 1 => s"option is ${options.head.format}"
-        case x: Int if x > 1 =>
-          s"options ( ${options.map(_.format).mkString(" ", ", ", " )")}"
-      }
-    }
-
     override def isEmpty: Boolean = super.isEmpty && options.isEmpty
 
     override def hasOptions: Boolean = options.nonEmpty
@@ -434,109 +438,133 @@ object AST {
   /** Base trait of any definition that is a container and contains types */
   sealed trait WithTypes extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
     lazy val types: Contents[Type] = contents.filter[Type]
-
     override def hasTypes: Boolean = types.nonEmpty
   }
 
+  /** Base trait to use in any definition that can define a constant */
   sealed trait WithConstants extends Container[RiddlValue] with OccursInProcessors {
     lazy val constants: Contents[Constant] = contents.filter[Constant]
   }
 
+  /** Base trait to use in any [[Definition]] that can define an invariant */
   sealed trait WithInvariants extends Container[RiddlValue] with OccursInProcessors {
     lazy val invariants: Contents[Invariant] = contents.filter[Invariant]
   }
 
+  /** Base trait to use in any [[Definition]] that can define a [[Function]] */
   sealed trait WithFunctions extends Container[RiddlValue] with OccursInProcessors {
     lazy val functions: Contents[Function] = contents.filter[Function]
   }
 
+  /** Base trait to use in any [[Definition]] that can define a [[Handler]] */
   sealed trait WithHandlers extends Container[RiddlValue] with OccursInProcessors {
     lazy val handlers: Contents[Handler] = contents.filter[Handler]
   }
 
+  /** Base trait to use in any [[Definition]] that can define an [[Inlet]] */
   sealed trait WithInlets extends Container[RiddlValue] with OccursInProcessors {
     lazy val inlets: Contents[Inlet] = contents.filter[Inlet]
   }
 
+  /** Base trait to use in any [[Definition]] that can define an [[Outlet]] */
   sealed trait WithOutlets extends Container[RiddlValue] with OccursInProcessors {
     lazy val outlets: Contents[Outlet] = contents.filter[Outlet]
   }
 
+  /** Base trait to use in any [[Definition]] that can define a [[State]] */
   sealed trait WithStates extends Container[RiddlValue] with OccursInEntity {
     lazy val states: Contents[State] = contents.filter[State]
   }
 
+  /** Base trait to use in any [[Definition]] that can define a [[Group]] */
   sealed trait WithGroups extends Container[RiddlValue] with OccursInApplication {
     lazy val groups: Contents[Group] = contents.filter[Group]
   }
 
+  /** Base trait to use in a [[Function]] to define the [[Statements]]s that form the body of that function */
   sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
     lazy val statements: Contents[Statement] = contents.filter[Statement]
   }
 
+  /** Base trait to use in a [[Domain]] to define the bounded [[Contexts]] it contains */
   sealed trait WithContexts extends Container[RiddlValue] with OccursInDomain {
     lazy val contexts: Contents[Context] = contents.filter[Context]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Author]]s */
   sealed trait WithAuthors extends Container[RiddlValue] with OccursInDomain {
-    def authors: Contents[Author] = contents.filter[Author]
+    lazy val authors: Contents[Author] = contents.filter[Author]
 
     override def hasAuthors: Boolean = authors.nonEmpty
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[User]]s */
   sealed trait WithUsers extends Container[RiddlValue] with OccursInDomain {
     def users: Contents[User] = contents.filter[User]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Epic]]s */
   sealed trait WithEpics extends Container[RiddlValue] with OccursInDomain {
     lazy val epics: Contents[Epic] = contents.filter[Epic]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Application]]s */
   sealed trait WithApplications extends Container[RiddlValue] with OccursInDomain {
     lazy val applications: Contents[Application] = contents.filter[Application]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Domain]]s */
   sealed trait WithDomains extends Container[RiddlValue] with OccursInDomain {
     lazy val domains: Contents[Domain] = contents.filter[Domain]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Projectors]]s */
   sealed trait WithProjectors extends Container[RiddlValue] with OccursInContext {
     lazy val projectors: Contents[Projector] = contents.filter[Projector]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Repositories]]s */
   sealed trait WithRepositories extends Container[RiddlValue] with OccursInContext {
     lazy val repositories: Contents[Repository] = contents.filter[Repository]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Entity]]s */
   sealed trait WithEntities extends Container[RiddlValue] with OccursInContext {
-    def entities: Contents[Entity] = contents.filter[Entity]
+    lazy val entities: Contents[Entity] = contents.filter[Entity]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Streamlets]]s */
   sealed trait WithStreamlets extends Container[RiddlValue] with OccursInContext {
-    def streamlets: Contents[Streamlet] = contents.filter[Streamlet]
+    lazy val streamlets: Contents[Streamlet] = contents.filter[Streamlet]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Connector]]s */
   sealed trait WithConnectors extends Container[RiddlValue] with OccursInContext {
-    def connectors: Contents[Connector] = contents.filter[Connector]
+    lazy val connectors: Contents[Connector] = contents.filter[Connector]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Adaptor]]s */
   sealed trait WithAdaptors extends Container[RiddlValue] with OccursInContext {
-    def adaptors: Contents[Adaptor] = contents.filter[Adaptor]
+    lazy val adaptors: Contents[Adaptor] = contents.filter[Adaptor]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[Saga]]s */
   sealed trait WithSagas extends Container[RiddlValue] with OccursInContext {
-    def sagas: Contents[Saga] = contents.filter[Saga]
+    lazy val sagas: Contents[Saga] = contents.filter[Saga]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[SagaStep]]s */
   sealed trait WithSagaSteps extends Container[RiddlValue] with OccursInSaga {
-    def sagaSteps: Contents[SagaStep] = contents.filter[SagaStep]
+    lazy val sagaSteps: Contents[SagaStep] = contents.filter[SagaStep]
   }
 
+  /** Base trait to use in any [[Definition]] that can define [[UseCase]]s */
   sealed trait WithUseCases extends Container[RiddlValue] with OccursInEpic {
-    def cases: Contents[UseCase] = contents.filter[UseCase]
+    lazy val cases: Contents[UseCase] = contents.filter[UseCase]
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
+  ///// This section defines various abstract things needed by the rest of the definitions
 
   /** The list of definitions to which a reference cannot be made */
   type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
@@ -629,6 +657,7 @@ object AST {
       with OccursInSaga
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
+  //////// The Abstract classes for defining Definitions by using the foregoing traits
 
   /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
     * yield a string that provides the kind and name
@@ -646,7 +675,6 @@ object AST {
     override def isDefinition: Boolean = true
 
     def isAppRelated: Boolean = false
-
   }
 
   /** A definition with no content */
@@ -658,7 +686,11 @@ object AST {
     final override def hasDefinitions: Boolean = false
   }
 
-  /** A definition that */
+  /** The base class of the primary, or vital, definitions. Most of the important definitions are derivatives of this
+    * sealed trait. All vital definitions contain comments, documentation, options, authors that defined it, include
+    * statements, and term definitions.
+    * @tparam CT
+    */
   sealed trait VitalDefinition[CT <: RiddlValue]
       extends Definition
       with Container[CT]
@@ -669,22 +701,12 @@ object AST {
       with WithIncludes[CT]
       with WithTerms {
 
-    import scala.language.implicitConversions
-
-    /** Implicit conversion of boolean to Int for easier computation of statistics below
-      *
-      * @param b
-      *   The boolean to convert to an Int
-      *
-      * @return
-      */
-    implicit def bool2int(b: Boolean): Int = if b then 1 else 0
-
     final override def isVital: Boolean = true
   }
 
   /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
-    * handlers, functions, and take messages directly with a reference).
+    * handlers, functions, and take messages directly with a reference). Processors are the active portion of a model
+    * since they handle messages and do the associated processing.
     */
   sealed trait Processor[CT <: RiddlValue]
       extends VitalDefinition[CT]
@@ -701,6 +723,7 @@ object AST {
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
+  //// The types defined in this section provide utility to the other definitions for includes and references.
 
   /** A value to hold the result of an Include while it is being included asynchronously
     *
@@ -778,8 +801,6 @@ object AST {
     override def isEmpty: Boolean = pathId.isEmpty
   }
 
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////// REFERENCES
-
   /** Base trait of a reference to definitions that can accept a message directly via a reference
     *
     * @tparam T
@@ -825,6 +846,7 @@ object AST {
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// USER
+
   /** An User (Role) who is the initiator of the user story. Users may be persons or machines
     *
     * @param loc
@@ -846,12 +868,21 @@ object AST {
     description: Option[Description] = None
   ) extends LeafDefinition
       with OccursInDomain {
-    def format: String = s"user ${id.format} is ${is_a.format}"
+    def format: String = s"${Keyword.user} ${id.format} is ${is_a.format}"
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// USER
 
-  /** A term definition for the glossary */
+  /** A term definition for the glossary
+    * @param loc
+    *   The [[At]] at which this glossary term occurs
+    * @param id
+    *   The term being defined
+    * @param brief
+    *   The short definition of the term
+    * @param description
+    *   The longer definition of the term.
+    */
   case class Term(
     loc: At,
     id: Identifier,
@@ -860,7 +891,7 @@ object AST {
   ) extends LeafDefinition
       with OccursInVitalDefinitions {
 
-    def format: String = s"term ${id.format}"
+    def format: String = s"${Keyword.term} ${id.format} is ${brief.map(_.format)}"
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// AUTHOR
@@ -879,6 +910,10 @@ object AST {
     *   The author's title within the organization
     * @param url
     *   A URL associated with the author
+    * @param brief
+    *   A optional short description of the author
+    * @param description
+    *   An optional long description of the author
     */
   case class Author(
     loc: At,
@@ -897,22 +932,24 @@ object AST {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
 
-    def format: String = s"author ${id.format}"
+    def format: String = Keyword.author + " " + id.format
   }
 
+  /** A reference to an [[Author]]
+    * @param loc
+    *   The [[At]] at which the reference is located
+    * @param pathId
+    *   The [[PathIdentifier]] providing the path to the [[Author]]
+    */
   case class AuthorRef(loc: At, pathId: PathIdentifier)
       extends Reference[Author]
       with OccursInVitalDefinitions
       with OccursInFunction
       with OccursInProcessors {
-    override def format: String = s"author ${pathId.format}"
+    override def format: String = Keyword.author + " " + pathId.format
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
-
-  sealed trait AggregateValue extends OccursInType with WithIdentifier {
-    def typeEx: TypeExpression
-  }
 
   /** Base trait of an expression that defines a type
     */
@@ -952,37 +989,6 @@ object AST {
     override def format: String = s"$keyword ${pathId.format}"
   }
 
-  /** A utility function for getting the kind of a type expression.
-    *
-    * @param te
-    *   The type expression to examine
-    * @return
-    *   A string indicating the kind corresponding to te
-    */
-  def errorDescription(te: TypeExpression): String = {
-    te match {
-      case AliasedTypeExpression(_, keyword, pid) => s"$keyword ${pid.format}"
-      case Optional(_, typeExp)                   => errorDescription(typeExp) + "?"
-      case ZeroOrMore(_, typeExp)                 => errorDescription(typeExp) + "*"
-      case OneOrMore(_, typeExp)                  => errorDescription(typeExp) + "+"
-      case e: Enumeration                         => s"Enumeration of ${e.enumerators.size} values"
-      case a: Alternation                         => s"Alternation of ${a.of.size} types"
-      case a: Aggregation                         => s"Aggregation of ${a.fields.size} fields"
-      case Mapping(_, from, to) =>
-        s"Map from ${errorDescription(from)} to ${errorDescription(to)}"
-      case EntityReferenceTypeExpression(_, entity) =>
-        s"Reference to entity ${entity.format}"
-      case p: Pattern              => p.format
-      case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
-      case RangeType(_, min, max)  => s"Range($min,$max)"
-      case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
-      case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
-        s"${messageKind.format} of ${m.fields.size} fields and ${m.methods.size} methods"
-      case pt: PredefinedType => pt.kind
-      case _                  => "<unknown type expression>"
-    }
-  }
-
   /** Base of an enumeration for the four kinds of message types */
   sealed trait AggregateUseCase {
     override def toString: String = useCase
@@ -990,36 +996,40 @@ object AST {
     def useCase: String
   }
 
-  /** An enumerator value for command types */
+  /** An enumerator value to distinguish command aggregates */
   case object CommandCase extends AggregateUseCase {
     @inline def useCase: String = "Command"
   }
 
-  /** An enumerator value for event types */
+  /** An enumerator value to distinguish event aggregates */
   case object EventCase extends AggregateUseCase {
     @inline def useCase: String = "Event"
   }
 
-  /** An enumerator value for query types */
+  /** An enumerator value to distinguish query aggregates */
   case object QueryCase extends AggregateUseCase {
     @inline def useCase: String = "Query"
   }
 
-  /** An enumerator value for result types */
+  /** An enumerator value  to distinguish result aggregates */
   case object ResultCase extends AggregateUseCase {
     @inline def useCase: String = "Result"
   }
 
+  /** An enumerator value  to distinguish record aggregates */
   case object RecordCase extends AggregateUseCase {
     @inline def useCase: String = "Record"
   }
 
+  /** An enumerator value to identify undistinguished aggregates */
   case object TypeCase extends AggregateUseCase {
     @inline def useCase: String = "Type"
   }
 
-  /** Base trait of the cardinality type expressions */
+  /** Base trait of the cardinality for type expressions */
   sealed trait Cardinality extends TypeExpression {
+
+    /** The [[TypeExpression]] that this cardinality expression modified */
     def typeExp: TypeExpression
     final override def hasCardinality: Boolean = true
   }
@@ -1127,6 +1137,91 @@ object AST {
       s"one of { ${of.map(_.format).mkString(", ")} }"
   }
 
+  /** A type expression for a sequence of some other type expression
+    *
+    * @param loc
+    *   Where this type expression occurs in the source code
+    * @param of
+    *   The type expression of the sequence's elements
+    */
+  case class Sequence(loc: At, of: TypeExpression) extends TypeExpression {
+    override def format: String = s"sequence of ${of.format}"
+  }
+
+  /** A type expressions that defines a mapping from a key to a value. The value of a Mapping is the set of mapped key
+    * -> value pairs, based on which keys have been provided values.
+    *
+    * @param loc
+    *   The location of the mapping type expression
+    * @param from
+    *   The type expression for the keys of the mapping
+    * @param to
+    *   The type expression for the values of the mapping
+    */
+  case class Mapping(loc: At, from: TypeExpression, to: TypeExpression) extends TypeExpression {
+    override def format: String = s"mapping from ${from.format} to ${to.format}"
+  }
+
+  /** A mathematical set of some other type of value
+    *
+    * @param loc
+    *   Where the type expression occurs in the source
+    * @param of
+    *   The type of the elements of the set.
+    */
+  case class Set(loc: At, of: TypeExpression) extends TypeExpression {
+
+    /** Format the node to a string */
+    override def format: String = s"set of ${of.format}"
+  }
+
+  /** A graph of homogenous nodes. This implies the nodes are augmented with additional data to support navigation in
+    * the graph but that detail is left to the implementation of the model.
+    *
+    * @param loc
+    *   Where the type expression occurs in the source
+    * @param of
+    *   The type of the elements of the graph
+    */
+  case class Graph(loc: At, of: TypeExpression) extends TypeExpression {
+
+    /** Format the node to a string */
+    override def format: String = s"graph of ${of.format}"
+  }
+
+  /** A vector, table, or array of homogeneous cells.
+    *
+    * @param loc
+    *   Where the type expression occurs in the source
+    * @param of
+    *   The type of the elements of the table
+    * @param dimensions
+    *   The size of the dimensions of the table. There can be as many dimensions as needed.
+    */
+  case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression {
+    override def format: String = s"table of ${of.format}(${dimensions.mkString(",")})"
+  }
+
+  /** A value that is replicated across nodes in a cluster. Usage requirements placement in a definition such as
+    * [[Context]] or [[Entity]] that supports the `clustered` value for the `kind` option.
+    *
+    * @param loc
+    *   Where the replica type expression occurs in the source
+    * @param of
+    *   The kind of data value that is replicated across cluster nodes. Because replicas imply use of a Conflict-free
+    *   Replicated Data Type, the kind of type expression for `of` is restricted to numeric, set, and map types
+    */
+  case class Replica(loc: At, of: TypeExpression) extends TypeExpression {
+    override def format: String = s"replica of ${of.format}"
+  }
+
+  /** The base trait of values of an aggregate type to provide the required `typeEx` field to give the
+    * [[TypeExpression]] for that value of the aggregate
+    */
+  sealed trait AggregateValue extends OccursInType with WithIdentifier {
+    def typeEx: TypeExpression
+  }
+
   /** A definition that is a field of an aggregation type expressions. Fields associate an identifier with a type
     * expression.
     *
@@ -1156,19 +1251,27 @@ object AST {
     override def format: String = s"${id.format}: ${typeEx.format}"
   }
 
-  /** An argument to a method */
+  /** An argument of a method value for an aggregate
+    *
+    * @param loc
+    *   The parse location of the argument
+    * @param name
+    *   The name of the argument
+    * @param typeEx
+    *   The type of the argument as a [[TypeExpression]]
+    */
   case class MethodArgument(
     loc: At,
-    key: String,
-    value: TypeExpression
+    name: String,
+    typeEx: TypeExpression
   ) extends RiddlValue {
 
     /** Format the node to a string */
-    def format: String = s"$key: ${value.format}"
+    def format: String = s"$name: ${typeEx.format}"
   }
 
-  /** A leaf definition that is a callable method (function) of an aggregation type expressions. Methods associate an
-    * identifier with a computed type expression.
+  /** A leaf definition that is a callable method (function) of an aggregate type expression. Methods associate an
+    * identifier with a computed [[TypeExpression]].
     *
     * @param loc
     *   The location of the field definition
@@ -1198,9 +1301,9 @@ object AST {
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
   }
 
-  /** A type expression that contains an aggregation of fields
+  /** A type expression that contains an aggregation of fields (named values) or methods (named functions)
     *
-    * This is used as the base trait of Aggregations and Messages
+    * This is used as the [[TypeExpression]] of Aggregations and Messages
     */
   sealed trait AggregateTypeExpression(contents: Contents[RiddlValue])
       extends Container[RiddlValue]
@@ -1244,126 +1347,6 @@ object AST {
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
   }
 
-  /** A type expression for a sequence of some other type expression
-    * @param loc
-    *   Where this type expression occurs in the source code
-    * @param of
-    *   The type expression of the sequence's elements
-    */
-  case class Sequence(loc: At, of: TypeExpression) extends TypeExpression {
-    override def format: String = s"sequence of ${of.format}"
-  }
-
-  /** A type expressions that defines a mapping from a key to a value. The value of a Mapping is the set of mapped key
-    * -> value pairs, based on which keys have been provided values.
-    *
-    * @param loc
-    *   The location of the mapping type expression
-    * @param from
-    *   The type expression for the keys of the mapping
-    * @param to
-    *   The type expression for the values of the mapping
-    */
-  case class Mapping(loc: At, from: TypeExpression, to: TypeExpression) extends TypeExpression {
-    override def format: String = s"mapping from ${from.format} to ${to.format}"
-  }
-
-  /** A mathematical set of some other type of value
-    * @param loc
-    *   Where the type expression occurs in the source
-    * @param of
-    *   The type of the elements of the set.
-    */
-  case class Set(loc: At, of: TypeExpression) extends TypeExpression {
-
-    /** Format the node to a string */
-    override def format: String = s"set of ${of.format}"
-  }
-
-  /** A graph of homogenous nodes. This implies the nodes are augmented with additional data to support navigation in
-    * the graph but that detail is left to the implementation of the model.
-    * @param loc
-    *   Where the type expression occurs in the source
-    * @param of
-    *   The type of the elements of the graph
-    */
-  case class Graph(loc: At, of: TypeExpression) extends TypeExpression {
-
-    /** Format the node to a string */
-    override def format: String = s"graph of ${of.format}"
-  }
-
-  /** A vector, table, or array of homogeneous cells.
-    * @param loc
-    *   Where the type expression occurs in the source
-    * @param of
-    *   The type of the elements of the table
-    * @param dimensions
-    *   The size of the dimensions of the table. There can be as many dimensions as needed.
-    */
-  case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression {
-    override def format: String = s"table of ${of.format}(${dimensions.mkString(",")})"
-  }
-
-  /** A value that is replicated across nodes in a cluster. Usage requirements placement in a definition such as
-    * [[Context]] or [[Entity]] that supports the `clustered` value for the `kind` option.
-    * @param loc
-    *   Where the replica type expression occurs in the source
-    * @param of
-    *   The kind of data value that is replicated across cluster nodes. Because replicas imply use of a Conflict-free
-    *   Replicated Data Type, the kind of type expression for `of` is restricted to numeric, set, and map types
-    */
-  case class Replica(loc: At, of: TypeExpression) extends TypeExpression {
-    override def format: String = s"replica of ${of.format}"
-  }
-
-  /** A type expression whose value is a reference to an instance of an entity.
-    *
-    * @param loc
-    *   The location of the reference type expression
-    * @param entity
-    *   The type of entity referenced by this type expression.
-    */
-  case class EntityReferenceTypeExpression(loc: At, entity: PathIdentifier) extends TypeExpression {
-    override def format: String = s"entity ${entity.format}"
-  }
-
-  /** A type expression that defines a string value constrained by a Java Regular Expression
-    *
-    * @param loc
-    *   The location of the pattern type expression
-    * @param pattern
-    *   The Java Regular Expression to which values of this type expression must obey.
-    * @see
-    *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
-    */
-  case class Pattern(loc: At, pattern: Seq[LiteralString]) extends PredefinedType {
-    override def format: String =
-      s"$kind(${pattern.map(_.format).mkString(", ")})"
-
-    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || other.isInstanceOf[String_]
-    }
-  }
-
-  /** A type expression for values that ensure a unique identifier for a specific entity.
-    *
-    * @param loc
-    *   The location of the unique identifier type expression
-    * @param entityPath
-    *   The path identifier of the entity type
-    */
-  case class UniqueId(loc: At, entityPath: PathIdentifier) extends PredefinedType {
-    inline override def kind: String = "Id"
-
-    override def format: String = s"$kind(${entityPath.format})"
-
-    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      super.isAssignmentCompatible(other) || other.isInstanceOf[String_] ||
-      other.isInstanceOf[Pattern]
-    }
-  }
-
   /** A type expression for an aggregation that is marked as being one of the use cases. This is used for messages,
     * records, and other aggregate types that need to have their purpose distinguished.
     *
@@ -1384,6 +1367,17 @@ object AST {
     }
   }
 
+  /** A type expression whose value is a reference to an instance of an entity.
+    *
+    * @param loc
+    *   The location of the reference type expression
+    * @param entity
+    *   The type of entity referenced by this type expression.
+    */
+  case class EntityReferenceTypeExpression(loc: At, entity: PathIdentifier) extends TypeExpression {
+    override def format: String = s"entity ${entity.format}"
+  }
+
   /** Base class of all pre-defined type expressions
     */
   abstract class PredefinedType extends TypeExpression {
@@ -1397,6 +1391,25 @@ object AST {
   object PredefinedType {
     final def unapply(preType: PredefinedType): Option[String] =
       Option(preType.kind)
+  }
+
+  /** A type expression that defines a string value constrained by a Java Regular Expression
+    *
+    * @param loc
+    *   The location of the pattern type expression
+    * @param pattern
+    *   The Java Regular Expression to which values of this type expression must obey.
+    *
+    * @see
+    *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
+    */
+  case class Pattern(loc: At, pattern: Seq[LiteralString]) extends PredefinedType {
+    override def format: String =
+      s"$kind(${pattern.map(_.format).mkString(", ")})"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[String_]
+    }
   }
 
   /** A type expression for values of arbitrary string type, possibly bounded by length.
@@ -1416,6 +1429,24 @@ object AST {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[Pattern]
+    }
+  }
+
+  /** A type expression for values that ensure a unique identifier for a specific entity.
+    *
+    * @param loc
+    *   The location of the unique identifier type expression
+    * @param entityPath
+    *   The path identifier of the entity type
+    */
+  case class UniqueId(loc: At, entityPath: PathIdentifier) extends PredefinedType {
+    inline override def kind: String = "Id"
+
+    override def format: String = s"$kind(${entityPath.format})"
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[String_] ||
+      other.isInstanceOf[Pattern]
     }
   }
 
@@ -1882,7 +1913,7 @@ object AST {
     def format: String = what.format
   }
 
-  /** An action that is intended to generate a runtime error in the generated application or otherwise indicate an error
+  /** A statement that is intended to generate a runtime error in the application or otherwise indicate an error
     * condition
     *
     * @param loc
@@ -1898,6 +1929,13 @@ object AST {
     def format: String = s"error ${message.format}"
   }
 
+  /** A statement that changes the focus of input in an application to a specific group
+    *
+    * @param loc
+    *   The location of the statement
+    * @param group
+    *   The group that is the target of the input focus
+    */
   case class FocusStatement(
     loc: At,
     group: GroupRef
@@ -1906,6 +1944,15 @@ object AST {
     def format: String = s"focus on ${group.format}"
   }
 
+  /** A statement that sets a value of a field
+    *
+    * @param loc
+    *   THe locaiton of the statement
+    * @param field
+    *   The field that is the target of the value change
+    * @param value
+    *   A description of the value to set as a [[LiteralString]]
+    */
   case class SetStatement(
     loc: At,
     field: FieldRef,
@@ -1915,7 +1962,7 @@ object AST {
     def format: String = s"set ${field.format} to ${value.format}"
   }
 
-  /** An action that returns a value from a function
+  /** A statement that returns a value from a function
     *
     * @param loc
     *   The location in the source of the publish action
@@ -1982,7 +2029,7 @@ object AST {
     def format: String = s"morph ${entity.format} to ${state.format} with ${value.format}"
   }
 
-  /** An action that changes the behavior of an entity by making it use a new handler for its messages; named for the
+  /** A statement that changes the behavior of an entity by making it use a new handler for its messages; named for the
     * "become" operation in Akka that does the same for an user.
     *
     * @param loc
@@ -2022,6 +2069,13 @@ object AST {
     def format: String = s"tell ${msg.format} to ${processorRef.format}"
   }
 
+  /** A statement that calls a function
+    *
+    * @param loc
+    *   The location of the statement in the model
+    * @param func
+    *   The function to be called
+    */
   case class CallStatement(
     loc: At,
     func: FunctionRef
@@ -2030,6 +2084,14 @@ object AST {
     def format: String = "call ${func.format}"
   }
 
+  /** A statement that suggests looping over the contents of a field with a non-zero cardinality, an Inlet or an outlet
+    * @param loc
+    *   The location of the statement in the model
+    * @param ref
+    *   The reference to the Field, outlet or Inlet
+    * @param do_
+    *   The set of statements to execute for each iteration_
+    */
   case class ForEachStatement(
     loc: At,
     ref: FieldRef | OutletRef | InletRef,
@@ -2040,6 +2102,17 @@ object AST {
       do_.map(_.format).mkString("\n") + "end\n"
   }
 
+  /** A statement that represents a class if-condition-then-A-else-B construct for logic decitions.
+    *
+    * @param loc
+    *   The location of the statement in the model
+    * @param cond
+    *   The conditional part of the if-then-else
+    * @param thens
+    *   The statements to execute if `cond` is true
+    * @param elses
+    *   The tsatements to execute if `cond` is false
+    */
   case class IfThenElseStatement(
     loc: At,
     cond: LiteralString,
@@ -2052,6 +2125,7 @@ object AST {
          else "\n")}"
   }
 
+  /** A statement that terminates the On Clause */
   case class StopStatement(
     loc: At
   ) extends Statement {
@@ -2059,6 +2133,19 @@ object AST {
     def format: String = "stop ${func.format}"
   }
 
+  /** A statement that reads data from a Repository
+    *
+    * @param loc
+    *   The location of the statement in the model
+    * @param keyword
+    *   The keyword used to color the nature of the read operation
+    * @param what
+    *   A string describing what should be read
+    * @param from
+    *   A reference to the type from which the value should be read in the repository
+    * @param where
+    *   A string describing the conditions on the read (like a SQL WHERE clause)
+    */
   case class ReadStatement(
     loc: At,
     keyword: String,
@@ -2070,6 +2157,17 @@ object AST {
     def format: String = s"$keyword ${what.format} from ${from.format} where ${where.s}"
   }
 
+  /** A statement that describes a write to a repository
+    *
+    * @param loc
+    *   The location of the statement in the model
+    * @param keyword
+    *   The keyword used to color the nature of teh write operation (e.g. update, append, etc.)
+    * @param what
+    *   A description of the data that should be written to the repository
+    * @param to
+    *   The [[TypeRef]] to the component of the Repository
+    */
   case class WriteStatement(
     loc: At,
     keyword: String,
@@ -2080,6 +2178,15 @@ object AST {
     def format: String = s"$keyword ${what.format} to ${to.format}"
   }
 
+  /** A statement that provides a definition of the computation to execute in a specific programming language
+    *
+    * @param loc
+    *   The location of the statement
+    * @param language
+    *   The name of the programming language in which the `body` is written
+    * @param body
+    *   The code that should be executed by this statement.
+    */
   case class CodeStatement(
     loc: At,
     language: LiteralString,
@@ -2090,15 +2197,23 @@ object AST {
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
-  /** Base class of all options for the Adaptor definition */
+  /** A trait that is the base trait of Adaptor directions */
   sealed trait AdaptorDirection extends RiddlValue {
     def loc: At
   }
 
+  /** Represents an [[AdaptorDirection]] that is inbound (towards the bounded context the [[Adpator]] was defined in)
+    *
+    * @param loc
+    *   Location in the source of the adaptor direction
+    */
   case class InboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "from"
   }
 
+  /** Represents an [[AdaptorDirection]] that is outbouand (towards a bounded context that is not the one that defined
+    * the [[Adaptor]]
+    */
   case class OutboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "to"
   }
@@ -2132,10 +2247,12 @@ object AST {
     description: Option[Description] = None
   ) extends Processor[OccursInAdaptor]
       with OccursInContext
-      with WithOptions {}
+      with WithOptions {
+    def format: String = Keyword.adaptor + " " + id.format
+  }
 
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
-    override def format: String = s"adaptor ${pathId.format}"
+    override def format: String = Keyword.adaptor + " " + pathId.format
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTION
@@ -2152,6 +2269,8 @@ object AST {
     *   An optional type expression that names and types the fields of the output of the function
     * @param contents
     *   The set of types, functions, statements, authors, includes and terms that define this FUnction
+    * @param statements
+    *   The set of statements that define the behavior of the function
     * @param brief
     *   A brief description (one sentence) for use in documentation
     * @param description
@@ -2171,11 +2290,9 @@ object AST {
       with WithFunctions
       with OccursInFunction
       with OccursInProcessors {
-
-    override def isEmpty: Boolean = statements.isEmpty && input.isEmpty &&
-      output.isEmpty
-
+    override def format: String = Keyword.function + " " + id.format
     final override inline def kind: String = "Function"
+    override def isEmpty: Boolean = statements.isEmpty && input.isEmpty && output.isEmpty
   }
 
   /** A reference to a function.
@@ -2186,7 +2303,7 @@ object AST {
     *   The path identifier of the referenced function.
     */
   case class FunctionRef(loc: At, pathId: PathIdentifier) extends Reference[Function] {
-    override def format: String = s"function ${pathId.format}"
+    override def format: String = Keyword.function + " " + pathId.format
   }
 
   /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional
@@ -2213,8 +2330,7 @@ object AST {
       with OccursInProcessors
       with OccursInState {
     override def isEmpty: Boolean = condition.isEmpty
-
-    def format: String = ""
+    def format: String = Keyword.invariant + " " + id.format + condition.map(_.format)
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// ON CLAUSE
@@ -2373,7 +2489,7 @@ object AST {
 
     def clauses: Seq[OnClause] = contents.filter[OnClause]
 
-    def format: String = s"handler ${id.format}"
+    def format: String = s"${Keyword.handler} ${id.format}"
   }
 
   /** A reference to a Handler
@@ -2384,7 +2500,7 @@ object AST {
     *   The path identifier of the referenced handler
     */
   case class HandlerRef(loc: At, pathId: PathIdentifier) extends Reference[Handler] {
-    override def format: String = s"handler ${pathId.format}"
+    def format: String = Keyword.handler + " " + pathId.format
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// STATE
@@ -2418,11 +2534,8 @@ object AST {
   ) extends Definition
       with Container[OccursInState]
       with OccursInEntity {
-
     override def contents: Seq[OccursInState] = handlers ++ invariants
-
-    def format: String = s"state ${id.format}"
-
+    def format: String = Keyword.state + " " + id.format
   }
 
   /** A reference to an entity's state definition
@@ -2433,7 +2546,7 @@ object AST {
     *   The path identifier of the referenced state definition
     */
   case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State] {
-    override def format: String = s"state ${pathId.format}"
+    def format: String = Keyword.state + " " + pathId.format
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ENTITY
@@ -2460,7 +2573,9 @@ object AST {
   ) extends Processor[OccursInEntity]
       with WithStates
       with WithOptions
-      with OccursInContext {}
+      with OccursInContext {
+    override def format: String = Keyword.entity + " " + id.format
+  }
 
   /** A reference to an entity
     *
@@ -2470,7 +2585,7 @@ object AST {
     *   The path identifier of the referenced entity.
     */
   case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity] {
-    override def format: String = s"entity ${pathId.format}"
+    def format: String = Keyword.entity + " " + pathId.format
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
@@ -2502,7 +2617,7 @@ object AST {
     connectors: Map[Identifier, (TypeRef, TypeRef)],
     indices: Seq[FieldRef]
   ) extends OccursInRepository {
-    def format: String = s"schema ${id.format} is $schemaKind"
+    def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   }
 
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
@@ -2533,7 +2648,7 @@ object AST {
   ) extends Processor[OccursInRepository]
       with OccursInContext
       with WithOptions {
-    override def kind: String = "Repository"
+    def format: String = Keyword.entity + " " + id.format
   }
 
   /** A reference to a repository definition
@@ -2581,6 +2696,7 @@ object AST {
       with OccursInContext
       with WithOptions {
     lazy val repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
+    def format: String = Keyword.projector + " " + id.format
   }
 
   /** A reference to an context's projector definition
@@ -2591,7 +2707,7 @@ object AST {
     *   The path identifier of the referenced projector definition
     */
   case class ProjectorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
-    override def format: String = s"projector ${pathId.format}"
+    override def format: String = Keyword.projector + " " + pathId.format
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
@@ -2627,7 +2743,9 @@ object AST {
       with WithAdaptors
       with WithSagas
       with WithOptions
-      with OccursInDomain {}
+      with OccursInDomain {
+    def format: String = Keyword.context + " " + id.format
+  }
 
   object Context {
     lazy val empty: Context = Context(At.empty, Identifier.empty)
@@ -2725,7 +2843,7 @@ object AST {
   ) extends LeafDefinition
       with OccursInContext {
     def hasOption(name: String): Boolean = options.exists(_.name == name)
-    override def format: String = s"Connector"
+    override def format: String = Keyword.connector + " " + id.format
 
     override def isEmpty: Boolean = super.isEmpty && from.isEmpty && to.isEmpty && options.isEmpty
   }
@@ -2802,6 +2920,8 @@ object AST {
       with WithOptions
       with OccursInContext {
     final override def kind: String = shape.getClass.getSimpleName
+    def format: String = shape.keyword + " " + id.format
+
     shape match {
       case Source(_) =>
         require(
@@ -2945,7 +3065,7 @@ object AST {
       with WithOptions
       with OccursInContext
       with OccursInDomain {
-
+    override def format: String = Keyword.saga + " " + id.format
     override def isEmpty: Boolean = super.isEmpty && input.isEmpty && output.isEmpty
 
   }
@@ -3045,7 +3165,7 @@ object AST {
     override def kind: String = "Optional Interaction"
   }
 
-  /** A very vague step just written as text */
+  /** An [[GenericInteraction]] that is vaguely written as a textual description */
   case class VagueInteraction(
     loc: At,
     from: LiteralString,
@@ -3058,6 +3178,21 @@ object AST {
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
+  /** A [[GenericInteraction]] that involves sending a message between the interacting components
+    *
+    * @param loc
+    *   The location of the interaction definition
+    * @param from
+    *   The definition that originates the interaction
+    * @param message
+    *   The message that is sent to the `to` component
+    * @param to
+    *   A [[Reference]] to the [[Processor]] that receives the sent `message`
+    * @param brief
+    *   A brief description of this interaction
+    * @param description
+    *   A full description of this interaction
+    */
   case class SendMessageInteraction(
     loc: At,
     from: Reference[Definition],
@@ -3071,7 +3206,6 @@ object AST {
     }
 
     override def kind: String = "Send Message Interaction"
-
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
@@ -3102,6 +3236,19 @@ object AST {
 
   }
 
+  /** An [[TwoReferenceInteraction]] between a [[Definition]] and itself
+    *
+    * @param loc
+    *   The location at which the interaction occurs
+    * @param from
+    *   A reference to a [[Definition]] from which the relationship extends and to which it returns.
+    * @param relationship
+    *   A textual description of the relationship
+    * @param brief
+    *   A brief description of the interaction for documentation purposes
+    * @param description
+    *   A full description of the interaction for documentation purposes
+    */
   case class SelfInteraction(
     loc: At,
     from: Reference[Definition],
@@ -3138,6 +3285,18 @@ object AST {
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
   }
 
+  /** An interaction between a ser and a URL
+    * @param loc
+    *   THe location of the interaction in the model
+    * @param from
+    *   The user from which the interaction emanates
+    * @param url
+    *   The URL towards which the user is directed
+    * @param brief
+    *   A brief description for documentation purposes
+    * @param description
+    *   A more full description of the interaction for documentation purposes
+    */
   case class DirectUserToURLInteraction(
     loc: At,
     from: UserRef,
@@ -3514,6 +3673,7 @@ object AST {
       with WithGroups
       with OccursInDomain {
     override def isAppRelated: Boolean = true
+    override def format: String = Keyword.application + " " + id.format
   }
 
   /** A reference to an Application using a path identifier
@@ -3524,7 +3684,7 @@ object AST {
     *   The path identifier that refers to the Application
     */
   case class ApplicationRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Application] {
-    def format: String = s"application ${pathId.format}"
+    def format: String = Keyword.application + " " + pathId.format
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// DOMAIN
@@ -3562,7 +3722,9 @@ object AST {
       with WithSagas
       with WithDomains
       with WithOptions
-      with OccursInDomain {}
+      with OccursInDomain {
+    override def format: String = Keyword.domain + " " + id.format
+  }
 
   /** A reference to a domain definition
     *
@@ -3600,19 +3762,17 @@ object AST {
     }
   }
 
-  /**
-    * Get all the top level domain definitions even if they are in include statements
+  /** Get all the top level domain definitions even if they are in include statements
     * @param root
     *   The model's [[AST.Root]] node.
     * @return
     *   A Seq of [[AST.Domain]]s as a [[AST.Contents]] extension
     */
   def getTopLevelDomains(root: Root): Contents[Domain] = {
-    (root.domains ++ root.includes.flatMap(_.contents.filter[Domain]))
+    root.domains ++ root.includes.flatMap(_.contents.filter[Domain])
   }
 
-  /**
-    * Get all the first level nested domains of a domain even if they are in include statements
+  /** Get all the first level nested domains of a domain even if they are in include statements
     * @param domain
     *   The parent [[AST.Domain]] whose subdomains will be returned
     * @return
@@ -3622,8 +3782,7 @@ object AST {
     domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
   }
 
-  /**
-    * Get the bounded contexts defined in a domain even if they are in includes of that domain
+  /** Get the bounded contexts defined in a domain even if they are in includes of that domain
     * @param domain
     *   The domain whose contexts should be returned
     * @return
@@ -3633,8 +3792,7 @@ object AST {
     domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
   }
 
-  /**
-    * Get all the applications defined in a domain even if they are in includes of that domain
+  /** Get all the applications defined in a domain even if they are in includes of that domain
     * @param domain
     *   The domain whose applications should be returned
     * @return
@@ -3644,30 +3802,64 @@ object AST {
     domain.applications ++ domain.includes.flatMap(_.contents.filter[Application])
   }
 
+  /** get all the epics defined in a domain even if they are in includes of that domain
+    *
+    * @param domain
+    *   The domain to examine for epics
+    * @return
+    *   A [[scala.Seq]] of [[AST.Epic]] expressed as a [[AST.Contents]] extension
+    */
   def getEpics(domain: Domain): Contents[Epic] = {
     domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
   }
 
+  /** get all the entities defined in a context even if they are in includes of that domain
+    *
+    * @param context
+    *   The domain to examine for entities
+    * @return
+    *   A Seq of [[AST.Entity]] expressed as a [[AST.Contents]] extension
+    */
   def getEntities(context: Context): Contents[Entity] = {
     context.entities ++ context.includes.flatMap(_.contents.filter[Entity])
   }
 
+  /** get all the authors defined in a domain even if they are in includes of that domain
+    *
+    * @param domain
+    *   The domain to examine for authors
+    * @return
+    *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
+    */
   def getAuthors(domain: Domain): Contents[Author] = {
     val nested = domain.includes.flatMap(_.contents.filter[Author])
     domain.authors ++ domain.domains.flatMap(getAuthors) ++ nested
   }
 
+  /** get all the authors defined in the root node even if they are in includes
+    *
+    * @param root
+    *   The domain to examine for entities
+    * @return
+    *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
+    */
   def getAuthors(root: Root): Contents[Author] = {
     root.domains.flatMap(getAuthors)
   }
 
+  /** get all the [[Author]]s defined in a [[Domain]] node even if they are in includes
+    *
+    * @param domain
+    *   The domain to examine for entities
+    * @return
+    *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
+    */
   def getUsers(domain: Domain): Contents[User] = {
     val nested = domain.includes.flatMap(_.contents.filter[User])
     domain.users ++ domain.domains.flatMap(getUsers) ++ nested
   }
 
-  /**
-    * Get the [[AST.User]] definitions found at the [[AST.Root]] level or in its [[AST.Include]]s
+  /** Get the [[AST.User]] definitions found at the [[AST.Root]] level or in its [[AST.Include]]s
     * @param root
     *   The [[AST.Root]] node to examine
     * @return
@@ -3677,6 +3869,44 @@ object AST {
     root.domains.flatMap(getUsers) ++ root.includes.flatMap(_.contents.filter[User])
   }
 
-  extension (optLit: Option[LiteralString]) def format: String = optLit.map(_.format).getOrElse("N/A")
+  extension (optLit: Option[LiteralString])
+    /** An extension to an [[scala.Option[LiteralString]]] that makes extracting the content of the [[LiteralString]]
+      * easier.
+      * @return
+      *   The content of the formatted LiteralString or "N/A" if it is not available
+      */
+    def format: String = optLit.map(_.format).getOrElse("N/A")
+
+  /** A utility function for getting the kind of a type expression.
+    *
+    * @param te
+    *   The type expression to examine
+    *
+    * @return
+    *   A string indicating the kind corresponding to te
+    */
+  def errorDescription(te: TypeExpression): String = {
+    te match {
+      case AliasedTypeExpression(_, keyword, pid) => s"$keyword ${pid.format}"
+      case Optional(_, typeExp)                   => errorDescription(typeExp) + "?"
+      case ZeroOrMore(_, typeExp)                 => errorDescription(typeExp) + "*"
+      case OneOrMore(_, typeExp)                  => errorDescription(typeExp) + "+"
+      case e: Enumeration                         => s"Enumeration of ${e.enumerators.size} values"
+      case a: Alternation                         => s"Alternation of ${a.of.size} types"
+      case a: Aggregation                         => s"Aggregation of ${a.fields.size} fields"
+      case Mapping(_, from, to) =>
+        s"Map from ${errorDescription(from)} to ${errorDescription(to)}"
+      case EntityReferenceTypeExpression(_, entity) =>
+        s"Reference to entity ${entity.format}"
+      case p: Pattern              => p.format
+      case Decimal(_, whl, frac)   => s"Decimal($whl,$frac)"
+      case RangeType(_, min, max)  => s"Range($min,$max)"
+      case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
+      case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
+        s"${messageKind.format} of ${m.fields.size} fields and ${m.methods.size} methods"
+      case pt: PredefinedType => pt.kind
+      case _                  => "<unknown type expression>"
+    }
+  }
 
 }
