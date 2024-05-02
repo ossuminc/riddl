@@ -214,7 +214,7 @@ object Messages {
     List(Message(loc, message))
   }
 
-  /** Generate a [[scala.LIst]] with a single warning message in it */
+  /** Generate a [[scala.List]] with a single warning message in it */
   def warnings(message: String, loc: At = At.empty): Messages = {
     List(Message(loc, message, Warning))
   }

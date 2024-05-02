@@ -48,7 +48,7 @@ object Folding {
   }
 
   /**
-    * A Typical foldLeft as with [[scala.colleciton.Seq]] but utilizing a stack of parents as well. 
+    * A Typical foldLeft as with [[scala.collection.Seq]] but utilizing a stack of parents as well. 
     * @param value
     * The node at which folding starts
     * @param parents

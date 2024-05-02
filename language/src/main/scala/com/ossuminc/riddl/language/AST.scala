@@ -25,7 +25,7 @@ object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES
 
-  /** The root trait of all parsed values. If a parser returns something, its a RiddlValue. Every node in the AST is a
+  /** The root trait of all parsed values. If a parser returns something, its a [[RiddlValue]]. Every node in the AST is a
     * RiddlNode. Subclasses implement the definitions in various ways because this is the most abstract notion of what
     * is parsed.
     */
@@ -481,12 +481,12 @@ object AST {
     lazy val groups: Contents[Group] = contents.filter[Group]
   }
 
-  /** Base trait to use in a [[Function]] to define the [[Statements]]s that form the body of that function */
+  /** Base trait to use in a [[AST.Function]] to define the [[AST.Statement]]s that form the body of that function */
   sealed trait WithStatements extends Container[RiddlValue] with OccursInProcessors with OccursInFunction {
     lazy val statements: Contents[Statement] = contents.filter[Statement]
   }
 
-  /** Base trait to use in a [[Domain]] to define the bounded [[Contexts]] it contains */
+  /** Base trait to use in a [[Domain]] to define the bounded [[Context]] it contains */
   sealed trait WithContexts extends Container[RiddlValue] with OccursInDomain {
     lazy val contexts: Contents[Context] = contents.filter[Context]
   }
@@ -518,12 +518,12 @@ object AST {
     lazy val domains: Contents[Domain] = contents.filter[Domain]
   }
 
-  /** Base trait to use in any [[Definition]] that can define [[Projectors]]s */
+  /** Base trait to use in any [[Definition]] that can define [[Projector]]s */
   sealed trait WithProjectors extends Container[RiddlValue] with OccursInContext {
     lazy val projectors: Contents[Projector] = contents.filter[Projector]
   }
 
-  /** Base trait to use in any [[Definition]] that can define [[Repositories]]s */
+  /** Base trait to use in any [[Definition]] that can define [[Repository]]s */
   sealed trait WithRepositories extends Container[RiddlValue] with OccursInContext {
     lazy val repositories: Contents[Repository] = contents.filter[Repository]
   }
@@ -533,7 +533,7 @@ object AST {
     lazy val entities: Contents[Entity] = contents.filter[Entity]
   }
 
-  /** Base trait to use in any [[Definition]] that can define [[Streamlets]]s */
+  /** Base trait to use in any [[Definition]] that can define [[Streamlet]]s */
   sealed trait WithStreamlets extends Container[RiddlValue] with OccursInContext {
     lazy val streamlets: Contents[Streamlet] = contents.filter[Streamlet]
   }
@@ -2202,7 +2202,7 @@ object AST {
     def loc: At
   }
 
-  /** Represents an [[AdaptorDirection]] that is inbound (towards the bounded context the [[Adpator]] was defined in)
+  /** Represents an [[AdaptorDirection]] that is inbound (towards the bounded context the [[Adaptor]] was defined in)
     *
     * @param loc
     *   Location in the source of the adaptor direction
