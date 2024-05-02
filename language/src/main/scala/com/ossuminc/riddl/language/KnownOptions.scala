@@ -1,5 +1,6 @@
 package com.ossuminc.riddl.language
 
+/** AN object that defines the names of the known options */
 object KnownOptions {
 
   final val adaptor: Seq[String] = Seq(
