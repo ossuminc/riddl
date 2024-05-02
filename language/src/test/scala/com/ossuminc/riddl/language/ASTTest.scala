@@ -209,7 +209,7 @@ class ASTTest extends AnyWordSpec with Matchers {
       wt.hasTypes mustBe false
       wt.hasOptions mustBe false
       wt.isEmpty mustBe true
-      wt.format mustBe ""
+      wt.format mustBe "domain "
     }
   }
 
@@ -331,7 +331,7 @@ class ASTTest extends AnyWordSpec with Matchers {
 
   "Term" should {
     "format correctly" in {
-      term.format mustBe s"${Keyword.term} ${term.id.format}"
+      term.format mustBe s"${Keyword.term} ${term.id.format} is None"
     }
   }
 }

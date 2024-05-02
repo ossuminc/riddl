@@ -50,7 +50,7 @@ class AdaptorWriterTest extends WriterTest {
               || _Uses_ | None |
               |
               |## *RiddlOptions*
-              |* css("background: blue")
+              |* option css("background: blue")
               |
               |## *Direction: from context Two*
               |
