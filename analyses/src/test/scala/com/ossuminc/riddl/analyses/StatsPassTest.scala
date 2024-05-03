@@ -4,5 +4,9 @@ import com.ossuminc.riddl.passes.validate.ValidatingTest
 
 class StatsPassTest extends ValidatingTest {
 
-  // TODO: Write me
+  "StatsPass" must {
+    "generate statistics" in {
+      // TODO: write me
+    }
+  }
 }
