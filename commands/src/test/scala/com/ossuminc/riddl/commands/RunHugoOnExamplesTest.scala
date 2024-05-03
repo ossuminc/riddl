@@ -9,10 +9,10 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.command.{CommandOptions, CommandPlugin}
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.testkit.RunCommandOnExamplesTest
-import com.ossuminc.riddl.hugo.HugoPass 
+import com.ossuminc.riddl.hugo.HugoPass
 import org.scalatest.Assertion
 
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.annotation.unused
 
 /** Unit Tests To Run Riddlc On Examples */
@@ -39,9 +39,13 @@ class RunHugoOnExamplesTest
     @unused passesResult: PassesResult,
     @unused tempDir: Path
   ): Assertion = {
-    // TODO: check themes dir
-    // TODO: check config.toml setting values
-    // TODO: check options
+    info(s"Hugo output in ${tempDir.toString}")
+    val themes = tempDir.resolve("themes").resolve("hugo-geekdoc")
+    Files.isDirectory(themes) mustBe true
+    val toml = tempDir.resolve("config.toml")
+    Files.isReadable(toml) mustBe true
+    Files.isRegularFile(toml) mustBe true
+    passesResult.commonOptions mustBe commonOptions
     succeed
   }
 }
