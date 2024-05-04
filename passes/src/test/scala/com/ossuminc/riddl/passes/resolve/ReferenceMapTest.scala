@@ -63,7 +63,7 @@ class ReferenceMapTest extends ValidatingTest {
     }
 
     "have definitionOf(ref: References[T], parent: Parent) work" in {
-      val context = result.root.domains.head.includes(1).contents.filter[Context].head 
+      val context = result.root.domains.head.includes(1).contents.filter[Context].head
       val entity = context.entities.head
       val expected = entity.types(2)
       val pid = PathIdentifier(At.empty, Seq("Something", "someData"))

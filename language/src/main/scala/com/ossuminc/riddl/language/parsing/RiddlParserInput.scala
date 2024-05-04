@@ -195,7 +195,7 @@ private[parsing] case class FileParserInput(file: File) extends RiddlParserInput
 
 private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
   lazy val data: String = {
-    val source: Source = Source.fromURI(uri)
+    val source: Source = Source.fromURL(uri.toURL)
     try { source.getLines().mkString("\n") }
     finally { source.close() }
   }
