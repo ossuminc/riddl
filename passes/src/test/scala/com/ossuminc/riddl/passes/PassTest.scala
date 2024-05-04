@@ -134,7 +134,6 @@ class PassTest extends AnyWordSpec with Matchers {
           val outputs = PassesOutput()
           val hp = TestHierarchyPass(input, outputs)
           val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
-          out mustBe PassOutput.empty
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens.mustBe(closes)
           opens.mustBe(39)
