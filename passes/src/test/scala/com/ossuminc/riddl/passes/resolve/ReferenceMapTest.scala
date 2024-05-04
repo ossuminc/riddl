@@ -41,12 +41,13 @@ class ReferenceMapTest extends ValidatingTest {
 
     "have definitionOf(pid: PathIdentifier, parent: Parent) work" in {
       val pid = PathIdentifier(At.empty, Seq("Sink", "Commands"))
-      val parent = result.root.domains.head.contexts.head.connectors.head
+      val context = result.root.domains.head.includes.head.contents.filter[Context].head 
+      val parent = context.connectors.head
       parent.id.value mustBe "AChannel"
       refMap.definitionOf[Inlet](pid, parent) match {
         case Some(actual: Inlet) =>
           actual.id.value mustBe("Commands")
-          val expected = result.root.domains.head.contexts.head.streamlets.find("Sink")
+          val expected = context.streamlets.find("Sink")
           expected match {
             case Some(streamlet: Streamlet) =>
               streamlet.id.value mustBe("Sink")
@@ -62,7 +63,7 @@ class ReferenceMapTest extends ValidatingTest {
     }
 
     "have definitionOf(ref: References[T], parent: Parent) work" in {
-      val context = result.root.domains.head.contexts(1)
+      val context = result.root.domains.head.includes(1).contents.filter[Context].head 
       val entity = context.entities.head
       val expected = entity.types(2)
       val pid = PathIdentifier(At.empty, Seq("Something", "someData"))
