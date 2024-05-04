@@ -29,6 +29,20 @@ abstract class ValidatingTest extends ParsingTest {
     else Right(result)
   }
 
+  def simpleParseAndValidate(
+    input: RiddlParserInput,
+    options: CommonOptions = CommonOptions()
+  ): Either[Messages, PassesResult] = {
+    TopLevelParser.parseInput(input) match {
+      case Left(messages) => Left(messages)
+      case Right(model) =>
+        runStandardPasses(model, options) match {
+          case Left(messages)              => Left(messages)
+          case Right(result: PassesResult) => Right(result)
+        }
+    }
+  }
+
   def parseAndValidateAggregate(
     input: RiddlParserInput,
     options: CommonOptions = CommonOptions()

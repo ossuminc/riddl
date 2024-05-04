@@ -29,10 +29,6 @@ trait UsageResolution extends UsageBase {
 
   protected def messages: Messages.Accumulator
 
-  def usesAsMap: Map[Definition, Seq[NamedValue]] = uses.toMap
-
-  def usedByAsMap: Map[NamedValue, Seq[Definition]] = usedBy.toMap
-
   protected var entities: Seq[Entity] = Seq.empty[Entity]
 
   def addEntity(entity: Entity): this.type = {

@@ -282,7 +282,7 @@ class PathResolutionPassTest extends ResolvingTest {
             contents = Seq(
               Include(
                 eL,
-                "", 
+                "",
                 contents = Seq(
                   Context(
                     eL,
