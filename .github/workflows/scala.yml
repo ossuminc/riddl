@@ -48,6 +48,7 @@ jobs:
         name: code-coverage-report
         path: |
           - **/target/scala-3.4.1/scoverage-report/scoverage.xml
+          - target/scala-3.4.1/scoverage-report/scoverage.xml
           - sbt-riddl/target/scala-2.12/scoverage-report/scoverage.xml
 
     - name: Test sbt-riddl plugin
