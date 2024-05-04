@@ -16,6 +16,8 @@ case class InputStack(
 
   private val inputs: mutable.Stack[RiddlParserInput] = mutable.Stack()
 
+  def isEmpty: Boolean = inputs.isEmpty
+
   def push(input: RiddlParserInput): Unit = synchronized { inputs.push(input) }
 
   def push(file: File): Unit = { synchronized { inputs.push(FileParserInput(file)) } }
