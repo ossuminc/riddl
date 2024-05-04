@@ -18,6 +18,18 @@ import java.nio.file.Path
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
 
+  /** Parse an input with options and return the result
+    * 
+    * @param input
+    * The [[RiddlParserInput]] to use as the input of the parsing
+    * @param commonOptions
+    * The [[CommonOptions]] to use during the parsing
+    * @return
+    */
+  def parse(input: RiddlParserInput, commonOptions: CommonOptions = CommonOptions.empty): Either[Messages,Root] = {
+    TopLevelParser.parseInput(input, commonOptions)
+}
+    
   /** Run the standard passes after parsing
     * 
     * @param root

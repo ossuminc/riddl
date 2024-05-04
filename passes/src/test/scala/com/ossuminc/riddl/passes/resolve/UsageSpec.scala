@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.passes
+package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

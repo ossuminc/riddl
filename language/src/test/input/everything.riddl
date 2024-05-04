@@ -92,13 +92,12 @@ domain Everything is {
     } briefly "Something is nothing interesting"
 
     entity SomeOtherThing is {
-      type ItHappened is event { field: String }
-      record otherThingData is { field: String }
+      type ItHappened is event { aField: String }
+      record otherThingData is { aField: String }
       state otherThingState of SomeOtherThing.otherThingData is {
         handler fee is {
           on event ItHappened {
-            set field SomeOtherThing.otherThingState.fields.field to
-              "field ItHappened.field"
+            set field SomeOtherThing.otherThingState.aField to "arbitrary string value"
           }
         }
       }
