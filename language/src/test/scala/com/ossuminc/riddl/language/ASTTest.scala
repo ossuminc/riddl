@@ -170,7 +170,6 @@ class ASTTest extends AnyWordSpec with Matchers {
       adaptor.context.pathId.value mustBe Seq("a", "b", "context")
     }
   }
-  // TODO: Finish the pending cases
   "Application" should {
     "have a test" in {
       application.loc mustBe At.empty
@@ -280,11 +279,22 @@ class ASTTest extends AnyWordSpec with Matchers {
       function.description mustBe description
     }
   }
-  "Group" should { "have a test" in { pending } }
-  "Handler" should { "have a test" in {
-    handler.contents mustBe onClauses
-    handler.id.value mustBe "handler"
-  } }
+
+  "Group" should {
+    val group = Group(At(), "panel", Identifier(At(), "42"), None, Seq.empty)
+    "has an alias" in {
+      group.alias must be("panel")
+    }
+  }
+
+  "Handler" should {
+    "have some onClauses" in {
+      handler.contents mustBe onClauses
+    }
+    "be named 'handler'" in {
+      handler.id.value mustBe "handler"
+    }
+  }
 
   "Include" should {
     "identify as root container, etc" in {
@@ -321,7 +331,7 @@ class ASTTest extends AnyWordSpec with Matchers {
   }
 
   "Saga" should { "have a test" in {
-    
+
   } }
   "SagaStep" should { "have a test" in { pending } }
   "State" should { "format correctly" in { state.format mustBe "state state" } }
