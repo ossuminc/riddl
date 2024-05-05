@@ -30,7 +30,7 @@ object PrettifyPass extends PassInfo[PrettifyPass.Options] {
   ) extends TranslationCommand.Options with PassOptions with PassCommandOptions {
     def command: String = name
   }
-  
+
   /** A function to translate between a definition and the keyword that introduces them.
     *
     * @param definition
@@ -217,19 +217,21 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       )
     else
       useCase.contents.foreach {
-        case si: SequentialInteractions     => () // FIXME
-        case pi: ParallelInteractions       => () // FIXME
-        case oi: OptionalInteractions       => () // FIXME
-        case twori: TwoReferenceInteraction => () // FIXME
-        case gi: GenericInteraction         => () // FIXME
+        case si: SequentialInteractions     => () // TODO: implement
+        case pi: ParallelInteractions       => () // TODO: implement
+        case oi: OptionalInteractions       => () // TODO: implement
+        case twori: TwoReferenceInteraction => () // TODO: implement
+        case gi: GenericInteraction         => () // TODO: implement
         case _: Comment                     => ()
       }
     end if
   }
 
   private def doInteraction(@unused interaction: Interaction): Unit = {
-    // TODO: write doInteraction
-  }
+    state.withCurrent(
+      _.addIndent(interaction.format)
+    )
+}
 
   private def closeUseCase(@unused useCase: UseCase): Unit = {
     // TODO: write closeUseCase

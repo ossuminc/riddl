@@ -208,17 +208,6 @@ lazy val docsite = DocSite("doc", docOutput, docProjects)
     scalaVersion := "3.4.1",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
-
-    /* TODO: Someday, auto-download and unpack to themes/hugo-geekdoc like this:
-    mkdir -p themes/hugo-geekdoc/
-    curl -L https://github.com/thegeeklab/hugo-geekdoc/releases/latest/download/hugo-geekdoc.tar.gz | tar -xz -C  themes/hugo-geekdoc/ --strip-components=1
-     */
-    // Hugo / sourceDirectory := sourceDirectory.value / "hugo",
-    // siteSubdirName / ScalaUnidoc := "api",
-    // (mappings / (
-    //   ScalaUnidoc, packageDoc), siteSubdirName in ScalaUnidoc
-    // ),
-    // publishSite
   )
 
 lazy val plugin = Plugin("sbt-riddl")
