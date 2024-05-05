@@ -13,6 +13,11 @@ min_version = "0.94.2"
 # googleAnalytics = "" # example : UA-123-45
 #disableLanguages = [] # disable language from here
 
+#[module]
+#[[module.imports]]
+#path = "https://github.com/thegeeklab/hugo-geekdoc"
+#disable=false
+
 [params.author]
 name = "Reid Spencer"
 email = "reid@ossuminc.com"

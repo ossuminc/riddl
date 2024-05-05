@@ -7,7 +7,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 class OptionsValidationTest extends ValidatingTest {
 
   "Options" should {
-    "identify incorrect css" in { // TODO: This needs to check failures once CSS validation is implemented
+    "identify incorrect css" in {
       val input: String =
         """domain ignore {
           |  context invalid {
@@ -22,7 +22,7 @@ class OptionsValidationTest extends ValidatingTest {
             fail(messages.justErrors.format)
           else
             succeed
-          end if 
+          end if
       }
     }
   }
