@@ -13,26 +13,19 @@ import java.nio.file.Path
 
 class WriterTest extends AnyWordSpec with Matchers {
 
+  val base = Path.of("hugo", "src", "test", "input")
+  val output = Path.of("hugo", "target", "test", "adaptors")
+
   def makeMDW(filePath: Path, passesResult: PassesResult): MarkdownWriter = {
     GeekDocWriter(filePath, passesResult.input, passesResult.outputs, HugoPass.Options(), CommonOptions())
   }
-
-  def runPasses(
-    input: RiddlParserInput,
-    options: CommonOptions = CommonOptions()
-  ): Either[Messages.Messages, PassesResult] = {
-    Riddl.parseAndValidate(input, options, shouldFailOnError = true, Pass.standardPasses)
-  }
-
+  
   def validateRoot(input: RiddlParserInput, options: CommonOptions = CommonOptions())(
     validate: (root: PassesResult) => Assertion
   ) = {
-    runPasses(input, options) match {
-      case Left(messages) =>
-        fail(messages.justErrors.format)
-      case Right(passesResult: PassesResult) =>
-        validate(passesResult)
+    Riddl.parseAndValidate(input, options) match {
+      case Left(messages) => fail(messages.justErrors.format)
+      case Right(passesResult: PassesResult) => validate(passesResult)
     }
   }
-
 }
