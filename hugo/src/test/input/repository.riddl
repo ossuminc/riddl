@@ -1,0 +1,7 @@
+domain Repository is {
+  context One is {
+    repository Repo is {
+      ???
+    }
+  }
+}
