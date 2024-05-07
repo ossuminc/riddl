@@ -11,8 +11,43 @@ import com.ossuminc.riddl.language.AST.*
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import java.nio.file.Path
+import java.net.URI
+
 /** Unit Tests For Abstract Syntax Tree */
 class ASTTest extends AnyWordSpec with Matchers {
+
+  "Descriptions" should {
+    "have empty Description.empty" in {
+      Description.empty.format mustBe ("")
+    }
+    "have empty BlockDescription().format" in {
+      BlockDescription().format mustBe ("")
+    }
+    "have useful FileDescription" in {
+      val fd = FileDescription(At(), Path.of("."))
+      fd.format must include("/")
+      fd.format must include(".")
+    }
+    "have useful URLDescription" in {
+      val url_text = "https://raw.githubusercontent.com/ossuminc/riddl/main/project/plugins.sbt"
+      val url: java.net.URL = URI.create(url_text).toURL
+      val ud = URLDescription(At(), url)
+      ud.loc.isEmpty mustBe (true)
+      ud.url.toExternalForm must be(url_text)
+      ud.format must be(url.toExternalForm)
+      val head = ud.lines.head
+      head.s must include("sbt-ossuminc")
+    }
+  }
+  
+  "Domain" should {
+    "return anonymous name when empty" in {
+      val domain = Domain(At(), Identifier.empty)
+      domain.identify must be("Anonymous Domain")
+    }
+  }
+
 
   "Types" should {
     "support domain definitions" in {

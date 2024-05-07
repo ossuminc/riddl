@@ -2,17 +2,19 @@ package com.ossuminc.riddl.analyses
 
 import com.ossuminc.riddl.language.AST.{Domain, Identifier, Root}
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.{PassInfo, PassInput, PassOptions, PassesOutput}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class DiagramsPassTest extends AnyWordSpec with Matchers {
+class DiagramsPassTest extends ValidatingTest {
 
   "Diagrams Data" must {
     "construct ContextDiagramData" in {
       val d = Domain(At(), Identifier(At(), "domain"))
-      val contextDiagramData = ContextDiagramData(d, Seq.empty, Seq.empty)
+      val contextDiagramData = ContextDiagramData(d)
       contextDiagramData.aggregates mustBe empty
+      contextDiagramData.relationships mustBe empty
       contextDiagramData.domain mustBe d
     }
     "construct DiagramsPassOutput" in {
@@ -30,10 +32,10 @@ class DiagramsPassTest extends AnyWordSpec with Matchers {
       val creator = DiagramsPass.creator()
       val input = PassInput(Root())
       val outputs = PassesOutput()
-      val pass = intercept[IllegalArgumentException] {creator(input, outputs)}
+      val pass = intercept[IllegalArgumentException] { creator(input, outputs) }
       pass.isInstanceOf[IllegalArgumentException] mustBe true
     }
-    "do something" in {
+    "generate diagrams output" in {
       succeed
     }
   }

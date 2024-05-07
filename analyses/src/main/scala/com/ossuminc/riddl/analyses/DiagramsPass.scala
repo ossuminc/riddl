@@ -43,7 +43,7 @@ type ContextRelationship = (Context, String)
 case class ContextDiagramData(
   domain: Domain,
   aggregates: Seq[Entity] = Seq.empty,
-  relationships: Seq[ContextRelationship]
+  relationships: Seq[ContextRelationship] = Seq.empty
 )
 
 /** The information needed to generate a Context Diagram at the Domain level to show the relationships between its
@@ -332,7 +332,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
 
 object DiagramsPass extends PassInfo[PassOptions] {
   val name: String = "Diagrams"
-  def creator(options: PassOptions = PassOptions.empty): PassCreator = { 
-    (in: PassInput, out: PassesOutput) => DiagramsPass(in, out)
+  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    DiagramsPass(in, out)
   }
 }

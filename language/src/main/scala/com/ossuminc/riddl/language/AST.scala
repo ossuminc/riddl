@@ -25,8 +25,8 @@ object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES
 
-  /** The root trait of all parsed values. If a parser returns something, its a [[RiddlValue]]. Every node in the AST is a
-    * RiddlNode. Subclasses implement the definitions in various ways because this is the most abstract notion of what
+  /** The root trait of all parsed values. If a parser returns something, its a [[RiddlValue]]. Every node in the AST is
+    * a RiddlNode. Subclasses implement the definitions in various ways because this is the most abstract notion of what
     * is parsed.
     */
   sealed trait RiddlValue {
@@ -276,12 +276,6 @@ object AST {
 
     /** Force all subclasses to return true as they are containers */
     final inline override def isContainer: Boolean = true
-
-    /** Extract by type from the contents */
-    final def filter[T <: RiddlValue: ClassTag]: Contents[T] = contents.filter[T]
-
-    /** Find the first element of the contents with the name `name` */
-    final def find(name: String): Option[CV] = contents.find(name)
 
     /** The list of contained [[Definition]]s */
     final def definitions: Contents[Definition] = contents.definitions

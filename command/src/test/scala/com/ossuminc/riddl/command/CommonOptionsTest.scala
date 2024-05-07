@@ -8,6 +8,7 @@ package com.ossuminc.riddl.command
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import com.ossuminc.riddl.language.CommonOptions
 
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
@@ -198,6 +199,30 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
         case Left(messages) =>
           fail(messages.format)
       }
+    }
+
+    "parse less frequently used options" in {
+      val opts = Array(
+        "--suppress-usage-warnings",
+        "--suppress-info-messages",
+        "--hide-info-messages",
+        "--plugins-dir:.",
+        "--max-parallel-parsing:12",
+        "test", "", "  ", "file.riddl", "arg1")
+      val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
+      comm match {
+        case Some(options: CommonOptions) =>
+          options.showUsageWarnings must be(false)
+          options.showInfoMessages must be(false)
+          options.pluginsDir must be(Some(Path.of(".")))
+          options.maxParallelParsing must be(12)
+          CommandOptions.parseCommandOptions(remaining) match {
+            case Right(options) => options.inputFile mustBe Some(Path.of("file.riddl"))
+            case Left(messages) => fail(messages.format)
+          }
+        case x => fail(s"Failed to parse options: $x")
+      }
+
     }
   }
 }

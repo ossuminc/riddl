@@ -55,7 +55,7 @@ object CommonOptionsHelper {
         .optional()
         .action((_, c) => c.copy(showTimes = true))
         .text("Show parsing phase execution times"),
-      opt[Unit]('i', name = "show-include-times")
+      opt[Unit]('I', name = "show-include-times")
         .optional()
         .action((_, c) => c.copy(showIncludeTimes = true))
         .text("Show parsing of included files execution times"),
@@ -102,7 +102,7 @@ object CommonOptionsHelper {
         .optional()
         .action((_, c) => c.copy(showUsageWarnings = false))
         .text("Suppress warnings about usage of definitions. "),
-      opt[Unit](name = "suppress-info-messages")
+      opt[Unit]('i', name = "suppress-info-messages")
         .optional()
         .action((_, c) => c.copy(showInfoMessages = false))
         .text("Suppress information output"),
@@ -148,7 +148,7 @@ object CommonOptionsHelper {
         .text(
           "Print all messages by their severity kind"
         ),
-      opt[Int]('x', name = "max-parallel-processing")
+      opt[Int]('x', name = "max-parallel-parsing")
         .optional()
         .action((v, c) => c.copy(maxParallelParsing = v))
         .text(
