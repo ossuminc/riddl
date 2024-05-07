@@ -5,7 +5,8 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.validate.ValidatingTest
-import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.passes.{PassesResult}
+import com.ossuminc.riddl.passes.symbols.Symbols 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -37,6 +38,14 @@ class ReferenceMapTest extends ValidatingTest {
         case Some(author: Author) => author.name.s mustBe("Reid")
         case x => fail(s"Unexpected result: ${x.toString}")
       }
+    }
+    
+    "inserts a value and finds it" in {
+      val context: Context = Context(At(), Identifier(At(), "context"))
+      val parent: Symbols.Parent = Domain(At(), Identifier(At(),"domain"))
+      val pid = PathIdentifier(At(), Seq("wrong-name"))
+      refMap.add[Context](pid, parent, context)
+      refMap.definitionOf[Context](pid, parent) must not be(empty)
     }
 
     "have definitionOf(pid: PathIdentifier, parent: Parent) work" in {
