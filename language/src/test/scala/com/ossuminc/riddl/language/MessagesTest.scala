@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{Logger, StringLogger}
 
-class MessagesSpec extends AnyWordSpec with Matchers {
+class MessagesTest extends AnyWordSpec with Matchers {
 
   "MessageKinds" should {
     "MissingWarning must have correct queries" in {

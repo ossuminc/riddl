@@ -17,7 +17,12 @@ import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 
-/** Top level parsing rules */
+/** The TopLevel (Root) parser. 
+  * This class 
+  * @param input
+  * @param commonOptions
+  * @param ec
+  */
 class TopLevelParser(
   val input: RiddlParserInput,
   val commonOptions: CommonOptions = CommonOptions.empty
