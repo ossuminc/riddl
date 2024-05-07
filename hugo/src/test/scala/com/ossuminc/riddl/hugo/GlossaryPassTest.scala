@@ -20,4 +20,12 @@ class GlossaryPassTest extends ValidatingTest {
       }
     }
   }
+
+  "GlossaryEntry" must {
+    "construct without links" in {
+      val ge = GlossaryEntry("foo", "Context", "Just a testing sample", Seq.empty)
+      ge.link must be("")
+      ge.sourceLink must be("")
+    }
+  }
 }
