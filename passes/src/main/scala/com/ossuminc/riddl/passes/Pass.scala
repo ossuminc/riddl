@@ -142,6 +142,7 @@ case class PassesResult(
     * @return
     */
   def outputOf[T <: PassOutput](passName: String): Option[T] = outputs.outputOf[T](passName)
+  def hasOutputOf(passName: String): Boolean = outputs.hasPassOutput(passName)
 
   lazy val messages: Messages = outputs.messages ++ additionalMessages
   lazy val symbols: SymbolsOutput = outputs.symbols

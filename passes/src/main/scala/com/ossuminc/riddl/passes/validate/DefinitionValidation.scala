@@ -11,8 +11,6 @@ import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
-import scala.math.abs
-
 /** A Trait that defines typical Validation checkers for validating definitions */
 trait DefinitionValidation extends BasicValidation {
 
@@ -121,73 +119,6 @@ trait DefinitionValidation extends BasicValidation {
           desc.loc
         )
       }
-    this
-  }
-
-  def checkStreamletShape(proc: Streamlet): this.type = {
-    val ins = proc.inlets.size
-    val outs = proc.outlets.size
-
-    def generateError(
-      proc: Streamlet,
-      req_ins: Int,
-      req_outs: Int
-    ): this.type = {
-      def sOutlet(n: Int): String = {
-        if n == 1 then s"1 outlet"
-        else if n < 0 then {
-          s"at least ${abs(n)} outlets"
-        } else s"$n outlets"
-      }
-
-      def sInlet(n: Int): String = {
-        if n == 1 then s"1 inlet"
-        else if n < 0 then {
-          s"at least ${abs(n)} outlets"
-        } else s"$n inlets"
-      }
-
-      messages.addError(
-        proc.loc,
-        s"${proc.identify} should have " + sOutlet(req_outs) + " and " +
-          sInlet(req_ins) + s" but it has " + sOutlet(outs) + " and " +
-          sInlet(ins)
-      )
-      this
-    }
-
-    if !proc.isEmpty then {
-      proc.shape match {
-        case _: Source =>
-          if ins != 0 || outs != 1 then {
-            generateError(proc, 0, 1)
-          }
-        case _: Flow =>
-          if ins != 1 || outs != 1 then {
-            generateError(proc, 1, 1)
-          }
-        case _: Sink =>
-          if ins != 1 || outs != 0 then {
-            generateError(proc, 1, 0)
-          }
-        case _: Merge =>
-          if ins < 2 || outs != 1 then {
-            generateError(proc, -2, 1)
-          }
-        case _: Split =>
-          if ins != 1 || outs < 2 then {
-            generateError(proc, 1, -2)
-          }
-        case _: Router =>
-          if ins < 2 || outs < 2 then {
-            generateError(proc, -2, -2)
-          }
-        case _: Void =>
-          if ins > 0 || outs > 0 then {
-            generateError(proc, 0, 0)
-          }
-      }
-    }
     this
   }
 

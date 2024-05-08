@@ -1,6 +1,8 @@
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.passes.Riddl
 
 /** Test cases for the StreamValidator */
 class StreamValidatorTest extends ValidatingTest {
@@ -101,16 +103,156 @@ class StreamValidatorTest extends ValidatingTest {
                 |  }
                 | }
                 |} """.stripMargin
-      parseAndValidateDomain(input) {
-        case (domain, _, messages) =>
-          domain.isEmpty mustBe false
-          domain.contents.size mustBe 2
-          messages.isEmpty mustBe false
-          messages.hasErrors mustBe false
-          messages.filter(_.message.contains("is not needed since both ends")) mustNot be(empty)
-          messages.exists(
-            _.message.startsWith("The persistence option on Connector 'c1'")
-          ) mustBe true
+      parseAndValidateDomain(input) { case (domain, _, messages) =>
+        domain.isEmpty mustBe false
+        domain.contents.size mustBe 2
+        messages.isEmpty mustBe false
+        messages.hasErrors mustBe false
+        messages.filter(_.message.contains("is not needed since both ends")) mustNot be(empty)
+        messages.exists(
+          _.message.startsWith("The persistence option on Connector 'c1'")
+        ) mustBe true
+      }
+    }
+
+    def pid(name: String): PathIdentifier = PathIdentifier(At(), Seq("domain", "context", name))
+
+    def inlet(name: String, pidName: String): Inlet =
+      Inlet(At(), Identifier(At(), name), TypeRef(At(), "type", pid(pidName)))
+
+    def outlet(name: String, pidName: String): Outlet =
+      Outlet(At(), Identifier(At(), name), TypeRef(At(), "type", pid(pidName)))
+
+    def root(streamlets: Seq[Streamlet]): Root = {
+      Root(
+        Seq(
+          Domain(
+            At(),
+            Identifier(At(), "domain"),
+            Seq(
+              Context(
+                At(),
+                Identifier(At(), "context"),
+                Seq(
+                  Type(At(), Identifier(At(), "Int"), Integer(At()))
+                ) ++ streamlets
+              )
+            )
+          )
+        )
+      )
+    }
+
+    "validate Streamlet types" in {
+      intercept[IllegalArgumentException] {
+        Riddl.validate(
+          root(
+            Seq(
+              Streamlet(At(), Identifier(At(), "source"), Source(At()), Seq(inlet("in1", "int"), inlet("in2", "int")))
+            )
+          )
+        )
+      }
+      intercept[IllegalArgumentException] {
+        Riddl.validate(
+          root(
+            Seq(
+              Streamlet(
+                At(),
+                Identifier(At(), "sink"),
+                Sink(At()),
+                Seq(
+                  inlet("in1", "int"),
+                  outlet("out1", "int")
+                )
+              )
+            )
+          )
+        )
+      }
+      intercept[IllegalArgumentException] {
+        Riddl.validate(
+          root(
+            Seq(
+              Streamlet(
+                At(),
+                Identifier(At(), "flow"),
+                Flow(At()),
+                Seq(
+                  outlet("out1", "int"),
+                  outlet("out2", "int")
+                )
+              )
+            )
+          )
+        )
+      }
+      intercept[IllegalArgumentException] {
+        Riddl.validate(
+          root(
+            Seq(
+              Streamlet(
+                At(),
+                Identifier(At(), "flow"),
+                Split(At()),
+                Seq(
+                  outlet("out1", "int"),
+                  outlet("out2", "int")
+                )
+              )
+            )
+          )
+        )
+      }
+      intercept[IllegalArgumentException] {
+        Riddl.validate(
+          root(
+            Seq(
+              Streamlet(
+                At(),
+                Identifier(At(), "flow"),
+                Merge(At()),
+                Seq(
+                  inlet("in1", "int"),
+                  inlet("in2", "int")
+                )
+              )
+            )
+          )
+        )
+      }
+      intercept[IllegalArgumentException] {
+        Riddl.validate(
+          root(
+            Seq(
+              Streamlet(
+                At(),
+                Identifier(At(), "flow"),
+                Router(At()),
+                Seq(
+                  outlet("out2", "int")
+                )
+              )
+            )
+          )
+        )
+      }
+      intercept[IllegalArgumentException] {
+        Riddl.validate(
+          root(
+            Seq(
+              Streamlet(
+                At(),
+                Identifier(At(), "flow"),
+                Void(At()),
+                Seq(
+                  inlet("in1", "int"),
+                  outlet("out2", "int")
+                )
+              )
+            )
+          )
+        )
       }
     }
   }
