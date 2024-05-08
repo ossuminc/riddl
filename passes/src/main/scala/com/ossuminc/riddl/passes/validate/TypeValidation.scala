@@ -14,18 +14,6 @@ import java.util.regex.PatternSyntaxException
 /** Unit Tests For TypeValidationState */
 trait TypeValidation extends DefinitionValidation {
 
-  def areSameType(
-    tr1: Reference[Type],
-    tr2: Reference[Type],
-    parents: Seq[Definition]
-  ): Boolean = {
-    val pid1 = tr1.pathId
-    val pid2 = tr2.pathId
-    val typeDef1 = resolvePath[Type](pid1, parents)
-    val typeDef2 = resolvePath[Type](pid2, parents)
-    areSameType(typeDef1, typeDef2)
-  }
-
   def areSameType(typ1: Option[Type], typ2: Option[Type]): Boolean = {
     val result = for {
       t1 <- typ1
@@ -35,21 +23,7 @@ trait TypeValidation extends DefinitionValidation {
     }
     result.getOrElse(false)
   }
-
-  def isAssignmentCompatible(
-    typeEx1: Option[TypeExpression],
-    typeEx2: Option[TypeExpression]
-  ): Boolean = {
-    typeEx1 match {
-      case None => false
-      case Some(ty1) =>
-        typeEx2 match {
-          case None      => false
-          case Some(ty2) => ty1.isAssignmentCompatible(ty2)
-        }
-    }
-  }
-
+  
   private def checkPattern(p: Pattern): this.type = {
     try {
       val compound = p.pattern.map(_.s).fold("") { case (a: String, b: String) => a + b }
@@ -178,7 +152,7 @@ trait TypeValidation extends DefinitionValidation {
   ): Unit = {
     checkTypeExpression(replica.of, typeDef, parents)
     replica.of match {
-      case _: Mapping | _: Sequence | _: Set  => // these are okay
+      case _: Mapping | _: Sequence | _: Set  | _: IntegerTypeExpression => // these are okay
       case _: Cardinality =>
         messages.addError(replica.loc, s"Replica type expressions may not have cardinality")
       case t: TypeExpression =>

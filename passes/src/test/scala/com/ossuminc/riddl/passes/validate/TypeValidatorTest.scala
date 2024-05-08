@@ -94,5 +94,40 @@ class TypeValidatorTest extends ValidatingTest {
         )
       }
     }
+
+    "check infrequently used TypeExpressions" in {
+      val input = RiddlParserInput(
+        """
+          |domain foo is {
+          |  type SI = set of Integer
+          |  type SN = sequence of Number
+          |  type r = replica of Integer
+          |  type rng = range(23,42)
+          |  type d = Decimal(3,8)
+          |  command c(int: Integer, str: String)
+          |}
+          |""".stripMargin
+      )
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain: Domain, _, msgs: Messages) =>
+        msgs.justErrors must be(empty)
+        val si = domain.types.find("SI").get
+        val sn = domain.types.find("SN").get
+        val r = domain.types.find("r").get
+        val rng = domain.types.find("rng").get
+        val d = domain.types.find("d").get
+        val c = domain.types.find("c").get
+        si.typ.isInstanceOf[Set] must be(true)
+        si.typ.asInstanceOf[Set].format must be("set of Integer")
+        sn.typ.isInstanceOf[Sequence] must be(true)
+        sn.typ.asInstanceOf[Sequence].format must be("sequence of Number")
+        r.typ.isInstanceOf[Replica] must be(true)
+        r.typ.asInstanceOf[Replica].format must be("replica of Integer")
+        rng.typ.isInstanceOf[RangeType] must be(true)
+        rng.typ.asInstanceOf[RangeType].format must be("Range(23,42)")
+        c.typ.isInstanceOf[AggregateUseCaseTypeExpression] must be(true)
+        c.typ.asInstanceOf[AggregateUseCaseTypeExpression].format must be("command { int: Integer, str: String }")
+      }
+
+    }
   }
 }
