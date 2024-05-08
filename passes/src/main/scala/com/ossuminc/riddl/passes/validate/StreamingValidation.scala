@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Messages}
+import scala.math.abs
 
 trait StreamingValidation extends TypeValidation {
 

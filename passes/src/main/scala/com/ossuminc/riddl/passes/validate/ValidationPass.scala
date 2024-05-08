@@ -558,7 +558,6 @@ case class ValidationPass(
     parents: Seq[Definition]
   ): Unit = {
     checkContainer(parents, s)
-    checkStreamletShape(s)
     checkDescription(s)
   }
 

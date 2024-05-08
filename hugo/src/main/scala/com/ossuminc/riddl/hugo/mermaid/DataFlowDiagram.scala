@@ -8,6 +8,8 @@ package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.passes.symbols.SymbolsPass
+import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.utils.FileBuilder
 
 /** Generate a data flow diagram Like this:
@@ -25,6 +27,9 @@ import com.ossuminc.riddl.utils.FileBuilder
   */
 case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
 
+  require(pr.hasOutputOf(SymbolsPass.name))
+  require(pr.hasOutputOf(ResolutionPass.name))
+
   override val spaces_per_level = 2
 
   private def makeNodeLabel(definition: Definition): Unit = {
@@ -39,11 +44,11 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
           case d: Definition => s"${d.kind} $name"
         }
         val (left, right) = definition match {
-          case _: Outlet          => "[\\" -> "\\]"
-          case _: Inlet           => "[/" -> "/]"
-          case _: Streamlet       => "[[" -> "]]"
+          case _: Outlet       => "[\\" -> "\\]"
+          case _: Inlet        => "[/" -> "/]"
+          case _: Streamlet    => "[[" -> "]]"
           case _: Processor[?] => "[{" -> "}]"
-          case _: Definition      => "[" -> "]"
+          case _: Definition   => "[" -> "]"
         }
         addIndent(s"${definition.id.value}$left\"$id\"$right")
       case _ =>
