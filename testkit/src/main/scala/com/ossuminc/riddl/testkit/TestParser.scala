@@ -8,14 +8,11 @@ import fastparse.*
 import fastparse.Parsed.{Failure, Success}
 import org.scalatest.matchers.must.Matchers
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.{ClassTag, classTag}
 import scala.util.control.NonFatal
 
-case class TestParser(override val input: RiddlParserInput, throwOnError: Boolean = false)(implicit
-  ec: ExecutionContext
-) extends TopLevelParser(input)(ec)
-    with Matchers {
+case class TestParser(override val input: RiddlParserInput) extends TopLevelParser(input) with Matchers {
 
   def expect[CT <: RiddlValue](
     parser: P[?] => P[CT],
@@ -59,6 +56,7 @@ case class TestParser(override val input: RiddlParserInput, throwOnError: Boolea
       case x if x == classOf[AST.Projector]  => projector(_)
       case x if x == classOf[AST.Epic]       => epic(_)
       case x if x == classOf[AST.Connector]  => connector(_)
+      case x if x == classOf[AST.Root]       => root(_)
       case _ =>
         throw new RuntimeException(
           s"No parser defined for ${classTag[T].runtimeClass}"

@@ -57,7 +57,7 @@ class TopLevelParser(
     }
   }
 
-  private def root[u: P]: P[Root] = {
+  def root[u: P]: P[Root] = {
     rootValues.map { (content: Seq[OccursAtRootScope]) => Root(content) }
   }
 
