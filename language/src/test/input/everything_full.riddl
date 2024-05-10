@@ -27,7 +27,24 @@ context full is {
   type zeroOrMore is agg*
   type optional is agg?
 
+  repository StoreIt is {
+    schema One is relational of a as type agg with link as type stamp to ident index on field agg.id
+    handler Putter is {
+      on command ACommand {
+        put "something" to type agg
+      }
+    }
+  }
+
   command ACommand()
+
+  adaptor fromAPlant to context APlant is {
+    handler adaptCommands is {
+      on command ACommand {
+        send command DoAThing to outlet APlant.Source.Commands
+      }
+    }
+  }
 
   entity Something is {
     option aggregate

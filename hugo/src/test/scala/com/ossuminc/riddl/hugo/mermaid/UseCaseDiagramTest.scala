@@ -32,7 +32,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match
         case Some(dpo: DiagramsPassOutput) =>
-          dpo.userCaseDiagrams.headOption match
+          dpo.useCaseDiagrams.headOption match
             case Some((uc, useCaseDiagramData)) =>
               val useCaseDiagram = UseCaseDiagram(TestUCDSupport(result), useCaseDiagramData)
               val lines = useCaseDiagram.generate

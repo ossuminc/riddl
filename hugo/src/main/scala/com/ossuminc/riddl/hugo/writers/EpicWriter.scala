@@ -51,7 +51,7 @@ trait EpicWriter { this: MarkdownWriter =>
         val epic = p1.asInstanceOf[Epic]
         generator.outputs.outputOf[DiagramsPassOutput](DiagramsPass.name) match
           case Some(dpo) =>
-            dpo.userCaseDiagrams.get(uc) match
+            dpo.useCaseDiagrams.get(uc) match
               case Some(useCaseDiagramData: UseCaseDiagramData) =>
                 val ucd = UseCaseDiagram(generator, useCaseDiagramData)
                 val lines = ucd.generate

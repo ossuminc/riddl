@@ -49,11 +49,11 @@ class StatsPassTest extends ValidatingTest {
           if statsOutput.messages.nonEmpty then fail(statsOutput.messages.format)
           statsOutput.maximum_depth > 0 mustBe true
           statsOutput.categories mustNot be(empty)
-          statsOutput.categories.size mustBe(23)
+          statsOutput.categories.size mustBe(25)
           val ksAll: KindStats = statsOutput.categories("All") 
-          ksAll.count mustBe 22
+          ksAll.count mustBe 24
           ksAll.numEmpty mustBe 31
-          ksAll.numStatements mustBe 1
+          ksAll.numStatements mustBe 3
           succeed
       }
     }
