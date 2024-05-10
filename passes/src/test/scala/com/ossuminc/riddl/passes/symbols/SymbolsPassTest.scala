@@ -45,10 +45,8 @@ class SymbolsPassTest extends ParsingTest {
       assertRefWithParent[Context, Domain](Seq("full"), "Everything")
       assertRefWithParent[Type, Context](Seq("boo"), "full")
       assertRefWithParent[Entity, Context](Seq("Something"), "full")
-      assertRefWithParent[Function, Entity](
-        Seq("whenUnderTheInfluence"),
-        "Something"
-      )
+      assertRefWithParent[Adaptor, Context](Seq("fromAPlant"), "full")
+      assertRefWithParent[Function, Entity](Seq("whenUnderTheInfluence"), "Something")
       assertRefWithParent[Handler, State](Seq("foo"), "someState")
       assertRefWithParent[Type, Entity](Seq("somethingDate"), "Something")
     }
