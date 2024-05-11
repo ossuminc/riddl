@@ -115,29 +115,26 @@ case class SymbolsOutput(
     require(id.nonEmpty, "No name elements provided to lookupSymbol")
     val clazz = classTag[D].runtimeClass
     val nameList = id.reverse
-    nameList.headOption match
+    val leafName = id.head 
+    symTab.get(leafName) match {
+      case Some(set) =>
+        set
+          .filter { case (_: NamedValue, parents: Parents) =>
+            // whittle down the list of matches to the ones whose parents names
+            // have the same as the nameList provided
+            hasSameParentNames(nameList, parents)
+          }
+          .map { case (d: NamedValue, _: Parents) =>
+            // If a name match is also the same type as desired by the caller
+            // then give them the definition in the requested type, optionally
+            if clazz.isInstance(d) then { (d, Option(d.asInstanceOf[D])) }
+            else { (d, None) }
+          }
+          .toList
       case None =>
+        // Symbol wasn't found
         List.empty
-      case Some(leafName) =>
-        symTab.get(leafName) match {
-          case Some(set) =>
-            set
-              .filter { case (_: NamedValue, parents: Parents) =>
-                // whittle down the list of matches to the ones whose parents names
-                // have the same as the nameList provided
-                hasSameParentNames(nameList, parents)
-              }
-              .map { case (d: NamedValue, _: Parents) =>
-                // If a name match is also the same type as desired by the caller
-                // then give them the definition in the requested type, optionally
-                if clazz.isInstance(d) then { (d, Option(d.asInstanceOf[D])) }
-                else { (d, None) }
-              }
-              .toList
-          case None =>
-            // Symbol wasn't found
-            List.empty
-        }
+    }
   }
 
   /** Look up a symbol in the table
@@ -149,54 +146,44 @@ case class SymbolsOutput(
     *   requested type
     */
   def lookupParentage(
-    names: Seq[String]
+    names: PathNames
   ): List[Symbols.SymTabItem] = {
-    names.headOption match
+    require(names.nonEmpty, "No name elements provided to lookupSymbol")
+    val leafName = names.head 
+    symTab.get(leafName) match {
+      case Some(set) =>
+        set.filter { case (_: Definition, parents: Parents) =>
+          // whittle down the list of matches to the ones whose parents names
+          // have the same as the nameList provided
+          hasSameParentNames(names, parents)
+        }.toList
       case None =>
-        require(names.nonEmpty, "No name elements provided to lookupSymbol")
+        // Symbol wasn't found
         List.empty[Symbols.SymTabItem]
-      case Some(leafName) =>
-        symTab.get(leafName) match {
-          case Some(set) =>
-            set.filter { case (_: Definition, parents: Parents) =>
-              // whittle down the list of matches to the ones whose parents names
-              // have the same as the nameList provided
-              hasSameParentNames(names, parents)
-            }.toList
-          case None =>
-            // Symbol wasn't found
-            List.empty[Symbols.SymTabItem]
-        }
+    }
   }
-
-  def lookup[D <: Definition: ClassTag](
-    ref: Reference[D]
-  ): List[D] = { lookup[D](ref.pathId.value) }
 
   def lookup[D <: Definition: ClassTag](
     id: PathNames
   ): List[D] = {
+    require(id.nonEmpty, "No name elements provided to lookup")
     val clazz = classTag[D].runtimeClass
-    id.headOption match
-      case None =>
-        require(id.nonEmpty, "Provided id is empty")
-        List.empty[D]
-      case Some(leafName) =>
-        symTab.get(leafName) match {
-          case Some(set) =>
-            val result = set
-              .filter { case (d: Definition, parents: Symbols.Parents) =>
-                if clazz.isInstance(d) then {
-                  // It is in the result set as long as the container names
-                  // given in the provided id are the same as the container
-                  // names in the symbol table.
-                  hasSameParentNames(id, parents)
-                } else { false }
-              }
-              .map(_._1.asInstanceOf[D])
-            result.toList
-          case None => List.empty[D]
-        }
+    val leafName = id.head 
+    symTab.get(leafName) match {
+      case Some(set) =>
+        val result = set
+          .filter { case (d: Definition, parents: Symbols.Parents) =>
+            if clazz.isInstance(d) then {
+              // It is in the result set as long as the container names
+              // given in the provided id are the same as the container
+              // names in the symbol table.
+              hasSameParentNames(id, parents)
+            } else { false }
+          }
+          .map(_._1.asInstanceOf[D])
+        result.toList
+      case None => List.empty[D]
+    }
   }
 
   def foreachOverloadedSymbol(f: Seq[Seq[NamedValue]] => Unit): Unit = {

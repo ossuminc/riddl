@@ -2,7 +2,7 @@ package com.ossuminc.riddl.passes.symbols
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.ParsingTest
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.{At,CommonOptions}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
 import org.scalatest.Assertion
 
@@ -11,11 +11,11 @@ import scala.reflect.ClassTag
 /** Unit Tests For SymbolsPassTest */
 class SymbolsPassTest extends ParsingTest {
 
-  val st: SymbolsOutput = {
+  val (root: Root, st: SymbolsOutput) = {
     val root = checkFile("everything", "everything.riddl")
     val input: PassInput = PassInput(root, CommonOptions())
     val outputs = PassesOutput()
-    Pass.runSymbols(input, outputs)
+    root -> Pass.runSymbols(input, outputs)
   }
 
   def assertRefWithParent[T <: Definition: ClassTag, P <: Definition: ClassTag](
@@ -30,6 +30,41 @@ class SymbolsPassTest extends ParsingTest {
         if p.isEmpty then fail(s"Symbol '${names.mkString(".")}' has no parent")
         p.get mustBe a[P]
         p.get.id.value mustEqual parentName
+    }
+  }
+
+  "SymbolsOutput" must {
+    "return empty list for non-existent namedValue" in {
+      val nv: NamedValue = Domain(At(), Identifier(At(), "not-in-root"))
+      st.parentsOf(nv) must be(Seq.empty[Definition])
+    }
+    "lookupSymbol(id: PathNames) should fail if no names" in {
+      val xcption = intercept[IllegalArgumentException] { st.lookupSymbol[Context](Seq.empty[String]) }
+      xcption.isInstanceOf[IllegalArgumentException] must be(true) 
+    }
+    "lookupSymbol() should return None for non-matching type" in {
+      val list = st.lookupSymbol[Context](Seq("Everything"))
+      list must not be(empty)
+      list.head._1.isInstanceOf[Domain] must be(true)
+      list.head._2 must be(None)
+    }
+    "lookupParentage(id: PathNames) should fail on no names" in {
+      val xcption = intercept[IllegalArgumentException] { 
+        val parents = st.lookupParentage(Seq.empty[String])
+        parents must be(empty)
+      }
+      xcption.isInstanceOf[IllegalArgumentException] must be(true)
+    }
+    "lookup should fail on no names" in {
+      val xcption = intercept[IllegalArgumentException] {
+        val parents = st.lookup[Context](Seq.empty[String])
+        parents must be(empty)
+      }
+      xcption.isInstanceOf[IllegalArgumentException] must be(true)
+    }
+    "lookup should return empty when nothing found" in {
+      val list = st.lookup[Epic](Seq("SomeType", "Everything"))
+      list must be(empty)
     }
   }
 
