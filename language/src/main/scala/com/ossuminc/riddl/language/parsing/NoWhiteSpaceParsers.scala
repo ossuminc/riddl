@@ -87,10 +87,6 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
 
   private val backslash: String = "\\"
   private final val zero: String = "0"
-  private def octalChar[u: P]: P[String] = CharIn("0-7").!
-  private def octalString[u: P]: P[String] = {
-    P(backslash ~ zero ~ octalChar.rep(min = 1, sep = P(""), max = 3).!)
-  }
 
   private def hexDigit[u: P]: P[String] = CharIn("0-9a-fA-F").!./
   private def hexEscape[u: P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min = 2)).!./
