@@ -8,23 +8,23 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import scala.concurrent.ExecutionContext.Implicits.global 
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /** Unit Tests For CommonParser */
 class CommonParserTest extends ParsingTest {
 
   "NonWhiteSpaceParsers" should {
     "handle a literalString" in {
-      val text = """"This is a literal string with" """
-      
+      val content = "This is a literal string with"
+      val text = s""""$content""""
       val input = RiddlParserInput(text, "test")
       val testParser = TestParser(input)
       testParser.expect[LiteralString](testParser.literalString(_)) match
         case Left(messages) => fail(messages.justErrors.format)
-        case Right(ls) => ls.s must be(s""""$text"""")
+        case Right(ls) => ls.s must be(content)
     }
   }
-  
+
   "CommonParser" should {
     "location should construct from pair" in {
       val loc = At((1, 1))
@@ -32,7 +32,7 @@ class CommonParserTest extends ParsingTest {
       val column = loc.col
       column mustBe 1
     }
-    
+
     "descriptions can be URLs" in {
       val input = """domain foo is { ??? } described at
                     |https://www.wordnik.com/words/phi""".stripMargin
