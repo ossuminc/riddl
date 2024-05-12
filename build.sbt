@@ -1,4 +1,3 @@
-import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
 import com.ossuminc.sbt.OssumIncPlugin
 
@@ -33,7 +32,7 @@ lazy val utils: Project = Module("utils", "riddl-utils")
   .configure(With.typical, With.build_info, With.coverage(70) /*, With.native()*/ )
   .configure(With.publishing)
   .settings(
-    coverageExcludedFiles := """<empty>;.*RiddlBuildInfo.scala""",
+    coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
     scalaVersion := "3.4.1",
     scalacOptions += "--no-warnings",
     buildInfoPackage := "com.ossuminc.riddl.utils",
@@ -49,7 +48,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .settings(
     scalaVersion := "3.4.1",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
-    coverageExcludedPackages := "<empty>",
+    coverageExcludedPackages := "<empty>;$anon",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse, Dep.commons_io, Dep.jacabi_w3c)
   )
@@ -62,7 +61,7 @@ lazy val passes = Module("passes", "riddl-passes")
   .settings(
     scalaVersion := "3.4.1",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
-    coverageExcludedPackages := "<empty>",
+    coverageExcludedPackages := "<empty>;$anon",
     description := "AST Pass infrastructure and essential passes",
     libraryDependencies ++= Dep.testing
   )
@@ -73,10 +72,9 @@ lazy val command = Module("command", "riddl-command")
   .configure(With.typical, With.coverage(30))
   .configure(With.publishing)
   .settings(
-    coverageExcludedFiles := """<empty>;\$anon""",
     scalaVersion := "3.4.1",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
-    coverageExcludedPackages := "<empty>",
+    coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   )
@@ -89,7 +87,7 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .configure(With.typical)
   .configure(With.publishing)
   .settings(
-    coverageExcludedFiles := """<empty>""",
+    coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.1",
     scalacOptions += "--no-warnings",
     description := "A Testkit for testing RIDDL code, and a suite of those tests",
@@ -107,7 +105,7 @@ lazy val analyses: Project = Module("analyses", "riddl-analyses")
   .configure(With.coverage(50))
   .configure(With.publishing)
   .settings(
-    coverageExcludedFiles := """<empty>""",
+    coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.1",
     description := "Implementation of various AST analyses passes other libraries may use",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
@@ -122,7 +120,7 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   .configure(With.coverage(65))
   .configure(With.publishing)
   .settings(
-    coverageExcludedFiles := """<empty>""",
+    coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.1",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
@@ -135,7 +133,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.coverage(65))
   .configure(With.publishing)
   .settings(
-    coverageExcludedFiles := """<empty>""",
+    coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.1",
     scalacOptions += "-explain-cyclic",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
@@ -149,7 +147,7 @@ lazy val commands: Project = Module("commands", "riddl-commands")
   .configure(With.coverage(50))
   .configure(With.publishing)
   .settings(
-    coverageExcludedFiles := """<empty>""",
+    coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.1",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "RIDDL Command Infrastructure and basic command definitions",
@@ -181,7 +179,7 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
     testkit % "test->compile"
   )
   .settings(
-    coverageExcludedFiles := """<empty>""",
+    coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.1",
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
