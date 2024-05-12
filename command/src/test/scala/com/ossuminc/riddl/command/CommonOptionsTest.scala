@@ -184,18 +184,25 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
     "load message related common options from a file" in {
       val optionFile = Path.of("command/src/test/input/message-options.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
-        case Right(opts) =>
+        case Right(opts: CommonOptions) =>
           opts.showTimes mustBe true
+          opts.showIncludeTimes mustBe true
           opts.verbose mustBe true
-          opts.quiet mustBe false
           opts.dryRun mustBe false
+          opts.quiet mustBe false
           opts.showWarnings mustBe true
-          opts.showStyleWarnings mustBe false
           opts.showMissingWarnings mustBe false
-          opts.maxIncludeWait mustBe 1.minute
-          opts.sortMessagesByLocation mustBe true
-          opts.groupMessagesByKind mustBe true
-          opts.noANSIMessages mustBe true
+          opts.showStyleWarnings mustBe false
+          opts.showUsageWarnings mustBe true
+          opts.showInfoMessages mustBe  false
+          opts.debug mustBe true
+          opts.pluginsDir must be ( Some(Path.of(".")) )
+          opts.sortMessagesByLocation must be ( true )
+          opts.groupMessagesByKind must be ( true)
+          opts.noANSIMessages must be ( true )
+          opts.maxParallelParsing must be (12)
+          opts.maxIncludeWait must be ( 1.minute )
+          opts.warningsAreFatal must be(true)
         case Left(messages) =>
           fail(messages.format)
       }
@@ -207,6 +214,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
         "--suppress-info-messages",
         "--hide-info-messages",
         "--plugins-dir:.",
+        "--max-include-wait:5",
         "--max-parallel-parsing:12",
         "test", "", "  ", "file.riddl", "arg1")
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
@@ -215,6 +223,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
           options.showUsageWarnings must be(false)
           options.showInfoMessages must be(false)
           options.pluginsDir must be(Some(Path.of(".")))
+          options.maxIncludeWait must be(5.seconds)
           options.maxParallelParsing must be(12)
           CommandOptions.parseCommandOptions(remaining) match {
             case Right(options) => options.inputFile mustBe Some(Path.of("file.riddl"))
