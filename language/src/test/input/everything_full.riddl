@@ -36,6 +36,15 @@ context full is {
     }
   }
 
+  projector ProjectIt is {
+    updates repository StoreIt
+    handler projector is {
+      on init {
+        tell command ACommand to repository StoreIt
+      }
+    }
+  }
+
   command ACommand()
 
   adaptor fromAPlant to context APlant is {

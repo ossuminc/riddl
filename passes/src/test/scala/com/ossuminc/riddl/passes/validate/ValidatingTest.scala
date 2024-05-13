@@ -164,12 +164,12 @@ abstract class ValidatingTest extends ParsingTest {
     andThen: (PassesResult, Root, RiddlParserInput, Messages) => T
   ): T = {
     TopLevelParser.parseInput(rpi) match {
-      case Left(errors) =>
-        fail(errors.format)
+      case Left(messages) =>
+        fail(messages.justErrors.format)
       case Right(root) =>
         runStandardPasses(root, options, shouldFailOnErrors) match {
-          case Left(errors) =>
-            fail(errors.format)
+          case Left(messages) =>
+            fail(messages.justErrors.format)
           case Right(passesResult: PassesResult) =>
             andThen(passesResult, root, rpi, passesResult.messages)
         }

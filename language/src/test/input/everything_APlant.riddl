@@ -6,4 +6,6 @@ context APlant is {
     from outlet Source.Commands
     to inlet Sink.Commands
   } explained as "A Channel"
+
+
 } briefly "A bunch of data flow connections"

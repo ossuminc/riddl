@@ -21,4 +21,6 @@ domain Everything is {
   } described as "A simple authoring epic"
 
   include "everything_full"
+
+  include "everything_app"
 }
