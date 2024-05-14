@@ -38,6 +38,7 @@ context full is {
 
   projector ProjectIt is {
     updates repository StoreIt
+    record Record is { ??? }
     handler projector is {
       on init {
         tell command ACommand to repository StoreIt
