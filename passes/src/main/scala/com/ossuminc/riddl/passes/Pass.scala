@@ -328,7 +328,8 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
         closeContainer(container, parents.toSeq)
       case include: Include[?] =>
         include.contents.foreach { item => traverse(item, parents) }
-      case value: RiddlValue => processValue(value, parents.toSeq)
+      case value: RiddlValue =>
+        processValue(value, parents.toSeq)
     }
   }
 }
