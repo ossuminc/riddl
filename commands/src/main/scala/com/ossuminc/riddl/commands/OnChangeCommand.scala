@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.command.{CommandOptions,CommandPlugin}
+import com.ossuminc.riddl.command.{CommandOptions, CommandPlugin}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
@@ -38,55 +38,67 @@ object OnChangeCommand {
     targetCommand: String = ParseCommand.cmdName,
     refreshRate: FiniteDuration = 10.seconds,
     maxCycles: Int = defaultMaxLoops,
-    interactive: Boolean = false)
-      extends CommandOptions {
+    interactive: Boolean = false
+  ) extends CommandOptions {
     def command: String = cmdName
     def inputFile: Option[Path] = None
   }
 }
 
-class OnChangeCommand
-    extends CommandPlugin[OnChangeCommand.Options](OnChangeCommand.cmdName) {
+class OnChangeCommand extends CommandPlugin[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
 
   override def getOptions: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder.*
     OParser.sequence(
-      cmd("onchange").children(
-        arg[File]("config-file").required()
-          .action((f, opts) => opts.copy(configFile = f.toPath))
-          .text("""Provides the top directory of a git repo clone that
+      cmd("onchange")
+        .children(
+          arg[File]("config-file")
+            .required()
+            .action((f, opts) => opts.copy(configFile = f.toPath))
+            .text("""Provides the top directory of a git repo clone that
                   |contains the <input-file> to be processed.""".stripMargin),
-        arg[File]("watch-directory").required()
-          .action((f, opts) => opts.copy(watchDirectory = f.toPath))
-          .text("""Provides the top directory of a git repo clone that
+          arg[File]("watch-directory")
+            .required()
+            .action((f, opts) => opts.copy(watchDirectory = f.toPath))
+            .text("""Provides the top directory of a git repo clone that
                   |contains the <input-file> to be processed.""".stripMargin),
-        arg[String]("target-command").required().action { (cmd, opt) =>
-          opt.copy(targetCommand = cmd)
-        }.text("The name of the command to select from the configuration file"),
-        arg[FiniteDuration]("refresh-rate").optional().validate {
-          case r if r.toMillis < 1000 =>
-            Left("<refresh-rate> is too fast, minimum is 1 seconds")
-          case r if r.toDays > 1 =>
-            Left("<refresh-rate> is too slow, maximum is 1 day")
-          case _ => Right(())
-        }.action((r, c) => c.copy(refreshRate = r))
-          .text("""Specifies the rate at which the <git-clone-dir> is checked
+          arg[String]("target-command")
+            .required()
+            .action { (cmd, opt) =>
+              opt.copy(targetCommand = cmd)
+            }
+            .text("The name of the command to select from the configuration file"),
+          arg[FiniteDuration]("refresh-rate")
+            .optional()
+            .validate {
+              case r if r.toMillis < 1000 =>
+                Left("<refresh-rate> is too fast, minimum is 1 seconds")
+              case r if r.toDays > 1 =>
+                Left("<refresh-rate> is too slow, maximum is 1 day")
+              case _ => Right(())
+            }
+            .action((r, c) => c.copy(refreshRate = r))
+            .text("""Specifies the rate at which the <git-clone-dir> is checked
                   |for updates so the process to regenerate the hugo site is
                   |started""".stripMargin),
-        arg[Int]("max-cycles").optional().validate {
-          case x if x < 1           => Left("<max-cycles> can't be less than 1")
-          case x if x > 1024 * 1024 => Left("<max-cycles> is too big")
-          case _                    => Right(())
-        }.action((m, c) => c.copy(maxCycles = m))
-          .text("""Limit the number of check cycles that will be repeated.""")
-      ).text(
-        """This command checks the <git-clone-dir> directory for new commits
+          arg[Int]("max-cycles")
+            .optional()
+            .validate {
+              case x if x < 1           => Left("<max-cycles> can't be less than 1")
+              case x if x > 1024 * 1024 => Left("<max-cycles> is too big")
+              case _                    => Right(())
+            }
+            .action((m, c) => c.copy(maxCycles = m))
+            .text("""Limit the number of check cycles that will be repeated.""")
+        )
+        .text(
+          """This command checks the <git-clone-dir> directory for new commits
           |and does a `git pull" command there if it finds some; otherwise
           |it does nothing. If commits were pulled from the repository, then
           |the configured command is run""".stripMargin
-      )
+        )
     ) -> Options()
   }
 
@@ -100,7 +112,7 @@ class OnChangeCommand
         configFile <- configFileRes.asString.flatMap { inputPath =>
           if inputPath.isEmpty then {
             ConfigReader.Result.fail[String](
-              CannotParse("'config-filew' requires a non-empty value", None)
+              CannotParse("'config-file' requires a non-empty value", None)
             )
           } else Right(inputPath)
         }
@@ -121,15 +133,17 @@ class OnChangeCommand
           } else Right(targetCmd)
         }
         refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString).flatMap { rr =>
-            val dur = Duration.create(rr)
-            if dur.isFinite then { Right(dur.asInstanceOf[FiniteDuration]) }
-            else {
-              ConfigReader.Result.fail[FiniteDuration](CannotParse(
+          val dur = Duration.create(rr)
+          if dur.isFinite then { Right(dur.asInstanceOf[FiniteDuration]) }
+          else {
+            ConfigReader.Result.fail[FiniteDuration](
+              CannotParse(
                 s"'refresh-rate' must be a finite duration, not $rr",
                 None
-              ))
-            }
+              )
+            )
           }
+        }
         maxCycles <- optional(objCur, "max-cycles", OnChangeCommand.defaultMaxLoops)(_.asInt)
         interactive <- optional(objCur, "interactive", true)(_.asBoolean)
       yield {
@@ -159,25 +173,24 @@ class OnChangeCommand
     }
   }
 
-  /** Execute the command given the options. Error should be returned as
-    * Left(messages) and not directly logged. The log is for verbose or debug
-    * output
-   *
-   * @param options
+  /** Execute the command given the options. Error should be returned as Left(messages) and not directly logged. The log
+    * is for verbose or debug output
+    *
+    * @param options
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-   * @param log
-   *    A logger for logging errors, warnings, and info
-   * @return
-   * Either a set of Messages on error or a Unit on success
-   */
+    * @param log
+    *   A logger for logging errors, warnings, and info
+    * @return
+    *   Either a set of Messages on error or a Unit on success
+    */
   override def run(
     options: Options,
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, PassesResult] = {Left(errors("Not Implemented"))}
+  ): Either[Messages, PassesResult] = { Left(errors("Not Implemented")) }
 
   private final val timeStampFileName: String = ".riddl-timestamp"
   def getTimeStamp(dir: Path): FileTime = {

@@ -3776,6 +3776,13 @@ object AST {
     domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
   }
 
+  def getAllDomains(root: Root): Contents[Domain] = {
+    for {
+      domain <- getTopLevelDomains(root)
+      domains <- getDomains(domain)
+    } yield { domains }
+  }
+
   /** Get the bounded contexts defined in a domain even if they are in includes of that domain
     * @param domain
     *   The domain whose contexts should be returned

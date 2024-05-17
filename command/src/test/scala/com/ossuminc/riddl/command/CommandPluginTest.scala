@@ -8,7 +8,10 @@ package com.ossuminc.riddl.command
 
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
-import com.ossuminc.riddl.utils.{Plugin, PluginSpecBase}
+import com.ossuminc.riddl.utils.{Plugin, PluginSpecBase, SysLogger}
+import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.Messages.Message
 
 import java.nio.file.Path
 import scopt.*
@@ -75,6 +78,29 @@ class CommandPluginTest
       )
       val rc = CommandPlugin.runMain(args)
       rc must be(0)
+    }
+
+    "generates error on wrong plugin name" in {
+      CommandPlugin.loadCommandNamed("foo", CommonOptions()) match
+        case Left(messages) =>
+          val errors = messages.justErrors
+          errors must not be (empty)
+          errors.find { (msg: Messages.Message) =>
+            msg.message.contains("No plugin command matches")
+          } match
+            case Some(msg) => succeed
+            case None => fail("Didn't find expected message")
+        case Right(plugin) =>
+          fail(s"Should have failed but got: $plugin")
+    }
+
+    "has runCommandNamed method" in {
+      val optionsPath: Path = Path.of("command/src/test/input/test.conf")
+      CommandPlugin.runCommandNamed("test",optionsPath, SysLogger()) match {
+        case Left(messages) => 
+          messages.justErrors must be(empty)
+        case Right(passesResult) => succeed
+      }
     }
 
     "handle wrong command as target" in {
