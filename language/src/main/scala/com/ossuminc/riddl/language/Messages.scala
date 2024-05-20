@@ -357,24 +357,8 @@ object Messages {
       this
     }
 
-    @inline def style(message: String, loc: At = At.empty): this.type = {
-      add(Message(loc, message, StyleWarning))
-    }
-
-    @inline def info(message: String, loc: At = At.empty): this.type = {
-      add(Message(loc, message, Info))
-    }
-
-    @inline def warning(message: String, loc: At = At.empty): this.type = {
-      add(Message(loc, message, Warning))
-    }
-
-    @inline def error(message: String, loc: At = At.empty): this.type = {
-      add(Message(loc, message, Error))
-    }
-
-    @inline def severe(message: String, loc: At = At.empty): this.type = {
-      add(Message(loc, message, SevereError))
+    @inline def addInfo(loc: At, msg: String): this.type = {
+      add(Message(loc, msg, Info))
     }
 
     @inline def addStyle(loc: At, msg: String): this.type = {

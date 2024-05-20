@@ -40,7 +40,7 @@ class ASTTest extends AnyWordSpec with Matchers {
       head.s must include("sbt-ossuminc")
     }
   }
-  
+
   "Domain" should {
     "return anonymous name when empty" in {
       val domain = Domain(At(), Identifier.empty)

@@ -184,6 +184,14 @@ class MessagesTest extends AnyWordSpec with Matchers {
       content mustBe expected
     }
 
+    "has inquiry methods" in {
+      mix.format.size must be(45)
+      mix.isOnlyWarnings must be(false)
+      mix.isOnlyIgnorable must be(false)
+      mix.hasErrors must be(true)
+      mix.hasWarnings must be(true)
+    }
+
     "format should produce a correct string for empty location" in {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
@@ -210,6 +218,40 @@ class MessagesTest extends AnyWordSpec with Matchers {
       val v2 = Message(At(2, 3, "the_source"), "the_message", Warning)
       v1 < v2 mustBe true
       v1 == v2 mustBe false
+    }
+  }
+
+  "Accumulator" must {
+    val acc: Accumulator = Accumulator(CommonOptions())
+    "has an empty companion" in {
+      Accumulator.empty must be(empty)
+    }
+    "have basic inquiry methods" in {
+      acc.isEmpty must be(true)
+      acc.nonEmpty must be(false)
+      acc.size must be(0)
+      acc.toMessages must be(empty)
+    }
+    "have message add methods" in {
+      acc.add(Messages.info("info", At.empty))
+      acc.addStyle(At.empty, "style")
+      acc.addMissing(At.empty, "missing")
+      acc.addUsage(At.empty, "usage")
+      acc.addWarning(At.empty, "warning")
+      acc.addError(At.empty, "error")
+      acc.addSevere(At.empty, "severe")
+      val msgs = acc.toMessages
+      msgs.justErrors.size must be(2)
+      msgs.justInfo.size must be(1)
+      msgs.justStyle.size must be(1)
+      msgs.justUsage.size must be(1)
+      msgs.justWarnings.size must be(4)
+      msgs.justErrors.head.message must be("error")
+      msgs.justInfo.head.message must be("info")
+      msgs.justStyle.head.message must be("style")
+      msgs.justMissing.head.message must be("missing")
+      msgs.justUsage.head.message must be("usage")
+      msgs.justErrors.head.message must be("error")
     }
   }
 }
