@@ -190,7 +190,9 @@ class OnChangeCommand extends CommandPlugin[OnChangeCommand.Options](OnChangeCom
     commonOptions: CommonOptions,
     log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, PassesResult] = { Left(errors("Not Implemented")) }
+  ): Either[Messages, PassesResult] = {
+    Left(errors("Not Implemented"))
+  }
 
   private final val timeStampFileName: String = ".riddl-timestamp"
   def getTimeStamp(dir: Path): FileTime = {
