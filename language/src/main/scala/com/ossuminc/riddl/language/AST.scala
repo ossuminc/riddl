@@ -2075,7 +2075,7 @@ object AST {
     func: FunctionRef
   ) extends Statement {
     override def kind: String = "Call Statement"
-    def format: String = "call ${func.format}"
+    def format: String = s"call ${func.format}"
   }
 
   /** A statement that suggests looping over the contents of a field with a non-zero cardinality, an Inlet or an outlet
@@ -2092,8 +2092,8 @@ object AST {
     do_ : Seq[Statement]
   ) extends Statement {
     override def kind: String = "Foreach Statement"
-    def format: String = s"foreach ${ref.format} do \n" +
-      do_.map(_.format).mkString("\n") + "end\n"
+    def format: String = s"foreach ${ref.format} do\n" +
+      do_.map(_.format).mkString("\n") + "\n  end"
   }
 
   /** A statement that represents a class if-condition-then-A-else-B construct for logic decitions.
@@ -2114,9 +2114,9 @@ object AST {
     elses: Seq[Statement]
   ) extends Statement {
     override def kind: String = "IfThenElse Statement"
-    def format: String = s"if ${cond.format} then\n{\n${thens.map(_.format).mkString("  ", "\n  ", "\n}") +
-        (if elses.nonEmpty then " else {\n" + elses.map(_.format).mkString("  ", "\n  ", "\n}\n")
-         else "\n")}"
+
+    def format: String = s"if ${cond.format} then {${thens.map(_.format).mkString("\n  ", "\n  ", "\n}") +
+        (" else {" + elses.map(_.format).mkString("\n  ", "\n  ", "\n}\nend"))}"
   }
 
   /** A statement that terminates the On Clause */
@@ -2124,7 +2124,7 @@ object AST {
     loc: At
   ) extends Statement {
     override def kind: String = "Stop Statement"
-    def format: String = "stop ${func.format}"
+    def format: String = "stop"
   }
 
   /** A statement that reads data from a Repository
@@ -2148,7 +2148,7 @@ object AST {
     where: LiteralString
   ) extends Statement {
     override def kind: String = "Read Statement"
-    def format: String = s"$keyword ${what.format} from ${from.format} where ${where.s}"
+    def format: String = s"$keyword ${what.format} from ${from.format} where ${where.format}"
   }
 
   /** A statement that describes a write to a repository
@@ -2186,6 +2186,7 @@ object AST {
     language: LiteralString,
     body: String
   ) extends Statement {
+    override def kind: String = "Code Statement"
     def format: String = s"```${language.s}$body```"
   }
 
