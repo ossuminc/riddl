@@ -17,8 +17,7 @@ private[parsing] trait TypeParser extends CommonParser {
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
-      location ~ Keywords.reference ~ Readability.to.? ~/
-        maybe(Keyword.entity) ~ pathIdentifier
+      location ~ Keywords.reference ~ (Readability.to ~ Keyword.entity).? ~/ pathIdentifier
     ).map { tpl => EntityReferenceTypeExpression.apply.tupled(tpl) }
   }
 
@@ -538,7 +537,7 @@ private[parsing] trait TypeParser extends CommonParser {
       case (location, fields) => Aggregation(location, fields)
     }
   }
-  
+
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
       location ~ aggregateUseCase ~/ identifier ~
