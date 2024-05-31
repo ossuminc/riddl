@@ -38,7 +38,7 @@ class PassTest extends AnyWordSpec with Matchers {
     }
   }
 
-  
+
 
   "Pass" must {
     "validate requires method" in {
@@ -110,9 +110,9 @@ class PassTest extends AnyWordSpec with Matchers {
           val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens.mustBe(closes)
-          opens.mustBe(47)
+          opens.mustBe(51)
           values.mustBe(19)
-          leaves.mustBe(22)
+          leaves.mustBe(25)
     }
     "traverses partial trees" in {
       val input = RiddlParserInput(
