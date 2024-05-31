@@ -88,8 +88,9 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     definition match
       case c: Context =>
         val aggregates = c.entities.filter(_.hasOption("aggregate"))
-        val relationships = makeRelationships(c)
         val domain = parents.head.asInstanceOf[Domain]
+        val root = parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
+        val relationships = makeRelationships(c,root)
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates, relationships))
       case epic: Epic =>
         epic.cases.foreach { uc =>
@@ -100,13 +101,15 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _ => ()
   }
 
-  private def makeRelationships(context: Context): Seq[ContextRelationship] = {
-    val allProcessors = findProcessors(context)
+  private def makeRelationships(context: Context, root: Root): Seq[ContextRelationship] = {
+    val domains = AST.getAllDomains(root)
+    val applications = domains.flatMap(AST.getApplications)
+    val allProcessors = findProcessors(context) ++ applications
     for {
       processor <- allProcessors
-      relationship <- makeProcessorRelationships(context, processor)
+      relationships <- makeProcessorRelationships(context, processor)
     } yield {
-      relationship
+      relationships
     }
   }
 
