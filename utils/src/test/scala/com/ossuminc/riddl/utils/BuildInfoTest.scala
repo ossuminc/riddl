@@ -1,7 +1,8 @@
 package com.ossuminc.riddl.utils
+
+import com.ossuminc.riddl.utils.RiddlBuildInfo
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import java.io.InputStream
 
 class BuildInfoTest extends AnyWordSpec with Matchers {

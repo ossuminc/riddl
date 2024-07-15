@@ -23,3 +23,4 @@ target
 *.lock
 /hugo-input/
 
+/scoverage-report/
