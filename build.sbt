@@ -29,7 +29,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
 
 lazy val Utils = config("utils")
 lazy val utils: Project = Module("utils", "riddl-utils")
-  .configure(With.typical, With.build_info, With.coverage(70) /*, With.native()*/ )
+  .configure(With.typical, With.build_info, With.coverage(70), With.native())
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
