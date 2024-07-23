@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.prettify
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
@@ -55,7 +55,7 @@ class PrettifyPassTest extends RiddlFilesTestBase {
     output1 mustEqual output3
   }
 
-  "PrettifyTranslator" should {
+  "PrettifyPass" should {
     "check domains" in {
       processADirectory("testkit/src/test/input/domains")
     }
@@ -77,6 +77,21 @@ class PrettifyPassTest extends RiddlFilesTestBase {
     "check rbbq.riddl" in {
       processAFile("testkit/src/test/input/rbbq.riddl")
       println("done")
+    }
+  }
+
+  "PrettifyOutput" must {
+    "construct" in {
+      intercept[IllegalArgumentException] {
+        PrettifyOutput(Messages.empty, PrettifyState())
+      }
+      val options = PrettifyPass.Options(Some(Path.of("foo")), Some(Path.of("destination")))
+      options.singleFile must be(true)
+      val ps = PrettifyState(options)
+      ps.files.size must be(1)
+      ps.dirs must be(empty)
+      val po = PrettifyOutput(Messages.empty, ps)
+      po.messages must be(empty)
     }
   }
 }

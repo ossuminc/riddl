@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets
 
 /** Unit Tests For RiddlFileEmitter */
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
-  
+
   def add(strings: Seq[LiteralString]): this.type = {
     if strings.sizeIs > 1 then {
       nl
@@ -207,7 +207,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
       case EntityReferenceTypeExpression(_, er) =>
         this
-          .add(s"${Keyword.reference} to ${er.format}")
+          .add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
       case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
       case Optional(_, typex)   => this.emitTypeExpression(typex).add("?")
@@ -251,7 +251,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitOptions(optionDef: WithOptions): this.type = {
     if optionDef.options.nonEmpty then
-      optionDef.options.map{ option => option.format + new_line}.foreach(addIndent); this
+      optionDef.options.map { option => option.format + new_line }.foreach(addIndent); this
     else this
   }
 

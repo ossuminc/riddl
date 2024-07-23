@@ -19,7 +19,7 @@ private[parsing] trait ApplicationParser {
     & StatementParser
     & TypeParser
     & CommonParser =>
-  
+
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
       location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description
@@ -56,7 +56,7 @@ private[parsing] trait ApplicationParser {
         (undefined(Seq.empty[OccursInOutput]) | appOutput.rep(1)) ~
         close
     ).?.map {
-      case Some(definitions) => definitions
+      case Some(definitions: List[Output]) => definitions
       case None              => Seq.empty[OccursInOutput]
     }
   }

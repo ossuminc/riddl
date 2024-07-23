@@ -180,7 +180,6 @@ private[parsing] case class FileParserInput(file: File) extends RiddlParserInput
   override def isEmpty: Boolean = data.isEmpty
   val root: File = file.getParentFile
   def origin: String = file.getName
-  def this(path: Path) = this(path.toFile)
 
   override def from: String = {
     val path = file.getAbsolutePath

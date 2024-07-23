@@ -89,7 +89,7 @@ private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
   private final val zero: String = "0"
 
   private def hexDigit[u: P]: P[String] = CharIn("0-9a-fA-F").!./
-  private def hexEscape[u: P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min = 2)).!./
+  private def hexEscape[u: P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min = 2, max=8,sep="")).!./
   private def unicodeEscape[u: P]: P[Unit] = P(backslash ~ "u" ~ hexDigit.rep(min = 4, max = 4, sep = "")).!./
 
   private final val escape_chars = "\\\\\\\"aefnrt"

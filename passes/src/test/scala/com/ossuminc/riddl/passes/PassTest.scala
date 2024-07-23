@@ -3,7 +3,7 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.Accumulator
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Usages}
@@ -38,40 +38,7 @@ class PassTest extends AnyWordSpec with Matchers {
     }
   }
 
-  class TestPass(input: PassInput, output: PassesOutput) extends Pass(input, output) {
-    def name: String = TestPass.name
 
-    def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
-
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = ???
-
-    def result: com.ossuminc.riddl.passes.PassOutput = ???
-  }
-
-  object TestPass extends PassInfo[PassOptions] {
-    val name: String = "TestPass"
-
-    override def creator(options: PassOptions): PassCreator = (input, output) => new TestPass(input, output)
-  }
-
-  class TestPass2(input: PassInput, output: PassesOutput) extends Pass(input, output) {
-    requires(TestPass)
-
-    def name: String = "TestPass2"
-
-    def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
-
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {
-      
-    }
-
-    def result: com.ossuminc.riddl.passes.PassOutput = ???
-  }
-  
-  object TestPass2 extends PassInfo[PassOptions] {
-    val name: String = "TestPass2"
-    override def creator(options:PassOptions): PassCreator = (input, output) => new TestPass2(input, output)
-  }
 
   "Pass" must {
     "validate requires method" in {
@@ -143,9 +110,30 @@ class PassTest extends AnyWordSpec with Matchers {
           val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens.mustBe(closes)
-          opens.mustBe(47)
+          opens.mustBe(51)
           values.mustBe(19)
-          leaves.mustBe(22)
+          leaves.mustBe(25)
+    }
+    "traverses partial trees" in {
+      val input = RiddlParserInput(
+        """domain foo is { context bar is {
+          | /* comment */
+          | term baz is briefly "a character in a play"
+          |}}
+          |""".stripMargin
+      )
+      Riddl.parseAndValidate(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(result: PassesResult) =>
+          val input = PassInput(result.root)
+          val outputs = PassesOutput()
+          val hp = TestHierarchyPass(input, outputs)
+          val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
+          val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
+          opens must be(closes)
+          opens must be(3)
+          values must be(1)
+          leaves must be(1)
 
     }
   }

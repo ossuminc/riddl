@@ -24,13 +24,15 @@ trait CommandTestBase(val inputDir: String = "command/src/test/input/") extends 
   }
 
   def check[OPTS <: CommandOptions](
-    cmd: CommandPlugin[?],
+    cmd: CommandPlugin[OPTS],
     expected: OPTS,
     file: Path = Path.of(confFile)
-  ): Assertion = {
+  )(checker: (opts: OPTS) => Assertion = { (opts: OPTS) => opts.check must be(empty) }): Assertion = {
     cmd.loadOptionsFrom(file) match {
-      case Left(errors)   => fail(errors.format)
-      case Right(options) => options must be(expected)
+      case Left(errors) => fail(errors.format)
+      case Right(options: OPTS) =>
+        checker(options)
+        options must be(expected)
     }
   }
 

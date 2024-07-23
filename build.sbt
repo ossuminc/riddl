@@ -78,7 +78,7 @@ lazy val command = Module("command", "riddl-command")
     description := "Command infrastructure needed to define a command",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(comptest(utils), comptest(language), passes)
+  .dependsOn(comptest(utils), comptest(language), comptest(passes))
 
 def testDep(project: Project): ClasspathDependency = project % "compile->compile;compile->test;test->test"
 
