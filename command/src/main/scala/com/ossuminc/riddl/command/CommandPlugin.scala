@@ -174,12 +174,9 @@ object CommandPlugin {
 
   private def handleCommandRun(
     remaining: Array[String],
-    commonOptions: CommonOptions
+    commonOptions: CommonOptions,
+    log: Logger
   ): Int = {
-    val log: Logger =
-      if commonOptions.quiet then StringLogger()
-      else SysLogger()
-
     if remaining.isEmpty then
       log.error("No command argument was provided")
       1
@@ -201,7 +198,7 @@ object CommandPlugin {
           val log: Logger = if commonOptions.quiet then StringLogger() else SysLogger()
           if remaining.isEmpty then
             Left(List(Messages.error("No command argument was provided")))
-          else  
+          else
             val name = remaining.head
             CommandPlugin.runCommandWithArgs(name, remaining, log, commonOptions)
         case None =>
@@ -211,13 +208,13 @@ object CommandPlugin {
         Left(List(Messages.severe("Exception Thrown:", exception, At.empty)))
     }
   }
-  
+
   def runMain(args: Array[String], log: Logger = SysLogger()): Int = {
     try {
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
         case Some(commonOptions) =>
-          handleCommandRun(remaining, commonOptions)
+          handleCommandRun(remaining, commonOptions, log)
         case None =>
           // arguments are bad, error message will have been displayed
           log.info("Option parsing failed, terminating.")
