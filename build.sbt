@@ -127,6 +127,7 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   )
   .dependsOn(utils, language, comptest(passes), command, testKitDep)
 
+
 val Hugo = config("hugo")
 lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.typical)
