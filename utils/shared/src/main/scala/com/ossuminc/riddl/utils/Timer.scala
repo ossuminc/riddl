@@ -7,8 +7,10 @@
 package com.ossuminc.riddl.utils
 
 import java.time.Clock
+import scala.scalajs.js.annotation.*
 
 /** Private implementation details which allow for more testability */
+@JSExportTopLevel("Timer", "Utils")
 object Timer {
 
   /** Runs a code block and returns its result, while recording its execution time, according to the passed clock.

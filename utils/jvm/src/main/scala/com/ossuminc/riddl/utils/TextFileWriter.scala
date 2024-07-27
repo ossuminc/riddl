@@ -7,7 +7,6 @@
 package com.ossuminc.riddl.utils
 
 import java.nio.charset.StandardCharsets
-
 import scala.annotation.tailrec
 import scala.collection.mutable
 

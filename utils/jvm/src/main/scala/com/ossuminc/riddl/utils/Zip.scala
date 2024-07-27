@@ -6,8 +6,7 @@
 
 package com.ossuminc.riddl.utils
 
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import java.util.zip.ZipFile
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*

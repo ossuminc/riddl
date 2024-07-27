@@ -5,8 +5,7 @@
  */
 
 package com.ossuminc.riddl.utils
-import java.net.URL
-import java.net.URLClassLoader
+import java.net.{URL, URLClassLoader}
 
 /** Loads a plugin using a [[java.net.URLClassLoader]].
   */

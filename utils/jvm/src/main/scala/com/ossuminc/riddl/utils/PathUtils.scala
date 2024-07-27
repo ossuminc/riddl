@@ -6,12 +6,9 @@
 
 package com.ossuminc.riddl.utils
 
-import java.io.File
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.net.URL
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.StandardCopyOption
+import java.nio.file.{Files, Path, StandardCopyOption}
 import scala.jdk.Accumulator
 import scala.jdk.StreamConverters.StreamHasToScala
 

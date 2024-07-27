@@ -6,12 +6,12 @@
 
 package com.ossuminc.riddl.utils
 
-import java.io.BufferedInputStream
-import java.nio.file.Path
-import java.nio.file.Files
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.utils.IOUtils
+
+import java.io.BufferedInputStream
+import java.nio.file.{Files, Path}
 
 object Tar {
 

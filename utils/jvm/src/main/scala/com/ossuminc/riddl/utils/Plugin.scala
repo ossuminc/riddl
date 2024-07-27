@@ -6,14 +6,12 @@
 
 package com.ossuminc.riddl.utils
 
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.ServiceLoader
-import scala.jdk.StreamConverters.*
-import scala.jdk.CollectionConverters.*
-import scala.reflect.ClassTag
-import scala.reflect.classTag
 import java.net.URI
+import java.nio.file.{Files, Path}
+import java.util.ServiceLoader
+import scala.jdk.CollectionConverters.*
+import scala.jdk.StreamConverters.*
+import scala.reflect.{ClassTag, classTag}
 
 object Plugin {
 

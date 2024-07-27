@@ -6,6 +6,9 @@
 
 package com.ossuminc.riddl.utils
 
+import scala.scalajs.js.annotation._
+
+@JSExportTopLevel(name = "StringHelpers", moduleID = "Utils")
 object StringHelpers {
   // extension (str: String)
 
