@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.LoggerInterface
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -173,10 +173,10 @@ class OnChangeCommand
    * Either a set of Messages on error or a Unit on success
    */
   override def run(
-    options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: Options,
+                    commonOptions: CommonOptions,
+                    log: LoggerInterface,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {Left(errors("Not Implemented"))}
 
   private final val timeStampFileName: String = ".riddl-timestamp"

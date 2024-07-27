@@ -10,7 +10,7 @@ import com.ossuminc.riddl.command.{CommandPlugin, CommandOptions}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{Logger,RiddlBuildInfo}
+import com.ossuminc.riddl.utils.{LoggerInterface,RiddlBuildInfo}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -46,10 +46,10 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
   }
 
   override def run(
-    options: InfoCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: InfoCommand.Options,
+                    commonOptions: CommonOptions,
+                    log: LoggerInterface,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     log.info("About riddlc:")
     log.info(s"           name: riddlc")

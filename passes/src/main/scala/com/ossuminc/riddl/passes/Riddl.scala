@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.utils.{Logger,SysLogger}
+import com.ossuminc.riddl.utils.{LoggerInterface,SysLogger}
 import com.ossuminc.riddl.passes.PassesCreator
 
 import java.nio.file.Path
@@ -71,7 +71,7 @@ object Riddl {
     commonOptions: CommonOptions = CommonOptions.empty,
     shouldFailOnError: Boolean = true,
     passes: PassesCreator = Pass.standardPasses,
-    logger: Logger = SysLogger()
+    logger: LoggerInterface = SysLogger()
   ): Either[Messages, PassesResult] = {
     TopLevelParser.parseInput(input, commonOptions) match {
       case Left(messages) => 
@@ -90,7 +90,7 @@ object Riddl {
     commonOptions: CommonOptions = CommonOptions.empty,
     shouldFailOnError: Boolean = true,
     passes: PassesCreator = Pass.standardPasses,
-    logger: Logger = SysLogger()
+    logger: LoggerInterface = SysLogger()
   ): Either[Messages, PassesResult] = {
     parseAndValidate(RiddlParserInput(path), commonOptions, shouldFailOnError, passes, logger)
   }

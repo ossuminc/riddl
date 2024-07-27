@@ -13,7 +13,7 @@ import com.ossuminc.riddl.command.CommandPlugin
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.LoggerInterface
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -49,10 +49,10 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
   }
 
   override def run(
-    options: HelpCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: HelpCommand.Options,
+                    commonOptions: CommonOptions,
+                    log: LoggerInterface,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     if commonOptions.verbose || !commonOptions.quiet then {
       val usage: String = {

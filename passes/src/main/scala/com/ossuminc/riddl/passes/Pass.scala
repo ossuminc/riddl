@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
-import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
+import com.ossuminc.riddl.utils.{LoggerInterface, SysLogger, Timer}
 import com.ossuminc.riddl.passes.PassCreator
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -413,7 +413,7 @@ object Pass {
   def runThesePasses(
     input: PassInput,
     passes: PassesCreator = standardPasses,
-    logger: Logger = SysLogger()
+    logger: LoggerInterface = SysLogger()
   ): PassesResult = {
     val outputs = PassesOutput()
     try {
@@ -473,7 +473,7 @@ object Pass {
     root: Root,
     commonOptions: CommonOptions,
     mkPass: => Pass,
-    logger: Logger = SysLogger()
+    logger: LoggerInterface = SysLogger()
   ): PassOutput = {
     val pass: Pass = mkPass
     Timer.time[PassOutput](pass.name, commonOptions.showTimes, logger) {

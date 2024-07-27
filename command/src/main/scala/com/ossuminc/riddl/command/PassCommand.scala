@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, PassesCreator}
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.LoggerInterface
 
 import java.nio.file.Path
 import scala.reflect.ClassTag
@@ -38,9 +38,9 @@ trait PassCommandOptions extends CommandOptions {
 abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) extends CommandPlugin[OPT](name) {
 
   def getPasses(
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: OPT
+                 log: LoggerInterface,
+                 commonOptions: CommonOptions,
+                 options: OPT
   ): PassesCreator
 
   def overrideOptions(options: OPT, newOutputDir: Path): OPT
@@ -48,7 +48,7 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) ex
   private final def doRun(
     options: OPT,
     commonOptions: CommonOptions,
-    log: Logger
+    log: LoggerInterface
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputPath: Path) =>
       TopLevelParser.parsePath(inputPath, commonOptions) match {
@@ -69,10 +69,10 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) ex
   }
 
   override def run(
-    originalOptions: OPT,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    originalOptions: OPT,
+                    commonOptions: CommonOptions,
+                    log: LoggerInterface,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val options = if outputDirOverride.nonEmpty then
       val path = outputDirOverride.fold(Path.of(""))(identity)

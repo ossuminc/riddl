@@ -10,7 +10,7 @@ import com.ossuminc.riddl.command.{CommandPlugin, CommandOptions}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{Interrupt, Logger}
+import com.ossuminc.riddl.utils.{Interrupt, LoggerInterface}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -160,10 +160,10 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](RepeatCommand.c
     *   Either a set of Messages on error or a Unit on success
     */
   override def run(
-    options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: Options,
+                    commonOptions: CommonOptions,
+                    log: LoggerInterface,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val maxCycles = options.maxCycles
     val refresh = options.refreshRate

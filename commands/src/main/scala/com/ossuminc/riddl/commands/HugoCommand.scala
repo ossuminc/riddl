@@ -17,7 +17,7 @@ import com.ossuminc.riddl.analyses.StatsPass
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.LoggerInterface
 import com.ossuminc.riddl.analyses.DiagramsPass
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -230,9 +230,9 @@ class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
   }
 
   def getPasses(
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: Options
+                 log: LoggerInterface,
+                 commonOptions: CommonOptions,
+                 options: Options
   ): PassesCreator = {
     HugoPass.getPasses(options)
   }

@@ -11,7 +11,7 @@ import com.ossuminc.riddl.command.TranslationCommand
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesCreator}
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.LoggerInterface
 import com.ossuminc.riddl.prettify.*
 
 import pureconfig.ConfigCursor
@@ -80,9 +80,9 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
   }
 
   override def getPasses(
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: PrettifyPass.Options
+                          log: LoggerInterface,
+                          commonOptions: CommonOptions,
+                          options: PrettifyPass.Options
   ): PassesCreator = {
     standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>

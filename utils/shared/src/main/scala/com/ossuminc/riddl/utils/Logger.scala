@@ -6,8 +6,6 @@
 
 package com.ossuminc.riddl.utils
 
-import org.apache.commons.lang3.exception.ExceptionUtils
-
 import scala.annotation.unused
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -31,7 +29,7 @@ object Logger {
   val nl: String = System.getProperty("line.separator")
 }
 
-trait Logger {
+trait LoggerInterface {
   import Logger.*
 
   protected def withHighlighting: Boolean = true
@@ -108,8 +106,7 @@ trait Logger {
   }
 }
 
-@JSExportTopLevel(name = "SysLogger", moduleID = "Utils")
-case class SysLogger(override val withHighlighting: Boolean = true) extends Logger {
+case class SysLogger(override val withHighlighting: Boolean = true) extends LoggerInterface {
   override def write(level: Logger.Lvl, s: String): Unit = {
     super.count(level)
     System.out.println(highlight(level, s))
@@ -117,7 +114,8 @@ case class SysLogger(override val withHighlighting: Boolean = true) extends Logg
 }
 
 @JSExportTopLevel(name = "StringLogger", moduleID = "Utils")
-case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: Boolean = true) extends Logger {
+case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: Boolean = true)
+    extends LoggerInterface {
   private val stringBuilder = new mutable.StringBuilder(capacity)
 
   override def write(level: Logger.Lvl, s: String): Unit = {
@@ -131,7 +129,7 @@ case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: 
 /** A Logger which captures logged lines into an in-memory buffer, useful for testing purposes.
   */
 @JSExportTopLevel(name = "InMemoryLogger", moduleID = "Utils")
-case class InMemoryLogger(override val withHighlighting: Boolean = false) extends Logger {
+case class InMemoryLogger(override val withHighlighting: Boolean = false) extends LoggerInterface {
   case class Line(level: Logger.Lvl, msg: String)
 
   private val buffer = ArrayBuffer[Line]()
@@ -142,5 +140,13 @@ case class InMemoryLogger(override val withHighlighting: Boolean = false) extend
   def write(level: Logger.Lvl, s: String): Unit = {
     super.count(level)
     buffer += Line(level, s)
+  }
+}
+
+@JSExportTopLevel(name = "CallBackLogger", moduleID = "Utils")
+case class CallBackLogger(callback: (Logger.Lvl, String) => Unit) extends LoggerInterface {
+  override def write(level: Logger.Lvl, s: String): Unit = {
+    super.count(level)
+    callback(level, s)
   }
 }

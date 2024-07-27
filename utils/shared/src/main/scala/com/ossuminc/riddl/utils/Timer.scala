@@ -36,7 +36,7 @@ object Timer {
   def time[T](
     stage: String,
     show: Boolean = true,
-    out: Logger = SysLogger()
+    out: LoggerInterface = SysLogger()
   )(f: => T): T = {
     if show then {
       val clock = Clock.systemUTC()
