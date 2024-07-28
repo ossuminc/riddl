@@ -22,7 +22,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
   * produced from parsing are syntactically correct but have no semantic validation.
   */
-@JSExportTopLevel("AST", "Language")
+@JSExportTopLevel("AST")
 object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES

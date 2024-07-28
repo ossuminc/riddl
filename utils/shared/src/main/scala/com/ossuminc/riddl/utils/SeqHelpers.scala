@@ -9,7 +9,7 @@ package com.ossuminc.riddl.utils
 import scala.collection.mutable
 import scala.scalajs.js.annotation._
 
-@JSExportTopLevel("SeqHelpers", "Utils")
+@JSExportTopLevel("SeqHelpers")
 object SeqHelpers {
 
   extension[T] (seq: Seq[T])

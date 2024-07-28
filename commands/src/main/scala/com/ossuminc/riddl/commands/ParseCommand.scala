@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.LoggerInterface
+import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.command.InputFileCommandPlugin
 
 import java.nio.file.Path
@@ -27,7 +27,7 @@ class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
   override def run(
                     options: Options,
                     commonOptions: CommonOptions,
-                    log: LoggerInterface,
+                    log: Logger,
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>

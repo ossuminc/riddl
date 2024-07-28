@@ -9,7 +9,7 @@ package com.ossuminc.riddl.command
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.LoggerInterface 
+import com.ossuminc.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -56,7 +56,7 @@ class ASimpleTestCommand
   override def run(
                     options: Options,
                     commonOptions: CommonOptions,
-                    log: LoggerInterface,
+                    log: Logger,
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     println(s"arg1: '${options.arg1}''")

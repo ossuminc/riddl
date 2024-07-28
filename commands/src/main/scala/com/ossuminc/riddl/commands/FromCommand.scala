@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{LoggerInterface, StringHelpers}
+import com.ossuminc.riddl.utils.{Logger, StringHelpers}
 import com.ossuminc.riddl.command.{CommandPlugin,CommandOptions,CommonOptionsHelper}
 
 import pureconfig.ConfigCursor
@@ -63,7 +63,7 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
   override def run(
                     options: FromCommand.Options,
                     commonOptions: CommonOptions,
-                    log: LoggerInterface,
+                    log: Logger,
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val loadedCO =

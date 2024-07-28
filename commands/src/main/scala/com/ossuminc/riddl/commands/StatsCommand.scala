@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.utils.LoggerInterface
+import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.analyses.{StatsOutput, StatsPass, KindStats}
 
 import scopt.OParser
@@ -84,7 +84,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     }
   }
 
-  override def getPasses(log: LoggerInterface, commonOptions: CommonOptions, options: Options): PassesCreator = {
+  override def getPasses(log: Logger, commonOptions: CommonOptions, options: Options): PassesCreator = {
     standardPasses :+ StatsPass.creator(options)
   }
 
@@ -92,7 +92,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
     System.out.println(s)
-    for { 
+    for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)
     } do {
@@ -112,7 +112,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
   override def run(
                     originalOptions: Options,
                     commonOptions: CommonOptions,
-                    log: LoggerInterface,
+                    log: Logger,
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val result = super.run(originalOptions, commonOptions, log, outputDirOverride)

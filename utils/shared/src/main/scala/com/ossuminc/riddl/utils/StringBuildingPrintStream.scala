@@ -19,7 +19,7 @@ final class StringBuildingPrintStream private (out: OutputStream, stringBuilder:
   def mkString(): String = stringBuilder.mkString
 }
 
-@JSExportTopLevel("StringBuildingPrintStream", "Utils")
+@JSExportTopLevel("StringBuildingPrintStream")
 object StringBuildingPrintStream {
 
   /** Returns a new StringBuildingPrintStream */

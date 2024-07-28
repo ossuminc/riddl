@@ -31,48 +31,55 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
   )
 
 lazy val Utils = config("utils")
-lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)(
-  With.typical, With.build_info
-)(
+lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
+  .jvmConfigure(With.typical)
+  .jvmConfigure(With.coverage(70))
+  .jvmConfigure(With.build_info)
+  .jvmConfigure(With.publishing)
+  .jvmSettings(
+    scalaVersion := "3.4.2",
+    buildInfoPackage := "com.ossuminc.riddl.utils",
+    buildInfoObject := "RiddlBuildInfo",
+    description := "Various utilities used throughout riddl libraries",
+    coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+  )
+  .jsConfigure(With.typical)
+  .jsConfigure(With.build_info)
+  .jsSettings(
     scalaVersion := "3.4.2",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     description := "Various utilities used throughout riddl libraries"
-  )
-  .jvmConfigure(With.coverage(70))
-  .jvmConfigure(With.publishing)
-  .jvmSettings(
-    coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
 
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js
 
 val Language = config("language")
-lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)(
-  With.typical)(
-  description := "Abstract Syntax Tree and basic RIDDL language parser",
-).jvmConfigure(With.typical)
+lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
+  .jvmConfigure(With.typical)
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
   .jvmSettings(
+    description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     coverageExcludedPackages := "<empty>;$anon",
-    libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse)
+    libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
+    libraryDependencies += Dep.commons_io % Test
   )
-
-lazy val language = language_cp.jvm.dependsOn(utils)
-
-lazy val language_js = language_cp.js
-  .configure(With.typical)
-  .settings(
+  .jsConfigure(With.typical)
+  .jsSettings(
+    description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
   )
-  .dependsOn(utilsJS)
+
+lazy val language = language_cp.jvm.dependsOn(utils)
+
+lazy val language_js = language_cp.js.dependsOn(utilsJS)
 
 val Passes = config("passes")
 lazy val passes = Module("passes", "riddl-passes")

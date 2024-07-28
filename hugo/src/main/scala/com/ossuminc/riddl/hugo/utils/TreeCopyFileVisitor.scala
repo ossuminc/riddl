@@ -6,14 +6,14 @@
 
 package com.ossuminc.riddl.hugo.utils
 
-import com.ossuminc.riddl.utils.{LoggerInterface, SysLogger}
+import com.ossuminc.riddl.utils.{Logger, SysLogger}
 
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 
 /** A FIle Visitor that copies a directory hierarchy*/
-case class TreeCopyFileVisitor(source: Path, target: Path, log: LoggerInterface = SysLogger())
+case class TreeCopyFileVisitor(source: Path, target: Path, log: Logger = SysLogger())
     extends SimpleFileVisitor[Path] {
 
   @throws[IOException]

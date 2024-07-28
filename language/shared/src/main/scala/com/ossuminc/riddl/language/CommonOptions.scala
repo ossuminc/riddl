@@ -51,7 +51,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * @param warningsAreFatal
   * When set to true, any warnings are handled as if they were errors and terminate riddlc with a non-zero status
   */
-@JSExportTopLevel("CommonOptions", "Language")
+@JSExportTopLevel("CommonOptions")
 case class CommonOptions(
   showTimes: Boolean = false,
   showIncludeTimes: Boolean = false,
@@ -73,7 +73,7 @@ case class CommonOptions(
   warningsAreFatal: Boolean = false
 )
 
-@JSExportTopLevel("CommonOptions$", "Language")
+@JSExportTopLevel("CommonOptions$")
 object CommonOptions {
   def empty: CommonOptions = CommonOptions()
   def noWarnings: CommonOptions = CommonOptions(showWarnings = false)

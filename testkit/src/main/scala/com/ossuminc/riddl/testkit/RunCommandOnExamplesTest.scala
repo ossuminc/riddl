@@ -14,7 +14,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.language.Messages.warnings
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{LoggerInterface, PathUtils, SysLogger, Zip}
+import com.ossuminc.riddl.utils.{Logger, PathUtils, SysLogger, Zip}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.DirectoryFileFilter
 import org.apache.commons.io.filefilter.NotFileFilter
@@ -65,7 +65,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     verbose = true
   )
 
-  val logger: LoggerInterface = SysLogger()
+  val logger: Logger = SysLogger()
 
   override def beforeAll(): Unit = {
     super.beforeAll()

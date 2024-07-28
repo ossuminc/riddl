@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{LoggerInterface,StringHelpers}
+import com.ossuminc.riddl.utils.{Logger,StringHelpers}
 import com.ossuminc.riddl.command.InputFileCommandPlugin
 
 import java.nio.file.Path
@@ -26,7 +26,7 @@ class DumpCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
   override def run(
                     options: Options,
                     commonOptions: CommonOptions,
-                    log: LoggerInterface,
+                    log: Logger,
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>

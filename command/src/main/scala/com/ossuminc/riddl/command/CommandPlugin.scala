@@ -55,7 +55,7 @@ object CommandPlugin {
   private def runCommandWithArgs(
                                   name: String,
                                   args: Array[String],
-                                  log: LoggerInterface,
+                                  log: Logger,
                                   commonOptions: CommonOptions,
                                   pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, PassesResult] = {
@@ -71,7 +71,7 @@ object CommandPlugin {
   def runCommandNamed(
                        name: String,
                        optionsPath: Path,
-                       log: LoggerInterface,
+                       log: Logger,
                        commonOptions: CommonOptions = CommonOptions(),
                        pluginsDir: Path = Plugin.pluginsDir,
                        outputDirOverride: Option[Path] = None
@@ -121,7 +121,7 @@ object CommandPlugin {
                      configFile: Option[Path],
                      targetCommand: String,
                      commonOptions: CommonOptions,
-                     log: LoggerInterface,
+                     log: Logger,
                      commandName: String
   ): Either[Messages, PassesResult] = {
     val result = CommandOptions.withInputFile[PassesResult](configFile, commandName) { path =>
@@ -155,7 +155,7 @@ object CommandPlugin {
   private def handleCommandResult(
     result: Either[Messages, PassesResult],
     commonOptions: CommonOptions,
-    log: LoggerInterface
+    log: Logger
   ): Int = {
     result match {
       case Right(passesResult: PassesResult) =>
@@ -175,7 +175,7 @@ object CommandPlugin {
   private def handleCommandRun(
     remaining: Array[String],
     commonOptions: CommonOptions,
-    log: LoggerInterface
+    log: Logger
   ): Int = {
     if remaining.isEmpty then
       log.error("No command argument was provided")
@@ -195,7 +195,7 @@ object CommandPlugin {
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match
         case Some(commonOptions) =>
-          val log: LoggerInterface = if commonOptions.quiet then StringLogger() else SysLogger()
+          val log: Logger = if commonOptions.quiet then StringLogger() else SysLogger()
           if remaining.isEmpty then
             Left(List(Messages.error("No command argument was provided")))
           else
@@ -209,7 +209,7 @@ object CommandPlugin {
     }
   }
 
-  def runMain(args: Array[String], log: LoggerInterface = SysLogger()): Int = {
+  def runMain(args: Array[String], log: Logger = SysLogger()): Int = {
     try {
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
@@ -296,7 +296,7 @@ trait CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) ext
   def run(
            @unused options: OPT,
            @unused commonOptions: CommonOptions,
-           @unused log: LoggerInterface,
+           @unused log: Logger,
            @unused outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     Left(
@@ -310,7 +310,7 @@ trait CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) ext
   def run(
            args: Array[String],
            commonOptions: CommonOptions,
-           log: LoggerInterface,
+           log: Logger,
            outputDirOverride: Option[Path] = None
   ): Either[Messages, PassesResult] = {
     val maybeOptions: Option[OPT] = parseOptions(args)

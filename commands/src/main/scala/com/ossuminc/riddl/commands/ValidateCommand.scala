@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.LoggerInterface
+import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
@@ -22,7 +22,7 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
   override def run(
                     options: Options,
                     @unused commonOptions: CommonOptions,
-                    log: LoggerInterface,
+                    log: Logger,
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>

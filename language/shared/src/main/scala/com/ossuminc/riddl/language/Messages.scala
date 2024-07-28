@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.LoggerInterface 
+import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.utils.ExceptionUtils
 
 import scala.collection.mutable
@@ -256,9 +256,9 @@ object Messages {
   val empty: Messages = List.empty[Message]
 
   def logMessages(
-    messages: Messages,
-    log: LoggerInterface,
-    options: CommonOptions
+                   messages: Messages,
+                   log: Logger,
+                   options: CommonOptions
   ): Int = {
     val list = if options.sortMessagesByLocation then messages.sorted else messages
     if options.groupMessagesByKind then { logMessagesByGroup(list, options, log) }
@@ -266,7 +266,7 @@ object Messages {
     list.highestSeverity
   }
 
-  private def logMessage(message: Message, log: LoggerInterface): Unit = {
+  private def logMessage(message: Message, log: Logger): Unit = {
     message.kind match {
       case Info           => log.info(message.format)
       case StyleWarning   => log.style(message.format)
@@ -278,14 +278,14 @@ object Messages {
     }
   }
 
-  private def logMessagesRetainingOrder(list: Messages, log: LoggerInterface): Unit = {
+  private def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
     list.foreach { msg => logMessage(msg, log) }
   }
 
   private def logMessagesByGroup(
     messages: Messages,
     commonOptions: CommonOptions,
-    log: LoggerInterface 
+    log: Logger
   ): Unit = {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])

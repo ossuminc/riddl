@@ -18,7 +18,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * @param offset
   *   The offset in that file/stream the defines the location
   */
-@JSExportTopLevel("At", "Language")
+@JSExportTopLevel("At")
 case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
 
   def isEmpty: Boolean = offset == 0 && source == RiddlParserInput.empty

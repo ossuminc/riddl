@@ -22,7 +22,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * companion object to construct a RiddlParserInput for a specific input source (file, path, Source, data string, URL,
   * etc.)
   */
-@JSExportTopLevel("RiddlParserInput", "Language")
+@JSExportTopLevel("RiddlParserInput")
 object RiddlParserInput {
 
   val empty: RiddlParserInput = EmptyParserInput()

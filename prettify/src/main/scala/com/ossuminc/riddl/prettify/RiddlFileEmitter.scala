@@ -11,13 +11,13 @@ import java.nio.file.Path
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.prettify.PrettifyPass.keyword
-import com.ossuminc.riddl.utils.{LoggerInterface, TextFileWriter}
+import com.ossuminc.riddl.utils.{Logger, TextFileWriter}
 
 import java.nio.charset.StandardCharsets
 
 /** Unit Tests For RiddlFileEmitter */
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
-  
+
   def add(strings: Seq[LiteralString]): this.type = {
     if strings.sizeIs > 1 then {
       nl

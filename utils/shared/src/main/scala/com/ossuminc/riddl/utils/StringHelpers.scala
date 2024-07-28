@@ -8,7 +8,7 @@ package com.ossuminc.riddl.utils
 
 import scala.scalajs.js.annotation._
 
-@JSExportTopLevel(name = "StringHelpers", moduleID = "Utils")
+@JSExportTopLevel("StringHelpers")
 object StringHelpers {
   // extension (str: String)
 

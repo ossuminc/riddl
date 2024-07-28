@@ -10,7 +10,7 @@ import java.time.Clock
 import scala.scalajs.js.annotation.*
 
 /** Private implementation details which allow for more testability */
-@JSExportTopLevel("Timer", "Utils")
+@JSExportTopLevel("Timer")
 object Timer {
 
   /** Runs a code block and returns its result, while recording its execution time, according to the passed clock.
@@ -36,7 +36,7 @@ object Timer {
   def time[T](
     stage: String,
     show: Boolean = true,
-    out: LoggerInterface = SysLogger()
+    out: Logger = SysLogger()
   )(f: => T): T = {
     if show then {
       val clock = Clock.systemUTC()
