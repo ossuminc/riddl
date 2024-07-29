@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 /** Unit Tests For a plugin with a future version */
 
-class FuturePluginSpec
+class FuturePluginTest
     extends PluginSpecBase(
       svcClassPath =
         Path.of("com/ossuminc/riddl/utils/FutureTestPlugin.class"),

@@ -29,7 +29,7 @@ abstract class PluginSpecBase(
 
   def testClassesDir: Path = Path.of(
     moduleName +
-      s"jvm/target/scala-${RiddlBuildInfo.scalaCompatVersion}/test-classes"
+      s"/jvm/target/scala-${RiddlBuildInfo.scalaCompatVersion}/test-classes"
   )
 
   def makeClassString(p: Path): String = {
