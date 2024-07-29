@@ -28,7 +28,7 @@ class BuildInfoTest extends AnyWordSpec with Matchers {
       RiddlBuildInfo.buildInfoPackage must be("com.ossuminc.riddl.utils")
       RiddlBuildInfo.buildInfoObject must be("RiddlBuildInfo")
       RiddlBuildInfo.startYear must be("2019")
-      RiddlBuildInfo.scalaCompatVersion must be("3.4.1")
+      RiddlBuildInfo.scalaCompatVersion must be("3.4.2")
       RiddlBuildInfo.builtAtMillis > 1715530945036L must be(true)
     }
     "has functioning toMap" in {

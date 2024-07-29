@@ -18,8 +18,7 @@ import scala.sys.process.Process
 
 /** Base class for testing plugins */
 abstract class PluginSpecBase(
-  svcClassPath: Path = Path
-    .of("com/ossuminc/riddl/utils/PluginInterface.class"),
+  svcClassPath: Path = Path.of("com/ossuminc/riddl/utils/PluginInterface.class"),
   implClassPath: Path = Path.of("com/ossuminc/riddl/utils/TestPlugin.class"),
   moduleName: String = "utils",
   jarFilename: String = "test-plugin.jar")
@@ -30,7 +29,7 @@ abstract class PluginSpecBase(
 
   def testClassesDir: Path = Path.of(
     moduleName +
-      s"/target/scala-${RiddlBuildInfo.scalaCompatVersion}/test-classes/"
+      s"jvm/target/scala-${RiddlBuildInfo.scalaCompatVersion}/test-classes"
   )
 
   def makeClassString(p: Path): String = {

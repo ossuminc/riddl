@@ -56,7 +56,7 @@ private[parsing] trait ApplicationParser {
         (undefined(Seq.empty[OccursInOutput]) | appOutput.rep(1)) ~
         close
     ).?.map {
-      case Some(definitions) => definitions
+      case Some(definitions: Seq[OccursInInput]) => definitions
       case None              => Seq.empty[OccursInOutput]
     }
   }

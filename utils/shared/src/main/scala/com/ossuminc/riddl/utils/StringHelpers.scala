@@ -38,7 +38,8 @@ object StringHelpers {
       obj match {
         case seq: Iterable[Any] => seq.foreach(doIt(_, depth + 1, None))
         case obj: Product =>
-          (obj.productIterator zip obj.productElementNames)
+          obj.productIterator
+            .zip(obj.productElementNames)
             .foreach { case (subObj, pName) =>
               doIt(subObj, depth + 1, Some(pName))
             }

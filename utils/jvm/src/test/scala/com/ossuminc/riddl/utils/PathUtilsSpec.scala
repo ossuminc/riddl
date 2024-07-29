@@ -34,7 +34,7 @@ class PathUtilsSpec extends AnyWordSpec with Matchers {
   }
   "PathUtils" should {
     "compare empty directories" in {
-      val path1 = Path.of("utils/src/test/input/empty")
+      val path1 = Path.of("utils/jvm/src/test/input/empty")
       val path2 = path1
       clear
       PathUtils.compareDirectories(path1, path2)(
@@ -47,8 +47,8 @@ class PathUtilsSpec extends AnyWordSpec with Matchers {
       diffCont mustBe empty
     }
     "compare size difference directories" in {
-      val path1 = Path.of("utils/src/test/input/size1")
-      val path2 = Path.of("utils/src/test/input/size2")
+      val path1 = Path.of("utils/jvm/src/test/input/size1")
+      val path2 = Path.of("utils/jvm/src/test/input/size2")
       clear
       PathUtils.compareDirectories(path1, path2)(
         missing,
@@ -60,8 +60,8 @@ class PathUtilsSpec extends AnyWordSpec with Matchers {
       diffSize mustNot be(empty)
     }
     "compare content difference directories" in {
-      val path1 = Path.of("utils/src/test/input/diff1")
-      val path2 = Path.of("utils/src/test/input/diff2")
+      val path1 = Path.of("utils/jvm/src/test/input/diff1")
+      val path2 = Path.of("utils/jvm/src/test/input/diff2")
       clear
       PathUtils.compareDirectories(path1, path2)(
         missing,

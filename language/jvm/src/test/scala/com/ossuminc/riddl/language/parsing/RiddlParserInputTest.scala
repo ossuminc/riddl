@@ -42,7 +42,7 @@ class RiddlParserInputTest extends AnyWordSpec with Matchers {
 
   "RiddlParserInput" should {
     "has empty" in {
-      RiddlParserInput.empty mustBe EmptyParserInput()
+      RiddlParserInput.empty mustBe EmptyParserInput
     }
 
     "construct from string" in {

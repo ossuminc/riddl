@@ -1,5 +1,5 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
-import com.ossuminc.sbt.OssumIncPlugin
+import com.ossuminc.sbt.{OssumIncPlugin, Plugin}
 import sbt.Keys.description
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.CrossProject
@@ -32,25 +32,21 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
 
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
-  .jvmConfigure(With.typical)
+  .configure(With.typical)
+  .configure(With.build_info)
   .jvmConfigure(With.coverage(70))
-  .jvmConfigure(With.build_info)
   .jvmConfigure(With.publishing)
-  .jvmSettings(
+  .jsConfigure(With.js(hasMain=false,forProd=true))
+  .settings(
     scalaVersion := "3.4.2",
+    scalacOptions += "-explain-cyclic",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     description := "Various utilities used throughout riddl libraries",
+  )
+  .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
-  )
-  .jsConfigure(With.typical)
-  .jsConfigure(With.build_info)
-  .jsSettings(
-    scalaVersion := "3.4.2",
-    buildInfoPackage := "com.ossuminc.riddl.utils",
-    buildInfoObject := "RiddlBuildInfo",
-    description := "Various utilities used throughout riddl libraries"
   )
 
 lazy val utils = utils_cp.jvm
@@ -58,22 +54,21 @@ lazy val utilsJS = utils_cp.js
 
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
-  .jvmConfigure(With.typical)
-  .jvmConfigure(With.coverage(65))
-  .jvmConfigure(With.publishing)
-  .jvmSettings(
+  .configure(With.typical)
+  .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
+  )
+  .jvmConfigure(With.coverage(65))
+  .jvmConfigure(With.publishing)
+  .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
     libraryDependencies += Dep.commons_io % Test
   )
-  .jsConfigure(With.typical)
+  .jsConfigure(With.js(hasMain = false, forProd = true))
   .jsSettings(
-    description := "Abstract Syntax Tree and basic RIDDL language parser",
-    scalaVersion := "3.4.2",
-    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
   )
 

@@ -42,7 +42,7 @@ object SeqHelpers {
     def popUntil(f: T => Boolean): mutable.Stack[T] = {
       val index = stack.indexWhere(f) - 1
       if index < 0 then { stack.clearAndShrink() }
-      else { for _ <- 0 to index do { stack.pop() }; stack }
+      else { for _ <- 0.to(index) do { stack.pop() }; stack }
     }
   
 }

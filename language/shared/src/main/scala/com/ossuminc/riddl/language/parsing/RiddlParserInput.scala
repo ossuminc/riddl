@@ -25,7 +25,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 @JSExportTopLevel("RiddlParserInput")
 object RiddlParserInput {
 
-  val empty: RiddlParserInput = EmptyParserInput()
+  val empty: RiddlParserInput = EmptyParserInput
 
   /** Set up a parser input for parsing directly from a String
     * @#param
@@ -151,7 +151,8 @@ abstract class RiddlParserInput extends ParserInput {
   }
 }
 
-case class EmptyParserInput() extends RiddlParserInput {
+@JSExportTopLevel("EmptyParserInput")
+case object EmptyParserInput extends RiddlParserInput {
   override def origin: String = "empty"
 
   override def data: String = ""
