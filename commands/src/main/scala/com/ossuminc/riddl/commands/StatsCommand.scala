@@ -92,7 +92,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
     System.out.println(s)
-    for { 
+    for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)
     } do {
@@ -110,10 +110,10 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     }
   }
   override def run(
-    originalOptions: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    originalOptions: Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val result = super.run(originalOptions, commonOptions, log, outputDirOverride)
     result match

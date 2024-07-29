@@ -160,10 +160,10 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](RepeatCommand.c
     *   Either a set of Messages on error or a Unit on success
     */
   override def run(
-    options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val maxCycles = options.maxCycles
     val refresh = options.refreshRate

@@ -173,10 +173,10 @@ class OnChangeCommand
    * Either a set of Messages on error or a Unit on success
    */
   override def run(
-    options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {Left(errors("Not Implemented"))}
 
   private final val timeStampFileName: String = ".riddl-timestamp"

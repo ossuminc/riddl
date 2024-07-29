@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets
 
 /** Unit Tests For RiddlFileEmitter */
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
-  
+
   def add(strings: Seq[LiteralString]): this.type = {
     if strings.sizeIs > 1 then {
       nl

@@ -53,11 +53,11 @@ object CommandPlugin {
   }
 
   private def runCommandWithArgs(
-    name: String,
-    args: Array[String],
-    log: Logger,
-    commonOptions: CommonOptions,
-    pluginsDir: Path = Plugin.pluginsDir
+                                  name: String,
+                                  args: Array[String],
+                                  log: Logger,
+                                  commonOptions: CommonOptions,
+                                  pluginsDir: Path = Plugin.pluginsDir
   ): Either[Messages, PassesResult] = {
     val result = loadCommandNamed(name, commonOptions, pluginsDir)
       .flatMap { cmd => cmd.run(args, commonOptions, log) }
@@ -69,12 +69,12 @@ object CommandPlugin {
   }
 
   def runCommandNamed(
-    name: String,
-    optionsPath: Path,
-    log: Logger,
-    commonOptions: CommonOptions = CommonOptions(),
-    pluginsDir: Path = Plugin.pluginsDir,
-    outputDirOverride: Option[Path] = None
+                       name: String,
+                       optionsPath: Path,
+                       log: Logger,
+                       commonOptions: CommonOptions = CommonOptions(),
+                       pluginsDir: Path = Plugin.pluginsDir,
+                       outputDirOverride: Option[Path] = None
   ): Either[Messages, PassesResult] = {
     if commonOptions.verbose then {
       println(s"About to run $name with options from $optionsPath")
@@ -118,11 +118,11 @@ object CommandPlugin {
   }
 
   def runFromConfig(
-    configFile: Option[Path],
-    targetCommand: String,
-    commonOptions: CommonOptions,
-    log: Logger,
-    commandName: String
+                     configFile: Option[Path],
+                     targetCommand: String,
+                     commonOptions: CommonOptions,
+                     log: Logger,
+                     commandName: String
   ): Either[Messages, PassesResult] = {
     val result = CommandOptions.withInputFile[PassesResult](configFile, commandName) { path =>
       CommandPlugin
@@ -294,10 +294,10 @@ trait CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) ext
     *   Either a set of Messages on error or a Unit on success
     */
   def run(
-    @unused options: OPT,
-    @unused commonOptions: CommonOptions,
-    @unused log: Logger,
-    @unused outputDirOverride: Option[Path]
+           @unused options: OPT,
+           @unused commonOptions: CommonOptions,
+           @unused log: Logger,
+           @unused outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     Left(
       severes(
@@ -308,10 +308,10 @@ trait CommandPlugin[OPT <: CommandOptions: ClassTag](val pluginName: String) ext
   }
 
   def run(
-    args: Array[String],
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path] = None
+           args: Array[String],
+           commonOptions: CommonOptions,
+           log: Logger,
+           outputDirOverride: Option[Path] = None
   ): Either[Messages, PassesResult] = {
     val maybeOptions: Option[OPT] = parseOptions(args)
     maybeOptions match {

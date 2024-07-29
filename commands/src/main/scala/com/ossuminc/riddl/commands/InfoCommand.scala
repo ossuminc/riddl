@@ -46,10 +46,10 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
   }
 
   override def run(
-    options: InfoCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: InfoCommand.Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     log.info("About riddlc:")
     log.info(s"           name: riddlc")

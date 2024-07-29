@@ -25,10 +25,10 @@ class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
   import InputFileCommandPlugin.Options
 
   override def run(
-    options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
       TopLevelParser.parsePath(inputFile, commonOptions)

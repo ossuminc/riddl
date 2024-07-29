@@ -1,18 +1,19 @@
 import sbt.*
 import sbt.librarymanagement.ModuleID
+import sbt.ModuleID.*
 
 /** V - Dependency Versions object */
 
 object V {
-  val commons_io = "2.15.1"
-  val compress = "1.24.0"
+  val commons_io = "2.16.1"
+  val compress = "1.26.2"
   val config = "1.4.2"
-  val fastparse = "3.0.2"
+  val fastparse = "3.1.1"
   val jgit = "6.5.0"
-  val lang3 = "3.14.0"
-  val pureconfig = "0.17.6"
-  val scalacheck = "1.17.0"
-  val scalatest = "3.2.18"
+  val lang3 = "3.15.0"
+  val pureconfig = "0.17.7"
+  val scalacheck = "1.18.0"
+  val scalatest = "3.2.19"
   val scopt = "4.1.0"
   val slf4j = "2.0.4"
 }

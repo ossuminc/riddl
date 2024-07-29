@@ -230,9 +230,9 @@ class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
   }
 
   def getPasses(
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: Options
+                 log: Logger,
+                 commonOptions: CommonOptions,
+                 options: Options
   ): PassesCreator = {
     HugoPass.getPasses(options)
   }

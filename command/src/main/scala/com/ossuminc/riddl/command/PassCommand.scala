@@ -38,9 +38,9 @@ trait PassCommandOptions extends CommandOptions {
 abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) extends CommandPlugin[OPT](name) {
 
   def getPasses(
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: OPT
+                 log: Logger,
+                 commonOptions: CommonOptions,
+                 options: OPT
   ): PassesCreator
 
   def overrideOptions(options: OPT, newOutputDir: Path): OPT
@@ -69,10 +69,10 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) ex
   }
 
   override def run(
-    originalOptions: OPT,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    originalOptions: OPT,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val options = if outputDirOverride.nonEmpty then
       val path = outputDirOverride.fold(Path.of(""))(identity)
