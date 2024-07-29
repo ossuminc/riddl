@@ -17,7 +17,7 @@ class TopLevelParserTest extends ParsingTest {
 
   val origin = "simpleDomain.riddl"
 
-  val simpleDomainFile = new File(s"language/src/test/input/domains/$origin")
+  val simpleDomainFile = new File(s"language/jvm/src/test/input/domains/$origin")
   val rip: RiddlParserInput = RiddlParserInput(simpleDomainFile)
 
   val simpleDomain: AST.Domain = Domain(

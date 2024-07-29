@@ -12,7 +12,7 @@ import scala.io.AnsiColor.*
 /** Parsing tests that try a variety of code snippets that should parse */
 class SnippetsFileTest extends ParsingTest {
 
-  val topDir: Path = Path.of(s"language/src/test/input/snippets")
+  val topDir: Path = Path.of(s"language/jvm/src/test/input/snippets")
   val files: Iterable[File] = FileUtils.listFiles(topDir.toFile, Array("riddl"), true).asScala
 
   "Snippet Files" should {

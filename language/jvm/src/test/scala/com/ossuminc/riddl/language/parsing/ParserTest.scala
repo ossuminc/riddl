@@ -41,7 +41,7 @@ class ParserTest extends ParsingTest {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.message must include("whitespace after keyword")
+          errors.head.message must include("white space after keyword")
         case Right(_) => fail("'domainfoois' should be flagged as needing whitespace after a keyword")
       }
     }
@@ -348,7 +348,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "parse from a complex file" in {
-      val rpi = RiddlParserInput(Path.of("language/src/test/input/everything.riddl"))
+      val rpi = RiddlParserInput(Path.of("language/jvm/src/test/input/everything.riddl"))
       parseTopLevelDomains(rpi) match {
         case Left(errors) =>
           fail(errors.format)

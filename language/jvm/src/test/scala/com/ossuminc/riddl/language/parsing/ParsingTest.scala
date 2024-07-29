@@ -164,7 +164,7 @@ trait ParsingTest extends AnyWordSpec with Matchers {
   def checkFile(
     @unused label: String,
     fileName: String,
-    directory: String = "language/src/test/input/"
+    directory: String = "language/jvm/src/test/input/"
   ): Root = {
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput(file)
