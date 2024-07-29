@@ -36,13 +36,13 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .configure(With.build_info)
   .jvmConfigure(With.coverage(70))
   .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain=false,forProd=true))
+  .jsConfigure(With.js(hasMain = false, forProd = true))
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
-    description := "Various utilities used throughout riddl libraries",
+    description := "Various utilities used throughout riddl libraries"
   )
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
@@ -58,7 +58,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalaVersion := "3.4.2",
-    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings")
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
@@ -71,23 +71,39 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .jsSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
   )
-
 lazy val language = language_cp.jvm.dependsOn(utils)
-
 lazy val language_js = language_cp.js.dependsOn(utilsJS)
 
 val Passes = config("passes")
-lazy val passes = Module("passes", "riddl-passes")
-  .configure(With.typical, With.coverage(30))
-  .configure(With.publishing)
+lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
+  .configure(With.typical)
+  .jvmConfigure(With.coverage(30))
+  .jvmConfigure(With.publishing)
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
+    description := "AST Pass infrastructure and essential passes"
+  )
+  .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
-    description := "AST Pass infrastructure and essential passes",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils, comptest(language))
+  .dependsOn(utils_cp, language_cp % "compile->compile;test->test")
+val passes = passes_cp.jvm
+val passesJS = passes_cp.js
+
+val Analyses = config("analyses")
+lazy val analyses: Project = Module("analyses", "riddl-analyses")
+  .configure(With.typical)
+  .configure(With.coverage(50))
+  .configure(With.publishing)
+  .settings(
+    coverageExcludedFiles := """<empty>;$anon""",
+    scalaVersion := "3.4.2",
+    description := "Implementation of various AST analyses passes other libraries may use",
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+  )
+  .dependsOn(utils, language, comptest(passes))
 
 val Command = config("command")
 lazy val command = Module("command", "riddl-command")
@@ -120,19 +136,6 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
     testDep(passes),
     testDep(command)
   )
-
-val Analyses = config("analyses")
-lazy val analyses: Project = Module("analyses", "riddl-analyses")
-  .configure(With.typical)
-  .configure(With.coverage(50))
-  .configure(With.publishing)
-  .settings(
-    coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
-    description := "Implementation of various AST analyses passes other libraries may use",
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
-  )
-  .dependsOn(utils, language, comptest(passes))
 
 def testKitDep: ClasspathDependency = testkit % "test->compile;test->test"
 
@@ -221,9 +224,9 @@ lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
   (passes, Passes),
+  (analyses, Analyses),
   (command, Command),
   (testkit, TestKit),
-  (analyses, Analyses),
   (prettify, Prettify),
   (hugo, Hugo),
   (commands, Commands),
