@@ -12,7 +12,6 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.Path
-import java.net.URI
 
 /** Unit Tests For Abstract Syntax Tree */
 class ASTTest extends AnyWordSpec with Matchers {
@@ -30,8 +29,9 @@ class ASTTest extends AnyWordSpec with Matchers {
       fd.format must include(".")
     }
     "have useful URLDescription" in {
+      import com.ossuminc.riddl.utils.URL
       val url_text = "https://raw.githubusercontent.com/ossuminc/riddl/main/project/plugins.sbt"
-      val url: java.net.URL = URI.create(url_text).toURL
+      val url: URL = URL(url_text)
       val ud = URLDescription(At(), url)
       ud.loc.isEmpty mustBe (true)
       ud.url.toExternalForm must be(url_text)
@@ -79,7 +79,7 @@ class ASTTest extends AnyWordSpec with Matchers {
       )
       ZonedDateTime((0, 0)).format mustBe "ZonedDateTime(\"UTC\")"
       UUID((0, 0)).format mustBe "UUID"
-      URL((0, 0)).format mustBe "URL(\"https\")"
+      URI((0, 0)).format mustBe "URI(\"https\")"
       Location((0, 0)).format mustBe "Location"
 
       Blob((0, 0), BlobKind.Audio).format mustBe "Blob(Audio)"

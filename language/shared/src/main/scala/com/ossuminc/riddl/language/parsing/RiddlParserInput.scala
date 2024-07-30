@@ -7,16 +7,16 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.utils.URL
 import fastparse.ParserInput
 import fastparse.internal.Util
 
 import java.io.File
-import java.net.{URI, URL}
 import java.nio.file.Path
 import scala.collection.Searching
 import scala.io.Source
 import scala.language.implicitConversions
-import scala.scalajs.js.annotation.JSExportTopLevel
+import scala.scalajs.js.annotation.*
 
 /** Primary interface to setting up a RIDDL Parser's input. The idea here is to use one of the apply methods in this
   * companion object to construct a RiddlParserInput for a specific input source (file, path, Source, data string, URL,
@@ -31,10 +31,12 @@ object RiddlParserInput {
     * @#param
     *   data The UTF-8 string to be parsed
     */
+  @JSExport("createWith")
   implicit def apply(data: String): RiddlParserInput = {
     StringParserInput(data)
   }
 
+  @JSExport("createWith")
   implicit def apply(data: String, origin: String): RiddlParserInput = {
     StringParserInput(data, origin)
   }
@@ -67,13 +69,8 @@ object RiddlParserInput {
     * @param url
     *   The java.net.URL from which UTF-8 text will be read and parsed.
     */
+  @JSExport("createWith")
   implicit def apply(url: URL): RiddlParserInput = URLParserInput(url)
-
-  /** Set up a parser input for parsing directly from a file at a specific URI
-    * @param uri
-    *   The java.net.URI from which UTF-8 text will be read and parsed.
-    */
-  implicit def apply(uri: URI): RiddlParserInput = URIParserInput(uri)
 }
 
 /** Same as fastparse.IndexedParserInput but with Location support */
@@ -197,7 +194,7 @@ private[parsing] case class FileParserInput(file: File) extends RiddlParserInput
   }
 }
 
-private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
+/*private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
   lazy val data: String = {
     val source: Source = Source.fromURL(uri.toURL)
     try { source.getLines().mkString("\n") }
@@ -210,16 +207,15 @@ private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
   override def path: Option[Path] = {
     Some(root.toPath)
   }
-}
-
+}*/
 private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
+
+  import scala.concurrent.{Future, ExecutionContext, Await}
+  import scala.concurrent.duration.DurationInt
+
   // require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
-  lazy val data: String = {
-    val source: Source = Source.fromURL(url)
-    try {
-      source.getLines().mkString("\n")
-    } finally { source.close() }
-  }
+  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  val data: String = url.getContents.mkString("\n")
   assert(data.nonEmpty, s"Empty content from ${url.toExternalForm}")
   override def isEmpty: Boolean = data.isEmpty
   val root: File = new File(url.getFile)

@@ -10,13 +10,15 @@ import com.ossuminc.riddl.language.AST.{OccursInProjector, ProcessorRef}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
-import java.net.URL
 import java.nio.file.Path
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.tailrec
 import scala.io.{BufferedSource, Codec}
-import scala.scalajs.js.annotation.JSExportTopLevel
+import scala.scalajs.js.annotation._
+
 
 /** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax Tree. This raw AST
   * has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
@@ -106,6 +108,7 @@ object AST {
     * @param s
     *   The parsed value of the string content
     */
+
   case class LiteralString(loc: At, s: String) extends RiddlValue {
     override def format = s"\"$s\""
 
@@ -205,10 +208,8 @@ object AST {
   }
 
   /** An implementation of [[Description]] that provides the description at a URL */
-  case class URLDescription(loc: At, url: java.net.URL) extends Description {
-    lazy val lines: Seq[LiteralString] =
-      val source = scala.io.Source.fromURL(url)(Codec.UTF8)
-      source.getLines().toSeq.map(LiteralString(loc.copy(), _))
+  case class URLDescription(loc: At, url: com.ossuminc.riddl.utils.URL) extends Description {
+    lazy val lines: Seq[LiteralString] = url.getContents.map(LiteralString(loc.copy(), _))
     override def format: String = url.toExternalForm
   }
 
@@ -686,6 +687,7 @@ object AST {
     * sealed trait. All vital definitions contain comments, documentation, options, authors that defined it, include
     * statements, and term definitions.
     * @tparam CT
+    *   The type of the contents of the Vital Definition which must be rooted in RiddlValue
     */
   sealed trait VitalDefinition[CT <: RiddlValue]
       extends Definition
@@ -918,7 +920,7 @@ object AST {
     email: LiteralString,
     organization: Option[LiteralString] = None,
     title: Option[LiteralString] = None,
-    url: Option[java.net.URL] = None,
+    url: Option[com.ossuminc.riddl.utils.URL] = None,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -937,6 +939,7 @@ object AST {
     * @param pathId
     *   The [[PathIdentifier]] providing the path to the [[Author]]
     */
+  @JSExportTopLevel("AuthorRef")
   case class AuthorRef(loc: At, pathId: PathIdentifier)
       extends Reference[Author]
       with OccursInVitalDefinitions
@@ -981,6 +984,7 @@ object AST {
     * @param pathId
     *   The path identifier to the aliased type
     */
+  @JSExportTopLevel("AliasedTypeExpression")
   case class AliasedTypeExpression(loc: At, keyword: String, pathId: PathIdentifier) extends TypeExpression {
     override def format: String = s"$keyword ${pathId.format}"
   }
@@ -993,31 +997,37 @@ object AST {
   }
 
   /** An enumerator value to distinguish command aggregates */
+  @JSExportTopLevel("CommandCase")
   case object CommandCase extends AggregateUseCase {
     @inline def useCase: String = "Command"
   }
 
   /** An enumerator value to distinguish event aggregates */
+  @JSExportTopLevel("EventCase")
   case object EventCase extends AggregateUseCase {
     @inline def useCase: String = "Event"
   }
 
   /** An enumerator value to distinguish query aggregates */
+  @JSExportTopLevel("QueryCase")
   case object QueryCase extends AggregateUseCase {
     @inline def useCase: String = "Query"
   }
 
   /** An enumerator value  to distinguish result aggregates */
+  @JSExportTopLevel("ResultCase")
   case object ResultCase extends AggregateUseCase {
     @inline def useCase: String = "Result"
   }
 
   /** An enumerator value  to distinguish record aggregates */
+  @JSExportTopLevel("RecordCase")
   case object RecordCase extends AggregateUseCase {
     @inline def useCase: String = "Record"
   }
 
   /** An enumerator value to identify undistinguished aggregates */
+  @JSExportTopLevel("TypeCase")
   case object TypeCase extends AggregateUseCase {
     @inline def useCase: String = "Type"
   }
@@ -1038,6 +1048,7 @@ object AST {
     * @param typeExp
     *   The type expression that is indicated as optional
     */
+  @JSExportTopLevel("Optional")
   case class Optional(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}?"
   }
@@ -1049,6 +1060,7 @@ object AST {
     * @param typeExp
     *   The type expression that is indicated with a cardinality of zero or more.
     */
+  @JSExportTopLevel("ZeroOrMore")
   case class ZeroOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}*"
   }
@@ -1060,6 +1072,7 @@ object AST {
     * @param typeExp
     *   The type expression that is indicated with a cardinality of one or more.
     */
+  @JSExportTopLevel("OneOrMore")
   case class OneOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
     override def format: String = s"${typeExp.format}+"
   }
@@ -1075,6 +1088,7 @@ object AST {
     * @param max
     *   The maximum number of items
     */
+  @JSExportTopLevel("SpecificRange")
   case class SpecificRange(
     loc: At,
     typeExp: TypeExpression,
@@ -1095,6 +1109,7 @@ object AST {
     * @param description
     *   the description of the enumerator. Each Enumerator in an enumeration may define independent descriptions
     */
+  @JSExportTopLevel("Enumerator")
   case class Enumerator(
     loc: At,
     id: Identifier,
@@ -1113,6 +1128,7 @@ object AST {
     * @param enumerators
     *   The set of enumerators from which the value of this enumeration may be chosen.
     */
+  @JSExportTopLevel("Enumeration")
   case class Enumeration(loc: At, enumerators: Seq[Enumerator]) extends IntegerTypeExpression {
     override def format: String = "{ " + enumerators
       .map(_.format)
@@ -1128,6 +1144,7 @@ object AST {
     * @param of
     *   The set of type expressions from which the value for this alternation may be chosen
     */
+  @JSExportTopLevel("Alternation")
   case class Alternation(loc: At, of: Seq[AliasedTypeExpression]) extends TypeExpression {
     override def format: String =
       s"one of { ${of.map(_.format).mkString(", ")} }"
@@ -1140,6 +1157,7 @@ object AST {
     * @param of
     *   The type expression of the sequence's elements
     */
+  @JSExportTopLevel("Sequence")
   case class Sequence(loc: At, of: TypeExpression) extends TypeExpression {
     override def format: String = s"sequence of ${of.format}"
   }
@@ -1154,6 +1172,7 @@ object AST {
     * @param to
     *   The type expression for the values of the mapping
     */
+  @JSExportTopLevel("Mapping")
   case class Mapping(loc: At, from: TypeExpression, to: TypeExpression) extends TypeExpression {
     override def format: String = s"mapping from ${from.format} to ${to.format}"
   }
@@ -1165,6 +1184,7 @@ object AST {
     * @param of
     *   The type of the elements of the set.
     */
+  @JSExportTopLevel("Set")
   case class Set(loc: At, of: TypeExpression) extends TypeExpression {
 
     /** Format the node to a string */
@@ -1179,6 +1199,7 @@ object AST {
     * @param of
     *   The type of the elements of the graph
     */
+  @JSExportTopLevel("Graph")
   case class Graph(loc: At, of: TypeExpression) extends TypeExpression {
 
     /** Format the node to a string */
@@ -1194,6 +1215,7 @@ object AST {
     * @param dimensions
     *   The size of the dimensions of the table. There can be as many dimensions as needed.
     */
+  @JSExportTopLevel("Table")
   case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression {
     override def format: String = s"table of ${of.format}(${dimensions.mkString(",")})"
   }
@@ -1207,6 +1229,7 @@ object AST {
     *   The kind of data value that is replicated across cluster nodes. Because replicas imply use of a Conflict-free
     *   Replicated Data Type, the kind of type expression for `of` is restricted to numeric, set, and map types
     */
+  @JSExportTopLevel("Replica")
   case class Replica(loc: At, of: TypeExpression) extends TypeExpression {
     override def format: String = s"replica of ${of.format}"
   }
@@ -1232,6 +1255,7 @@ object AST {
     * @param description
     *   An optional description of the field.
     */
+  @JSExportTopLevel("Field")
   case class Field(
     loc: At,
     id: Identifier,
@@ -1256,6 +1280,7 @@ object AST {
     * @param typeEx
     *   The type of the argument as a [[TypeExpression]]
     */
+  @JSExportTopLevel("MethodArgument")
   case class MethodArgument(
     loc: At,
     name: String,
@@ -1280,11 +1305,12 @@ object AST {
     * @param description
     *   An optional description of the field.
     */
+  @JSExportTopLevel("Method")
   case class Method(
     loc: At,
     id: Identifier,
-    args: Seq[MethodArgument] = Seq.empty[MethodArgument],
     typeEx: TypeExpression,
+    args: Seq[MethodArgument] = Seq.empty[MethodArgument],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends LeafDefinition
@@ -1334,11 +1360,13 @@ object AST {
     * @param contents
     *   The content of the aggregation
     */
+  @JSExportTopLevel("Aggregation")
   case class Aggregation(
     loc: At,
     contents: Seq[RiddlValue] = Seq.empty
   ) extends AggregateTypeExpression(contents)
 
+  @JSExportTopLevel("Aggregation$")
   object Aggregation {
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
   }
@@ -1353,6 +1381,7 @@ object AST {
     * @param contents
     *   The contents of the message's aggregation
     */
+  @JSExportTopLevel("AggregateUseCaseTypeExpression")
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
@@ -1370,6 +1399,7 @@ object AST {
     * @param entity
     *   The type of entity referenced by this type expression.
     */
+  @JSExportTopLevel("EntityReferenceTypeExpression")
   case class EntityReferenceTypeExpression(loc: At, entity: PathIdentifier) extends TypeExpression {
     override def format: String = s"entity ${entity.format}"
   }
@@ -1384,6 +1414,7 @@ object AST {
     override def format: String = kind
   }
 
+  @JSExportTopLevel("PredefinedType")
   object PredefinedType {
     final def unapply(preType: PredefinedType): Option[String] =
       Option(preType.kind)
@@ -1399,6 +1430,7 @@ object AST {
     * @see
     *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
     */
+  @JSExportTopLevel("Pattern")
   case class Pattern(loc: At, pattern: Seq[LiteralString]) extends PredefinedType {
     override def format: String =
       s"$kind(${pattern.map(_.format).mkString(", ")})"
@@ -1417,6 +1449,7 @@ object AST {
     * @param max
     *   The maximum length of the string (default: MaxInt)
     */
+  @JSExportTopLevel("String_")
   case class String_(loc: At, min: Option[Long] = None, max: Option[Long] = None) extends PredefinedType {
     override inline def kind: String = "String"
     override def format: String = {
@@ -1435,6 +1468,7 @@ object AST {
     * @param entityPath
     *   The path identifier of the entity type
     */
+  @JSExportTopLevel("UniqueId")
   case class UniqueId(loc: At, entityPath: PathIdentifier) extends PredefinedType {
     inline override def kind: String = "Id"
 
@@ -1452,6 +1486,7 @@ object AST {
     * @param country
     *   The ISO 3166 A-3 three letter code for the country
     */
+  @JSExportTopLevel("Currency")
   case class Currency(loc: At, country: String) extends PredefinedType
 
   /** The simplest type expression: Abstract An abstract type expression is one that is not defined explicitly. It is
@@ -1461,11 +1496,13 @@ object AST {
     * @param loc
     *   The location of the Bool type expression
     */
+  @JSExportTopLevel("Abstract")
   case class Abstract(loc: At) extends PredefinedType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = true
   }
 
+  @JSExportTopLevel("UserId")
   case class UserId(loc: At) extends PredefinedType {
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || {
@@ -1481,6 +1518,7 @@ object AST {
     * @param loc
     *   The location of the Bool type expression
     */
+  @JSExportTopLevel("Bool")
   case class Bool(loc: At) extends PredefinedType with IntegerTypeExpression {
     override def kind: String = "Boolean"
   }
@@ -1490,6 +1528,7 @@ object AST {
     * @param loc
     *   The location of the number type expression
     */
+  @JSExportTopLevel("Number")
   case class Number(loc: At) extends PredefinedType with IntegerTypeExpression with RealTypeExpression {}
 
   /** A predefined type expression for an integer value
@@ -1497,10 +1536,13 @@ object AST {
     * @param loc
     *   The location of the integer type expression
     */
+  @JSExportTopLevel("Integer")
   case class Integer(loc: At) extends PredefinedType with IntegerTypeExpression
 
+  @JSExportTopLevel("Whole")
   case class Whole(loc: At) extends PredefinedType with IntegerTypeExpression
 
+  @JSExportTopLevel("Natural")
   case class Natural(loc: At) extends PredefinedType with IntegerTypeExpression
 
   /** A type expression that defines a set of integer values from a minimum value to a maximum value, inclusively.
@@ -1512,6 +1554,7 @@ object AST {
     * @param max
     *   The maximum value of the RangeType
     */
+  @JSExportTopLevel("RangeType")
   case class RangeType(loc: At, min: Long, max: Long) extends IntegerTypeExpression {
     override def format: String = s"$kind($min,$max)"
     inline override def kind: String = "Range"
@@ -1526,6 +1569,7 @@ object AST {
     * @param loc
     *   The location of the decimal integer type expression
     */
+  @JSExportTopLevel("Decimal")
   case class Decimal(loc: At, whole: Long, fractional: Long) extends RealTypeExpression {
 
     /** Format the node to a string */
@@ -1537,38 +1581,45 @@ object AST {
     * @param loc
     *   The location of the real number type expression
     */
+  @JSExportTopLevel("Real")
   case class Real(loc: At) extends PredefinedType with RealTypeExpression
 
   /** A predefined type expression for the SI Base unit for Current (amperes)
     * @param loc
     *   \- The locaitonof the current type expression
     */
+  @JSExportTopLevel("Current")
   case class Current(loc: At) extends PredefinedType with RealTypeExpression
 
   /** A predefined type expression for the SI Base unit for Length (meters)
     * @param loc
     *   The location of the current type expression
     */
+  @JSExportTopLevel("Length")
   case class Length(loc: At) extends PredefinedType with RealTypeExpression
 
   /** A predefined type expression for the SI Base Unit for Luminosity (candela)
     * @param loc
     *   The location of the luminosity expression
     */
+  @JSExportTopLevel("Luminosity")
   case class Luminosity(loc: At) extends PredefinedType with RealTypeExpression
 
+  @JSExportTopLevel("Mass")
   case class Mass(loc: At) extends PredefinedType with RealTypeExpression
 
   /** A predefined type expression for the SI Base Unit for Mole (mole)
     * @param loc
-    *   \- The location of the mass type expression
+    *   The location of the mass type expression
     */
+  @JSExportTopLevel("Mole")
   case class Mole(loc: At) extends PredefinedType with RealTypeExpression
 
   /** A predefined type expression for the SI Base Unit for Temperature (Kelvin)
     * @param loc
-    *   \- The location of the mass type expression
+    *   The location of the mass type expression
     */
+  @JSExportTopLevel("Temperature")
   case class Temperature(loc: At) extends PredefinedType with RealTypeExpression
 
   sealed trait TimeType extends PredefinedType
@@ -1578,6 +1629,7 @@ object AST {
     * @param loc
     *   The location of the date type expression.
     */
+  @JSExportTopLevel("Date")
   case class Date(loc: At) extends TimeType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -1592,6 +1644,7 @@ object AST {
     * @param loc
     *   The location of the time type expression.
     */
+  @JSExportTopLevel("Time")
   case class Time(loc: At) extends TimeType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -1606,6 +1659,7 @@ object AST {
     * @param loc
     *   The location of the datetime type expression.
     */
+  @JSExportTopLevel("DateTime")
   case class DateTime(loc: At) extends TimeType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -1615,6 +1669,7 @@ object AST {
     }
   }
 
+  @JSExportTopLevel("ZonedDatTime")
   case class ZonedDateTime(loc: At, zone: Option[LiteralString] = None) extends TimeType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -1632,6 +1687,7 @@ object AST {
     * @param loc
     *   The location of the timestamp
     */
+  @JSExportTopLevel("TimeStamp")
   case class TimeStamp(loc: At) extends TimeType {
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
       super.isAssignmentCompatible(other) || other.isInstanceOf[DateTime] ||
@@ -1646,6 +1702,7 @@ object AST {
     * @param loc
     *   The location of the duration type expression
     */
+  @JSExportTopLevel("Duration")
   case class Duration(loc: At) extends TimeType
 
   /** A predefined type expression for a universally unique identifier as defined by the Java Virtual Machine.
@@ -1653,6 +1710,7 @@ object AST {
     * @param loc
     *   The location of the UUID type expression
     */
+  @JSExportTopLevel("UUID")
   case class UUID(loc: At) extends PredefinedType
 
   /** A predefined type expression for a Uniform Resource Locator of a specific schema.
@@ -1662,7 +1720,8 @@ object AST {
     * @param scheme
     *   The scheme to which the URL is constrained.
     */
-  case class URL(loc: At, scheme: Option[LiteralString] = None) extends PredefinedType {
+  @JSExportTopLevel("URI")
+  case class URI(loc: At, scheme: Option[LiteralString] = None) extends PredefinedType {
     override def format: String = s"$kind(${scheme.map(_.format).getOrElse("\"https\"")})"
   }
 
@@ -1671,11 +1730,13 @@ object AST {
     * @param loc
     *   The location of the LatLong type expression.
     */
+  @JSExportTopLevel("Location")
   case class Location(loc: At) extends PredefinedType
 
   enum BlobKind:
     case Text, XML, JSON, Image, Audio, Video, CSV, FileSystem
 
+  @JSExportTopLevel("Blob")
   case class Blob(loc: At, blobKind: BlobKind) extends PredefinedType {
     override def format: String = s"$kind($blobKind)"
   }
@@ -1685,6 +1746,7 @@ object AST {
     * @param loc
     *   The location of the nothing type expression.
     */
+  @JSExportTopLevel("Nothing")
   case class Nothing(loc: At) extends PredefinedType {
     override def isAssignmentCompatible(other: TypeExpression): Boolean = false
   }
@@ -1697,6 +1759,7 @@ object AST {
       s"${messageKind.useCase.toLowerCase} ${pathId.format}"
   }
 
+  @JSExportTopLevel("MessageRef")
   object MessageRef {
     lazy val empty: MessageRef = new MessageRef {
       def messageKind: AggregateUseCase = RecordCase
@@ -1714,6 +1777,7 @@ object AST {
     * @param pathId
     *   The path identifier to the event type
     */
+  @JSExportTopLevel("CommandRef")
   case class CommandRef(
     loc: At,
     pathId: PathIdentifier
@@ -1728,6 +1792,7 @@ object AST {
     * @param pathId
     *   The path identifier to the event type
     */
+  @JSExportTopLevel("EventRef")
   case class EventRef(
     loc: At,
     pathId: PathIdentifier
@@ -1742,6 +1807,7 @@ object AST {
     * @param pathId
     *   The path identifier to the query type
     */
+  @JSExportTopLevel("QueryRef")
   case class QueryRef(
     loc: At,
     pathId: PathIdentifier
@@ -1756,6 +1822,7 @@ object AST {
     * @param pathId
     *   The path identifier to the result type
     */
+  @JSExportTopLevel("ResultRef")
   case class ResultRef(
     loc: At,
     pathId: PathIdentifier
@@ -1770,6 +1837,7 @@ object AST {
     * @param pathId
     *   The path identifier to the result type
     */
+  @JSExportTopLevel("RecordRef")
   case class RecordRef(
     loc: At,
     pathId: PathIdentifier
@@ -1792,6 +1860,7 @@ object AST {
     * @param description
     *   An optional description of the type.
     */
+  @JSExportTopLevel("Type")
   case class Type(
     loc: At,
     id: Identifier,
@@ -1832,6 +1901,7 @@ object AST {
     * @param pathId
     *   The path identifier of the reference type
     */
+  @JSExportTopLevel("TypeRef")
   case class TypeRef(
     loc: At = At.empty,
     keyword: String = "type",
@@ -1841,6 +1911,7 @@ object AST {
   }
   object TypeRef { def empty: TypeRef = TypeRef() }
 
+  @JSExportTopLevel("FieldRef")
   case class FieldRef(
     loc: At = At.empty,
     pathId: PathIdentifier = PathIdentifier.empty
@@ -1865,6 +1936,7 @@ object AST {
     * @param description
     *   A detailed description of the constant
     */
+  @JSExportTopLevel("Constant")
   case class Constant(
     loc: At,
     id: Identifier,
@@ -1881,6 +1953,7 @@ object AST {
       s"const ${id.format} is ${typeEx.format} = ${value.format}"
   }
 
+  @JSExportTopLevel("ConstantRef")
   case class ConstantRef(
     loc: At = At.empty,
     pathId: PathIdentifier = PathIdentifier.empty
@@ -1901,6 +1974,7 @@ object AST {
     * @param what
     *   The action to take (emitted as pseudo-code)
     */
+  @JSExportTopLevel("ArbitraryStatement")
   case class ArbitraryStatement(
     loc: At,
     what: LiteralString
@@ -1917,6 +1991,7 @@ object AST {
     * @param message
     *   The error message to report
     */
+  @JSExportTopLevel("ErrorStatement")
   case class ErrorStatement(
     loc: At,
     message: LiteralString
@@ -1932,6 +2007,7 @@ object AST {
     * @param group
     *   The group that is the target of the input focus
     */
+  @JSExportTopLevel("FocusStatement")
   case class FocusStatement(
     loc: At,
     group: GroupRef
@@ -1949,6 +2025,7 @@ object AST {
     * @param value
     *   A description of the value to set as a [[LiteralString]]
     */
+  @JSExportTopLevel("SetStatement")
   case class SetStatement(
     loc: At,
     field: FieldRef,
@@ -1965,6 +2042,7 @@ object AST {
     * @param value
     *   The value to be returned
     */
+  @JSExportTopLevel("ReturnStatement")
   case class ReturnStatement(
     loc: At,
     value: LiteralString
@@ -1982,6 +2060,7 @@ object AST {
     * @param portlet
     *   The inlet or outlet to which the message is sent
     */
+  @JSExportTopLevel("SendStatement")
   case class SendStatement(
     loc: At,
     msg: MessageRef,
@@ -1998,6 +2077,7 @@ object AST {
     * @param message
     *   The message to be returned
     */
+  @JSExportTopLevel("ReplyStatement")
   case class ReplyStatement(
     loc: At,
     message: MessageRef
@@ -2015,6 +2095,7 @@ object AST {
     * @param state
     *   The reference to the new state structure
     */
+  @JSExportTopLevel("MorphStatement")
   case class MorphStatement(
     loc: At,
     entity: EntityRef,
@@ -2035,6 +2116,7 @@ object AST {
     * @param handler
     *   The reference to the new handler for the entity
     */
+  @JSExportTopLevel("BecomeStatement")
   case class BecomeStatement(
     loc: At,
     entity: EntityRef,
@@ -2056,6 +2138,7 @@ object AST {
     * @param processorRef
     *   The processor to which the message is directed
     */
+  @JSExportTopLevel("TellStatement")
   case class TellStatement(
     loc: At,
     msg: MessageRef,
@@ -2072,6 +2155,7 @@ object AST {
     * @param func
     *   The function to be called
     */
+  @JSExportTopLevel("CallStatement")
   case class CallStatement(
     loc: At,
     func: FunctionRef
@@ -2088,6 +2172,7 @@ object AST {
     * @param do_
     *   The set of statements to execute for each iteration_
     */
+  @JSExportTopLevel("ForEachStatement")
   case class ForEachStatement(
     loc: At,
     ref: FieldRef | OutletRef | InletRef,
@@ -2109,6 +2194,7 @@ object AST {
     * @param elses
     *   The tsatements to execute if `cond` is false
     */
+  @JSExportTopLevel("IfThenElseStatement")
   case class IfThenElseStatement(
     loc: At,
     cond: LiteralString,
@@ -2122,6 +2208,7 @@ object AST {
   }
 
   /** A statement that terminates the On Clause */
+  @JSExportTopLevel("StopStatement")
   case class StopStatement(
     loc: At
   ) extends Statement {
@@ -2142,6 +2229,7 @@ object AST {
     * @param where
     *   A string describing the conditions on the read (like a SQL WHERE clause)
     */
+  @JSExportTopLevel("ReadStatement")
   case class ReadStatement(
     loc: At,
     keyword: String,
@@ -2164,6 +2252,7 @@ object AST {
     * @param to
     *   The [[TypeRef]] to the component of the Repository
     */
+  @JSExportTopLevel("WriteStatement")
   case class WriteStatement(
     loc: At,
     keyword: String,
@@ -2183,6 +2272,7 @@ object AST {
     * @param body
     *   The code that should be executed by this statement.
     */
+  @JSExportTopLevel("CodeStatement")
   case class CodeStatement(
     loc: At,
     language: LiteralString,
@@ -2203,6 +2293,7 @@ object AST {
     * @param loc
     *   Location in the source of the adaptor direction
     */
+  @JSExportTopLevel("InboundAdaptor")
   case class InboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "from"
   }
@@ -2210,6 +2301,7 @@ object AST {
   /** Represents an [[AdaptorDirection]] that is outbouand (towards a bounded context that is not the one that defined
     * the [[Adaptor]]
     */
+  @JSExportTopLevel("OutboundAdaptor")
   case class OutboundAdaptor(loc: At) extends AdaptorDirection {
     def format: String = "to"
   }
@@ -2233,6 +2325,7 @@ object AST {
     * @param description
     *   Optional description of the adaptor.
     */
+  @JSExportTopLevel("Adaptor")
   case class Adaptor(
     loc: At,
     id: Identifier,
@@ -2247,6 +2340,7 @@ object AST {
     def format: String = Keyword.adaptor + " " + id.format
   }
 
+  @JSExportTopLevel("AdaptorRef")
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
     override def format: String = Keyword.adaptor + " " + pathId.format
   }
@@ -2272,6 +2366,7 @@ object AST {
     * @param description
     *   An optional description of the function.
     */
+  @JSExportTopLevel("Function")
   case class Function(
     loc: At,
     id: Identifier,
@@ -2298,6 +2393,7 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced function.
     */
+  @JSExportTopLevel("FunctionRef")
   case class FunctionRef(loc: At, pathId: PathIdentifier) extends Reference[Function] {
     override def format: String = Keyword.function + " " + pathId.format
   }
@@ -2316,6 +2412,7 @@ object AST {
     * @param description
     *   An optional description of the invariant.
     */
+  @JSExportTopLevel("Invariant")
   case class Invariant(
     loc: At,
     id: Identifier,
@@ -2349,6 +2446,7 @@ object AST {
     * @param description
     *   An optional description of the on clause.
     */
+  @JSExportTopLevel("OnOtherClause")
   case class OnOtherClause(
     loc: At,
     statements: Seq[Statement] = Seq.empty[Statement],
@@ -2375,6 +2473,7 @@ object AST {
     * @param description
     *   An optional description of the on clause.
     */
+  @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
     loc: At,
     statements: Seq[Statement] = Seq.empty[Statement],
@@ -2406,6 +2505,7 @@ object AST {
     * @param description
     *   An optional description of the on clause.
     */
+  @JSExportTopLevel("OnMessageClause")
   case class OnMessageClause(
     loc: At,
     msg: MessageRef,
@@ -2432,6 +2532,7 @@ object AST {
     * @param description
     *   An optional description of the on clause.
     */
+  @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
     statements: Seq[Statement] = Seq.empty[Statement],
@@ -2465,6 +2566,7 @@ object AST {
     * @param description
     *   An optional description of the handler
     */
+  @JSExportTopLevel("Handler")
   case class Handler(
     loc: At,
     id: Identifier,
@@ -2495,6 +2597,7 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced handler
     */
+  @JSExportTopLevel("HandlerRef")
   case class HandlerRef(loc: At, pathId: PathIdentifier) extends Reference[Handler] {
     def format: String = Keyword.handler + " " + pathId.format
   }
@@ -2519,6 +2622,7 @@ object AST {
     * @param description
     *   An optional description of the state.
     */
+  @JSExportTopLevel("State")
   case class State(
     loc: At,
     id: Identifier,
@@ -2541,6 +2645,7 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced state definition
     */
+  @JSExportTopLevel("StateRef")
   case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State] {
     def format: String = Keyword.state + " " + pathId.format
   }
@@ -2560,6 +2665,7 @@ object AST {
     * @param description
     *   Optional description of the entity
     */
+  @JSExportTopLevel("Entity")
   case class Entity(
     loc: At,
     id: Identifier,
@@ -2580,6 +2686,7 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced entity.
     */
+  @JSExportTopLevel("EntityRef")
   case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity] {
     def format: String = Keyword.entity + " " + pathId.format
   }
@@ -2605,13 +2712,14 @@ object AST {
     *   A list of named relations between primary data nodes #indices A list of fields in the ((data)) or ((connectors)
     *   that are considered indexed for faster retrieval
     */
+  @JSExportTopLevel("Schema")
   case class Schema(
     loc: At,
     id: Identifier,
     schemaKind: RepositorySchemaKind = RepositorySchemaKind.Other,
-    data: Map[Identifier, TypeRef],
-    connectors: Map[Identifier, (TypeRef, TypeRef)],
-    indices: Seq[FieldRef]
+    data: Map[Identifier, TypeRef] = Map.empty[Identifier, TypeRef],
+    connectors: Map[Identifier, (TypeRef, TypeRef)] = Map.empty[Identifier, (TypeRef, TypeRef)],
+    indices: Seq[FieldRef] = Seq.empty[FieldRef]
   ) extends OccursInRepository {
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   }
@@ -2635,6 +2743,7 @@ object AST {
     * @param description
     *   A detailed description of this repository
     */
+  @JSExportTopLevel("Repository")
   case class Repository(
     loc: At,
     id: Identifier,
@@ -2654,6 +2763,7 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
+  @JSExportTopLevel("RepositoryRef")
   case class RepositoryRef(loc: At, pathId: PathIdentifier)
       extends Reference[Repository]
       with ProcessorRef[Projector]
@@ -2682,6 +2792,7 @@ object AST {
     * @param description
     *   A detailed description of this Projector
     */
+  @JSExportTopLevel("Projector")
   case class Projector(
     loc: At,
     id: Identifier,
@@ -2702,6 +2813,7 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
+  @JSExportTopLevel("ProjectorRef")
   case class ProjectorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Projector] {
     override def format: String = Keyword.projector + " " + pathId.format
   }
@@ -2724,6 +2836,7 @@ object AST {
     * @param description
     *   An optional description of the context
     */
+  @JSExportTopLevel("Context")
   case class Context(
     loc: At,
     id: Identifier,
@@ -2743,6 +2856,7 @@ object AST {
     def format: String = Keyword.context + " " + id.format
   }
 
+  @JSExportTopLevel("Context$")
   object Context {
     lazy val empty: Context = Context(At.empty, Identifier.empty)
   }
@@ -2754,6 +2868,7 @@ object AST {
     * @param pathId
     *   The path identifier for the referenced context
     */
+  @JSExportTopLevel("ContextRef")
   case class ContextRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Context] {
     override def format: String = s"context ${pathId.format}"
   }
@@ -2776,6 +2891,7 @@ object AST {
     * @param description
     *   An optional description of the Inlet
     */
+  @JSExportTopLevel("Inlet")
   case class Inlet(
     loc: At,
     id: Identifier,
@@ -2801,6 +2917,7 @@ object AST {
     * @param description
     *   An optional description of the Outlet.
     */
+  @JSExportTopLevel("Outlet")
   case class Outlet(
     loc: At,
     id: Identifier,
@@ -2828,6 +2945,7 @@ object AST {
     * @param description
     *   An optional description of the connector
     */
+  @JSExportTopLevel("Connector")
   case class Connector(
     loc: At,
     id: Identifier,
@@ -2848,42 +2966,49 @@ object AST {
     def keyword: String
   }
 
+  @JSExportTopLevel("Void")
   case class Void(loc: At) extends StreamletShape {
     def format: String = "void"
 
     def keyword: String = "void"
   }
 
+  @JSExportTopLevel("Source")
   case class Source(loc: At) extends StreamletShape {
     def format: String = "source"
 
     def keyword: String = "source"
   }
 
+  @JSExportTopLevel("Sink")
   case class Sink(loc: At) extends StreamletShape {
     def format: String = "sink"
 
     def keyword: String = "sink"
   }
 
+  @JSExportTopLevel("Flow")
   case class Flow(loc: At) extends StreamletShape {
     def format: String = "flow"
 
     def keyword: String = "flow"
   }
 
+  @JSExportTopLevel("Merge")
   case class Merge(loc: At) extends StreamletShape {
     def format: String = "merge"
 
     def keyword: String = "merge"
   }
 
+  @JSExportTopLevel("Split")
   case class Split(loc: At) extends StreamletShape {
     def format: String = "split"
 
     def keyword: String = "split"
   }
 
+  @JSExportTopLevel("Router")
   case class Router(loc: At) extends StreamletShape {
     def format: String = "router"
 
@@ -2905,6 +3030,7 @@ object AST {
     * @param description
     *   An optional description of the processor
     */
+  @JSExportTopLevel("Streamlet")
   case class Streamlet(
     loc: At,
     id: Identifier,
@@ -2965,6 +3091,7 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced projector definition
     */
+  @JSExportTopLevel("StreamletRef")
   case class StreamletRef(loc: At, keyword: String, pathId: PathIdentifier) extends ProcessorRef[Streamlet] {
     override def format: String = s"$keyword ${pathId.format}"
   }
@@ -2983,9 +3110,11 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced [[Inlet]]
     */
+  @JSExportTopLevel("InletRef")
   case class InletRef(loc: At, pathId: PathIdentifier) extends PortletRef[Inlet] {
     override def format: String = s"inlet ${pathId.format}"
   }
+  @JSExportTopLevel("InletRef$")
   object InletRef { def empty: InletRef = InletRef(At.empty, PathIdentifier.empty) }
 
   /** A reference to an [[Outlet]]
@@ -2995,9 +3124,11 @@ object AST {
     * @param pathId
     *   The path identifier of the referenced [[Outlet]]
     */
+  @JSExportTopLevel("OutletRef")
   case class OutletRef(loc: At, pathId: PathIdentifier) extends PortletRef[Outlet] {
     override def format: String = s"outlet ${pathId.format}"
   }
+  @JSExportTopLevel("OutletRef$")
   object OutletRef { def empty: OutletRef = OutletRef(At.empty, PathIdentifier.empty) }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// SAGA
@@ -3017,6 +3148,7 @@ object AST {
     * @param description
     *   An optional description of the saga action
     */
+  @JSExportTopLevel("SagaStep")
   case class SagaStep(
     loc: At,
     id: Identifier,
@@ -3048,6 +3180,7 @@ object AST {
     * @param description
     *   An optional description of the saga.
     */
+  @JSExportTopLevel("Saga")
   case class Saga(
     loc: At,
     id: Identifier,
@@ -3066,6 +3199,7 @@ object AST {
 
   }
 
+  @JSExportTopLevel("SagaRef")
   case class SagaRef(loc: At, pathId: PathIdentifier) extends Reference[Saga] {
     def format: String = s"saga ${pathId.format}"
   }
@@ -3079,6 +3213,7 @@ object AST {
     * @param pathId
     *   The path identifier that locates the User
     */
+  @JSExportTopLevel("UserRef")
   case class UserRef(loc: At, pathId: PathIdentifier) extends Reference[User] {
     def format: String = s"user ${pathId.format}"
   }
@@ -3113,6 +3248,7 @@ object AST {
     * @param brief
     *   A brief description of the parallel group
     */
+  @JSExportTopLevel("ParallelInteractions")
   case class ParallelInteractions(
     loc: At,
     contents: Contents[Interaction | Comment] = Seq.empty[Interaction | Comment],
@@ -3134,10 +3270,11 @@ object AST {
     * @param description
     *   A longer description of the sequence
     */
+  @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
     loc: At,
     contents: Contents[Interaction | Comment] = Seq.empty[Interaction | Comment],
-    brief: Option[LiteralString],
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
     override def kind: String = "Sequential Interaction"
@@ -3152,16 +3289,18 @@ object AST {
     * @param brief
     *   A brief description of the optional group
     */
+  @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
     loc: At,
     contents: Contents[Interaction | Comment] = Seq.empty[Interaction | Comment],
-    brief: Option[LiteralString],
+    brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
     override def kind: String = "Optional Interaction"
   }
 
   /** An [[GenericInteraction]] that is vaguely written as a textual description */
+  @JSExportTopLevel("VagueInteraction")
   case class VagueInteraction(
     loc: At,
     from: LiteralString,
@@ -3189,6 +3328,7 @@ object AST {
     * @param description
     *   A full description of this interaction
     */
+  @JSExportTopLevel("SendMessageInteraction")
   case class SendMessageInteraction(
     loc: At,
     from: Reference[Definition],
@@ -3218,6 +3358,7 @@ object AST {
     * @param brief
     *   A brief description of the interaction step
     */
+  @JSExportTopLevel("ArbitraryInteraction")
   case class ArbitraryInteraction(
     loc: At,
     from: Reference[Definition],
@@ -3245,6 +3386,7 @@ object AST {
     * @param description
     *   A full description of the interaction for documentation purposes
     */
+  @JSExportTopLevel("SelfInteraction")
   case class SelfInteraction(
     loc: At,
     from: Reference[Definition],
@@ -3268,6 +3410,7 @@ object AST {
     * @param brief
     *   A brief description of this interaction
     */
+  @JSExportTopLevel("FocusOnGroupInteraction")
   case class FocusOnGroupInteraction(
     loc: At,
     from: UserRef,
@@ -3293,10 +3436,11 @@ object AST {
     * @param description
     *   A more full description of the interaction for documentation purposes
     */
+  @JSExportTopLevel("DirectUserToURLInteraction")
   case class DirectUserToURLInteraction(
     loc: At,
     from: UserRef,
-    url: java.net.URL,
+    url: com.ossuminc.riddl.utils.URL,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
@@ -3318,6 +3462,7 @@ object AST {
     * @param brief
     *   A brief description of this interaction
     */
+  @JSExportTopLevel("ShowOutputInteraction")
   case class ShowOutputInteraction(
     loc: At,
     from: OutputRef,
@@ -3341,6 +3486,7 @@ object AST {
     * @param brief
     *   A description of this interaction step
     */
+  @JSExportTopLevel("SelectInputInteraction")
   case class SelectInputInteraction(
     loc: At,
     from: UserRef,
@@ -3364,6 +3510,7 @@ object AST {
     * @param brief
     *   A description of this interaction step
     */
+  @JSExportTopLevel("TakeInputInteraction")
   case class TakeInputInteraction(
     loc: At,
     from: UserRef,
@@ -3389,6 +3536,7 @@ object AST {
     * @param description
     *   A longer description of this use case
     */
+  @JSExportTopLevel("UseCase")
   case class UseCase(
     loc: At,
     id: Identifier,
@@ -3414,6 +3562,7 @@ object AST {
     * @param benefit
     *   The benefit of that utilization
     */
+  @JSExportTopLevel("UserStory")
   case class UserStory(
     loc: At = At.empty,
     user: UserRef = UserRef(At.empty, PathIdentifier.empty),
@@ -3445,11 +3594,12 @@ object AST {
     * @param description
     *   An more detailed description of the Epic
     */
+  @JSExportTopLevel("Epic")
   case class Epic(
     loc: At,
     id: Identifier,
     userStory: Option[UserStory] = Option.empty[UserStory],
-    shownBy: Seq[java.net.URL] = Seq.empty[java.net.URL],
+    shownBy: Seq[com.ossuminc.riddl.utils.URL] = Seq.empty[com.ossuminc.riddl.utils.URL],
     contents: Seq[OccursInEpic] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
@@ -3469,6 +3619,7 @@ object AST {
     * @param pathId
     *   The path id of the referenced Story
     */
+  @JSExportTopLevel("EpicRef")
   case class EpicRef(loc: At, pathId: PathIdentifier) extends Reference[Epic] {
     def format: String = s"epic ${pathId.format}"
   }
@@ -3487,11 +3638,12 @@ object AST {
     * @param description
     *   A more detailed description of the group
     */
+  @JSExportTopLevel("Group")
   case class Group(
     loc: At,
     alias: String,
     id: Identifier,
-    shownBy: Option[java.net.URL] = None,
+    shownBy: Option[com.ossuminc.riddl.utils.URL] = None,
     elements: Seq[OccursInGroup] = Seq.empty[OccursInGroup],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
@@ -3518,6 +3670,7 @@ object AST {
     * @param pathId
     *   The path to the referenced group
     */
+  @JSExportTopLevel("GroupRef")
   case class GroupRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Group] {
     def format: String = s"$keyword ${pathId.format}"
   }
@@ -3531,6 +3684,7 @@ object AST {
     * @param group
     *   The contained group as a reference to that group
     */
+  @JSExportTopLevel("ContainedGroup")
   case class ContainedGroup(
     loc: At,
     id: Identifier,
@@ -3558,6 +3712,7 @@ object AST {
     * @param description
     *   A detailed description of the view
     */
+  @JSExportTopLevel("Output")
   case class Output(
     loc: At,
     nounAlias: String,
@@ -3590,6 +3745,7 @@ object AST {
     * @param pathId
     *   The path identifier that refers to the View
     */
+  @JSExportTopLevel("OutputRef")
   case class OutputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Output] {
     def format: String = s"$keyword ${pathId.format}"
   }
@@ -3608,6 +3764,7 @@ object AST {
     * @param description
     *   a detailed description of the Give
     */
+  @JSExportTopLevel("Input")
   case class Input(
     loc: At,
     nounAlias: String,
@@ -3642,6 +3799,7 @@ object AST {
     * @param pathId
     *   The path identifier that refers to the Give
     */
+  @JSExportTopLevel("InputRef")
   case class InputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Input] {
     def format: String = s"$keyword ${pathId.format}"
   }
@@ -3659,6 +3817,7 @@ object AST {
     * @param description
     *   A longer description of the application.
     */
+  @JSExportTopLevel("Application")
   case class Application(
     loc: At,
     id: Identifier,
@@ -3679,6 +3838,7 @@ object AST {
     * @param pathId
     *   The path identifier that refers to the Application
     */
+  @JSExportTopLevel("ApplicationRef")
   case class ApplicationRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Application] {
     def format: String = Keyword.application + " " + pathId.format
   }
@@ -3700,6 +3860,7 @@ object AST {
     * @param description
     *   An optional description of the domain.
     */
+  @JSExportTopLevel("Domain")
   case class Domain(
     loc: At,
     id: Identifier,
@@ -3729,6 +3890,7 @@ object AST {
     * @param pathId
     *   The path identifier for the referenced domain.
     */
+  @JSExportTopLevel("DomainRef")
   case class DomainRef(loc: At, pathId: PathIdentifier) extends Reference[Domain] {
     override def format: String = s"domain ${pathId.format}"
   }
@@ -3744,6 +3906,7 @@ object AST {
     * @return
     *   The list of [[AST.Author]]s of definition
     */
+  @JSExport
   def findAuthors(
     defn: RiddlValue,
     parents: Seq[Container[RiddlValue]]
@@ -3764,6 +3927,7 @@ object AST {
     * @return
     *   A Seq of [[AST.Domain]]s as a [[AST.Contents]] extension
     */
+  @JSExport
   def getTopLevelDomains(root: Root): Contents[Domain] = {
     root.domains ++ root.includes.flatMap(_.contents.filter[Domain])
   }
@@ -3774,6 +3938,7 @@ object AST {
     * @return
     *   The subdomains of the provided domain as a [[AST.Contents]] extension
     */
+  @JSExport
   def getDomains(domain: Domain): Contents[Domain] = {
     domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
   }
@@ -3784,6 +3949,7 @@ object AST {
     * @return
     *   A Seq of Context expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getContexts(domain: Domain): Contents[Context] = {
     domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
   }
@@ -3794,6 +3960,7 @@ object AST {
     * @return
     *   A Seq of [[AST.Application]] expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getApplications(domain: Domain): Contents[Application] = {
     domain.applications ++ domain.includes.flatMap(_.contents.filter[Application])
   }
@@ -3805,6 +3972,7 @@ object AST {
     * @return
     *   A [[scala.Seq]] of [[AST.Epic]] expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getEpics(domain: Domain): Contents[Epic] = {
     domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
   }
@@ -3816,6 +3984,7 @@ object AST {
     * @return
     *   A Seq of [[AST.Entity]] expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getEntities(context: Context): Contents[Entity] = {
     context.entities ++ context.includes.flatMap(_.contents.filter[Entity])
   }
@@ -3827,6 +3996,7 @@ object AST {
     * @return
     *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getAuthors(domain: Domain): Contents[Author] = {
     val nested = domain.includes.flatMap(_.contents.filter[Author])
     domain.authors ++ domain.domains.flatMap(getAuthors) ++ nested
@@ -3839,6 +4009,7 @@ object AST {
     * @return
     *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getAuthors(root: Root): Contents[Author] = {
     root.domains.flatMap(getAuthors)
   }
@@ -3850,6 +4021,7 @@ object AST {
     * @return
     *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getUsers(domain: Domain): Contents[User] = {
     val nested = domain.includes.flatMap(_.contents.filter[User])
     domain.users ++ domain.domains.flatMap(getUsers) ++ nested
@@ -3861,6 +4033,7 @@ object AST {
     * @return
     *   A Seq of [[AST.User]] expressed as a [[AST.Contents]] extension
     */
+  @JSExport
   def getUsers(root: Root): Contents[User] = {
     root.domains.flatMap(getUsers) ++ root.includes.flatMap(_.contents.filter[User])
   }
@@ -3871,6 +4044,7 @@ object AST {
       * @return
       *   The content of the formatted LiteralString or "N/A" if it is not available
       */
+    @JSExport
     def format: String = optLit.map(_.format).getOrElse("N/A")
 
   /** A utility function for getting the kind of a type expression.
@@ -3881,6 +4055,7 @@ object AST {
     * @return
     *   A string indicating the kind corresponding to te
     */
+  @JSExport
   def errorDescription(te: TypeExpression): String = {
     te match {
       case AliasedTypeExpression(_, keyword, pid) => s"$keyword ${pid.format}"

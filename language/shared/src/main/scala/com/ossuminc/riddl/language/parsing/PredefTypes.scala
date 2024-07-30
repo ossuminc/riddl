@@ -106,7 +106,7 @@ object PredefType {
   final val Time = "Time"
   final val TimeStamp = "TimeStamp"
   final val Unknown = "Unknown"
-  final val URL = "URL"
+  final val URI = "URI"
   final val UserId = "UserId"
   final val UUID = "UUID"
   final val Whole = "Whole"

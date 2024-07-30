@@ -93,9 +93,9 @@ class TypeParserTest extends ParsingTest {
         "type stamp = TimeStamp" ->
           Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
         "type url = URL" ->
-          Type(1 -> 1, Identifier(1 -> 6, "url"), URL(1 -> 12)),
+          Type(1 -> 1, Identifier(1 -> 6, "url"), URI(1 -> 12)),
         "type FirstName = URL" ->
-          Type(1 -> 1, Identifier(1 -> 6, "FirstName"), URL(1 -> 18, None))
+          Type(1 -> 1, Identifier(1 -> 6, "FirstName"), URI(1 -> 18, None))
       )
       checkDefinitions[Type, Type](cases, identity)
     }
@@ -219,8 +219,8 @@ class TypeParserTest extends ParsingTest {
             Method(
               (3, 3, rip),
               Identifier((3, 3, rip), "calc"),
-              Seq(MethodArgument((3, 8, rip), "key", Number((3, 13, rip)))),
-              Number((3, 22, rip))
+              Number((3, 22, rip)),
+              Seq(MethodArgument((3, 8, rip), "key", Number((3, 13, rip))))
             )
           )
         )

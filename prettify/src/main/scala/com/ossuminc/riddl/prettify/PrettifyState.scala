@@ -18,7 +18,7 @@ import scala.collection.mutable
 case class PrettifyState(
   options: PrettifyPass.Options = PrettifyPass.Options()
 )   extends TranslatingState[RiddlFileEmitter] {
-  
+
   require(options.inputFile.nonEmpty, "No input file specified")
   require(options.outputDir.nonEmpty, "No output directory specified")
 

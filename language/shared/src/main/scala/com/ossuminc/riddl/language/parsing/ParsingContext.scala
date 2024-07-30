@@ -85,8 +85,8 @@ trait ParsingContext extends ParsingErrors {
   private def startNextSource(from: LiteralString)(implicit ctx: P[?]): RiddlParserInput = {
     val str = from.s
     if str.startsWith("http") then {
-      val url = java.net.URI(str).toURL
-      RiddlParserInput(url)
+      import com.ossuminc.riddl.utils.URL
+      RiddlParserInput(URL(str))
     } else {
       val name = {
         if str.endsWith(".riddl") then str

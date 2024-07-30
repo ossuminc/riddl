@@ -8,11 +8,14 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
 
+import scalajs.js.annotation._
+
 /** The context for finding things within a given [Ccontainer]] or [[AST.RiddlValue]] as found in the AST model. This
   * provides the ability to find values in the model by traversing it and looking for the matching condition.
   * @param root
   *   The container of RiddlValues to traverse for the sought condition
   */
+@JSExportTopLevel("Finder")
 case class Finder(root: Container[RiddlValue]) {
 
   /** Search the `root` for a [[AST.RiddlValue]] that matches the boolean expression
@@ -21,6 +24,7 @@ case class Finder(root: Container[RiddlValue]) {
     * @return
     *   A [[scala.Seq]] of the matching [[AST.RiddlValue]]
     */
+  @JSExport
   def find(select: RiddlValue => Boolean): Seq[RiddlValue] = {
     Folding.foldEachDefinition(root, root, Seq.empty) { case (_, value, state) =>
       if select(value) then state :+ value else state
@@ -38,10 +42,10 @@ case class Finder(root: Container[RiddlValue]) {
     *   A [[Finder#DefWithParents]] that returns a [[scala.Seq]] of two-tuples with
     *   the [[AST.RiddlValue]] a a [[scala.Seq]] of the parents of that value.
     */
-  def findWithParents(
+  @JSExport def findWithParents(
     select: RiddlValue => Boolean
   ): DefWithParents = {
-    Folding.foldLeftWithStack(Seq.empty[(RiddlValue, Seq[RiddlValue])])(root) { case (state, definition, parents) =>
+    Folding.foldLeftWithStack(Seq.empty[(RiddlValue, Seq[RiddlValue])],root) { case (state, definition, parents) =>
       if select(definition) then state :+ (definition -> parents) else state
     }
   }
@@ -51,5 +55,5 @@ case class Finder(root: Container[RiddlValue]) {
     * @return
     *   A [[scala.Seq]] of [[AST.RiddlValue]], along with their parents that are empty
     */
-  def findEmpty: DefWithParents = findWithParents(_.isEmpty)
+  @JSExport def findEmpty: DefWithParents = findWithParents(_.isEmpty)
 }

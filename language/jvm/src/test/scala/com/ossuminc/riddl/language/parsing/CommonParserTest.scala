@@ -39,13 +39,14 @@ class CommonParserTest extends ParsingTest {
       parseDomainDefinition(input, identity) match {
         case Left(errors) => fail(errors.format)
         case Right((domain, _)) =>
+          import com.ossuminc.riddl.utils.URL
           val expected = Domain(
             (1, 1),
             Identifier((1, 8), "foo"),
             description = Some(
               URLDescription(
                 (2, 1),
-                java.net.URI("https://www.wordnik.com/words/phi").toURL
+                URL("https://www.wordnik.com/words/phi")
               )
             )
           )

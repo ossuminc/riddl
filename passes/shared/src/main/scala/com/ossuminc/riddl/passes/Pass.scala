@@ -16,7 +16,7 @@ import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
-import org.apache.commons.lang3.exception.ExceptionUtils
+import com.ossuminc.riddl.utils.ExceptionUtils
 
 import scala.annotation.unused
 import scala.collection.mutable

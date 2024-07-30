@@ -83,7 +83,7 @@ class FoldingTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
-          val result = Folding.foldLeftWithStack(empty)(content) { case (track, definition, stack) =>
+          val result = Folding.foldLeftWithStack(empty,content) { case (track, definition, stack) =>
             val previous: Seq[String] = stack.map {
               case nv: NamedValue => nv.identify
               case rv: RiddlValue => rv.toString

@@ -9,6 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 
 import java.nio.file.Path
+import com.ossuminc.riddl.utils.URL
 
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
@@ -41,24 +42,27 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle non existent URL" in {
-      val emptyURL = new java.net.URI(
+      val nonExistentURL = URL(
         "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
       )
-      parseDomainDefinition(
-        RiddlParserInput(emptyURL),
-        identity
-      ) match {
-        case Right(_) =>
-          fail("Should have gotten 'port out of range' error")
-        case Left(errors) =>
-          errors.size must be(1)
-          errors.exists(_.format.contains("port out of range: 8900000"))
+      intercept[java.io.FileNotFoundException] {
+        parseDomainDefinition(
+          RiddlParserInput(nonExistentURL),
+          identity
+        ) match {
+          case Right(_) =>
+            fail("Should have gotten 'port out of range' error")
+          case Left(errors) =>
+            errors.size must be(1)
+            errors.exists(_.format.contains("port out of range: 8900000"))
+        }
       }
     }
     "handle existing URI" in {
+      import com.ossuminc.riddl.utils.URL
       val cwd = System.getProperty("user.dir", ".")
       val urlStr: String = s"file:///$cwd/testkit/src/test/input/domains/simpleDomain.riddl"
-      val uri = java.net.URI(urlStr)
+      val uri = URL(urlStr)
       parseDomainDefinition(
         RiddlParserInput(uri),
         identity
@@ -106,7 +110,7 @@ class IncludeAndImportTest extends ParsingTest {
       root.domains.head.includes.head.contents mustNot be(empty)
     }
     "warn about duplicate includes" in {
-      val path = Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl") 
+      val path = Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl")
       val input = RiddlParserInput(path)
       TopLevelParser.parseInput(input) match {
         case Right(_) =>
@@ -116,7 +120,7 @@ class IncludeAndImportTest extends ParsingTest {
           if errors.nonEmpty then fail(errors.format)
           val warnings = messages.justWarnings
           warnings.size mustBe 1
-          warnings.head.message must include ("Duplicate include origin detected in someTypes")
+          warnings.head.message must include("Duplicate include origin detected in someTypes")
           succeed
       }
 

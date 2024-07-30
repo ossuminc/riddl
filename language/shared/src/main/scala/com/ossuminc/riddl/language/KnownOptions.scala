@@ -1,6 +1,9 @@
 package com.ossuminc.riddl.language
 
+import scala.scalajs.js.annotation.JSExportTopLevel
+
 /** AN object that defines the names of the known options */
+@JSExportTopLevel("KnownOptions")
 object KnownOptions {
 
   final val adaptor: Seq[String] = Seq(

@@ -12,17 +12,20 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
+import scalajs.js.annotation.*
 
 import scala.collection.mutable
 
 /** The information needed to generate a Data Flow Diagram. DFDs are generated for each
   * [[com.ossuminc.riddl.language.AST.Context]] and consist of the streaming components that that are connected.
   */
+@JSExport("DataFlowDiagramData")
 case class DataFlowDiagramData()
 
 /** The information needed to generate a Use Case Diagram. The diagram for a use case is very similar to a Sequence
   * Diagram showing the interactions between involved components of the model.
   */
+@JSExport("UseCaseDiagramData")
 case class UseCaseDiagramData(
   name: String,
   actors: Map[String, Definition],

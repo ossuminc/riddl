@@ -6,11 +6,11 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import Readability.*
-import java.net.URL
 
 private[parsing] trait EpicParser {
   this: CommonParser & ReferenceParser =>
@@ -159,11 +159,11 @@ private[parsing] trait EpicParser {
     }
   }
 
-  def shownBy[u: P]: P[Seq[java.net.URL]] = {
+  def shownBy[u: P]: P[Seq[URL]] = {
     P(
       Keywords.shown ~ Readability.by ~ open ~
         httpUrl.rep(0, Punctuation.comma) ~ close
-    ).?.map { (x: Option[Seq[java.net.URL]]) => x.getOrElse(Seq.empty[java.net.URL]) }
+    ).?.map { (x: Option[Seq[URL]]) => x.getOrElse(Seq.empty[URL]) }
   }
 
   private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
@@ -176,7 +176,7 @@ private[parsing] trait EpicParser {
 
   private type EpicBody = (
     Option[UserStory],
-    Seq[java.net.URL],
+    Seq[URL],
     Seq[OccursInEpic]
   )
 
@@ -185,7 +185,7 @@ private[parsing] trait EpicParser {
       undefined(
         (
           Option.empty[UserStory],
-          Seq.empty[java.net.URL],
+          Seq.empty[URL],
           Seq.empty[OccursInEpic]
         )
       )./ |

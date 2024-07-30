@@ -10,13 +10,12 @@ import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.translate.TranslatingState
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.Pass.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.{SymbolsPass, Symbols}
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.passes.translate.TranslatingOptions
+import com.ossuminc.riddl.passes.translate.{TranslatingOptions, TranslatingState}
 import com.ossuminc.riddl.command.PassCommandOptions
 import com.ossuminc.riddl.analyses.{StatsPass, DiagramsPass}
 import com.ossuminc.riddl.hugo.mermaid.*

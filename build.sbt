@@ -36,7 +36,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .configure(With.build_info)
   .jvmConfigure(With.coverage(70))
   .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true))
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
@@ -47,6 +47,9 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+  )
+  .jsSettings(
+    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0"
   )
 
 lazy val utils = utils_cp.jvm
@@ -62,12 +65,12 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
     libraryDependencies += Dep.commons_io % Test
   )
-  .jsConfigure(With.js(hasMain = false, forProd = true))
   .jsSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
   )
@@ -79,6 +82,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .configure(With.typical)
   .jvmConfigure(With.coverage(30))
   .jvmConfigure(With.publishing)
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
@@ -93,17 +97,22 @@ val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
 val Analyses = config("analyses")
-lazy val analyses: Project = Module("analyses", "riddl-analyses")
+lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(JVM,JS)
   .configure(With.typical)
-  .configure(With.coverage(50))
-  .configure(With.publishing)
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(With.publishing)
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
   .settings(
-    coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.2",
     description := "Implementation of various AST analyses passes other libraries may use",
+  )
+  .jvmSettings(
+    coverageExcludedFiles := """<empty>;$anon""",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(utils, language, comptest(passes))
+  .dependsOn(utils_cp, language_cp, passes_cp % "compile->compile;test->test")
+val analyses = analyses_cp.jvm
+val analysesJS = analyses_cp.js
 
 val Command = config("command")
 lazy val command = Module("command", "riddl-command")
@@ -164,7 +173,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils, comptest(language), comptest(passes), comptest(command), analyses, testKitDep)
+  .dependsOn(utils, comptest(language), comptest(passes), comptest(command), analyses, prettify, testKitDep)
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")

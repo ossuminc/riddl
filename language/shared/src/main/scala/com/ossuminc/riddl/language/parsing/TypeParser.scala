@@ -212,11 +212,11 @@ private[parsing] trait TypeParser extends CommonParser {
     ).map { tpl => Currency.apply.tupled(tpl) }
   }
 
-  private def urlType[u: P]: P[URL] = {
+  private def urlType[u: P]: P[URI] = {
     P(
       location ~ PredefTypes.URL ~/
         (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
-    ).map { tpl => URL.apply.tupled(tpl) }
+    ).map { tpl => URI.apply.tupled(tpl) }
   }
 
   private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
@@ -379,7 +379,9 @@ private[parsing] trait TypeParser extends CommonParser {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
         is ~ fieldTypeExpression ~ briefly ~ description
-    ).map(tpl => Method.apply.tupled(tpl))
+    ).map { case (loc, id, args, typeExp, briefly, description) =>
+      Method.apply(loc, id, typeExp, args, briefly, description)
+    }
   }
 
   private def aggregateContent[u: P]: P[RiddlValue] = {
@@ -531,11 +533,11 @@ private[parsing] trait TypeParser extends CommonParser {
     )
   }
 
-  private def scalaAggregateDefinition[u:P]: P[Aggregation] = {
+  private def scalaAggregateDefinition[u: P]: P[Aggregation] = {
     P(
-      location ~ Punctuation.roundOpen ~ field.rep(0,",") ~ Punctuation.roundClose
-    ).map {
-      case (location, fields) => Aggregation(location, fields)
+      location ~ Punctuation.roundOpen ~ field.rep(0, ",") ~ Punctuation.roundClose
+    ).map { case (location, fields) =>
+      Aggregation(location, fields)
     }
   }
 

@@ -16,6 +16,7 @@ import fastparse.MultiLineWhitespace.*
 import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
+import scala.scalajs.js.annotation._
 
 /** The TopLevel (Root) parser.
   * This class
@@ -23,10 +24,11 @@ import scala.concurrent.ExecutionContext
   * @param commonOptions
   * @param ec
   */
+@JSExportTopLevel("TopLevelParser")
 class TopLevelParser(
   val input: RiddlParserInput,
   val commonOptions: CommonOptions = CommonOptions.empty
-)(implicit val ec: ExecutionContext)
+)(implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global)
     extends DomainParser
     with AdaptorParser
     with ApplicationParser
@@ -61,6 +63,7 @@ class TopLevelParser(
     rootValues.map { (content: Seq[OccursAtRootScope]) => Root(content) }
   }
 
+  @JSExport
   def parseRoot(withVerboseFailures: Boolean = false): Either[Messages, Root] = {
     parseRule[Root](input, root(_), withVerboseFailures) {
       (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
@@ -76,8 +79,10 @@ class TopLevelParser(
   }
 }
 
+@JSExportTopLevel("TopLevelParser$")
 object TopLevelParser {
 
+  @JSExport  
   def parseInput(
     input: RiddlParserInput,
     commonOptions: CommonOptions = CommonOptions.empty,
@@ -110,6 +115,7 @@ object TopLevelParser {
     parsePath(file.toPath, commonOptions)
   }
 
+  @JSExport
   def parseString(
     input: String,
     commonOptions: CommonOptions = CommonOptions.empty,

@@ -34,7 +34,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
   val temperature = Temperature(At.empty)
   val time = Time(At.empty)
   val timestamp = TimeStamp(At.empty)
-  val url = URL(At.empty)
+  val uri = URI(At.empty)
   val uuid = UUID(At.empty)
 
   val pattern = Pattern(At.empty, Seq(LiteralString(At.empty, "^$")))
@@ -175,12 +175,12 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       timestamp.isContainer mustBe false
       timestamp.format mustBe PredefType.TimeStamp
     }
-    "support URL" in {
-      url.kind mustBe PredefType.URL
-      AST.errorDescription(url) mustBe "URL"
-      url.isEmpty mustBe true
-      url.isContainer mustBe false
-      url.format mustBe "URL(\"https\")"
+    "support URI" in {
+      uri.kind mustBe PredefType.URI
+      AST.errorDescription(uri) mustBe PredefType.URI
+      uri.isEmpty mustBe true
+      uri.isContainer mustBe false
+      uri.format mustBe "URI(\"https\")"
     }
     "support UUID" in {
       uuid.kind mustBe PredefType.UUID
@@ -255,7 +255,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       Field(At.empty, Identifier(At.empty, "temperature"), temperature),
       Field(At.empty, Identifier(At.empty, "time"), time),
       Field(At.empty, Identifier(At.empty, "timestamp"), timestamp),
-      Field(At.empty, Identifier(At.empty, "url"), url),
+      Field(At.empty, Identifier(At.empty, "url"), uri),
       Field(At.empty, Identifier(At.empty, "uuid"), uuid),
       Field(At.empty, Identifier(At.empty, "pattern"), pattern),
       Field(At.empty, Identifier(At.empty, "range"), range),
@@ -295,7 +295,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +
-        "timestamp: TimeStamp, url: URL(\"https\"), uuid: UUID, " +
+        "timestamp: TimeStamp, url: URI(\"https\"), uuid: UUID, " +
         "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
         "id: Id(a.b) }"
       aggregation.isEmpty mustBe false
@@ -335,7 +335,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
         "integer: Integer, length: Length, location: Location, " +
         "luminosity: Luminosity, mass: Mass, mole: Mole, nothing: Nothing, " +
         "number: Number, real: Real, temperature: Temperature, time: Time, " +
-        "timestamp: TimeStamp, url: URL(\"https\"), uuid: UUID, " +
+        "timestamp: TimeStamp, url: URI(\"https\"), uuid: UUID, " +
         "pattern: Pattern(\"^$\"), range: Range(2,4), string: String(42,), " +
         "id: Id(a.b) }"
       message.isEmpty mustBe false
@@ -401,7 +401,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       abs.isAssignmentCompatible(temperature) mustBe true
       abs.isAssignmentCompatible(time) mustBe true
       abs.isAssignmentCompatible(timestamp) mustBe true
-      abs.isAssignmentCompatible(url) mustBe true
+      abs.isAssignmentCompatible(uri) mustBe true
       abs.isAssignmentCompatible(uuid) mustBe true
     }
     "support TimeStamp equality" in {
@@ -460,7 +460,7 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
       nothing.isAssignmentCompatible(temperature) mustBe false
       nothing.isAssignmentCompatible(time) mustBe false
       nothing.isAssignmentCompatible(timestamp) mustBe false
-      nothing.isAssignmentCompatible(url) mustBe false
+      nothing.isAssignmentCompatible(uri) mustBe false
       nothing.isAssignmentCompatible(uuid) mustBe false
     }
   }

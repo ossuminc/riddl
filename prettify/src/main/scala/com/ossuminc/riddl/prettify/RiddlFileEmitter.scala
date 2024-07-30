@@ -192,7 +192,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     typEx match {
       case string: String_                 => emitString(string)
       case AliasedTypeExpression(_, _, id) => this.add(id.format)
-      case URL(_, scheme) =>
+      case URI(_, scheme) =>
         this
           .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
       case enumeration: Enumeration => emitEnumeration(enumeration)

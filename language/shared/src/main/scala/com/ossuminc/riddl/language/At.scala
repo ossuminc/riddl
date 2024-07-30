@@ -21,22 +21,32 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 @JSExportTopLevel("At")
 case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
 
+  import scala.scalajs.js.annotation.JSExport
+
+  @JSExport
   def isEmpty: Boolean = offset == 0 && source == RiddlParserInput.empty
 
+  @JSExport
   lazy val line: Int = source.lineOf(offset) + 1
+  @JSExport
   lazy val col: Int = offset - source.offsetOf(line - 1) + 1
 
+  @JSExport
   @inline override def toString: String = { source.origin + toShort }
+  @JSExport
   @inline def toShort: String = { s"($line:$col)" }
 
+  @JSExport
   override def compare(that: At): Int = {
     if this.source.origin == that.source.origin then { this.offset - that.offset }
     else { this.source.origin.compare(that.source.origin) }
   }
 
   @targetName("plus")
+  @JSExport
   def +(int: Int): At = At(source, offset + int)
 
+  @JSExport
   override def equals(obj: Any): Boolean = {
     if obj.getClass != classOf[At] then { false }
     else {
@@ -47,10 +57,14 @@ case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
   }
 }
 
+@JSExportTopLevel("At$")
 object At {
-  val empty: At = At(RiddlParserInput.empty)
-  def empty(input: RiddlParserInput): At = { At(input) }
-  final val defaultSourceName = RiddlParserInput.empty.origin
+
+  import scala.scalajs.js.annotation.JSExport
+
+  @JSExport("emptyConst") val empty: At = At(RiddlParserInput.empty)
+  @JSExport def empty(input: RiddlParserInput): At = { At(input) }
+  @JSExport final val defaultSourceName = RiddlParserInput.empty.origin
 
   /** Empty constructor for [[At]] */
   implicit def apply(): At = { At(RiddlParserInput.empty) }

@@ -5,9 +5,9 @@
  */
 package com.ossuminc.riddl.analyses
 
-import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass

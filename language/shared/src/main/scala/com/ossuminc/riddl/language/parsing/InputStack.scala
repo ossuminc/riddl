@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import java.io.File
-import java.net.URL
+import com.ossuminc.riddl.utils.URL
 import scala.collection.mutable
 
 /** The stack of input sources while parsing */
