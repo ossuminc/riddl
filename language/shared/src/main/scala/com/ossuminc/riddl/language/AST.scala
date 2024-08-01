@@ -6,19 +6,18 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.utils.{URL,Path}
 import com.ossuminc.riddl.language.AST.{OccursInProjector, ProcessorRef}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
-import java.nio.file.Path
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.tailrec
 import scala.io.{BufferedSource, Codec}
 import scala.scalajs.js.annotation._
-
 
 /** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax Tree. This raw AST
   * has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
@@ -170,17 +169,10 @@ object AST {
 
     /** All kinds of [[Description]] have a location provided by an [[At]] value. */
     def loc: At
-
-    /** All kinds of [[Description]] must be able to yield the lines of markdown equivalent */
-    def lines: Seq[LiteralString]
-
-    override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
-
-    override def hasDescription: Boolean = lines.nonEmpty
-
   }
 
   /** Companion class for Description only to define the empty value */
+  @JSExportTopLevel("Description$")
   object Description {
 
     /** The empty [[Description]] definition */
@@ -196,20 +188,24 @@ object AST {
     loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString]
   ) extends Description {
+    def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
+    def hasDescription: Boolean = lines.nonEmpty
     def format: String = ""
   }
 
   /** An implementation of [[Description]] that provides the description in a Markdown file */
   case class FileDescription(loc: At, file: Path) extends Description {
-    lazy val lines: Seq[LiteralString] =
-      val src = scala.io.Source.fromFile(file.toFile)(Codec.UTF8)
+    lazy val lines: Future[Seq[LiteralString]] = Future {
+      scala.io.Source.
+      val src = scala.io.Source.from(file.toFile)(Codec.UTF8)
       src.getLines().toSeq.map(LiteralString(loc, _))
+    }
     def format: String = file.toAbsolutePath.toString
   }
 
   /** An implementation of [[Description]] that provides the description at a URL */
   case class URLDescription(loc: At, url: com.ossuminc.riddl.utils.URL) extends Description {
-    lazy val lines: Seq[LiteralString] = url.getContents.map(LiteralString(loc.copy(), _))
+    lazy val linesF: Future[Seq[LiteralString]] = URL.load(url).map(_.map(LiteralString(loc.copy(), _)))
     override def format: String = url.toExternalForm
   }
 

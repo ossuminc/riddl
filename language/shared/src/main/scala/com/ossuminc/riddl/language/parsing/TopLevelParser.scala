@@ -82,7 +82,7 @@ class TopLevelParser(
 @JSExportTopLevel("TopLevelParser$")
 object TopLevelParser {
 
-  @JSExport  
+  @JSExport
   def parseInput(
     input: RiddlParserInput,
     commonOptions: CommonOptions = CommonOptions.empty,

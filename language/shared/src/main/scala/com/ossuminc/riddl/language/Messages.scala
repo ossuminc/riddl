@@ -7,12 +7,11 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.utils.ExceptionUtils
+import com.ossuminc.riddl.utils.{ExceptionUtils, Logger}
 
 import scala.collection.mutable
 import scala.io.AnsiColor.*
-import scala.scalajs.js.annotation._
+import scala.scalajs.js.annotation.*
 
 /** This module handles everything needed to deal with the message output of the `riddlc` compiler */
 @JSExportTopLevel("Messages")
@@ -124,7 +123,7 @@ object Messages {
     * @param context
     *   Additional context that indicates the conditions that produced the message
     */
-  @JSExport
+  @JSExportTopLevel("Message")
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
 
@@ -335,7 +334,8 @@ object Messages {
   }
 
   /** A utility to help accumulate error messages with regards to the settings in the [[CommonOptions]] */
-  @JSExport case class Accumulator(commonOptions: CommonOptions) {
+  @JSExportTopLevel("Accumulator")
+  case class Accumulator(commonOptions: CommonOptions) {
     private val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
 
     def size: Int = msgs.length
@@ -407,7 +407,7 @@ object Messages {
     }
   }
 
-  @JSExport("Accumulator$")
+  @JSExportTopLevel("Accumulator$")
   object Accumulator {
     val empty: Accumulator = new Accumulator(CommonOptions())
     def apply(commonOptions: CommonOptions): Accumulator = new Accumulator(commonOptions)

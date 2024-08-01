@@ -26,7 +26,7 @@ object Logging {
   case object Missing extends Lvl
   case object Info extends Lvl
 
-  val nl: String = System.getProperty("line.separator")
+  val nl: String = "\n"
 }
 
 trait Logger {

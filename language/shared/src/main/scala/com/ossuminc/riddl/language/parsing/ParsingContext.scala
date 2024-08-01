@@ -18,7 +18,7 @@ import fastparse.Parsed.Success
 import java.io.File
 import java.nio.file.Files
 import scala.annotation.unused
-import scala.concurrent.{Await, ExecutionContext, Future, blocking}
+import scala.concurrent.{ExecutionContext, Future, blocking}
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */

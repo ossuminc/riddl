@@ -1,6 +1,5 @@
 import sbt.*
 import sbt.librarymanagement.ModuleID
-import sbt.ModuleID.*
 
 /** V - Dependency Versions object */
 

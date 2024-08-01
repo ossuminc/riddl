@@ -39,13 +39,19 @@ case class Finder(root: Container[RiddlValue]) {
     * @param select
     *   The boolean expression derived from a candidate [[AST.RiddlValue]] that selects it to the result set
     * @return
-    *   A [[Finder#DefWithParents]] that returns a [[scala.Seq]] of two-tuples with
-    *   the [[AST.RiddlValue]] a a [[scala.Seq]] of the parents of that value.
+    *   A [[Finder#DefWithParents]] that returns a [[scala.Seq]] of two-tuples with the [[AST.RiddlValue]] a a
+    *   [[scala.Seq]] of the parents of that value.
     */
-  @JSExport def findWithParents(
+  @JSExport
+  def findWithParents(
     select: RiddlValue => Boolean
   ): DefWithParents = {
-    Folding.foldLeftWithStack(Seq.empty[(RiddlValue, Seq[RiddlValue])],root) { case (state, definition, parents) =>
+    import scala.collection.mutable
+    Folding.foldLeftWithStack(
+      Seq.empty[(RiddlValue, Seq[RiddlValue])],
+      root,
+      mutable.Stack.empty[Container[RiddlValue]]
+    ) { case (state, definition, parents) =>
       if select(definition) then state :+ (definition -> parents) else state
     }
   }

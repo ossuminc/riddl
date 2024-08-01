@@ -36,7 +36,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .configure(With.build_info)
   .jvmConfigure(With.coverage(70))
   .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
@@ -49,7 +49,11 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
   .jsSettings(
-    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0"
+    libraryDependencies ++= Seq(
+      "org.scalactic" %% "scalactic" % V.scalatest,
+      "org.scalatest" %%% "scalatest" % V.scalatest,
+      "org.scala-js" %%% "scalajs-dom" % "2.8.0"
+    )
   )
 
 lazy val utils = utils_cp.jvm
@@ -65,7 +69,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
@@ -82,7 +86,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .configure(With.typical)
   .jvmConfigure(With.coverage(30))
   .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
@@ -97,14 +101,14 @@ val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
 val Analyses = config("analyses")
-lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(JVM,JS)
+lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(JVM, JS)
   .configure(With.typical)
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule=false))
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
   .settings(
     scalaVersion := "3.4.2",
-    description := "Implementation of various AST analyses passes other libraries may use",
+    description := "Implementation of various AST analyses passes other libraries may use"
   )
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",

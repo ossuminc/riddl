@@ -76,11 +76,9 @@ object RiddlParserInput {
 /** Same as fastparse.IndexedParserInput but with Location support */
 abstract class RiddlParserInput extends ParserInput {
   def origin: String
-  def data: String
+  def data: Future[String]
   def root: File
 
-  def isEmpty: Boolean = { data.isEmpty }
-  final def nonEmpty: Boolean = !isEmpty
   override def apply(index: Int): Char = data.charAt(index)
   override def dropBuffer(index: Int): Unit = {}
   override def slice(from: Int, until: Int): String = data.slice(from, until)
@@ -152,7 +150,7 @@ abstract class RiddlParserInput extends ParserInput {
 case object EmptyParserInput extends RiddlParserInput {
   override def origin: String = "empty"
 
-  override def data: String = ""
+  override def data: Future[String] = Future.successful { "" }
 
   override def root: File = File.listRoots().head
 
@@ -163,9 +161,10 @@ case object EmptyParserInput extends RiddlParserInput {
 }
 
 private[parsing] case class StringParserInput(
-  data: String,
+  input: String,
   origin: String = At.defaultSourceName
 ) extends RiddlParserInput {
+  override def data: Future[String] = Future.successful { input }
   val root: File = new File(System.getProperty("user.dir"))
   override def isEmpty: Boolean = data.isEmpty
   def from: String = origin
@@ -173,7 +172,7 @@ private[parsing] case class StringParserInput(
 
 private[parsing] case class FileParserInput(file: File) extends RiddlParserInput {
 
-  lazy val data: String = {
+  lazy val data: Future[String] = Future {
     val source: Source = Source.fromFile(file)
     try { source.getLines().mkString("\n") }
     finally { source.close() }
@@ -215,9 +214,7 @@ private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
 
   // require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  val data: String = url.getContents.mkString("\n")
-  assert(data.nonEmpty, s"Empty content from ${url.toExternalForm}")
-  override def isEmpty: Boolean = data.isEmpty
+  val data: Future[String] = URL.load(url).map(_.mkString("\n"))
   val root: File = new File(url.getFile)
   def origin: String = url.toString
   def from: String = url.toString
@@ -226,9 +223,13 @@ private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
 
 private[parsing] case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
 
-  lazy val data: String =
-    try { source.mkString }
-    finally { source.close() }
+  lazy val data: Future[String] = Future {
+    try {
+      source.mkString
+    } finally {
+      source.close()
+    }
+  }
   val root: File = new File(System.getProperty("user.dir"))
 
   def from: String = source.descr

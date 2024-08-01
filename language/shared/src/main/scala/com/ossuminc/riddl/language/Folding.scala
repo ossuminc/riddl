@@ -72,8 +72,8 @@ object Folding {
   @JSExport final def foldLeftWithStack[S, CT <: RiddlValue](
     value: S,
     top: Container[CT],
-    parents: mutable.Stack[Container[CT]] = mutable.Stack.empty[Container[CT]]
-  )(f: (S, CT | Container[CT], Seq[Container[CT]]) => S = { (x: S, y: CT, z: Seq[Container[CT]]) => x }): S = {
+    parents: mutable.Stack[Container[CT]]
+  )(f: (S, CT | Container[CT], Seq[Container[CT]]) => S ): S = {
     val initial = f(value, top, parents.toSeq)
     if !top.isAnonymous then parents.push(top)
     try {
