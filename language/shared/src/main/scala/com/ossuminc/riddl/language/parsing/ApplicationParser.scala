@@ -128,7 +128,7 @@ private[parsing] trait ApplicationParser {
     P(applicationDefinition.rep(0, comments))
   }
 
-  private def applicationInclude[u: P]: P[IncludeHolder[OccursInApplication]] = {
+  private def applicationInclude[u: P]: P[Include[OccursInApplication]] = {
     include[u, OccursInApplication](applicationDefinitions(_))
   }
 
@@ -144,8 +144,7 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
-      val mergedContent = mergeAsynchContent[OccursInApplication](contents)
-      Application(loc, id, mergedContent, brief, description)
+      Application(loc, id, contents, brief, description)
     }
   }
 }

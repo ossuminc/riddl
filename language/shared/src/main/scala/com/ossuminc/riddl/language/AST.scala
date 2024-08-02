@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.{URL,Path}
+import com.ossuminc.riddl.utils.{URL, Path}
 import com.ossuminc.riddl.language.AST.{OccursInProjector, ProcessorRef}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
@@ -188,19 +188,18 @@ object AST {
     loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString]
   ) extends Description {
-    def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
-    def hasDescription: Boolean = lines.nonEmpty
+    override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
+    override def hasDescription: Boolean = lines.nonEmpty
     def format: String = ""
   }
 
   /** An implementation of [[Description]] that provides the description in a Markdown file */
   case class FileDescription(loc: At, file: Path) extends Description {
     lazy val lines: Future[Seq[LiteralString]] = Future {
-      scala.io.Source.
-      val src = scala.io.Source.from(file.toFile)(Codec.UTF8)
+      val src = scala.io.Source.fromFile(file.path)
       src.getLines().toSeq.map(LiteralString(loc, _))
     }
-    def format: String = file.toAbsolutePath.toString
+    def format: String = file.path // FIXME: ? was .absolutePath
   }
 
   /** An implementation of [[Description]] that provides the description at a URL */
@@ -564,7 +563,7 @@ object AST {
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
-    IncludeHolder[?] | TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
+     TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
     AdaptorDirection | UserStory | MethodArgument | Schema
 
   /** Base trait of values defined at the root (top of file) scope */
@@ -718,30 +717,7 @@ object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
   //// The types defined in this section provide utility to the other definitions for includes and references.
-
-  /** A value to hold the result of an Include while it is being included asynchronously
-    *
-    * @param loc
-    *   The location at which the include occurs in the input
-    *
-    * @param future
-    *   The future deliverable of the result of parsing the inclusion; either a list of error messages or the
-    *   RiddlParserInput for the included content and a list of the values parsed
-    * @tparam CT
-    *   The type of values expected at the top level of the
-    */
-  case class IncludeHolder[CT <: RiddlValue](
-    loc: At = At.empty,
-    origin: String = "",
-    maxDelay: scala.concurrent.duration.FiniteDuration,
-    future: Future[Contents[CT]]
-  ) extends RiddlValue
-      with OccursInVitalDefinitions
-      with OccursAtRootScope {
-    def format: String = s"include \"$origin\""
-    override def toString: String = format
-  }
-
+  
   /** A value to record an inclusion of a file while parsing.
     *
     * @param loc

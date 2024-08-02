@@ -18,8 +18,7 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js.annotation._
 
-/** The TopLevel (Root) parser.
-  * This class
+/** The TopLevel (Root) parser. This class
   * @param input
   * @param commonOptions
   * @param ec
@@ -47,16 +46,14 @@ class TopLevelParser(
     with CommonParser
     with ParsingContext {
 
-  private def rootInclude[u: P]: P[IncludeHolder[OccursAtRootScope]] = {
+  private def rootInclude[u: P]: P[Include[OccursAtRootScope]] = {
     include[u, OccursAtRootScope](rootValues(_))
   }
 
   private def rootValues[u: P]: P[Seq[OccursAtRootScope]] = {
     P(
       Start ~ (comment | rootInclude[u] | domain | author)./.rep(1) ~ End
-    ).map { (content: Contents[OccursAtRootScope]) =>
-      mergeAsynchContent[OccursAtRootScope](content)
-    }
+    )
   }
 
   def root[u: P]: P[Root] = {

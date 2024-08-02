@@ -13,19 +13,10 @@ import Readability.*
 
 /** Parsing rules for Context definitions */
 private[parsing] trait ContextParser {
-  this: HandlerParser
-    & AdaptorParser
-    & EntityParser
-    & FunctionParser
-    & ProjectorParser
-    & ReferenceParser
-    & RepositoryParser
-    & SagaParser
-    & StreamingParser
-    & StatementParser
-    & TypeParser =>
+  this: HandlerParser & AdaptorParser & EntityParser & FunctionParser & ProjectorParser & ReferenceParser &
+    RepositoryParser & SagaParser & StreamingParser & StatementParser & TypeParser =>
 
-  private def contextInclude[u: P]: P[IncludeHolder[OccursInContext]] = {
+  private def contextInclude[u: P]: P[Include[OccursInContext]] = {
     include[u, OccursInContext](contextDefinitions(_))
   }
 
@@ -51,11 +42,10 @@ private[parsing] trait ContextParser {
     P(
       location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
-      val mergedContent = mergeAsynchContent[OccursInContext](contents)
       Context(
         loc,
         id,
-        mergedContent,
+        contents,
         brief,
         description
       )

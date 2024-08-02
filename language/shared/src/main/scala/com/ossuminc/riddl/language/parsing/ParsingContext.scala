@@ -125,45 +125,10 @@ trait ParsingContext extends ParsingErrors {
   def doInclude[CT <: RiddlValue](
     loc: At,
     str: LiteralString
-  )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
+  )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.Include[CT] = {
     Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
-      val future: Future[Seq[CT]] = {
-        if commonOptions.maxParallelParsing > 1 then Future { blocking { doIncludeParsing[CT](loc, str, rule) } }
-        else Future.successful { doIncludeParsing[CT](loc, str, rule) }
-        end if
-      }
-      AST.IncludeHolder[CT](loc, str.s, commonOptions.maxIncludeWait, future)
+      val contents = doIncludeParsing[CT](loc, str, rule)
+      AST.Include[CT](loc, str.s, contents)
     }
-  }
-
-  def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
-    val result: Contents[CT] = contents.map {
-      case ih: IncludeHolder[CT] @unchecked =>
-        val contents: Contents[CT] =
-          try {
-            val result = Await.result[Contents[CT]](ih.future, ih.maxDelay)
-            mergeAsynchContent(result)
-          } catch {
-            case NonFatal(exception) =>
-              makeParseFailureError(exception, ih.loc, s"while including '${ih.origin}''")
-              // NOTE: makeParseFailureError already captured the error
-              // NOTE: We just want to place empty content into the Include
-              Seq.empty[CT]
-          }
-        Include[CT](ih.loc, ih.origin, contents).asInstanceOf[CT]
-      case rv: CT => rv
-    }
-
-    val allIncludes = result.filter[Include[?]]
-    val distinctIncludes = allIncludes.distinctBy(_.origin)
-    for {
-      incl <- distinctIncludes
-      copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
-    } yield {
-      val copyList = copies.map(i => i.origin + " at " + i.loc.toShort).mkString(", ")
-      val message = s"Duplicate include origin detected in $copyList"
-      warning(incl.loc, message, "while merging includes")
-    }
-    result
   }
 }

@@ -20,9 +20,9 @@ case class InputStack(
 
   def push(input: RiddlParserInput): Unit = synchronized { inputs.push(input) }
 
-  def push(file: File): Unit = { synchronized { inputs.push(FileParserInput(file)) } }
+  def push(file: File): Unit = { synchronized { inputs.push(RiddlParserInput(file)) } }
 
-  def push(url: URL): Unit = { synchronized { inputs.push(URLParserInput(url)) } }
+  def push(url: URL): Unit = { synchronized { inputs.push(RiddlParserInput(url)) } }
 
   def pop: RiddlParserInput = { synchronized { inputs.pop() } }
 

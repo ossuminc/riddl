@@ -27,7 +27,7 @@ private[parsing] trait DomainParser {
     & CommonParser
     & ParsingContext =>
 
-  private def domainInclude[u: P]: P[IncludeHolder[OccursInDomain]] = {
+  private def domainInclude[u: P]: P[Include[OccursInDomain]] = {
     include[u,OccursInDomain](domainDefinitions(_))
   }
 
@@ -56,8 +56,7 @@ private[parsing] trait DomainParser {
       location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~/
         briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
-      val mergedContent = mergeAsynchContent[OccursInDomain](contents)
-      Domain(loc, id, mergedContent, brief, description)
+      Domain(loc, id, contents, brief, description)
     }
   }
 }

@@ -15,6 +15,9 @@ import java.io.File
 import java.nio.file.Path
 import scala.collection.Searching
 import scala.io.Source
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Future, Await}
+import scala.concurrent.duration.DurationInt
 import scala.language.implicitConversions
 import scala.scalajs.js.annotation.*
 
@@ -46,7 +49,15 @@ object RiddlParserInput {
     *   The Source from which UTF-8 text will be read and parsed
     */
   implicit def apply(source: Source): RiddlParserInput = {
-    SourceParserInput(source, source.descr)
+    lazy val data: Future[String] = Future {
+      try {
+        source.getLines().mkString("\n")
+      } finally {
+        source.close()
+      }
+    }
+    val result = Await.result(data, 5.seconds)
+    StringParserInput(result, source.descr)
   }
 
   /** Set up a parser input for parsing directly from a Java File
@@ -54,29 +65,41 @@ object RiddlParserInput {
     *   The java.io.File from which UTF-8 text will be read and parsed.
     */
   implicit def apply(file: File): RiddlParserInput = {
-    FileParserInput(file)
+    import scala.concurrent.Await
+    lazy val future: Future[String] = Future {
+      val source: Source = Source.fromFile(file)
+      try {
+        source.getLines().mkString("\n")
+      } finally {
+        source.close()
+      }
+    }
+    val data = Await.result(future, 5.seconds)
+    StringParserInput(data, file.getName)
   }
 
   /** Set up a parser input for parsing directly from a file at a specific Path
     * @param path
     *   THe java.nio.path.Path from which UTF-8 text will be read and parsed.
     */
-  implicit def apply(path: Path): RiddlParserInput = {
-    FileParserInput(path.toFile)
-  }
+  implicit def apply(path: Path): RiddlParserInput = apply(path.toFile)
 
   /** Set up a parser input for parsing directly from a file at a specific URL
     * @param url
     *   The java.net.URL from which UTF-8 text will be read and parsed.
     */
-  @JSExport("createWith")
-  implicit def apply(url: URL): RiddlParserInput = URLParserInput(url)
+//  implicit def apply(url: java.net.URL): RiddlParserInput = {
+//    implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+//    url.
+//    val data: Future[String] = URL.load(url).map(_.mkString("\n"))
+//    StringParserInput(data, )
+//  }
 }
 
 /** Same as fastparse.IndexedParserInput but with Location support */
 abstract class RiddlParserInput extends ParserInput {
   def origin: String
-  def data: Future[String]
+  def data: String
   def root: File
 
   override def apply(index: Int): Char = data.charAt(index)
@@ -87,7 +110,8 @@ abstract class RiddlParserInput extends ParserInput {
   override def isReachable(index: Int): Boolean = index < length
 
   def checkTraceable(): Unit = ()
-
+  inline final def isEmpty: Boolean = data.isEmpty
+  inline final def nonEmpty: Boolean = !isEmpty
   def from: String
   def path: Option[Path] = None
 
@@ -149,90 +173,16 @@ abstract class RiddlParserInput extends ParserInput {
 @JSExportTopLevel("EmptyParserInput")
 case object EmptyParserInput extends RiddlParserInput {
   override def origin: String = "empty"
-
-  override def data: Future[String] = Future.successful { "" }
-
   override def root: File = File.listRoots().head
-
   override def offsetOf(line: Int): Int = { line * 80 }
   override def lineOf(offset: Int): Int = { offset / 80 }
-
   def from: String = ""
 }
 
 private[parsing] case class StringParserInput(
-  input: String,
+  data: String,
   origin: String = At.defaultSourceName
 ) extends RiddlParserInput {
-  override def data: Future[String] = Future.successful { input }
   val root: File = new File(System.getProperty("user.dir"))
-  override def isEmpty: Boolean = data.isEmpty
   def from: String = origin
-}
-
-private[parsing] case class FileParserInput(file: File) extends RiddlParserInput {
-
-  lazy val data: Future[String] = Future {
-    val source: Source = Source.fromFile(file)
-    try { source.getLines().mkString("\n") }
-    finally { source.close() }
-  }
-  override def isEmpty: Boolean = data.isEmpty
-  val root: File = file.getParentFile
-  def origin: String = file.getName
-  def this(path: Path) = this(path.toFile)
-
-  override def from: String = {
-    val path = file.getAbsolutePath
-    val index = path.lastIndexOf("riddl/")
-    path.substring(index + 6)
-  }
-
-  override def path: Option[Path] = {
-    Some(file.getAbsoluteFile.toPath)
-  }
-}
-
-/*private[parsing] case class URIParserInput(uri: URI) extends RiddlParserInput {
-  lazy val data: String = {
-    val source: Source = Source.fromURL(uri.toURL)
-    try { source.getLines().mkString("\n") }
-    finally { source.close() }
-  }
-  override def isEmpty: Boolean = data.isEmpty
-  val root: File = new File(uri.getPath)
-  def origin: String = uri.toString
-  def from: String = uri.toString
-  override def path: Option[Path] = {
-    Some(root.toPath)
-  }
-}*/
-private[parsing] case class URLParserInput(url: URL) extends RiddlParserInput {
-
-  import scala.concurrent.{Future, ExecutionContext, Await}
-  import scala.concurrent.duration.DurationInt
-
-  // require(url.getProtocol.startsWith("http"), s"Non-http URL protocol '${url.getProtocol}``")
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  val data: Future[String] = URL.load(url).map(_.mkString("\n"))
-  val root: File = new File(url.getFile)
-  def origin: String = url.toString
-  def from: String = url.toString
-  override def path: Option[Path] = Some(root.toPath)
-}
-
-private[parsing] case class SourceParserInput(source: Source, origin: String) extends RiddlParserInput {
-
-  lazy val data: Future[String] = Future {
-    try {
-      source.mkString
-    } finally {
-      source.close()
-    }
-  }
-  val root: File = new File(System.getProperty("user.dir"))
-
-  def from: String = source.descr
-  override def path: Option[Path] = Some(root.toPath)
-
 }

@@ -17,7 +17,7 @@ private[parsing] trait AdaptorParser {
   this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
     CommonParser =>
 
-  private def adaptorInclude[u: P]: P[IncludeHolder[OccursInAdaptor]] = {
+  private def adaptorInclude[u: P]: P[Include[OccursInAdaptor]] = {
     include[u, OccursInAdaptor](adaptorDefinitions(_))
   }
 
@@ -47,8 +47,7 @@ private[parsing] trait AdaptorParser {
       location ~ Keywords.adaptor ~/ identifier ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ briefly ~ description
     ).map { case (loc, id, direction, cRef, contents, brief, description) =>
-      val mergedContent = mergeAsynchContent[OccursInAdaptor](contents)
-      Adaptor(loc, id, direction, cRef, mergedContent, brief, description)
+      Adaptor(loc, id, direction, cRef, contents, brief, description)
     }
   }
 }

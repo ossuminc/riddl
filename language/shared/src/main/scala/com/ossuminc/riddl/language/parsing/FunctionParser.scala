@@ -15,7 +15,7 @@ import Readability.*
 private[parsing] trait FunctionParser {
   this: ReferenceParser & TypeParser & StatementParser & CommonParser =>
 
-  private def functionInclude[u: P]: P[IncludeHolder[OccursInFunction]] = {
+  private def functionInclude[u: P]: P[Include[OccursInFunction]] = {
     include[u, OccursInFunction](functionDefinitions(_))
   }
 
@@ -66,8 +66,7 @@ private[parsing] trait FunctionParser {
     P(
       location ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~/ close ~/ briefly ~/ description
     )./.map { case (loc, id, (ins, outs, contents, statements), briefly, description) =>
-      val mergedContent = mergeAsynchContent[OccursInFunction](contents)
-      Function(loc, id, ins, outs, mergedContent, statements, briefly, description)
+      Function(loc, id, ins, outs, contents, statements, briefly, description)
     }
   }
 }

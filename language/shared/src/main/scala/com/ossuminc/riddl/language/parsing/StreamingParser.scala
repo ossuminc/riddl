@@ -57,7 +57,7 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[IncludeHolder[OccursInStreamlet]] = {
+  ): P[Include[OccursInStreamlet]] = {
     include[u, OccursInStreamlet](
       streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
@@ -117,8 +117,7 @@ private[parsing] trait StreamingParser {
         close ~ briefly ~ description
     )./.map { case (loc, id, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
-      val mergedContent = mergeAsynchContent[OccursInStreamlet](contents)
-      Streamlet(loc, id, shape, mergedContent, brief, description)
+      Streamlet(loc, id, shape, contents, brief, description)
     }
   }
 

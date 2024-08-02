@@ -166,7 +166,7 @@ private[parsing] trait EpicParser {
     ).?.map { (x: Option[Seq[URL]]) => x.getOrElse(Seq.empty[URL]) }
   }
 
-  private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
+  private def epicInclude[u: P]: P[Include[OccursInEpic]] = {
     include[u, OccursInEpic](epicDefinitions(_))
   }
 
@@ -197,8 +197,7 @@ private[parsing] trait EpicParser {
     P(
       location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ briefly ~ description
     ).map { case (loc, id, (userStory, shownBy, contents), briefly, description) =>
-      val mergedContent = mergeAsynchContent[OccursInEpic](contents)
-      Epic(loc, id, userStory, shownBy, mergedContent, briefly, description)
+      Epic(loc, id, userStory, shownBy, contents, briefly, description)
     }
   }
 }
