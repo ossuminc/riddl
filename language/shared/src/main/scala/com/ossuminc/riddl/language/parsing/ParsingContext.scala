@@ -94,7 +94,7 @@ trait ParsingContext extends ParsingErrors {
       }
       val path = ctx.input.asInstanceOf[RiddlParserInput].root.toPath.resolve(name)
       require(Files.exists(path), s"File does not exist: $name")
-      require(Files.isReadable(path), s"File is not readable; $name")
+      require(Files.isReadable(path), s"File is not readable: $name")
       RiddlParserInput(path)
     }
   }

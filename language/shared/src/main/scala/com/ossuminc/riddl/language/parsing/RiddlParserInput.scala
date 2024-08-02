@@ -19,6 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.DurationInt
 import scala.language.implicitConversions
+import scala.util.Try
 import scala.scalajs.js.annotation.*
 
 /** Primary interface to setting up a RIDDL Parser's input. The idea here is to use one of the apply methods in this
@@ -42,6 +43,12 @@ object RiddlParserInput {
   @JSExport("createWith")
   implicit def apply(data: String, origin: String): RiddlParserInput = {
     StringParserInput(data, origin)
+  }
+
+  @JSExport("createWith")
+  implicit def apply(url: URL): FutureParserInput = {
+    val future = URL.load(url).map(_.mkString("\n"))
+    FutureParserInput(future, url.toExternalForm)
   }
 
   /** Set up a parser input for parsing directly from a Scala Source
@@ -176,6 +183,7 @@ case object EmptyParserInput extends RiddlParserInput {
   override def root: File = File.listRoots().head
   override def offsetOf(line: Int): Int = { line * 80 }
   override def lineOf(offset: Int): Int = { offset / 80 }
+  def data: String = ""
   def from: String = ""
 }
 
@@ -185,4 +193,14 @@ private[parsing] case class StringParserInput(
 ) extends RiddlParserInput {
   val root: File = new File(System.getProperty("user.dir"))
   def from: String = origin
+}
+
+private[parsing] case class FutureParserInput(
+  future: Future[String],
+  origin: String = At.defaultSourceName
+) extends RiddlParserInput {
+  def data: String = ""
+  def from: String = origin
+  def root: java.io.File = new File("")
+  def andThen(process: PartialFunction[Try[String], Unit]): Unit = future.andThen(process)
 }
