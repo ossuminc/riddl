@@ -563,8 +563,8 @@ object AST {
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
-     TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
-    AdaptorDirection | UserStory | MethodArgument | Schema
+    TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
+    MethodArgument | Schema
 
   /** Base trait of values defined at the root (top of file) scope */
   sealed trait OccursAtRootScope extends RiddlValue
@@ -717,7 +717,7 @@ object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
   //// The types defined in this section provide utility to the other definitions for includes and references.
-  
+
   /** A value to record an inclusion of a file while parsing.
     *
     * @param loc
@@ -729,8 +729,8 @@ object AST {
     */
   case class Include[CT <: RiddlValue](
     loc: At = At.empty,
-    origin: String = "",
-    contents: Contents[CT] = Seq.empty[CT]
+    origin: String,
+    contents: Seq[CT]
   ) extends RiddlValue
       with Container[CT]
       with OccursInVitalDefinitions

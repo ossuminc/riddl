@@ -7,19 +7,18 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{Path,URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
 import java.io.File
-import java.nio.file.Path
 import scala.collection.Searching
 import scala.io.Source
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.DurationInt
 import scala.language.implicitConversions
-import scala.util.Try
+import scala.util.{Try, Success, Failure}
 import scala.scalajs.js.annotation.*
 
 /** Primary interface to setting up a RIDDL Parser's input. The idea here is to use one of the apply methods in this
@@ -46,9 +45,9 @@ object RiddlParserInput {
   }
 
   @JSExport("createWith")
-  implicit def apply(url: URL): FutureParserInput = {
-    val future = URL.load(url).map(_.mkString("\n"))
-    FutureParserInput(future, url.toExternalForm)
+  implicit def apply(path: Path): RiddlParserInput = {
+    val source = Source.fromFile(path.path)
+    apply(source)
   }
 
   /** Set up a parser input for parsing directly from a Scala Source
@@ -56,15 +55,13 @@ object RiddlParserInput {
     *   The Source from which UTF-8 text will be read and parsed
     */
   implicit def apply(source: Source): RiddlParserInput = {
-    lazy val data: Future[String] = Future {
+    val data: String =
       try {
         source.getLines().mkString("\n")
       } finally {
         source.close()
       }
-    }
-    val result = Await.result(data, 5.seconds)
-    StringParserInput(result, source.descr)
+    StringParserInput(data, source.descr)
   }
 
   /** Set up a parser input for parsing directly from a Java File
@@ -72,8 +69,7 @@ object RiddlParserInput {
     *   The java.io.File from which UTF-8 text will be read and parsed.
     */
   implicit def apply(file: File): RiddlParserInput = {
-    import scala.concurrent.Await
-    lazy val future: Future[String] = Future {
+    val data: String = {
       val source: Source = Source.fromFile(file)
       try {
         source.getLines().mkString("\n")
@@ -81,7 +77,6 @@ object RiddlParserInput {
         source.close()
       }
     }
-    val data = Await.result(future, 5.seconds)
     StringParserInput(data, file.getName)
   }
 
@@ -89,7 +84,7 @@ object RiddlParserInput {
     * @param path
     *   THe java.nio.path.Path from which UTF-8 text will be read and parsed.
     */
-  implicit def apply(path: Path): RiddlParserInput = apply(path.toFile)
+  implicit def apply(path: java.nio.file.Path): RiddlParserInput = apply(path.toFile)
 
   /** Set up a parser input for parsing directly from a file at a specific URL
     * @param url
@@ -199,8 +194,10 @@ private[parsing] case class FutureParserInput(
   future: Future[String],
   origin: String = At.defaultSourceName
 ) extends RiddlParserInput {
-  def data: String = ""
+  var data: String = ""
   def from: String = origin
   def root: java.io.File = new File("")
-  def andThen(process: PartialFunction[Try[String], Unit]): Unit = future.andThen(process)
+  def map[T](process: RiddlParserInput => T): Future[T] = {
+    future.map { delayed_data => process(this) }
+  }
 }

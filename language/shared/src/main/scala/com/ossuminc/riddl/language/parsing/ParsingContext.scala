@@ -85,8 +85,8 @@ trait ParsingContext extends ParsingErrors {
   private def startNextSource(from: LiteralString)(implicit ctx: P[?]): RiddlParserInput = {
     val str = from.s
     if str.startsWith("http") then {
-      import com.ossuminc.riddl.utils.URL
-      RiddlParserInput(URL(str))
+      import com.ossuminc.riddl.utils.Path
+      RiddlParserInput(Path(str))
     } else {
       val name = {
         if str.endsWith(".riddl") then str
@@ -99,22 +99,28 @@ trait ParsingContext extends ParsingErrors {
     }
   }
 
+  private def doParse[CT <: RiddlValue](loc: At, rpi: RiddlParserInput, str: LiteralString, rule: P[?] => P[Seq[CT]])(implicit
+    ctx: P[?]
+  ): Seq[CT] = {
+    fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
+      case Success(content, _) =>
+        if messagesNonEmpty then Seq.empty[CT]
+        else if content.isEmpty then
+          error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
+        end if
+        content
+      case failure: Failure =>
+        makeParseFailureError(failure, rpi)
+        Seq.empty[CT]
+    }
+  }
+
   private def doIncludeParsing[CT <: RiddlValue](loc: At, str: LiteralString, rule: P[?] => P[Seq[CT]])(implicit
     ctx: P[?]
   ): Seq[CT] = {
     try {
       val rpi = startNextSource(str)
-      fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
-        case Success(content, _) =>
-          if messagesNonEmpty then Seq.empty[CT]
-          else if content.isEmpty then
-            error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
-          end if
-          content
-        case failure: Failure =>
-          makeParseFailureError(failure, rpi)
-          Seq.empty[CT]
-      }
+      doParse(loc, rpi, str, rule)
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception, loc, s"while included '${str.s}'")
