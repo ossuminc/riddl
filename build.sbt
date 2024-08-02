@@ -263,5 +263,6 @@ lazy val plugin = Plugin("sbt-riddl")
     description := "An sbt plugin to embellish a project with riddlc usage",
     buildInfoObject := "SbtRiddlPluginBuildInfo",
     buildInfoPackage := "com.ossuminc.riddl.sbt",
-    buildInfoUsePackageAsPath := true
+    buildInfoUsePackageAsPath := true,
+    scalaVersion := "2.12.19"
   )

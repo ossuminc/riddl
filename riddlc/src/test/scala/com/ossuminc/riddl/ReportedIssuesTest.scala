@@ -120,7 +120,7 @@ class ReportedIssuesTest extends ValidatingTest {
         case Left(messages) =>
           val errors = messages.justErrors
           errors.size mustBe 1
-          errors.head.message must include("whitespace after keyword")
+          errors.head.message must include("white space after a keyword")
         case Right(result) =>
           fail("Should not have parsed correctly")
       }
@@ -147,7 +147,7 @@ class ReportedIssuesTest extends ValidatingTest {
           warnings.find(_.message.contains(warning_text)) match {
             case Some(msg) =>
               fail(s"Message with '$warning_text' found")
-            case None      =>
+            case None =>
               succeed
           }
       }
@@ -158,9 +158,9 @@ class ReportedIssuesTest extends ValidatingTest {
           val errors = messages.justErrors
           errors.find(_.message.contains("but a Portlet was expected")) match {
             case Some(msg) => succeed
-            case None => fail("a wrong-type error was expected")
+            case None      => fail("a wrong-type error was expected")
           }
-        case Right(result) => 
+        case Right(result) =>
           fail("a wrong-type error was expected")
       }
     }
