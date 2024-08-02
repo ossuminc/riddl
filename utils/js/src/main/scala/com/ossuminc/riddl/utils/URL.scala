@@ -27,21 +27,7 @@ case class URL(url: String) extends AnyRef {
     url.takeRight(url.length - spot)
   }
 
-}
-
-@JSExportTopLevel("URL$")
-object URL {
-  @JSExport
-  def load(url: URL): Future[Seq[String]] = {
-    val info: RequestInfo = url.url
-    dom.fetch(info, new RequestInit { method = HttpMethod.GET })
-      .toFuture
-      .flatMap(resp => {
-        if resp.status != 200 then {
-          throw Exception(s"GET failed with status ${resp.statusText}")
-        }
-        resp.text().toFuture.map(_.split('\n').toIndexedSeq)
-      }
-    )
+  inline def root: URL = {
+    URL(url.dropRight(this.getFile.length))
   }
 }
