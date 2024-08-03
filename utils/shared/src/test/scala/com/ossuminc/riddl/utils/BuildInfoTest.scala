@@ -1,13 +1,14 @@
 package com.ossuminc.riddl.utils
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.TestData
+import java.time.Instant
 import java.io.InputStream
 
-class BuildInfoTest extends AnyWordSpec with Matchers {
+class BuildInfoTest extends TestingBasis {
 
   "BuildInfo" must {
-    "have all the fields" in {
+    "have all the fields" in { (td: TestData) =>
       RiddlBuildInfo.name must be("utils")
       RiddlBuildInfo.version must startWith regex """[0-9]+."""
       RiddlBuildInfo.scalaVersion must startWith("3")
@@ -29,15 +30,18 @@ class BuildInfoTest extends AnyWordSpec with Matchers {
       RiddlBuildInfo.buildInfoObject must be("RiddlBuildInfo")
       RiddlBuildInfo.startYear must be("2019")
       RiddlBuildInfo.scalaCompatVersion must be("3.4.2")
-      RiddlBuildInfo.builtAtMillis > 1715530945036L must be(true)
+      val now: Long = Instant.now().toEpochMilli
+      val yesterday: Long = now - 1000 * 24 * 60 * 60
+      RiddlBuildInfo.builtAtMillis must be > yesterday
+      RiddlBuildInfo.builtAtMillis must be < now
     }
-    "has functioning toMap" in {
-      val map  = RiddlBuildInfo.toMap
+    "has functioning toMap" in { (td: TestData) =>
+      val map = RiddlBuildInfo.toMap
       map.size must be(23)
     }
-    "has functioning toJson" in {
+    "has functioning toJson" in { (td: TestData) =>
       val json = RiddlBuildInfo.toJson
-      json must not be(empty)
+      json must not be (empty)
     }
   }
 }

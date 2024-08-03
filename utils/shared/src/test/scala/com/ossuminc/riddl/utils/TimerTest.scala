@@ -6,15 +6,14 @@
 
 package com.ossuminc.riddl.utils
 
-import org.scalatest.matchers.must.Matchers
+import java.time.Instant
+import org.scalatest.TestData
 import org.scalatest.wordspec.AnyWordSpec
 
-import java.time.Instant
-
-class TimerTest extends AnyWordSpec with Matchers {
+class TimerTest extends TestingBasis {
 
   "timer" should {
-    "measure the correct time" in {
+    "measure the correct time" in { (td: TestData) =>
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
       val clock = new AdjustableClock(start)
 
@@ -29,15 +28,15 @@ class TimerTest extends AnyWordSpec with Matchers {
       clock.instant() mustBe start.plusSeconds(2)
       logger.toString.matches("[info] Stage 'MyStage': 0.0\\d\\d seconds\n")
     }
-    "not print anything" in {
+    "not print anything" in { (td: TestData) =>
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
       val clock = new AdjustableClock(start)
 
       val printStream = StringBuildingPrintStream()
-      val result = Timer.time( "MyStage", show = false) {
-          clock.updateInstant(_.plusSeconds(2))
-          123
-        }
+      val result = Timer.time("MyStage", show = false) {
+        clock.updateInstant(_.plusSeconds(2))
+        123
+      }
 
       result mustBe 123
 
