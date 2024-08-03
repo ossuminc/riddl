@@ -7,7 +7,7 @@ implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionC
 
 @JSExportTopLevel("URL")
 case class URL(url: String) extends AnyRef {
-
+  require(url.matches("(file:///|https?://).*"),"Invalid URL syntax")
   @JSExport override def toString: String = url
   @JSExport def toExternalForm: String = url
 

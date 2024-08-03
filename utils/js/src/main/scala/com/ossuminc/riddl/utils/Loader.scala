@@ -22,17 +22,16 @@ case class Loader(url: URL) {
   import scalajs.js
 
   @JSExport
-  def load(implicit ec: ExecutionContext = global): Future[Iterator[String]] = {
+  def load(implicit ec: ExecutionContext = global): Future[String] = {
     import org.scalajs.dom.RequestInit
     import org.scalajs.dom.HttpMethod
     val requestInit = new RequestInit { method = HttpMethod.GET }
-    val future: Future[String] = dom.fetch(url.toExternalForm, requestInit).toFuture.flatMap { response => 
+    dom.fetch(url.toExternalForm, requestInit).toFuture.flatMap { response =>
       if response.status != 200 then {
-        Future.failed( new Exception(s"GET failed with status ${response.status} ${response.statusText}"))
+        Future.failed(new Exception(s"GET failed with status ${response.status} ${response.statusText}"))
       } else {
         response.text().toFuture
       }
     }
-    future.map(_.split('\n').iterator)
   }
 }

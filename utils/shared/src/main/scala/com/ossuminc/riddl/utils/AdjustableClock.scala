@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.utils
 
-import java.time.{Clock, Instant, ZoneId}
+import java.time.*
 
 /** An implementation of java.time.Clock which only moves through time via calls
   * to `updateInstant`. This allows fine-grained, side-effect-free deterministic

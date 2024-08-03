@@ -21,13 +21,13 @@ case class Loader(url: URL) {
   import scala.scalajs.js.annotation.JSExport
 
   @JSExport
-  def load(implicit ec: ExecutionContext = global): Future[Iterator[String]] = {
+  def load(implicit ec: ExecutionContext = global): Future[String] = {
     Future {
       import scala.io.Codec
       val jurl = java.net.URI(url.toExternalForm).toURL
       val source = Source.fromURL(jurl)(Codec.UTF8)
       try {
-        source.getLines()
+        source.getLines().mkString("\n")
       } finally {
         source.close()
       }

@@ -6,3 +6,5 @@ addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.12.0")
 // addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "1.4.6")
 
 ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % "always"
+
+libraryDependencies += "org.scala-js" %% "scalajs-env-jsdom-nodejs" % "1.0.0"

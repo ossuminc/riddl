@@ -3,6 +3,7 @@ package com.ossuminc.riddl.utils
 import scala.concurrent.Future
 
 case class URL(url_as_string: String) {
+  require(url_as_string.matches("(file:///|https?://).*"), "Invalid URL syntax")
 
   private val url: java.net.URL = java.net.URI.create(url_as_string).toURL
   inline override def toString: String = url.toString
