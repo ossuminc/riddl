@@ -11,12 +11,15 @@ import com.ossuminc.riddl.language.AST
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.scalatest.TestData
 
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest {
 
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
+  
   "ParserContext" must {
-    "throw on underflow" in {
+    "throw on underflow" in { (td: TestData) =>
       val riddlParserInput = RiddlParserInput("")
       val testParser = TestParser(riddlParserInput)
       testParser
@@ -24,8 +27,8 @@ class ParserTest extends ParsingTest {
   }
 
   "Parser" must {
-    "report bad syntax" in {
-      val input = "Flerkins are evil but cute"
+    "report bad syntax" in { (td: TestData) =>
+      val input = RiddlParserInput("Flerkins are evil but cute", td)
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
@@ -36,8 +39,8 @@ class ParserTest extends ParsingTest {
         case Right(_) => fail("Invalid syntax should make an error")
       }
     }
-    "ensure keywords are distinct" in {
-      val input = "domainfoois { author nobody is { ??? } } \n"
+    "ensure keywords are distinct" in { (td: TestData) =>
+      val input = RiddlParserInput("domainfoois { author nobody is { ??? } } \n", td)
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
@@ -45,8 +48,8 @@ class ParserTest extends ParsingTest {
         case Right(_) => fail("'domainfoois' should be flagged as needing whitespace after a keyword")
       }
     }
-    "handle missing }" in {
-      val input = "domain foo is { author nobody is { ??? } \n"
+    "handle missing }" in { (td: TestData) =>
+      val input = RiddlParserInput("domain foo is { author nobody is { ??? } \n", td)
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
@@ -55,8 +58,8 @@ class ParserTest extends ParsingTest {
         case Right(_) => fail("Missing closing brace should make an error")
       }
     }
-    "allow an empty funky-name domain" in {
-      val input = RiddlParserInput("domain 'foo-fah|roo' is { ??? }")
+    "allow an empty funky-name domain" in { (td: TestData) =>
+      val input = RiddlParserInput("domain 'foo-fah|roo' is { ??? }", td)
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -66,11 +69,14 @@ class ParserTest extends ParsingTest {
             Domain((1, 1, rpi), Identifier((1, 8, rpi), "foo-fah|roo"))
       }
     }
-    "allow nested domains" in {
-      val input = RiddlParserInput("""domain foo is {
+    "allow nested domains" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is {
                                      |domain bar is { ??? }
                                      |}
-                                     |""".stripMargin)
+                                     |""".stripMargin,
+        td
+      )
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -85,10 +91,13 @@ class ParserTest extends ParsingTest {
           )
       }
     }
-    "allow multiple domains" in {
-      val input = RiddlParserInput("""domain foo is { ??? }
+    "allow multiple domains" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is { ??? }
                                      |domain bar is { ??? }
-                                     |""".stripMargin)
+                                     |""".stripMargin,
+        td
+      )
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -100,7 +109,7 @@ class ParserTest extends ParsingTest {
           )
       }
     }
-    "allow major definitions to be stubbed with ???" in {
+    "allow major definitions to be stubbed with ???" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain one is { ??? }
           |domain two is {
@@ -121,7 +130,8 @@ class ParserTest extends ParsingTest {
           |    adaptor one from context over.consumption is { ??? }
           |  }
           |}
-          |""".stripMargin
+          |""".stripMargin,
+        td
       )
       parseTopLevelDomains(input) match {
         case Left(errors) =>
@@ -132,8 +142,8 @@ class ParserTest extends ParsingTest {
           succeed
       }
     }
-    "allow context definitions in domains" in {
-      val input = RiddlParserInput("domain foo is { context bar is { ??? } }")
+    "allow context definitions in domains" in { (td: TestData) =>
+      val input = RiddlParserInput("domain foo is { context bar is { ??? } }", td)
       parseDomainDefinition[Context](input, _.contexts.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -143,14 +153,15 @@ class ParserTest extends ParsingTest {
             Context((1, 17, rpi), id = Identifier((1, 25, rpi), "bar"))
       }
     }
-    "allow options on context definitions" in {
+    "allow options on context definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """context bar is {
           |  option service
           |  option wrapper
           |  option gateway
           |}
-          |""".stripMargin
+          |""".stripMargin,
+        td
       )
       parseContextDefinition[Context](input, identity) match {
         case Left(errors) =>
@@ -168,11 +179,11 @@ class ParserTest extends ParsingTest {
           )
       }
     }
-    "allow type definitions in contexts" in {
-      val rpi =
-        RiddlParserInput("""type Vikings = any of {
-                           |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
-                           |}""".stripMargin)
+    "allow type definitions in contexts" in {  (td: TestData) =>
+      val rpi = RiddlParserInput(
+      """type Vikings = any of {
+        |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
+        |}""".stripMargin, td)
       parseInContext(rpi, _.types.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -226,10 +237,8 @@ class ParserTest extends ParsingTest {
           content mustBe expected
       }
     }
-    "allow invariant definitions" in {
-      val input = RiddlParserInput(
-        """invariant large is "x is greater or equal to 10" """
-      )
+    "allow invariant definitions" in { (td: TestData) =>
+      val input = RiddlParserInput("""invariant large is "x is greater or equal to 10" """, td)
       parseDefinition[Invariant](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -244,7 +253,7 @@ class ParserTest extends ParsingTest {
           )
       }
     }
-    "allow entity definitions" in {
+    "allow entity definitions" in { (td: TestData) =>
       val input = RiddlParserInput("""entity Hamburger is {
          |  option transient
          |  option aggregate
@@ -252,7 +261,9 @@ class ParserTest extends ParsingTest {
          |  state BurgerState of type BurgerStruct {
          |  handler BurgerHandler is {} }
          |}
-         |""".stripMargin)
+         |""".stripMargin,
+        td
+      )
       parseDefinition[Entity](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -283,9 +294,8 @@ class ParserTest extends ParsingTest {
           content mustBe expected
       }
     }
-    "allow adaptor definitions" in {
-      val input =
-        RiddlParserInput("adaptor fuzz from context foo.bar is { ??? }")
+    "allow adaptor definitions" in { (td: TestData) =>
+      val input = RiddlParserInput("adaptor fuzz from context foo.bar is { ??? }", td)
       parseDefinition[Adaptor](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -304,16 +314,18 @@ class ParserTest extends ParsingTest {
       }
     }
 
-    "allow functions" in {
-      val input = """
-                    |function foo is {
-                    |  requires { b : Boolean}
-                    |  returns { i : Integer}
-                    |  body { ??? }
-                    |}
-                    |""".stripMargin
-
-      parseDefinition[Function](RiddlParserInput(input)) match {
+    "allow functions" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """
+          |function foo is {
+          |  requires { b : Boolean}
+          |  returns { i : Integer}
+          |  body { ??? }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Function](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
@@ -332,14 +344,16 @@ class ParserTest extends ParsingTest {
           }
       }
     }
-    "support Replica types in Contexts" in {
-      val input: String =
+    "support Replica types in Contexts" in {  (td: TestData) =>
+      val input = RiddlParserInput(
         """domain foo {
           |  context bar is {
           |    type crdt is replica of Integer
           |  }
           |}
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
@@ -347,8 +361,8 @@ class ParserTest extends ParsingTest {
           typ.typ mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
       }
     }
-    "parse from a complex file" in {
-      val rpi = RiddlParserInput(Path.of("language/jvm/src/test/input/everything.riddl"))
+    "parse from a complex file" in { (td: TestData) =>
+      val rpi = rpiFromPath(java.nio.file.Path.of("language/jvm/src/test/input/everything.riddl"))
       parseTopLevelDomains(rpi) match {
         case Left(errors) =>
           fail(errors.format)

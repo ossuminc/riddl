@@ -3,9 +3,9 @@ package com.ossuminc.riddl.utils
 import org.scalatest.{TestData, TestSuite}
 import org.scalatest.fixture
 import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.FixtureAnyWordSpec
+import org.scalatest.wordspec.{FixtureAnyWordSpec,AnyWordSpec}
 
-trait TestingBasis extends FixtureAnyWordSpec with Matchers with fixture.TestDataFixture {
+abstract class TestingBasis extends AnyWordSpec with Matchers {
 
   import scala.language.implicitConversions
 
@@ -13,3 +13,12 @@ trait TestingBasis extends FixtureAnyWordSpec with Matchers with fixture.TestDat
     implicit def testName: String = td.scopes.mkString("|") + "|" + td.name
   }
 }
+
+abstract class TestingBasisWithTestData extends FixtureAnyWordSpec with Matchers with fixture.TestDataFixture {
+
+  import scala.language.implicitConversions
+
+  extension (td: TestData) {
+    implicit def testName: String = td.scopes.mkString("|") + "|" + td.name
+  }
+} 

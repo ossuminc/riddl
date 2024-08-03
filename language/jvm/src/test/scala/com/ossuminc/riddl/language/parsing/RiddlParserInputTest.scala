@@ -1,36 +1,33 @@
 package com.ossuminc.riddl.language.parsing
 
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import com.ossuminc.riddl.utils.{TestingBasis, URL, Loader}
+
 import org.scalatest.Assertion
-import java.io.File
-import java.net.URI
 import scala.io.Source
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
-import com.ossuminc.riddl.utils.URL
+class RiddlParserInputTest extends TestingBasis {
 
-class RiddlParserInputTest extends AnyWordSpec with Matchers {
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
   val fullPath = "/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"
   val src = s"https://raw.githubusercontent.com$fullPath"
 
-  def getFromURI(uri: URI): String = {
-    val source: Source = Source.fromURL(uri.toURL)
-    try {
-      source.getLines().mkString("\n")
-    } finally {
-      source.close()
-    }
+  def getFromURI(url: URL): String = {
+    val contentF = Loader(url).load
+    Await.result(contentF, 10.seconds)
   }
 
-  def checkRPI(rpi: RiddlParserInput, uri: URI): Assertion = {
+  def checkRPI(rpi: RiddlParserInput, url: URL): Assertion = {
     rpi.path match
       case Some(path) => path.toString.mustBe(fullPath)
       case x          => fail(s"Unexpected: $x")
     rpi.origin.mustBe(src)
     rpi.from.mustBe(src)
-    rpi.root.mustBe(new File("/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"))
-    val expected = getFromURI(uri)
+    rpi.root.mustBe(URL("/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"))
+    val expected = getFromURI(url)
     rpi.data.mustBe(expected)
     val exception = intercept[ArrayIndexOutOfBoundsException] { rpi.offsetOf(-1) }
     rpi.offsetOf(2) mustBe 38
@@ -48,20 +45,14 @@ class RiddlParserInputTest extends AnyWordSpec with Matchers {
     }
 
     "construct from string" in {
-      val rpi = RiddlParserInput("This is the text to parse")
+      val rpi = RiddlParserInput("This is the text to parse", "construct from string")
       rpi.data.mustBe("This is the text to parse")
-      rpi.from
     }
 
-    "construct from URI" in {
-      val uri = URI.create(src)
-      val rpi = RiddlParserInput(URL(src))
-      checkRPI(rpi, uri)
-    }
     "construct from URL" in {
-      val uri = URI.create(src)
-      val rpi2 = RiddlParserInput(URL(src))
-      checkRPI(rpi2, uri)
+      val url = URL(src)
+      val rpi2 = Await.result(rpiFromURL(url), 10.seconds)
+      checkRPI(rpi2, url)
     }
   }
 }

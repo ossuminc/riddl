@@ -6,13 +6,12 @@
 
 package com.ossuminc.riddl.language
 
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import com.ossuminc.riddl.utils.TestingBasis
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.PredefType
 
 /** Unit Tests For TypeExpressions */
-class TypeExpressionTest extends AnyWordSpec with Matchers {
+class TypeExpressionTest extends TestingBasis {
 
   val abstract_ = Abstract(At.empty)
   val bool: Bool = Bool(At.empty)
@@ -282,8 +281,8 @@ class TypeExpressionTest extends AnyWordSpec with Matchers {
   val message: AggregateUseCaseTypeExpression =
     AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields)
 
-  val alias: AliasedTypeExpression = AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a",
-    "b", "foo")))
+  val alias: AliasedTypeExpression =
+    AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a", "b", "foo")))
 
   "Complex Expression Types" must {
     "Support Aggregation" in {

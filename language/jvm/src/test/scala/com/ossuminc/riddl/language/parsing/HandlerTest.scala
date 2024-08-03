@@ -9,21 +9,26 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.{Context, Entity}
 import com.ossuminc.riddl.language.parsing.ParsingTest
 
+import org.scalatest.TestData
+
 /** Unit Tests For Handler */
 class HandlerTest extends ParsingTest {
   "Handlers" should {
-    "be allowed in contexts" in {
-      val input = """context Foo is {
-                    |  type DoFoo is command { flux: Integer }
-                    |  type FooDone is event { flux: Integer }
-                    |  outlet begone is event FooDone
-                    |  handler FooHandler is {
-                    |    on command FooMessage {
-                    |      send event FooDone to outlet begone
-                    |    }
-                    |  }
-                    |}
-                    |""".stripMargin
+    "be allowed in contexts" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context Foo is {
+          |  type DoFoo is command { flux: Integer }
+          |  type FooDone is event { flux: Integer }
+          |  outlet begone is event FooDone
+          |  handler FooHandler is {
+          |    on command FooMessage {
+          |      send event FooDone to outlet begone
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
       parseDefinition[Context](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString("\n")
@@ -31,18 +36,19 @@ class HandlerTest extends ParsingTest {
         case Right(_) => succeed
       }
     }
-    "empty example disallowed" in {
-      val input = "handler foo is { on other { } "
+
+    "empty example disallowed" in { (td: TestData) =>
+      val input = RiddlParserInput("handler foo is { on other { } ", td)
       parseDefinition[Context](input) match {
         case Left(errors) =>
           errors must not(be(empty))
           succeed
         case Right(_) => fail("Did not catch empty on clause examples")
       }
-
     }
-    "only one syntax error" in {
-      val input =
+
+    "only one syntax error" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain foo is {
           |context Members is {
           |
@@ -91,7 +97,9 @@ class HandlerTest extends ParsingTest {
           |        }
           |    }
           |
-          |}""".stripMargin
+          |}""".stripMargin,
+        td
+      )
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           errors must not(be(empty))
@@ -99,8 +107,8 @@ class HandlerTest extends ParsingTest {
         case Right(_) => fail("Test case should have failed")
       }
     }
-    "accept accept an if statement " in {
-      val input =
+    "accept accept an if statement " in { (td: TestData) =>
+      val input = RiddlParserInput(
         """entity DistributionItem is {
           |  type ArbitraryState is { value: String }
           |  state DistributionState of ArbitraryState is { ??? }
@@ -112,7 +120,9 @@ class HandlerTest extends ParsingTest {
           |    } explained as { "Helps update this item's location" }
           |  }
           |}
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseDefinition[Entity](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString("\n")
@@ -120,8 +130,8 @@ class HandlerTest extends ParsingTest {
         case Right(_) => succeed
       }
     }
-    "handle statements" in {
-      val input =
+    "handle statements" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """entity DistributionItem is {
           |  inlet incoming is event ItemPreInducted
           |  type ArbitraryState is { value: String }
@@ -198,7 +208,9 @@ class HandlerTest extends ParsingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseDefinition[Entity](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString("\n")

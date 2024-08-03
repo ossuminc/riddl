@@ -104,7 +104,7 @@ object TopLevelParser {
     ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   ): Future[Either[Messages, Root]] = {
     import com.ossuminc.riddl.utils.Loader
-    Loader(url).load.map { (data: Iterator[String]) =>
+    Loader(url).load.map { (data: String) =>
       val rpi = RiddlParserInput(data.mkString, url)
       parseInput(rpi, commonOptions, withVerboseFailures)
     }

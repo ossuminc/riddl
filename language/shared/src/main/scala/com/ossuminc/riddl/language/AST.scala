@@ -207,7 +207,7 @@ object AST {
 
     import com.ossuminc.riddl.utils.Loader
 
-    lazy val linesF: Future[Iterator[LiteralString]] = Loader(url).load.map(_.map(LiteralString(loc.copy(), _)))
+    lazy val linesF: Future[Seq[String]] = Loader(url).load.map(_.split("\n").toSeq)
     override def format: String = url.toExternalForm
   }
 

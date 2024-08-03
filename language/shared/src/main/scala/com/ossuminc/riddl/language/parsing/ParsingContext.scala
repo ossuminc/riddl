@@ -96,8 +96,8 @@ trait ParsingContext extends ParsingErrors {
         }
         ctx.input.asInstanceOf[RiddlParserInput].root.resolve(name)
       }
-      Loader(url).load.map { (lines: Iterator[String]) =>
-        val rpi = RiddlParserInput(lines.mkString, url)
+      Loader(url).load.map { (data: String) =>
+        val rpi = RiddlParserInput(data, url)
         doParse[CT](loc, rpi, str, rule)
       }
     } catch {

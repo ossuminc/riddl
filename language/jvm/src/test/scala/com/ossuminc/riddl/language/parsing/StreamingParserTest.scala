@@ -8,9 +8,12 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
+import org.scalatest.TestData
 
 /** Unit Tests For StreamingParser */
 class StreamingParserTest extends ParsingTest {
+
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
   val sourceInput: String =
     """source GetWeatherForecast is {
@@ -51,13 +54,13 @@ class StreamingParserTest extends ParsingTest {
     )
 
   "StreamingParser" should {
-    "recognize a source processor" in {
-      val rpi = RiddlParserInput(sourceInput)
+    "recognize a source processor" in { (td:TestData) =>
+      val rpi = RiddlParserInput(sourceInput,td)
       checkDefinition[Streamlet, Streamlet](rpi, sourceExpected(rpi), identity)
     }
-    "recognize a source processor in a context" in {
+    "recognize a source processor in a context" in {  (td:TestData) =>
       val input = s"context foo is { $sourceInput }"
-      val rpi = RiddlParserInput(input)
+      val rpi = RiddlParserInput(input, td)
       val expected = Context(
         (1, 1, rpi),
         Identifier((1, 9, rpi), "foo"),
@@ -66,7 +69,7 @@ class StreamingParserTest extends ParsingTest {
       checkDefinition[Context, Context](rpi, expected, identity)
     }
 
-    "recognize a streaming context" in {
+    "recognize a streaming context" in { (td:TestData) =>
       val rpi = RiddlParserInput(
         """
           |domain AnyDomain is {
@@ -90,7 +93,7 @@ class StreamingParserTest extends ParsingTest {
           |"A complete plant definition for temperature based sensor attenuation."
           |
           |} explained as "Plants can only be specified in a domain definition"
-          |""".stripMargin
+          |""".stripMargin,td
       )
       val expected = Context(
         loc = (3, 1, rpi),
@@ -175,7 +178,7 @@ class StreamingParserTest extends ParsingTest {
           Streamlet(
             (15, 3, rpi),
             Identifier((15, 8, rpi), "AttenuateSensor"),
-            Sink((15, 3, rpi)), 
+            Sink((15, 3, rpi)),
             List(
               Inlet(
                 (16, 5, rpi),

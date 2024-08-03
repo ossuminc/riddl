@@ -6,16 +6,17 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.Path
+import com.ossuminc.riddl.utils.{Path, TestingBasis}
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.AST.*
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import scala.concurrent.Await 
+
+import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 /** Unit Tests For Abstract Syntax Tree */
-class ASTTest extends AnyWordSpec with Matchers {
+class ASTTest extends TestingBasis {
 
   "Descriptions" should {
     "have empty Description.empty" in {
@@ -37,9 +38,9 @@ class ASTTest extends AnyWordSpec with Matchers {
       ud.loc.isEmpty mustBe (true)
       ud.url.toExternalForm must be(url_text)
       ud.format must be(url.toExternalForm)
-      val lines: Seq[LiteralString] = Await.result(ud.linesF, 5.seconds)
+      val lines: Seq[String] = Await.result(ud.linesF, 5.seconds)
       val head = lines.head
-      head.s must include("sbt-ossuminc")
+      head must include("sbt-ossuminc")
     }
   }
   

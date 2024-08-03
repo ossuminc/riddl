@@ -7,73 +7,74 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{Field, *}
+import org.scalatest.TestData
 
 /** Unit Tests For TypesParserTest */
 class TypeParserTest extends ParsingTest {
 
   "TypeParser" should {
-    "allow renames of String" in {
-      val rpi = RiddlParserInput("type str = String")
+    "allow renames of String" in { (td: TestData) =>
+      val rpi = RiddlParserInput("type str = String", td)
       val expected =
         Type((1, 1, rpi), Identifier((1, 6, rpi), "str"), String_((1, 12, rpi)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
-    "allow renames of Number" in {
-      val rpi = RiddlParserInput("type num = Number")
+    "allow renames of Number" in { (td: TestData) =>
+      val rpi = RiddlParserInput("type num = Number", td)
       val expected =
         Type((1, 1, rpi), Identifier((1, 6, rpi), "num"), Number((1, 12, rpi)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
-    "allow rename of Abstract" in {
-      val input = "type abs = Abstract"
+    "allow rename of Abstract" in { (td: TestData) =>
+      val input = RiddlParserInput("type abs = Abstract", td)
       val expected = Type(1 -> 1, Identifier(1 -> 6, "abs"), Abstract(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Boolean" in {
-      val input = "type boo = Boolean"
+    "allow rename of Boolean" in { (td: TestData) =>
+      val input = RiddlParserInput("type boo = Boolean", td)
       val expected = Type(1 -> 1, Identifier(1 -> 6, "boo"), Bool(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Current" in {
-      val input = "type cur = Current"
+    "allow rename of Current" in { (td: TestData) =>
+      val input = RiddlParserInput("type cur = Current", td)
       val expected = Type(1 -> 1, Identifier(1 -> 6, "cur"), Current(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Currency(USD)" in {
-      val input = "type cur = Currency(USD)"
+    "allow rename of Currency(USD)" in { (td: TestData) =>
+      val input = RiddlParserInput("type cur = Currency(USD)",td)
       val expected =
         Type(1 -> 1, Identifier(1 -> 6, "cur"), Currency(1 -> 12, "USD"))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Length" in {
-      val input = "type len = Length"
+    "allow rename of Length" in { (td: TestData) =>
+      val input = RiddlParserInput("type len = Length", td)
       val expected = Type(1 -> 1, Identifier(1 -> 6, "len"), Length(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Luminosity" in {
-      val input = "type lum = Luminosity"
+    "allow rename of Luminosity" in { (td: TestData) =>
+      val input = RiddlParserInput("type lum = Luminosity", td)
       val expected =
         Type(1 -> 1, Identifier(1 -> 6, "lum"), Luminosity(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Mass" in {
-      val input = "type mas = Mass"
+    "allow rename of Mass" in { (td: TestData) =>
+      val input = RiddlParserInput("type mas = Mass",td)
       val expected = Type(1 -> 1, Identifier(1 -> 6, "mas"), Mass(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Mole" in {
-      val input = "type mol = Mole"
+    "allow rename of Mole" in { (td: TestData) =>
+      val input = RiddlParserInput("type mol = Mole",td)
       val expected = Type(1 -> 1, Identifier(1 -> 6, "mol"), Mole(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow rename of Temperature" in {
-      val input = "type tmp = Temperature"
+    "allow rename of Temperature" in { (td: TestData) =>
+      val input = RiddlParserInput("type tmp = Temperature",td)
       val expected =
         Type(1 -> 1, Identifier(1 -> 6, "tmp"), Temperature(1 -> 12))
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow renames of Id(path)" in {
-      val input = "type ident = Id(entity foo)"
+    "allow renames of Id(path)" in { (td: TestData) =>
+      val input = RiddlParserInput("type ident = Id(entity foo)",td)
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "ident"),
@@ -84,7 +85,7 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow renames of 8 literal types" in {
+    "allow renames of 8 literal types" in { (td: TestData) =>
       val cases = Map[String, Type](
         "type dat = Date" ->
           Type(1 -> 1, Identifier(1 -> 6, "dat"), Date(1 -> 12)),
@@ -99,8 +100,8 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinitions[Type, Type](cases, identity)
     }
-    "allow enumerators" in {
-      val input = "type enum = any of { Apple Pear Peach Persimmon }"
+    "allow enumerators" in {  (td: TestData) =>
+      val input = RiddlParserInput("type enum = any of { Apple Pear Peach Persimmon }",td)
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "enum"),
@@ -116,8 +117,8 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow alternation" in {
-      val input = "type alt = one of { type enum or type stamp or type url }"
+    "allow alternation" in { (td: TestData) =>
+      val input = RiddlParserInput("type alt = one of { type enum or type stamp or type url }",td)
       val expected = Type(
         1 -> 1,
         Identifier(1 -> 6, "alt"),
@@ -140,12 +141,13 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](input, expected, identity)
     }
-    "allow alternation of a lone type reference" in {
-      val rpi = RiddlParserInput("""domain Blah is {
-                                   |type Foo = String
-                                   |type alt = one of { type Foo }
-                                   |}
-                                   |""".stripMargin)
+    "allow alternation of a lone type reference" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+      """domain Blah is {
+        |type Foo = String
+        |type alt = one of { type Foo }
+        |}
+        |""".stripMargin,td)
       val expected = Alternation(
         (3, 12, rpi),
         List(
@@ -163,13 +165,14 @@ class TypeParserTest extends ParsingTest {
         case Right((Type(_, _, typeExp,  _, _), _)) => typeExp mustBe expected
       }
     }
-    "allow aggregation" in {
-      val rip = RiddlParserInput("""type agg = {
-                                   |  key: Number,
-                                   |  id: Id(entity foo),
-                                   |  time: TimeStamp
-                                   |}
-                                   |""".stripMargin)
+    "allow aggregation" in { (td: TestData) =>
+      val rip = RiddlParserInput(
+        """type agg = {
+          |  key: Number,
+          |  id: Id(entity foo),
+          |  time: TimeStamp
+          |}
+          |""".stripMargin, td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "agg"),
@@ -199,12 +202,13 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
-    "allow methods in aggregates" in {
-      val rip = RiddlParserInput("""record agg = {
-                                   |  key: Number,
-                                   |  calc(key: Number): Number,
-                                   |}
-                                   |""".stripMargin)
+    "allow methods in aggregates" in { (td: TestData) =>
+      val rip = RiddlParserInput(
+        """record agg = {
+          |  key: Number,
+          |  calc(key: Number): Number,
+          |}
+          |""".stripMargin,td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "agg"),
@@ -226,15 +230,16 @@ class TypeParserTest extends ParsingTest {
         )
       )
     }
-    "allow command, event, query, and result message aggregations" in {
+    "allow command, event, query, and result message aggregations" in { (td: TestData) =>
       for mk <- Seq("command", "event", "query", "result") do {
         val prefix = s"type mkt = $mk {"
-        val rip = RiddlParserInput(prefix + """
-                                              |  key: Number,
-                                              |  id: Id(entity foo),
-                                              |  time: TimeStamp
-                                              |}
-                                              |""".stripMargin)
+        val rip = RiddlParserInput(prefix + 
+          """
+            |  key: Number,
+            |  id: Id(entity foo),
+            |  time: TimeStamp
+            |}
+            |""".stripMargin,td)
         val expected = Type(
           (1, 1, rip),
           Identifier((1, 6, rip), "mkt"),
@@ -271,8 +276,8 @@ class TypeParserTest extends ParsingTest {
         checkDefinition[Type, Type](rip, expected, identity)
       }
     }
-    "allow mappings between two types" in {
-      val rip = RiddlParserInput("type m1 = mapping from String to Number")
+    "allow mappings between two types" in { (td: TestData) =>
+      val rip = RiddlParserInput("type m1 = mapping from String to Number", td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "m1"),
@@ -280,8 +285,8 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
-    "allow graphs of types" in {
-      val rip = RiddlParserInput("type g1 = graph of String")
+    "allow graphs of types" in { (td: TestData) =>
+      val rip = RiddlParserInput("type g1 = graph of String", td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "g1"),
@@ -289,8 +294,8 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
-    "allow tables of types" in {
-      val rip = RiddlParserInput("type t1 = table of String of [5,10]")
+    "allow tables of types" in { (td: TestData) =>
+      val rip = RiddlParserInput("type t1 = table of String of [5,10]",td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "t1"),
@@ -298,8 +303,8 @@ class TypeParserTest extends ParsingTest {
       )
       checkDefinition[Type, Type](rip, expected, identity)
     }
-    "allow range of values" in {
-      val rip = RiddlParserInput("type r1 = range(21,  42)")
+    "allow range of values" in { (td: TestData) =>
+      val rip = RiddlParserInput("type r1 = range(21,  42)",td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "r1"),
@@ -308,8 +313,8 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
 
-    "allow one or more in regex style" in {
-      val rip = RiddlParserInput("type oneOrMoreB = agg+")
+    "allow one or more in regex style" in { (td: TestData) =>
+      val rip = RiddlParserInput("type oneOrMoreB = agg+", td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "oneOrMoreB"),
@@ -325,8 +330,8 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
 
-    "allow zero or more" in {
-      val rip = RiddlParserInput("type zeroOrMore = many optional agg")
+    "allow zero or more" in { (td: TestData) =>
+      val rip = RiddlParserInput("type zeroOrMore = many optional agg",td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "zeroOrMore"),
@@ -342,8 +347,8 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
 
-    "allow optionality" in {
-      val rip = RiddlParserInput("type optional = optional agg")
+    "allow optionality" in { (td: TestData) =>
+      val rip = RiddlParserInput("type optional = optional agg",td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 6, rip), "optional"),
@@ -359,8 +364,8 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
 
-    "allow messages defined with more natural syntax" in {
-      val rip = RiddlParserInput("command foo is { a: Integer }")
+    "allow messages defined with more natural syntax" in { (td: TestData) =>
+      val rip = RiddlParserInput("command foo is { a: Integer }",td)
       val expected = Type(
         (1, 1, rip),
         Identifier((1, 9, rip), "foo"),
@@ -379,23 +384,24 @@ class TypeParserTest extends ParsingTest {
       checkDefinition[Type, Type](rip, expected, identity)
     }
 
-    "allow complex nested type definitions" in {
-      val rip = RiddlParserInput("""
-                                   |domain foo is {
-                                   |  type Simple = String
-                                   |  record Compound is {
-                                   |    s: Simple,
-                                   |    ns: many Number
-                                   |  }
-                                   |  type Choices is one of { Number or Id }
-                                   |  type Complex is {
-                                   |    a: Simple,
-                                   |    b: TimeStamp,
-                                   |    c: many optional record Compound,
-                                   |    d: optional Choices
-                                   |  }
-                                   |}
-                                   |""".stripMargin)
+    "allow complex nested type definitions" in { (td: TestData) =>
+      val rip = RiddlParserInput(
+        """
+          |domain foo is {
+          |  type Simple = String
+          |  record Compound is {
+          |    s: Simple,
+          |    ns: many Number
+          |  }
+          |  type Choices is one of { Number or Id }
+          |  type Complex is {
+          |    a: Simple,
+          |    b: TimeStamp,
+          |    c: many optional record Compound,
+          |    d: optional Choices
+          |  }
+          |}
+          |""".stripMargin,td)
       parseDomainDefinition[Type](rip, _.types.last) match {
         case Left(errors)          => fail(errors.format)
         case Right((typeDef, rpi)) =>

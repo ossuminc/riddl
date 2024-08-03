@@ -2,7 +2,7 @@ import org.scoverage.coveralls.Imports.CoverallsKeys.*
 import com.ossuminc.sbt.{OssumIncPlugin, Plugin}
 import sbt.Keys.description
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
-import sbtcrossproject.CrossProject
+import sbtcrossproject.{CrossClasspathDependency, CrossProject}
 import org.scalajs.linker.interface.OutputPatterns
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -12,16 +12,21 @@ enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
 
-def compTest(p: Project): ClasspathDependency = p % "compile->compile;test->test"
+def cpDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
+def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
 
 lazy val riddl: Project = Root("riddl", startYr = startYear)
   .configure(With.noPublishing, With.git, With.dynver)
   .aggregate(
     utils,
+    utilsJS,
     language,
+    languageJS,
     passes,
-    command,
+    passesJS,
     analyses,
+    analysesJS,
+    command,
     prettify,
     hugo,
     testkit,
@@ -50,7 +55,6 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
   .jsSettings(
-
     scalaJSLinkerConfig ~= {
       // Enable ECMAScript module output.
       _.withModuleKind(ModuleKind.ESModule)
@@ -76,6 +80,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings")
   )
+  .dependsOn(cpDep(utils_cp))
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
   .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
@@ -85,10 +90,16 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += Dep.commons_io % Test
   )
   .jsSettings(
+    scalaJSLinkerConfig ~= {
+      // Enable ECMAScript module output.
+      _.withModuleKind(ModuleKind.ESModule)
+        // Use .mjs extension.
+        .withOutputPatterns(OutputPatterns.fromJSFile("%s.mjs"))
+    },
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
   )
 lazy val language = language_cp.jvm.dependsOn(utils)
-lazy val language_js = language_cp.js.dependsOn(utilsJS)
+lazy val languageJS = language_cp.js.dependsOn(utilsJS)
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
@@ -105,7 +116,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils_cp, language_cp % "compile->compile;test->test")
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp))
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
@@ -123,7 +134,7 @@ lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(J
     coverageExcludedFiles := """<empty>;$anon""",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(utils_cp, language_cp, passes_cp % "compile->compile;test->test")
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
 val analyses = analyses_cp.jvm
 val analysesJS = analyses_cp.js
 
@@ -138,7 +149,7 @@ lazy val command = Module("command", "riddl-command")
     description := "Command infrastructure needed to define a command",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   )
-  .dependsOn(compTest(utils), compTest(language), passes)
+  .dependsOn(pDep(utils), pDep(language), passes)
 
 def testDep(project: Project): ClasspathDependency = project % "compile->compile;compile->test;test->test"
 
@@ -172,7 +183,7 @@ lazy val prettify = Module("prettify", "riddl-prettify")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils, language, compTest(passes), command, testKitDep)
+  .dependsOn(utils, language, pDep(passes), command, testKitDep)
 
 val Hugo = config("hugo")
 lazy val hugo = Module("hugo", "riddl-hugo")
@@ -186,7 +197,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils, compTest(language), compTest(passes), compTest(command), analyses, prettify, testKitDep)
+  .dependsOn(utils, pDep(language), pDep(passes), pDep(command), analyses, prettify, testKitDep)
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
@@ -201,9 +212,9 @@ lazy val commands: Project = Module("commands", "riddl-commands")
     libraryDependencies ++= Dep.testing
   )
   .dependsOn(
-    compTest(utils),
-    compTest(language),
-    compTest(passes),
+    pDep(utils),
+    pDep(language),
+    pDep(passes),
     command,
     analyses,
     prettify,

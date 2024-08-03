@@ -8,17 +8,20 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term, NamedValue}
 import com.ossuminc.riddl.language.{At, Finder}
+import org.scalatest.TestData
+
 class TermTest extends ParsingTest {
 
   "Term" should {
-    "do something" in {
-      val input = """domain foo {
-                    |  term one is described by "uno"
-                    |  context bar is {
-                    |    term two is described by "dos"
-                    |    entity foo is { ??? }
-                    |  }
-                    |}""".stripMargin
+    "do something" in { (td:TestData) =>
+      val input = RiddlParserInput(
+        """domain foo {
+          |  term one is described by "uno"
+          |  context bar is {
+          |    term two is described by "dos"
+          |    entity foo is { ??? }
+          |  }
+          |}""".stripMargin,td)
       parseTopLevelDomain(input, identity) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString

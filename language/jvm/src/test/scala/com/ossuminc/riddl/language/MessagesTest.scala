@@ -8,14 +8,17 @@ package com.ossuminc.riddl.language
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.TestData
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{Logger, StringLogger}
+import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
+import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.{Logger, StringLogger, URL}
 
-class MessagesTest extends AnyWordSpec with Matchers {
+class MessagesTest extends TestingBasis {
 
   "MessageKinds" should {
-    "MissingWarning must have correct queries" in {
+    "MissingWarning must have correct queries" in { (td: TestData) =>
       MissingWarning.isSevereError mustBe false
       MissingWarning.isError mustBe false
       MissingWarning.isWarning mustBe true
@@ -27,7 +30,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       MissingWarning.isMissing mustBe true
       MissingWarning.toString mustBe "Missing"
     }
-    "StyleWarning must have correct queries" in {
+    "StyleWarning must have correct queries" in {  (td: TestData) =>
       StyleWarning.isSevereError mustBe false
       StyleWarning.isError mustBe false
       StyleWarning.isWarning mustBe true
@@ -39,7 +42,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       StyleWarning.isMissing mustBe false
       StyleWarning.toString mustBe "Style"
     }
-    "UsageWarning must have correct queries" in {
+    "UsageWarning must have correct queries" in { (td: TestData) =>
       UsageWarning.isSevereError mustBe false
       UsageWarning.isError mustBe false
       UsageWarning.isWarning mustBe true
@@ -51,7 +54,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       UsageWarning.isMissing mustBe false
       UsageWarning.toString mustBe "Usage"
     }
-    "Warning must have correct queries" in {
+    "Warning must have correct queries" in { (td: TestData) =>
       Warning.isSevereError mustBe false
       Warning.isError mustBe false
       Warning.isWarning mustBe true
@@ -63,7 +66,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       Warning.isMissing mustBe false
       Warning.toString mustBe "Warning"
     }
-    "Error must have correct queries" in {
+    "Error must have correct queries" in { (td: TestData) =>
       Error.isSevereError mustBe false
       Error.isError mustBe true
       Error.isWarning mustBe false
@@ -75,7 +78,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       Error.isMissing mustBe false
       Error.toString mustBe "Error"
     }
-    "SevereError must have correct queries" in {
+    "SevereError must have correct queries" in { (td: TestData) =>
       SevereError.isSevereError mustBe true
       SevereError.isError mustBe true
       SevereError.isWarning mustBe false
@@ -87,7 +90,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       SevereError.isMissing mustBe false
       SevereError.toString mustBe "Severe"
     }
-    "Severities from lowest to highest" in {
+    "Severities from lowest to highest" in { (td: TestData) =>
       Info.severity mustBe 0
       StyleWarning.severity mustBe 1
       MissingWarning.severity mustBe 2
@@ -96,7 +99,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       Error.severity mustBe 5
       SevereError.severity mustBe 6
     }
-    "KindOfMessage supports comparison" in {
+    "KindOfMessage supports comparison" in { (td: TestData) =>
       (Info < StyleWarning &&
         StyleWarning < MissingWarning &&
         MissingWarning < UsageWarning &&
@@ -115,7 +118,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
   private val s = Messages.severe("severe")
 
   "Message" should {
-    "know their kind" in {
+    "know their kind" in { (td: TestData) =>
       i.isInfo mustBe true
       sty.isStyle mustBe true
       m.isMissing mustBe true
@@ -129,10 +132,10 @@ class MessagesTest extends AnyWordSpec with Matchers {
   val mix: Messages = List(i, sty, m, u, w, e, s)
 
   "Messages" should {
-    "filter for Warnings" in {
+    "filter for Warnings" in { (td: TestData) =>
       mix.justWarnings mustBe Seq(sty, m, u, w)
     }
-    "filter for Errors" in {
+    "filter for Errors" in { (td: TestData) =>
       mix.justErrors mustBe Seq(e, s)
     }
     "filter for StyleWarnings" in {
@@ -151,7 +154,7 @@ class MessagesTest extends AnyWordSpec with Matchers {
       val commonOptions = CommonOptions()
       val log: Logger = StringLogger()
       Messages.logMessages(mix, log, commonOptions)
-      val content = log.toString()
+      val content = log.toString
       val expected = """[34m[1m[info] info[0m
                        |[32m[1m[style] style[0m
                        |[32m[1m[missing] missing[0m
@@ -192,8 +195,8 @@ class MessagesTest extends AnyWordSpec with Matchers {
       content mustBe expected
     }
 
-    "format should produce located output for non-empty location" in {
-      val rip: RiddlParserInput = RiddlParserInput("test", "test")
+    "format should produce located output for non-empty location" in { (td: TestData) =>
+      val rip: RiddlParserInput = RiddlParserInput("test", td)
       val at = At(1, 2, rip)
       val msg = Message(at, "the_message", Warning)
       val content = msg.format
@@ -205,9 +208,10 @@ class MessagesTest extends AnyWordSpec with Matchers {
       content mustBe expected
     }
 
-    "be ordered based on location" in {
-      val v1 = Message(At(1, 2, "the_source"), "the_message", Warning)
-      val v2 = Message(At(2, 3, "the_source"), "the_message", Warning)
+    "be ordered based on location" in { (td: TestData) =>
+      val rip: RiddlParserInput = RiddlParserInput("test",td)
+      val v1 = Message(At(1, 2, rip), "the_message", Warning)
+      val v2 = Message(At(2, 3, rip), "the_message", Warning)
       v1 < v2 mustBe true
       v1 == v2 mustBe false
     }

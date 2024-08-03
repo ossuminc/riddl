@@ -8,11 +8,13 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Folding
-import scala.collection.mutable 
+import scala.collection.mutable
+
+import org.scalatest.TestData
 
 class FoldingTest extends ParsingTest {
 
-  val input: String =
+  val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
       |  context one is {
       |    connector a is { ??? }
@@ -47,7 +49,9 @@ class FoldingTest extends ParsingTest {
       |  }
       |  type AString = String
       |}
-      |""".stripMargin
+      |""".stripMargin,
+    "FoldingTest"
+  )
 
   val expectedResult: Seq[Seq[String]] = List(
     List("Root"),
@@ -78,8 +82,7 @@ class FoldingTest extends ParsingTest {
   )
 
   "Folding" should {
-    "visit each definition" in {
-
+    "visit each definition" in { (td: TestData) =>
       parseTopLevelDomains(input) match {
         case Left(errors) => fail(errors.format)
         case Right(content) =>

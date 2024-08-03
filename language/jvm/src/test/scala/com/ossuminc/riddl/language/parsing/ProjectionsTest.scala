@@ -3,10 +3,12 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 
+import org.scalatest.TestData
+
 class ProjectionsTest extends ParsingTest {
 
   "Projector" should {
-    "use a Repository" in {
+    "use a Repository" in { (td:TestData) => 
       val rpi = RiddlParserInput("""domain ignore {
         |  context ignore {
         |    repository storage is {
@@ -17,7 +19,7 @@ class ProjectionsTest extends ParsingTest {
         |    }
         |  }
         |}
-        |""".stripMargin)
+        |""".stripMargin,td)
       parseTopLevelDomain[Projector](rpi, _.domains.head.contexts.head.projectors.head) match
         case Left(messages) =>
           if messages.justErrors.nonEmpty then fail(messages.format)
@@ -29,7 +31,7 @@ class ProjectionsTest extends ParsingTest {
           rr.pathId mustBe PathIdentifier(At(7, 27, input), Seq("storage"))
 
     }
-    "does not use data statements" in {
+    "does not use data statements" in { (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
           |  context ignore {
@@ -42,7 +44,8 @@ class ProjectionsTest extends ParsingTest {
           |       }
           |     }
           |   }
-          |""".stripMargin
+          |""".stripMargin,
+        td
       )
       parseTopLevelDomain[Projector](rpi, _.domains.head.contexts.head.projectors.head) match {
         case Left(messages) =>
@@ -56,7 +59,7 @@ class ProjectionsTest extends ParsingTest {
   }
 
   "Repository" should {
-    "have a schema" in {
+    "have a schema" in { (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
           |  context ignore {
@@ -68,7 +71,7 @@ class ProjectionsTest extends ParsingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseTopLevelDomain[Repository](rpi, _.domains.head.contexts.head.repositories.head) match
         case Left(messages) =>
@@ -85,7 +88,7 @@ class ProjectionsTest extends ParsingTest {
             Seq(FieldRef(At(7,18,input),PathIdentifier(At(7,24,input), Seq("Person","name"))))
           )
     }
-    "handles data statements" in {
+    "handles data statements" in { (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
           |  context ignore {
@@ -99,7 +102,7 @@ class ProjectionsTest extends ParsingTest {
           |       }
           |     }
           |   }
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseTopLevelDomain[Repository](rpi, _.domains.head.contexts.head.repositories.head) match {
         case Left(messages) =>

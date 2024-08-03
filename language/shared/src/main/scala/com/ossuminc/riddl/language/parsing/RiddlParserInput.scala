@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{Path, URL}
+import com.ossuminc.riddl.utils.{Path, URL, Loader}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -38,6 +38,75 @@ object RiddlParserInput {
   implicit def apply(data: String, origin: URL): RiddlParserInput = {
     StringParserInput(data, origin)
   }
+
+  /** Set up a parser input for parsing a test case from a String and the testCaseName.
+    * @param data
+    *   The data to be parsed and returned in a RiddlParserInput
+    * @param testCaseName
+    *   A string, typically derived by the scalatest TestData extension in ParserTest.
+    */
+  @JSExport("createTestInput")
+  implicit def apply(data: String, testCaseName: String = "unspecified test case"): RiddlParserInput = {
+    StringParserInput(data, URL(testCaseName))
+  }
+
+  /** Set up a parser input from a [[com.ossuminc.riddl.utils.URL]].
+    *
+    * @param url
+    *   The url from which to load the data
+    * @return
+    *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
+    */
+  @JSExport
+  def rpiFromURL(url: URL): Future[RiddlParserInput] = {
+    Loader(url).load.map(data => apply(data,url))
+  }
+
+  /** Set up a parser input for parsing directly from a Scala Source
+    *
+    * @param source
+    *   The Source from which UTF-8 text will be read and parsed
+    * @note
+    *   JVM Only
+    */
+  def rpiFromSource(source: scala.io.Source): RiddlParserInput = {
+    val data: String =
+      try {
+        source.getLines().mkString("\n")
+      } finally {
+        source.close()
+      }
+    StringParserInput(data, URL(source.descr))
+  }
+
+  /** Set up a parser input for parsing directly from a Java File
+    *
+    * @param file
+    *   The java.io.File from which UTF-8 text will be read and parsed.
+    * @note
+    *   JVM Only
+    */
+  def rpiFromFile(file: java.io.File): RiddlParserInput = {
+    val data: String = {
+      val source: scala.io.Source = scala.io.Source.fromFile(file)
+      try {
+        source.getLines().mkString("\n")
+      } finally {
+        source.close()
+      }
+    }
+    StringParserInput(data, URL(file.toURI.toURL.toString))
+  }
+
+  /** Set up a parser input for parsing directly from a file at a specific Path
+    *
+    * @param path
+    *   The java.nio.path.Path from which UTF-8 text will be read and parsed.
+    * @note
+    *   JVM Only
+    */
+  def rpiFromPath(path: java.nio.file.Path): RiddlParserInput = rpiFromFile(path.toFile)
+
 }
 
 /** Same as fastparse.IndexedParserInput but with Location support */

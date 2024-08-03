@@ -7,20 +7,18 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.utils.{Path, URL}
 
-import com.ossuminc.riddl.utils.{Path,URL}
+import org.scalatest.TestData
 
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
 
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
   "Include" should {
-    "handle missing files" in {
-      parseDomainDefinition(
-        RiddlParserInput(
-          "domain foo is { include \"unexisting\" } explained as \"foo\""
-        ),
-        identity
-      ) match {
+    "handle missing files" in { (td: TestData) =>
+      val rpi = RiddlParserInput("domain foo is { include \"unexisting\" } explained as \"foo\"", td)
+      parseDomainDefinition(rpi, identity) match {
         case Right(result) =>
           fail(s"Should have gotten 'FileNotFoundException' but succeeded with: ${result._1}")
         case Left(errors) =>
@@ -28,11 +26,9 @@ class IncludeAndImportTest extends ParsingTest {
           errors.exists(_.format.contains("does not exist,"))
       }
     }
-    "handle bad URL" in {
-      parseDomainDefinition(
-        "include \"https://incredible.lightness.of.being:8900000/@@@\"",
-        identity
-      ) match {
+    "handle bad URL" in { (td: TestData) =>
+      val rip = RiddlParserInput("include \"https://incredible.lightness.of.being:8900000/@@@\"", td)
+      parseDomainDefinition(rip, identity) match {
         case Right(_) =>
           fail("Should have gotten 'port out of range' error")
         case Left(errors) =>
@@ -40,10 +36,9 @@ class IncludeAndImportTest extends ParsingTest {
           errors.exists(_.format.contains("port out of range: 8900000"))
       }
     }
-    "handle non existent URL" in {
-      val nonExistentURL = URL(
+    "handle non existent URL" in { (td: TestData) =>
+      val nonExistentURL = 
         "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
-      )
       intercept[java.io.FileNotFoundException] {
         parseDomainDefinition(
           RiddlParserInput(nonExistentURL),
@@ -57,24 +52,20 @@ class IncludeAndImportTest extends ParsingTest {
         }
       }
     }
-    "handle existing URI" in {
+    "handle existing URI" in { (td: TestData) =>
       import com.ossuminc.riddl.utils.URL
       val cwd = System.getProperty("user.dir", ".")
       val urlStr: String = s"file:///$cwd/testkit/src/test/input/domains/simpleDomain.riddl"
-      val url = URL(urlStr)
-      parseDomainDefinition(
-        RiddlParserInput(url),
-        identity
-      ) match {
+      parseDomainDefinition(RiddlParserInput(urlStr), identity) match {
         case Right(_) =>
           succeed
         case Left(errors) =>
           fail(errors.format)
       }
     }
-    "handle inclusions into domain" in {
+    "handle inclusions into domain" in { (td: TestData) =>
       val rc = checkFile("Domain Includes", "includes/domainIncludes.riddl")
-      val inc = StringParserInput("", "domainIncluded.riddl")
+      val inc = StringParserInput("", URL("domainIncluded.riddl"))
       rc.domains mustNot be(empty)
       rc.domains.head.includes mustNot be(empty)
       rc.domains.head.includes.head.contents mustNot be(empty)
@@ -87,9 +78,9 @@ class IncludeAndImportTest extends ParsingTest {
       )
       actual mustBe expected
     }
-    "handle inclusions into contexts" in {
+    "handle inclusions into contexts" in { (td: TestData) =>
       val rc = checkFile("Context Includes", "includes/contextIncludes.riddl")
-      val inc = StringParserInput("", "contextIncluded.riddl")
+      val inc = StringParserInput("", URL("contextIncluded.riddl"))
       rc.domains mustNot be(empty)
       rc.domains.head.contexts mustNot be(empty)
       rc.domains.head.contexts.head.includes mustNot be(empty)
@@ -103,14 +94,14 @@ class IncludeAndImportTest extends ParsingTest {
       )
       actual mustBe expected
     }
-    "handle 553-Contained-Group-References-Do-Not-Work" in {
+    "handle 553-Contained-Group-References-Do-Not-Work" in {  (td: TestData) =>
       val root = checkFile("Include Group", "includes/includer.riddl")
       root.domains mustNot be(empty)
       root.domains.head.includes.head.contents mustNot be(empty)
     }
-    "warn about duplicate includes" in {
-      val path = Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl")
-      val input = RiddlParserInput(path)
+    "warn about duplicate includes" in { (td: TestData) =>
+      val path = java.nio.file.Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl")
+      val input = rpiFromPath(path)
       TopLevelParser.parseInput(input) match {
         case Right(_) =>
           fail("Should have failed with warnings")
@@ -127,16 +118,15 @@ class IncludeAndImportTest extends ParsingTest {
   }
 
   "Import" should {
-    "work syntactically" in {
+    "work syntactically" in { (td: TestData) =>
       val root = checkFile("Import", "import/import.riddl")
       root.domains must not(be(empty))
       root.domains.head.domains must not(be(empty))
       root.domains.head.domains.head.id.value must be("NotImplemented")
     }
-    "handle missing files" in {
-      val input =
-        "domain foo is { import domain foo from \"nonexisting\" } described as \"foo\""
-      parseDomainDefinition(RiddlParserInput(input), identity) match {
+    "handle missing files" in { (td: TestData) =>
+      val input = "domain foo is { import domain foo from \"nonexisting\" } described as \"foo\""
+      parseDomainDefinition(RiddlParserInput(input, td), identity) match {
         case Right(_) => fail("Should have gotten 'does not exist' error")
         case Left(errors) =>
           errors.size must be(1)

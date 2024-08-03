@@ -2,13 +2,14 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import org.scalatest.matchers.must.Matchers
 
-class ApplicationParsingTest extends ParsingTest with Matchers {
+import org.scalatest.TestData
+
+class ApplicationParsingTest extends ParsingTest {
 
   "Application Components" must {
-    "support nested empty definitions that fail" in {
-      val input =
+    "support nested empty definitions that fail" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain foo {
           |application foo2 {
@@ -19,7 +20,9 @@ class ApplicationParsingTest extends ParsingTest with Matchers {
           |    output o1 displays String is { ??? }
           |  }
           |}
-          |}""".stripMargin
+          |}""".stripMargin,
+        td
+      )
       parseDefinition[Domain](input) match {
         case Left(messages: Messages) =>
           fail(messages.format)
@@ -27,8 +30,8 @@ class ApplicationParsingTest extends ParsingTest with Matchers {
           succeed
       }
     }
-    "supports using the focus statement" in {
-      val input =
+    "supports using the focus statement" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain foo {
           |application foo2 {
@@ -40,7 +43,9 @@ class ApplicationParsingTest extends ParsingTest with Matchers {
           |  }
           |  group g2 is { ??? }
           |}
-          |}""".stripMargin
+          |}""".stripMargin,
+        td
+      )
       parseDefinition[Domain](input) match {
         case Left(messages: Messages) =>
           fail(messages.format)
@@ -48,8 +53,8 @@ class ApplicationParsingTest extends ParsingTest with Matchers {
           succeed
       }
     }
-    "supports 'shown by' in groups" in {
-      val input =
+    "supports 'shown by' in groups" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain foo {
           |  application ignore {
@@ -58,7 +63,9 @@ class ApplicationParsingTest extends ParsingTest with Matchers {
           |    }
           |  }
           |}
-          |""".stripMargin
+          |""".stripMargin,
+      td
+      )
     }
   }
 }

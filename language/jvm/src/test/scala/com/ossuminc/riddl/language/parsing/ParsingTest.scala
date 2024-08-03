@@ -6,94 +6,65 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.utils.{URL, TestingBasisWithTestData}
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.Messages.{Message, Messages}
 import com.ossuminc.riddl.language.CommonOptions
-import fastparse.{P, *}
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
-import java.io.File
-import java.nio.file.Path
+import fastparse.*
 
+import java.nio.file.{Path, Files}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.annotation.unused
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-trait ParsingTest extends AnyWordSpec with Matchers {
+trait ParsingTest extends TestingBasisWithTestData {
+
+  import com.ossuminc.riddl.language.AST.RiddlValue
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
   protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
 
-  case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content), testingOptions)
-
-  /** Set up a parser input for parsing directly from a Scala Source
-    *
-    * @param source
-    *   The Source from which UTF-8 text will be read and parsed
-    */
-  def ripFromSource(source: Source): RiddlParserInput = {
-    val data: String =
-      try {
-        source.getLines().mkString("\n")
-      } finally {
-        source.close()
-      }
-    StringParserInput(data, source.descr)
-  }
-
-  /** Set up a parser input for parsing directly from a Java File
-    *
-    * @param file
-    *   The java.io.File from which UTF-8 text will be read and parsed.
-    */
-  def ripFromFile(file: File): RiddlParserInput = {
-    val data: String = {
-      val source: Source = Source.fromFile(file)
-      try {
-        source.getLines().mkString("\n")
-      } finally {
-        source.close()
-      }
-    }
-    StringParserInput(data, file.getName)
-  }
-
-  /** Set up a parser input for parsing directly from a file at a specific Path
-    *
-    * @param path
-    *   The java.nio.path.Path from which UTF-8 text will be read and parsed.
-    */
-  def ripFromPath(path: java.nio.file.Path): RiddlParserInput = ripFromFile(path.toFile)
+  case class StringParser(content: String, testCase: String = "unknown test case")
+      extends TopLevelParser(RiddlParserInput(content, testCase), testingOptions)
 
   def parsePath(
     path: Path,
     commonOptions: CommonOptions = CommonOptions.empty
   ): Either[Messages, Root] = {
     if Files.exists(path) then
-      if Files.isReadable(path) then TopLEvelParser.parseInput(RiddlParserInput(path), commonOptions)
-      else Left(List(Messages.error(s"Input file `${path.toString} is not readable.")))
+      if Files.isReadable(path) then {
+        val input = rpiFromPath(path)
+        TopLevelParser.parseInput(input, commonOptions)
+      } else {
+        val message: Message = Messages.error(s"Input file `${path.toString} is not readable.")
+        Left(List(message))
+      }
       end if
-    else Left(List(Messages.error(s"Input file `${path.toString} does not exist.")))
+    else {
+      val message: Message = Messages.error(s"Input file `${path.toString} does not exist.")
+      Left(List(message))
+    }
     end if
   }
 
   def parseFile(
-    file: File,
+    file: java.io.File,
     commonOptions: CommonOptions = CommonOptions.empty
   ): Either[Messages, Root] = {
     parsePath(file.toPath, commonOptions)
   }
 
-  @JSExport
   def parseString(
     input: String,
     commonOptions: CommonOptions = CommonOptions.empty,
-    origin: Option[String] = None
+    origin: Option[URL] = None
   ): Either[Messages, Root] = {
-    val spi = StringParserInput(input, origin.getOrElse(s"string(${input.length})"))
+    val spi = StringParserInput(input, origin.getOrElse(URL(s"string(${input.length})")))
     TopLevelParser.parseInput(spi, commonOptions)
   }
 
@@ -106,13 +77,13 @@ trait ParsingTest extends AnyWordSpec with Matchers {
     tp.parse[T, U](parser, extraction)
   }
 
-  def parseRoot(file: File): Either[Messages, Root] = {
-    val rpi = RiddlParserInput(file)
+  def parseRoot(file: java.io.File): Either[Messages, Root] = {
+    val rpi = rpiFromFile(file)
     parseTopLevelDomains(rpi)
   }
 
-  def parseRoot(path: Path): Either[Messages, Root] = {
-    val rpi = RiddlParserInput(path)
+  def parseRoot(path: java.nio.file.Path): Either[Messages, Root] = {
+    val rpi = rpiFromPath(path)
     parseTopLevelDomains(rpi)
   }
 
@@ -181,14 +152,14 @@ trait ParsingTest extends AnyWordSpec with Matchers {
 
   def parseDefinition[FROM <: Definition: ClassTag](
     input: RiddlParserInput
-  ): Either[Messages, (FROM, RiddlParserInput)] = {
+  ): Either[Messages.Messages, (FROM, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseDefinition[FROM]
   }
 
   def parseDefinition[FROM <: Definition: ClassTag](
     input: String
-  ): Either[Messages, (FROM, RiddlParserInput)] = {
+  ): Either[Messages.Messages, (FROM, RiddlParserInput)] = {
     parseDefinition(RiddlParserInput(input))
   }
 
@@ -234,8 +205,8 @@ trait ParsingTest extends AnyWordSpec with Matchers {
     fileName: String,
     directory: String = "language/jvm/src/test/input/"
   ): Root = {
-    val file = new File(directory + fileName)
-    val rpi = RiddlParserInput(file)
+    val path = java.nio.file.Path.of(directory, fileName)
+    val rpi = rpiFromPath(path)
     TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
         fail(errors.format)
