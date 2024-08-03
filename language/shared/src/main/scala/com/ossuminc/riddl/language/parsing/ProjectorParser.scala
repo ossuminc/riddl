@@ -20,7 +20,7 @@ private[parsing] trait ProjectorParser {
     & StreamingParser
     & TypeParser =>
 
-  private def projectorInclude[u: P]: P[Include[OccursInProjector]] = {
+  private def projectorInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
     include[u, OccursInProjector](projectorDefinitions(_))
   }
 

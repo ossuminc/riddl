@@ -40,18 +40,20 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def include[u: P, K <: RiddlValue](
+
+  def include[u:P, K <: RiddlValue](
     parser: P[?] => P[Seq[K]]
-  ): P[Include[K]] = {
-    P(Keywords.include ~/ location ~ literalString)./.map { case (loc: At, str: LiteralString) =>
-      doInclude[K](loc, str)(parser)
+  ): P[IncludeHolder[K]] = {
+    P(Keywords.include ~/ location ~ literalString)./.map {
+      case (loc: At, str: LiteralString) =>
+        doInclude[K](loc, str)(parser)
     }
   }
 
   def importDef[u: P]: P[OccursInDomain] = {
     P(
       location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ Readability.from ~ literalString
-    ).map { tuple => doImport(tuple._1, tuple._2, tuple._3) }
+    ).map { case(loc, id, litStr) => doImport(loc, id, URL(litStr.s)) }
   }
 
   def undefined[u: P, RT](f: => RT): P[RT] = {

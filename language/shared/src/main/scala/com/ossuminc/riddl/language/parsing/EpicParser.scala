@@ -166,7 +166,7 @@ private[parsing] trait EpicParser {
     ).?.map { (x: Option[Seq[URL]]) => x.getOrElse(Seq.empty[URL]) }
   }
 
-  private def epicInclude[u: P]: P[Include[OccursInEpic]] = {
+  private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
     include[u, OccursInEpic](epicDefinitions(_))
   }
 

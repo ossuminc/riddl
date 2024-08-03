@@ -46,7 +46,7 @@ private[parsing] trait EntityParser {
     }
   }
 
-  private def entityInclude[u: P]: P[Include[OccursInEntity]] = {
+  private def entityInclude[u: P]: P[IncludeHolder[OccursInEntity]] = {
     include[u, OccursInEntity](entityDefinitions(_))
   }
 

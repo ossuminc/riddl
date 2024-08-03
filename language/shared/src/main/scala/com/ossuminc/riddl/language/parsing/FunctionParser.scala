@@ -15,7 +15,7 @@ import Readability.*
 private[parsing] trait FunctionParser {
   this: ReferenceParser & TypeParser & StatementParser & CommonParser =>
 
-  private def functionInclude[u: P]: P[Include[OccursInFunction]] = {
+  private def functionInclude[u: P]: P[IncludeHolder[OccursInFunction]] = {
     include[u, OccursInFunction](functionDefinitions(_))
   }
 

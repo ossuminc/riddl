@@ -16,7 +16,7 @@ private[parsing] trait ContextParser {
   this: HandlerParser & AdaptorParser & EntityParser & FunctionParser & ProjectorParser & ReferenceParser &
     RepositoryParser & SagaParser & StreamingParser & StatementParser & TypeParser =>
 
-  private def contextInclude[u: P]: P[Include[OccursInContext]] = {
+  private def contextInclude[u: P]: P[IncludeHolder[OccursInContext]] = {
     include[u, OccursInContext](contextDefinitions(_))
   }
 

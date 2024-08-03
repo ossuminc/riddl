@@ -8,8 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 
-import java.nio.file.Path
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{Path,URL}
 
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
@@ -62,9 +61,9 @@ class IncludeAndImportTest extends ParsingTest {
       import com.ossuminc.riddl.utils.URL
       val cwd = System.getProperty("user.dir", ".")
       val urlStr: String = s"file:///$cwd/testkit/src/test/input/domains/simpleDomain.riddl"
-      val uri = URL(urlStr)
+      val url = URL(urlStr)
       parseDomainDefinition(
-        RiddlParserInput(uri),
+        RiddlParserInput(url),
         identity
       ) match {
         case Right(_) =>

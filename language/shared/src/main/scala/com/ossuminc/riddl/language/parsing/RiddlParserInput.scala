@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{Path,URL}
+import com.ossuminc.riddl.utils.{Path, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -35,75 +35,16 @@ object RiddlParserInput {
     *   data The UTF-8 string to be parsed
     */
   @JSExport("createWith")
-  implicit def apply(data: String): RiddlParserInput = {
-    StringParserInput(data)
-  }
-
-  @JSExport("createWith")
-  implicit def apply(data: String, origin: String): RiddlParserInput = {
+  implicit def apply(data: String, origin: URL): RiddlParserInput = {
     StringParserInput(data, origin)
   }
-
-  @JSExport("createWith")
-  implicit def apply(path: Path): RiddlParserInput = {
-    val source = Source.fromFile(path.path)
-    apply(source)
-  }
-
-  /** Set up a parser input for parsing directly from a Scala Source
-    * @param source
-    *   The Source from which UTF-8 text will be read and parsed
-    */
-  implicit def apply(source: Source): RiddlParserInput = {
-    val data: String =
-      try {
-        source.getLines().mkString("\n")
-      } finally {
-        source.close()
-      }
-    StringParserInput(data, source.descr)
-  }
-
-  /** Set up a parser input for parsing directly from a Java File
-    * @param file
-    *   The java.io.File from which UTF-8 text will be read and parsed.
-    */
-  implicit def apply(file: File): RiddlParserInput = {
-    val data: String = {
-      val source: Source = Source.fromFile(file)
-      try {
-        source.getLines().mkString("\n")
-      } finally {
-        source.close()
-      }
-    }
-    StringParserInput(data, file.getName)
-  }
-
-  /** Set up a parser input for parsing directly from a file at a specific Path
-    * @param path
-    *   THe java.nio.path.Path from which UTF-8 text will be read and parsed.
-    */
-  implicit def apply(path: java.nio.file.Path): RiddlParserInput = apply(path.toFile)
-
-  /** Set up a parser input for parsing directly from a file at a specific URL
-    * @param url
-    *   The java.net.URL from which UTF-8 text will be read and parsed.
-    */
-//  implicit def apply(url: java.net.URL): RiddlParserInput = {
-//    implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-//    url.
-//    val data: Future[String] = URL.load(url).map(_.mkString("\n"))
-//    StringParserInput(data, )
-//  }
 }
 
 /** Same as fastparse.IndexedParserInput but with Location support */
 abstract class RiddlParserInput extends ParserInput {
-  def origin: String
+  def root: URL
   def data: String
-  def root: File
-
+  def origin: String = root.getFile
   override def apply(index: Int): Char = data.charAt(index)
   override def dropBuffer(index: Int): Unit = {}
   override def slice(from: Int, until: Int): String = data.slice(from, until)
@@ -175,29 +116,16 @@ abstract class RiddlParserInput extends ParserInput {
 @JSExportTopLevel("EmptyParserInput")
 case object EmptyParserInput extends RiddlParserInput {
   override def origin: String = "empty"
-  override def root: File = File.listRoots().head
+  override def root: URL = URL("/")
   override def offsetOf(line: Int): Int = { line * 80 }
   override def lineOf(offset: Int): Int = { offset / 80 }
   def data: String = ""
   def from: String = ""
 }
 
-private[parsing] case class StringParserInput(
+protected[parsing] case class StringParserInput(
   data: String,
-  origin: String = At.defaultSourceName
+  root: URL
 ) extends RiddlParserInput {
-  val root: File = new File(System.getProperty("user.dir"))
-  def from: String = origin
-}
-
-private[parsing] case class FutureParserInput(
-  future: Future[String],
-  origin: String = At.defaultSourceName
-) extends RiddlParserInput {
-  var data: String = ""
-  def from: String = origin
-  def root: java.io.File = new File("")
-  def map[T](process: RiddlParserInput => T): Future[T] = {
-    future.map { delayed_data => process(this) }
-  }
+  def from: String = root.getFile
 }

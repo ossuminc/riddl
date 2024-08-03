@@ -204,7 +204,10 @@ object AST {
 
   /** An implementation of [[Description]] that provides the description at a URL */
   case class URLDescription(loc: At, url: com.ossuminc.riddl.utils.URL) extends Description {
-    lazy val linesF: Future[Seq[LiteralString]] = URL.load(url).map(_.map(LiteralString(loc.copy(), _)))
+
+    import com.ossuminc.riddl.utils.Loader
+
+    lazy val linesF: Future[Iterator[LiteralString]] = Loader(url).load.map(_.map(LiteralString(loc.copy(), _)))
     override def format: String = url.toExternalForm
   }
 
@@ -563,8 +566,8 @@ object AST {
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
-    TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema
+    IncludeHolder[?] | TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape |
+    AdaptorDirection | UserStory | MethodArgument | Schema
 
   /** Base trait of values defined at the root (top of file) scope */
   sealed trait OccursAtRootScope extends RiddlValue
@@ -718,6 +721,28 @@ object AST {
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
   //// The types defined in this section provide utility to the other definitions for includes and references.
 
+  /** A value to hold the result of an Include while it is being included asynchronously
+    *
+    * @param loc
+    *   The location at which the include occurs in the input
+    *
+    * @param future
+    *   The future deliverable of the result of parsing the inclusion; either a list of error messages or the
+    *   RiddlParserInput for the included content and a list of the values parsed
+    * @tparam CT
+    *   The type of values expected at the top level of the
+    */
+  case class IncludeHolder[CT <: RiddlValue](
+    loc: At = At.empty,
+    origin: String = "",
+    future: Future[Contents[CT]]
+  ) extends RiddlValue
+      with OccursInVitalDefinitions
+      with OccursAtRootScope {
+    def format: String = s"include \"$origin\""
+    override def toString: String = format
+  }
+
   /** A value to record an inclusion of a file while parsing.
     *
     * @param loc
@@ -729,8 +754,8 @@ object AST {
     */
   case class Include[CT <: RiddlValue](
     loc: At = At.empty,
-    origin: String,
-    contents: Seq[CT]
+    origin: String = "",
+    contents: Contents[CT] = Seq.empty[CT]
   ) extends RiddlValue
       with Container[CT]
       with OccursInVitalDefinitions

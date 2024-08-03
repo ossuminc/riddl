@@ -8,6 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Folding
+import scala.collection.mutable 
 
 class FoldingTest extends ParsingTest {
 
@@ -83,15 +84,16 @@ class FoldingTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
-          val result = Folding.foldLeftWithStack(empty,content) { case (track, definition, stack) =>
-            val previous: Seq[String] = stack.map {
-              case nv: NamedValue => nv.identify
-              case rv: RiddlValue => rv.toString
-            }.reverse
-            definition match {
-              case nv: NamedValue => track :+ (previous :+ nv.identify)
-              case rv: RiddlValue => track :+ (previous :+ rv.toString)
-            }
+          val result = Folding.foldLeftWithStack(empty, content, mutable.Stack.empty) {
+            case (track, definition, stack) =>
+              val previous: Seq[String] = stack.map {
+                case nv: NamedValue => nv.identify
+                case rv: RiddlValue => rv.toString
+              }.reverse
+              definition match {
+                case nv: NamedValue => track :+ (previous :+ nv.identify)
+                case rv: RiddlValue => track :+ (previous :+ rv.toString)
+              }
           }
           val expectedCount = 25
           result.length must be(expectedCount)

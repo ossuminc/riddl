@@ -52,7 +52,8 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % V.scalatest,
       "org.scalatest" %%% "scalatest" % V.scalatest,
-      "org.scala-js" %%% "scalajs-dom" % "2.8.0"
+      "org.scala-js" %%% "scalajs-dom" % "2.8.0",
+      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0"
     )
   )
 

@@ -15,7 +15,8 @@ import fastparse.MultiLineWhitespace.*
 
 import java.io.File
 import java.nio.file.{Files, Path}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.scalajs.js.annotation._
 
 /** The TopLevel (Root) parser. This class
@@ -27,8 +28,7 @@ import scala.scalajs.js.annotation._
 class TopLevelParser(
   val input: RiddlParserInput,
   val commonOptions: CommonOptions = CommonOptions.empty
-)(implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global)
-    extends DomainParser
+) extends DomainParser
     with AdaptorParser
     with ApplicationParser
     with ContextParser
@@ -46,7 +46,9 @@ class TopLevelParser(
     with CommonParser
     with ParsingContext {
 
-  private def rootInclude[u: P]: P[Include[OccursAtRootScope]] = {
+  import scala.concurrent.Future
+
+  private def rootInclude[u: P]: P[IncludeHolder[OccursAtRootScope]] = {
     include[u, OccursAtRootScope](rootValues(_))
   }
 
@@ -56,7 +58,7 @@ class TopLevelParser(
     )
   }
 
-  def root[u: P]: P[Root] = {
+  protected def root[u: P]: P[Root] = {
     rootValues.map { (content: Seq[OccursAtRootScope]) => Root(content) }
   }
 
@@ -79,6 +81,45 @@ class TopLevelParser(
 @JSExportTopLevel("TopLevelParser$")
 object TopLevelParser {
 
+  import com.ossuminc.riddl.utils.URL
+
+  import scala.concurrent.ExecutionContext
+
+  /** Main entry point into parsing. This sets up the asynchronous (but maybe not parallel) parsing of the input to the
+    * parser.
+    * @param url
+    *   A `file://` or `https://` based url to specify the source of the parser input
+    * @param commonOptions
+    *   Options relevant to parsing the input
+    * @param withVerboseFailures
+    *   Control whether parse failures are diagnosed verbosely or not. Typically only useful to maintainers of RIDDL, or
+    *   test cases
+    */
+  @JSExport
+  def parseURL(
+    url: URL,
+    commonOptions: CommonOptions = CommonOptions.empty,
+    withVerboseFailures: Boolean = false
+  )(implicit
+    ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  ): Future[Either[Messages, Root]] = {
+    import com.ossuminc.riddl.utils.Loader
+    Loader(url).load.map { (data: Iterator[String]) =>
+      val rpi = RiddlParserInput(data.mkString, url)
+      parseInput(rpi, commonOptions, withVerboseFailures)
+    }
+  }
+
+  /** Alternate, non-asynchronous interface to parsing. If you have your data already, you can just make your own
+    * RiddlParserInput from a string and call this to start parsing.
+    * @param input
+    *   The RiddlParserInput that contains the data to parse
+    * @param commonOptions
+    *   The common options that could affect parsing or its output
+    * @param withVerboseFailures
+    *   For the utility of RIDDL implementers.
+    * @return
+    */
   @JSExport
   def parseInput(
     input: RiddlParserInput,
@@ -93,32 +134,35 @@ object TopLevelParser {
     }
   }
 
-  def parsePath(
-    path: Path,
-    commonOptions: CommonOptions = CommonOptions.empty
-  ): Either[Messages, Root] = {
-    if Files.exists(path) then
-      if Files.isReadable(path) then parseInput(RiddlParserInput(path), commonOptions)
-      else Left(List(Messages.error(s"Input file `${path.toString} is not readable.")))
-      end if
-    else Left(List(Messages.error(s"Input file `${path.toString} does not exist.")))
-    end if
-  }
-
-  def parseFile(
-    file: File,
-    commonOptions: CommonOptions = CommonOptions.empty
-  ): Either[Messages, Root] = {
-    parsePath(file.toPath, commonOptions)
-  }
-
-  @JSExport
-  def parseString(
-    input: String,
-    commonOptions: CommonOptions = CommonOptions.empty,
-    origin: Option[String] = None
-  ): Either[Messages, Root] = {
-    val spi = StringParserInput(input, origin.getOrElse(s"string(${input.length})"))
-    parseInput(spi, commonOptions)
-  }
 }
+
+//def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
+//  val result: Contents[CT] = contents.map {
+//    case ih: IncludeHolder[CT] @unchecked =>
+//      val contents: Contents[CT] =
+//        try {
+//          val result = Await.result[Contents[CT]](ih.future, ih.maxDelay)
+//          mergeAsynchContent(result)
+//        } catch {
+//          case NonFatal(exception) =>
+//            makeParseFailureError(exception, ih.loc, s"while including '${ih.origin}''")
+//            // NOTE: makeParseFailureError already captured the error
+//            // NOTE: We just want to place empty content into the Include
+//            Seq.empty[CT]
+//        }
+//      Include[CT](ih.loc, ih.origin, contents).asInstanceOf[CT]
+//    case rv: CT => rv
+//  }
+//
+//  val allIncludes = result.filter[Include[?]]
+//  val distinctIncludes = allIncludes.distinctBy(_.origin)
+//  for {
+//    incl <- distinctIncludes
+//    copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
+//  } yield {
+//    val copyList = copies.map(i => i.origin + " at " + i.loc.toShort).mkString(", ")
+//    val message = s"Duplicate include origin detected in $copyList"
+//    warning(incl.loc, message, "while merging includes")
+//  }
+//  result
+//}

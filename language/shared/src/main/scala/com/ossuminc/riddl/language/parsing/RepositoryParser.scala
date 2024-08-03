@@ -21,7 +21,7 @@ private[parsing] trait RepositoryParser {
     & FunctionParser
     & TypeParser =>
 
-  private def repositoryInclude[u: P]: P[Include[OccursInRepository]] = {
+  private def repositoryInclude[u: P]: P[IncludeHolder[OccursInRepository]] = {
     include[u, OccursInRepository](repositoryDefinitions(_))
   }
 

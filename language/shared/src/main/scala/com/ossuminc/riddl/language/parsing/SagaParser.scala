@@ -24,7 +24,7 @@ private[parsing] trait SagaParser {
     ).map(x => SagaStep.apply.tupled(x))
   }
 
-  private def sagaInclude[u: P]: P[Include[OccursInSaga]] = {
+  private def sagaInclude[u: P]: P[IncludeHolder[OccursInSaga]] = {
     include[u, OccursInSaga](sagaDefinitions(_))
   }
 

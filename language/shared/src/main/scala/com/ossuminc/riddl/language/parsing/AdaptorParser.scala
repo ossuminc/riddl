@@ -17,7 +17,7 @@ private[parsing] trait AdaptorParser {
   this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
     CommonParser =>
 
-  private def adaptorInclude[u: P]: P[Include[OccursInAdaptor]] = {
+  private def adaptorInclude[u: P]: P[IncludeHolder[OccursInAdaptor]] = {
     include[u, OccursInAdaptor](adaptorDefinitions(_))
   }
 

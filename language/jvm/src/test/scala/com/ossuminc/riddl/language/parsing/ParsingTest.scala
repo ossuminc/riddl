@@ -24,10 +24,78 @@ import scala.reflect.*
 
 /** A helper class for testing the parser */
 trait ParsingTest extends AnyWordSpec with Matchers {
-  
+
   protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
-  
+
   case class StringParser(content: String) extends TopLevelParser(RiddlParserInput(content), testingOptions)
+
+  /** Set up a parser input for parsing directly from a Scala Source
+    *
+    * @param source
+    *   The Source from which UTF-8 text will be read and parsed
+    */
+  def ripFromSource(source: Source): RiddlParserInput = {
+    val data: String =
+      try {
+        source.getLines().mkString("\n")
+      } finally {
+        source.close()
+      }
+    StringParserInput(data, source.descr)
+  }
+
+  /** Set up a parser input for parsing directly from a Java File
+    *
+    * @param file
+    *   The java.io.File from which UTF-8 text will be read and parsed.
+    */
+  def ripFromFile(file: File): RiddlParserInput = {
+    val data: String = {
+      val source: Source = Source.fromFile(file)
+      try {
+        source.getLines().mkString("\n")
+      } finally {
+        source.close()
+      }
+    }
+    StringParserInput(data, file.getName)
+  }
+
+  /** Set up a parser input for parsing directly from a file at a specific Path
+    *
+    * @param path
+    *   The java.nio.path.Path from which UTF-8 text will be read and parsed.
+    */
+  def ripFromPath(path: java.nio.file.Path): RiddlParserInput = ripFromFile(path.toFile)
+
+  def parsePath(
+    path: Path,
+    commonOptions: CommonOptions = CommonOptions.empty
+  ): Either[Messages, Root] = {
+    if Files.exists(path) then
+      if Files.isReadable(path) then TopLEvelParser.parseInput(RiddlParserInput(path), commonOptions)
+      else Left(List(Messages.error(s"Input file `${path.toString} is not readable.")))
+      end if
+    else Left(List(Messages.error(s"Input file `${path.toString} does not exist.")))
+    end if
+  }
+
+  def parseFile(
+    file: File,
+    commonOptions: CommonOptions = CommonOptions.empty
+  ): Either[Messages, Root] = {
+    parsePath(file.toPath, commonOptions)
+  }
+
+  @JSExport
+  def parseString(
+    input: String,
+    commonOptions: CommonOptions = CommonOptions.empty,
+    origin: Option[String] = None
+  ): Either[Messages, Root] = {
+    val spi = StringParserInput(input, origin.getOrElse(s"string(${input.length})"))
+    TopLevelParser.parseInput(spi, commonOptions)
+  }
 
   def parse[T <: RiddlValue, U <: RiddlValue](
     input: RiddlParserInput,
@@ -60,7 +128,7 @@ trait ParsingTest extends AnyWordSpec with Matchers {
     extract: Root => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
-    tp.parseTopLevelDomain[TO](extract).map( x => (x, input))
+    tp.parseTopLevelDomain[TO](extract).map(x => (x, input))
   }
 
   def parseDomainDefinition[TO <: RiddlValue](

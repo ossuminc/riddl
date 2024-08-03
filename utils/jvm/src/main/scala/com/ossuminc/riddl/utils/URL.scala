@@ -11,5 +11,7 @@ case class URL(url_as_string: String) {
   inline def root: URL = {
     URL(url.toExternalForm.dropRight(url.getFile.length))
   }
+  inline def resolve(pathElement: String): URL = {
+    URL(url.toExternalForm + "/" + pathElement)
+  }
 }
-

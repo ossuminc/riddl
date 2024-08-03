@@ -27,7 +27,7 @@ private[parsing] trait DomainParser {
     & CommonParser
     & ParsingContext =>
 
-  private def domainInclude[u: P]: P[Include[OccursInDomain]] = {
+  private def domainInclude[u: P]: P[IncludeHolder[OccursInDomain]] = {
     include[u,OccursInDomain](domainDefinitions(_))
   }
 

@@ -15,18 +15,18 @@ import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 
-import java.io.File
-import java.nio.file.Files
 import scala.annotation.unused
-import scala.concurrent.{ExecutionContext, Future, blocking}
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
 trait ParsingContext extends ParsingErrors {
 
-  def commonOptions: CommonOptions
+  import com.ossuminc.riddl.utils.URL
+  import fastparse.P
 
-  implicit def ec: ExecutionContext
+  def commonOptions: CommonOptions
 
   def parseRule[RESULT <: RiddlValue](
     rpi: RiddlParserInput,
@@ -62,45 +62,53 @@ trait ParsingContext extends ParsingErrors {
   def doImport(
     loc: At,
     domainName: Identifier,
-    fileName: LiteralString
+    url: URL
   )(implicit ctx: P[?]): Domain = {
-    val name = fileName.s
-    val input = ctx.input.asInstanceOf[RiddlParserInput]
-    val file = new File(input.root, name)
-    if !file.exists() then {
-      error(s"File '$name` does not exist, can't be imported.")
-      Domain(loc, domainName)
-    } else {
-      importDomain(file)
-    }
-  }
-
-  private def importDomain(
-    @unused file: File
-  ): Domain = {
     // TODO: implement importDomain, issue #72
     Domain(At(), Identifier(At(), "NotImplemented"))
+    // importDomain(url)
   }
 
-  private def startNextSource(from: LiteralString)(implicit ctx: P[?]): RiddlParserInput = {
-    val str = from.s
-    if str.startsWith("http") then {
-      import com.ossuminc.riddl.utils.Path
-      RiddlParserInput(Path(str))
-    } else {
-      val name = {
-        if str.endsWith(".riddl") then str
-        else str + ".riddl"
-      }
-      val path = ctx.input.asInstanceOf[RiddlParserInput].root.toPath.resolve(name)
-      require(Files.exists(path), s"File does not exist: $name")
-      require(Files.isReadable(path), s"File is not readable: $name")
-      RiddlParserInput(path)
+  def doInclude[CT <: RiddlValue](
+    loc: At,
+    str: LiteralString
+  )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
+    Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
+      val contentsF: Future[Seq[CT]] = doIncludeParsing[CT](loc, str, rule)
+      AST.IncludeHolder[CT](loc, str.s, contentsF)
     }
   }
 
-  private def doParse[CT <: RiddlValue](loc: At, rpi: RiddlParserInput, str: LiteralString, rule: P[?] => P[Seq[CT]])(implicit
-    ctx: P[?]
+  private def doIncludeParsing[CT <: RiddlValue](
+    loc: At, 
+    str: LiteralString, 
+    rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]
+  ): Future[Seq[CT]] = {
+    try {
+      import com.ossuminc.riddl.utils.{Loader, URL}
+      val path = str.s
+      val url: URL = if path.startsWith("http") then {
+        URL(path)
+      } else {
+        val name: String = {
+          if path.endsWith(".riddl") then path
+          else path + ".riddl"
+        }
+        ctx.input.asInstanceOf[RiddlParserInput].root.resolve(name)
+      }
+      Loader(url).load.map { (lines: Iterator[String]) =>
+        val rpi = RiddlParserInput(lines.mkString, url)
+        doParse[CT](loc, rpi, str, rule)
+      }
+    } catch {
+      case NonFatal(exception) =>
+        makeParseFailureError(exception, loc, s"while including '${str.s}'")
+        Future.failed(exception) 
+    }
+  }
+
+  private def doParse[CT <: RiddlValue](loc: At, rpi: RiddlParserInput, str: LiteralString, rule: P[?] => P[Seq[CT]])(
+    implicit ctx: P[?]
   ): Seq[CT] = {
     fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
       case Success(content, _) =>
@@ -115,26 +123,5 @@ trait ParsingContext extends ParsingErrors {
     }
   }
 
-  private def doIncludeParsing[CT <: RiddlValue](loc: At, str: LiteralString, rule: P[?] => P[Seq[CT]])(implicit
-    ctx: P[?]
-  ): Seq[CT] = {
-    try {
-      val rpi = startNextSource(str)
-      doParse(loc, rpi, str, rule)
-    } catch {
-      case NonFatal(exception) =>
-        makeParseFailureError(exception, loc, s"while included '${str.s}'")
-        Seq.empty[CT]
-    }
-  }
 
-  def doInclude[CT <: RiddlValue](
-    loc: At,
-    str: LiteralString
-  )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.Include[CT] = {
-    Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
-      val contents = doIncludeParsing[CT](loc, str, rule)
-      AST.Include[CT](loc, str.s, contents)
-    }
-  }
 }
