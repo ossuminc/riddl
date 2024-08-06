@@ -13,17 +13,8 @@ import Readability.*
 
 /** Parsing rules for Context definitions */
 private[parsing] trait ContextParser {
-  this: HandlerParser
-    & AdaptorParser
-    & EntityParser
-    & FunctionParser
-    & ProjectorParser
-    & ReferenceParser
-    & RepositoryParser
-    & SagaParser
-    & StreamingParser
-    & StatementParser
-    & TypeParser =>
+  this: HandlerParser & AdaptorParser & EntityParser & FunctionParser & ProjectorParser & ReferenceParser &
+    RepositoryParser & SagaParser & StreamingParser & StatementParser & TypeParser =>
 
   private def contextInclude[u: P]: P[IncludeHolder[OccursInContext]] = {
     include[u, OccursInContext](contextDefinitions(_))

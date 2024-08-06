@@ -31,21 +31,20 @@ class RepositoryTest extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      val options = CommonOptions.noWarnings.copy(showMissingWarnings=false)
-      parseAndValidateDomain(input, options)  {
-        case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
-          domain mustNot be(empty)
-          domain.contexts.headOption match {
-            case Some(context) =>
-              context.repositories mustNot be(empty)
-              // info(msgs.format)
-              val errors = msgs.justErrors
-              errors.size mustBe 0
-              msgs.isOnlyWarnings
-              succeed
-            case _ =>
-              fail("Did not parse a context!")
-          }
+      val options = CommonOptions.noWarnings.copy(showMissingWarnings = false)
+      parseAndValidateDomain(input, options) { case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
+        domain mustNot be(empty)
+        domain.contexts.headOption match {
+          case Some(context) =>
+            context.repositories mustNot be(empty)
+            // info(msgs.format)
+            val errors = msgs.justErrors
+            errors.size mustBe 0
+            msgs.isOnlyWarnings
+            succeed
+          case _ =>
+            fail("Did not parse a context!")
+        }
 
       }
     }

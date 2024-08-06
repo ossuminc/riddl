@@ -13,7 +13,7 @@ import java.io.File
 import java.nio.file.Path
 
 object InputFileCommandPlugin {
-  case class  Options(inputFile: Option[Path] = None, command: String = "unspecified") extends CommandOptions
+  case class Options(inputFile: Option[Path] = None, command: String = "unspecified") extends CommandOptions
 }
 
 /** An abstract command definition helper class for commands that only take a single input file parameter

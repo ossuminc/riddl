@@ -165,7 +165,7 @@ private[parsing] trait EpicParser {
         httpUrl.rep(0, Punctuation.comma) ~ close
     ).?.map { (x: Option[Seq[java.net.URL]]) => x.getOrElse(Seq.empty[java.net.URL]) }
   }
-  
+
   private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
     include[u, OccursInEpic](epicDefinitions(_))
   }

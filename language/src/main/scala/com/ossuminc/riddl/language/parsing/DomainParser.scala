@@ -16,19 +16,11 @@ import scala.concurrent.{Await, Future}
 
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {
-  this: ApplicationParser
-    & ContextParser
-    & EpicParser
-    & ReferenceParser
-    & SagaParser
-    & StreamingParser
-    & StatementParser
-    & TypeParser
-    & CommonParser
-    & ParsingContext =>
+  this: ApplicationParser & ContextParser & EpicParser & ReferenceParser & SagaParser & StreamingParser &
+    StatementParser & TypeParser & CommonParser & ParsingContext =>
 
   private def domainInclude[u: P]: P[IncludeHolder[OccursInDomain]] = {
-    include[u,OccursInDomain](domainDefinitions(_))
+    include[u, OccursInDomain](domainDefinitions(_))
   }
 
   private def user[u: P]: P[User] = {

@@ -52,7 +52,7 @@ object At {
 
   /** Empty constructor for [[At]] */
   implicit def apply(): At = { At(RiddlParserInput.empty) }
-  
+
   /** Empty constructor at start of a line for the empty [[At]] */
   implicit def apply(line: Int): At = { At(RiddlParserInput.empty, line) }
 
@@ -77,8 +77,7 @@ object At {
     triple: (Int, Int, RiddlParserInput)
   ): At = { apply(triple._1, triple._2, triple._3) }
 
-  /**
-    * General constructor of [[At]] providing all three values
+  /** General constructor of [[At]] providing all three values
     * @param line
     *   The line number in the input for this [[At]]
     * @param col

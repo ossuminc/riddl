@@ -36,8 +36,10 @@ object PathUtils {
     *   True if the program is in the path, false otherwise
     */
   def existsInPath(program: String): Boolean = {
-    System.getenv("PATH")
-      .split(java.util.regex.Pattern.quote(File.pathSeparator)).map(Path.of(_))
+    System
+      .getenv("PATH")
+      .split(java.util.regex.Pattern.quote(File.pathSeparator))
+      .map(Path.of(_))
       .exists(p => Files.isExecutable(p.resolve(program)))
   }
 
@@ -61,14 +63,18 @@ object PathUtils {
   def compareDirectories(
     a: Path,
     b: Path
-  )(missing: Path => Boolean,
+  )(
+    missing: Path => Boolean,
     differentSize: (Path, Path) => Boolean,
     differentContent: (Path, Path) => Boolean
   ): Unit = {
     var exit = false
-    val sourceFiles = Files.list(a).toScala(Accumulator).toList
+    val sourceFiles = Files
+      .list(a)
+      .toScala(Accumulator)
+      .toList
       .filterNot(_.getFileName.toString.startsWith("."))
-    for  fileA <- sourceFiles  do {
+    for fileA <- sourceFiles do {
       val fileNameA = fileA.getFileName
       val fileB = b.resolve(fileNameA)
       if !Files.exists(fileB) then { exit = missing(fileB) }
@@ -84,6 +90,5 @@ object PathUtils {
       }
     }
   }
-  
-  
+
 }

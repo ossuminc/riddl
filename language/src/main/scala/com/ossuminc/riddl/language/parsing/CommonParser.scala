@@ -38,12 +38,11 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-
-  def include[u:P, K <: RiddlValue](
+  def include[u: P, K <: RiddlValue](
     parser: P[?] => P[Seq[K]]
   ): P[IncludeHolder[K]] = {
-    P(Keywords.include ~/ location ~ literalString)./.map {
-      case (loc: At, str: LiteralString) => doInclude[K](loc, str)(parser)
+    P(Keywords.include ~/ location ~ literalString)./.map { case (loc: At, str: LiteralString) =>
+      doInclude[K](loc, str)(parser)
     }
   }
 
@@ -78,7 +77,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   private def fileDescription[u: P](implicit ctx: P[?]): P[FileDescription] = {
-    P(location ~ Keywords.file ~ literalString).map { case(loc, file) =>
+    P(location ~ Keywords.file ~ literalString).map { case (loc, file) =>
       val path = ctx.input.asInstanceOf[RiddlParserInput].root.toPath.resolve(file.s)
       if Files.isReadable(path) && Files.isRegularFile(path) then {
         FileDescription(loc, path)
@@ -122,7 +121,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def comment[u:P]: P[Comment] = {
+  def comment[u: P]: P[Comment] = {
     P(inlineComment | endOfLineComment)
   }
 
@@ -177,15 +176,14 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  
   def option[u: P]: P[OptionValue] = {
-    P( Keywords.option ~/ Readability.is.? ~
-          location ~ CharsWhile(ch => ch.isLower | ch.isDigit | ch == '_' | ch == '-').!  ~
-          (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~
-            Punctuation.roundClose).?
-    ).map {
-      case (loc, option, params) =>
-        OptionValue(loc, option, params.getOrElse(Seq.empty[LiteralString]))
+    P(
+      Keywords.option ~/ Readability.is.? ~
+        location ~ CharsWhile(ch => ch.isLower | ch.isDigit | ch == '_' | ch == '-').! ~
+        (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~
+          Punctuation.roundClose).?
+    ).map { case (loc, option, params) =>
+      OptionValue(loc, option, params.getOrElse(Seq.empty[LiteralString]))
     }
   }
 

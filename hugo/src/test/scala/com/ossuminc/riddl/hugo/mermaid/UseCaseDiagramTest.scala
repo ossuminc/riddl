@@ -19,7 +19,11 @@ class UseCaseDiagramTest extends RunPassTestBase {
     def makeDocLink(namedValue: NamedValue): String = {
       val parents = symTab.parentsOf(namedValue)
       val uri = new URI(
-        "http", "example.com", parents.map(_.id.value).mkString("//", "/", "/") + s"${namedValue.id.value}", null, null
+        "http",
+        "example.com",
+        parents.map(_.id.value).mkString("//", "/", "/") + s"${namedValue.id.value}",
+        null,
+        null
       )
       uri.toASCIIString
     }
@@ -49,18 +53,18 @@ class UseCaseDiagramTest extends RunPassTestBase {
   "UseCaseDiagramSupport" should {
     "getDefinitionFor should work" in {
       val outputs: PassesOutput = PassesOutput()
-      val pid =PathIdentifier(At(),Seq("foo"))
+      val pid = PathIdentifier(At(), Seq("foo"))
       val item = Domain(At(), Identifier(At(), "foo"))
       val parent = Root(Seq(item))
       outputs.refMap.add[Domain](pid, parent, item)
-      val passesResult = PassesResult(PassInput.empty, outputs )
+      val passesResult = PassesResult(PassInput.empty, outputs)
       case class TestUseCaseDiagramSupport(passesResult: PassesResult) extends UseCaseDiagramSupport {
         def makeDocLink(definition: NamedValue): String = ???
       }
       val tucds = TestUseCaseDiagramSupport(passesResult)
       tucds.getDefinitionFor[Domain](pid, parent) match {
         case Some(domain: Domain) => succeed
-        case x => fail(s"Unexpected: $x")
+        case x                    => fail(s"Unexpected: $x")
       }
     }
   }

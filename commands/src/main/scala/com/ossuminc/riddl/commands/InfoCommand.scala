@@ -10,7 +10,7 @@ import com.ossuminc.riddl.command.{CommandPlugin, CommandOptions}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{Logger,RiddlBuildInfo}
+import com.ossuminc.riddl.utils.{Logger, RiddlBuildInfo}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -20,10 +20,7 @@ import java.nio.file.Path
 
 /** Unit Tests For FromCommand */
 object InfoCommand {
-  case class Options(
-    command: String = "info",
-    inputFile: Option[Path] = None,
-    targetCommand: Option[String] = None)
+  case class Options(command: String = "info", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
 }
 
@@ -31,18 +28,18 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
   import InfoCommand.Options
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd(pluginName).action((_, c) => c.copy(command = pluginName))
+    cmd(pluginName)
+      .action((_, c) => c.copy(command = pluginName))
       .text("Print out build information about this program") ->
       InfoCommand.Options()
   }
 
-  override def getConfigReader: ConfigReader[InfoCommand.Options] = {
-    (cur: ConfigCursor) =>
-      for
-        topCur <- cur.asObjectCursor
-        topRes <- topCur.atKey(pluginName)
-        cmd <- topRes.asObjectCursor
-      yield { Options(cmd.path) }
+  override def getConfigReader: ConfigReader[InfoCommand.Options] = { (cur: ConfigCursor) =>
+    for
+      topCur <- cur.asObjectCursor
+      topRes <- topCur.atKey(pluginName)
+      cmd <- topRes.asObjectCursor
+    yield { Options(cmd.path) }
   }
 
   override def run(

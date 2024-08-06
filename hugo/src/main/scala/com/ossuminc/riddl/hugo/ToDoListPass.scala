@@ -28,7 +28,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
     extends CollectingPass[ToDoItem](input, outputs) {
 
   private val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
-  
+
   protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
     definition match {
       case _: Root | _: Interaction | _: Include[Definition] @unchecked =>
@@ -43,7 +43,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
         val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)
         val prnts = generator.makeStringParents(pars)
         val path = (prnts :+ d.id.value).mkString(".")
-        val link = generator. makeDocLink(d, prnts)
+        val link = generator.makeDocLink(d, prnts)
         auths.map(auth => ToDoItem(item, auth, path, link))
       case _ =>
         Seq.empty[ToDoItem]
@@ -76,8 +76,8 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
 object ToDoListPass extends PassInfo[HugoPass.Options] {
   val name: String = "ToDoList"
-  def creator(options: HugoPass.Options): PassCreator = { 
-    (in: PassInput, out: PassesOutput) => ToDoListPass(in, out, options ) 
+  def creator(options: HugoPass.Options): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    ToDoListPass(in, out, options)
   }
 }
 

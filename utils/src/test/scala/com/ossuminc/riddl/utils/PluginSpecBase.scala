@@ -22,8 +22,10 @@ abstract class PluginSpecBase(
     .of("com/ossuminc/riddl/utils/PluginInterface.class"),
   implClassPath: Path = Path.of("com/ossuminc/riddl/utils/TestPlugin.class"),
   moduleName: String = "utils",
-  jarFilename: String = "test-plugin.jar")
-    extends AnyWordSpec with Matchers with BeforeAndAfterAll {
+  jarFilename: String = "test-plugin.jar"
+) extends AnyWordSpec
+    with Matchers
+    with BeforeAndAfterAll {
 
   val tmpDir: Path = Files.createTempDirectory("RiddlTest")
   final val providerConfigurationBasePath = Path.of("META-INF/services/")
@@ -43,7 +45,8 @@ abstract class PluginSpecBase(
     .resolve(svcClassStr)
 
   val providerConfigurationPath: Path = testClassesDir
-    .resolve(providerRelativePath).toAbsolutePath
+    .resolve(providerRelativePath)
+    .toAbsolutePath
 
   val jarFile: Path = tmpDir.resolve(jarFilename)
 

@@ -17,8 +17,9 @@ import scala.annotation.unused
 
 object PrettifyPass extends PassInfo[PrettifyPass.Options] {
   val name: String = "prettify"
-  def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    PrettifyPass(in, out, PrettifyState(options))
+  def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator = {
+    (in: PassInput, out: PassesOutput) =>
+      PrettifyPass(in, out, PrettifyState(options))
   }
 
   /** Options for the PrettifyPass and PrettifyCommand */
@@ -27,7 +28,9 @@ object PrettifyPass extends PassInfo[PrettifyPass.Options] {
     outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
     projectName: Option[String] = None,
     singleFile: Boolean = true
-  ) extends TranslationCommand.Options with PassOptions with PassCommandOptions {
+  ) extends TranslationCommand.Options
+      with PassOptions
+      with PassCommandOptions {
     def command: String = name
   }
 
@@ -114,8 +117,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case _: Root       => () // ignore
       case _: Enumerator => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
-           _: OnInitializationClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
-           _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
+          _: OnInitializationClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet |
+          _: Connector | _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
         () // not  containers
 
     }
@@ -231,7 +234,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     state.withCurrent(
       _.addIndent(interaction.format)
     )
-}
+  }
 
   private def closeUseCase(@unused useCase: UseCase): Unit = {
     // TODO: write closeUseCase

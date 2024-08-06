@@ -38,13 +38,14 @@ object PassOptions {
 /** Information a pass must provide, basically its name and a function to create the pass
   */
 trait PassInfo[OPT <: PassOptions] {
+
   /** The name of the pass */
   def name: String
 
   /** A function to create an instance of the pass
     *
     * @param options
-    * The options the pass requires
+    *   The options the pass requires
     * @return
     */
   def creator(options: OPT): PassCreator
@@ -136,9 +137,9 @@ case class PassesResult(
   /** Get the output of one pass that ran
     *
     * @param passName
-    * The name of the pass. Use the Pass's companion object's [[PassInfo.name]] method to retrieve it.
+    *   The name of the pass. Use the Pass's companion object's [[PassInfo.name]] method to retrieve it.
     * @tparam T
-    * The type of the Pass's output which must derive from [[PassOutput]].
+    *   The type of the Pass's output which must derive from [[PassOutput]].
     * @return
     */
   def outputOf[T <: PassOutput](passName: String): Option[T] = outputs.outputOf[T](passName)

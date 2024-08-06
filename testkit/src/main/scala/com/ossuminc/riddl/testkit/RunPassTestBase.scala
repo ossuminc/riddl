@@ -10,13 +10,12 @@ abstract class RunPassTestBase extends ValidatingTest {
 
   def runPassesWith(
     input: RiddlParserInput,
-    passToRun:PassCreator,
+    passToRun: PassCreator,
     commonOptions: CommonOptions = CommonOptions.empty
-  )
-  : PassesResult = {
+  ): PassesResult = {
     TopLevelParser.parseInput(input, commonOptions, true) match {
       case Left(messages) => fail(messages.format)
-      case Right(root:Root) =>
+      case Right(root: Root) =>
         val passesToRun = Pass.standardPasses :+ passToRun
         val passInput = PassInput(root, commonOptions)
         val result = Pass.runThesePasses(passInput, passesToRun, SysLogger())

@@ -14,7 +14,6 @@ import java.nio.file.Path
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
-
 object TranslationCommand {
   trait Options extends TranslatingOptions with PassCommandOptions {
     def inputFile: Option[Path]

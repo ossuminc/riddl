@@ -80,7 +80,7 @@ class RegressionTests extends ValidatingTest {
         case Left(messages) =>
           val errors = messages.justErrors
           errors.size mustBe 1
-          errors.head.message.contains ("whitespace after keyword")
+          errors.head.message.contains("whitespace after keyword")
         case Right((typ, rpi)) =>
           val expected: Type = Type(
             (2, 3, rpi),

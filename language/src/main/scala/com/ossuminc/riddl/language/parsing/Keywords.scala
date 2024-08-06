@@ -312,7 +312,7 @@ object Keywords {
   def when[u: P]: P[Unit] = keyword(Keyword.when)
 
   def where[u: P]: P[Unit] = keyword(Keyword.where)
-}  
+}
 
 object Keyword {
   final val acquires = "acquires"

@@ -92,7 +92,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
     System.out.println(s)
-    for { 
+    for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)
     } do {
@@ -122,7 +122,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
       case Right(passesResult) =>
         passesResult.outputOf[StatsOutput](StatsPass.name) match
           case Some(stats) => printStats(stats)
-          case None => println("Statistics not available.")
+          case None        => println("Statistics not available.")
     result
   }
 

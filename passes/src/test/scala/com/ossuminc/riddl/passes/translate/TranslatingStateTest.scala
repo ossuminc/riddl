@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.passes.translate
 
-import com.ossuminc.riddl.language.AST.{Domain,Identifier}
+import com.ossuminc.riddl.language.AST.{Domain, Identifier}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.utils.OutputFile
 import org.scalatest.matchers.must.Matchers
@@ -17,14 +17,14 @@ class TranslatingStateTest extends AnyWordSpec with Matchers {
   ) extends TranslatingOptions
 
   case class TestTranslatingState(options: TestTranslatingOptions) extends TranslatingState[OutputFile]
-  
+
   "TranslatingState" should {
     "have defaulted list of generatedFiles" in {
       val tto = TestTranslatingOptions(Some(Path.of("")), Some(Files.createTempDirectory("test")), Some("test"))
       val ts = TestTranslatingState(tto)
       val gf = ts.generatedFiles
       gf must be(empty)
-      val path: Seq[String] = ts.makeDefPath(Domain(At(), Identifier(At(), "domain")),Seq.empty)
+      val path: Seq[String] = ts.makeDefPath(Domain(At(), Identifier(At(), "domain")), Seq.empty)
       path.mkString(".") must be("domain")
     }
   }

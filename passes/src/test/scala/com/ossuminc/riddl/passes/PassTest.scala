@@ -61,16 +61,14 @@ class PassTest extends AnyWordSpec with Matchers {
 
     def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
 
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {
-      
-    }
+    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {}
 
     def result: com.ossuminc.riddl.passes.PassOutput = ???
   }
-  
+
   object TestPass2 extends PassInfo[PassOptions] {
     val name: String = "TestPass2"
-    override def creator(options:PassOptions): PassCreator = (input, output) => new TestPass2(input, output)
+    override def creator(options: PassOptions): PassCreator = (input, output) => new TestPass2(input, output)
   }
 
   "Pass" must {

@@ -39,10 +39,8 @@ class ValidationPassTest extends ValidatingTest {
               root,
               CommonOptions(showMissingWarnings = false, showStyleWarnings = true)
             )
-            if result.messages.hasErrors then
-              fail(result.messages.format)
-            else
-              result.root mustBe sharedRoot
+            if result.messages.hasErrors then fail(result.messages.format)
+            else result.root mustBe sharedRoot
         }
       }
       "handle includes" in {
@@ -61,7 +59,7 @@ class ValidationPassTest extends ValidatingTest {
         val app = apps.head
         app.terms mustNot be(empty)
         app.hasAuthors mustBe false
-        app.hasAuthorRefs mustBe true 
+        app.hasAuthorRefs mustBe true
         app.authorRefs mustNot be(empty)
       }
     }

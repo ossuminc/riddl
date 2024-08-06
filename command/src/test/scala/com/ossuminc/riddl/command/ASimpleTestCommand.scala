@@ -9,7 +9,7 @@ package com.ossuminc.riddl.command
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger 
+import com.ossuminc.riddl.utils.Logger
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -17,28 +17,26 @@ import scopt.OParser
 import java.nio.file.Path
 
 object ASimpleTestCommand {
-  case class Options(
-    inputFile: Option[Path] = None,
-    arg1: String = "")
-  extends CommandOptions {
+  case class Options(inputFile: Option[Path] = None, arg1: String = "") extends CommandOptions {
     val command: String = "test"
   }
 }
 
 /** A pluggable command for testing plugin commands! */
-class ASimpleTestCommand
-    extends CommandPlugin[ASimpleTestCommand.Options]("test") {
+class ASimpleTestCommand extends CommandPlugin[ASimpleTestCommand.Options]("test") {
   import ASimpleTestCommand.Options
   override def getOptions: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder.*
-    OParser.sequence(cmd("test").children(
-      arg[String]("input-file").action((s,to) => to.copy(inputFile = Some(Path.of(s)))),
-      arg[String]("arg1").action((s, to) => to.copy(arg1 = s)).validate { a1 =>
-        if a1.nonEmpty then { Right(()) }
-        else { Left("All argument keys must be nonempty") }
-      }
-    )) -> Options()
+    OParser.sequence(
+      cmd("test").children(
+        arg[String]("input-file").action((s, to) => to.copy(inputFile = Some(Path.of(s)))),
+        arg[String]("arg1").action((s, to) => to.copy(arg1 = s)).validate { a1 =>
+          if a1.nonEmpty then { Right(()) }
+          else { Left("All argument keys must be nonempty") }
+        }
+      )
+    ) -> Options()
   }
 
   override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>

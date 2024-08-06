@@ -193,15 +193,14 @@ object CommandPlugin {
         handleCommandResult(result, commonOptions, log)
   }
 
-  def runMainForTest(args: Array[String]): Either[Messages,PassesResult] = {
+  def runMainForTest(args: Array[String]): Either[Messages, PassesResult] = {
     try {
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match
         case Some(commonOptions) =>
           val log: Logger = if commonOptions.quiet then StringLogger() else SysLogger()
-          if remaining.isEmpty then
-            Left(List(Messages.error("No command argument was provided")))
-          else  
+          if remaining.isEmpty then Left(List(Messages.error("No command argument was provided")))
+          else
             val name = remaining.head
             CommandPlugin.runCommandWithArgs(name, remaining, log, commonOptions)
         case None =>
@@ -211,7 +210,7 @@ object CommandPlugin {
         Left(List(Messages.severe("Exception Thrown:", exception, At.empty)))
     }
   }
-  
+
   def runMain(args: Array[String], log: Logger = SysLogger()): Int = {
     try {
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)

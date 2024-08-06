@@ -32,7 +32,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
   def makeDocLink(definition: NamedValue, parents: Seq[String]): String
 
   def makeDocAndParentsLinks(definition: NamedValue): String
-  
+
   def makeSourceLink(definition: Definition): String
 
   def makeTomlFile(options: HugoPass.Options, author: Option[Author]): String
@@ -98,11 +98,16 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
 }
 
 object ThemeGenerator {
-  def apply(options: HugoPass.Options, inputs: PassInput, outputs: PassesOutput, messages: Messages.Accumulator): ThemeGenerator = {
+  def apply(
+    options: HugoPass.Options,
+    inputs: PassInput,
+    outputs: PassesOutput,
+    messages: Messages.Accumulator
+  ): ThemeGenerator = {
     options.hugoThemeName match {
       case None                            => GeekDocGenerator(options, inputs, outputs, messages)
       case Some(GeekDocWriter.name) | None => GeekDocGenerator(options, inputs, outputs, messages)
-      case Some(DotdockWriter.name)         => DotdockGenerator(options, inputs, outputs, messages)
+      case Some(DotdockWriter.name)        => DotdockGenerator(options, inputs, outputs, messages)
       case Some(s) =>
         messages.addWarning((0, 0), s"Hugo theme named '$s' is not supported, using GeekDoc ")
         GeekDocGenerator(options, inputs, outputs, messages)

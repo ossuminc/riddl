@@ -50,8 +50,8 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
                                        |1234
                                        |56
                                        |""".stripMargin)
-        Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach {
-          case (loc, offset) => input.rangeOf(At(loc)) mustBe offset
+        Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach { case (loc, offset) =>
+          input.rangeOf(At(loc)) mustBe offset
         }
 
       }

@@ -87,11 +87,11 @@ trait SummariesWriter { this: MarkdownWriter =>
         emitTableRow(item._1, item._2)
     }
   }
-  
+
   def emitUsers(weight: Int, users: Seq[User]): Unit = {
     fileHead("Users", weight, Some("A list of the users defined for epics"))
     h2("Users")
-    for { user <- users } do 
+    for { user <- users } do
       h3(user.identify)
       list(
         Seq(
@@ -101,11 +101,11 @@ trait SummariesWriter { this: MarkdownWriter =>
       )
       user.description.foreach(d => p(d.lines.map(_.format).mkString("\n")))
   }
-  
+
   def emitAuthors(weight: Int, authors: Seq[Author]): Unit = {
     fileHead("Authors", weight, Some("A list of the authors of this specification model"))
     h2("Authors")
-    for {author <- authors} do
+    for { author <- authors } do
       h3(author.id.format)
       list(
         Seq(

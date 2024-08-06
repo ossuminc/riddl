@@ -2,7 +2,7 @@ package com.ossuminc.riddl.passes.symbols
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.ParsingTest
-import com.ossuminc.riddl.language.{At,CommonOptions}
+import com.ossuminc.riddl.language.{At, CommonOptions}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
 import org.scalatest.Assertion
 
@@ -40,16 +40,16 @@ class SymbolsPassTest extends ParsingTest {
     }
     "lookupSymbol(id: PathNames) should fail if no names" in {
       val xcption = intercept[IllegalArgumentException] { st.lookupSymbol[Context](Seq.empty[String]) }
-      xcption.isInstanceOf[IllegalArgumentException] must be(true) 
+      xcption.isInstanceOf[IllegalArgumentException] must be(true)
     }
     "lookupSymbol() should return None for non-matching type" in {
       val list = st.lookupSymbol[Context](Seq("Everything"))
-      list must not be(empty)
+      list must not be (empty)
       list.head._1.isInstanceOf[Domain] must be(true)
       list.head._2 must be(None)
     }
     "lookupParentage(id: PathNames) should fail on no names" in {
-      val xcption = intercept[IllegalArgumentException] { 
+      val xcption = intercept[IllegalArgumentException] {
         val parents = st.lookupParentage(Seq.empty[String])
         parents must be(empty)
       }

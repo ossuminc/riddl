@@ -21,7 +21,7 @@ class CommonParserTest extends ParsingTest {
       val testParser = TestParser(input)
       testParser.expect[LiteralString](testParser.literalString(_)) match
         case Left(messages) => fail(messages.justErrors.format)
-        case Right(ls) => ls.s must be(content)
+        case Right(ls)      => ls.s must be(content)
     }
   }
 

@@ -57,7 +57,7 @@ trait MarkdownWriter
       val spaces = " ".repeat(indent + 2)
       p(s"$spaces* [${application.identify}]($link)")
     }
-    for { epic <- AST.getEpics(domain).sortBy(_.id.value)} do {
+    for { epic <- AST.getEpics(domain).sortBy(_.id.value) } do {
       val link = generator.makeDocLink(epic)
       val spaces = " ".repeat(indent + 2)
       p(s"$spaces* [${epic.identify}]($link)")

@@ -155,7 +155,6 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
       }
     }
 
-
     "options at top level do not override in common object" in {
       val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
@@ -168,7 +167,7 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
     }
 
     "empty args are eliminated" in {
-      val opts = Array("--show-times", "test",  "", "  ", "file.riddl", "arg1")
+      val opts = Array("--show-times", "test", "", "  ", "file.riddl", "arg1")
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options) =>
@@ -194,14 +193,14 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
           opts.showMissingWarnings mustBe false
           opts.showStyleWarnings mustBe false
           opts.showUsageWarnings mustBe true
-          opts.showInfoMessages mustBe  false
+          opts.showInfoMessages mustBe false
           opts.debug mustBe true
-          opts.pluginsDir must be ( Some(Path.of(".")) )
-          opts.sortMessagesByLocation must be ( true )
-          opts.groupMessagesByKind must be ( true)
-          opts.noANSIMessages must be ( true )
-          opts.maxParallelParsing must be (12)
-          opts.maxIncludeWait must be ( 1.minute )
+          opts.pluginsDir must be(Some(Path.of(".")))
+          opts.sortMessagesByLocation must be(true)
+          opts.groupMessagesByKind must be(true)
+          opts.noANSIMessages must be(true)
+          opts.maxParallelParsing must be(12)
+          opts.maxIncludeWait must be(1.minute)
           opts.warningsAreFatal must be(true)
         case Left(messages) =>
           fail(messages.format)
@@ -216,7 +215,12 @@ class CommonOptionsTest extends AnyWordSpec with Matchers {
         "--plugins-dir:.",
         "--max-include-wait:5",
         "--max-parallel-parsing:12",
-        "test", "", "  ", "file.riddl", "arg1")
+        "test",
+        "",
+        "  ",
+        "file.riddl",
+        "arg1"
+      )
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options: CommonOptions) =>

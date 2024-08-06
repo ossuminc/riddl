@@ -57,13 +57,12 @@ class InvariantValidator extends ValidatingTest {
                                               |entity user is {
                                               | invariant large is "true"
                                               |}
-                                              |""".stripMargin) {
-        (_, _, msgs) =>
-          assertValidationMessage(
-            msgs,
-            MissingWarning,
-            "Invariant 'large' should have a description"
-          )
+                                              |""".stripMargin) { (_, _, msgs) =>
+        assertValidationMessage(
+          msgs,
+          MissingWarning,
+          "Invariant 'large' should have a description"
+        )
       }
 
     }

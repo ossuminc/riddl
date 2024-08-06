@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Adaptor
+
 /** Unit Tests For ConsumerTest */
 class AdaptorTest extends ValidatingTest {
 
@@ -69,8 +70,7 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |""".stripMargin
       parseAndValidateDomain(input) { (_, _, messages) =>
-
-          succeed
+        succeed
       }
     }
 

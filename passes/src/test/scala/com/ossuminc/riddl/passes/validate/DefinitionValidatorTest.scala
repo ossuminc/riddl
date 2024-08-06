@@ -20,22 +20,25 @@ class DefinitionValidatorTest extends ValidatingTest {
           |}
           |""".stripMargin
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (_: Domain, _, msgs: Seq[Message]) =>
-          if msgs.isEmpty then {
-            fail(
-              "Identifiers with less than 3 characters should generate a warning"
-            )
-          } else {
-            val styleWarnings = msgs.filter(_.isStyle)
-            styleWarnings.size mustEqual 2
-            assertValidationMessage(
-              styleWarnings, StyleWarning, "Domain identifier 'po' is too short. The minimum length is 3"
-            )
-            assertValidationMessage(
-              styleWarnings, StyleWarning, "Type identifier 'Ba' is too short. The minimum length is 3"
-            )
-          }
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Seq[Message]) =>
+        if msgs.isEmpty then {
+          fail(
+            "Identifiers with less than 3 characters should generate a warning"
+          )
+        } else {
+          val styleWarnings = msgs.filter(_.isStyle)
+          styleWarnings.size mustEqual 2
+          assertValidationMessage(
+            styleWarnings,
+            StyleWarning,
+            "Domain identifier 'po' is too short. The minimum length is 3"
+          )
+          assertValidationMessage(
+            styleWarnings,
+            StyleWarning,
+            "Type identifier 'Ba' is too short. The minimum length is 3"
+          )
+        }
       }
     }
   }

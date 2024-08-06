@@ -27,7 +27,6 @@ import java.net.URL
 import java.nio.file.Path
 import scala.annotation.unused
 
-
 class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
 
   import HugoPass.Options

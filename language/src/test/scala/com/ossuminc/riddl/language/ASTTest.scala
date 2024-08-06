@@ -40,14 +40,13 @@ class ASTTest extends AnyWordSpec with Matchers {
       head.s must include("sbt-ossuminc")
     }
   }
-  
+
   "Domain" should {
     "return anonymous name when empty" in {
       val domain = Domain(At(), Identifier.empty)
       domain.identify must be("Anonymous Domain")
     }
   }
-
 
   "Types" should {
     "support domain definitions" in {
@@ -365,9 +364,7 @@ class ASTTest extends AnyWordSpec with Matchers {
     }
   }
 
-  "Saga" should { "have a test" in {
-
-  } }
+  "Saga" should { "have a test" in {} }
   "SagaStep" should { "have a test" in { pending } }
   "State" should { "format correctly" in { state.format mustBe "state state" } }
   "Story Case" should {

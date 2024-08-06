@@ -72,7 +72,7 @@ class RiddlTest extends ParsingTest {
 
     "parse and validate nonsense file as invalid" in {
       runOne("testkit/src/test/input/invalid.riddl") match {
-        case Right(root) => fail(s"Should not have parsed, but got:\n$root")
+        case Right(root)  => fail(s"Should not have parsed, but got:\n$root")
         case Left(errors) => assert(errors.exists(_.kind == Messages.Error))
       }
     }
@@ -100,7 +100,7 @@ class RiddlTest extends ParsingTest {
       val common = CommonOptions(showTimes = true)
       val input = RiddlParserInput("I am not valid riddl (hopefully).")
       Riddl.parseAndValidate(input, common) match {
-        case Right(_) => succeed
+        case Right(_)       => succeed
         case Left(messages) => assert(messages.exists(_.kind == Messages.Error))
       }
     }

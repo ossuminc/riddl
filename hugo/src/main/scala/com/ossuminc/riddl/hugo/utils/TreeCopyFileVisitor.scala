@@ -12,9 +12,8 @@ import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 
-/** A FIle Visitor that copies a directory hierarchy*/
-case class TreeCopyFileVisitor(source: Path, target: Path, log: Logger = SysLogger())
-    extends SimpleFileVisitor[Path] {
+/** A FIle Visitor that copies a directory hierarchy */
+case class TreeCopyFileVisitor(source: Path, target: Path, log: Logger = SysLogger()) extends SimpleFileVisitor[Path] {
 
   @throws[IOException]
   override def preVisitDirectory(
@@ -39,12 +38,12 @@ case class TreeCopyFileVisitor(source: Path, target: Path, log: Logger = SysLogg
     FileVisitResult.CONTINUE
   }
 
-/*  override def visitFileFailed(
+  /*  override def visitFileFailed(
     file: Path,
     exc: IOException
   ): FileVisitResult = {
     log.error(s"Unable to copy: $file: $exc\n")
     FileVisitResult.CONTINUE
   }
- */
+   */
 }

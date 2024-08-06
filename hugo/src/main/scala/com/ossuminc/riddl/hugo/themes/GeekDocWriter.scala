@@ -106,8 +106,7 @@ case class GeekDocWriter(
       sb.append(s"```")
       sb.append(items.map(_.format).mkString(new_line, new_line, new_line))
       sb.append(s"```$new_line")
-    else
-      mono("No statements defined.")
+    else mono("No statements defined.")
   }
 
   def processorIndex(processor: Processor[?]): Unit = {

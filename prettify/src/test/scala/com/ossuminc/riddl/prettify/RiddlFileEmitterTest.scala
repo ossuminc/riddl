@@ -7,7 +7,6 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.{Files, Path}
 
-
 /** Tests For RiddlFileEmitter */
 class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 

@@ -77,10 +77,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
   }
 
   override def afterAll(): Unit = {
-    if shouldDelete then
-      FileUtils.forceDeleteOnExit(tmpDir.toFile)
-    else
-      info(s"Leaving ${tmpDir} undeleted")
+    if shouldDelete then FileUtils.forceDeleteOnExit(tmpDir.toFile)
+    else info(s"Leaving ${tmpDir} undeleted")
   }
 
   private final val suffix = "conf"
@@ -114,7 +112,9 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
     }
   }
 
-  def forAFolder(folderName: String)(f: (String, Path) => Either[Messages, PassesResult]): Either[Messages, PassesResult] = {
+  def forAFolder(
+    folderName: String
+  )(f: (String, Path) => Either[Messages, PassesResult]): Either[Messages, PassesResult] = {
     FileUtils
       .iterateFilesAndDirs(
         srcDir.toFile,
@@ -132,10 +132,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: CommandPlu
             folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
               case Some(config) =>
                 CommandPlugin.loadCandidateCommands(config.toPath).flatMap { commands =>
-                  if commands.contains(commandName) then
-                    f(folderName, config.toPath)
-                  else
-                    Left(errors(s"Config file $commandName not found in $config"))
+                  if commands.contains(commandName) then f(folderName, config.toPath)
+                  else Left(errors(s"Config file $commandName not found in $config"))
 
                 }
               case None =>

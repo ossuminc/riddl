@@ -34,7 +34,7 @@ class CommandOptionsTest extends AnyWordSpec with Matchers {
       CommandOptions.withInputFile[Assertion](Some(Path.of(".")), "unspecified") { (path: Path) =>
         Right(Files.exists(path) must be(true))
       } match {
-        case Left(messages) => fail(s"Unexpected: ${messages.format}")
+        case Left(messages)   => fail(s"Unexpected: ${messages.format}")
         case Right(assertion) => assertion
       }
     }

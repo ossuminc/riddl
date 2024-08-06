@@ -13,13 +13,14 @@ case class DotdockGenerator(
   input: PassInput,
   outputs: PassesOutput,
   messages: Messages.Accumulator
-) extends ThemeGenerator with UseCaseDiagramSupport {
+) extends ThemeGenerator
+    with UseCaseDiagramSupport {
 
   def makeDocLink(definition: NamedValue, parents: Seq[String]): String = "" // TODO: implement makeDocLink
 
   def makeSourceLink(definition: Definition): String = "" // TODO: implement makeSourceLink
 
   def makeDocAndParentsLinks(definition: NamedValue): String = "" // TODO: implement makeDocAndParentsLink
-  
+
   def makeTomlFile(options: HugoPass.Options, author: Option[Author]): String = "" // TODO: implement makeTomlFile
 }

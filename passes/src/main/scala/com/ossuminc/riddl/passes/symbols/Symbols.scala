@@ -9,7 +9,7 @@ import com.ossuminc.riddl.language.AST.{Definition, NamedValue}
 
 import scala.collection.mutable
 
-/** Some common types associated with the AST names of things for brevity; and, used widely*/
+/** Some common types associated with the AST names of things for brevity; and, used widely */
 object Symbols {
   type Parent = Definition
   type Parents = Seq[Parent]

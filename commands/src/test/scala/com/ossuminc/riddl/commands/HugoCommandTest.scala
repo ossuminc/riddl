@@ -2,7 +2,7 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.CommandTestBase
 
-class HugoCommandTest extends CommandTestBase  {
+class HugoCommandTest extends CommandTestBase {
 
   val inputFile = "hugo/src/test/input/rbbq.riddl"
   val hugoConfig = "hugo/src/test/input/hugo.conf"
@@ -19,7 +19,8 @@ class HugoCommandTest extends CommandTestBase  {
         inputFile,
         "-o",
         outputDir("hugo"),
-        "--hugo-theme-name", "GeekDoc"
+        "--hugo-theme-name",
+        "GeekDoc"
       )
       runCommand(args)
     }

@@ -13,12 +13,7 @@ import Readability.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait ProjectorParser {
-  this: FunctionParser
-    & HandlerParser
-    & ReferenceParser
-    & StatementParser
-    & StreamingParser
-    & TypeParser =>
+  this: FunctionParser & HandlerParser & ReferenceParser & StatementParser & StreamingParser & TypeParser =>
 
   private def projectorInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
     include[u, OccursInProjector](projectorDefinitions(_))

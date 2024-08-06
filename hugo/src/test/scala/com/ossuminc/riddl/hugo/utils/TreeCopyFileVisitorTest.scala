@@ -12,7 +12,7 @@ class TreeCopyFileVisitorTest extends AnyWordSpec with Matchers {
     val source = Path.of("hugo/src/test/input")
     val target: Path = Files.createTempDirectory("TCFV-test")
     val visitor = TreeCopyFileVisitor(source, target)
-    
+
     "copies input files" in {
       Files.createDirectories(target.resolve("regressions")) // To make it delete something
       val result = Files.walkFileTree(source, visitor)

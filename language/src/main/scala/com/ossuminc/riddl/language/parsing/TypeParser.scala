@@ -531,14 +531,14 @@ private[parsing] trait TypeParser extends CommonParser {
     )
   }
 
-  private def scalaAggregateDefinition[u:P]: P[Aggregation] = {
+  private def scalaAggregateDefinition[u: P]: P[Aggregation] = {
     P(
-      location ~ Punctuation.roundOpen ~ field.rep(0,",") ~ Punctuation.roundClose
-    ).map {
-      case (location, fields) => Aggregation(location, fields)
+      location ~ Punctuation.roundOpen ~ field.rep(0, ",") ~ Punctuation.roundClose
+    ).map { case (location, fields) =>
+      Aggregation(location, fields)
     }
   }
-  
+
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
       location ~ aggregateUseCase ~/ identifier ~

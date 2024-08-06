@@ -14,12 +14,7 @@ import Readability.*
 
 private[parsing] trait RepositoryParser {
 
-  this: HandlerParser
-    & ReferenceParser
-    & StatementParser
-    & StreamingParser
-    & FunctionParser
-    & TypeParser =>
+  this: HandlerParser & ReferenceParser & StatementParser & StreamingParser & FunctionParser & TypeParser =>
 
   private def repositoryInclude[u: P]: P[IncludeHolder[OccursInRepository]] = {
     include[u, OccursInRepository](repositoryDefinitions(_))
