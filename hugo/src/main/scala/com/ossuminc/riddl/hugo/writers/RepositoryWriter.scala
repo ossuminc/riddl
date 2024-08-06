@@ -6,7 +6,7 @@ import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 trait RepositoryWriter { this: MarkdownWriter =>
 
   def emitSchema(repository: Repository): Unit = {
-    //TODO: Schema writing
+    // TODO: Schema writing
   }
   def emitRepository(
     repository: Repository,

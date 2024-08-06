@@ -92,7 +92,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
 object MessagesPass extends PassInfo[HugoPass.Options] {
   val name: String = "Messages"
-  def creator(options: HugoPass.Options): PassCreator = {
-    (in: PassInput, out: PassesOutput) => MessagesPass(in, out, options)
+  def creator(options: HugoPass.Options): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    MessagesPass(in, out, options)
   }
 }

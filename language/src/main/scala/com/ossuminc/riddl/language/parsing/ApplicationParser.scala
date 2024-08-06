@@ -12,14 +12,9 @@ import fastparse.MultiLineWhitespace.*
 import Readability.*
 
 private[parsing] trait ApplicationParser {
-  this: StreamingParser
-    & FunctionParser
-    & ReferenceParser
-    & HandlerParser
-    & StatementParser
-    & TypeParser
-    & CommonParser =>
-  
+  this: StreamingParser & FunctionParser & ReferenceParser & HandlerParser & StatementParser & TypeParser &
+    CommonParser =>
+
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
       location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description

@@ -13,13 +13,8 @@ import Readability.*
 
 /** Parsing rules for entity definitions */
 private[parsing] trait EntityParser {
-  this: FunctionParser
-    & HandlerParser
-    & ReferenceParser
-    & StatementParser
-    & StreamingParser
-    & TypeParser =>
-  
+  this: FunctionParser & HandlerParser & ReferenceParser & StatementParser & StreamingParser & TypeParser =>
+
   private def stateDefinitions[u: P]: P[Seq[OccursInState]] = {
     P(handler(StatementsSet.EntityStatements) | invariant).rep(0)
   }

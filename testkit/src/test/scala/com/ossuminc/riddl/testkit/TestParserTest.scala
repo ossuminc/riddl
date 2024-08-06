@@ -4,7 +4,7 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST,At}
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.Messages.Messages
 import java.nio.file.Path
 
@@ -25,7 +25,7 @@ class TestParserTest extends AnyWordSpec with Matchers {
       }
     }
     "provide parse" in {
-      tp.parse[Root,Domain](tp.root, AST.getTopLevelDomains(_).head) match {
+      tp.parse[Root, Domain](tp.root, AST.getTopLevelDomains(_).head) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right((domain: Domain, rpi: RiddlParserInput)) =>
           rpi must be(input)
@@ -56,14 +56,14 @@ class TestParserTest extends AnyWordSpec with Matchers {
       tp.parseTopLevelDomain[Domain](_.domains.head) match {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right(domain: Domain) =>
-          domain.identify must be ("Domain 'Everything'")
+          domain.identify must be("Domain 'Everything'")
       }
     }
     "provide parseDefinition(extractor)" in {
-      tp.parseDefinition[Root,Domain](_.domains.head) match {
+      tp.parseDefinition[Root, Domain](_.domains.head) match {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((domain: Domain, rpi: RiddlParserInput)) =>
-          domain.identify must be ("Domain 'Everything'")
+          domain.identify must be("Domain 'Everything'")
           rpi must be(input)
       }
     }
@@ -84,7 +84,7 @@ class TestParserTest extends AnyWordSpec with Matchers {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((typ: Type, rpi: RiddlParserInput)) =>
           rpi must be(input)
-          typ.typ must be(Integer(At((1,27))))
+          typ.typ must be(Integer(At((1, 27))))
       }
     }
     "provide parseContextDefinition(extractor)" in {
@@ -95,7 +95,7 @@ class TestParserTest extends AnyWordSpec with Matchers {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((typ: Type, rpi: RiddlParserInput)) =>
           rpi must be(input)
-          typ.typ must be(Integer(At((1,28))))
+          typ.typ must be(Integer(At((1, 28))))
       }
     }
   }

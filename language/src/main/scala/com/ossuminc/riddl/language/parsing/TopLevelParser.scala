@@ -17,8 +17,7 @@ import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 
-/** The TopLevel (Root) parser. 
-  * This class 
+/** The TopLevel (Root) parser. This class
   * @param input
   * @param commonOptions
   * @param ec

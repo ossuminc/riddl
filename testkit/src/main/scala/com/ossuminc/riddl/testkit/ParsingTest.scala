@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, CommonOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{TopLevelParser, RiddlParserInput}
-import com.ossuminc.riddl.language.parsing.{ParsingTest => langParsingTest} 
+import com.ossuminc.riddl.language.parsing.{ParsingTest => langParsingTest}
 import fastparse.{P, *}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec

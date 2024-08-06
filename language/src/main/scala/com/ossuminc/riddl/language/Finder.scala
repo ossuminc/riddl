@@ -35,8 +35,8 @@ case class Finder(root: Container[RiddlValue]) {
     * @param select
     *   The boolean expression derived from a candidate [[AST.RiddlValue]] that selects it to the result set
     * @return
-    *   A [[Finder#DefWithParents]] that returns a [[scala.Seq]] of two-tuples with 
-    *   the [[AST.RiddlValue]] a a [[scala.Seq]] of the parents of that value.
+    *   A [[Finder#DefWithParents]] that returns a [[scala.Seq]] of two-tuples with the [[AST.RiddlValue]] a a
+    *   [[scala.Seq]] of the parents of that value.
     */
   def findWithParents(
     select: RiddlValue => Boolean

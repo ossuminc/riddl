@@ -28,8 +28,8 @@ class StatementValidatorTest extends ValidatingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndValidate(input, "test case",CommonOptions(), shouldFailOnErrors = false) {
-        (root: Root, messages: Messages ) =>
+      parseAndValidate(input, "test case", CommonOptions(), shouldFailOnErrors = false) {
+        (root: Root, messages: Messages) =>
           // info(messages.format)
           root.isEmpty mustBe false
           messages.hasErrors mustBe false
@@ -41,6 +41,6 @@ class StatementValidatorTest extends ValidatingTest {
           } must be(true)
       }
 
-      }
+    }
   }
 }

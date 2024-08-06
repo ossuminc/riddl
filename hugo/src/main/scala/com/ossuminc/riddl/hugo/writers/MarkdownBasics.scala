@@ -153,7 +153,7 @@ trait MarkdownBasics extends TextFileWriter with ThemeWriter { this: MarkdownWri
         sb.append(description.lines.map(line => s"$ndnt$listItem${line.s}\n"))
   }
 
-  def definitionToc(kindOfThing: String, list:Seq[Definition], level:Int = 2): Unit = {
+  def definitionToc(kindOfThing: String, list: Seq[Definition], level: Int = 2): Unit = {
     val strList = list.map(c => c.id.value)
     toc(kindOfThing, strList, level)
   }

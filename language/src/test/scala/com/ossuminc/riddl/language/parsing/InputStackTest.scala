@@ -18,12 +18,12 @@ class InputStackTest extends AnyWordSpec with Matchers {
       is.push(i_top)
       is.push(i_middle)
       is.push(i_bottom)
-      is.current mustBe(i_bottom)
-      is.sourceNames mustBe( Seq("bottom", "middle", "top"))
-      is.pop mustBe(i_bottom)
-      is.pop mustBe(i_middle)
-      is.pop mustBe(i_top)
-      is.isEmpty mustBe(true)
+      is.current mustBe (i_bottom)
+      is.sourceNames mustBe (Seq("bottom", "middle", "top"))
+      is.pop mustBe (i_bottom)
+      is.pop mustBe (i_middle)
+      is.pop mustBe (i_top)
+      is.isEmpty mustBe (true)
     }
   }
 }

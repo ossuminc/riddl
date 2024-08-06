@@ -25,13 +25,11 @@ object ValidationPass extends PassInfo[PassOptions] {
   }
 }
 
-/**
-  * A Pass for validating the content of a RIDDL model. This pass can produce many warnings and errors about the
-  * model. 
+/** A Pass for validating the content of a RIDDL model. This pass can produce many warnings and errors about the model.
   * @param input
   *   Input from previous passes
   * @param outputs
-  *   The outputs from prior passes (symbols & resolution) 
+  *   The outputs from prior passes (symbols & resolution)
   */
 case class ValidationPass(
   input: PassInput,

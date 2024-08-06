@@ -3,8 +3,7 @@ package com.ossuminc.riddl.hugo.mermaid
 import com.ossuminc.riddl.analyses.DomainDiagramData
 import com.ossuminc.riddl.language.AST.{Definition, Context, Domain, Processor}
 
-class DomainMapDiagram(domain: Domain)
-    extends FlowchartDiagramGenerator(s"Map For ${domain.identify}", "TB") {
+class DomainMapDiagram(domain: Domain) extends FlowchartDiagramGenerator(s"Map For ${domain.identify}", "TB") {
 
   private def nodes = domain.contents.processors ++ domain.includes.flatMap(_.contents.processors)
   private def relationships: Seq[(Processor[?], String)] = nodes.zip(List.fill(nodes.size)("contains"))

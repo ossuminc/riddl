@@ -6,7 +6,7 @@ import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.{PassesResult}
-import com.ossuminc.riddl.passes.symbols.Symbols 
+import com.ossuminc.riddl.passes.symbols.Symbols
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -18,7 +18,7 @@ class ReferenceMapTest extends ValidatingTest {
     val input = RiddlParserInput(Path.of("language/src/test/input/everything.riddl"))
     simpleParseAndValidate(input) match {
       case Left(messages) => fail(messages.format)
-      case Right(result) => result
+      case Right(result)  => result
     }
   }
 
@@ -34,40 +34,40 @@ class ReferenceMapTest extends ValidatingTest {
 
     "have definitionOf(pathId:String) work" in {
       refMap.definitionOf[Author]("Reid") match {
-        case None => fail("Expected to find 'Reid'")
-        case Some(author: Author) => author.name.s mustBe("Reid")
-        case x => fail(s"Unexpected result: ${x.toString}")
+        case None                 => fail("Expected to find 'Reid'")
+        case Some(author: Author) => author.name.s mustBe ("Reid")
+        case x                    => fail(s"Unexpected result: ${x.toString}")
       }
     }
-    
+
     "inserts a value and finds it" in {
       val context: Context = Context(At(), Identifier(At(), "context"))
-      val parent: Symbols.Parent = Domain(At(), Identifier(At(),"domain"))
+      val parent: Symbols.Parent = Domain(At(), Identifier(At(), "domain"))
       val pid = PathIdentifier(At(), Seq("wrong-name"))
       refMap.add[Context](pid, parent, context)
-      refMap.definitionOf[Context](pid, parent) must not be(empty)
+      refMap.definitionOf[Context](pid, parent) must not be (empty)
     }
 
     "have definitionOf(pid: PathIdentifier, parent: Parent) work" in {
       val pid = PathIdentifier(At.empty, Seq("Sink", "Commands"))
-      val context = result.root.domains.head.includes.head.contents.filter[Context].head 
+      val context = result.root.domains.head.includes.head.contents.filter[Context].head
       val parent = context.connectors.head
       parent.id.value mustBe "AChannel"
       refMap.definitionOf[Inlet](pid, parent) match {
         case Some(actual: Inlet) =>
-          actual.id.value mustBe("Commands")
+          actual.id.value mustBe ("Commands")
           val expected = context.streamlets.find("Sink")
           expected match {
             case Some(streamlet: Streamlet) =>
-              streamlet.id.value mustBe("Sink")
-              streamlet.inlets must(not be(empty))
+              streamlet.id.value mustBe ("Sink")
+              streamlet.inlets must (not be (empty))
               val expected = streamlet.inlets.head
               actual mustBe expected
             case None => fail("Didn't find streamlets 'Sink'")
-            case x => fail(s"Unexpected result: ${x.toString}")
+            case x    => fail(s"Unexpected result: ${x.toString}")
           }
         case None => fail("Expected to find 'Source'")
-        case x => fail(s"Unexpected result: ${x.toString}")
+        case x    => fail(s"Unexpected result: ${x.toString}")
       }
     }
 
@@ -80,9 +80,9 @@ class ReferenceMapTest extends ValidatingTest {
       refMap.definitionOf[Type](ref, entity) match {
         case Some(actual: Type) =>
           actual mustBe expected
-          actual.id.value mustBe("someData")
+          actual.id.value mustBe ("someData")
         case None => fail("Expected to find 'Something'")
-        case x => fail(s"Unexpected result: ${x.toString}")
+        case x    => fail(s"Unexpected result: ${x.toString}")
       }
     }
   }

@@ -38,10 +38,10 @@ class TermTest extends ParsingTest {
             None,
             Some(BlockDescription(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
           )
-          val result: Finder#DefWithParents  =  finder.findEmpty
+          val result: Finder#DefWithParents = finder.findEmpty
           result.size mustBe 1
           result.head match {
-            case (entity,_) =>
+            case (entity, _) =>
               entity.asInstanceOf[NamedValue].id.value mustBe "foo"
           }
       }

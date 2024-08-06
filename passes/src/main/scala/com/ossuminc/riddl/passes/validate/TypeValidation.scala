@@ -23,7 +23,7 @@ trait TypeValidation extends DefinitionValidation {
     }
     result.getOrElse(false)
   }
-  
+
   private def checkPattern(p: Pattern): this.type = {
     try {
       val compound = p.pattern.map(_.s).fold("") { case (a: String, b: String) => a + b }
@@ -152,14 +152,13 @@ trait TypeValidation extends DefinitionValidation {
   ): Unit = {
     checkTypeExpression(replica.of, typeDef, parents)
     replica.of match {
-      case _: Mapping | _: Sequence | _: Set  | _: IntegerTypeExpression => // these are okay
+      case _: Mapping | _: Sequence | _: Set | _: IntegerTypeExpression => // these are okay
       case _: Cardinality =>
         messages.addError(replica.loc, s"Replica type expressions may not have cardinality")
       case t: TypeExpression =>
         messages.addError(replica.loc, s"Type expression in Replica is not a replicable type")
     }
   }
-
 
   def checkTypeExpression(
     typ: TypeExpression,

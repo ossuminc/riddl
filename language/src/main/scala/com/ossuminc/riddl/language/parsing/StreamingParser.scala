@@ -29,16 +29,16 @@ private[parsing] trait StreamingParser {
         typeRef ~/ briefly ~ description
     )./.map { tpl => Outlet.apply.tupled(tpl) }
   }
-  
-  private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
+
+  private def connectorDefinitions[u: P]: P[(OutletRef, InletRef, Seq[OptionValue])] = {
     P(
-        Readability.from ~ outletRef ~/
+      Readability.from ~ outletRef ~/
         Readability.to ~ inletRef ~/
         option.rep(0)
     )
   }
 
-  private def connectorBody[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
+  private def connectorBody[u: P]: P[(OutletRef, InletRef, Seq[OptionValue])] = {
     P(
       undefined((OutletRef.empty, InletRef.empty, Seq.empty)) | connectorDefinitions
     )
@@ -72,7 +72,7 @@ private[parsing] trait StreamingParser {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
-        ( handler(StatementsSet.StreamStatements) | term | authorRef | comment | function | invariant | constant |
+        (handler(StatementsSet.StreamStatements) | term | authorRef | comment | function | invariant | constant |
           typeDef | option | streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
           inlets ++ outlets ++ definitions

@@ -36,7 +36,7 @@ class RiddlcCommandsTest extends RunCommandSpecBase {
       runWith(args)
     }
     "rc=1 on parse errors" in {
-      val args = Seq("parse","testkit/src/test/input/check/fd-error/fd-error.riddl")
+      val args = Seq("parse", "testkit/src/test/input/check/fd-error/fd-error.riddl")
       val rc = CommandPlugin.runMain(args.toArray)
       rc mustBe 6
     }

@@ -52,8 +52,8 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
         case _: AliasedTypeExpression         => from + " ||--|| " + typeName
         case _: EntityReferenceTypeExpression => from + " ||--|| " + typeName
         case _: UniqueId                      => from + " ||--|| " + typeName
-        case _ => ""
-      connector + " : references"  
+        case _                                => ""
+      connector + " : references"
     else typeName
   }
 

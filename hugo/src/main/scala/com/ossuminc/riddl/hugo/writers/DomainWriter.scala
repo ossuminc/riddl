@@ -21,5 +21,4 @@ trait DomainWriter { this: MarkdownWriter =>
     definitionToc("Epics", domain.epics)
   }
 
-
 }

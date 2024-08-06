@@ -4,7 +4,7 @@ import org.scalatest.matchers.must.Matchers
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.{CodeStatement, Statement}
 
-class StatementsTest extends ParsingTest with Matchers{
+class StatementsTest extends ParsingTest with Matchers {
 
   "Statements" must {
     "include Code Statement" in {
@@ -29,8 +29,7 @@ class StatementsTest extends ParsingTest with Matchers{
           s.isInstanceOf[CodeStatement] must be(true)
           val codeStatement = s.asInstanceOf[CodeStatement]
           codeStatement.language.s must be("scala")
-          codeStatement.body must be(
-            """val foo: Int = 1
+          codeStatement.body must be("""val foo: Int = 1
               |        """.stripMargin)
 
     }

@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.utils.{Logger,SysLogger}
+import com.ossuminc.riddl.utils.{Logger, SysLogger}
 import com.ossuminc.riddl.passes.PassesCreator
 
 import java.nio.file.Path
@@ -19,25 +19,25 @@ import java.nio.file.Path
 object Riddl {
 
   /** Parse an input with options and return the result
-    * 
+    *
     * @param input
-    * The [[RiddlParserInput]] to use as the input of the parsing
+    *   The [[RiddlParserInput]] to use as the input of the parsing
     * @param commonOptions
-    * The [[CommonOptions]] to use during the parsing
+    *   The [[CommonOptions]] to use during the parsing
     * @return
     */
-  def parse(input: RiddlParserInput, commonOptions: CommonOptions = CommonOptions.empty): Either[Messages,Root] = {
+  def parse(input: RiddlParserInput, commonOptions: CommonOptions = CommonOptions.empty): Either[Messages, Root] = {
     TopLevelParser.parseInput(input, commonOptions)
-}
-    
+  }
+
   /** Run the standard passes after parsing
-    * 
+    *
     * @param root
-    * The root object of the model which is the product of parsing
+    *   The root object of the model which is the product of parsing
     * @param options
-    * The common options to use for the validation
+    *   The common options to use for the validation
     * @param shouldFailOnError
-    * Whether this should just return the Left[Messages] if an error occurs in them, or not
+    *   Whether this should just return the Left[Messages] if an error occurs in them, or not
     * @return
     */
   def validate(
@@ -51,19 +51,19 @@ object Riddl {
   }
 
   /** Parse and validate some [[com.ossuminc.riddl.language.parsing.RiddlParserInput]]
-    * 
+    *
     * @param input
-    * The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input to the parser
+    *   The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input to the parser
     * @param commonOptions
-    * The [[com.ossuminc.riddl.language.CommonOptions]] to use during parsing and validation
+    *   The [[com.ossuminc.riddl.language.CommonOptions]] to use during parsing and validation
     * @param shouldFailOnError
-    * If set to true if the parsing succeeds and the validation generates errors in which case the errors will 
-    * simply be returned, otherwise the PassesResult will be returned. 
+    *   If set to true if the parsing succeeds and the validation generates errors in which case the errors will simply
+    *   be returned, otherwise the PassesResult will be returned.
     * @param passes
-    * The set of passes to be run after parsing. It defaults to the standard passes: symbols, 
-    * reference resolution, validation 
+    *   The set of passes to be run after parsing. It defaults to the standard passes: symbols, reference resolution,
+    *   validation
     * @param logger
-    * The logger to which messages should be logged
+    *   The logger to which messages should be logged
     * @return
     */
   def parseAndValidate(
@@ -74,7 +74,7 @@ object Riddl {
     logger: Logger = SysLogger()
   ): Either[Messages, PassesResult] = {
     TopLevelParser.parseInput(input, commonOptions) match {
-      case Left(messages) => 
+      case Left(messages) =>
         Left(messages)
       case Right(root) =>
         val input = PassInput(root, commonOptions)

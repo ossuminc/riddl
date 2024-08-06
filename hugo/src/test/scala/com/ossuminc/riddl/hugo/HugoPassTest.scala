@@ -41,7 +41,7 @@ class HugoPassTest extends AnyWordSpec with Matchers {
         .Options()
         .copy(withGlossary = false, withTODOList = false, withGraphicalTOC = false, withMessageSummary = false)
       val passes: PassesCreator = HugoPass.getPasses(hpo)
-      passes.size mustBe(6)
+      passes.size mustBe (6)
     }
     "check its creation dependencies" in {
       val input = PassInput(Root())

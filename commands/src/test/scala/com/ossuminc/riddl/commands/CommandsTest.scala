@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.{CommandPlugin,CommandOptions}
+import com.ossuminc.riddl.command.{CommandPlugin, CommandOptions}
 import com.ossuminc.riddl.command.CommandTestBase
 
 class CommandsTest extends CommandTestBase("commands/src/test/input/") {
@@ -16,7 +16,6 @@ class CommandsTest extends CommandTestBase("commands/src/test/input/") {
   val validateConfig = "testkit/src/test/input/validate.conf"
   val outputDir: String => String =
     (name: String) => s"riddlc/target/test/$name"
-
 
   "Commands" should {
     "handle dump" in {

@@ -35,7 +35,7 @@ case class GlossaryPass(
 ) extends CollectingPass[GlossaryEntry](input, outputs) {
 
   private val generator = ThemeGenerator(options, input, outputs, messages)
-  
+
   // Members declared in com.ossuminc.riddl.passes.CollectingPass
   protected def collect(
     definition: RiddlValue,

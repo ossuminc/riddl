@@ -15,10 +15,10 @@ import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
 /** The primary output of the [[ResolutionPass]]. It provides a mapping from a reference to the referenced definition.
-  * This is useful for fast resolution during validation and other Passes because the resolution logic doesn't need
-  * to be exercised again. 
+  * This is useful for fast resolution during validation and other Passes because the resolution logic doesn't need to
+  * be exercised again.
   * @param messages
-  * A message accumulator for collecting messages when member functions are invoked  
+  *   A message accumulator for collecting messages when member functions are invoked
   */
 case class ReferenceMap(messages: Messages.Accumulator) {
 

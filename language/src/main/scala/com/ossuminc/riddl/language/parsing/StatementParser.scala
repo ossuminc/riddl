@@ -160,7 +160,6 @@ private[parsing] trait StatementParser {
     )
   }
 
-
   def statement[u: P](set: StatementsSet): P[Statement] = {
     set match {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement

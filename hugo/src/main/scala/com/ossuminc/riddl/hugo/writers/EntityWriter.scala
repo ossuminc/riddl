@@ -23,7 +23,7 @@ trait EntityWriter { this: MarkdownWriter =>
     emitERD(state.id.format, fields, parents)
     h3("Fields")
     emitFields(fields)
-    for h <- state.handlers do emitHandler(h, state +: parents,4)
+    for h <- state.handlers do emitHandler(h, state +: parents, 4)
   }
 
   def emitHandler(handler: Handler, parents: Parents, level: Int = 3): Unit = {
@@ -32,9 +32,9 @@ trait EntityWriter { this: MarkdownWriter =>
     handler.clauses.foreach { clause =>
       clause match {
         case oic: OnInitializationClause => heading("Initialize", level + 1)
-        case omc: OnMessageClause => heading(" On " + omc.msg.format, level + 1)
-        case otc: OnTerminationClause => heading("Terminate", level + 1)
-        case ooc: OnOtherClause => heading("Other", level + 1)
+        case omc: OnMessageClause        => heading(" On " + omc.msg.format, level + 1)
+        case otc: OnTerminationClause    => heading("Terminate", level + 1)
+        case ooc: OnOtherClause          => heading("Other", level + 1)
       }
       codeBlock(clause.statements)
     }
@@ -43,7 +43,7 @@ trait EntityWriter { this: MarkdownWriter =>
   private def emitERD(
     name: String,
     fields: Seq[Field],
-    parents: Seq[Definition],
+    parents: Seq[Definition]
   ): Unit = {
     h3("Entity Relationships")
     val erd = EntityRelationshipDiagram(generator.refMap)

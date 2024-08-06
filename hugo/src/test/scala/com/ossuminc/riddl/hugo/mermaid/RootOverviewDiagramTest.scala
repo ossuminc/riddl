@@ -81,7 +81,6 @@ class RootOverviewDiagramTest extends RunPassTestBase {
           |  class B B_class
           |  class C C_class""".stripMargin
 
-
       actual mustBe expected
     }
   }

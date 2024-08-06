@@ -29,7 +29,7 @@ trait CommandOptions {
   ): Either[Messages, S] = {
     CommandOptions.withInputFile(inputFile, command)(f)
   }
-  
+
   def check: Messages = {
     if inputFile.isEmpty then {
       Messages.errors("An input path was not provided.")

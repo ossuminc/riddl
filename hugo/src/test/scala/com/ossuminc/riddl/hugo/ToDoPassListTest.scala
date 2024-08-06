@@ -9,7 +9,7 @@ class ToDoPassListTest extends ValidatingTest {
 
   "ToDoListPass" must {
     "generate ToDoItems" in {
-      parseAndValidateTestInput("ToDoItem", "everything.riddl", dir) { case ( _ , pr) =>
+      parseAndValidateTestInput("ToDoItem", "everything.riddl", dir) { case (_, pr) =>
         if pr.messages.hasErrors then
           val errors = pr.messages.justErrors.format
           fail(errors)

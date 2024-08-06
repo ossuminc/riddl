@@ -17,7 +17,7 @@ class PluginSpec extends PluginSpecBase() {
       plugins.exists(_.getClass == plugin.getClass) mustBe true
       plugins.find(_.getClass == plugin.getClass) match {
         case Some(plugin) =>
-          plugin.asInstanceOf[TestPlugin].pluginVersion mustBe("0.0.0")
+          plugin.asInstanceOf[TestPlugin].pluginVersion mustBe ("0.0.0")
         case None => fail("Didn't find the plugin class")
       }
 

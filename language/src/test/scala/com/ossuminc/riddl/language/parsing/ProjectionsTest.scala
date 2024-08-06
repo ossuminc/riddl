@@ -78,11 +78,19 @@ class ProjectionsTest extends ParsingTest {
           val schemas = repo.contents.filter[Schema]
           schemas mustNot be(empty)
           val schema = schemas.head
-          schema mustBe Schema(At(5,7,input),Identifier(At(5,14,input),"structure"),
+          schema mustBe Schema(
+            At(5, 7, input),
+            Identifier(At(5, 14, input), "structure"),
             RepositorySchemaKind.Flat,
-            Map(Identifier(At(6,12,input),"person") -> TypeRef(At(6,22,input),"record",PathIdentifier(At(6,29,input), Seq("Person")))),
+            Map(
+              Identifier(At(6, 12, input), "person") -> TypeRef(
+                At(6, 22, input),
+                "record",
+                PathIdentifier(At(6, 29, input), Seq("Person"))
+              )
+            ),
             Map.empty,
-            Seq(FieldRef(At(7,18,input),PathIdentifier(At(7,24,input), Seq("Person","name"))))
+            Seq(FieldRef(At(7, 18, input), PathIdentifier(At(7, 24, input), Seq("Person", "name"))))
           )
     }
     "handles data statements" in {
@@ -104,10 +112,8 @@ class ProjectionsTest extends ParsingTest {
       parseTopLevelDomain[Repository](rpi, _.domains.head.contexts.head.repositories.head) match {
         case Left(messages) =>
           val errors = messages.justErrors
-          if errors.nonEmpty then 
-            succeed
-          else  
-            fail(errors.format)
+          if errors.nonEmpty then succeed
+          else fail(errors.format)
         case Right(_, _) =>
           succeed
       }

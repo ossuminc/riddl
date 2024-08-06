@@ -23,7 +23,7 @@ object PredefTypes {
     StringIn(PredefType.Boolean, PredefType.Integer, PredefType.Whole, PredefType.Natural).!
   )
 
-  def timeTypes[u:P]: P[String] = keywords(
+  def timeTypes[u: P]: P[String] = keywords(
     StringIn(
       PredefType.Duration,
       PredefType.DateTime,
@@ -33,7 +33,7 @@ object PredefTypes {
     ).!
   )
 
-  def otherTypes[u:P]: P[String] = keywords(
+  def otherTypes[u: P]: P[String] = keywords(
     StringIn(
       // order matters in this list, because of common prefixes
       PredefType.Abstract,

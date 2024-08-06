@@ -8,7 +8,7 @@ import org.scalatest.matchers.must.Matchers
 class FileBuilderTest extends AnyWordSpec with Matchers {
 
   class TestFileBuilder extends FileBuilder {
-    def indentLine(str: String, indent: Int =0): Unit = {
+    def indentLine(str: String, indent: Int = 0): Unit = {
       for i <- 1 to indent do incr
       addIndent(str)
       for i <- 1 to indent do decr

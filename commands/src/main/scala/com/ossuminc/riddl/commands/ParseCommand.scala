@@ -31,8 +31,10 @@ class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      TopLevelParser.parsePath(inputFile, commonOptions)
-        .map(_ => PassesResult()).map(_ => PassesResult())
+      TopLevelParser
+        .parsePath(inputFile, commonOptions)
+        .map(_ => PassesResult())
+        .map(_ => PassesResult())
     }
   }
 

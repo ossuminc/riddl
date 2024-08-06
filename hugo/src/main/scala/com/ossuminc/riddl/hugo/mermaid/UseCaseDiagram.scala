@@ -11,7 +11,6 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.FileBuilder
 
-
 import scala.reflect.ClassTag
 
 /** A class to generate the sequence diagrams for an Epic's Use Case
@@ -29,12 +28,12 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
   def title: String = ucdd.name
 
   def frontMatterItems: Map[String, String] = Map(
-      "theme" -> "dark",
-      "forceMenus" -> "true",
-      "wrap" -> "true",
-      "mirrorActors" -> "false",
-      "messageFontFamily" -> "monospace"
-    )
+    "theme" -> "dark",
+    "forceMenus" -> "true",
+    "wrap" -> "true",
+    "mirrorActors" -> "false",
+    "messageFontFamily" -> "monospace"
+  )
 
   private def makeParticipants(parts: Seq[Definition]): Unit = {
     parts.foreach { (part: Definition) =>
@@ -71,7 +70,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
   private def actorName(key: String): String = {
     ucdd.actors.get(key) match {
       case Some(definition: Definition) => definition.id.value
-      case None             => key
+      case None                         => key
     }
   }
 

@@ -19,12 +19,12 @@ class WriterTest extends AnyWordSpec with Matchers {
   def makeMDW(filePath: Path, passesResult: PassesResult): MarkdownWriter = {
     GeekDocWriter(filePath, passesResult.input, passesResult.outputs, HugoPass.Options(), CommonOptions())
   }
-  
+
   def validateRoot(input: RiddlParserInput, options: CommonOptions = CommonOptions())(
     validate: (root: PassesResult) => Assertion
   ) = {
     Riddl.parseAndValidate(input, options) match {
-      case Left(messages) => fail(messages.justErrors.format)
+      case Left(messages)                    => fail(messages.justErrors.format)
       case Right(passesResult: PassesResult) => validate(passesResult)
     }
   }

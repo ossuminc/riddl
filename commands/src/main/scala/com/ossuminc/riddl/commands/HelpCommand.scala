@@ -24,10 +24,7 @@ import java.nio.file.Path
 
 /** Unit Tests For FromCommand */
 object HelpCommand {
-  case class Options(
-    command: String = "help",
-    inputFile: Option[Path] = None,
-    targetCommand: Option[String] = None)
+  case class Options(command: String = "help", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
 }
 
@@ -35,17 +32,17 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
   import HelpCommand.Options
   override def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd(pluginName).action((_, c) => c.copy(command = pluginName))
+    cmd(pluginName)
+      .action((_, c) => c.copy(command = pluginName))
       .text("Print out how to use this program") -> HelpCommand.Options()
   }
 
-  override def getConfigReader: ConfigReader[HelpCommand.Options] = {
-    (cur: ConfigCursor) =>
-      for
-        topCur <- cur.asObjectCursor
-        topRes <- topCur.atKey(pluginName)
-        cmd <- topRes.asObjectCursor
-      yield { Options(cmd.path) }
+  override def getConfigReader: ConfigReader[HelpCommand.Options] = { (cur: ConfigCursor) =>
+    for
+      topCur <- cur.asObjectCursor
+      topRes <- topCur.atKey(pluginName)
+      cmd <- topRes.asObjectCursor
+    yield { Options(cmd.path) }
   }
 
   override def run(
@@ -58,7 +55,8 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
       val usage: String = {
         val common = OParser.usage(commonOptionsParser, OneColumn)
         val commands = OParser.usage(commandOptionsParser, OneColumn)
-        val improved_commands = commands.split(System.lineSeparator())
+        val improved_commands = commands
+          .split(System.lineSeparator())
           .flatMap { line =>
             if line.isEmpty || line.forall(_.isWhitespace) then {
               Seq.empty[String]
@@ -66,7 +64,8 @@ class HelpCommand extends CommandPlugin[HelpCommand.Options]("help") {
               Seq(System.lineSeparator() + line)
             } else if line.startsWith("Usage:") then { Seq(line) }
             else { Seq("  " + line) }
-          }.mkString(System.lineSeparator())
+          }
+          .mkString(System.lineSeparator())
         common ++ "\n\n" ++ improved_commands
       }
       println(usage)
