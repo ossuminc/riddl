@@ -33,7 +33,7 @@ lazy val utils: Project = Module("utils", "riddl-utils")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     scalacOptions += "--no-warnings",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -46,7 +46,7 @@ lazy val language: Project = Module("language", "riddl-language")
   .configure(With.typical, With.coverage(65))
   .configure(With.publishing)
   .settings(
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     coverageExcludedPackages := "<empty>;$anon",
     description := "Abstract Syntax Tree and basic RIDDL language parser",
@@ -59,7 +59,7 @@ lazy val passes = Module("passes", "riddl-passes")
   .configure(With.typical, With.coverage(30))
   .configure(With.publishing)
   .settings(
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     coverageExcludedPackages := "<empty>;$anon",
     description := "AST Pass infrastructure and essential passes",
@@ -72,7 +72,7 @@ lazy val command = Module("command", "riddl-command")
   .configure(With.typical, With.coverage(30))
   .configure(With.publishing)
   .settings(
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
@@ -88,7 +88,7 @@ lazy val testkit: Project = Module("testkit", "riddl-testkit")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     scalacOptions += "--no-warnings",
     description := "A Testkit for testing RIDDL code, and a suite of those tests",
     libraryDependencies ++= Dep.testKitDeps
@@ -106,7 +106,7 @@ lazy val analyses: Project = Module("analyses", "riddl-analyses")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     description := "Implementation of various AST analyses passes other libraries may use",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
@@ -121,7 +121,7 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
@@ -134,7 +134,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
@@ -148,7 +148,7 @@ lazy val commands: Project = Module("commands", "riddl-commands")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "RIDDL Command Infrastructure and basic command definitions",
     libraryDependencies ++= Dep.testing
@@ -180,7 +180,7 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
   )
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     maintainer := "reid@ossuminc.com",
@@ -213,7 +213,7 @@ lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "a
 lazy val docsite = DocSite("doc", docOutput, docProjects)
   .settings(
     name := "riddl-doc",
-    scalaVersion := "3.4.1",
+    scalaVersion := "3.4.2",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
   )
