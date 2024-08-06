@@ -50,6 +50,7 @@ private[parsing] trait AdaptorParser {
       location ~ Keywords.adaptor ~/ identifier ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ briefly ~ description
     ).map { case (loc, id, direction, cRef, contents, brief, description) =>
+      checkForDuplicateIncludes(contents)
       Adaptor(loc, id, direction, cRef, contents, brief, description)
     }
   }

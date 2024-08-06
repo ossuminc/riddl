@@ -17,7 +17,7 @@ import scalajs.js.annotation._
   *   The container of RiddlValues to traverse for the sought condition
   */
 @JSExportTopLevel("Finder")
-case class Finder(root: Container[RiddlValue]) {
+case class Finder[CV <: ContentValues](root: Container[CV]) {
 
   import scala.reflect.ClassTag
 
@@ -85,4 +85,11 @@ case class Finder(root: Container[RiddlValue]) {
     *   A [[scala.Seq]] of [[AST.RiddlValue]], along with their parents that are empty
     */
   @JSExport def findEmpty: DefWithParents[Definition] = findWithParents[Definition](_.isEmpty)
+}
+
+object Finder {
+  def apply[CV <: ContentValues](contents: Contents[CV]): Finder[CV] = {
+    val container = SimpleContainer[CV](contents)
+    Finder[CV](container)
+  }
 }

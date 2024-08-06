@@ -66,6 +66,7 @@ private[parsing] trait FunctionParser {
     P(
       location ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~/ close ~/ briefly ~/ description
     )./.map { case (loc, id, (ins, outs, contents, statements), briefly, description) =>
+      checkForDuplicateIncludes(contents)
       Function(loc, id, ins, outs, contents, statements, briefly, description)
     }
   }

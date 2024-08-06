@@ -9,8 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.utils.{URL, TestingBasisWithTestData}
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.language.Messages.{Message, Messages}
+import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.CommonOptions
 
 import fastparse.*
@@ -41,12 +40,12 @@ trait ParsingTest extends TestingBasisWithTestData {
         val input = rpiFromPath(path)
         TopLevelParser.parseInput(input, commonOptions)
       } else {
-        val message: Message = Messages.error(s"Input file `${path.toString} is not readable.")
+        val message: Message = error(s"Input file `${path.toString} is not readable.")
         Left(List(message))
       }
       end if
     else {
-      val message: Message = Messages.error(s"Input file `${path.toString} does not exist.")
+      val message: Message = error(s"Input file `${path.toString} does not exist.")
       Left(List(message))
     }
     end if
@@ -138,14 +137,14 @@ trait ParsingTest extends TestingBasisWithTestData {
 
   def parseDefinition[FROM <: Definition: ClassTag](
     input: RiddlParserInput
-  ): Either[Messages.Messages, (FROM, RiddlParserInput)] = {
+  ): Either[Messages, (FROM, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseDefinition[FROM]
   }
 
   def parseDefinition[FROM <: Definition: ClassTag](
     input: String
-  ): Either[Messages.Messages, (FROM, RiddlParserInput)] = {
+  ): Either[Messages, (FROM, RiddlParserInput)] = {
     parseDefinition(RiddlParserInput(input, "parseDefinition[FROM]"))
   }
 
@@ -186,10 +185,11 @@ trait ParsingTest extends TestingBasisWithTestData {
     tp.parseContextDefinition[TO](extract)
   }
 
+  val defaultInputDir = "language/jvm/src/test/input/"
   def checkFile(
     @unused label: String,
     fileName: String,
-    directory: String = "language/jvm/src/test/input/"
+    directory: String = defaultInputDir 
   ): (Root, RiddlParserInput) = {
     val path = java.nio.file.Path.of(directory, fileName)
     val rpi = rpiFromPath(path)

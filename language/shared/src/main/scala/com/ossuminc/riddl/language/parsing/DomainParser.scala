@@ -48,6 +48,7 @@ private[parsing] trait DomainParser {
       location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~/
         briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
+      checkForDuplicateIncludes(contents)
       Domain(loc, id, contents, brief, description)
     }
   }

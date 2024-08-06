@@ -57,7 +57,9 @@ class TopLevelParser(
   }
   
   protected def root[u: P]: P[Root] = {
-    P(Start ~ rootDefinitions ~ End).map { (content: Seq[RootScopeContents]) => Root(content) }
+    P(Start ~ rootDefinitions ~ End).map { (content: Seq[RootScopeContents]) =>
+      Root(content) 
+    }
   }
 
   @JSExport

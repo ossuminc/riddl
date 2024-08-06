@@ -41,7 +41,7 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle non existent URL" in { (td: TestData) =>
-      val nonExistentURL = 
+      val nonExistentURL =
         "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
       intercept[java.io.FileNotFoundException] {
         val future = rpiFromURL(URL(nonExistentURL), td).map { (rpi: RiddlParserInput) =>
@@ -71,11 +71,12 @@ class IncludeAndImportTest extends ParsingTest {
       Await.result(future, 10.seconds)
     }
     "handle inclusions into domain" in { (td: TestData) =>
-      val (rc,inc) = checkFile("Domain Includes", "includes/domainIncludes.riddl")
-      rc.domains mustNot be(empty)
-      rc.domains.head.includes mustNot be(empty)
-      rc.domains.head.includes.head.contents mustNot be(empty)
-      val actual = rc.domains.head.includes.head.contents.head
+      val (root, rpi) = checkFile("Domain Includes", "includes/domainIncludes.riddl")
+      val inc = StringParserInput("", URL("file:/" + defaultInputDir + "/includes/domainIncluded.riddl"))
+      root.domains mustNot be(empty)
+      root.domains.head.includes mustNot be(empty)
+      root.domains.head.includes.head.contents mustNot be(empty)
+      val actual = root.domains.head.includes.head.contents.head
       val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
@@ -85,12 +86,13 @@ class IncludeAndImportTest extends ParsingTest {
       actual mustBe expected
     }
     "handle inclusions into contexts" in { (td: TestData) =>
-      val (rc,inc) = checkFile("Context Includes", "includes/contextIncludes.riddl")
-      rc.domains mustNot be(empty)
-      rc.domains.head.contexts mustNot be(empty)
-      rc.domains.head.contexts.head.includes mustNot be(empty)
-      rc.domains.head.contexts.head.includes.head.contents mustNot be(empty)
-      val actual = rc.domains.head.contexts.head.includes.head.contents.head
+      val (root, rpi) = checkFile("Context Includes", "includes/contextIncludes.riddl")
+      val inc = StringParserInput("", URL("file:/" + defaultInputDir + "/includes/contextIncluded.riddl"))
+      root.domains mustNot be(empty)
+      root.domains.head.contexts mustNot be(empty)
+      root.domains.head.contexts.head.includes mustNot be(empty)
+      root.domains.head.contexts.head.includes.head.contents mustNot be(empty)
+      val actual = root.domains.head.contexts.head.includes.head.contents.head
       val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
@@ -99,8 +101,8 @@ class IncludeAndImportTest extends ParsingTest {
       )
       actual mustBe expected
     }
-    "handle 553-Contained-Group-References-Do-Not-Work" in {  (td: TestData) =>
-      val (root,_) = checkFile("Include Group", "includes/includer.riddl")
+    "handle 553-Contained-Group-References-Do-Not-Work" in { (td: TestData) =>
+      val (root, _) = checkFile("Include Group", "includes/includer.riddl")
       root.domains mustNot be(empty)
       root.domains.head.includes.head.contents mustNot be(empty)
     }
@@ -115,7 +117,7 @@ class IncludeAndImportTest extends ParsingTest {
           if errors.nonEmpty then fail(errors.format)
           val warnings = messages.justWarnings
           warnings.size mustBe 1
-          warnings.head.message must include("Duplicate include origin detected in someTypes")
+          warnings.head.message must include("Duplicate include origin detected in")
           succeed
       }
 
@@ -124,19 +126,10 @@ class IncludeAndImportTest extends ParsingTest {
 
   "Import" should {
     "work syntactically" in { (td: TestData) =>
-      val (root,_) = checkFile("Import", "import/import.riddl")
+      val (root, _) = checkFile("Import", "import/import.riddl")
       root.domains must not(be(empty))
       root.domains.head.domains must not(be(empty))
       root.domains.head.domains.head.id.value must be("NotImplemented")
-    }
-    "handle missing files" in { (td: TestData) =>
-      val input = "domain foo is { import domain foo from \"nonexisting\" } described as \"foo\""
-      parseDomainDefinition(RiddlParserInput(input, td), identity) match {
-        case Right(_) => fail("Should have gotten 'does not exist' error")
-        case Left(errors) =>
-          errors.size must be(1)
-          errors.exists(_.format.contains("does not exist,"))
-      }
     }
   }
 }

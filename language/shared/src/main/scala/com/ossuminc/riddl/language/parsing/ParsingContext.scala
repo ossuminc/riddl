@@ -47,7 +47,7 @@ trait ParsingContext extends ParsingErrors {
       }
     } catch {
       case NonFatal(exception) =>
-        makeParseFailureError(exception, At((0, 0), rpi))
+        makeParseFailureError(exception, At.empty)
         validate(Left(messagesAsList), rpi, 0)
     }
   }
@@ -62,7 +62,7 @@ trait ParsingContext extends ParsingErrors {
   def doImport(
     loc: At,
     domainName: Identifier,
-    url: URL
+    url: LiteralString
   )(implicit ctx: P[?]): Domain = {
     // TODO: implement importDomain, issue #72
     Domain(At(), Identifier(At(), "NotImplemented"))
@@ -111,6 +111,20 @@ trait ParsingContext extends ParsingErrors {
       case failure: Failure =>
         makeParseFailureError(failure, rpi)
         Seq.empty[CT]
+    }
+  }
+  
+  def checkForDuplicateIncludes[CT <: RiddlValue](contents: Contents[CT]): Unit = {
+    import com.ossuminc.riddl.language.Finder
+    val allIncludes = Finder(contents).findByType[Include[?]]
+    val distinctIncludes = allIncludes.distinctBy(_.origin)
+    for {
+      incl <- distinctIncludes
+      copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
+    } yield {
+      val copyList = copies.map(i => i.origin.toExternalForm + i.loc.toShort).mkString(", ")
+      val message = s"Duplicate include origin detected in $copyList"
+      warning(incl.loc, message, "while merging includes")
     }
   }
 }

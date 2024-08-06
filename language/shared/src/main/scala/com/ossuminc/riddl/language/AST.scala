@@ -166,6 +166,10 @@ object AST {
     final def namedValues: Contents[NamedValue] = contents.namedValues
 
   }
+  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] {
+    def format: String = ""
+    def loc: At = At.empty 
+  }
 
   /** Represents a literal string parsed between quote characters in the input
     *
@@ -589,6 +593,10 @@ object AST {
   /** Type of definitions that occur in an [[Entity]] */
   type OccursInEntity = OccursInProcessor | State
   type EntityContents = OccursInEntity | Include[OccursInEntity]
+  
+  /** Type of definitions that occur in a [[Handler]] */
+  type OccursInHandler = OnClause | Comment
+  type HandlerContents = OccursInHandler
 
   /** Type of definitions that occur in an [[Adaptor]] */
   type OccursInAdaptor = OccursInProcessor
@@ -621,9 +629,6 @@ object AST {
   type OccursInFunction = OccursInVitalDefinition | Aggregation
   type FunctionContents = OccursInFunction | Include[OccursInFunction]
 
-  /** Type of definitions that occur in a [[Handler]] */
-  type OccursInHandler = OnClause
-  type HandlerContents = OccursInHandler
 
   /** Type of definitions that occur in a [[Type]] */
   type OccursInType = Field | Method | Enumerator

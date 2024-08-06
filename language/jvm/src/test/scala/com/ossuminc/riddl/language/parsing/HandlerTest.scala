@@ -107,11 +107,11 @@ class HandlerTest extends ParsingTest {
         case Right(_) => fail("Test case should have failed")
       }
     }
-    "accept accept an if statement " in { (td: TestData) =>
+    "accept an if statement " in { (td: TestData) =>
       val input = RiddlParserInput(
         """entity DistributionItem is {
           |  type ArbitraryState is { value: String }
-          |  state DistributionState of ArbitraryState is { ??? }
+          |  state DistributionState of ArbitraryState
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      "if  ==(field ContainerNestedInContainer.id, parentContainer) then"
@@ -135,7 +135,7 @@ class HandlerTest extends ParsingTest {
         """entity DistributionItem is {
           |  inlet incoming is event ItemPreInducted
           |  type ArbitraryState is { value: String }
-          |  state DistributionState of ArbitraryState is { ??? }
+          |  state DistributionState of ArbitraryState
           | handler FromContainer  is {
           |    on event ContainerNestedInContainer {
           |      "if ==(field ContainerNestedInContainer.id,parentContainer) then"

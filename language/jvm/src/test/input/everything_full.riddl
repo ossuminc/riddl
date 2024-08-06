@@ -69,14 +69,14 @@ context full is {
     event Inebriated is { ??? }
 
     record someData(field:  SomeType)
-    state someState of Something.someData is {
-      handler foo is {
-        // Handle the ACommand
-        on command ACommand {
-          if "Something arrives" then {
-            // we want to send an event
-            send event Inebriated to outlet APlant.Source.Commands
-          }
+    state someState of Something.someData
+
+    handler foo is {
+      // Handle the ACommand
+      on command ACommand {
+        if "Something arrives" then {
+          // we want to send an event
+          send event Inebriated to outlet APlant.Source.Commands
         }
       }
     }
@@ -93,11 +93,10 @@ context full is {
   entity SomeOtherThing is {
     type ItHappened is event { aField: String }
     record otherThingData is { aField: String }
-    state otherThingState of SomeOtherThing.otherThingData is {
-      handler fee is {
-        on event ItHappened {
-          set field SomeOtherThing.otherThingState.aField to "arbitrary string value"
-        }
+    state otherThingState of SomeOtherThing.otherThingData
+    handler fee is {
+      on event ItHappened {
+        set field SomeOtherThing.otherThingState.aField to "arbitrary string value"
       }
     }
   }

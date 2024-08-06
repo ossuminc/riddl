@@ -139,6 +139,7 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
+      checkForDuplicateIncludes(contents)
       Application(loc, id, contents, brief, description)
     }
   }

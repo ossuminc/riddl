@@ -197,6 +197,7 @@ private[parsing] trait EpicParser {
     P(
       location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ briefly ~ description
     ).map { case (loc, id, (userStory, shownBy, contents), briefly, description) =>
+      checkForDuplicateIncludes(contents)
       Epic(loc, id, userStory, shownBy, contents, briefly, description)
     }
   }

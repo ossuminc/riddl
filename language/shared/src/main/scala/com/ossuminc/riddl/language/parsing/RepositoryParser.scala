@@ -88,6 +88,7 @@ private[parsing] trait RepositoryParser {
     P(
       location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
+      checkForDuplicateIncludes(contents)
       Repository(loc, id, contents, brief, description)
     }
   }

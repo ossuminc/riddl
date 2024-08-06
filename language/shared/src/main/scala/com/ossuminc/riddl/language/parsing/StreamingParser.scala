@@ -117,6 +117,7 @@ private[parsing] trait StreamingParser {
         close ~ briefly ~ description
     )./.map { case (loc, id, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
+      checkForDuplicateIncludes(contents)
       Streamlet(loc, id, shape, contents, brief, description)
     }
   }

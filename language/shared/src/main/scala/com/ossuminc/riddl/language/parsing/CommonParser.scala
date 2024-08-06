@@ -9,6 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.parsing.Readability.*
 import fastparse.{P, *}
 import fastparse.MultiLineWhitespace.*
 
@@ -46,7 +47,9 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def importDef[u: P]: P[OccursInDomain] = {
     P(
       location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ Readability.from ~ literalString
-    ).map { case(loc, id, litStr) => doImport(loc, id, URL(litStr.s)) }
+    ).map { case(loc, id, litStr) =>
+      doImport(loc, id, litStr) 
+    }
   }
 
   def undefined[u: P, RT](f: => RT): P[RT] = {
@@ -153,8 +156,6 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
   def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
-  
-  def is[u:P]: P[Unit] = { P( "is" ) }
 
   def include[u: P, CT <: RiddlValue](parser: P[?] => P[Seq[CT]]): P[Include[CT]] = {
     P(location ~ Keywords.include ~ literalString)./.map {

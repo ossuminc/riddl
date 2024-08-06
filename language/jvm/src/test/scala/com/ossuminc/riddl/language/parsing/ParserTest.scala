@@ -122,7 +122,7 @@ class ParserTest extends ParsingTest {
           |    entity one is { ??? }
           |    entity two is {
           |      type twoState is { foo: Integer }
-          |      state entityState of twoState is { ??? }
+          |      state entityState of twoState
           |      handler one  is { ??? }
           |      function one is { ??? }
           |      invariant one is "???"
@@ -258,8 +258,8 @@ class ParserTest extends ParsingTest {
          |  option transient
          |  option aggregate
          |  type Foo is { x: String }
-         |  state BurgerState of type BurgerStruct {
-         |  handler BurgerHandler is {} }
+         |  state BurgerState of type BurgerStruct
+         |  handler BurgerHandler is {}
          |}
          |""".stripMargin,
         td
@@ -287,7 +287,8 @@ class ParserTest extends ParsingTest {
                 (5, 3, rpi),
                 Identifier((5, 9, rpi), "BurgerState"),
                 TypeRef((5, 24, rpi), "type", PathIdentifier((5, 29, rpi), List("BurgerStruct")))
-              )
+              ),
+              Handler((6, 11, rpi), Identifier((6, 11, rpi), "BurgerHandler"))
             )
           )
           content mustBe expected

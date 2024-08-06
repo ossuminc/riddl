@@ -42,14 +42,8 @@ private[parsing] trait ContextParser {
     P(
       location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
-      // mergeFutureContent[OccursInContext](contents) { (contents: Seq[OccursInContext]) =>
-      Context(
-        loc,
-        id,
-        contents,
-        brief,
-        description
-      )
+      checkForDuplicateIncludes(contents)
+      Context(loc, id, contents, brief, description)
     }
   }
 }

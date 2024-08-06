@@ -44,6 +44,7 @@ private[parsing] trait EntityParser {
     P(
       location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
+      checkForDuplicateIncludes(contents)
       Entity(loc, id, contents, brief, description)
     }
   }
