@@ -21,12 +21,7 @@ class RiddlParserInputTest extends TestingBasis {
   }
 
   def checkRPI(rpi: RiddlParserInput, url: URL): Assertion = {
-    rpi.path match
-      case Some(path) => path.toString.mustBe(fullPath)
-      case x          => fail(s"Unexpected: $x")
-    rpi.origin.mustBe(src)
-    rpi.from.mustBe(src)
-    rpi.root.mustBe(URL("/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"))
+    rpi.root.toExternalForm.mustBe(src)
     val expected = getFromURI(url)
     rpi.data.mustBe(expected)
     val exception = intercept[ArrayIndexOutOfBoundsException] { rpi.offsetOf(-1) }

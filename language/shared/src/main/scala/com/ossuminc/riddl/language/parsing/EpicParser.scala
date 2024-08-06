@@ -166,18 +166,18 @@ private[parsing] trait EpicParser {
     ).?.map { (x: Option[Seq[URL]]) => x.getOrElse(Seq.empty[URL]) }
   }
 
-  private def epicInclude[u: P]: P[IncludeHolder[OccursInEpic]] = {
-    include[u, OccursInEpic](epicDefinitions(_))
+  private def epicInclude[u: P]: P[Include[EpicContents]] = {
+    include[u, EpicContents](epicDefinitions(_))
   }
 
-  private def epicDefinitions[u: P]: P[Seq[OccursInEpic]] = {
-    P(useCase | term | epicInclude | comment | authorRef | option).rep(1)
+  private def epicDefinitions[u: P]: P[Seq[EpicContents]] = {
+    P(useCase | term | epicInclude | comment | authorRef | option).asInstanceOf[P[EpicContents]].rep(1)
   }
 
   private type EpicBody = (
     Option[UserStory],
     Seq[URL],
-    Seq[OccursInEpic]
+    Seq[EpicContents]
   )
 
   private def epicBody[u: P]: P[EpicBody] = {
@@ -186,7 +186,7 @@ private[parsing] trait EpicParser {
         (
           Option.empty[UserStory],
           Seq.empty[URL],
-          Seq.empty[OccursInEpic]
+          Seq.empty[EpicContents]
         )
       )./ |
         (userStory.? ~ shownBy ~ epicDefinitions)./

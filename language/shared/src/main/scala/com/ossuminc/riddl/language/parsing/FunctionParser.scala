@@ -15,8 +15,8 @@ import Readability.*
 private[parsing] trait FunctionParser {
   this: ReferenceParser & TypeParser & StatementParser & CommonParser =>
 
-  private def functionInclude[u: P]: P[IncludeHolder[OccursInFunction]] = {
-    include[u, OccursInFunction](functionDefinitions(_))
+  private def functionInclude[u: P]: P[Include[FunctionContents]] = {
+    include[u, FunctionContents](functionDefinitions(_))
   }
 
   def input[u: P]: P[Aggregation] = {
@@ -27,28 +27,28 @@ private[parsing] trait FunctionParser {
     P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)./
   }
 
-  private def statementBlock[u: P]: P[Seq[Statement]] = {
+  private def statementBlock[u: P]: P[Seq[Statements]] = {
     P(
-      Keywords.body./ ~ (undefined(Seq.empty[Statement]) | pseudoCodeBlock(StatementsSet.FunctionStatements))
+      Keywords.body./ ~ (undefined(Seq.empty[Statements]) | pseudoCodeBlock(StatementsSet.FunctionStatements))
     )
   }
 
-  private def functionDefinitions[u: P]: P[Seq[OccursInFunction]] = {
+  private def functionDefinitions[u: P]: P[Seq[FunctionContents]] = {
     P(
       typeDef | function | term | functionInclude | authorRef | comment
-    )./.rep(0)
+    ).asInstanceOf[P[FunctionContents]]./.rep(0)
   }
 
   private def functionBody[u: P]: P[
     (
       Option[Aggregation],
       Option[Aggregation],
-      Seq[OccursInFunction],
-      Seq[Statement]
+      Seq[FunctionContents],
+      Seq[Statements]
     )
   ] = {
     P(undefined(None).map { _ =>
-      (None, None, Seq.empty[OccursInFunction], Seq.empty[Statement])
+      (None, None, Seq.empty[FunctionContents], Seq.empty[Statements])
     } | (input.? ~ output.? ~ functionDefinitions ~ statementBlock))
   }
 

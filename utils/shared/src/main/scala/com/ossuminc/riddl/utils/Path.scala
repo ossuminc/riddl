@@ -7,7 +7,7 @@ package com.ossuminc.riddl.utils
   */
 case class Path(path: String) {
   // make sure the string passed really is a "Path"
-  require(path.matches("[A-Za-z0-9_-](\\.[A-Za-z0-9_-])*"))
+  require(path.matches("[A-Za-z0-9.+_-](/[A-Za-z0-9.+_-])*"))
 }
 
 object Path {

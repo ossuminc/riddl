@@ -25,7 +25,7 @@ class StatementsTest extends ParsingTest{
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
           val clause = AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
-          val s: Statement = clause.statements.head
+          val s: Statement = clause.contents.filter[Statement].head 
           s.isInstanceOf[CodeStatement] must be(true)
           val codeStatement = s.asInstanceOf[CodeStatement]
           codeStatement.language.s must be("scala")

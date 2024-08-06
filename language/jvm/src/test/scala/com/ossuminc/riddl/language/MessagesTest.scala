@@ -6,19 +6,15 @@
 
 package com.ossuminc.riddl.language
 
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.TestData
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
-import com.ossuminc.riddl.utils.TestingBasis
-import com.ossuminc.riddl.utils.{Logger, StringLogger, URL}
+import com.ossuminc.riddl.utils.{Logger, StringLogger, TestingBasis, URL}
 
 class MessagesTest extends TestingBasis {
 
-  "MessageKinds" should {
-    "MissingWarning must have correct queries" in { (td: TestData) =>
+  "MessageKinds" must {
+    "have MissingWarning with correct queries" in {
       MissingWarning.isSevereError mustBe false
       MissingWarning.isError mustBe false
       MissingWarning.isWarning mustBe true
@@ -30,7 +26,7 @@ class MessagesTest extends TestingBasis {
       MissingWarning.isMissing mustBe true
       MissingWarning.toString mustBe "Missing"
     }
-    "StyleWarning must have correct queries" in {  (td: TestData) =>
+    "have StyleWarning with correct queries" in {
       StyleWarning.isSevereError mustBe false
       StyleWarning.isError mustBe false
       StyleWarning.isWarning mustBe true
@@ -42,7 +38,7 @@ class MessagesTest extends TestingBasis {
       StyleWarning.isMissing mustBe false
       StyleWarning.toString mustBe "Style"
     }
-    "UsageWarning must have correct queries" in { (td: TestData) =>
+    "have UsageWarning with correct queries" in {
       UsageWarning.isSevereError mustBe false
       UsageWarning.isError mustBe false
       UsageWarning.isWarning mustBe true
@@ -54,7 +50,7 @@ class MessagesTest extends TestingBasis {
       UsageWarning.isMissing mustBe false
       UsageWarning.toString mustBe "Usage"
     }
-    "Warning must have correct queries" in { (td: TestData) =>
+    "have Warning with correct queries" in {
       Warning.isSevereError mustBe false
       Warning.isError mustBe false
       Warning.isWarning mustBe true
@@ -66,7 +62,7 @@ class MessagesTest extends TestingBasis {
       Warning.isMissing mustBe false
       Warning.toString mustBe "Warning"
     }
-    "Error must have correct queries" in { (td: TestData) =>
+    "have Error with correct queries" in {
       Error.isSevereError mustBe false
       Error.isError mustBe true
       Error.isWarning mustBe false
@@ -78,7 +74,7 @@ class MessagesTest extends TestingBasis {
       Error.isMissing mustBe false
       Error.toString mustBe "Error"
     }
-    "SevereError must have correct queries" in { (td: TestData) =>
+    "have SevereError with correct queries" in {
       SevereError.isSevereError mustBe true
       SevereError.isError mustBe true
       SevereError.isWarning mustBe false
@@ -90,7 +86,7 @@ class MessagesTest extends TestingBasis {
       SevereError.isMissing mustBe false
       SevereError.toString mustBe "Severe"
     }
-    "Severities from lowest to highest" in { (td: TestData) =>
+    "have Severities from lowest to highest" in {
       Info.severity mustBe 0
       StyleWarning.severity mustBe 1
       MissingWarning.severity mustBe 2
@@ -99,7 +95,7 @@ class MessagesTest extends TestingBasis {
       Error.severity mustBe 5
       SevereError.severity mustBe 6
     }
-    "KindOfMessage supports comparison" in { (td: TestData) =>
+    "have KindOfMessage that supports comparison" in {
       (Info < StyleWarning &&
         StyleWarning < MissingWarning &&
         MissingWarning < UsageWarning &&
@@ -118,7 +114,7 @@ class MessagesTest extends TestingBasis {
   private val s = Messages.severe("severe")
 
   "Message" should {
-    "know their kind" in { (td: TestData) =>
+    "know their kind" in {
       i.isInfo mustBe true
       sty.isStyle mustBe true
       m.isMissing mustBe true
@@ -132,10 +128,10 @@ class MessagesTest extends TestingBasis {
   val mix: Messages = List(i, sty, m, u, w, e, s)
 
   "Messages" should {
-    "filter for Warnings" in { (td: TestData) =>
+    "filter for Warnings" in {
       mix.justWarnings mustBe Seq(sty, m, u, w)
     }
-    "filter for Errors" in { (td: TestData) =>
+    "filter for Errors" in {
       mix.justErrors mustBe Seq(e, s)
     }
     "filter for StyleWarnings" in {
@@ -155,13 +151,13 @@ class MessagesTest extends TestingBasis {
       val log: Logger = StringLogger()
       Messages.logMessages(mix, log, commonOptions)
       val content = log.toString
-      val expected = """[34m[1m[info] info[0m
-                       |[32m[1m[style] style[0m
-                       |[32m[1m[missing] missing[0m
-                       |[32m[1m[usage] usage[0m
-                       |[33m[1m[warning] warning[0m
-                       |[31m[1m[error] error[0m
-                       |[41m[30m[1m[severe] severe[0m
+      val expected = """[34m[1m[info] empty(1:1)info[0m
+                       |[32m[1m[style] empty(1:1)style[0m
+                       |[32m[1m[missing] empty(1:1)missing[0m
+                       |[32m[1m[usage] empty(1:1)usage[0m
+                       |[33m[1m[warning] empty(1:1)warning[0m
+                       |[31m[1m[error] empty(1:1)error[0m
+                       |[41m[30m[1m[severe] empty(1:1)severe[0m
                        |""".stripMargin
       content mustBe expected
     }
@@ -172,44 +168,44 @@ class MessagesTest extends TestingBasis {
       val content = log.toString
       val expected =
         """[41m[30m[1m[severe] Severe Message Count: 1[0m
-          |[41m[30m[1m[severe] severe[0m
+          |[41m[30m[1m[severe] empty(1:1)severe[0m
           |[31m[1m[error] Error Message Count: 1[0m
-          |[31m[1m[error] error[0m
+          |[31m[1m[error] empty(1:1)error[0m
           |[32m[1m[usage] Usage Message Count: 1[0m
-          |[32m[1m[usage] usage[0m
+          |[32m[1m[usage] empty(1:1)usage[0m
           |[32m[1m[missing] Missing Message Count: 1[0m
-          |[32m[1m[missing] missing[0m
+          |[32m[1m[missing] empty(1:1)missing[0m
           |[32m[1m[style] Style Message Count: 1[0m
-          |[32m[1m[style] style[0m
+          |[32m[1m[style] empty(1:1)style[0m
           |[34m[1m[info] Info Message Count: 1[0m
-          |[34m[1m[info] info[0m
+          |[34m[1m[info] empty(1:1)info[0m
           |""".stripMargin
       content mustBe expected
     }
 
-    "format should produce a correct string for empty location" in {
+    "format a correct string for empty location" in {
       val msg =
         Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
       val content = msg.format
-      val expected = "the_message"
+      val expected = "empty(1:2)the_message"
       content mustBe expected
     }
 
-    "format should produce located output for non-empty location" in { (td: TestData) =>
-      val rip: RiddlParserInput = RiddlParserInput("test", td)
+    "format to locate output for non-empty location" in {
+      val rip: RiddlParserInput = RiddlParserInput("test", URL.empty, "test")
       val at = At(1, 2, rip)
       val msg = Message(at, "the_message", Warning)
       val content = msg.format
       val expected =
-        """test(1:2):
+        """empty(1:2):
           |the_message:
           |test
           | ^""".stripMargin
       content mustBe expected
     }
 
-    "be ordered based on location" in { (td: TestData) =>
-      val rip: RiddlParserInput = RiddlParserInput("test",td)
+    "be ordered based on location" in {
+      val rip: RiddlParserInput = RiddlParserInput("test", "")
       val v1 = Message(At(1, 2, rip), "the_message", Warning)
       val v2 = Message(At(2, 3, rip), "the_message", Warning)
       v1 < v2 mustBe true

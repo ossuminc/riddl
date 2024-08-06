@@ -58,16 +58,7 @@ trait ParsingTest extends TestingBasisWithTestData {
   ): Either[Messages, Root] = {
     parsePath(file.toPath, commonOptions)
   }
-
-  def parseString(
-    input: String,
-    commonOptions: CommonOptions = CommonOptions.empty,
-    origin: Option[URL] = None
-  ): Either[Messages, Root] = {
-    val spi = StringParserInput(input, origin.getOrElse(URL(s"string(${input.length})")))
-    TopLevelParser.parseInput(spi, commonOptions)
-  }
-
+  
   def parse[T <: RiddlValue, U <: RiddlValue](
     input: RiddlParserInput,
     parser: P[?] => P[T],
@@ -75,11 +66,6 @@ trait ParsingTest extends TestingBasisWithTestData {
   ): Either[Messages, (U, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parse[T, U](parser, extraction)
-  }
-
-  def parseRoot(file: java.io.File): Either[Messages, Root] = {
-    val rpi = rpiFromFile(file)
-    parseTopLevelDomains(rpi)
   }
 
   def parseRoot(path: java.nio.file.Path): Either[Messages, Root] = {
@@ -116,7 +102,7 @@ trait ParsingTest extends TestingBasisWithTestData {
   ): Unit = {
     cases foreach { case (statement, expected) =>
       val input = s"domain foo {\n$statement\n}"
-      val tp = TestParser(RiddlParserInput(input))
+      val tp = TestParser(RiddlParserInput(input,"checkDomainDefinitions"))
       tp.parseDomainDefinition(extract) match {
         case Right(content) => content mustBe expected
         case Left(errors) =>
@@ -146,7 +132,7 @@ trait ParsingTest extends TestingBasisWithTestData {
     input: String,
     extract: FROM => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    val tp = TestParser(RiddlParserInput(input))
+    val tp = TestParser(RiddlParserInput(input, "parseDefinition[FROM,TO]"))
     tp.parseDefinition[FROM, TO](extract)
   }
 
@@ -160,7 +146,7 @@ trait ParsingTest extends TestingBasisWithTestData {
   def parseDefinition[FROM <: Definition: ClassTag](
     input: String
   ): Either[Messages.Messages, (FROM, RiddlParserInput)] = {
-    parseDefinition(RiddlParserInput(input))
+    parseDefinition(RiddlParserInput(input, "parseDefinition[FROM]"))
   }
 
   def checkDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](
@@ -181,7 +167,7 @@ trait ParsingTest extends TestingBasisWithTestData {
     @unused extract: FROM => TO
   ): Unit = {
     cases.foreach { case (statement: String, expected: TO @unchecked) =>
-      val rip = RiddlParserInput(statement)
+      val rip = RiddlParserInput(statement, "checkDefinitions")
       TestParser(rip).parseDefinition[FROM] match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -195,7 +181,7 @@ trait ParsingTest extends TestingBasisWithTestData {
     input: RiddlParserInput,
     extract: Context => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    val rpi = RiddlParserInput(s"context foo is {\n${input.data}\n}")
+    val rpi = RiddlParserInput(s"context foo is {\n${input.data}\n}", "parseInContext")
     val tp = TestParser(rpi)
     tp.parseContextDefinition[TO](extract)
   }
@@ -204,13 +190,13 @@ trait ParsingTest extends TestingBasisWithTestData {
     @unused label: String,
     fileName: String,
     directory: String = "language/jvm/src/test/input/"
-  ): Root = {
+  ): (Root, RiddlParserInput) = {
     val path = java.nio.file.Path.of(directory, fileName)
     val rpi = rpiFromPath(path)
     TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
         fail(errors.format)
-      case Right(root) => root
+      case Right(root) => root -> rpi
     }
   }
 

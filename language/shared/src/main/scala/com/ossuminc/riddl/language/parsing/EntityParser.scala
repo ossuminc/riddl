@@ -13,53 +13,30 @@ import Readability.*
 
 /** Parsing rules for entity definitions */
 private[parsing] trait EntityParser {
-  this: FunctionParser
-    & HandlerParser
-    & ReferenceParser
-    & StatementParser
-    & StreamingParser
-    & TypeParser =>
-
-  private def stateDefinitions[u: P]: P[Seq[OccursInState]] = {
-    P(handler(StatementsSet.EntityStatements) | invariant).rep(0)
-  }
-
-  private def stateBody[u: P]: P[Seq[OccursInState]] = {
-    P(undefined(Seq.empty[OccursInState]) | stateDefinitions)
-  }
+  this: FunctionParser & HandlerParser & ReferenceParser & StatementParser & StreamingParser & TypeParser =>
 
   private def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~ identifier ~/ Readability.of ~
-        typeRef ~/ is ~ (open ~ stateBody ~ close).? ~/
-        briefly ~ description
-    )./.map { case (loc, id, typRef, body, brief, description) =>
-      body match {
-        case Some(defs) =>
-          val groups = defs.groupBy(_.getClass)
-          val handlers = mapTo[Handler](groups.get(classOf[Handler]))
-          val invariants = mapTo[Invariant](groups.get(classOf[Invariant]))
-          State(loc, id, typRef, handlers, invariants, brief, description)
-        case None =>
-          State(loc, id, typRef, brief = brief, description = description)
-      }
+      location ~ Keywords.state ~ identifier ~/ (Readability.of | Readability.is) ~ typeRef ~/ briefly ~ description
+    )./.map { case (loc, id, typRef, brief, description) =>
+      State(loc, id, typRef, brief, description)
     }
   }
 
-  private def entityInclude[u: P]: P[IncludeHolder[OccursInEntity]] = {
-    include[u, OccursInEntity](entityDefinitions(_))
+  private def entityInclude[u: P]: P[Include[EntityContents]] = {
+    include[u, EntityContents](entityDefinitions(_))
   }
 
-  private def entityDefinitions[u: P]: P[Seq[OccursInEntity]] = {
+  private def entityDefinitions[u: P]: P[Seq[EntityContents]] = {
     P(
       handler(StatementsSet.EntityStatements) | function | invariant | state | entityInclude | inlet | outlet |
         typeDef | term | authorRef | comment | constant | option
-    )./.rep(1)
+    ).asInstanceOf[P[EntityContents]]./.rep(1)
   }
 
-  private def entityBody[u: P]: P[Seq[OccursInEntity]] = {
+  private def entityBody[u: P]: P[Seq[EntityContents]] = {
     P(
-      undefined(Seq.empty[OccursInEntity])./ | entityDefinitions./
+      undefined(Seq.empty[EntityContents])./ | entityDefinitions./
     )
   }
 

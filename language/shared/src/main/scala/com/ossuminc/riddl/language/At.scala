@@ -28,18 +28,22 @@ case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
 
   @JSExport
   lazy val line: Int = source.lineOf(offset) + 1
+
   @JSExport
   lazy val col: Int = offset - source.offsetOf(line - 1) + 1
 
   @JSExport
   @inline override def toString: String = { source.origin + toShort }
+
   @JSExport
   @inline def toShort: String = { s"($line:$col)" }
 
   @JSExport
   override def compare(that: At): Int = {
-    if this.source.origin == that.source.origin then { this.offset - that.offset }
-    else { this.source.origin.compare(that.source.origin) }
+    val thisRoot = this.source.root.toExternalForm
+    val thatRoot = that.source.root.toExternalForm
+    if thisRoot == thatRoot then { this.offset - that.offset }
+    else { thisRoot.compare(thatRoot) }
   }
 
   @targetName("plus")
@@ -93,8 +97,7 @@ object At {
     triple: (Int, Int, RiddlParserInput)
   ): At = { apply(triple._1, triple._2, triple._3) }
 
-  /**
-    * General constructor of [[At]] providing all three values
+  /** General constructor of [[At]] providing all three values
     * @param line
     *   The line number in the input for this [[At]]
     * @param col

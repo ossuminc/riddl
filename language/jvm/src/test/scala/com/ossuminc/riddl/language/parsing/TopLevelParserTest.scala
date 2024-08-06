@@ -12,12 +12,11 @@ import com.ossuminc.riddl.language.{AST, At}
 
 import java.io.File
 import scala.io.Source
-import org.scalatest.TestData 
+import org.scalatest.TestData
 
 class TopLevelParserTest extends ParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
-
 
   val origin = "simpleDomain.riddl"
 
@@ -31,25 +30,24 @@ class TopLevelParserTest extends ParsingTest {
   val simpleDomainResults: AST.Root = Root(List(simpleDomain))
 
   "parse" should {
-    "parse RiddlParserInput" in { (td:TestData) =>
+    "parse RiddlParserInput" in { (td: TestData) =>
       val input = rpiFromFile(simpleDomainFile)
       TopLevelParser.parseInput(input) mustBe Right(simpleDomainResults)
     }
-    "parse File" in { (td:TestData) =>
+    "parse File" in { (td: TestData) =>
       val input = rpiFromFile(simpleDomainFile)
       TopLevelParser.parseInput(input) mustBe Right(simpleDomainResults)
     }
-    "parse String" in { (td:TestData) =>
+    "parse String" in { (td: TestData) =>
       val source = Source.fromFile(simpleDomainFile)
       try {
         val stringContents = source.mkString
-        val input = RiddlParserInput(stringContents, td)
-        val result = TopLevelParser.parseInput(input)
+        val result = TopLevelParser.parseInput(rpi)
         val expected = Root(List(simpleDomain))
         result mustBe Right(expected)
       } finally { source.close() }
     }
-    "parse empty String" in { (td:TestData) =>
+    "parse empty String" in { (td: TestData) =>
       val expected = Root(List())
       val parser = StringParser("")
       parser.parseRoot() match {
@@ -64,7 +62,7 @@ class TopLevelParserTest extends ParsingTest {
       }
     }
 
-    "handle garbage" in { (td:TestData) =>
+    "handle garbage" in { (td: TestData) =>
       val input = RiddlParserInput(" pweio afhj", td)
       TopLevelParser.parseInput(input) match {
         case Right(_) =>

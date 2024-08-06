@@ -26,7 +26,8 @@ class ASTTest extends TestingBasis {
       BlockDescription().format mustBe ("")
     }
     "have useful FileDescription" in {
-      val fd = FileDescription(At(), Path.of("."))
+      import com.ossuminc.riddl.utils.URL
+      val fd = FileDescription(At(), URL("file:///."))
       fd.format must include("/")
       fd.format must include(".")
     }
@@ -38,12 +39,12 @@ class ASTTest extends TestingBasis {
       ud.loc.isEmpty mustBe (true)
       ud.url.toExternalForm must be(url_text)
       ud.format must be(url.toExternalForm)
-      val lines: Seq[String] = Await.result(ud.linesF, 5.seconds)
+      val lines: Seq[String] = ud.lines
       val head = lines.head
       head must include("sbt-ossuminc")
     }
   }
-  
+
   "Domain" should {
     "return anonymous name when empty" in {
       val domain = Domain(At(), Identifier.empty)
@@ -295,10 +296,12 @@ class ASTTest extends TestingBasis {
           OptionValue(At(), "transient", Seq.empty),
           OptionValue(At(), "kind", Seq(LiteralString(At(), "concept")))
         )
+        val entityContents: Seq[EntityContents] =
+          (options ++ states ++ types ++ handlers ++ functions ++ invariants).asInstanceOf[Seq[EntityContents]]
         val entity = AST.Entity(
           loc = At(),
           id = Identifier(At(), "foo"),
-          contents = options ++ states ++ types ++ handlers ++ functions ++ invariants,
+          contents = entityContents,
           description = None
         )
 
@@ -336,7 +339,8 @@ class ASTTest extends TestingBasis {
 
   "Include" should {
     "identify as root container, etc" in {
-      val incl = Include()
+      import com.ossuminc.riddl.utils.URL
+      val incl = Include(At.empty,URL.empty, Seq.empty)
       incl.isRootContainer mustBe true
       incl.loc mustBe At.empty
       incl.format mustBe "include \"\""

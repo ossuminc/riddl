@@ -24,23 +24,25 @@ private[parsing] trait SagaParser {
     ).map(x => SagaStep.apply.tupled(x))
   }
 
-  private def sagaInclude[u: P]: P[IncludeHolder[OccursInSaga]] = {
-    include[u, OccursInSaga](sagaDefinitions(_))
+  private def sagaInclude[u: P]: P[Include[SagaContents]] = {
+    include[u, SagaContents](sagaDefinitions(_))
   }
 
-  private def sagaDefinitions[u: P]: P[Seq[OccursInSaga]] = {
-    P(sagaStep | inlet | outlet | function | term | sagaInclude | option)./.rep(2)
+  private def sagaDefinitions[u: P]: P[Seq[SagaContents]] = {
+    P(
+      sagaStep | inlet | outlet | function | term | sagaInclude | option
+    ).asInstanceOf[P[SagaContents]]./.rep(2)
   }
 
   private type SagaBodyType = (
     Option[Aggregation],
     Option[Aggregation],
-    Seq[OccursInSaga]
+    Seq[SagaContents]
   )
 
   private def sagaBody[u: P]: P[SagaBodyType] = {
     P(
-      undefined((None, None, Seq.empty[OccursInSaga])) |
+      undefined((None, None, Seq.empty[SagaContents])) |
         (input.? ~ output.? ~ sagaDefinitions)
     )
   }

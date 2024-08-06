@@ -20,8 +20,8 @@ private[parsing] trait ProjectorParser {
     & StreamingParser
     & TypeParser =>
 
-  private def projectorInclude[u: P]: P[IncludeHolder[OccursInProjector]] = {
-    include[u, OccursInProjector](projectorDefinitions(_))
+  private def projectorInclude[u: P]: P[Include[ProjectorContents]] = {
+    include[u, ProjectorContents](projectorDefinitions(_))
   }
 
   private def updates[u: P]: P[RepositoryRef] = {
@@ -32,16 +32,16 @@ private[parsing] trait ProjectorParser {
     }
   }
 
-  private def projectorDefinitions[u: P]: P[Seq[OccursInProjector]] = {
+  private def projectorDefinitions[u: P]: P[Seq[ProjectorContents]] = {
     P(
       updates | typeDef | term | projectorInclude | handler(StatementsSet.ProjectorStatements) |
         function | inlet | outlet | invariant | constant | authorRef | comment | option
-    )./.rep(1)
+    ).asInstanceOf[P[ProjectorContents]]./.rep(1)
   }
 
-  private def projectorBody[u: P]: P[Seq[OccursInProjector]] = {
+  private def projectorBody[u: P]: P[Seq[ProjectorContents]] = {
     P(
-      undefined(Seq.empty[OccursInProjector]) | projectorDefinitions
+      undefined(Seq.empty[ProjectorContents]) | projectorDefinitions
     )
   }
 

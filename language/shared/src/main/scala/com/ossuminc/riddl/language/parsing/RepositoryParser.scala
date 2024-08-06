@@ -21,8 +21,8 @@ private[parsing] trait RepositoryParser {
     & FunctionParser
     & TypeParser =>
 
-  private def repositoryInclude[u: P]: P[IncludeHolder[OccursInRepository]] = {
-    include[u, OccursInRepository](repositoryDefinitions(_))
+  private def repositoryInclude[u: P]: P[Include[RepositoryContents]] = {
+    include[u, RepositoryContents](repositoryDefinitions(_))
   }
 
   private def schemaKind[u: P]: P[RepositorySchemaKind] = {
@@ -71,16 +71,16 @@ private[parsing] trait RepositoryParser {
     }
   }
 
-  private def repositoryDefinitions[u: P]: P[Seq[OccursInRepository]] = {
+  private def repositoryDefinitions[u: P]: P[Seq[RepositoryContents]] = {
     P(
       typeDef | schema | handler(StatementsSet.RepositoryStatements) | option |
         function | term | repositoryInclude | inlet | outlet | constant | authorRef | comment
-    ).rep(0)
+    ).asInstanceOf[P[RepositoryContents]]./.rep(0)
   }
 
-  private def repositoryBody[u: P]: P[Seq[OccursInRepository]] = {
+  private def repositoryBody[u: P]: P[Seq[RepositoryContents]] = {
     P(
-      undefined(Seq.empty[OccursInRepository]) | repositoryDefinitions
+      undefined(Seq.empty[RepositoryContents]) | repositoryDefinitions
     )
   }
 

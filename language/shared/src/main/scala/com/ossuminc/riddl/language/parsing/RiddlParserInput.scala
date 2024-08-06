@@ -31,23 +31,27 @@ object RiddlParserInput {
   val empty: RiddlParserInput = EmptyParserInput
 
   /** Set up a parser input for parsing directly from a String
-    * @#param
+    * @param data
     *   data The UTF-8 string to be parsed
+    * @param root
+    *   The URL from which the input data was derived
+    * @param purpose
+    *   The purpose for which this data is provided, often the test case name
     */
   @JSExport("createWith")
-  implicit def apply(data: String, origin: URL): RiddlParserInput = {
-    StringParserInput(data, origin)
+  implicit def apply(data: String, root: URL, purpose: String = ""): RiddlParserInput = {
+    StringParserInput(data, root, purpose)
   }
 
   /** Set up a parser input for parsing a test case from a String and the testCaseName.
     * @param data
     *   The data to be parsed and returned in a RiddlParserInput
-    * @param testCaseName
+    * @param purpose
     *   A string, typically derived by the scalatest TestData extension in ParserTest.
     */
   @JSExport("createTestInput")
-  implicit def apply(data: String, testCaseName: String = "unspecified test case"): RiddlParserInput = {
-    StringParserInput(data, URL(testCaseName))
+  implicit def apply(data: String, purpose: String): RiddlParserInput = {
+    StringParserInput(data, URL.empty, purpose)
   }
 
   /** Set up a parser input from a [[com.ossuminc.riddl.utils.URL]].
@@ -58,8 +62,8 @@ object RiddlParserInput {
     *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
     */
   @JSExport
-  def rpiFromURL(url: URL): Future[RiddlParserInput] = {
-    Loader(url).load.map(data => apply(data,url))
+  def rpiFromURL(url: URL, purpose: String = ""): Future[RiddlParserInput] = {
+    Loader(url).load.map(data => apply(data, url, purpose))
   }
 
   /** Set up a parser input for parsing directly from a Scala Source
@@ -76,7 +80,7 @@ object RiddlParserInput {
       } finally {
         source.close()
       }
-    StringParserInput(data, URL(source.descr))
+    StringParserInput(data, URL.empty, source.descr)
   }
 
   /** Set up a parser input for parsing directly from a Java File
@@ -86,7 +90,7 @@ object RiddlParserInput {
     * @note
     *   JVM Only
     */
-  def rpiFromFile(file: java.io.File): RiddlParserInput = {
+  def rpiFromFile(file: java.io.File, purpose: String = ""): RiddlParserInput = {
     val data: String = {
       val source: scala.io.Source = scala.io.Source.fromFile(file)
       try {
@@ -95,7 +99,9 @@ object RiddlParserInput {
         source.close()
       }
     }
-    StringParserInput(data, URL(file.toURI.toURL.toString))
+    val fileURL = file.toURI.toURL
+    val filePath = fileURL.toExternalForm // fix bug in JVM!
+    StringParserInput(data, URL(filePath), purpose)
   }
 
   /** Set up a parser input for parsing directly from a file at a specific Path
@@ -109,23 +115,40 @@ object RiddlParserInput {
 
 }
 
-/** Same as fastparse.IndexedParserInput but with Location support */
+/** This class provides the loaded data for fastparse to parse. It is the same as fastparse.IndexedParserInput but adds
+  * support for file locations with [[At]]. The class is abstract because
+  */
 abstract class RiddlParserInput extends ParserInput {
-  def root: URL
+
+  /** The data that will be parsed by fastparse */
   def data: String
-  def origin: String = root.getFile
-  override def apply(index: Int): Char = data.charAt(index)
-  override def dropBuffer(index: Int): Unit = {}
-  override def slice(from: Int, until: Int): String = data.slice(from, until)
-  override def length: Int = data.length
-  override def innerLength: Int = length
-  override def isReachable(index: Int): Boolean = index < length
+
+  /** The URL from which the [[data]] originated. If it didn't originate from a network or file location, then this
+    * should be empty, URL("") so that URL validity checking will be skipped.
+    */
+  def root: URL
+
+  /** The short origin name to use in error messages as the origin of the error. In test cases that do not use a URL,
+    * this should be overridden with the word "empty"
+    * @return
+    *   Typically the last filename in the URL is sufficient, and that is the default calculated from [[root]].
+    */
+  def origin: String = if root.isEmpty then "empty" else root.getFile
+
+  /** The purpose of this parsing input. It could be a test name or blank for normal usage */
+  def purpose: String = ""
+
+  override inline def apply(index: Int): Char = data.charAt(index)
+  override inline def dropBuffer(index: Int): Unit = {}
+  override inline def slice(from: Int, until: Int): String = data.slice(from, until)
+  override inline def length: Int = data.length
+  override inline def innerLength: Int = length
+  override inline def isReachable(index: Int): Boolean = index < length
 
   def checkTraceable(): Unit = ()
+
   inline final def isEmpty: Boolean = data.isEmpty
   inline final def nonEmpty: Boolean = !isEmpty
-  def from: String
-  def path: Option[Path] = None
 
   private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
 
@@ -175,7 +198,7 @@ abstract class RiddlParserInput extends ParserInput {
       val quoted = slice(start, end).stripTrailing()
       if quoted.isEmpty then ""
       else {
-        val col = index.col - 1
+        val col = Integer.max(index.col - 1,0)
         quoted + nl + " ".repeat(col) + "^" + nl
       }
     } else ""
@@ -194,7 +217,6 @@ case object EmptyParserInput extends RiddlParserInput {
 
 protected[parsing] case class StringParserInput(
   data: String,
-  root: URL
-) extends RiddlParserInput {
-  def from: String = root.getFile
-}
+  root: URL = URL.empty,
+  override val purpose: String = ""
+) extends RiddlParserInput

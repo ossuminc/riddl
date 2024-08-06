@@ -97,11 +97,9 @@ final class Interrupt extends (() => Boolean) {
 
 object Interrupt {
 
-  private def aFuture[T](
-    block: => T
-  )(implicit ec: ExecutionContext): (Future[T], Interrupt) = {
+  private def aFuture[T](block: => T): (Future[T], Interrupt) = {
     val interrupt = new Interrupt()
-    Future { interrupt.interruptibly(block) }(ec) -> interrupt
+    Future { interrupt.interruptibly(block) } -> interrupt
   }
 
   def allowCancel(

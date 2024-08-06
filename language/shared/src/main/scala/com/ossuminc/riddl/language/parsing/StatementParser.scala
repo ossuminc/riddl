@@ -153,17 +153,17 @@ private[parsing] trait StatementParser {
     }
   }
 
-  private def anyDefStatements[u: P](set: StatementsSet): P[Statement] = {
+  private def anyDefStatements[u: P](set: StatementsSet): P[Statements] = {
     P(
       sendStatement | arbitraryStatement | errorStatement | theSetStatement | tellStatement | callStatement |
         stopStatement | ifThenElseStatement(set) | forEachStatement(set) | codeStatement | comment
-    )
+    ).asInstanceOf[P[Statements]]
   }
 
 
-  def statement[u: P](set: StatementsSet): P[Statement] = {
+  def statement[u: P](set: StatementsSet): P[Statements] = {
     set match {
-      case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
+      case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement 
       case StatementsSet.ApplicationStatements => anyDefStatements(set) | focusStatement
       case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
       case StatementsSet.EntityStatements =>
@@ -177,26 +177,15 @@ private[parsing] trait StatementParser {
     }
   }
 
-  def setOfStatements[u: P](set: StatementsSet): P[Seq[Statement]] = {
+  def setOfStatements[u: P](set: StatementsSet): P[Seq[Statements]] = {
     P(statement(set).rep(0))./
   }
 
-  def pseudoCodeBlock[u: P](set: StatementsSet): P[Seq[Statement]] = {
+  def pseudoCodeBlock[u: P](set: StatementsSet): P[Seq[Statements]] = {
     P(
       open ~/ (
-        undefined(Seq.empty[Statement]) | statement(set).rep(1)
+        undefined(Seq.empty[Statements]) | statement(set).rep(1)
       ) ~ close./
     )
   }
-
-  def invariant[u: P]: P[Invariant] = {
-    P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ (
-        undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ briefly ~ description
-    ).map { case (loc, id, condition, brief, description) =>
-      Invariant(loc, id, condition, brief, description)
-    }
-  }
-
 }

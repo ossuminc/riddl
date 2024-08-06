@@ -57,8 +57,8 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[IncludeHolder[OccursInStreamlet]] = {
-    include[u, OccursInStreamlet](
+  ): P[Include[StreamletContents]] = {
+    include[u, StreamletContents](
       streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
     )
   }
@@ -68,14 +68,14 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[OccursInStreamlet]] = {
+  ): P[Seq[StreamletContents]] = {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
         ( handler(StatementsSet.StreamStatements) | term | authorRef | comment | function | invariant | constant |
           typeDef | option | streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
-          inlets ++ outlets ++ definitions
+          (inlets ++ outlets ++ definitions).asInstanceOf[Seq[StreamletContents]]
       }
     )
   }
@@ -85,9 +85,9 @@ private[parsing] trait StreamingParser {
     maxInlets: Int,
     minOutlets: Int,
     maxOutlets: Int
-  ): P[Seq[OccursInStreamlet]] = {
+  ): P[Seq[StreamletContents]] = {
     P(
-      undefined(Seq.empty[OccursInStreamlet]) |
+      undefined(Seq.empty[StreamletContents]) |
         streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)
     )
   }

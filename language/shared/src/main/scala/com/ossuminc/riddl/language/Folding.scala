@@ -70,17 +70,17 @@ object Folding {
     *   [[scala.collection.Seq.foldLeft()]]
     */
   @JSExport final def foldLeftWithStack[S, CT <: RiddlValue](
-    value: S,
+    zeroValue: S,
     top: Container[CT],
-    parents: mutable.Stack[Container[CT]]
-  )(f: (S, CT | Container[CT], Seq[Container[CT]]) => S ): S = {
-    val initial = f(value, top, parents.toSeq)
-    if !top.isAnonymous then parents.push(top)
+    parents: mutable.Stack[Parent]
+  )(f: (S, CT | Container[CT], Seq[Parent]) => S ): S = {
+    val initial = f(zeroValue, top, parents.toSeq)
+    if !top.isAnonymous then parents.push(top.asInstanceOf[Parent])
     try {
       top.contents.foldLeft(initial) { (next, value) =>
         value match {
           case c: Container[CT] @unchecked if c.nonEmpty => foldLeftWithStack(next, c, parents)(f)
-          case v: RiddlValue                             => f(next, v, parents.toSeq)
+          case v: CT                             => f(next, v, parents.toSeq)
         }
       }
     } finally {

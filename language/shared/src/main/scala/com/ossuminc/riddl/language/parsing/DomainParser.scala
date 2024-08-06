@@ -16,20 +16,8 @@ import scala.concurrent.{Await, Future}
 
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {
-  this: ApplicationParser
-    & ContextParser
-    & EpicParser
-    & ReferenceParser
-    & SagaParser
-    & StreamingParser
-    & StatementParser
-    & TypeParser
-    & CommonParser
-    & ParsingContext =>
-
-  private def domainInclude[u: P]: P[IncludeHolder[OccursInDomain]] = {
-    include[u,OccursInDomain](domainDefinitions(_))
-  }
+  this: ApplicationParser & ContextParser & EpicParser & ReferenceParser & SagaParser & StreamingParser &
+    StatementParser & TypeParser & CommonParser & ParsingContext =>
 
   private def user[u: P]: P[User] = {
     P(
@@ -40,15 +28,19 @@ private[parsing] trait DomainParser {
     }
   }
 
-  private def domainDefinitions[u: P]: P[Seq[OccursInDomain]] = {
+  private def domainInclude[u: P]: P[Include[DomainContents]] = {
+    include[u, DomainContents](domainDefinitions(_))
+  }
+
+  private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
     P(
       author | authorRef | typeDef | context | user | epic | saga | domain | term |
         constant | application | importDef | domainInclude | comment | option
-    )./.rep(1)
+    ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 
-  private def domainBody[u: P]: P[Seq[OccursInDomain]] = {
-    undefined(Seq.empty[OccursInDomain]) | domainDefinitions
+  private def domainBody[u: P]: P[Seq[DomainContents]] = {
+    undefined(Seq.empty[DomainContents]) | domainDefinitions
   }
 
   def domain[u: P]: P[Domain] = {

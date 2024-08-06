@@ -12,13 +12,8 @@ import fastparse.MultiLineWhitespace.*
 import Readability.*
 
 private[parsing] trait ApplicationParser {
-  this: StreamingParser
-    & FunctionParser
-    & ReferenceParser
-    & HandlerParser
-    & StatementParser
-    & TypeParser
-    & CommonParser =>
+  this: StreamingParser & FunctionParser & ReferenceParser & HandlerParser & StatementParser & TypeParser &
+    CommonParser =>
 
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
@@ -29,7 +24,7 @@ private[parsing] trait ApplicationParser {
   }
 
   private def groupDefinitions[u: P]: P[Seq[OccursInGroup]] = {
-    P(group | containedGroup | appOutput | appInput | comment).rep(1)
+    P(group | containedGroup | appOutput | appInput | comment).asInstanceOf[P[OccursInGroup]].rep(1)
   }
 
   private def group[u: P]: P[Group] = {
@@ -57,7 +52,7 @@ private[parsing] trait ApplicationParser {
         close
     ).?.map {
       case Some(definitions: Seq[OccursInInput]) => definitions
-      case None              => Seq.empty[OccursInOutput]
+      case None                                  => Seq.empty[OccursInOutput]
     }
   }
 
@@ -117,26 +112,26 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-  private def applicationDefinition[u: P]: P[OccursInApplication] = {
+  private def applicationDefinition[u: P]: P[ApplicationContents] = {
     P(
-      group | handler(StatementsSet.ApplicationStatements) | function |
+      group | handler(StatementsSet.ApplicationStatements) | function | invariant |
         inlet | outlet | term | typeDef | constant | authorRef | comment | applicationInclude | option
-    )
+    ).asInstanceOf[P[ApplicationContents]]
   }
 
-  private def applicationDefinitions[u: P]: P[Seq[OccursInApplication]] = {
+  private def applicationDefinitions[u: P]: P[Seq[ApplicationContents]] = {
     P(applicationDefinition.rep(0, comments))
   }
 
-  private def applicationInclude[u: P]: P[IncludeHolder[OccursInApplication]] = {
-    include[u, OccursInApplication](applicationDefinitions(_))
+  private def applicationInclude[u: P]: P[Include[ApplicationContents]] = {
+    include[u, ApplicationContents](applicationDefinitions(_))
   }
 
-  private def emptyApplication[u: P]: P[Seq[OccursInApplication]] = {
-    undefined(Seq.empty[OccursInApplication])
+  private def emptyApplication[u: P]: P[Seq[ApplicationContents]] = {
+    undefined(Seq.empty[ApplicationContents])
   }
 
-  private def applicationBody[u: P]: P[Seq[OccursInApplication]] = {
+  private def applicationBody[u: P]: P[Seq[ApplicationContents]] = {
     emptyApplication | applicationDefinitions
   }
 

@@ -26,7 +26,7 @@ class ParsingTestTest extends ParsingTest {
     }
 
     "parse[Saga]" in { (td: TestData) =>
-      val rpi = RiddlParserInput("""saga foo is { ??? }""")
+      val rpi = RiddlParserInput("""saga foo is { ??? }""", td)
       parseDefinition[Saga](rpi) match {
         case Right((saga, _)) =>
           val expected = Saga((1, 1, rpi), Identifier((1, 6, rpi), "foo"))

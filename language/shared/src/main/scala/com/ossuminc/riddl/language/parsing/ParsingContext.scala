@@ -69,52 +69,43 @@ trait ParsingContext extends ParsingErrors {
     // importDomain(url)
   }
 
-  def doInclude[CT <: RiddlValue](
-    loc: At,
-    str: LiteralString
-  )(rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]): AST.IncludeHolder[CT] = {
-    Timer.time(s"include '${str.s}'", commonOptions.showIncludeTimes) {
-      val contentsF: Future[Seq[CT]] = doIncludeParsing[CT](loc, str, rule)
-      AST.IncludeHolder[CT](loc, str.s, contentsF)
+  def doIncludeParsing[CT <: RiddlValue](loc: At, path: String, rule: P[?] => P[Seq[CT]])(implicit
+    ctx: P[?]
+  ): Include[CT] = {
+    import com.ossuminc.riddl.utils.{Loader, URL}
+    val newURL = if URL.isValid(path) then {
+      URL(path)
+    } else {
+      val name: String = {
+        if path.endsWith(".riddl") then path
+        else path + ".riddl"
+      }
+      ctx.input.asInstanceOf[RiddlParserInput].root.parent.resolve(name)
     }
-  }
-
-  private def doIncludeParsing[CT <: RiddlValue](
-    loc: At, 
-    str: LiteralString, 
-    rule: P[?] => P[Seq[CT]])(implicit ctx: P[?]
-  ): Future[Seq[CT]] = {
     try {
-      import com.ossuminc.riddl.utils.{Loader, URL}
-      val path = str.s
-      val url: URL = if path.startsWith("http") then {
-        URL(path)
-      } else {
-        val name: String = {
-          if path.endsWith(".riddl") then path
-          else path + ".riddl"
-        }
-        ctx.input.asInstanceOf[RiddlParserInput].root.resolve(name)
+      import com.ossuminc.riddl.utils.Await
+
+      val future: Future[Include[CT]] = Loader(newURL).load.map { (data: String) =>
+        val rpi = RiddlParserInput(data, newURL)
+        val contents = doParse[CT](loc, rpi, newURL, rule)
+        Include(loc, newURL, contents)
       }
-      Loader(url).load.map { (data: String) =>
-        val rpi = RiddlParserInput(data, url)
-        doParse[CT](loc, rpi, str, rule)
-      }
+      Await.result(future, 10)
     } catch {
       case NonFatal(exception) =>
-        makeParseFailureError(exception, loc, s"while including '${str.s}'")
-        Future.failed(exception) 
+        makeParseFailureError(exception, loc, s"while including '$path'")
+        Include[CT](loc, newURL, Seq.empty[CT])
     }
   }
 
-  private def doParse[CT <: RiddlValue](loc: At, rpi: RiddlParserInput, str: LiteralString, rule: P[?] => P[Seq[CT]])(
-    implicit ctx: P[?]
+  private def doParse[CT <: RiddlValue](loc: At, rpi: RiddlParserInput, url: URL, rule: P[?] => P[Seq[CT]])(implicit
+    ctx: P[?]
   ): Seq[CT] = {
     fastparse.parse[Seq[CT]](rpi, rule(_), verboseFailures = true) match {
       case Success(content, _) =>
         if messagesNonEmpty then Seq.empty[CT]
         else if content.isEmpty then
-          error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '${str.s}''")
+          error(loc, s"Parser could not translate '${rpi.origin}''", s"while including '$url''")
         end if
         content
       case failure: Failure =>
@@ -122,6 +113,4 @@ trait ParsingContext extends ParsingErrors {
         Seq.empty[CT]
     }
   }
-
-
 }

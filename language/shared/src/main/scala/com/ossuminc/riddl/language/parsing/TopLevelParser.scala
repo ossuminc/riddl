@@ -48,18 +48,16 @@ class TopLevelParser(
 
   import scala.concurrent.Future
 
-  private def rootInclude[u: P]: P[IncludeHolder[OccursAtRootScope]] = {
-    include[u, OccursAtRootScope](rootValues(_))
+  private def rootInclude[u: P]: P[Include[RootScopeContents]] = {
+    include[u, RootScopeContents](rootDefinitions(_))
   }
 
-  private def rootValues[u: P]: P[Seq[OccursAtRootScope]] = {
-    P(
-      Start ~ (comment | rootInclude[u] | domain | author)./.rep(1) ~ End
-    )
+  private def rootDefinitions[u:P]: P[Seq[RootScopeContents]] = {
+    P(comment | rootInclude[u] | domain | author).asInstanceOf[P[RootScopeContents]]./.rep(1)
   }
-
+  
   protected def root[u: P]: P[Root] = {
-    rootValues.map { (content: Seq[OccursAtRootScope]) => Root(content) }
+    P(Start ~ rootDefinitions ~ End).map { (content: Seq[RootScopeContents]) => Root(content) }
   }
 
   @JSExport
@@ -127,42 +125,10 @@ object TopLevelParser {
     withVerboseFailures: Boolean = false
   ): Either[Messages, Root] = {
     Timer.time(s"parse ${input.origin}", commonOptions.showTimes) {
-      // val es: ExecutorService = Executors.newWorkStealingPool(commonOptions.maxParallelParsing)
       implicit val _: ExecutionContext = ExecutionContext.Implicits.global
       val tlp = new TopLevelParser(input, commonOptions)
       tlp.parseRoot(withVerboseFailures)
     }
   }
-
 }
 
-//def mergeAsynchContent[CT <: RiddlValue](contents: Contents[CT]): Contents[CT] = {
-//  val result: Contents[CT] = contents.map {
-//    case ih: IncludeHolder[CT] @unchecked =>
-//      val contents: Contents[CT] =
-//        try {
-//          val result = Await.result[Contents[CT]](ih.future, ih.maxDelay)
-//          mergeAsynchContent(result)
-//        } catch {
-//          case NonFatal(exception) =>
-//            makeParseFailureError(exception, ih.loc, s"while including '${ih.origin}''")
-//            // NOTE: makeParseFailureError already captured the error
-//            // NOTE: We just want to place empty content into the Include
-//            Seq.empty[CT]
-//        }
-//      Include[CT](ih.loc, ih.origin, contents).asInstanceOf[CT]
-//    case rv: CT => rv
-//  }
-//
-//  val allIncludes = result.filter[Include[?]]
-//  val distinctIncludes = allIncludes.distinctBy(_.origin)
-//  for {
-//    incl <- distinctIncludes
-//    copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
-//  } yield {
-//    val copyList = copies.map(i => i.origin + " at " + i.loc.toShort).mkString(", ")
-//    val message = s"Duplicate include origin detected in $copyList"
-//    warning(incl.loc, message, "while merging includes")
-//  }
-//  result
-//}

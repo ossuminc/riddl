@@ -27,6 +27,7 @@ class TermTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((model, _)) =>
+          import com.ossuminc.riddl.language.AST.Parent
           val finder = Finder(model)
           val found = finder.find(_.isInstanceOf[Term])
           found contains Term(
@@ -41,7 +42,7 @@ class TermTest extends ParsingTest {
             None,
             Some(BlockDescription(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
           )
-          val result: Finder#DefWithParents  =  finder.findEmpty
+          val result: Finder#DefWithParents[Parent]  =  finder.findEmpty
           result.size mustBe 1
           result.head match {
             case (entity,_) =>

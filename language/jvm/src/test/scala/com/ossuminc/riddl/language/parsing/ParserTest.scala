@@ -20,7 +20,7 @@ class ParserTest extends ParsingTest {
   
   "ParserContext" must {
     "throw on underflow" in { (td: TestData) =>
-      val riddlParserInput = RiddlParserInput("")
+      val riddlParserInput = RiddlParserInput("", td)
       val testParser = TestParser(riddlParserInput)
       testParser
     }
@@ -286,8 +286,7 @@ class ParserTest extends ParsingTest {
               State(
                 (5, 3, rpi),
                 Identifier((5, 9, rpi), "BurgerState"),
-                TypeRef((5, 24, rpi), "type", PathIdentifier((5, 29, rpi), List("BurgerStruct"))),
-                List(Handler((6, 11, rpi), Identifier((6, 11, rpi), "BurgerHandler")))
+                TypeRef((5, 24, rpi), "type", PathIdentifier((5, 29, rpi), List("BurgerStruct")))
               )
             )
           )

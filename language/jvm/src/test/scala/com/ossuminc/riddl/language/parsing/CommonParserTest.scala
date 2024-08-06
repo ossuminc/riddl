@@ -29,7 +29,7 @@ class CommonParserTest extends ParsingTest {
   }
 
   "CommonParser" should {
-    "location should construct from pair" in { (td: TestData) => 
+    "location should construct from pair" in { (td: TestData) =>
       val loc = At((1, 1))
       loc.line mustBe 1
       val column = loc.col
@@ -37,15 +37,16 @@ class CommonParserTest extends ParsingTest {
     }
 
     "descriptions can be URLs" in { (td: TestData) =>
+      import com.ossuminc.riddl.utils.URL
       val input = RiddlParserInput(
         """domain foo is { ??? } described at
           |https://www.wordnik.com/words/phi""".stripMargin,
+        URL.empty,
         td
       )
       parseDomainDefinition(input, identity) match {
         case Left(errors) => fail(errors.format)
         case Right((domain, _)) =>
-          import com.ossuminc.riddl.utils.URL
           val expected = Domain(
             (1, 1),
             Identifier((1, 8), "foo"),

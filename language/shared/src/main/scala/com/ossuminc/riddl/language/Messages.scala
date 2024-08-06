@@ -146,19 +146,12 @@ object Messages {
       val ctxt = if context.nonEmpty then {
         s"${nl}Context: $context"
       } else ""
-      val headLine = {
-        val source = loc.source.from
-        if source.isEmpty then {
-          ""
-        } else {
-          s"$source${loc.toShort}"
-        }
-      }
+      val location = loc.toString
       val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
-      if loc.isEmpty || headLine.isEmpty || errorLine.isEmpty then {
-        s"$headLine$message$ctxt"
+      if loc.isEmpty || errorLine.isEmpty then {
+        s"$location$message$ctxt"
       } else {
-        s"$headLine:$nl$message:$nl$errorLine$ctxt"
+        s"$location:$nl$message:$nl$errorLine$ctxt"
       }
     }
   }

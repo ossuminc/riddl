@@ -8,6 +8,7 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
 
+import scala.reflect.{ClassTag, classTag}
 import scalajs.js.annotation._
 
 /** The context for finding things within a given [Ccontainer]] or [[AST.RiddlValue]] as found in the AST model. This
@@ -18,9 +19,13 @@ import scalajs.js.annotation._
 @JSExportTopLevel("Finder")
 case class Finder(root: Container[RiddlValue]) {
 
+  import scala.reflect.ClassTag
+
   /** Search the `root` for a [[AST.RiddlValue]] that matches the boolean expression
+    *
     * @param select
     *   The boolean expression to search for
+    *
     * @return
     *   A [[scala.Seq]] of the matching [[AST.RiddlValue]]
     */
@@ -31,8 +36,17 @@ case class Finder(root: Container[RiddlValue]) {
     }
   }
 
-  /** THe return value for the [[Finder.findWithParents()]] function */
-  type DefWithParents = Seq[(RiddlValue, Seq[RiddlValue])]
+  /** Search the [[root]] for a certain kind of [[RiddlValue]] and return those */
+  @JSExport
+  def findByType[T <: AST.RiddlValue: ClassTag]: Seq[T] = {
+    import scala.reflect.classTag
+    val lookingFor = classTag[T].runtimeClass
+    val result = find { (value: RiddlValue) => lookingFor.isAssignableFrom(value.getClass) }
+    result.asInstanceOf[Seq[T]]
+  }
+
+  /** The return value for the [[Finder.findWithParents()]] function */
+  type DefWithParents[T <: RiddlValue] = Seq[(T, Parents)]
 
   /** Find a matching set of [[AST.RiddlValue]] but return them with their parents
     *
@@ -43,17 +57,26 @@ case class Finder(root: Container[RiddlValue]) {
     *   [[scala.Seq]] of the parents of that value.
     */
   @JSExport
-  def findWithParents(
-    select: RiddlValue => Boolean
-  ): DefWithParents = {
+  def findWithParents[T <: RiddlValue : ClassTag](
+    select: T => Boolean
+  ): DefWithParents[T] = {
     import scala.collection.mutable
-    Folding.foldLeftWithStack(
-      Seq.empty[(RiddlValue, Seq[RiddlValue])],
+    import scala.reflect.classTag
+    val lookingFor = classTag[T].runtimeClass
+    Folding.foldLeftWithStack[Seq[(T, Parents)],RiddlValue](
+      Seq.empty[(T, Parents)],
       root,
-      mutable.Stack.empty[Container[RiddlValue]]
-    ) { case (state, definition, parents) =>
-      if select(definition) then state :+ (definition -> parents) else state
-    }
+      mutable.Stack.empty[Parent]
+    ) { case (state, definition: RiddlValue, parents) =>
+      if lookingFor.isAssignableFrom(definition.getClass) then
+        val value: T = definition.asInstanceOf[T]
+        if select(value) then
+          state :+ (value -> parents)
+        else
+          state
+      else
+        state
+    }.asInstanceOf[DefWithParents[T]]
   }
 
   /** Find definitions that are empty
@@ -61,5 +84,5 @@ case class Finder(root: Container[RiddlValue]) {
     * @return
     *   A [[scala.Seq]] of [[AST.RiddlValue]], along with their parents that are empty
     */
-  @JSExport def findEmpty: DefWithParents = findWithParents(_.isEmpty)
+  @JSExport def findEmpty: DefWithParents[Definition] = findWithParents[Definition](_.isEmpty)
 }

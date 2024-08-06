@@ -15,6 +15,8 @@ import fastparse.MultiLineWhitespace.*
 import java.net.URI
 import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
+import scala.concurrent.Future
+
 
 /** Common Parsing Rules */
 private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
@@ -40,15 +42,6 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-
-  def include[u:P, K <: RiddlValue](
-    parser: P[?] => P[Seq[K]]
-  ): P[IncludeHolder[K]] = {
-    P(Keywords.include ~/ location ~ literalString)./.map {
-      case (loc: At, str: LiteralString) =>
-        doInclude[K](loc, str)(parser)
-    }
-  }
 
   def importDef[u: P]: P[OccursInDomain] = {
     P(
@@ -78,6 +71,13 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   private def blockDescription[u: P]: P[BlockDescription] = {
     P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
+  }
+
+  private def fileDescription[u: P](implicit ctx: P[?]): P[FileDescription] = {
+    P(location ~ Keywords.file ~ literalString).map { case (loc, file) =>
+      val path = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
+      FileDescription(loc, path)
+    }
   }
 
   private def urlDescription[u: P]: P[URLDescription] = {
@@ -153,6 +153,16 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
 
   def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
+  
+  def is[u:P]: P[Unit] = { P( "is" ) }
+
+  def include[u: P, CT <: RiddlValue](parser: P[?] => P[Seq[CT]]): P[Include[CT]] = {
+    P(location ~ Keywords.include ~ literalString)./.map {
+      case (loc: At, str: LiteralString) =>
+        doIncludeParsing[CT](loc, str.s, parser)
+    }
+  }
+
 
   private def maybeOptionWithArgs[u: P](
     validOptions: => P[String]
@@ -216,6 +226,17 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
       Term.apply.tupled(tpl)
     )
   }
+
+  def invariant[u: P]: P[Invariant] = {
+    P(
+      Keywords.invariant ~/ location ~ identifier ~ is ~ (
+        undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
+        ) ~ briefly ~ description
+    ).map { case (loc, id, condition, brief, description) =>
+      Invariant(loc, id, condition, brief, description)
+    }
+  }
+
 
   def groupAliases[u: P]: P[String] = {
     P(

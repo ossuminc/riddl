@@ -50,7 +50,7 @@ class FoldingTest extends ParsingTest {
       |  type AString = String
       |}
       |""".stripMargin,
-    "FoldingTest"
+    "empty"
   )
 
   val expectedResult: Seq[Seq[String]] = List(

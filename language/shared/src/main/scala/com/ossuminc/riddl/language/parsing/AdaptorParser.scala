@@ -11,24 +11,27 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import Readability.*
 import com.ossuminc.riddl.language.AST
+import sourcecode.Text.generate
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {
   this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
     CommonParser =>
 
-  private def adaptorInclude[u: P]: P[IncludeHolder[OccursInAdaptor]] = {
-    include[u, OccursInAdaptor](adaptorDefinitions(_))
+  import scala.concurrent.Future
+
+  private def adaptorInclude[u: P]: P[Include[AdaptorContents]] = {
+    include[u, AdaptorContents](adaptorDefinitions(_))
   }
 
-  private def adaptorDefinitions[u: P]: P[Seq[OccursInAdaptor]] = {
+  private def adaptorDefinitions[u: P]: P[Seq[AdaptorContents]] = {
     P(
-      (handler(StatementsSet.AdaptorStatements) | function | inlet | option |
-        outlet | adaptorInclude | term | constant | authorRef | comment)./.rep(1)
-    )
+      (handler(StatementsSet.AdaptorStatements) | option | inlet | outlet
+        | function | term | constant | authorRef | comment)
+    ).asInstanceOf[P[AdaptorContents]].rep(1)
   }
 
-  private def adaptorBody[u: P]: P[Seq[OccursInAdaptor]] = {
+  private def adaptorBody[u: P]: P[Seq[AdaptorContents]] = {
     undefined(Seq.empty[OccursInAdaptor])./ | adaptorDefinitions./
   }
 
