@@ -8,7 +8,6 @@ package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.passes.symbols.Symbols.Parent
 import com.ossuminc.riddl.utils.StringHelpers
 
 import scala.collection.mutable

@@ -9,6 +9,8 @@ case class URL(url: String) extends AnyRef {
 
   @JSExport def isEmpty: Boolean = url.isEmpty
 
+  @JSExport def nonEmpty: Boolean = !isEmpty
+
   @JSExport def isValid: Boolean = URL.isValid(url)
 
   @JSExport override def toString: String = url
@@ -26,9 +28,9 @@ case class URL(url: String) extends AnyRef {
 
   @JSExport def parent: URL = {
     val index = url.lastIndexOf('/')
-    URL(url.substring(0,index))
+    URL(url.substring(0, index))
   }
-  
+
   @JSExport def resolve(pathElement: String): URL = {
     URL(url + "/" + pathElement)
   }

@@ -57,7 +57,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
   /** Generate a string that is the file path portion of a url including the line number.
     */
   def makeFilePath(definition: Definition): Option[String] = {
-    definition.loc.source.path.map(_.toString)
+    definition.loc.source.root.toExternalForm.map(_.toString)
   }
 
   def makeFullName(definition: Definition): String = {

@@ -52,8 +52,9 @@ case class ValidationPass(
     * @return
     *   an instance of the output type
     */
-  override def result: ValidationOutput = {
+  override def result(root: Root): ValidationOutput = {
     ValidationOutput(
+      root,
       messages.toMessages,
       inlets,
       outlets,
@@ -63,7 +64,7 @@ case class ValidationPass(
     )
   }
 
-  def postProcess(root: Root): Unit = {
+  override def postProcess(root: Root): Unit = {
     checkOverloads()
     checkStreaming(root)
   }
@@ -88,16 +89,16 @@ case class ValidationPass(
         validateUser(sa, parentsAsSeq)
       case omc: OnMessageClause =>
         validateOnMessageClause(omc, parentsAsSeq)
-        validateStatements(omc.statements, omc, parentsAsSeq)
+        validateStatements(omc.contents, omc, parentsAsSeq)
       case oic: OnInitializationClause =>
         checkDefinition(parentsAsSeq, oic)
-        validateStatements(oic.statements, oic, parentsAsSeq)
+        validateStatements(oic.contents, oic, parentsAsSeq)
       case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
-        validateStatements(otc.statements, otc, parentsAsSeq)
+        validateStatements(otc.contents, otc, parentsAsSeq)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
-        validateStatements(ooc.statements, ooc, parentsAsSeq)
+        validateStatements(ooc.contents, ooc, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
@@ -158,7 +159,7 @@ case class ValidationPass(
       checkMessageRef(omc.msg, omc, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
         case CommandCase =>
-          val sends: Seq[SendStatement] = omc.statements
+          val sends: Seq[SendStatement] = omc.contents
             .filter(_.isInstanceOf[SendStatement])
             .map(_.asInstanceOf[SendStatement])
           if sends.isEmpty || sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
@@ -166,7 +167,7 @@ case class ValidationPass(
               missing("Processing for commands should result in sending an event", omc.loc)
             )
         case QueryCase =>
-          val sends: Seq[SendStatement] = omc.statements
+          val sends: Seq[SendStatement] = omc.contents
             .filter(_.isInstanceOf[SendStatement])
             .map(_.asInstanceOf[SendStatement])
           if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == ResultCase) then
@@ -182,7 +183,7 @@ case class ValidationPass(
     checkDescription(omc)
   }
 
-  private def validateStatements(statements: Seq[Statement], onClause: OnClause, parents: Seq[Definition]): Unit = {
+  private def validateStatements(statements: Seq[Statements], onClause: OnClause, parents: Seq[Definition]): Unit = {
     if statements.isEmpty then
       messages.add(
         missing(s"${onClause.identify} should have statements")
@@ -482,7 +483,7 @@ case class ValidationPass(
         )
       )
     }
-    if e.states.nonEmpty && e.states.forall(_.handlers.isEmpty) && e.handlers.isEmpty then {
+    if e.states.nonEmpty && e.handlers.isEmpty then {
       messages.add(
         Message(
           e.loc,

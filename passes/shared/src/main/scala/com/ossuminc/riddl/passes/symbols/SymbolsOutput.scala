@@ -22,6 +22,7 @@ import scala.reflect.{ClassTag, classTag}
   *   The SymbolTable that handles identifier translation to definitions
   */
 case class SymbolsOutput(
+  root: Root = Root.empty,
   messages: Messages.Messages = Messages.empty,
   symTab: SymTab = Symbols.emptySymTab,
   parentage: Parentage = Symbols.emptyParentage
@@ -172,7 +173,7 @@ case class SymbolsOutput(
     symTab.get(leafName) match {
       case Some(set) =>
         val result = set
-          .filter { case (d: Definition, parents: Symbols.Parents) =>
+          .filter { case (d: Definition, parents: Parents) =>
             if clazz.isInstance(d) then {
               // It is in the result set as long as the container names
               // given in the provided id are the same as the container

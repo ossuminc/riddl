@@ -17,8 +17,9 @@ import scala.annotation.unused
 
 object PrettifyPass extends PassInfo[PrettifyPass.Options] {
   val name: String = "prettify"
-  def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    PrettifyPass(in, out, PrettifyState(options))
+  def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator = {
+    (in: PassInput, out: PassesOutput) =>
+      PrettifyPass(in, out, PrettifyState(options))
   }
 
   /** Options for the PrettifyPass and PrettifyCommand */
@@ -27,7 +28,9 @@ object PrettifyPass extends PassInfo[PrettifyPass.Options] {
     outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
     projectName: Option[String] = None,
     singleFile: Boolean = true
-  ) extends TranslationCommand.Options with PassOptions with PassCommandOptions {
+  ) extends TranslationCommand.Options
+      with PassOptions
+      with PassCommandOptions {
     def command: String = name
   }
 
@@ -77,14 +80,12 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
 
   def name: String = PrettifyPass.name
 
-  def postProcess(root: AST.Root): Unit = ()
-
   /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
     *
     * @return
     *   an instance of the output type
     */
-  override def result: PassOutput = PrettifyOutput(Messages.empty, state)
+  override def result(root: Root): PassOutput = PrettifyOutput(root, Messages.empty, state)
 
   def openContainer(container: Definition, parents: Seq[Definition]): Unit = {
     container match {
@@ -101,6 +102,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
       case handler: Handler =>
         state.withCurrent(_.openDef(handler))
+      case onClause: OnClause => 
+        processOnClause(onClause)
       case saga: Saga =>
         state.withCurrent(_.openDef(saga))
       case group: Group =>
@@ -114,8 +117,8 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
       case _: Root       => () // ignore
       case _: Enumerator => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: OnOtherClause |
-           _: OnInitializationClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet | _: Connector |
-           _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction =>
+          _: OnInitializationClause | _: OnMessageClause | _: OnTerminationClause | _: Inlet | _: Outlet |
+          _: Connector | _: User | _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: Schema =>
         () // not  containers
 
     }
@@ -126,7 +129,6 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     parents: Seq[Definition]
   ): Unit = {
     definition match {
-      case onClause: OnClause => processOnClause(onClause)
       case invariant: Invariant =>
         state.withCurrent(
           _.openDef(invariant).closeDef(invariant, withBrace = false)
@@ -231,7 +233,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     state.withCurrent(
       _.addIndent(interaction.format)
     )
-}
+  }
 
   private def closeUseCase(@unused useCase: UseCase): Unit = {
     // TODO: write closeUseCase
@@ -273,19 +275,19 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     onClause match {
       case omc: OnMessageClause =>
         state.withCurrent(
-          _.addIndent("on ").emitMessageRef(omc.msg).emitCodeBlock(omc.statements)
+          _.addIndent("on ").emitMessageRef(omc.msg).emitCodeBlock(omc.contents)
         )
       case oic: OnInitializationClause =>
         state.withCurrent(
-          _.addIndent("on init ").emitCodeBlock(oic.statements)
+          _.addIndent("on init ").emitCodeBlock(oic.contents)
         )
       case otc: OnTerminationClause =>
         state.withCurrent(
-          _.addIndent("on term ").emitCodeBlock(otc.statements)
+          _.addIndent("on term ").emitCodeBlock(otc.contents)
         )
       case ooc: OnOtherClause =>
         state.withCurrent(
-          _.addIndent("on other ").emitCodeBlock(ooc.statements)
+          _.addIndent("on other ").emitCodeBlock(ooc.contents)
         )
     }
   }
@@ -368,7 +370,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     @unused include: Include[T]
   ): Unit = {
     if !state.options.singleFile then {
-      include.origin match {
+      include.origin.toExternalForm match {
         case path: String if path.startsWith("http") =>
           val url = java.net.URI.create(path).toURL
           state.current.add(s"include \"$path\"")

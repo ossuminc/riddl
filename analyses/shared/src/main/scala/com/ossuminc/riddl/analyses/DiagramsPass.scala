@@ -66,6 +66,7 @@ type DomainDiagramData = Seq[(Context, ContextDiagramData)]
   *   The data necessary for the context diagrams
   */
 case class DiagramsPassOutput(
+  root: Root = Root.empty,
   messages: Messages.Messages = Messages.empty,
   dataFlowDiagrams: Map[Context, DataFlowDiagramData] = Map.empty,
   useCaseDiagrams: Map[UseCase, UseCaseDiagramData] = Map.empty,
@@ -142,7 +143,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case a: Adaptor     => inferRelationship(context, a)
       case _: Application => Seq.empty[ContextRelationship]
       case _: Context     => Seq.empty[ContextRelationship]
-      case e: Entity      => makeHandlerRelationships(context, e.states.flatMap(_.handlers))
+      case e: Entity      => makeHandlerRelationships(context, e.handlers)
       case _: Projector   => Seq.empty[ContextRelationship]
       case _: Repository  => Seq.empty[ContextRelationship]
       case _: Streamlet   => Seq.empty[ContextRelationship]
@@ -188,7 +189,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       h <- handlers
       oc: OnClause <- h.clauses if oc.isInstanceOf[OnMessageClause]
       omc: OnMessageClause = oc.asInstanceOf[OnMessageClause]
-      relationship <- makeStatementRelationships(context, omc, omc.statements)
+      relationship <- makeStatementRelationships(context, omc, omc.contents)
     } yield {
       relationship
     }
@@ -197,7 +198,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private def makeStatementRelationships(
     context: Context,
     parent: OnMessageClause,
-    statements: Seq[Statement]
+    statements: Seq[Statements]
   ): Seq[ContextRelationship] = {
     for {
       statement <- statements
@@ -209,7 +210,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     }
   }
 
-  private def getStatementReferences(statement: Statement): Seq[Reference[Definition]] = {
+  private def getStatementReferences(statement: Statements): Seq[Reference[Definition]] = {
     statement match
       case SendStatement(_, msg, portlet)   => Seq(msg, portlet)
       case TellStatement(_, msg, processor) => Seq(msg, processor)
@@ -321,10 +322,9 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     UseCaseDiagramData(title, actors, uc.contents.filter[Interaction])
   }
 
-  def postProcess(root: Root): Unit = {}
-
-  def result: DiagramsPassOutput = {
+  def result(root: Root): DiagramsPassOutput = {
     DiagramsPassOutput(
+      root,
       messages.toMessages,
       dataFlowDiagrams.toMap,
       useCaseDiagrams.toMap,

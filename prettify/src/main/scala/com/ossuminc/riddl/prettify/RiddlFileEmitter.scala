@@ -238,7 +238,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .nl
   }
 
-  def emitCodeBlock(statements: Seq[Statement]): this.type = {
+  def emitCodeBlock(statements: Seq[Statements]): this.type = {
     if statements.isEmpty then add(" { ??? }").nl
     else
       add(" {").incr.nl

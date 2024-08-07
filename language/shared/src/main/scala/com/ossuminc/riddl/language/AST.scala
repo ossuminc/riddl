@@ -25,8 +25,6 @@ import scala.scalajs.js.annotation._
 @JSExportTopLevel("AST")
 object AST {
 
-  import com.ossuminc.riddl.language.AST.{Comment, Interaction}
-
   ///////////////////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES
 
   /** The root trait of all parsed values. If a parser returns something, its a [[RiddlValue]]. Every node in the AST is
@@ -168,7 +166,7 @@ object AST {
   }
   case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] {
     def format: String = ""
-    def loc: At = At.empty 
+    def loc: At = At.empty
   }
 
   /** Represents a literal string parsed between quote characters in the input
@@ -240,6 +238,9 @@ object AST {
 
     /** All kinds of [[Description]] have a location provided by an [[At]] value. */
     def loc: At
+
+    /** The lines of the description */
+    def lines: Seq[LiteralString]
   }
 
   /** Companion class for Description only to define the empty value */
@@ -267,17 +268,21 @@ object AST {
   /** An implementation of [[Description]] that provides the description in a Markdown file */
   case class FileDescription(loc: At, file: URL) extends Description {
     def format: String = file.toExternalForm
+
+    lazy val lines: Seq[LiteralString] = {
+      import com.ossuminc.riddl.utils.{Await, Loader}
+      val future = Loader(file).load.map(_.split("\n").toSeq.map(LiteralString(loc, _)))
+      Await.result(future, 10)
+    }
   }
 
   /** An implementation of [[Description]] that provides the description at a URL */
-  case class URLDescription(loc: At, url: com.ossuminc.riddl.utils.URL) extends Description {
+  case class URLDescription(loc: At, url: URL) extends Description {
 
-    import com.ossuminc.riddl.utils.Loader
-
-    lazy val lines: Seq[String] = {
-      import com.ossuminc.riddl.utils.Await
-      val future = Loader(url).load.map(_.split("\n").toSeq)
-      Await.result[Seq[String]](future, 10)
+    lazy val lines: Seq[LiteralString] = {
+      import com.ossuminc.riddl.utils.{Loader, Await}
+      val future = Loader(url).load.map(_.split("\n").toSeq.map(LiteralString(loc, _)))
+      Await.result(future, 10)
     }
     override def format: String = url.toExternalForm
   }
@@ -562,7 +567,7 @@ object AST {
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema
+    MethodArgument | Schema | SimpleContainer[?]
 
   /** Type of definitions that can be defined at the root (top of file) scope */
   type OccursAtRootScope = Comment | Domain | Author
@@ -593,7 +598,7 @@ object AST {
   /** Type of definitions that occur in an [[Entity]] */
   type OccursInEntity = OccursInProcessor | State
   type EntityContents = OccursInEntity | Include[OccursInEntity]
-  
+
   /** Type of definitions that occur in a [[Handler]] */
   type OccursInHandler = OnClause | Comment
   type HandlerContents = OccursInHandler
@@ -628,7 +633,6 @@ object AST {
   /** Type of definitions that occur in a [[Function]]. */
   type OccursInFunction = OccursInVitalDefinition | Aggregation
   type FunctionContents = OccursInFunction | Include[OccursInFunction]
-
 
   /** Type of definitions that occur in a [[Type]] */
   type OccursInType = Field | Method | Enumerator
@@ -676,7 +680,6 @@ object AST {
     */
   sealed trait VitalDefinition[CT <: ContentValues]
       extends Definition
-      with Container[CT]
       with WithIncludes[CT]
       with WithComments
       with WithDocumentation
@@ -779,7 +782,7 @@ object AST {
       with WithDomains {
 
     override def isRootContainer: Boolean = true
-    
+
     def loc: At = At.empty
 
     override def id: Identifier = Identifier(loc, "Root")
@@ -2356,7 +2359,9 @@ object AST {
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends Container[OnClauseContents]
+  sealed trait OnClause extends Definition with WithComments {
+    override def contents: Contents[Statements] = Seq.empty
+  }
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
     * corresponds to the "other" case of an [[Handler]].
@@ -2373,7 +2378,7 @@ object AST {
   @JSExportTopLevel("OnOtherClause")
   case class OnOtherClause(
     loc: At,
-    contents: Seq[OnClauseContents] = Seq.empty[OnClauseContents],
+    override val contents: Seq[Statements] = Seq.empty[Statements],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -2398,7 +2403,7 @@ object AST {
   @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
     loc: At,
-    contents: Contents[OnClauseContents] = Seq.empty[OnClauseContents],
+    override val contents: Contents[Statements] = Seq.empty[Statements],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -2430,7 +2435,7 @@ object AST {
     loc: At,
     msg: MessageRef,
     from: Option[(Option[Identifier], Reference[Definition])],
-    contents: Contents[OnClauseContents] = Seq.empty[OnClauseContents],
+    override val contents: Contents[Statements] = Seq.empty[Statements],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
@@ -2452,7 +2457,7 @@ object AST {
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
-    contents: Contents[OnClauseContents] = Seq.empty[OnClauseContents],
+    override val contents: Contents[Statements] = Seq.empty[Statements],
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {

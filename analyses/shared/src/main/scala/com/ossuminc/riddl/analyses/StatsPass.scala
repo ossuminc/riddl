@@ -79,6 +79,7 @@ case class KindStats(
 }
 
 case class StatsOutput(
+  root: Root = Root.empty, 
   messages: Messages = Messages.empty,
   maximum_depth: Int = 0,
   categories: Map[String, KindStats] = Map.empty
@@ -102,7 +103,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
         handler <- handlers
         clause <- handler.clauses
       } yield {
-        clause.statements.size.toLong
+        clause.contents.size.toLong
       }
       sizes.foldLeft(0L)((a, b) => a + b)
     }
@@ -163,7 +164,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     }
   }
 
-  def postProcess(root: Root): Unit = {
+  override def postProcess(root: Root): Unit = {
     for { defStats <- collectedValues } {
       def remapping(existing: Option[KindStats]): Option[KindStats] = {
         Some(
@@ -219,9 +220,10 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     * @return
     *   an instance of the output type
     */
-  override def result: StatsOutput = {
+  override def result(root: Root): StatsOutput = {
     val totals = total_stats.getOrElse(KindStats())
     StatsOutput(
+      root,
       Messages.empty,
       maximum_depth,
       categories = (kind_stats.toSeq :+ ("All" -> totals)).toMap[String, KindStats]

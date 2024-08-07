@@ -12,6 +12,7 @@ import com.ossuminc.riddl.passes.PassOutput
 
 /** The output of the Validation Pass */
 case class ValidationOutput(
+  root: Root = Root.empty,
   messages: Messages.Messages = Messages.empty,
   inlets: Seq[Inlet] = Seq.empty[Inlet],
   outlets: Seq[Outlet] = Seq.empty[Outlet],

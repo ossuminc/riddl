@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, Parents, SymTab, SymTabItem}
+import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, SymTab, SymTabItem}
 
 import scala.annotation.unused
 import scala.collection.mutable
@@ -52,8 +52,8 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
 
   def process(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case _: Root                         => // NOTE: Root doesn't have any names
-      case nv: NamedValue if nv.isAnonymous => //Nameless things, like includes, don't go in symbol table
+      case _: Root                          => // NOTE: Root doesn't have any names
+      case nv: NamedValue if nv.isAnonymous => // Nameless things, like includes, don't go in symbol table
       case namedValue: NamedValue => // NOTE: Anything with a name goes in symbol table
         val name = namedValue.id.value
         if name.nonEmpty then {
@@ -75,8 +75,8 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
     }
   }
 
-  override def result: SymbolsOutput = {
-    SymbolsOutput(Messages.empty, symTab, parentage)
+  override def result(root: Root): SymbolsOutput = {
+    SymbolsOutput(root, Messages.empty, symTab, parentage)
   }
 
   override def close(): Unit = ()

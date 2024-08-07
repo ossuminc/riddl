@@ -5,16 +5,14 @@
  */
 package com.ossuminc.riddl.passes.symbols
 
-import com.ossuminc.riddl.language.AST.{Definition, NamedValue}
+import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Parent, Parents}
 
 import scala.collection.mutable
 
-/** Some common types associated with the AST names of things for brevity; and, used widely*/
+/** Some common types associated with the AST names of things for brevity; and, used widely */
 object Symbols {
-  type Parent = Definition
-  type Parents = Seq[Parent]
   type Parentage = mutable.HashMap[NamedValue, Parents]
-  type ParentStack = mutable.Stack[Definition]
+  type ParentStack = mutable.Stack[Parent]
   type PathNames = Seq[String]
   type SymTabItem = (NamedValue, Parents)
   type SymTabItems = Seq[SymTabItem]

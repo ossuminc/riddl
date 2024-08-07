@@ -188,7 +188,7 @@ trait BasicValidation {
     this
   }
 
-  def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
+  def checkIdentifierLength[T <: NamedValue](d: T, min: Int = 3): this.type = {
     if d.id.value.nonEmpty && d.id.value.length < min then {
       messages.addStyle(
         d.id.loc,

@@ -51,7 +51,9 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) ex
     log: Logger
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputPath: Path) =>
-      TopLevelParser.parsePath(inputPath, commonOptions) match {
+      import com.ossuminc.riddl.language.parsing.RiddlParserInput
+      val rpi = RiddlParserInput.rpiFromPath(inputPath)
+      TopLevelParser.parseInput(rpi, commonOptions) match {
         case Left(errors) =>
           Left[Messages, PassesResult](errors)
         case Right(root) =>
