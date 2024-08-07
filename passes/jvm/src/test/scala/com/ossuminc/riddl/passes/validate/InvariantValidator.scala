@@ -8,11 +8,12 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.Messages.*
+import org.scalatest.TestData
 
 class InvariantValidator extends ValidatingTest {
 
   "InvariantValidator" should {
-    "allow undefined expressions in invariants" in {
+    "allow undefined expressions in invariants" in { (td: TestData) =>
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
@@ -37,7 +38,7 @@ class InvariantValidator extends ValidatingTest {
         )
       }
     }
-    "warn about missing descriptions " in {
+    "warn about missing descriptions " in { (td: TestData) =>
       parseAndValidateInContext[AST.Entity](
         """
           |entity user is {
@@ -52,21 +53,18 @@ class InvariantValidator extends ValidatingTest {
         )
       }
     }
-    "allow arbitrary conditional" in {
+    "allow arbitrary conditional" in { (td: TestData) =>
       parseAndValidateInContext[AST.Entity]("""
                                               |entity user is {
                                               | invariant large is "true"
                                               |}
-                                              |""".stripMargin) {
-        (_, _, msgs) =>
-          assertValidationMessage(
-            msgs,
-            MissingWarning,
-            "Invariant 'large' should have a description"
-          )
+                                              |""".stripMargin) { (_, _, msgs) =>
+        assertValidationMessage(
+          msgs,
+          MissingWarning,
+          "Invariant 'large' should have a description"
+        )
       }
-
     }
   }
-
 }

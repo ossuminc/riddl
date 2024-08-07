@@ -7,11 +7,13 @@ import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 
 import java.nio.file.Path
 
+import org.scalatest.TestData
+
 /** Unit Tests For the ResolutionPass */
 class PathResolutionPassTest extends ResolvingTest {
 
   "PathResolutionPass" must {
-    "resolve a full path" in {
+    "resolve a full path" in {(td: TestData) =>
       val rpi = RiddlParserInput(
         """domain A {
           |  domain B {
@@ -20,8 +22,7 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |  type APrime = A.B.C.D
-          |}""".stripMargin,
-        "resolve a full path"
+          |}""".stripMargin,td
       )
       parseAndResolve(rpi) { (input, outputs) =>
         val target: Type = input.root.domains.head.domains.head.domains.head.types.head
@@ -37,8 +38,8 @@ class PathResolutionPassTest extends ResolvingTest {
       }
     }
 
-    "resolve a relative path, B.C.D" in {
-      val rpi =
+    "resolve a relative path, B.C.D" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
         """domain A {
           |  domain B {
           |    domain C {
@@ -47,8 +48,8 @@ class PathResolutionPassTest extends ResolvingTest {
           |    type FromB = B.C.D
           |  }
           |
-          |}""".stripMargin
-      parseAndResolve(RiddlParserInput(rpi)) { (in, outs) =>
+          |}""".stripMargin, td)
+      parseAndResolve(rpi) { (in, outs) =>
         val target: Type = in.root.domains.head.domains.head.domains.head.types.head
         val parent = in.root.domains.head.domains.head.types.head
         val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
@@ -61,14 +62,14 @@ class PathResolutionPassTest extends ResolvingTest {
       }
     }
 
-    "resolve A.Top" in {
-      val input =
+    "resolve A.Top" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain A {
           |  type Top = String
           |  type aTop = type A.Top
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (in, outs) =>
+          |""".stripMargin,td)
+      parseAndResolve(input) { (in, outs) =>
         val target: Type = in.root.domains.head.types.find(_.id.value == "Top").get
         val parent: Type = in.root.domains.head.types.find(_.id.value == "aTop").get
         val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
@@ -82,8 +83,8 @@ class PathResolutionPassTest extends ResolvingTest {
       }
     }
 
-    "resolve A.B.InB" in {
-      val input =
+    "resolve A.B.InB" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain A {
           |  domain B {
           |    type InB = String
@@ -92,12 +93,12 @@ class PathResolutionPassTest extends ResolvingTest {
           |    type InC = A.B.InB
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
+          |""".stripMargin,td)
+      parseAndResolve(input) { (_, _) => succeed }
     }
 
-    "resolve entity field" in {
-      val input =
+    "resolve entity field" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain A {
           |  context D {
           |    type DSimple = Number
@@ -110,12 +111,12 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
+          |""".stripMargin,td)
+      parseAndResolve(input) { (_, _) => succeed }
     }
 
-    "resolve nested fields - old " in {
-      val input =
+    "resolve nested fields - old " in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain D {
           |  type Bottom = { a: String }
@@ -132,12 +133,12 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
+          |""".stripMargin,td)
+      parseAndResolve(input) { (_, _) => succeed }
     }
 
-    "resolve nested fields - new" in {
-      val input =
+    "resolve nested fields - new" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain D {
           |  type Bottom = { a: String }
@@ -154,12 +155,12 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
+          |""".stripMargin,td)
+      parseAndResolve(input) { (_, _) => succeed }
     }
 
-    "resolve complicated paths" in {
-      val input =
+    "resolve complicated paths" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain A {
           |  type Top = String
@@ -188,8 +189,8 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (in, outs) =>
+          |""".stripMargin,td)
+      parseAndResolve(input) { (in, outs) =>
         outs.getAllMessages mustBe Messages.empty
         val Top = in.root.domains.head.types.head
         val D = in.root.domains.head.domains.head.contexts.find(_.id.value == "D").get
@@ -203,8 +204,8 @@ class PathResolutionPassTest extends ResolvingTest {
       }
     }
 
-    "resolve doc example" in {
-      val input =
+    "resolve doc example" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain A {
           |  domain B {
           |    context C {
@@ -221,11 +222,11 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
+          |""".stripMargin, td)
+      parseAndResolve(input) { (_, _) => succeed }
     }
-    "deal with cyclic references" in {
-      val input =
+    "deal with cyclic references" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain A {
           |  type T is { tp: A.TPrime } // Refers to T.TPrime
           |  type TPrime is { t: A.T } // Refers to A.T cyclically
@@ -235,26 +236,25 @@ class PathResolutionPassTest extends ResolvingTest {
           |      record fields is {
           |        f: A.TPrime
           |      }
-          |      state S of E.fields is  {
-          |        handler foo is {
-          |         on command DoIt {
-          |           set field E.S.f.t to "true"
-          |         }
-          |        }
+          |      state S of E.fields
+          |      handler foo is {
+          |       on command DoIt {
+          |         set field E.S.f.t to "true"
+          |       }
           |      }
           |    }
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed } { messages =>
+          |""".stripMargin,td)
+      parseAndResolve(input) { (_, _) => succeed } { messages =>
         val errors = messages.justErrors
         errors must be(empty)
         fail(errors.format)
       }
     }
 
-    "resolve simple path directly" in {
-      val input =
+    "resolve simple path directly" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain D {
           |  context C {
           |    command DoIt is { value: Number }
@@ -271,10 +271,11 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
-      parseAndResolve(RiddlParserInput(input)) { (_, _) => succeed }
+          |""".stripMargin,td)
+      parseAndResolve(input) { (_, _) => succeed }
     }
-    "resolve simple path through an include" in {
+    "resolve simple path through an include" in { (td: TestData) =>
+      import com.ossuminc.riddl.utils.URL 
       val eL = At.empty
       val root = Root(
         contents = Seq(
@@ -284,7 +285,7 @@ class PathResolutionPassTest extends ResolvingTest {
             contents = Seq(
               Include(
                 eL,
-                "",
+                URL.empty,
                 contents = Seq(
                   Context(
                     eL,
@@ -322,7 +323,7 @@ class PathResolutionPassTest extends ResolvingTest {
       val errors = messages.justErrors
       if errors.nonEmpty then fail(errors.format) else succeed
     }
-    "resolve entity references" in {
+    "resolve entity references" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain ReactiveBBQ is {
           |  type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
@@ -332,8 +333,7 @@ class PathResolutionPassTest extends ResolvingTest {
           |    entity Customer is { ??? }
           |  }
           |}
-          |""".stripMargin
-      )
+          |""".stripMargin,td)
       parseAndResolve(input) { (in, outs) =>
         val entity = in.root.domains.head.contexts.head.entities.head
         entity.getClass mustBe classOf[Entity]
@@ -355,12 +355,13 @@ class PathResolutionPassTest extends ResolvingTest {
         }
       }
     }
-    "resolve rbbq.riddl" in {
-      val input = RiddlParserInput(Path.of("language/src/test/input/domains/rbbq.riddl"))
+    "resolve rbbq.riddl" in { (td: TestData) =>
+      val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
       parseAndResolve(input) { (_, _) => succeed }
     }
-    "resolve references in morph action" in {
-      val input = RiddlParserInput("""domain Ignore is {
+    "resolve references in morph action" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain Ignore is {
           |  context Ignore2 is {
           |    entity OfInterest is {
           |      command MorphIt is {}
@@ -377,27 +378,27 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin)
+          |""".stripMargin, td)
       parseAndResolve(input) { (_, _) => succeed }
     }
-    "resolve a path identifier" in {
-      val rpi = RiddlParserInput(data = """domain d is {
-                                          |  context c is {
-                                          |    entity e is {
-                                          |      state s of record c.eState is {
-                                          |        handler h is {
-                                          |          on command c.foo { ??? }
-                                          |        }
-                                          |      }
-                                          |    }
-                                          |    record eState is { f: Integer }
-                                          |    command foo is { ??? }
-                                          |  }
-                                          |}
-                                          |""".stripMargin)
+    "resolve a path identifier" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain d is {
+          |  context c is {
+          |    entity e is {
+          |      state s of record c.eState
+          |      handler h is {
+          |        on command c.foo { ??? }
+          |      }
+          |    }
+          |    record eState is { f: Integer }
+          |    command foo is { ??? }
+          |  }
+          |}
+          |""".stripMargin, td)
       parseAndResolve(rpi)()()
     }
-    "groups contain groups" in {
+    "groups contain groups" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain foo {
           |  application app {
@@ -405,8 +406,7 @@ class PathResolutionPassTest extends ResolvingTest {
           |    group container { contains member as group contained }
           |  }
           |}
-          |""".stripMargin
-      )
+          |""".stripMargin,td)
       parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
         val app: Application = pi.root.domains.head.applications.head
         val contained: Group = app.groups.head

@@ -10,23 +10,27 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 /** Unit Tests For TypeValidationTest */
 class TypeValidatorTest extends ValidatingTest {
 
   "TypeValidator" should {
-    "ensure type names start with capital letter" in {
-      parseAndValidateDomain("""domain foo is {
-                               |type bar is String
-                               |}
-                               |""".stripMargin) { case (_: Domain, _, msgs: Seq[Message]) =>
+    "ensure type names start with capital letter" in { (td:TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is {
+          |type bar is String
+          |}
+          |""".stripMargin,td
+      )
+      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Seq[Message]) =>
         if msgs.isEmpty then fail("Type 'bar' should have generated warning")
         else if msgs.map(_.message).exists(_.contains("should start with"))
         then { succeed }
         else { fail("No such message") }
       }
     }
-    "identify undefined type references" in {
+    "identify undefined type references" in { (td:TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
@@ -41,7 +45,7 @@ class TypeValidatorTest extends ValidatingTest {
           |  type Alternation is one of { Bar or Foo }
           |  type Order is Id(Bar)
           |}
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
@@ -50,12 +54,12 @@ class TypeValidatorTest extends ValidatingTest {
           errors.head.message must include("but an Entity was expected")
       }
     }
-    "allow ??? in aggregate bodies without warning" in {
+    "allow ??? in aggregate bodies without warning" in { (td:TestData) =>
       val input = RiddlParserInput(
         """domain foo {
           |type Empty is { ??? } explained as "empty"
           |} explained as "nothing"
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         msgs mustNot be(empty)
@@ -64,27 +68,27 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
 
-    "identify when pattern type does not refer to a valid pattern" in {
+    "identify when pattern type does not refer to a valid pattern" in { (td:TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
           |type pat is Pattern("[")
           |}
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(msgs, Error, "Unclosed character class")
       }
     }
 
-    "identify when unique ID types reference something other than an entity" in {
+    "identify when unique ID types reference something other than an entity" in { (td:TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
           |context TypeTest is { ??? }
           |type Order is Id(TypeTest)
           |}
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
@@ -95,7 +99,7 @@ class TypeValidatorTest extends ValidatingTest {
       }
     }
 
-    "check infrequently used TypeExpressions" in {
+    "check infrequently used TypeExpressions" in { (td:TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
@@ -106,7 +110,7 @@ class TypeValidatorTest extends ValidatingTest {
           |  type d = Decimal(3,8)
           |  command c(int: Integer, str: String)
           |}
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain: Domain, _, msgs: Messages) =>
         msgs.justErrors must be(empty)

@@ -9,38 +9,43 @@ package com.ossuminc.riddl.passes.resolve
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.TestData
 
-class UsageSpec extends AnyWordSpec with Matchers {
+class UsageSpec extends ParsingTest {
 
   "Usage" should {
-    "correctly associated definitions" in {
-      val input = """
-                    |domain D is {
-                    |  type T is Number
-                    |  context C is {
-                    |    command DoIt is { ref: Id(C.E), f1: C.T }
-                    |    type T is D.T
-                    |    entity E is {
-                    |      record SFields is {
-                    |        f2: D.T,
-                    |        f3: C.T
-                    |      }
-                    |      state S of E.SFields is {
-                    |        handler H is {
-                    |          on command C.DoIt from di: context C{
-                    |            set field S.f2 to "field di.f1"
-                    |          }
-                    |        }
-                    |      }
-                    |    }
-                    |  }
-                    |}
-                    |""".stripMargin
-      Riddl.parseAndValidate(RiddlParserInput(input), CommonOptions()) match {
-        case Left(messages) => fail(messages.format)
+    "correctly associated definitions" in { (td: TestData) =>
+      import com.ossuminc.riddl.language.Messages.Messages
+      val input = RiddlParserInput(
+        """
+          |domain D is {
+          |  type T is Number
+          |  context C is {
+          |    command DoIt is { ref: Id(C.E), f1: C.T }
+          |    type T is D.T
+          |    entity E is {
+          |      record SFields is {
+          |        f2: D.T,
+          |        f3: C.T
+          |      }
+          |      state S of E.SFields
+          |      handler H is {
+          |        on command C.DoIt from di: context C{
+          |          set field S.f2 to "field di.f1"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      Riddl.parseAndValidate(input, CommonOptions()) match {
+        case Left(messages:Messages) => fail(messages.format)
         case Right(result: PassesResult) =>
           val usage = result.usage
           // ensure usedBy and uses are reflective
@@ -75,24 +80,26 @@ class UsageSpec extends AnyWordSpec with Matchers {
           usage.uses(f3, C_T) must be(true)
       }
     }
-    "unused entities generate a warning" in {
-      val input = """domain foo {
-                    |  context Bar is {
-                    |    command ACommand is { ??? } described as "AC"
-                    |    entity fooBar is {
-                    |      record fields is { field: Number }
-                    |      state AState of fooBar.fields {
-                    |        handler fooBarHandlerForAState is {
-                    |          on command ACommand {
-                    |            ???
-                    |          } described as "inconsequential"
-                    |        } described as "inconsequential"
-                    |      } described as "inconsequential"
-                    |    } described as "unused"
-                    |  } described as "inconsequential"
-                    |} described as "inconsequential"
-                    |""".stripMargin
-      Riddl.parseAndValidate(RiddlParserInput(input), shouldFailOnError = false) match {
+    "unused entities generate a warning" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo {
+          |  context Bar is {
+          |    command ACommand is { ??? } described as "AC"
+          |    entity fooBar is {
+          |      record fields is { field: Number }
+          |      state AState of fooBar.fields
+          |      handler fooBarHandlerForAState is {
+          |        on command ACommand {
+          |          ???
+          |        } described as "inconsequential"
+          |      } described as "inconsequential"
+          |    } described as "unused"
+          |  } described as "inconsequential"
+          |} described as "inconsequential"
+          |""".stripMargin,
+        td
+      )
+      Riddl.parseAndValidate(input, shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
         case Right(result)  =>
           // info(result.messages.format)
@@ -104,13 +111,16 @@ class UsageSpec extends AnyWordSpec with Matchers {
       }
 
     }
-    "unused types generate a warning" in {
-      val input = """domain foo {
-                    |  type Bar = Number described as "consequential"
-                    |} described as "inconsequential"
-                    |""".stripMargin
+    "unused types generate a warning" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo {
+          |  type Bar = Number described as "consequential"
+          |} described as "inconsequential"
+          |""".stripMargin,
+        td
+      )
       val options = CommonOptions(showStyleWarnings = false, showMissingWarnings = false)
-      Riddl.parseAndValidate(RiddlParserInput(input), options, shouldFailOnError = false) match {
+      Riddl.parseAndValidate(input, options, shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
         case Right(result) =>
           result.messages.isOnlyIgnorable mustBe true

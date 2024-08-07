@@ -7,16 +7,21 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Adaptor
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 /** Unit Tests For AdaptorTest */
 class AdaptorTest extends ValidatingTest {
 
   "Adaptors" should {
-    "handle undefined body" in {
-      val input = """adaptor PaymentAdapter from context Foo is {
-                    |  ???
-                    |}
-                    |""".stripMargin
+    "handle undefined body" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """adaptor PaymentAdapter from context Foo is {
+          |  ???
+          |}
+          |""".stripMargin,
+        td
+      )
       parseDefinition[Adaptor](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -25,8 +30,8 @@ class AdaptorTest extends ValidatingTest {
       }
     }
 
-    "allow message actions" in {
-      val input =
+    "allow message actions" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain ignore is { context Target is {???}  context Foo is {
           |type ItHappened = event { abc: String described as "abc" } described as "?"
           |adaptor PaymentAdapter to context Target is {
@@ -38,14 +43,16 @@ class AdaptorTest extends ValidatingTest {
           |} explained as "?"
           |} explained as "?"
           |} explained as "?"
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { (_, _, messages) =>
         messages.isOnlyIgnorable mustBe true
       }
     }
 
-    "allow wrapper adaptations" in {
-      val input =
+    "allow wrapper adaptations" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain ignore is {
           | context Target is {???}
           | context Foo is {
@@ -68,12 +75,12 @@ class AdaptorTest extends ValidatingTest {
           |  } explained as "?"
           | } explained as "?"
           |} explained as "?"
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { (_, _, messages) =>
-
-          succeed
+        succeed
       }
     }
-
   }
 }

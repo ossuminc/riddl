@@ -9,20 +9,23 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 /** Unit Tests For EntityValidatorTest */
 class EntityValidatorTest extends ValidatingTest {
 
   "EntityValidator" should {
-    "handle a variety of options" in {
-      val input = """entity WithOptions is {
-                    | option finite-state-machine
-                    | option message-queue
-                    | option aggregate
-                    | option transient
-                    | option available
-                    |}
-                    |""".stripMargin
+    "handle a variety of options" in { (td: TestData) =>
+      val input = 
+        """entity WithOptions is {
+          | option finite-state-machine
+          | option message-queue
+          | option aggregate
+          | option transient
+          | option available
+          |}
+          |""".stripMargin
       parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
         case (entity: Entity, rpi, msgs: Messages) =>
           // info(msgs.format)
@@ -39,13 +42,15 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
 
-    "handle entity with multiple states" in {
-      val input =
+    "handle entity with multiple states" in { (td: TestData) =>
+      val input = 
         """entity MultiState is {
           |  option finite-state-machine
           |  record fields is { field: String  }
-          |  state foo of MultiState.fields is { handler x is {???} }
-          |  state bar of MultiState.fields is { handler x is {???} }
+          |  state foo of MultiState.fields
+          |  handler x is {???}
+          |  state bar of MultiState.fields 
+          |  handler y is {???}
           |  handler fum is { ??? }
           |}""".stripMargin
       parseAndValidateInContext[Entity](input) { case (entity: Entity, _, msgs: Messages) =>
@@ -53,12 +58,13 @@ class EntityValidatorTest extends ValidatingTest {
         entity.states.size mustBe 2
       }
     }
-    "error for finite-state-machine entities without at least two states" in {
+    "error for finite-state-machine entities without at least two states" in { (td: TestData) =>
       val input =
         """entity MultiState is {
           |  option finite-state-machine
           |  record fields is { field: String }
-          |  state foo of MultiState.fields is {  handler x is {???}  }
+          |  state foo of MultiState.fields
+          |  handler x is {???}
           |}""".stripMargin
       parseAndValidateInContext[Entity](input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_: Entity, _, msgs: Messages) =>
@@ -70,7 +76,7 @@ class EntityValidatorTest extends ValidatingTest {
           )
       }
     }
-    "catch missing things" in {
+    "catch missing things" in { (td: TestData) =>
       val input = """entity Hamburger is {
                     |  record fields is { field: SomeType }
                     |  state foo of Hamburger.fields
@@ -107,20 +113,20 @@ class EntityValidatorTest extends ValidatingTest {
       }
     }
 
-    "produce an error for transient entity with empty event handler" in {
-      val input =
+    "produce an error for transient entity with empty event handler" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain foo is {
           |context bar is {
           |  entity Hamburger  is {
           |    option aggregate option transient
           |    record fields is { field: SomeType }
-          |    state field of Hamburger.fields is {  handler x is {???}  }
-          |    handler foo is {}
+          |    state field of Hamburger.fields
+          |    handler foo is { ??? }
           |  }
           |}
           |}
-          |""".stripMargin
+          |""".stripMargin,td) 
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
@@ -129,8 +135,8 @@ class EntityValidatorTest extends ValidatingTest {
         )
       }
     }
-    "produce correct field references" in {
-      val input =
+    "produce correct field references" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain foo is {
           |context bar is {
           |  type DoIt = command { ??? }
@@ -141,7 +147,7 @@ class EntityValidatorTest extends ValidatingTest {
           |    outlet ridOfIt is event Message
           |    type SomeType is Number
           |    record fields is { field: SomeType } handler x is { ??? }
-          |    state field of Hamburger.fields is { }
+          |    state field of Hamburger.fields
           |    handler baz is {
           |      on command DoIt {
           |        send event Message to outlet ridOfIt
@@ -150,7 +156,7 @@ class EntityValidatorTest extends ValidatingTest {
           |  }
           |}
           |}
-          |""".stripMargin
+          |""".stripMargin,td)
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         val errors = msgs.justErrors
         if errors.nonEmpty then fail(errors.format)

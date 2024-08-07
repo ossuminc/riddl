@@ -511,7 +511,7 @@ case class ValidationPass(
           case _ => false
         }
       },
-      s"${p.identify} lacks a required ${RecordCase.format} definition.",
+      s"${p.identify} lacks a required ${RecordCase.useCase} definition.",
       Messages.Error,
       p.loc
     )

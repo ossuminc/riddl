@@ -9,11 +9,12 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.{Domain, Epic, LiteralString}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 class EpicTest extends ValidatingTest {
 
   "Epic" should {
-    "parse and validate a case-less example " in {
+    "parse and validate a case-less example " in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain foo is {
           |  user Author is "human writer"
@@ -23,7 +24,7 @@ class EpicTest extends ValidatingTest {
           |  case perfection is { ???  }
           |} described as "A simple authoring story"
           |} described as "a parsing convenience"
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(rpi) { case (domain: Domain, rpi: RiddlParserInput, messages: Messages.Messages) =>
         domain.epics mustNot be(empty)
@@ -44,7 +45,7 @@ class EpicTest extends ValidatingTest {
       }
     }
 
-    "parse and validate a full example" in {
+    "parse and validate a full example" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
           |context OrganizationContext {
@@ -100,7 +101,7 @@ class EpicTest extends ValidatingTest {
           |} briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
           |} briefly "A placeholder" described by "Not important"
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
@@ -112,7 +113,7 @@ class EpicTest extends ValidatingTest {
           else fail(errors.format)
       }
     }
-    "handle parallel group" in {
+    "handle parallel group" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
           |context OrganizationContext {
@@ -168,7 +169,7 @@ class EpicTest extends ValidatingTest {
           |} briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
           |} briefly "A placeholder" described by "Not important"
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
@@ -183,7 +184,7 @@ class EpicTest extends ValidatingTest {
             fail("Shouldn't have errors")
       }
     }
-    "handle optional group" in {
+    "handle optional group" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
           |context OrganizationContext {
@@ -234,7 +235,7 @@ class EpicTest extends ValidatingTest {
           |} briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
           |} briefly "A placeholder" described by "Not important"
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>

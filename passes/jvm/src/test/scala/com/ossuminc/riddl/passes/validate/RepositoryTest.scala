@@ -3,12 +3,13 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.Domain
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 /** Unit Tests For Repository */
 class RepositoryTest extends ValidatingTest {
 
   "RepositoryTest" should {
-    "handle a basic definition" in {
+    "handle a basic definition" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
           |  context bar is {
@@ -28,8 +29,7 @@ class RepositoryTest extends ValidatingTest {
           |     }
           |  }
           |}
-          |""".stripMargin
-      )
+          |""".stripMargin,td)
       val options = CommonOptions.noWarnings.copy(showMissingWarnings=false)
       parseAndValidateDomain(input, options)  {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>

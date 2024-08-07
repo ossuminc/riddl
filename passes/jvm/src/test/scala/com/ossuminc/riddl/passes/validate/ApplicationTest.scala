@@ -9,11 +9,12 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.Domain
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 class ApplicationTest extends ValidatingTest {
 
   "Application" should {
-    "parse a simple case " in {
+    "parse a simple case " in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain foo is {
           |  application Test is {
@@ -28,7 +29,7 @@ class ApplicationTest extends ValidatingTest {
           |    } described as "Show a title, collect a Name"
           |  } described as "A very simple app just for testing"
           |} described as "Just a parsing convenience"
-          |""".stripMargin
+          |""".stripMargin,td
       )
       parseAndValidateDomain(rpi) {
         case (

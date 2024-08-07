@@ -54,6 +54,10 @@ object RiddlParserInput {
     StringParserInput(data, URL.empty, purpose)
   }
 
+  implicit def apply(data: (String, String)): RiddlParserInput = {
+    StringParserInput(data._1, URL.empty, data._2)
+  }
+
   /** Set up a parser input from a [[com.ossuminc.riddl.utils.URL]].
     *
     * @param url
@@ -198,7 +202,7 @@ abstract class RiddlParserInput extends ParserInput {
       val quoted = slice(start, end).stripTrailing()
       if quoted.isEmpty then ""
       else {
-        val col = Integer.max(index.col - 1,0)
+        val col = Integer.max(index.col - 1, 0)
         quoted + nl + " ".repeat(col) + "^" + nl
       }
     } else ""

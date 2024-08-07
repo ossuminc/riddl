@@ -40,11 +40,11 @@ class PassTest extends AnyWordSpec with Matchers {
   class TestPass(input: PassInput, output: PassesOutput) extends Pass(input, output) {
     def name: String = TestPass.name
 
-    def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
+    override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
 
     protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = ???
 
-    def result: com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root:Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
 
   object TestPass extends PassInfo[PassOptions] {
@@ -58,13 +58,11 @@ class PassTest extends AnyWordSpec with Matchers {
 
     def name: String = "TestPass2"
 
-    def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
+    override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
 
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {
+    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {}
 
-    }
-
-    def result: com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root:Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
 
   object TestPass2 extends PassInfo[PassOptions] {
@@ -127,7 +125,7 @@ class PassTest extends AnyWordSpec with Matchers {
 
     override def postProcess(root: Root): Unit = ()
 
-    override def result: PassOutput = PassOutput.empty
+    override def result(root:Root): PassOutput = PassOutput.empty
   }
 
   "HierarchyPass" must {
@@ -142,10 +140,9 @@ class PassTest extends AnyWordSpec with Matchers {
           val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens.mustBe(closes)
-          opens.mustBe(47)
-          values.mustBe(19)
-          leaves.mustBe(22)
-
+          opens.mustBe(50)
+          values.mustBe(23)
+          leaves.mustBe(20)
     }
   }
 }

@@ -4,11 +4,12 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.{Messages, StyleWarning}
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData 
 
 class StatementValidatorTest extends ValidatingTest {
 
   "Statement Validation" must {
-    "identify cross-context references" in {
+    "identify cross-context references" in { (td:TestData) =>
       val input =
         """domain test {
           |  context one {

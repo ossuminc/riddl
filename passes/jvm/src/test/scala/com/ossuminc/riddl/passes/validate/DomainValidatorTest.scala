@@ -12,12 +12,13 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass
 import com.ossuminc.riddl.passes.Riddl
+import org.scalatest.TestData
 
 /** Unit Tests For ValidatorTest */
 class DomainValidatorTest extends ValidatingTest {
 
   "DomainValidator" should {
-    "identify duplicate domain definitions" in {
+    "identify duplicate domain definitions" in { (td: TestData) =>
       val rpi = RiddlParserInput.empty
       val root = Root(
         Seq(
@@ -37,7 +38,7 @@ class DomainValidatorTest extends ValidatingTest {
       }
     }
 
-    "allow author information" in {
+    "allow author information" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """author Reid is {
                 |    name: "Reid Spencer"
@@ -48,8 +49,7 @@ class DomainValidatorTest extends ValidatingTest {
                 |domain foo is {
                 |  by author Reid
                 |} described as "example"
-                |""".stripMargin
-      )
+                |""".stripMargin,td)
       Riddl.parseAndValidate(rpi) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
@@ -82,11 +82,12 @@ class DomainValidatorTest extends ValidatingTest {
           domain.authorRefs.head must be(expectedAuthorRef)
       }
     }
-    "identify useless domain hierarchy" in {
-      val input = """
-                    |domain foo is {
-                    |  domain bar is { ??? }
-                    |}""".stripMargin
+    "identify useless domain hierarchy" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """
+          |domain foo is {
+          |  domain bar is { ??? }
+          |}""".stripMargin,td)
       parseAndValidateDomain(input) { (domain: Domain, _: RiddlParserInput, messages: Messages) =>
         domain mustNot be(empty)
         domain.contents mustNot be(empty)

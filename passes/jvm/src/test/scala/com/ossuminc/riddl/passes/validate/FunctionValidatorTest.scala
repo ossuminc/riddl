@@ -8,11 +8,12 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
+import org.scalatest.TestData
 
 class FunctionValidatorTest extends ValidatingTest {
 
   "FunctionValidator" should {
-    "accept function but warn about descriptions" in {
+    "accept function but warn about descriptions" in { (td: TestData) =>
       parseAndValidateInContext[Entity]("""
                                           |entity user is {
                                           |  function foo is {
@@ -41,7 +42,7 @@ class FunctionValidatorTest extends ValidatingTest {
         )
       }
     }
-    "validate simple function" in {
+    "validate simple function" in { (td: TestData) =>
       val input =
         """function percent {
         |  requires { number: Number }
@@ -58,7 +59,7 @@ class FunctionValidatorTest extends ValidatingTest {
       }
 
     }
-    "validate function empty statements" in {
+    "validate function empty statements" in { (td: TestData) =>
       val input = """
                     |  function AnAspect is {
                     |    body {

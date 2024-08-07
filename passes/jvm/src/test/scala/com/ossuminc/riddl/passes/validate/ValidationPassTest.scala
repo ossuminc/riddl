@@ -5,13 +5,14 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
 import java.nio.file.Path
+import org.scalatest.TestData
 
 /** Unit Tests For ValidationPass */
 class ValidationPassTest extends ValidatingTest {
 
   "ValidationPass" should {
-    "parse and validation rbbq.riddl" in {
-      val input = RiddlParserInput(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
+    "parse and validation rbbq.riddl" in { (td:TestData) =>
+      val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
       parseAndValidateAggregate(input, CommonOptions.noMinorWarnings) { (vo: PassesResult) =>
         // info(vo.messages.format)
         vo.messages.justErrors.size mustBe 0
@@ -28,9 +29,10 @@ class ValidationPassTest extends ValidatingTest {
     "Validate All Things" must {
       var sharedRoot: Root = Root.empty
 
-      "parse correctly" in {
+      "parse correctly" in { (td:TestData) =>
         val rootFile = "language/jvm/src/test/input/full/domain.riddl"
-        val parseResult = parseTopLevelDomains(Path.of(rootFile))
+        val rpi = RiddlParserInput.rpiFromPath(Path.of(rootFile))
+        val parseResult = parseTopLevelDomains(rpi)
         parseResult match {
           case Left(errors) => fail(errors.format)
           case Right(root) =>
@@ -40,17 +42,17 @@ class ValidationPassTest extends ValidatingTest {
               CommonOptions(showMissingWarnings = false, showStyleWarnings = true)
             )
             if result.messages.hasErrors then fail(result.messages.format)
-            else result.root mustBe sharedRoot
+            else result.root.mustBe(sharedRoot)
         }
       }
-      "handle includes" in {
+      "handle includes" in { (td:TestData) =>
         val incls = sharedRoot.domains.head.includes
         incls mustNot be(empty)
         incls.head.contents mustNot be(empty)
         incls.head.contents.head.getClass mustBe classOf[Application]
         incls(1).contents.head.getClass mustBe classOf[Context]
       }
-      "have terms and author refs in applications" in {
+      "have terms and author refs in applications" in { (td:TestData) =>
         val includes = sharedRoot.domains.head.includes
         includes mustNot be(empty)
         val apps = includes.head.contents.filter[Application]

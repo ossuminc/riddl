@@ -9,15 +9,17 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ValidatingTest {
   "Regressions" should {
-    "allow descriptions as a single string" in {
-      val input = """domain foo is { ??? }
-                    |explained as { "foo" }
-                    |""".stripMargin
-      parseDefinition[Domain](RiddlParserInput(input)) match {
+    "allow descriptions as a single string" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is { ??? }
+          |explained as { "foo" }
+          |""".stripMargin,td)
+      parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
         case Right((domain, _)) =>
           domain.description match {
@@ -26,24 +28,25 @@ class RegressionTests extends ValidatingTest {
           }
       }
     }
-    "allow descriptions as a doc block" in {
-      val input = """domain foo is { ??? }
-                    |explained as {
-                    |  |ladeedah
-                    |}
-                    |""".stripMargin
-      parseDefinition[Domain](RiddlParserInput(input)) match {
+    "allow descriptions as a doc block" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo is { ??? }
+          |explained as {
+          |  |ladeedah
+          |}
+          |""".stripMargin,td)
+      parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
         case Right((domain, _)) =>
           domain.description match {
-            case Some(desc) => desc.lines.nonEmpty mustBe true
+            case Some(desc) => desc.lines.nonEmpty.mustBe(true)
             case None       => fail("no description")
           }
       }
     }
 
-    "allow simple descriptions" in {
-      val input =
+    "allow simple descriptions" in {  (td: TestData) =>
+      val input = RiddlParserInput(
         """domain foo is {
           |type DeliveryInstruction is any of {
           |  FrontDoor(20), SideDoor(21), Garage(23), FrontDesk(24), DeliverToPostOffice(25)
@@ -60,18 +63,19 @@ class RegressionTests extends ValidatingTest {
           |    |25 Livrer au bureau de poste
           |}
           |}
-          |""".stripMargin
-      parseDomainDefinition[Type](RiddlParserInput(input), _.types.last) match {
+          |""".stripMargin,td)
+      parseDomainDefinition[Type](input, _.types.last) match {
         case Left(errors) => fail(errors.format)
         case Right(_)     =>
           // info(typeDef.toString)
           succeed
       }
     }
-    "catch types with predefined expression with a suffix" in {
-      val input = """domain foo {
-                    |  type Bug: IntegerRange
-                    |}""".stripMargin
+    "catch types with predefined expression with a suffix" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo {
+          |  type Bug: IntegerRange
+          |}""".stripMargin,td)
 
       def extract(root: Root): Type = {
         root.domains.head.types.head
@@ -79,9 +83,10 @@ class RegressionTests extends ValidatingTest {
       parseTopLevelDomain[Type](input, extract) match {
         case Left(messages) =>
           val errors = messages.justErrors
-          errors.size mustBe 1
+          errors.size.mustBe(1)
           errors.head.message.contains ("whitespace after keyword")
         case Right((typ, rpi)) =>
+          import scala.language.postfixOps
           val expected: Type = Type(
             (2, 3, rpi),
             Identifier((2, 8, rpi), "Bug"),
@@ -91,26 +96,28 @@ class RegressionTests extends ValidatingTest {
               PathIdentifier((2, 20, rpi), List("IntegerRange"))
             )
           )
-          typ mustBe expected
+          typ.mustBe(expected)
       }
     }
 
-    "catch types with bad predefined expression in an aggregation" in {
-      val input = """domain foo {
-                    |  type DateRange = Duration
-                    |  type SomePlace = Location
-                    |  type Thing is {
-                    |    locationId: type SomePlace,
-                    |    schedule: type DateRange+
-                    |  }
-                    |}
-                    |""".stripMargin
+    "catch types with bad predefined expression in an aggregation" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain foo {
+          |  type DateRange = Duration
+          |  type SomePlace = Location
+          |  type Thing is {
+          |    locationId: type SomePlace,
+          |    schedule: type DateRange+
+          |  }
+          |}
+          |""".stripMargin,td)
       def extract(root: Root): Type = {
         root.domains.head.types(2)
       }
       parseTopLevelDomain[Type](input, extract) match {
         case Left(messages) => fail(messages.format)
         case Right((typ, rpi)) =>
+          import scala.language.postfixOps
           val expected: Type = Type(
             (4, 3, rpi),
             Identifier((4, 8, rpi), "Thing"),
@@ -147,10 +154,10 @@ class RegressionTests extends ValidatingTest {
             None,
             None
           )
-          typ mustBe expected
+          typ.mustBe(expected)
       }
     }
-    "357: Nested fields in State constructors do not compile" in {
+    "357: Nested fields in State constructors do not compile" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain Example is {
           |   context ExampleContext is {
@@ -176,24 +183,22 @@ class RegressionTests extends ValidatingTest {
           |        info: String,
           |        name: String
           |      }
-          |      state FooExample of FooExampleState is {
-          |        handler FooExampleHandler {
-          |          on other {
-          |            error "You must first create an event using ScheduleEvent command."
-          |          }
+          |      state FooExample of FooExampleState
+          |      handler FooExampleHandler {
+          |        on other {
+          |          error "You must first create an event using ScheduleEvent command."
           |        }
           |      }
           |    }
           |	 }
           |}
-          |""".stripMargin
-      )
+          |""".stripMargin,td)
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         val errors: Messages.Messages = msgs.justErrors
         errors must be(empty)
       }
     }
-    "359: empty names in error message" in {
+    "359: empty names in error message" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain Example is {
           |  context ErrorsToDemonstrateClutter{
@@ -221,8 +226,7 @@ class RegressionTests extends ValidatingTest {
           |    }
           |  }
           |}
-          |""".stripMargin
-      )
+          |""".stripMargin,td)
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
         msgs mustNot be(empty)
         val duplicate =

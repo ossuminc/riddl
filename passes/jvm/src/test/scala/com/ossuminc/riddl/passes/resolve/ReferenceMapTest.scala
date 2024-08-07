@@ -11,11 +11,12 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.Path
+import org.scalatest.TestData
 
 class ReferenceMapTest extends ValidatingTest {
 
   protected def create: PassesResult = {
-    val input = RiddlParserInput(Path.of("language/jvm/src/test/input/everything.riddl"))
+    val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
     simpleParseAndValidate(input) match {
       case Left(messages) => fail(messages.format)
       case Right(result) => result
@@ -25,14 +26,14 @@ class ReferenceMapTest extends ValidatingTest {
   "ReferenceMap" must {
     val result: PassesResult = create
     val refMap = result.refMap
-    "convert to a pretty string" in {
+    "convert to a pretty string" in { (td: TestData) =>
       info("pretty: " + refMap.toString)
     }
-    "have correct size" in {
+    "have correct size" in { (td: TestData) =>
       info("size: " + refMap.size.toString)
     }
 
-    "have definitionOf(pathId:String) work" in {
+    "have definitionOf(pathId:String) work" in { (td: TestData) =>
       refMap.definitionOf[Author]("Reid") match {
         case None => fail("Expected to find 'Reid'")
         case Some(author: Author) => author.name.s mustBe("Reid")
@@ -40,15 +41,15 @@ class ReferenceMapTest extends ValidatingTest {
       }
     }
 
-    "inserts a value and finds it" in {
+    "inserts a value and finds it" in { (td: TestData) =>
       val context: Context = Context(At(), Identifier(At(), "context"))
-      val parent: Symbols.Parent = Domain(At(), Identifier(At(),"domain"))
+      val parent: Parent = Domain(At(), Identifier(At(),"domain"))
       val pid = PathIdentifier(At(), Seq("wrong-name"))
       refMap.add[Context](pid, parent, context)
       refMap.definitionOf[Context](pid, parent) must not be(empty)
     }
 
-    "have definitionOf(pid: PathIdentifier, parent: Parent) work" in {
+    "have definitionOf(pid: PathIdentifier, parent: Parent) work" in { (td: TestData) =>
       val pid = PathIdentifier(At.empty, Seq("Sink", "Commands"))
       val context = result.root.domains.head.includes.head.contents.filter[Context].head
       val parent = context.connectors.head
@@ -71,7 +72,7 @@ class ReferenceMapTest extends ValidatingTest {
       }
     }
 
-    "have definitionOf(ref: References[T], parent: Parent) work" in {
+    "have definitionOf(ref: References[T], parent: Parent) work" in { (td: TestData) =>
       val context = result.root.domains.head.includes(1).contents.filter[Context].head
       val entity = context.entities.head
       val expected = entity.types(2)

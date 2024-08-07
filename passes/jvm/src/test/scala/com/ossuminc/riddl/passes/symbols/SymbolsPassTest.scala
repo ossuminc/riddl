@@ -12,7 +12,7 @@ import scala.reflect.ClassTag
 class SymbolsPassTest extends ParsingTest {
 
   val (root: Root, st: SymbolsOutput) = {
-    val root = checkFile("everything", "everything.riddl")
+    val (root,rpi) = checkFile("everything", "everything.riddl")
     val input: PassInput = PassInput(root, CommonOptions())
     val outputs = PassesOutput()
     root -> Pass.runSymbols(input, outputs)
@@ -34,42 +34,44 @@ class SymbolsPassTest extends ParsingTest {
   }
 
   "SymbolsOutput" must {
-    "return empty list for non-existent namedValue" in {
-      val nv: NamedValue = Domain(At(), Identifier(At(), "not-in-root"))
+    import org.scalatest.TestData
+    "return empty list for non-existent namedValue" in { (td: TestData) =>
+    val nv: NamedValue = Domain(At(), Identifier(At(), "not-in-root"))
       st.parentsOf(nv) must be(Seq.empty[Definition])
     }
-    "lookupSymbol(id: PathNames) should fail if no names" in {
+    "lookupSymbol(id: PathNames) should fail if no names" in { (td: TestData) =>
       val xcption = intercept[IllegalArgumentException] { st.lookupSymbol[Context](Seq.empty[String]) }
       xcption.isInstanceOf[IllegalArgumentException] must be(true)
     }
-    "lookupSymbol() should return None for non-matching type" in {
+    "lookupSymbol() should return None for non-matching type" in { (td: TestData) =>
       val list = st.lookupSymbol[Context](Seq("Everything"))
       list must not be(empty)
       list.head._1.isInstanceOf[Domain] must be(true)
       list.head._2 must be(None)
     }
-    "lookupParentage(id: PathNames) should fail on no names" in {
+    "lookupParentage(id: PathNames) should fail on no names" in { (td: TestData) =>
       val xcption = intercept[IllegalArgumentException] {
         val parents = st.lookupParentage(Seq.empty[String])
         parents must be(empty)
       }
       xcption.isInstanceOf[IllegalArgumentException] must be(true)
     }
-    "lookup should fail on no names" in {
+    "lookup should fail on no names" in { (td: TestData) =>
       val xcption = intercept[IllegalArgumentException] {
         val parents = st.lookup[Context](Seq.empty[String])
         parents must be(empty)
       }
       xcption.isInstanceOf[IllegalArgumentException] must be(true)
     }
-    "lookup should return empty when nothing found" in {
+    "lookup should return empty when nothing found" in { (td: TestData) =>
       val list = st.lookup[Epic](Seq("SomeType", "Everything"))
       list must be(empty)
     }
   }
 
   "SymbolsPass" must {
-    "capture all expected symbol references and parents" in {
+    import org.scalatest.TestData
+    "capture all expected symbol references and parents" in { (td: TestData) =>
       st.lookup[Domain](Seq("Everything")).headOption mustBe defined
 
       assertRefWithParent[Type, Domain](Seq("DoAThing"), "Everything")
@@ -82,15 +84,16 @@ class SymbolsPassTest extends ParsingTest {
       assertRefWithParent[Entity, Context](Seq("Something"), "full")
       assertRefWithParent[Adaptor, Context](Seq("fromAPlant"), "full")
       assertRefWithParent[Function, Entity](Seq("whenUnderTheInfluence"), "Something")
-      assertRefWithParent[Handler, State](Seq("foo"), "someState")
+      assertRefWithParent[Handler, Entity](Seq("foo"), "Something")
+      assertRefWithParent[State,Entity](Seq("someState"),"Something")
       assertRefWithParent[Type, Entity](Seq("somethingDate"), "Something")
     }
 
-    "capture expected state reference with appropriate parent" in {
+    "capture expected state reference with appropriate parent" in { (td: TestData) =>
       assertRefWithParent[State, Entity](Seq("someState"), "Something")
     }
 
-    "capture expected state field references with appropriate parent" in {
+    "capture expected state field references with appropriate parent" in { (td: TestData) =>
       st.lookup[Definition](Seq("field")) mustNot be(empty)
     }
   }

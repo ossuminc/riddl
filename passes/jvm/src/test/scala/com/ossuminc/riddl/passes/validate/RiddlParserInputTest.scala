@@ -7,26 +7,27 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.language.parsing.{RiddlParserInput, SourceParserInput}
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.TestingBasisWithTestData
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
-
+import org.scalatest.TestData
 import scala.io.Source
 
-class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
+class RiddlParserInputTest extends TestingBasisWithTestData {
 
   "RiddlParserInput" should {
-    "produce input from scala.io.Source" in {
+    "produce input from scala.io.Source" in { (td: TestData) =>
       val string = "helloooo"
       val source: Source = Source.fromString(string)
-      val riddlParserInput = RiddlParserInput(source)
-      riddlParserInput.data mustBe string
-      riddlParserInput.innerLength mustBe 8
-      riddlParserInput.length mustBe 8
+      val riddlParserInput = RiddlParserInput.rpiFromSource(source)
+      riddlParserInput.data.mustBe(string)
+      riddlParserInput.innerLength.mustBe(8)
+      riddlParserInput.length.mustBe(8)
     }
 
     "length" should {
-      "be equal to input length" in {
+      "be equal to input length" in { (td: TestData) =>
         val inputs = List(
           "",
           "hi",
@@ -36,33 +37,42 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
             |""".stripMargin
         )
 
-        for input <- inputs do {
-          RiddlParserInput(input).length mustBe input.length
-          RiddlParserInput(input).innerLength mustBe input.length
+        for {
+          input <- inputs
+          rpi:RiddlParserInput = RiddlParserInput(input, td)
+        } do {
+          rpi.length.mustBe(input.length)
+          rpi.innerLength.mustBe(input.length)
         }
       }
     }
 
     "rangeOf" should {
-      "convert a Location to a pair " in {
-        val input = RiddlParserInput("""12345
+      "convert a Location to a pair " in { (td: TestData) =>
+        val input = RiddlParserInput(
+          """12345
                                        |6789
                                        |0
                                        |1234
                                        |56
-                                       |""".stripMargin)
-        Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach {
-          case (loc, offset) => input.rangeOf(At(loc)) mustBe offset
+                                       |""".stripMargin,
+          td
+        )
+        Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach { case (loc, offset) =>
+          input.rangeOf(At(loc)).mustBe(offset)
         }
 
       }
-      "return the line and column of a char index" in {
-        val input = RiddlParserInput("""12345
+      "return the line and column of a char index" in { (td: TestData) =>
+        val input = RiddlParserInput(
+          """12345
                                        |6789
                                        |0
                                        |1234
                                        |56
-                                       |""".stripMargin)
+                                       |""".stripMargin,
+          td
+        )
 
         List(
           0 -> (0, 6),
@@ -81,20 +91,19 @@ class RiddlParserInputTest extends AnyWordSpec with must.Matchers {
           15 -> (13, 18)
         ).foreach { case (in, out) =>
           val result = input.rangeOf(in)
-          result mustBe out
+          result.mustBe(out)
         }
       }
     }
   }
 
   "SourceParserInput" should {
-    "read data from a source" in {
+    "read data from a source" in { (td: TestData) =>
       val string = """
                      |hello I
                      |am a
-                     |String
-                     |""".stripMargin
-      RiddlParserInput(Source.fromString(string)).data mustBe string
+                     |String""".stripMargin
+      RiddlParserInput.rpiFromSource(Source.fromString(string)).data.mustBe(string)
     }
   }
 

@@ -9,31 +9,34 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.Domain
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import org.scalatest.TestData
 
 class HandlerValidatorTest extends ValidatingTest {
 
   "Handler Validation" should {
-    "produce an error when on clause references a command that does not exist" in {
-      val input =
+    "produce an error when on clause references a command that does not exist" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
           |  type StateFields is { field1: Number, field2: String }
-          |  state HamburgerState of StateFields = {
-          |    handler foo is {
-          |      on command EntityCommand {
-          |        set field HamburgerState.field1 to "345"
-          |      }
-          |      on event EntityEvent {
-          |        set field HamburgerState.field2 to "678"
-          |      }
-          |    } described as "Irrelevant"
+          |  state HamburgerState of StateFields
+          |  handler foo is {
+          |    on command EntityCommand {
+          |      set field HamburgerState.field1 to "345"
+          |    }
+          |    on event EntityEvent {
+          |      set field HamburgerState.field2 to "678"
+          |    }
           |  } described as "Irrelevant"
           |} described as "Irrelevant"
           |} described as "Irrelevant"
           |} described as "Irrelevant"
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_: Domain, _, msgs: Messages) =>
           assertValidationMessage(
@@ -68,24 +71,25 @@ class HandlerValidatorTest extends ValidatingTest {
       }
     }
 
-    "produce an error when on clause references a message of the wrong type" in {
-      val input =
+    "produce an error when on clause references a message of the wrong type" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """
           |domain entityTest is {
           | context EntityContext is {
           |  entity Hamburger is {
           |   type StateFields is { field1: Number }
-          |   state HamburgerState of Hamburger.StateFields is {
-          |    handler foo is {
-          |     on event EntityContext.Incoming {
-          |       set field HamburgerState.field1 to "678"
-          |     }
+          |   state HamburgerState of Hamburger.StateFields
+          |   handler foo is {
+          |    on event EntityContext.Incoming {
+          |     set field HamburgerState.field1 to "678"
           |    }
           |   }
           |  }
           | }
           |}
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
           assertValidationMessage(
@@ -98,30 +102,31 @@ class HandlerValidatorTest extends ValidatingTest {
       }
     }
 
-    "allow message clauses to name the message and it resolves" in {
-      val input =
+    "allow message clauses to name the message and it resolves" in { (td: TestData) =>
+      val input = RiddlParserInput(
         """domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
           |  type EntityCommand is command { foo: String }
           |  record Fields is { field1: String }
-          |  state HamburgerState of Fields = {
-          |    handler doit is {
-          |      on command EntityCommand {
-          |        set field HamburgerState.field1 to "field ec.foo"
-          |      }
+          |  state HamburgerState of Fields
+          |  handler doit is {
+          |    on command EntityCommand {
+          |      set field HamburgerState.field1 to "field ec.foo"
           |    }
           |  }
           |}
           |}
           |}
-          |""".stripMargin
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (_, _, msgs: Messages) =>
           msgs.justErrors mustBe empty
       }
     }
-    "produce a warning for commands with no events sent" in {
+    "produce a warning for commands with no events sent" in { (td: TestData) =>
       val input =
         """domain ignore is {
           |  context ignore is {

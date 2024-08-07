@@ -8,13 +8,15 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
+import org.scalatest.TestData 
 
 class ContextValidationTest extends ValidatingTest {
 
   "Context" should {
-    "allow options" in {
+    "allow options" in { (td: TestData) =>
       val input =
         """option wrapper option service option gateway option package("foo") option technology("http")  """
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
@@ -27,7 +29,7 @@ class ContextValidationTest extends ValidatingTest {
         context.options must contain(OptionValue((2, 76, rpi), "technology", Seq(LiteralString((2, 87, rpi), "http"))))
       }
     }
-    "allow types" in {
+    "allow types" in { (td: TestData) =>
       val input = """type C is Current
                     |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
@@ -40,13 +42,14 @@ class ContextValidationTest extends ValidatingTest {
         )
       }
     }
-    "allow functions" in {
-      val input = """function bar is {
-                    |  requires { i: Integer }
-                    |  returns { o: Integer }
-                    |  body { ??? }
-                    |}
-                    |""".stripMargin
+    "allow functions" in { (td: TestData) =>
+      val input =
+        """function bar is {
+          |  requires { i: Integer }
+          |  returns { o: Integer }
+          |  body { ??? }
+          |}
+          |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         val errors = msgs.justErrors
         // info(errors.format)
@@ -83,7 +86,7 @@ class ContextValidationTest extends ValidatingTest {
         context.functions.head mustBe expected
       }
     }
-    "allow entities" in {
+    "allow entities" in { (td: TestData) =>
       val input = """entity bar is { ??? }
                     |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
@@ -96,7 +99,7 @@ class ContextValidationTest extends ValidatingTest {
       }
 
     }
-    "allow terms" in {
+    "allow terms" in { (td: TestData) =>
       val input = """term bar is briefly "imaginary line in court room"
                     |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
@@ -112,7 +115,7 @@ class ContextValidationTest extends ValidatingTest {
         context.terms.head mustBe expected
       }
     }
-    "allow processors" in {
+    "allow processors" in { (td: TestData) =>
       val input = """source foo is { ??? }
                     |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
@@ -128,12 +131,13 @@ class ContextValidationTest extends ValidatingTest {
         context.streamlets.head mustBe expected
       }
     }
-    "allow projectors" in {
-      val input = """projector foo is {
-                    |  record one is { ??? }
-                    |  handler one is { ??? }
-                    |}
-                    |""".stripMargin
+    "allow projectors" in { (td: TestData) =>
+      val input =
+        """projector foo is {
+          |  record one is { ??? }
+          |  handler one is { ??? }
+          |}
+          |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         val errors = msgs.justErrors
         // info(errors.format)
@@ -171,7 +175,7 @@ class ContextValidationTest extends ValidatingTest {
       }
     }
 
-    "allow includes" in {
+    "allow includes" in { (td: TestData) =>
       val name = "language/jvm/src/test/input/context/context-with-include.riddl"
       val path = Path.of(name)
       parseRoot(path) match {
