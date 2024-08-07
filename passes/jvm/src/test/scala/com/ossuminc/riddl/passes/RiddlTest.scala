@@ -15,7 +15,7 @@ class RiddlTest extends AnyWordSpec with Matchers {
   "Riddl" must {
 
     "parse a file" in {
-      val input = RiddlParserInput(Path.of(testPath))
+      val input = RiddlParserInput.rpiFromPath(Path.of(testPath))
       Riddl.parse(input) match {
         case Left(messages) => fail(messages.format)
         case Right(root) =>
@@ -29,7 +29,7 @@ class RiddlTest extends AnyWordSpec with Matchers {
     }
 
     "validate a file" in {
-      val input = RiddlParserInput(new File(testPath))
+      val input = RiddlParserInput.rpiFromTest(new File(testPath))
       Riddl.parse(input) match
         case Left(messages) => fail(messages.format)
         case Right(root) =>
@@ -40,7 +40,7 @@ class RiddlTest extends AnyWordSpec with Matchers {
     }
 
     "parse and validate a RiddlParserInput" in {
-      val input = RiddlParserInput(new File(testPath))
+      val input = RiddlParserInput.rpiFromTest(new File(testPath))
       Riddl.parseAndValidate(input) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(result)  => succeed

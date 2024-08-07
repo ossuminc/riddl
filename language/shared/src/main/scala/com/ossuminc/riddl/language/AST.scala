@@ -42,6 +42,7 @@ object AST {
     /** Whether or not this instance has an id: [[Identifier]] field or not */
     def isIdentified: Boolean = false
 
+    /** True only if this value does not have a name or has an empty name */
     def isAnonymous: Boolean = true
 
     /** Determine if this [[RiddlValue]] contains other values or not */
@@ -56,37 +57,37 @@ object AST {
     /** Determine if this [[RiddlValue]] is a definition or not */
     def isDefinition: Boolean = false
 
-    /** determine if this [[RiddlValue]] is empty or not. Non-containers are always empty */
+    /** Determine if this [[RiddlValue]] is empty or not. Non-containers are always empty */
     def isEmpty: Boolean = true
 
-    /** determines if this [[RiddlValue]] is a comment or not */
+    /** Determines if this [[RiddlValue]] is a comment or not */
     def isComment: Boolean = false
 
-    /** determines if this node is a vital node or not */
+    /** Determines if this node is a vital node or not */
     def isVital: Boolean = false
 
-    /** determines if this [[RiddlValue]] is a processor (handles messages) or not */
+    /** Determines if this [[RiddlValue]] is a processor (handles messages) or not */
     def isProcessor: Boolean = false
 
-    /** determines if this [[RiddlValue]] has any options set or not */
+    /** Determines if this [[RiddlValue]] has any options set or not */
     def hasOptions: Boolean = false
 
-    /** determines if this [[RiddlValue]]defines any [[Author]]s or not */
+    /** Determines if this [[RiddlValue]]defines any [[Author]]s or not */
     def hasAuthors: Boolean = false
 
-    /** determines if this [[RiddlValue]] references any [[Author]]s or not */
+    /** Determines if this [[RiddlValue]] references any [[Author]]s or not */
     def hasAuthorRefs: Boolean = false
 
-    /** determines if this [[RiddlValue]] contains any type definitions */
+    /** Determines if this [[RiddlValue]] contains any type definitions */
     def hasTypes: Boolean = false
 
-    /** determines if this [[RiddlValue]] has any includes in it */
+    /** Determines if this [[RiddlValue]] has any includes in it */
     def hasIncludes: Boolean = false
 
-    /** determines if this [[RiddlValue]] defines a description */
+    /** Determines if this [[RiddlValue]] defines a description */
     def hasDescription: Boolean = false
 
-    /** determines if this [[RiddlValue]] defines a brief description */
+    /** Determines if this [[RiddlValue]] defines a brief description */
     def hasBriefDescription: Boolean = false
 
     /** implements the nonEmpty function based on the isEmpty function */
@@ -150,6 +151,10 @@ object AST {
     *   The kind of contained value that is contained within.
     */
   sealed trait Container[+CV <: ContentValues] extends RiddlValue {
+
+    /** The definitional contents of this Container value. The [[contents]] are constrained by the type parameter CV so
+      * subclasses must honor that constraint.
+      */
     def contents: Contents[CV]
 
     override def isEmpty: Boolean = contents.isEmpty
@@ -164,6 +169,8 @@ object AST {
     final def namedValues: Contents[NamedValue] = contents.namedValues
 
   }
+
+  /** A simple container for utility purposes in code. The parser never returns one of these */
   case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] {
     def format: String = ""
     def loc: At = At.empty
@@ -184,9 +191,10 @@ object AST {
     override def isEmpty: Boolean = s.isEmpty
   }
 
+  /** Companion for LiteralString class to provide the empty value */
   object LiteralString {
 
-    /** definition of the empty LiteralString */
+    /** Definition of the empty LiteralString */
     val empty: LiteralString = LiteralString(At.empty, "")
   }
 
@@ -198,13 +206,11 @@ object AST {
     *   The parsed value of the [[Identifier]]
     */
   case class Identifier(loc: At, value: String) extends RiddlValue {
-
-    /** Convert to a printable form */
     override def format: String = value
-
     override def isEmpty: Boolean = value.isEmpty
   }
 
+  /** Companion object for the Identifier class to provide the empty value */
   object Identifier {
 
     /** Definition of the empty [[Identifier]] */
@@ -221,10 +227,10 @@ object AST {
     */
   case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue {
     override def format: String = { value.mkString(".") }
-
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
   }
 
+  /** Companion object of the PathIdentifier class to provide its empty value */
   object PathIdentifier {
 
     /** The empty [[PathIdentifier]] */
@@ -239,7 +245,7 @@ object AST {
     /** All kinds of [[Description]] have a location provided by an [[At]] value. */
     def loc: At
 
-    /** The lines of the description */
+    /** The lines of the description abstractly defined to be provided by subclasses */
     def lines: Seq[LiteralString]
   }
 
@@ -255,7 +261,12 @@ object AST {
     }
   }
 
-  /** An implementation of a [[Description]] that implements the lines directly as [[LiteralString]] */
+  /** An implementation of a [[Description]] that implements the lines directly as a [[Seq]] of [[LiteralString]]
+    * @param loc
+    *   The [[At]] value that provides the location of this [[BlockDescription]]
+    * @param lines
+    *   The literal lines of this description as a [[Seq]] of [[LiteralString]]
+    */
   case class BlockDescription(
     loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString]
@@ -265,18 +276,12 @@ object AST {
     def format: String = ""
   }
 
-  /** An implementation of [[Description]] that provides the description in a Markdown file */
-  case class FileDescription(loc: At, file: URL) extends Description {
-    def format: String = file.toExternalForm
-
-    lazy val lines: Seq[LiteralString] = {
-      import com.ossuminc.riddl.utils.{Await, Loader}
-      val future = Loader(file).load.map(_.split("\n").toSeq.map(LiteralString(loc, _)))
-      Await.result(future, 10)
-    }
-  }
-
-  /** An implementation of [[Description]] that provides the description at a URL */
+  /** An URL based implementation of [[Description]] that provides the description in a Markdown file
+    * @param loc
+    *   The location in the parse source where this description occurs
+    * @param url
+    *   The URL for the file content that is the description.
+    */
   case class URLDescription(loc: At, url: URL) extends Description {
 
     lazy val lines: Seq[LiteralString] = {
@@ -289,7 +294,11 @@ object AST {
 
   /** A trait to add a brief description string to a RiddlValue */
   sealed trait BrieflyDescribedValue extends RiddlValue {
+
+    /** The optional brief description of the value */
     def brief: Option[LiteralString]
+
+    /** A reliable extractor of the brief description, dealing with the Optionality of it */
     def briefValue: String = {
       brief.map(_.s).getOrElse("No brief description.")
     }
@@ -298,6 +307,8 @@ object AST {
 
   /** Base trait of all [[RiddlValue]]s that have an optional Description */
   sealed trait DescribedValue extends RiddlValue {
+
+    /** The optional full description of the value */
     def description: Option[Description]
     override def hasDescription: Boolean = description.exists(_.hasDescription)
   }
@@ -347,390 +358,8 @@ object AST {
   /** A [[RiddlValue]] that is named via the [[WithIdentifier]] trait */
   sealed trait NamedValue extends RiddlValue with WithIdentifier
 
+  /** A [[NamedValue]] that is also a [[Container]] */
   sealed trait NamedContainer[CV <: ContentValues] extends NamedValue with Container[CV]
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
-  ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
-
-  /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]],
-    * [[Definition]] and any other thing that needs to be identified by name.
-    */
-  sealed trait WithIdentifier extends RiddlValue {
-
-    /** the name/identifier of this value. All definitions have one */
-    def id: Identifier
-
-    final override inline def isIdentified: Boolean = true
-
-    /** This one has an identifier so it is never anonymous */
-    override final inline def isAnonymous: Boolean = id.value.isEmpty
-
-    /** Convert the identifier into its string format */
-    def identify: String = {
-      if id.isEmpty then {
-        s"Anonymous $kind"
-      } else {
-        s"$kind '${id.format}'"
-      }
-    }
-
-    def identifyWithLoc: String = s"$identify at $loc"
-  }
-
-  /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
-  sealed trait WithDocumentation extends RiddlValue {
-
-    /** The optional brief description as a single (short) line of text */
-    def brief: Option[LiteralString]
-
-    /** The optional [[Description]] which can be provided in several such as [[BlockDescription]], [[FileDescription]],
-      * or [[URLDescription]]
-      */
-    def description: Option[Description]
-  }
-
-  /** A trait that includes the `comments` field to extract the comments from the contents */
-  sealed trait WithComments extends Container[ContentValues] {
-    lazy val comments: Contents[Comment] = contents.filter[Comment]
-  }
-
-  /** Added to definitions that support includes */
-  sealed trait WithIncludes[CT <: ContentValues] extends Container[CT] {
-    lazy val includes: Contents[Include[CT]] = contents.filter[Include[CT]]
-    final override def hasIncludes = true
-  }
-
-  /** Added to definitions that support a list of term definitions */
-  sealed trait WithTerms extends Container[ContentValues] {
-    lazy val terms: Contents[Term] = contents.filter[Term]
-  }
-
-  /** A trait that provides the [[AuthorRef]] to indicate who authored the definition */
-  sealed trait WithAuthorRefs extends Container[ContentValues] {
-    lazy val authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
-
-    override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
-  }
-
-  /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
-    * queried, and formatted.
-    */
-  sealed trait WithOptions extends Container[ContentValues] {
-    lazy val options: Contents[OptionValue] = contents.filter[OptionValue]
-
-    def hasOption(name: String): Boolean = options.exists(_.name == name)
-
-    def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
-
-    override def isEmpty: Boolean = super.isEmpty && options.isEmpty
-
-    override def hasOptions: Boolean = options.nonEmpty
-  }
-
-  /** Base trait of any definition that is a container and contains types */
-  sealed trait WithTypes extends Container[ContentValues] {
-    lazy val types: Contents[Type] = contents.filter[Type]
-    override def hasTypes: Boolean = types.nonEmpty
-  }
-
-  /** Base trait to use in any definition that can define a constant */
-  sealed trait WithConstants extends Container[ContentValues] {
-    lazy val constants: Contents[Constant] = contents.filter[Constant]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define an invariant */
-  sealed trait WithInvariants extends Container[ContentValues] {
-    lazy val invariants: Contents[Invariant] = contents.filter[Invariant]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define a [[Function]] */
-  sealed trait WithFunctions extends Container[ContentValues] {
-    lazy val functions: Contents[Function] = contents.filter[Function]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define a [[Handler]] */
-  sealed trait WithHandlers extends Container[ContentValues] {
-    lazy val handlers: Contents[Handler] = contents.filter[Handler]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define an [[Inlet]] */
-  sealed trait WithInlets extends Container[ContentValues] {
-    lazy val inlets: Contents[Inlet] = contents.filter[Inlet]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define an [[Outlet]] */
-  sealed trait WithOutlets extends Container[ContentValues] {
-    lazy val outlets: Contents[Outlet] = contents.filter[Outlet]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define a [[State]] */
-  sealed trait WithStates extends Container[ContentValues] {
-    lazy val states: Contents[State] = contents.filter[State]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define a [[Group]] */
-  sealed trait WithGroups extends Container[ContentValues] {
-    lazy val groups: Contents[Group] = contents.filter[Group]
-  }
-
-  /** Base trait to use in a [[AST.Function]] to define the [[AST.Statement]]s that form the body of that function */
-  sealed trait WithStatements extends Container[ContentValues] {
-    lazy val statements: Contents[Statement] = contents.filter[Statement]
-  }
-
-  /** Base trait to use in a [[Domain]] to define the bounded [[Context]] it contains */
-  sealed trait WithContexts extends Container[ContentValues] {
-    lazy val contexts: Contents[Context] = contents.filter[Context]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Author]]s */
-  sealed trait WithAuthors extends Container[ContentValues] {
-    lazy val authors: Contents[Author] = contents.filter[Author]
-
-    override def hasAuthors: Boolean = authors.nonEmpty
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[User]]s */
-  sealed trait WithUsers extends Container[ContentValues] {
-    def users: Contents[User] = contents.filter[User]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Epic]]s */
-  sealed trait WithEpics extends Container[ContentValues] {
-    lazy val epics: Contents[Epic] = contents.filter[Epic]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Application]]s */
-  sealed trait WithApplications extends Container[ContentValues] {
-    lazy val applications: Contents[Application] = contents.filter[Application]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Domain]]s */
-  sealed trait WithDomains extends Container[ContentValues] {
-    lazy val domains: Contents[Domain] = contents.filter[Domain]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Projector]]s */
-  sealed trait WithProjectors extends Container[ContentValues] {
-    lazy val projectors: Contents[Projector] = contents.filter[Projector]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Repository]]s */
-  sealed trait WithRepositories extends Container[ContentValues] {
-    lazy val repositories: Contents[Repository] = contents.filter[Repository]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Entity]]s */
-  sealed trait WithEntities extends Container[ContentValues] {
-    lazy val entities: Contents[Entity] = contents.filter[Entity]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Streamlet]]s */
-  sealed trait WithStreamlets extends Container[ContentValues] {
-    lazy val streamlets: Contents[Streamlet] = contents.filter[Streamlet]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Connector]]s */
-  sealed trait WithConnectors extends Container[ContentValues] {
-    lazy val connectors: Contents[Connector] = contents.filter[Connector]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Adaptor]]s */
-  sealed trait WithAdaptors extends Container[ContentValues] {
-    lazy val adaptors: Contents[Adaptor] = contents.filter[Adaptor]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[Saga]]s */
-  sealed trait WithSagas extends Container[ContentValues] {
-    lazy val sagas: Contents[Saga] = contents.filter[Saga]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[SagaStep]]s */
-  sealed trait WithSagaSteps extends Container[ContentValues] {
-    lazy val sagaSteps: Contents[SagaStep] = contents.filter[SagaStep]
-  }
-
-  /** Base trait to use in any [[Definition]] that can define [[UseCase]]s */
-  sealed trait WithUseCases extends Container[ContentValues] {
-    lazy val cases: Contents[UseCase] = contents.filter[UseCase]
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
-  ///// This section defines various abstract things needed by the rest of the definitions
-
-  type Parent = Definition
-  type Parents = Seq[Parent]
-
-  /** The list of definitions to which a reference cannot be made */
-  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
-
-  /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
-  type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
-    TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema | SimpleContainer[?]
-
-  /** Type of definitions that can be defined at the root (top of file) scope */
-  type OccursAtRootScope = Comment | Domain | Author
-  type RootScopeContents = Comment | Domain | Author | Include[OccursAtRootScope]
-
-  /** Type of definitions that occurs within all Vital Definitions */
-  type OccursInVitalDefinition = Comment | Term | AuthorRef | Type
-
-  /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler | Inlet |
-    Outlet
-
-  /** Type of definitions that occur in a [[Domain]] */
-  type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
-  type DomainContents = OccursInDomain | Include[OccursInDomain]
-
-  /** Type of definitions that occur in an [[Application]] */
-  type OccursInApplication = OccursInProcessor | Group
-  type ApplicationContents = OccursInApplication | Include[OccursInApplication]
-  type OccursInGroup = Group | ContainedGroup | Input | Output | Comment
-  type OccursInInput = Input | TypeRef
-  type OccursInOutput = Output | TypeRef
-
-  /** Type of definitions that occur in a [[Context]] */
-  type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
-  type ContextContents = OccursInContext | Include[OccursInContext]
-
-  /** Type of definitions that occur in an [[Entity]] */
-  type OccursInEntity = OccursInProcessor | State
-  type EntityContents = OccursInEntity | Include[OccursInEntity]
-
-  /** Type of definitions that occur in a [[Handler]] */
-  type OccursInHandler = OnClause | Comment
-  type HandlerContents = OccursInHandler
-
-  /** Type of definitions that occur in an [[Adaptor]] */
-  type OccursInAdaptor = OccursInProcessor
-  type AdaptorContents = OccursInProcessor | Include[OccursInAdaptor]
-
-  /** Type of definitions that occur in a [[Saga]] */
-  type OccursInSaga = OccursInVitalDefinition | SagaStep
-  type SagaContents = OccursInSaga | Include[OccursInSaga]
-
-  /** Type of definitions that occur in a [[Streamlet]] */
-  type OccursInStreamlet = OccursInProcessor
-  type StreamletContents = OccursInStreamlet | Include[OccursInStreamlet]
-
-  /** Type of definitions that occur in the body of a [[Epic]] */
-  type OccursInEpic = OccursInVitalDefinition | UseCase
-  type EpicContents = OccursInEpic | Include[OccursInEpic]
-  type OccursInUseCase = Interaction | Comment
-  type UseCaseContents = OccursInUseCase
-  type ContainerInteractionContents = Interaction | Comment
-
-  /** Type of definitions that occur in the body of a [[Projector]] */
-  type OccursInProjector = OccursInProcessor | RepositoryRef
-  type ProjectorContents = OccursInProjector | Include[OccursInProjector]
-
-  /** Type of definitions that occur in a [[Repository]] */
-  type OccursInRepository = OccursInProcessor | Schema
-  type RepositoryContents = OccursInRepository | Include[OccursInRepository]
-
-  /** Type of definitions that occur in a [[Function]]. */
-  type OccursInFunction = OccursInVitalDefinition | Aggregation
-  type FunctionContents = OccursInFunction | Include[OccursInFunction]
-
-  /** Type of definitions that occur in a [[Type]] */
-  type OccursInType = Field | Method | Enumerator
-
-  /** Type of definitions that occur in a block of [[Statement]] */
-  type Statements = Statement | Comment
-  type OnClauseContents = Statements
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
-  //////// The Abstract classes for defining Definitions by using the foregoing traits
-
-  /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
-    * yield a string that provides the kind and name
-    */
-  sealed trait Definition
-      extends Container[ContentValues]
-      with NamedValue
-      with DescribedValue
-      with BrieflyDescribedValue
-      with WithComments {
-
-    /** True iff there are contained definitions */
-    override def hasDefinitions: Boolean = contents.definitions.nonEmpty
-
-    /** Yes anything deriving from here is a definition */
-    override def isDefinition: Boolean = true
-
-    def isAppRelated: Boolean = false
-  }
-
-  /** A definition with no content */
-  sealed trait LeafDefinition extends Definition {
-    override def isEmpty: Boolean = contents.isEmpty && description.isEmpty && brief.isEmpty
-
-    final override def contents: Contents[ContentValues] = Seq.empty[ContentValues]
-
-    final override def hasDefinitions: Boolean = false
-  }
-
-  /** The base class of the primary, or vital, definitions. Most of the important definitions are derivatives of this
-    * sealed trait. All vital definitions contain comments, documentation, options, authors that defined it, include
-    * statements, and term definitions.
-    * @tparam CT
-    *   The type of the contents of the Vital Definition which must be rooted in RiddlValue
-    */
-  sealed trait VitalDefinition[CT <: ContentValues]
-      extends Definition
-      with WithIncludes[CT]
-      with WithComments
-      with WithDocumentation
-      with WithOptions
-      with WithAuthorRefs
-      with WithTerms {
-
-    final override def isVital: Boolean = true
-  }
-
-  /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
-    * handlers, functions, and take messages directly with a reference). Processors are the active portion of a model
-    * since they handle messages and do the associated processing.
-    */
-  sealed trait Processor[CT <: ContentValues]
-      extends VitalDefinition[CT]
-      with WithTypes
-      with WithConstants
-      with WithInvariants
-      with WithFunctions
-      with WithHandlers
-      with WithInlets
-      with WithOutlets {
-
-    final override def isProcessor: Boolean = true
-
-  }
-
-  ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
-  //// The types defined in this section provide utility to the other definitions for includes and references.
-
-  /** A value to record an inclusion of a file while parsing.
-    *
-    * @param loc
-    *   The location of the include statement in the source
-    * @param contents
-    *   The Vital Definitions read from the file
-    * @param origin
-    *   The string that indicates the origin of the inclusion
-    */
-  case class Include[CT <: RiddlValue](
-    loc: At = At.empty,
-    origin: URL = URL.empty,
-    contents: Contents[CT]
-  ) extends Container[CT] {
-
-    override def isRootContainer: Boolean = true
-
-    def format: String = s"include \"$origin\""
-    override def toString: String = format
-  }
 
   /** A reference to a definition of a specific type.
     *
@@ -761,6 +390,488 @@ object AST {
     override def isEmpty: Boolean = pathId.isEmpty
   }
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
+  ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
+
+  /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]],
+    * [[Definition]] and any other thing that needs to be identified by name.
+    */
+  sealed trait WithIdentifier extends RiddlValue {
+
+    /** the name/identifier of this value. All definitions have one */
+    def id: Identifier
+
+    final override inline def isIdentified: Boolean = true
+
+    /** This one has an identifier so it is only anonymous if that identifier is empty */
+    override final inline def isAnonymous: Boolean = id.value.isEmpty
+
+    /** Convert the identifier into a string format with its [[kind]] and dealing with anonymity. */
+    def identify: String = {
+      if id.isEmpty then {
+        s"Anonymous $kind"
+      } else {
+        s"$kind '${id.format}'"
+      }
+    }
+
+    /** Same as [[identify]] but also add the value's location via [[loc]] */
+    def identifyWithLoc: String = s"$identify at $loc"
+  }
+
+  /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
+  sealed trait WithDocumentation extends RiddlValue {
+
+    /** The optional brief description as a single (short) line of text */
+    def brief: Option[LiteralString]
+
+    /** The optional [[Description]] which can be provided in several ways such as [[BlockDescription]] or
+      * [[URLDescription]]
+      */
+    def description: Option[Description]
+  }
+
+  /** A trait that includes the `comments` field to extract the comments from the contents */
+  sealed trait WithComments extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Comment]] filtered from the contents */
+    lazy val comments: Contents[Comment] = contents.filter[Comment]
+  }
+
+  /** Added to definitions that support includes */
+  sealed trait WithIncludes[CT <: ContentValues] extends Container[CT] {
+
+    /** A lazily constructed [[Seq]] of [[Include]] filtered from the contents */
+    lazy val includes: Contents[Include[CT]] = contents.filter[Include[CT]]
+    final override def hasIncludes = true
+  }
+
+  /** Added to definitions that support a list of term definitions */
+  sealed trait WithTerms extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Term]] filtered from the contents */
+    lazy val terms: Contents[Term] = contents.filter[Term]
+  }
+
+  /** A trait that provides the [[AuthorRef]] to indicate who authored the definition */
+  sealed trait WithAuthorRefs extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[AuthorRef]] filtered from the contents */
+    lazy val authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
+    override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
+  }
+
+  /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
+    * queried, and formatted.
+    */
+  sealed trait WithOptions extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[OptionValue]] filtered from the contents */
+    lazy val options: Contents[OptionValue] = contents.filter[OptionValue]
+
+    /** True if this value contains an option with the given `name`. */
+    def hasOption(name: String): Boolean = options.exists(_.name == name)
+
+    /** Get the value of `name`'d option, if there is one. */
+    def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
+
+    override def isEmpty: Boolean = super.isEmpty && options.isEmpty
+    override def hasOptions: Boolean = options.nonEmpty
+  }
+
+  /** Base trait of any definition that is a container and contains types */
+  sealed trait WithTypes extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Type]] filtered from the contents */
+    lazy val types: Contents[Type] = contents.filter[Type]
+    override def hasTypes: Boolean = types.nonEmpty
+  }
+
+  /** Base trait to use in any definition that can define a constant */
+  sealed trait WithConstants extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Constant]] filtered from the contents */
+    lazy val constants: Contents[Constant] = contents.filter[Constant]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define an invariant */
+  sealed trait WithInvariants extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Invariant]] filtered from the contents */
+    lazy val invariants: Contents[Invariant] = contents.filter[Invariant]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define a [[Function]] */
+  sealed trait WithFunctions extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Function]] filtered from the contents */
+    lazy val functions: Contents[Function] = contents.filter[Function]
+  }
+
+  /** Base trait to use in any [[Processor]] because they define [[Handler]]s */
+  sealed trait WithHandlers extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Handler]] filtered from the contents */
+    lazy val handlers: Contents[Handler] = contents.filter[Handler]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define an [[Inlet]] */
+  sealed trait WithInlets extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Inlet]] filtered from the contents */
+    lazy val inlets: Contents[Inlet] = contents.filter[Inlet]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define an [[Outlet]] */
+  sealed trait WithOutlets extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Outlet]] filtered from the contents */
+    lazy val outlets: Contents[Outlet] = contents.filter[Outlet]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define a [[State]] */
+  sealed trait WithStates extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[State]] filtered from the contents */
+    lazy val states: Contents[State] = contents.filter[State]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define a [[Group]] */
+  sealed trait WithGroups extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Group]] filtered from the contents */
+    lazy val groups: Contents[Group] = contents.filter[Group]
+  }
+
+  /** Base trait to use to define the [[AST.Statement]]s that form the body of a [[Function]] or [[OnClause]] */
+  sealed trait WithStatements extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Statement]] filtered from the contents */
+    lazy val statements: Contents[Statement] = contents.filter[Statement]
+  }
+
+  /** Base trait to use in a [[Domain]] to define the bounded [[Context]] it contains */
+  sealed trait WithContexts extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Context]] filtered from the contents */
+    lazy val contexts: Contents[Context] = contents.filter[Context]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Author]]s */
+  sealed trait WithAuthors extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Author]] filtered from the contents */
+    lazy val authors: Contents[Author] = contents.filter[Author]
+    override def hasAuthors: Boolean = authors.nonEmpty
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[User]]s */
+  sealed trait WithUsers extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[User]] filtered from the contents */
+    def users: Contents[User] = contents.filter[User]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Epic]]s */
+  sealed trait WithEpics extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Epic]] filtered from the contents */
+    lazy val epics: Contents[Epic] = contents.filter[Epic]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Application]]s */
+  sealed trait WithApplications extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Application]] filtered from the contents */
+    lazy val applications: Contents[Application] = contents.filter[Application]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Domain]]s */
+  sealed trait WithDomains extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Domain]] filtered from the contents */
+    lazy val domains: Contents[Domain] = contents.filter[Domain]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Projector]]s */
+  sealed trait WithProjectors extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Projector]] filtered from the contents */
+    lazy val projectors: Contents[Projector] = contents.filter[Projector]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Repository]]s */
+  sealed trait WithRepositories extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Repository]] filtered from the contents */
+    lazy val repositories: Contents[Repository] = contents.filter[Repository]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Entity]]s */
+  sealed trait WithEntities extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Entity]] filtered from the contents */
+    lazy val entities: Contents[Entity] = contents.filter[Entity]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Streamlet]]s */
+  sealed trait WithStreamlets extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Streamlet]] filtered from the contents */
+    lazy val streamlets: Contents[Streamlet] = contents.filter[Streamlet]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Connector]]s */
+  sealed trait WithConnectors extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Connector]] filtered from the contents */
+    lazy val connectors: Contents[Connector] = contents.filter[Connector]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Adaptor]]s */
+  sealed trait WithAdaptors extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Adaptor]] filtered from the contents */
+    lazy val adaptors: Contents[Adaptor] = contents.filter[Adaptor]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[Saga]]s */
+  sealed trait WithSagas extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Saga]] filtered from the contents */
+    lazy val sagas: Contents[Saga] = contents.filter[Saga]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[SagaStep]]s */
+  sealed trait WithSagaSteps extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[SagaStep]] filtered from the contents */
+    lazy val sagaSteps: Contents[SagaStep] = contents.filter[SagaStep]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define [[UseCase]]s */
+  sealed trait WithUseCases extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[UseCase]] filtered from the contents */
+    lazy val cases: Contents[UseCase] = contents.filter[UseCase]
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
+  ///// This section defines various abstract things needed by the rest of the definitions
+
+  /** A [[Parent]] is always a [[Definition]] because it must have an identifier */
+  type Parent = Definition
+
+  /** A simple sequence of Parents from the closest all the way up to the Root */
+  type Parents = Seq[Parent]
+
+  /** The list of definitions to which a reference cannot be made */
+  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
+
+  /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
+  type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
+    TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
+    MethodArgument | Schema | SimpleContainer[?]
+
+  /** Type of definitions that occur in a [[Root]] without [[Include]] */
+  private type OccursInRoot = Comment | Domain | Author
+
+  /** Type of definitions that can be defined in a [[Root]] with [[Include]] */
+  type RootContents = Comment | Domain | Author | Include[OccursInRoot]
+
+  /** Type of definitions that occurs within all Vital Definitions */
+  private type OccursInVitalDefinition = Comment | Term | AuthorRef | Type
+
+  /** Type of definitions that occur within all Processor types */
+  private type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler |
+    Inlet | Outlet
+
+  /** Type of definitions that occur in a [[Domain]] without [[Include]] */
+  type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
+
+  /** Type of definitions that occur in a [[Domain]] with [[Include]] */
+  type DomainContents = OccursInDomain | Include[OccursInDomain]
+
+  /** Type of definitions that occur in a [[Application]] without [[Include]] */
+  private type OccursInApplication = OccursInProcessor | Group
+
+  /** Type of definitions that occur in an [[Application]] with [[Include]] */
+  type ApplicationContents = OccursInApplication | Include[OccursInApplication]
+
+  /** Type of definitions that occur in a [[Group]] */
+  type OccursInGroup = Group | ContainedGroup | Input | Output | Comment
+
+  /** Type of definitions that occur in an [[Input]] */
+  type OccursInInput = Input | TypeRef
+
+  /** Type of definitions that occur in an [[Output]] */
+  type OccursInOutput = Output | TypeRef
+
+  /** Type of definitions that occur in a [[Context]] without [[Include]] */
+  type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
+
+  /** Type of definitions that occur in a [[Context]] with [[Include]] */
+  type ContextContents = OccursInContext | Include[OccursInContext]
+
+  /** Type of definitions that occur in an [[Entity]] without [[Include]] */
+  private type OccursInEntity = OccursInProcessor | State
+
+  /** Type of definitions that occur in an [[Entity]] with [[Include]] */
+  type EntityContents = OccursInEntity | Include[OccursInEntity]
+
+  /** Type of definitions that occur in a [[Handler]] */
+  type HandlerContents = OnClause | Comment
+
+  /** Type of definitions that occur in an [[Adaptor]] without [[Include]] */
+  private type OccursInAdaptor = OccursInProcessor
+
+  /** Type of definitions that occur in an [[Adaptor]] with [[Include]] */
+  type AdaptorContents = OccursInProcessor | Include[OccursInAdaptor]
+
+  /** Type of definitions that occur in a [[Saga]] without [[Include]] */
+  private type OccursInSaga = OccursInVitalDefinition | SagaStep
+
+  /** Type of definitions that occur in a [[Saga]] with [[Include]] */
+  type SagaContents = OccursInSaga | Include[OccursInSaga]
+
+  /** Type of definitions that occur in a [[Streamlet]] without [[Include]] */
+  private type OccursInStreamlet = OccursInProcessor
+
+  /** Type of definitions that occur in a [[Streamlet]] with [[Include]] */
+  type StreamletContents = OccursInStreamlet | Include[OccursInStreamlet]
+
+  /** Type of definitions that occur in an [[Epic]] without [[Include]] */
+  private type OccursInEpic = OccursInVitalDefinition | UseCase
+
+  /** Type of definitions that occur in an [[Epic]] with [[Include]] */
+  type EpicContents = OccursInEpic | Include[OccursInEpic]
+
+  /** Type of definitions that occur in a [[UseCase]] */
+  private type UseCaseContents = Interaction | Comment
+
+  /** Type of definitions that occur in a [[InteractionContainer]] */
+  private type InteractionContainerContents = Interaction | Comment
+
+  /** Type of definitions that occur in a [[Projector]] without [[Include]] */
+  private type OccursInProjector = OccursInProcessor | RepositoryRef
+
+  /** Type of definitions that occur in a [[Projector]] with [[Include]] */
+  type ProjectorContents = OccursInProjector | Include[OccursInProjector]
+
+  /** Type of definitions that occur in a [[Repository]] without [[Include]] */
+  private type OccursInRepository = OccursInProcessor | Schema
+
+  /** Type of definitions that occur in a [[Repository]] with [[Include]] */
+  type RepositoryContents = OccursInRepository | Include[OccursInRepository]
+
+  /** Type of definitions that occur in a [[Function]] */
+  private type OccursInFunction = OccursInVitalDefinition | Aggregation
+
+  /** Type of definitions that occur in a [[Function]], with Include */
+  type FunctionContents = OccursInFunction | Include[OccursInFunction]
+
+  /** Type of definitions that occur in a [[Type]] */
+  private type OccursInType = Field | Method | Enumerator
+
+  /** Type of definitions that occur in a block of [[Statement]] */
+  type Statements = Statement | Comment
+
+  /** Type of definitions that an occur in an OnClause */
+  type OnClauseContents = Statements
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
+  //////// The Abstract classes for defining Definitions by using the foregoing traits
+
+  /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
+    * yield a string that provides the kind and name
+    */
+  sealed trait Definition
+      extends Container[ContentValues]
+      with NamedValue
+      with DescribedValue
+      with BrieflyDescribedValue
+      with WithComments {
+
+    /** True iff there are contained definitions */
+    override def hasDefinitions: Boolean = contents.definitions.nonEmpty
+
+    /** Yes anything deriving from here is a definition */
+    override def isDefinition: Boolean = true
+
+    def isAppRelated: Boolean = false
+  }
+
+  /** A definition with no content */
+  sealed trait LeafDefinition extends Definition {
+    override def isEmpty: Boolean = contents.isEmpty && description.isEmpty && brief.isEmpty
+    final override def contents: Contents[ContentValues] = Seq.empty[ContentValues]
+    final override def hasDefinitions: Boolean = false
+  }
+
+  /** The base class of the primary, or vital, definitions. Most of the important definitions are derivatives of this
+    * sealed trait. All vital definitions contain comments, documentation, options, authors that defined it, include
+    * statements, and term definitions.
+    * @tparam CT
+    *   The type of the contents of the Vital Definition which must be rooted in RiddlValue
+    */
+  sealed trait VitalDefinition[CT <: ContentValues]
+      extends Definition
+      with WithIncludes[CT]
+      with WithComments
+      with WithDocumentation
+      with WithOptions
+      with WithAuthorRefs
+      with WithTerms {
+
+    final override def isVital: Boolean = true
+  }
+
+  /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
+    * handlers, functions, and take messages directly with a reference). Processors are the active portion of a model
+    * since they handle messages and do the associated processing.
+    * @tparam CT
+    *   The type of content that the [[Processor]] may contain
+    */
+  sealed trait Processor[CT <: ContentValues]
+      extends VitalDefinition[CT]
+      with WithTypes
+      with WithConstants
+      with WithInvariants
+      with WithFunctions
+      with WithHandlers
+      with WithInlets
+      with WithOutlets {
+
+    final override def isProcessor: Boolean = true
+
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
+  //// The types defined in this section provide utility to the other definitions for includes and references.
+
+  /** A value to record an inclusion of a file while parsing.
+    *
+    * @param loc
+    *   The location of the include statement in the source
+    * @param contents
+    *   The Vital Definitions read from the file
+    * @param origin
+    *   The string that indicates the origin of the inclusion
+    * @tparam CT
+    *   The type of things that may be included as the contents of the [[Include]]'s parent.
+    */
+  case class Include[CT <: RiddlValue](
+    loc: At = At.empty,
+    origin: URL = URL.empty,
+    contents: Contents[CT]
+  ) extends Container[CT] {
+
+    override def isRootContainer: Boolean = true
+
+    def format: String = s"include \"$origin\""
+    override def toString: String = format
+  }
+
   /** Base trait of a reference to definitions that can accept a message directly via a reference
     *
     * @tparam T
@@ -776,8 +887,8 @@ object AST {
     *   The sequence top level definitions contained by this root container
     */
   case class Root(
-    contents: Contents[RootScopeContents] = Seq.empty
-  ) extends VitalDefinition[RootScopeContents]
+    contents: Contents[RootContents] = Seq.empty
+  ) extends VitalDefinition[RootContents]
       with WithAuthors
       with WithDomains {
 
@@ -799,7 +910,9 @@ object AST {
   }
 
   object Root {
-    val empty: Root = apply(Seq.empty[RootScopeContents])
+
+    /** The value to use for an empty [[Root]] instance */
+    val empty: Root = apply(Seq.empty[RootContents])
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// USER
@@ -903,21 +1016,29 @@ object AST {
   /** Base trait of an expression that defines a type
     */
   sealed trait TypeExpression extends RiddlValue {
+
+    /** Determines whether the `other` type is assignable to `this` type. */
     def isAssignmentCompatible(other: TypeExpression): Boolean = {
       (other == this) || (other.getClass == this.getClass) ||
       (other.getClass == classOf[Abstract]) ||
       (this.getClass == classOf[Abstract])
     }
+
+    /** Indicates whether this type has/is a [[Cardinality]] expression. */
     def hasCardinality: Boolean = false
+
+    /** Determines if `this` [[TypeExpression]] is an [[AggregateTypeExpression]] of a specific [[AggregateUseCase]]
+      */
     def isAggregateOf(useCase: AggregateUseCase): Boolean = {
       this match {
-        case AliasedTypeExpression(_, keyword, _) if keyword.compareToIgnoreCase(useCase.format) == 0 => true
+        case AliasedTypeExpression(_, keyword, _) if keyword.compareToIgnoreCase(useCase.useCase) == 0 => true
         case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == useCase                      => true
         case _                                                                                        => false
       }
     }
   }
 
+  /** Base of all Numeric types */
   sealed trait NumericType extends TypeExpression {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -925,7 +1046,10 @@ object AST {
     }
   }
 
+  /** Base of all the Integer Numeric types */
   sealed trait IntegerTypeExpression extends NumericType
+
+  /** Base of all the Real Numeric types */
   sealed trait RealTypeExpression extends NumericType
 
   /** A TypeExpression that references another type by PathIdentifier
@@ -942,7 +1066,8 @@ object AST {
   /** Base of an enumeration for the four kinds of message types */
   sealed trait AggregateUseCase {
     override def toString: String = useCase
-    def format: String = useCase
+
+    /** The textual name of the usecase, for subclasses to define */
     def useCase: String
   }
 
@@ -1231,8 +1356,6 @@ object AST {
     name: String,
     typeEx: TypeExpression
   ) extends RiddlValue {
-
-    /** Format the node to a string */
     def format: String = s"$name: ${typeEx.format}"
   }
 
@@ -1271,7 +1394,9 @@ object AST {
       extends Container[RiddlValue]
       with TypeExpression
       with WithComments {
+    /** The list of aggregated [[Field]]  */
     def fields: Seq[Field] = contents.filter[Field]
+    /** Thelist of aggregated [[Method]] */
     def methods: Seq[Method] = contents.filter[Method]
     override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
@@ -1307,7 +1432,10 @@ object AST {
   ) extends AggregateTypeExpression(contents)
 
   @JSExportTopLevel("Aggregation$")
+  /** Companion object for [[Aggregation]] to provide the empty value */
   object Aggregation {
+
+    /** The empty value for an [[Aggregation]] */
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
   }
 
@@ -1328,7 +1456,7 @@ object AST {
     contents: Seq[RiddlValue] = Seq.empty
   ) extends AggregateTypeExpression(contents) {
     override def format: String = {
-      usecase.format.toLowerCase() + " " + super.format
+      usecase.useCase.toLowerCase() + " " + super.format
     }
   }
 
@@ -2368,7 +2496,7 @@ object AST {
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param statements
+    * @param contents
     *   A set of examples that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
@@ -2393,7 +2521,7 @@ object AST {
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param statements
+    * @param contents
     *   A set of statements that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
@@ -2423,7 +2551,7 @@ object AST {
     *   A reference to the message type that is handled
     * @param from
     *   Optional message generating
-    * @param statements
+    * @param contents
     *   A set of statements that define the behavior when the [[msg]] is received.
     * @param brief
     *   A brief description (one sentence) for use in documentation
@@ -2447,7 +2575,7 @@ object AST {
     *
     * @param loc
     *   THe location of the "on other" clause
-    * @param statements
+    * @param contents
     *   A set of statements that define the behavior when a message doesn't match
     * @param brief
     *   A brief description (one sentence) for use in documentation
@@ -3122,7 +3250,7 @@ object AST {
     def to: Reference[Definition]
   }
 
-  sealed trait InteractionContainer extends Interaction with Container[ContainerInteractionContents] with WithComments {
+  sealed trait InteractionContainer extends Interaction with Container[InteractionContainerContents] with WithComments {
 
     /** Format the node to a string */
     override def format: String = s"Interaction"
@@ -3140,7 +3268,7 @@ object AST {
   @JSExportTopLevel("ParallelInteractions")
   case class ParallelInteractions(
     loc: At,
-    contents: Contents[ContainerInteractionContents] = Seq.empty[Interaction | Comment],
+    contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
@@ -3162,7 +3290,7 @@ object AST {
   @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
     loc: At,
-    contents: Contents[ContainerInteractionContents] = Seq.empty[Interaction | Comment],
+    contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
@@ -3181,7 +3309,7 @@ object AST {
   @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
     loc: At,
-    contents: Contents[ContainerInteractionContents] = Seq.empty[Interaction | Comment],
+    contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
@@ -3430,7 +3558,7 @@ object AST {
     loc: At,
     id: Identifier,
     userStory: UserStory = UserStory(),
-    contents: Contents[UseCaseContents] = Seq.empty[Interaction | Comment],
+    contents: Contents[UseCaseContents] = Seq.empty,
     brief: Option[LiteralString] = None,
     description: Option[Description] = None
   ) extends Definition
@@ -3945,7 +4073,7 @@ object AST {
       case RangeType(_, min, max)  => s"Range($min,$max)"
       case UniqueId(_, entityPath) => s"Id(${entityPath.format})"
       case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
-        s"${messageKind.format} of ${m.fields.size} fields and ${m.methods.size} methods"
+        s"${messageKind.useCase} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind
       case _                  => "<unknown type expression>"
     }

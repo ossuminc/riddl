@@ -48,16 +48,16 @@ class TopLevelParser(
 
   import scala.concurrent.Future
 
-  private def rootInclude[u: P]: P[Include[RootScopeContents]] = {
-    include[u, RootScopeContents](rootDefinitions(_))
+  private def rootInclude[u: P]: P[Include[RootContents]] = {
+    include[u, RootContents](rootDefinitions(_))
   }
 
-  private def rootDefinitions[u:P]: P[Seq[RootScopeContents]] = {
-    P(comment | rootInclude[u] | domain | author).asInstanceOf[P[RootScopeContents]]./.rep(1)
+  private def rootDefinitions[u:P]: P[Seq[RootContents]] = {
+    P(comment | rootInclude[u] | domain | author).asInstanceOf[P[RootContents]]./.rep(1)
   }
   
   protected def root[u: P]: P[Root] = {
-    P(Start ~ rootDefinitions ~ End).map { (content: Seq[RootScopeContents]) =>
+    P(Start ~ rootDefinitions ~ End).map { (content: Seq[RootContents]) =>
       Root(content) 
     }
   }

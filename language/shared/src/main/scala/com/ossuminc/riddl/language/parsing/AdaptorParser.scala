@@ -32,7 +32,7 @@ private[parsing] trait AdaptorParser {
   }
 
   private def adaptorBody[u: P]: P[Seq[AdaptorContents]] = {
-    undefined(Seq.empty[OccursInAdaptor])./ | adaptorDefinitions./
+    undefined(Seq.empty[AdaptorContents])./ | adaptorDefinitions./
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {

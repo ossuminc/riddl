@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.AST.*
 import scala.reflect.{ClassTag, classTag}
 import scalajs.js.annotation._
 
-/** The context for finding things within a given [Ccontainer]] or [[AST.RiddlValue]] as found in the AST model. This
+/** The context for finding things within a given [Ccontainer]] or [[com.ossuminc.riddl.language.AST.RiddlValue]] as found in the AST model. This
   * provides the ability to find values in the model by traversing it and looking for the matching condition.
   * @param root
   *   The container of RiddlValues to traverse for the sought condition
@@ -36,7 +36,7 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     }
   }
 
-  /** Search the [[root]] for a certain kind of [[RiddlValue]] and return those */
+  /** Search the [[root]] for a certain kind of [[AST.RiddlValue]] and return those */
   @JSExport
   def findByType[T <: AST.RiddlValue: ClassTag]: Seq[T] = {
     import scala.reflect.classTag

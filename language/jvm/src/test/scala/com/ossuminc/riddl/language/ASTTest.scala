@@ -27,7 +27,7 @@ class ASTTest extends TestingBasis {
     }
     "have useful FileDescription" in {
       import com.ossuminc.riddl.utils.URL
-      val fd = FileDescription(At(), URL("file:///."))
+      val fd = URLDescription(At(), URL("file:///."))
       fd.format must include("/")
       fd.format must include(".")
     }
@@ -39,7 +39,7 @@ class ASTTest extends TestingBasis {
       ud.loc.isEmpty mustBe (true)
       ud.url.toExternalForm must be(url_text)
       ud.format must be(url.toExternalForm)
-      val lines: Seq[String] = ud.lines
+      val lines: Seq[String] = ud.lines.map(_.s)
       val head = lines.head
       head must include("sbt-ossuminc")
     }

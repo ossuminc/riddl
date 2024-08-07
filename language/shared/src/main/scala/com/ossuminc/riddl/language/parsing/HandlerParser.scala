@@ -46,13 +46,13 @@ private[parsing] trait HandlerParser {
       briefly ~ description
   }.map(tpl => OnMessageClause.apply.tupled(tpl))
 
-  private def onClauses[u: P](set: StatementsSet): P[Seq[OccursInHandler]] = {
+  private def onClauses[u: P](set: StatementsSet): P[Seq[HandlerContents]] = {
     P(onInitClause(set) | onOtherClause(set) | onTermClause(set) | onMessageClause(set) | comment)
       .asInstanceOf[P[HandlerContents]]./.rep(0)
   }
 
-  private def handlerBody[u: P](set: StatementsSet): P[Seq[OccursInHandler]] = {
-    undefined(Seq.empty[OccursInHandler]) | onClauses(set)
+  private def handlerBody[u: P](set: StatementsSet): P[Seq[HandlerContents]] = {
+    undefined(Seq.empty[HandlerContents]) | onClauses(set)
   }
 
   def handler[u: P](set: StatementsSet): P[Handler] = {

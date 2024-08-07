@@ -12,7 +12,7 @@ class PathResolutionPassTest extends ResolvingTest {
 
   "PathResolutionPass" must {
     "resolve a full path" in {
-      val rpi =
+      val rpi = RiddlParserInput(
         """domain A {
           |  domain B {
           |    domain C {
@@ -20,8 +20,10 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |  type APrime = A.B.C.D
-          |}""".stripMargin
-      parseAndResolve(RiddlParserInput(rpi)) { (input, outputs) =>
+          |}""".stripMargin,
+        "resolve a full path"
+      )
+      parseAndResolve(rpi) { (input, outputs) =>
         val target: Type = input.root.domains.head.domains.head.domains.head.types.head
         val pid: Type = input.root.domains.head.types.head
         val parent = input.root.domains.head

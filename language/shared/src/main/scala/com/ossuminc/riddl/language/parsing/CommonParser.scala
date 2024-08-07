@@ -75,14 +75,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   private def blockDescription[u: P]: P[BlockDescription] = {
     P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
   }
-
-  private def fileDescription[u: P](implicit ctx: P[?]): P[FileDescription] = {
-    P(location ~ Keywords.file ~ literalString).map { case (loc, file) =>
-      val path = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
-      FileDescription(loc, path)
-    }
-  }
-
+  
   private def urlDescription[u: P]: P[URLDescription] = {
     P(location ~ httpUrl).map { case (loc, url) =>
       URLDescription(loc, url)
