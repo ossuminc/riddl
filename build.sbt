@@ -3,7 +3,6 @@ import com.ossuminc.sbt.{OssumIncPlugin, Plugin}
 import sbt.Keys.description
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
-import org.scalajs.linker.interface.OutputPatterns
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
@@ -19,15 +18,10 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
   .configure(With.noPublishing, With.git, With.dynver)
   .aggregate(
     utils,
-    utilsJS,
     language,
-    languageJS,
     passes,
-    passesJS,
     analyses,
-    analysesJS,
     diagrams,
-    diagramsJS,
     command,
     prettify,
     hugo,

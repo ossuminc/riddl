@@ -1,3 +1,8 @@
+/*
+ * Copyright 2024 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package com.ossuminc.riddl.utils
 
 import scala.scalajs.js
