@@ -26,6 +26,8 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     passesJS,
     analyses,
     analysesJS,
+    diagrams,
+    diagramsJS,
     command,
     prettify,
     hugo,
@@ -56,10 +58,10 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   )
   .jsSettings(
     scalaJSLinkerConfig ~= {
-      // Enable ECMAScript module output.
-      _.withModuleKind(ModuleKind.ESModule)
-        // Use .mjs extension.
-        .withOutputPatterns(OutputPatterns.fromJSFile("%s.mjs"))
+      // Enable CommonJS module output for smallest output size
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withSourceMap(true)
+        .withJSHeader("// RIDDL modules: utils\n")
     },
     libraryDependencies ++= Seq(
       "org.scalactic" %%% "scalactic" % V.scalatest,
@@ -92,9 +94,9 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .jsSettings(
     scalaJSLinkerConfig ~= {
       // Enable ECMAScript module output.
-      _.withModuleKind(ModuleKind.ESModule)
-        // Use .mjs extension.
-        .withOutputPatterns(OutputPatterns.fromJSFile("%s.mjs"))
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withSourceMap(true)
+        .withJSHeader("// RIDDL modules: language, utils\n")
     },
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
   )
@@ -116,6 +118,15 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing
   )
+  .jsSettings(
+    scalaJSLinkerConfig ~= {
+      // Enable CommonJS module output.
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withSourceMap(true)
+        .withJSHeader("// RIDDL modules: passes, language, utils\n")
+
+    }
+  )
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
@@ -134,9 +145,43 @@ lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(J
     coverageExcludedFiles := """<empty>;$anon""",
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
+  .jsSettings(
+    scalaJSLinkerConfig ~= {
+      // Enable CommonJS module output.
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withSourceMap(true)
+        .withJSHeader("// RIDDL modules: analyses, passes, language, utils\n")
+    }
+  )
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
 val analyses = analyses_cp.jvm
 val analysesJS = analyses_cp.js
+
+val Diagrams = config("diagrams")
+lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
+  .configure(With.typical)
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(With.publishing)
+  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
+  .settings(
+    scalaVersion := "3.4.2",
+    description := "Implementation of various AST diagrams passes other libraries may use"
+  )
+  .jvmSettings(
+    coverageExcludedFiles := """<empty>;$anon""",
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+  )
+  .jsSettings(
+    scalaJSLinkerConfig ~= {
+      // Enable CommonJS module output.
+      _.withModuleKind(ModuleKind.CommonJSModule)
+        .withSourceMap(true)
+        .withJSHeader("// RIDDL modules: diagrams, analyses, passes, language, utils\n")
+    }
+  )
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(analyses_cp))
+val diagrams = diagrams_cp.jvm
+val diagramsJS = diagrams_cp.js
 
 val Command = config("command")
 lazy val command = Module("command", "riddl-command")
@@ -197,7 +242,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils, pDep(language), pDep(passes), pDep(command), analyses, prettify, testKitDep)
+  .dependsOn(utils, pDep(language), pDep(passes), analyses, diagrams, pDep(command), prettify, testKitDep)
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")

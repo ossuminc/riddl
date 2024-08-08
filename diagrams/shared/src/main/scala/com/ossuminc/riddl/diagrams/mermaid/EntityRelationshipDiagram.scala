@@ -1,4 +1,4 @@
-package com.ossuminc.riddl.hugo.mermaid
+package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
@@ -53,7 +53,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
         case _: EntityReferenceTypeExpression => from + " ||--|| " + typeName
         case _: UniqueId                      => from + " ||--|| " + typeName
         case _ => ""
-      connector + " : references"  
+      connector + " : references"
     else typeName
   }
 

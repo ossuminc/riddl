@@ -6,7 +6,6 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.testkit.RunPassTestBase
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.hugo.mermaid.UseCaseDiagramSupport
 
 import java.nio.file.Path
 import java.net.URI
@@ -34,6 +33,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
         case Some(dpo: DiagramsPassOutput) =>
           dpo.useCaseDiagrams.headOption match
             case Some((uc, useCaseDiagramData)) =>
+
               val useCaseDiagram = UseCaseDiagram(TestUCDSupport(result), useCaseDiagramData)
               val lines = useCaseDiagram.generate
               info(lines.mkString("\n"))

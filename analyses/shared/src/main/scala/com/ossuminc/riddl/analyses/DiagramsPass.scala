@@ -19,13 +19,13 @@ import scala.collection.mutable
 /** The information needed to generate a Data Flow Diagram. DFDs are generated for each
   * [[com.ossuminc.riddl.language.AST.Context]] and consist of the streaming components that that are connected.
   */
-@JSExport("DataFlowDiagramData")
+@JSExportTopLevel("DataFlowDiagramData")
 case class DataFlowDiagramData()
 
 /** The information needed to generate a Use Case Diagram. The diagram for a use case is very similar to a Sequence
   * Diagram showing the interactions between involved components of the model.
   */
-@JSExport("UseCaseDiagramData")
+@JSExportTopLevel("UseCaseDiagramData")
 case class UseCaseDiagramData(
   name: String,
   actors: Map[String, Definition],
@@ -43,6 +43,7 @@ type ContextRelationship = (Context, String)
   * @param relationships
   *   The relationships between contexts
   */
+@JSExportTopLevel("ContextDiagramData")
 case class ContextDiagramData(
   domain: Domain,
   aggregates: Seq[Entity] = Seq.empty,
@@ -65,6 +66,7 @@ type DomainDiagramData = Seq[(Context, ContextDiagramData)]
   * @param contextDiagrams
   *   The data necessary for the context diagrams
   */
+@JSExportTopLevel("DiagramsPassOutput")
 case class DiagramsPassOutput(
   root: Root = Root.empty,
   messages: Messages.Messages = Messages.empty,
@@ -73,6 +75,7 @@ case class DiagramsPassOutput(
   contextDiagrams: Map[Context, ContextDiagramData] = Map.empty
 ) extends PassOutput
 
+@JSExportTopLevel("DiagramsPass")
 class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
 
   def name: String = DiagramsPass.name
@@ -333,6 +336,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   }
 }
 
+@JSExportTopLevel("DiagramsPass$")
 object DiagramsPass extends PassInfo[PassOptions] {
   val name: String = "Diagrams"
   def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>

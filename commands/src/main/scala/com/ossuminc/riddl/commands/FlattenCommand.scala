@@ -9,12 +9,13 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.command.InputFileCommandPlugin
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.utils.{Logger, StringHelpers}
 
 import java.nio.file.Path
 
-object DumpCommand {
+object FlattenCommand {
   final val cmdName = "flatten"
 }
 
@@ -30,7 +31,8 @@ class FlattenCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      Riddl.parseAndValidate(inputFile, commonOptions).map { result =>
+      val rpi = RiddlParserInput.rpiFromPath(inputFile)
+      Riddl.parseAndValidate(rpi, commonOptions).map { result =>
         // TODO: output the model to System.out without spacing and with a line break only after every Definition
         result
       }

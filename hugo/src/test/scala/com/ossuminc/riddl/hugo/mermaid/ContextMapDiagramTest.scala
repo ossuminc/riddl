@@ -3,7 +3,6 @@ package com.ossuminc.riddl.hugo.mermaid
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.testkit.RunPassTestBase
 import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.hugo.mermaid.ContextMapDiagram
 
 import java.nio.file.Path
 
@@ -16,6 +15,7 @@ class ContextMapDiagramTest extends RunPassTestBase {
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match
         case Some(dpo: DiagramsPassOutput) =>
+
           var failures = Seq.empty[String]
           for {
             (context, data) <- dpo.contextDiagrams

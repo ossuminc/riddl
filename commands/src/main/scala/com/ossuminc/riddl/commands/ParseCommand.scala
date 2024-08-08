@@ -9,6 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.TopLevelParser
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.command.InputFileCommandPlugin
@@ -31,7 +32,8 @@ class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      TopLevelParser.parsePath(inputFile, commonOptions)
+      val rpi = RiddlParserInput.rpiFromPath(inputFile)
+      TopLevelParser.parseInput(rpi, commonOptions)
         .map(_ => PassesResult()).map(_ => PassesResult())
     }
   }

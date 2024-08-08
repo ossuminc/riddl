@@ -6,12 +6,11 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid.*
-import com.ossuminc.riddl.hugo.mermaid
+import com.ossuminc.riddl.diagrams.mermaid.*
+import com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.parsing.Keywords.{domain, *}
 import com.ossuminc.riddl.utils.TextFileWriter
@@ -391,7 +390,7 @@ trait MarkdownWriter
         heading("Aggregation Of", headLevel)
         emitAggregateMembers(agg, parents)
       case mt: AggregateUseCaseTypeExpression =>
-        heading(s"${mt.usecase.format} Of", headLevel)
+        heading(s"${mt.usecase} Of", headLevel)
         emitAggregateMembers(mt, parents)
       case map: Mapping =>
         heading("Mapping Of", headLevel)
@@ -426,7 +425,7 @@ trait MarkdownWriter
     val groups = definition.types
       .groupBy { typ =>
         typ.typ match {
-          case mt: AggregateUseCaseTypeExpression          => mt.usecase.format
+          case mt: AggregateUseCaseTypeExpression          => mt.usecase.toString + " "
           case AliasedTypeExpression(loc, keyword, pathId) => "Alias "
           case EntityReferenceTypeExpression(loc, entity)  => "Reference "
           case numericType: NumericType                    => "Numeric "

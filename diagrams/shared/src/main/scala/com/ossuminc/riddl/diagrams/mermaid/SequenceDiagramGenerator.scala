@@ -1,4 +1,4 @@
-package com.ossuminc.riddl.hugo.mermaid
+package com.ossuminc.riddl.diagrams.mermaid
 
 /** A mermaid diagram generator for making sequence diagrams
   */

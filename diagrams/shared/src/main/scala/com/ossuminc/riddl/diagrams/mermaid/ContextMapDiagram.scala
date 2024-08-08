@@ -1,4 +1,4 @@
-package com.ossuminc.riddl.hugo.mermaid
+package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.analyses.ContextDiagramData
 import com.ossuminc.riddl.language.AST.{Context, Definition, Processor}

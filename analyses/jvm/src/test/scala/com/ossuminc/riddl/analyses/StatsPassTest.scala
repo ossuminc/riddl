@@ -10,7 +10,7 @@ import java.nio.file.Path
 class StatsPassTest extends ValidatingTest {
 
   "DefinitionStats" must {
-    "default correctly" in {
+    "default correctly" in { (td: TestData) =>
       val ds = DefinitionStats()
       ds.kind mustBe ""
       ds.isEmpty mustBe true
@@ -27,7 +27,7 @@ class StatsPassTest extends ValidatingTest {
   }
 
   "StatsOutput" must {
-    "default correctly" in {
+    "default correctly" in { (td: TestData) =>
       val so = StatsOutput()
       so.messages mustBe empty
       so.maximum_depth mustBe 0
@@ -36,8 +36,8 @@ class StatsPassTest extends ValidatingTest {
   }
 
   "StatsPass" must {
-    "generate statistics" in {
-      val rpi = RiddlParserInput(Path.of("language/jvm/src/test/input/everything.riddl"))
+    "generate statistics" in { (td: TestData) =>
+      val rpi = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
       parseValidateAndThen(rpi) { (pr: PassesResult, root: AST.Root, rpi: RiddlParserInput, messages: Messages.Messages) =>
         if messages.justErrors.nonEmpty then
           fail(messages.justErrors.format)
@@ -49,11 +49,11 @@ class StatsPassTest extends ValidatingTest {
           if statsOutput.messages.nonEmpty then fail(statsOutput.messages.format)
           statsOutput.maximum_depth > 0 mustBe true
           statsOutput.categories mustNot be(empty)
-          statsOutput.categories.size mustBe(28)
+          statsOutput.categories.size mustBe(29)
           val ksAll: KindStats = statsOutput.categories("All")
-          ksAll.count mustBe 27
-          ksAll.numEmpty mustBe 33
-          ksAll.numStatements mustBe 4
+          ksAll.count mustBe 28
+          ksAll.numEmpty mustBe 36
+          ksAll.numStatements mustBe 6
           succeed
       }
     }

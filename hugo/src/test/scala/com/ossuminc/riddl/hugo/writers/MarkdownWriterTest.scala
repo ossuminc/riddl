@@ -6,7 +6,6 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid.DomainMapDiagram
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.hugo.{GlossaryEntry, HugoTestBase}
 import com.ossuminc.riddl.language.AST.Root
@@ -36,6 +35,7 @@ class MarkdownWriterTest extends HugoTestBase {
         case Left(errors) =>
           fail("Parse Failed:\n" + errors.map(_.format).mkString("\n"))
         case Right(root) =>
+
           root.contents mustNot be(empty)
           val domain = root.domains.head
           val mkd = makeMDW(output, PassesResult.empty)

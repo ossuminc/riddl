@@ -14,6 +14,7 @@ class DataFlowDiagramTest extends ValidatingTest {
       simpleParseAndValidate(input) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right(passesResult: PassesResult) =>
+
           val dfd = DataFlowDiagram(passesResult)
           val domains = AST.getTopLevelDomains(passesResult.root)
           val contexts = AST.getContexts(domains.head)

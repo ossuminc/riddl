@@ -21,9 +21,9 @@ object Riddl {
   /** Parse an input with options and return the result
     *
     * @param input
-    * The [[RiddlParserInput]] to use as the input of the parsing
+    * The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input of the parsing
     * @param commonOptions
-    * The [[CommonOptions]] to use during the parsing
+    * The [[com.ossuminc.riddl.language.CommonOptions]] to use during the parsing
     * @return
     */
   def parse(input: RiddlParserInput, commonOptions: CommonOptions = CommonOptions.empty): Either[Messages,Root] = {
