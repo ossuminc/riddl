@@ -4,13 +4,15 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.PassesResult
-
+import com.ossuminc.riddl.diagrams.mermaid.DataFlowDiagram
 import java.nio.file.Path
+import org.scalatest.TestData
 
 class DataFlowDiagramTest extends ValidatingTest {
   "DataFlowDiagram" should {
-    "generate a simple diagram correctly" in {
-      val input = RiddlParserInput(Path.of("language/src/test/input/everything.riddl"))
+    "generate a simple diagram correctly" in { (td: TestData) =>
+      val path = Path.of("language/src/test/input/everything.riddl")
+      val input = RiddlParserInput.rpiFromPath(path)
       simpleParseAndValidate(input) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right(passesResult: PassesResult) =>

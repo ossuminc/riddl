@@ -116,7 +116,7 @@ object HugoPass extends PassInfo[HugoPass.Options] {
 }
 
 case class HugoOutput(
-  root: Root,
+  root: Root = Root.empty,
   messages: Messages = Messages.empty
 ) extends PassOutput
 

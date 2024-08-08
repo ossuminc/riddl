@@ -59,8 +59,9 @@ class IncludeAndImportTest extends ParsingTest {
     "handle existing URI" in { (td: TestData) =>
       import com.ossuminc.riddl.utils.URL
       val cwd = System.getProperty("user.dir", ".")
-      val urlStr: String = s"file:///$cwd/testkit/src/test/input/domains/simpleDomain.riddl"
-      val future = rpiFromURL(URL(urlStr), td).map { rpi =>
+      val urlStr: String = s"file:///$cwd/"
+      val url = URL("file","",cwd,"testkit/src/test/input/domains/simpleDomain.riddl")
+      val future = rpiFromURL(url, td).map { rpi =>
         parseDomainDefinition(rpi, identity) match {
           case Right(_) =>
             succeed
@@ -72,7 +73,8 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle inclusions into domain" in { (td: TestData) =>
       val (root, rpi) = checkFile("Domain Includes", "includes/domainIncludes.riddl")
-      val inc = StringParserInput("", URL("file:/" + defaultInputDir + "/includes/domainIncluded.riddl"))
+      val url = URL("file", "", "", defaultInputDir + "/includes/domainIncluded.riddl")
+      val inc = StringParserInput("", url)
       root.domains mustNot be(empty)
       root.domains.head.includes mustNot be(empty)
       root.domains.head.includes.head.contents mustNot be(empty)
@@ -87,7 +89,8 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle inclusions into contexts" in { (td: TestData) =>
       val (root, rpi) = checkFile("Context Includes", "includes/contextIncludes.riddl")
-      val inc = StringParserInput("", URL("file:/" + defaultInputDir + "/includes/contextIncluded.riddl"))
+      val url = URL("file", "", "", defaultInputDir + "/includes/contextIncluded.riddl")
+      val inc = StringParserInput("", url)
       root.domains mustNot be(empty)
       root.domains.head.contexts mustNot be(empty)
       root.domains.head.contexts.head.includes mustNot be(empty)

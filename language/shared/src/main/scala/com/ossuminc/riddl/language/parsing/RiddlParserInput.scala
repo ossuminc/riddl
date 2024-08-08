@@ -103,9 +103,9 @@ object RiddlParserInput {
         source.close()
       }
     }
-    val fileURL = file.toURI.toURL
-    val filePath = fileURL.toExternalForm // fix bug in JVM!
-    StringParserInput(data, URL(filePath), purpose)
+    val cwd = Option(System.getProperty("user.dir")).getOrElse("")
+    val url = URL("file", "", cwd, file.getPath)
+    StringParserInput(data, url, purpose)
   }
 
   /** Set up a parser input for parsing directly from a file at a specific Path
@@ -137,7 +137,7 @@ abstract class RiddlParserInput extends ParserInput {
     * @return
     *   Typically the last filename in the URL is sufficient, and that is the default calculated from [[root]].
     */
-  def origin: String = if root.isEmpty then "empty" else root.getFile
+  def origin: String = if root.isEmpty then "empty" else root.path
 
   /** The purpose of this parsing input. It could be a test name or blank for normal usage */
   def purpose: String = ""

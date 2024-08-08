@@ -56,7 +56,7 @@ class TopLevelParser(
     P(comment | rootInclude[u] | domain | author).asInstanceOf[P[RootContents]]./.rep(1)
   }
   
-  protected def root[u: P]: P[Root] = {
+  def root[u: P]: P[Root] = {
     P(Start ~ rootDefinitions ~ End).map { (content: Seq[RootContents]) =>
       Root(content) 
     }
@@ -131,6 +131,16 @@ object TopLevelParser {
       val tlp = new TopLevelParser(input, commonOptions)
       tlp.parseRoot(withVerboseFailures)
     }
+  }
+  
+  @JSExport
+  def parseString(
+    input: String,
+    commonOptions: CommonOptions = CommonOptions.empty,
+    withVerboseFailures: Boolean = false
+  ): Either[Messages, Root] = {
+    val rpi = RiddlParserInput(input,"")
+    parseInput(rpi)
   }
 }
 

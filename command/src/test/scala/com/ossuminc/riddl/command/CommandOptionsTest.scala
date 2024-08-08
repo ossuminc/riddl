@@ -4,10 +4,11 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.Assertion
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.utils.TestingBasis
 
 import java.nio.file.{Files, Path}
 
-class CommandOptionsTest extends AnyWordSpec with Matchers {
+class CommandOptionsTest extends TestingBasis {
 
   "CommandOptions" must {
     "check inputFile validity" in {

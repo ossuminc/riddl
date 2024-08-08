@@ -185,7 +185,7 @@ trait ParsingTest extends TestingBasisWithTestData {
     tp.parseContextDefinition[TO](extract)
   }
 
-  val defaultInputDir = "language/jvm/src/test/input/"
+  val defaultInputDir = "language/jvm/src/test/input"
   def checkFile(
     @unused label: String,
     fileName: String,

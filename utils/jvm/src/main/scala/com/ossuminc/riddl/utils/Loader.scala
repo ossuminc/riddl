@@ -14,7 +14,8 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   */
 @JSExportTopLevel("Loader")
 case class Loader(url: URL) {
-
+  require(url.isValid, "Cannot load from an invalid URL")
+  
   import scala.concurrent.ExecutionContext.Implicits.global
   import scala.concurrent.{ExecutionContext, Future}
   import scala.io.Source
@@ -24,16 +25,17 @@ case class Loader(url: URL) {
   def load: Future[String] = {
     val source: Source = {
       import scala.io.Codec
-      if url.url.startsWith("file:") then
-        import java.io.FileNotFoundException
-        import java.nio.file.Files
-        val path = java.nio.file.Path.of(url.url.drop(5))
-        if Files.exists(path) then Source.fromFile(path.toFile)(Codec.UTF8)
-        else throw FileNotFoundException(s"While loading $url")
-      else
-        val jurl = java.net.URI(url.toExternalForm).toURL
-        Source.fromURL(jurl)(Codec.UTF8)
-      end if
+      url.scheme match {
+        case file: String if file == URL.fileScheme =>
+          import java.io.FileNotFoundException
+          import java.nio.file.Files
+          val path = java.nio.file.Path.of(url.path)
+          if Files.exists(path) then Source.fromFile(path.toFile)(Codec.UTF8)
+          else throw FileNotFoundException(s"While loading $url")
+        case _ => 
+          val jurl = java.net.URI(url.toExternalForm).toURL
+          Source.fromURL(jurl)(Codec.UTF8)
+      }
     }
     Future {
       try {

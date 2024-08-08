@@ -3,7 +3,10 @@ package com.ossuminc.riddl.utils
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 
-class URLTest extends AnyWordSpec with Matchers {
+import scalajs.js.annotation._
+
+@JSExportTopLevel("URLTest")
+class URLTest2 extends AnyWordSpec with Matchers {
 
   "URL" must {
     "throws on bad syntax" in {
@@ -16,5 +19,6 @@ class URLTest extends AnyWordSpec with Matchers {
       val url2 = URL("http://host.name/path/to/file")
       val url3 = URL("https://host.name/path/to/file")
     }
+
   }
 }

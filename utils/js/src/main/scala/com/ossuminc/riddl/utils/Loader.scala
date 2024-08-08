@@ -23,13 +23,13 @@ case class Loader(url: URL) {
   import scalajs.js
 
   case class FileNotFoundException(url:URL) extends Exception(
-    s"Files cannot be loaded from Javascript: ${url.url}"
+    s"Files cannot be loaded from Javascript: ${url.toString}"
   )
   @JSExport
   def load: Future[String] = {
     import org.scalajs.dom.RequestInit
     import org.scalajs.dom.HttpMethod
-    if url.url.startsWith("file:") then 
+    if url.scheme == "file" then 
       throw new FileNotFoundException(url)
     else  
       val requestInit = new RequestInit { method = HttpMethod.GET }

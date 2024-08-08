@@ -16,33 +16,31 @@ import java.io.File
 import java.nio.file.Path
 import java.util.UUID
 import scala.io.Source
+import org.scalatest.TestData 
 
 class RiddlTest extends ParsingTest {
 
   "parse" should {
-    "parse a file" in {
-      TopLevelParser.parsePath(
-        path = Path.of("testkit/src/test/input/rbbq.riddl"),
-        commonOptions = CommonOptions(showTimes = true)
+    "parse a file" in { (td:TestData) =>
+      val rpi = RiddlParserInput.rpiFromPath(Path.of("testkit/src/test/input/rbbq.riddl"))
+      TopLevelParser.parseInput(rpi, commonOptions = CommonOptions(showTimes = true)
       ) match {
-        case Left(errors) => fail(errors.mkString(System.lineSeparator()))
+        case Left(errors) => fail(errors.format)
         case Right(_)     => succeed
       }
     }
 
-    "return an error when file does not exist" in {
+    "return an error when file does not exist" in { (td:TestData) =>
+      import java.sql.RowIdLifetime
       val options = CommonOptions(showTimes = true)
-      val file = new File(UUID.randomUUID().toString).toPath
-      TopLevelParser.parsePath(file, options) match {
-        case Right(root) => fail(s"File doesn't exist, can't be \n$root")
-        case Left(errors) =>
-          require(errors.size == 1)
-          errors.head.message must include(s"$file does not exist")
+      val file = new File(UUID.randomUUID().toString)
+      val xcptn = intercept[java.io.FileNotFoundException] {
+        RiddlParserInput.rpiFromFile(file)
       }
     }
-    "record errors" in {
+    "record errors" in { (td:TestData) =>
       val riddlParserInput: RiddlParserInput =
-        RiddlParserInput(UUID.randomUUID().toString)
+        RiddlParserInput(UUID.randomUUID().toString, td)
       val options = CommonOptions(showTimes = true)
       TopLevelParser.parseInput(input = riddlParserInput, options) match {
         case Right(_) => succeed
@@ -59,10 +57,11 @@ class RiddlTest extends ParsingTest {
   "parseAndValidate" should {
     def runOne(pathname: String): Either[Messages, PassesResult] = {
       val common = CommonOptions(showTimes = true)
-      Riddl.parseAndValidate(new File(pathname).toPath, common)
+      val rpi = RiddlParserInput.rpiFromFile(new File(pathname))
+      Riddl.parseAndValidate(rpi, common)
     }
 
-    "parse and validate a simple domain from path" in {
+    "parse and validate a simple domain from path" in { (td:TestData) =>
       runOne("testkit/src/test/input/domains/simpleDomain.riddl") match {
         case Right(_: PassesResult) => succeed
         case Left(errors) =>
@@ -70,14 +69,14 @@ class RiddlTest extends ParsingTest {
       }
     }
 
-    "parse and validate nonsense file as invalid" in {
+    "parse and validate nonsense file as invalid" in { (td:TestData) =>
       runOne("testkit/src/test/input/invalid.riddl") match {
         case Right(root) => fail(s"Should not have parsed, but got:\n$root")
         case Left(errors) => assert(errors.exists(_.kind == Messages.Error))
       }
     }
 
-    "parse and validate a simple domain from input" in {
+    "parse and validate a simple domain from input" in { (td:TestData) =>
       val content: String = {
         val source = Source.fromFile(
           new File(
@@ -88,7 +87,7 @@ class RiddlTest extends ParsingTest {
         finally source.close()
       }
       val common = CommonOptions(showTimes = true)
-      val input = RiddlParserInput(content)
+      val input = RiddlParserInput(content, td)
       Riddl.parseAndValidate(input, common) match {
         case Right(_: PassesResult) => succeed
         case Left(messages) =>
@@ -96,9 +95,9 @@ class RiddlTest extends ParsingTest {
       }
     }
 
-    "parse and validate nonsense input as invalid" in {
+    "parse and validate nonsense input as invalid" in { (td:TestData) =>
       val common = CommonOptions(showTimes = true)
-      val input = RiddlParserInput("I am not valid riddl (hopefully).")
+      val input = RiddlParserInput("I am not valid riddl (hopefully).", td)
       Riddl.parseAndValidate(input, common) match {
         case Right(_) => succeed
         case Left(messages) => assert(messages.exists(_.kind == Messages.Error))

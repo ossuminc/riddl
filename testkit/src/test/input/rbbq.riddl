@@ -15,7 +15,7 @@ domain ReactiveBBQ is {
 
   context Customer is {
     entity Customer is {
-      state main of ReactiveBBQ.Empty is { ??? }
+      state main of ReactiveBBQ.Empty
       handler input is { ??? }
     }
   }
@@ -29,9 +29,8 @@ domain ReactiveBBQ is {
     entity OrderViewer is {
      option is kind("device")
      record fields is { field: type OrderViewType }
-     state OrderState of OrderViewer.fields is {
-       handler input is { ??? }
-     }
+     state OrderState of OrderViewer.fields
+     handler input is { ??? }
     } explained as {
       |# brief
       |This is an OrderViewer
@@ -79,9 +78,8 @@ domain ReactiveBBQ is {
         points is Number,
         rewardEvents is many optional RewardEvent
       }
-      state RewardState of RewardsAccount.fields is {
-        handler Inputs is { ??? }
-      }
+      state RewardState of RewardsAccount.fields
+      handler Inputs is { ??? }
     }
 
     adaptor PaymentAdapter from context ReactiveBBQ.Payment is {
@@ -96,9 +94,8 @@ domain ReactiveBBQ is {
         orderId is OrderId,
         customerId is CustomerId
       }
-      state OrderState of Order.fields is {
-        handler foo  is {}
-      }
+      state OrderState of Order.fields
+      handler foo  is {}
     }
   }
 
@@ -110,26 +107,23 @@ domain ReactiveBBQ is {
         amount is Number,
         cardToken is String
       }
-      state PaymentState of Payment.fields is {
-        handler foo is { ??? }
-      }
+      state PaymentState of Payment.fields
+      handler foo is { ??? }
     }
   }
 
   context Menu is {
     entity MenuItem is {
       record fields is { something: String }
-      state MenuState of MenuItem.fields is {
-        handler foo is {}
-      }
+      state MenuState of MenuItem.fields
+      handler foo is {}
     }
     type MenuItemRef is reference to entity MenuItem
     entity Menu is {
       option is aggregate
       record fields is { items: many MenuItemRef }
-      state typical of Menu.fields is {
-        handler foo is { ??? }
-      }
+      state typical of Menu.fields
+      handler foo is { ??? }
     }
   }
 
@@ -143,17 +137,15 @@ domain ReactiveBBQ is {
     }
     entity Location is {
       record fields is { name: String }
-      state typical of Location.fields is {
-        handler foo is {}
-      }
+      state typical of Location.fields
+      handler foo is {}
     } explained as "This is a retail store Location"
 
     entity Reservation is {
      option aggregate
      record fields is { value: ReservationValue }
-     state reservation of Reservation.fields is {
-       handler ofInputs is {}
-     }
+     state reservation of Reservation.fields
+     handler ofInputs is {}
     }
   }
 } explained as {

@@ -12,7 +12,7 @@ import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
 import com.ossuminc.riddl.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
 import com.ossuminc.riddl.testkit.RiddlFilesTestBase
-import org.scalatest.Assertion
+import org.scalatest.{Assertion, TestData}
 
 import java.io.File
 import java.nio.file.Path
@@ -46,35 +46,35 @@ class PrettifyPassTest extends RiddlFilesTestBase {
   def checkAFile(
     file: File
   ): Assertion = {
-    val input1 = RiddlParserInput(file.toPath)
+    val input1 = RiddlParserInput.rpiFromPath(file.toPath)
     val output1 = runPrettify(input1, "first")
-    val input2 = RiddlParserInput(output1)
+    val input2 = RiddlParserInput(output1,"checkAFile")
     val output2 = runPrettify(input2, "second")
-    val input3 = RiddlParserInput(output2)
+    val input3 = RiddlParserInput(output2,"checkAFile")
     val output3 = runPrettify(input3, "third")
     output1 mustEqual output3
   }
 
   "PrettifyTranslator" should {
-    "check domains" in {
+    "check domains" in { (td: TestData) =>
       processADirectory("testkit/src/test/input/domains")
     }
-    "check enumerations" in {
+    "check enumerations" in { (td: TestData) =>
       processADirectory("testkit/src/test/input/enumerations")
     }
-    "check mappings" in {
+    "check mappings" in { (td: TestData) =>
       processADirectory("testkit/src/test/input/mappings")
     }
-    "check ranges" in {
+    "check ranges" in { (td: TestData) =>
       processADirectory("testkit/src/test/input/ranges")
     }
-    "check everything.riddl" in {
+    "check everything.riddl" in { (td: TestData) =>
       processAFile("testkit/src/test/input/everything.riddl")
     }
-    "check petstore.riddl" in {
+    "check petstore.riddl" in { (td: TestData) =>
       processAFile("testkit/src/test/input/petstore.riddl")
     }
-    "check rbbq.riddl" in {
+    "check rbbq.riddl" in { (td: TestData) =>
       processAFile("testkit/src/test/input/rbbq.riddl")
       println("done")
     }

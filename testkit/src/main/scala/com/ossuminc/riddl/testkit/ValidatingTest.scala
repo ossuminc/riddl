@@ -20,7 +20,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.io.File
 
 /** Convenience functions for tests that do validation */
-abstract class ValidatingTest extends AnyWordSpec with Matchers with ParsingTest {
+abstract class ValidatingTest extends ParsingTest {
 
   protected def runStandardPasses(
     model: Root,
@@ -61,14 +61,15 @@ abstract class ValidatingTest extends AnyWordSpec with Matchers with ParsingTest
   def parseAndValidateTestInput(
     label: String,
     fileName: String,
-    directory: String = "language/src/test/input/",
+    directory: String = "language/jvm/src/test/input/",
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
     validation: (Root, PassesResult) => Assertion = (_, pr) => defaultFail(pr)
   ): Assertion = {
     val file = new File(directory + fileName)
-    parseRoot(file) match {
+    val rpi = RiddlParserInput.rpiFromFile(file)
+    TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
@@ -85,7 +86,8 @@ abstract class ValidatingTest extends AnyWordSpec with Matchers with ParsingTest
   )(validation: (Root, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
     val directory = "testkit/src/test/input/"
     val file = new File(directory + fileName)
-    Riddl.parseAndValidate(file, options) match {
+    val rpi = RiddlParserInput.rpiFromFile(file)
+    Riddl.parseAndValidate(rpi, options) match {
       case Left(errors) =>
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
@@ -98,7 +100,8 @@ abstract class ValidatingTest extends AnyWordSpec with Matchers with ParsingTest
     file: File,
     options: CommonOptions = CommonOptions()
   ): Assertion = {
-    Riddl.parseAndValidate(file, options, shouldFailOnError = false) match {
+    val rpi = RiddlParserInput.rpiFromFile(file)
+    Riddl.parseAndValidate(rpi, options, shouldFailOnError = false) match {
       case Left(errors) =>
         fail(errors.format)
       case Right(result) =>

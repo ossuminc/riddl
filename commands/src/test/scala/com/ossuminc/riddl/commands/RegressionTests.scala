@@ -8,6 +8,7 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.CommandPlugin
 import com.ossuminc.riddl.language.parsing.ParsingTest
+import org.scalatest.TestData
 
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ParsingTest {
@@ -16,7 +17,7 @@ class RegressionTests extends ParsingTest {
   val output = "commands/target/regressions/"
 
   "Regressions" should {
-    "not produce a MatchError" in {
+    "not produce a MatchError" in { (td: TestData) =>
       val source = "match-error.riddl"
       val args = Array(
         "hugo",

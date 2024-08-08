@@ -59,13 +59,12 @@ domain Everything is {
       event Inebriated is { ??? }
 
       record fields is { field:  SomeType }
-      state someState of Something.fields is {
-        handler foo is {
-          on command ACommand {
-            "if and(Something arrives, misc()) then"
-              send event Inebriated to inlet Everything.full.input
-            "end"
-          }
+      state someState of Something.fields
+      handler foo is {
+        on command ACommand {
+          "if and(Something arrives, misc()) then"
+            send event Inebriated to inlet Everything.full.input
+          "end"
         }
       }
 
@@ -73,14 +72,14 @@ domain Everything is {
         requires {n: Nothing}
         returns {b: Boolean}
         body {
-          ```scala 
+          ```scala
             // Simulate a creative state
             val randomFactor = Math.random() // A random value between 0 and 1
             val threshold = 0.7 // Threshold for creativity
-        
+
             // If the random factor exceeds the threshold, consider it a creative state
             b = randomFactor > threshold
-          ``` 
+          ```
         }
       }
     }
@@ -88,11 +87,10 @@ domain Everything is {
     entity SomeOtherThing is {
       type ItHappened is event { field: String }
       record fields is { field: String }
-      state otherThingState of SomeOtherThing.fields is {
-        handler fee is {
-          on event ItHappened {
-             set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
-          }
+      state otherThingState of SomeOtherThing.fields
+      handler fee is {
+        on event ItHappened {
+           set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
         }
       }
     }

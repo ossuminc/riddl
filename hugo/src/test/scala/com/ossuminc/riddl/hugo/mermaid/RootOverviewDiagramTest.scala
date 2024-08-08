@@ -3,14 +3,17 @@ package com.ossuminc.riddl.hugo.mermaid
 import com.ossuminc.riddl.analyses.DiagramsPass
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.testkit.RunPassTestBase
+import com.ossuminc.riddl.diagrams.mermaid.RootOverviewDiagram
+import org.scalatest.TestData
 
 import java.nio.file.Path
 
 class RootOverviewDiagramTest extends RunPassTestBase {
 
   "ContextDiagram" should {
-    "generate a simple diagram correctly" in {
-      val input = RiddlParserInput(Path.of("hugo/src/test/input/context-relationships.riddl"))
+    "generate a simple diagram correctly" in { (td:TestData) =>
+      val path = Path.of("hugo/src/test/input/context-relationships.riddl")
+      val input = RiddlParserInput.rpiFromPath(path)
       val result = runPassesWith(input, DiagramsPass.creator())
       val diagram = RootOverviewDiagram(result.root)
       val lines = diagram.generate
@@ -79,8 +82,6 @@ class RootOverviewDiagramTest extends RunPassTestBase {
           |  class A A_class
           |  class B B_class
           |  class C C_class""".stripMargin
-
-
       actual mustBe expected
     }
   }
