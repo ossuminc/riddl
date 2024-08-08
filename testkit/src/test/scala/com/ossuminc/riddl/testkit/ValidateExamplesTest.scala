@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.testkit
 
 import com.ossuminc.riddl.language.CommonOptions
+import org.scalatest.TestData
 
 /** Validate files */
 class ValidateExamplesTest extends ValidatingTest {
@@ -17,7 +18,7 @@ class ValidateExamplesTest extends ValidatingTest {
   )
 
   "ValidateExamples" should {
-    "validate all with no errors or warnings" in {
+    "validate all with no errors or warnings" in {  (td:TestData) =>
       for ((label, fileName) <- files) yield {
         validateFile(label, fileName) { case (_, messages) =>
           val errors = messages.justErrors
@@ -32,20 +33,20 @@ class ValidateExamplesTest extends ValidatingTest {
   }
 
   "Enumerations" should {
-    "enforce Enumerators to start with lower case" in {
+    "enforce Enumerators to start with lower case" in { (td:TestData) =>
       validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") {
         case (_, messages) =>
           assertValidationMessage(messages, "style warnings")(_.kind.isStyle)
       }
     }
-    "allow enumerators with values" in {
+    "allow enumerators with values" in { (td:TestData) =>
       validateFile("t0002", "enumerations/t0002.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
     }
   }
   "Mappings" should {
-    "allow ranges" in {
+    "allow ranges" in { (td:TestData) =>
       validateFile("t0001", "mappings/t0001.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
@@ -53,7 +54,7 @@ class ValidateExamplesTest extends ValidatingTest {
   }
 
   "Ranges" should {
-    "allow ranges" in {
+    "allow ranges" in { (td:TestData) =>
       validateFile("t0001", "ranges/t0001.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
@@ -61,7 +62,7 @@ class ValidateExamplesTest extends ValidatingTest {
   }
 
   "options.showStyleWarnings" should {
-    "determine if style warnings are returned from validation" in {
+    "determine if style warnings are returned from validation" in { (td:TestData) =>
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",
@@ -83,7 +84,7 @@ class ValidateExamplesTest extends ValidatingTest {
     }
   }
   "options.showMissingWarnings" should {
-    "determine if missing warnings are returned from validation" in {
+    "determine if missing warnings are returned from validation" in { (td:TestData) =>
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl",

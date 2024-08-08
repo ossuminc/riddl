@@ -24,6 +24,7 @@ case class GlossaryEntry(
 )
 
 case class GlossaryOutput(
+  root: Root,
   messages: Messages.Messages,
   entries: Seq[GlossaryEntry]
 ) extends CollectingPassOutput[GlossaryEntry]
@@ -56,7 +57,7 @@ case class GlossaryPass(
 
   private def makeGlossaryEntry(
     d: Definition,
-    stack: Symbols.Parents
+    stack: Parents
   ): GlossaryEntry = {
     val parents = generator.makeStringParents(stack)
     val entry = GlossaryEntry(
@@ -70,13 +71,13 @@ case class GlossaryPass(
     entry
   }
 
-  def result: GlossaryOutput = {
-    GlossaryOutput(messages.toMessages, collectedValues.toSeq)
+  def result(root: Root): GlossaryOutput = {
+    GlossaryOutput(root, messages.toMessages, collectedValues.toSeq)
   }
 
   // Members declared in com.ossuminc.riddl.passes.Pass
   def name: String = GlossaryPass.name
-  def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ()
+  override def postProcess(root: Root): Unit = ()
 }
 
 object GlossaryPass {

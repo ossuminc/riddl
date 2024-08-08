@@ -48,7 +48,7 @@ case class DotdockWriter(
 
   def leafHead(definition: Definition, weight: Int): Unit = ???
 
-  def codeBlock(items: Seq[Statement]): Unit = ???
+  def codeBlock(items: Seq[Statements]): Unit = ???
 
   def notAvailable(thing: String, title: String = "Unavailable"): Unit = ???
 

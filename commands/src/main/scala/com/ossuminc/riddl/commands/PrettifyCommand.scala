@@ -80,9 +80,9 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
   }
 
   override def getPasses(
-    log: Logger,
-    commonOptions: CommonOptions,
-    options: PrettifyPass.Options
+                          log: Logger,
+                          commonOptions: CommonOptions,
+                          options: PrettifyPass.Options
   ): PassesCreator = {
     standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>

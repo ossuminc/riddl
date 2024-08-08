@@ -5,13 +5,14 @@ import com.ossuminc.riddl.hugo.themes.GeekDocWriter
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{Pass, PassesResult, Riddl}
+import com.ossuminc.riddl.utils.TestingBasis
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.Path
 
-class WriterTest extends AnyWordSpec with Matchers {
+class WriterTest extends TestingBasis {
 
   val base = Path.of("hugo", "src", "test", "input")
   val output = Path.of("hugo", "target", "test", "adaptors")

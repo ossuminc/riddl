@@ -2,19 +2,22 @@ package com.ossuminc.riddl.testkit
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.TestData
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST,At}
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.utils.TestingBasisWithTestData
+
 import java.nio.file.Path
 
-class TestParserTest extends AnyWordSpec with Matchers {
+class TestParserTest extends ParsingTest {
 
   "TestParser" should {
-    val input = RiddlParserInput(Path.of("language/src/test/input/everything.riddl"))
+    val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
     val tp = TestParser(input)
 
-    "provide expect" in {
+    "provide expect" in { (td:TestData) =>
       tp.expect[Root](tp.root) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root: Root) =>
@@ -24,7 +27,7 @@ class TestParserTest extends AnyWordSpec with Matchers {
           domains.head.identify must be("Domain 'Everything'")
       }
     }
-    "provide parse" in {
+    "provide parse" in { (td:TestData) =>
       tp.parse[Root,Domain](tp.root, AST.getTopLevelDomains(_).head) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right((domain: Domain, rpi: RiddlParserInput)) =>
@@ -32,7 +35,7 @@ class TestParserTest extends AnyWordSpec with Matchers {
           domain.identify must be("Domain 'Everything'")
       }
     }
-    "provide parserRoot" in {
+    "provide parserRoot" in { (td:TestData) =>
       tp.parseRoot match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root: Root) =>
@@ -42,7 +45,7 @@ class TestParserTest extends AnyWordSpec with Matchers {
           domains.head.identify must be("Domain 'Everything'")
       }
     }
-    "provide parseTopLevelDomain" in {
+    "provide parseTopLevelDomain" in { (td:TestData) =>
       tp.parseTopLevelDomains match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root: Root) =>
@@ -52,14 +55,14 @@ class TestParserTest extends AnyWordSpec with Matchers {
           domains.head.identify must be("Domain 'Everything'")
       }
     }
-    "provide parseTopLevelDomain(extractor)" in {
+    "provide parseTopLevelDomain(extractor)" in { (td:TestData) =>
       tp.parseTopLevelDomain[Domain](_.domains.head) match {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right(domain: Domain) =>
           domain.identify must be ("Domain 'Everything'")
       }
     }
-    "provide parseDefinition(extractor)" in {
+    "provide parseDefinition(extractor)" in { (td:TestData) =>
       tp.parseDefinition[Root,Domain](_.domains.head) match {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((domain: Domain, rpi: RiddlParserInput)) =>
@@ -67,7 +70,7 @@ class TestParserTest extends AnyWordSpec with Matchers {
           rpi must be(input)
       }
     }
-    "provide parseDefinition[TYPE]" in {
+    "provide parseDefinition[TYPE]" in { (td:TestData) =>
       tp.parseDefinition[Root] match {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((root: Root, rpi: RiddlParserInput)) =>
@@ -76,9 +79,9 @@ class TestParserTest extends AnyWordSpec with Matchers {
       }
     }
 
-    "provide parseDomainDefinition(extractor)" in {
-      val raw = """domain foo is { type x is Integer }"""
-      val input = RiddlParserInput(raw)
+    "provide parseDomainDefinition(extractor)" in {  (td:TestData) =>
+      val raw: String = """domain foo is { type x is Integer }"""
+      val input = RiddlParserInput.apply(raw, td.toString)
       val tp = TestParser(input)
       tp.parseDomainDefinition[Type](_.types.head) match {
         case Left(messages: Messages) => fail(messages.justErrors.format)
@@ -87,14 +90,14 @@ class TestParserTest extends AnyWordSpec with Matchers {
           typ.typ must be(Integer(At((1,27))))
       }
     }
-    "provide parseContextDefinition(extractor)" in {
+    "provide parseContextDefinition(extractor)" in { (td:TestData) =>
       val raw = """context foo is { type x is Integer }"""
-      val input = RiddlParserInput(raw)
+      val input = RiddlParserInput(raw,td)
       val tp = TestParser(input)
       tp.parseContextDefinition[Type](_.types.head) match {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((typ: Type, rpi: RiddlParserInput)) =>
-          rpi must be(input)
+          rpi.origin must be(input.origin)
           typ.typ must be(Integer(At((1,28))))
       }
     }

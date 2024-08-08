@@ -11,13 +11,11 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.Riddl
-import org.scalatest.Assertion
+import org.scalatest.{Assertion,TestData}
 
 import java.io.File
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
-
-//noinspection ScalaStyle
 
 /** CheckMessage This test suite runs through the files in input/check directory and validates them each as their own
   * test case. Each .riddl file can have a .check file that lists the expected messages. If there is no .check file the
@@ -38,7 +36,7 @@ class CheckMessagesTest extends ValidatingTest {
   )(
     validation: (Root, Messages) => Assertion
   ): Assertion = {
-    val input = RiddlParserInput(Path.of(fileName))
+    val input = RiddlParserInput.rpiFromPath(Path.of(fileName))
     Riddl.parseAndValidate(input, options, shouldFailOnError = false) match {
       case Left(errors) =>
         fail(s"In $label:\n${errors.format}")
@@ -83,7 +81,7 @@ class CheckMessagesTest extends ValidatingTest {
     }
   }
 
-  def checkADirectory(dirName: String): Unit = {
+  def checkADirectory(dirName: String, testName: String): Unit = {
     val dir = checkPath.resolve(dirName)
     val dirContents = dir.toFile.listFiles()
     val checkFiles = dirContents
@@ -119,15 +117,15 @@ class CheckMessagesTest extends ValidatingTest {
   }
 
   "Check Messages" should {
-    "check ambiguity" in { checkADirectory("ambiguity") }
-    "check domain" in { checkADirectory("domain") }
-    "check everything" in { checkADirectory("everything") }
-    // FIXME: "check fd-error" in { checkADirectory("fd-error") }
-    "check fd-success" in { checkADirectory("fd-success") }
-    "check overloading" in { checkADirectory("overloading") }
-    "check references" in { checkADirectory("references") }
-    "check saga" in { checkADirectory("saga") }
-    "check streaming" in { checkADirectory("streaming") }
-    "check t0001" in { checkADirectory("t0001") }
+    "check ambiguity" in { (td: TestData) => checkADirectory("ambiguity", td) }
+    "check domain" in { (td: TestData) => checkADirectory("domain",td) }
+    "check everything" in { (td: TestData) => checkADirectory("everything",td) }
+    // FIXME: "check fd-error" in { (td: TestData) => checkADirectory("fd-error", td) }
+    "check fd-success" in { (td: TestData) => checkADirectory("fd-success",td) }
+    "check overloading" in { (td: TestData) => checkADirectory("overloading",td) }
+    "check references" in { (td: TestData) => checkADirectory("references",td) }
+    "check saga" in { (td: TestData) => checkADirectory("saga",td) }
+    "check streaming" in { (td: TestData) => checkADirectory("streaming",td) }
+    "check t0001" in { (td: TestData) => checkADirectory("t0001",td) }
   }
 }

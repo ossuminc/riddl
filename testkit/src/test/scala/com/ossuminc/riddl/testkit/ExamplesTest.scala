@@ -10,6 +10,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import org.scalatest.Assertion
 
 import java.nio.file.Path
+import org.scalatest.TestData
 
 /** Unit Tests For ExamplesTest */
 class ExamplesTest extends ValidatingTest {
@@ -30,9 +31,9 @@ class ExamplesTest extends ValidatingTest {
   }
 
   "Examples" should {
-    "compile Reactive BBQ" in { doOne("rbbq.riddl") }
-    "compile Pet Store" in { doOne("petstore.riddl") }
-    "compile Everything" in { doOne("everything.riddl") }
-    "compile dokn" in { doOne("dokn.riddl") }
+    "compile Reactive BBQ" in { (td: TestData) =>  doOne("rbbq.riddl") }
+    "compile Pet Store" in { (td: TestData) => doOne("petstore.riddl") }
+    "compile Everything" in { (td: TestData) => doOne("everything.riddl") }
+    "compile dokn" in { (td: TestData) => doOne("dokn.riddl") }
   }
 }

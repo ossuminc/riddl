@@ -1,9 +1,8 @@
 package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
-import com.ossuminc.riddl.hugo.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
-import com.ossuminc.riddl.language.AST.{Definition, Epic, UseCase, User, UserStory}
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
+import com.ossuminc.riddl.language.AST.{Definition, Epic, UseCase, User, UserStory, Parents}
+import com.ossuminc.riddl.diagrams.mermaid.UseCaseDiagram
 
 trait EpicWriter { this: MarkdownWriter =>
 
@@ -53,6 +52,7 @@ trait EpicWriter { this: MarkdownWriter =>
           case Some(dpo) =>
             dpo.useCaseDiagrams.get(uc) match
               case Some(useCaseDiagramData: UseCaseDiagramData) =>
+
                 val ucd = UseCaseDiagram(generator, useCaseDiagramData)
                 val lines = ucd.generate
                 emitMermaidDiagram(lines)

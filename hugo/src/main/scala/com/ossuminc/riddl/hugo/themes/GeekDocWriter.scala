@@ -101,7 +101,7 @@ case class GeekDocWriter(
     }
   }
 
-  def codeBlock(items: Seq[Statement]): Unit = {
+  def codeBlock(items: Seq[Statements]): Unit = {
     if items.nonEmpty then
       sb.append(s"```")
       sb.append(items.map(_.format).mkString(new_line, new_line, new_line))

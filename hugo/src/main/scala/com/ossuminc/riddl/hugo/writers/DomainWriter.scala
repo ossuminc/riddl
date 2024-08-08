@@ -1,8 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid.DomainMapDiagram
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
+import com.ossuminc.riddl.diagrams.mermaid.DomainMapDiagram
 
 trait DomainWriter { this: MarkdownWriter =>
 

@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets
 
 /** Unit Tests For RiddlFileEmitter */
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
-  
+
   def add(strings: Seq[LiteralString]): this.type = {
     if strings.sizeIs > 1 then {
       nl
@@ -192,7 +192,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     typEx match {
       case string: String_                 => emitString(string)
       case AliasedTypeExpression(_, _, id) => this.add(id.format)
-      case URL(_, scheme) =>
+      case URI(_, scheme) =>
         this
           .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
       case enumeration: Enumeration => emitEnumeration(enumeration)
@@ -238,7 +238,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .nl
   }
 
-  def emitCodeBlock(statements: Seq[Statement]): this.type = {
+  def emitCodeBlock(statements: Seq[Statements]): this.type = {
     if statements.isEmpty then add(" { ??? }").nl
     else
       add(" {").incr.nl

@@ -1,10 +1,10 @@
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.HugoPass
-import com.ossuminc.riddl.hugo.mermaid.UseCaseDiagramSupport
 import com.ossuminc.riddl.language.AST.{Author, Definition, NamedValue, PathIdentifier, UseCase}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.diagrams.mermaid.UseCaseDiagramSupport
 
 import scala.reflect.ClassTag
 
@@ -20,6 +20,6 @@ case class DotdockGenerator(
   def makeSourceLink(definition: Definition): String = "" // TODO: implement makeSourceLink
 
   def makeDocAndParentsLinks(definition: NamedValue): String = "" // TODO: implement makeDocAndParentsLink
-  
+
   def makeTomlFile(options: HugoPass.Options, author: Option[Author]): String = "" // TODO: implement makeTomlFile
 }

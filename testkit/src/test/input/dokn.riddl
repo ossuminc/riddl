@@ -43,12 +43,11 @@ domain dokn is {
               primaryContactPhone: MobileNumber,
               primaryContactEmail: EmailAddress
             }
-            state CompanyBase of Company.fields is {
-              handler CompanyBaseHandler is {
-                  on command AddCompany {
-                      send event CompanyAdded to outlet CompanyEvents_out
-                  }
-              }
+            state CompanyBase of Company.fields
+            handler CompanyBaseHandler is {
+                on command AddCompany {
+                    send event CompanyAdded to outlet CompanyEvents_out
+                }
             }
         }
     }
@@ -80,15 +79,14 @@ domain dokn is {
               onDutyTime: TimeStamp,
               companyId: CompanyId
             }
-            state DriverBase of Driver.fields is {
-              handler DriverBaseHandler is {
-                  on command AddDriverToCompany {
-                    send event DriverAddedToCompany to inlet Driver_out
-                  }
-                  on command RemoveDriverFromCompany {
-                    send event DriverRemovedFromCompany to inlet Driver_out
-                  }
-              }
+            state DriverBase of Driver.fields
+            handler DriverBaseHandler is {
+                on command AddDriverToCompany {
+                  send event DriverAddedToCompany to inlet Driver_out
+                }
+                on command RemoveDriverFromCompany {
+                  send event DriverRemovedFromCompany to inlet Driver_out
+                }
             }
         }
     }
@@ -105,9 +103,8 @@ domain dokn is {
               downvoteCount: Integer,
               approved: Boolean
             }
-            state NoteBase of Note.fields is {
-              handler NoteBaseHandler is { ??? }
-            }
+            state NoteBase of Note.fields
+            handler NoteBaseHandler is { ??? }
         }
     }
 
@@ -119,9 +116,8 @@ domain dokn is {
               path: String,
               companyId: CompanyId
             }
-            state MediaBase of Media.fields is {
-              handler MediaBaseHandler is { ??? }
-            }
+            state MediaBase of Media.fields
+            handler MediaBaseHandler is { ??? }
         }
     }
 
@@ -160,29 +156,28 @@ domain dokn is {
               ticketCount: Integer,
               loadingMethod: type LoadingMethod
             }
-            state LocationBase of Location.fields is {
-              handler Base is {
-                  on command Location.AddDeliveryLocation {
-                    send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
-                  }
-                  on command ChangeLocationName {
-                    send event Location.LocationNameChanged to inlet CompanyEvents_in
-                  }
-                  on command ReportTicketReceived {
-                    send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
-                  }
-                  on command ModifyNotesAtLocation {
-                    send event Location.NotesForLocationModified to inlet CompanyEvents_in
-                  }
-                  on event Location.LocationAddressReceived {
-                    set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
-                  }
-                  on query Location.getLocationDetails {
-                    send result Location.LocationDetails to inlet Driver_in
-                  }
-                  on query Location.getLocationNotes {
-                    send result Location.LocationNotes to outlet Driver_out
-                  }
+            state LocationBase of Location.fields
+            handler Base is {
+              on command Location.AddDeliveryLocation {
+                send event Location.DeliveryLocationAdded to inlet CompanyEvents_in
+              }
+              on command ChangeLocationName {
+                send event Location.LocationNameChanged to inlet CompanyEvents_in
+              }
+              on command ReportTicketReceived {
+                send event Location.TicketReportedAtLocation to inlet CompanyEvents_in
+              }
+              on command ModifyNotesAtLocation {
+                send event Location.NotesForLocationModified to inlet CompanyEvents_in
+              }
+              on event Location.LocationAddressReceived {
+                set field LocationBase.address to "field Location.LocationAddressReceived.newAddress"
+              }
+              on query Location.getLocationDetails {
+                send result Location.LocationDetails to inlet Driver_in
+              }
+              on query Location.getLocationNotes {
+                send result Location.LocationNotes to outlet Driver_out
               }
             }
         }

@@ -30,6 +30,7 @@ case class MessageInfo(
 )
 
 case class MessageOutput(
+  root: Root, 
   messages: Messages.Messages,
   collected: Seq[MessageInfo]
 ) extends CollectingPassOutput[MessageInfo]
@@ -82,11 +83,9 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
     }
   }
 
-  def postProcess(root: Root): Unit = ()
-
-  override def result: MessageOutput = {
+  override def result(root: Root): MessageOutput = {
     val sortedList = collectedValues.sortBy(_.message).toSeq
-    MessageOutput(messages.toMessages, sortedList)
+    MessageOutput(root, messages.toMessages, sortedList)
   }
 }
 

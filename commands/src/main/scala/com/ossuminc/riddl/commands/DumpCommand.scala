@@ -8,6 +8,7 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.utils.{Logger,StringHelpers}
 import com.ossuminc.riddl.command.InputFileCommandPlugin
@@ -24,13 +25,14 @@ class DumpCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
   import InputFileCommandPlugin.Options
 
   override def run(
-    options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      Riddl.parseAndValidate(inputFile, commonOptions).map { result =>
+      val rpi = RiddlParserInput.rpiFromPath(inputFile)
+      Riddl.parseAndValidate(rpi, commonOptions).map { result =>
         log.info(s"AST of $inputFile is:")
         log.info(StringHelpers.toPrettyString(result, 1, None))
         result

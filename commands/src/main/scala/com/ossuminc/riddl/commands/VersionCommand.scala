@@ -47,10 +47,10 @@ class VersionCommand extends CommandPlugin[VersionCommand.Options]("version") {
   }
 
   override def run(
-    options: VersionCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: VersionCommand.Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     if commonOptions.verbose || !commonOptions.quiet then {
       println(RiddlBuildInfo.version)

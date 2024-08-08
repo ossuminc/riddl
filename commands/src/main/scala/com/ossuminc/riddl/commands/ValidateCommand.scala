@@ -9,6 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.command.InputFileCommandPlugin
 
@@ -26,7 +27,8 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      Riddl.parseAndValidate(inputFile, commonOptions)
+      val rpi = RiddlParserInput.rpiFromPath(inputFile)
+      Riddl.parseAndValidate(rpi, commonOptions)
     }
   }
 

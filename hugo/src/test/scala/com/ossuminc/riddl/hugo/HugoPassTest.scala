@@ -4,8 +4,9 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.passes.{Pass, PassesCreator, PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.TestingBasis
 
-class HugoPassTest extends AnyWordSpec with Matchers {
+class HugoPassTest extends TestingBasis {
 
   "HugoOutput" must {
     "construct empty" in {

@@ -10,17 +10,15 @@ import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.translate.TranslatingState
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.Pass.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.{SymbolsPass, Symbols}
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.passes.translate.TranslatingOptions
+import com.ossuminc.riddl.passes.translate.{TranslatingOptions, TranslatingState}
 import com.ossuminc.riddl.command.PassCommandOptions
 import com.ossuminc.riddl.analyses.{StatsPass, DiagramsPass}
-import com.ossuminc.riddl.hugo.mermaid.*
-import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
+import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.hugo.utils.TreeCopyFileVisitor
 import com.ossuminc.riddl.hugo.themes.{ThemeGenerator, ThemeWriter}
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
@@ -118,6 +116,7 @@ object HugoPass extends PassInfo[HugoPass.Options] {
 }
 
 case class HugoOutput(
+  root: Root = Root.empty,
   messages: Messages = Messages.empty
 ) extends PassOutput
 
@@ -190,6 +189,7 @@ case class HugoPass(
           case r: Repository => mkd.emitRepository(r, stack)
           case s: Saga       => mkd.emitSaga(s, stack)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
+          case r: Root => ()
         }
 
       case u: UseCase   => setUpContainer(u, stack).emitUseCase(u, stack)
@@ -212,7 +212,7 @@ case class HugoPass(
     close(root)
   }
 
-  override def result: HugoOutput = HugoOutput(messages.toMessages)
+  override def result(root: Root): HugoOutput = HugoOutput(root, messages.toMessages)
 
   private def deleteAll(directory: File): Boolean = {
     if !directory.isDirectory then false

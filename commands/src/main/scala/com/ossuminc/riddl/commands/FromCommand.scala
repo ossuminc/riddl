@@ -61,10 +61,10 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
   }
 
   override def run(
-    options: FromCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: FromCommand.Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val loadedCO =
       CommonOptionsHelper.loadCommonOptions(options.inputFile.fold(Path.of(""))(identity)) match {
