@@ -58,10 +58,10 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
         .withJSHeader("// RIDDL modules: utils\n")
     },
     libraryDependencies ++= Seq(
-      "org.scalactic" %%% "scalactic" % V.scalatest,
-      "org.scalatest" %%% "scalatest" % V.scalatest,
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
-      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0"
+      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
+      "org.scalactic" %%% "scalactic" % V.scalatest % "test",
+      "org.scalatest" %%% "scalatest" % V.scalatest % "test"
     )
   )
 
@@ -85,6 +85,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
     libraryDependencies += Dep.commons_io % Test
   )
+  // .jsSettings(ScalaJSPlugin.testConfigSettings)
   .jsSettings(
     scalaJSLinkerConfig ~= {
       // Enable ECMAScript module output.
@@ -92,7 +93,9 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
         .withSourceMap(true)
         .withJSHeader("// RIDDL modules: language, utils\n")
     },
-    libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "fastparse" % V.fastparse
+    )
   )
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
