@@ -11,13 +11,14 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.FileBuilder
 
-
 import scala.reflect.ClassTag
+import scala.scalajs.js.annotation.JSExportTopLevel
 
 /** A class to generate the sequence diagrams for an Epic's Use Case
   * @param ucdd
   *   The UseCaseDiagramData from the DiagramsPass for this
   */
+@JSExportTopLevel("UseCaseDiagram")
 case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) extends SequenceDiagramGenerator {
 
   private val participants: Seq[Definition] = ucdd.actors.values.toSeq.sortBy(_.kind)

@@ -4,9 +4,12 @@ import com.ossuminc.riddl.utils.FileBuilder
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.KnownOption.*
 
+import scala.scalajs.js.annotation.JSExport
+
 /** Common trait for things that generate mermaid diagrams */
 trait MermaidDiagramGenerator extends FileBuilder {
 
+  @JSExport
   def generate: Seq[String] = toLines
 
   def title: String

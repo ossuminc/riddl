@@ -12,6 +12,8 @@ import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.utils.FileBuilder
 
+import scala.scalajs.js.annotation.JSExportTopLevel
+
 /** Generate a data flow diagram Like this:
   * {{{
   * flowchart TD
@@ -25,6 +27,7 @@ import com.ossuminc.riddl.utils.FileBuilder
   * @param pr
   *   The PassesResult from running the standard passes to obtain all the collected ideas.
   */
+@JSExportTopLevel("DataFlowDiagram")
 case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
 
   require(pr.hasOutputOf(SymbolsPass.name))

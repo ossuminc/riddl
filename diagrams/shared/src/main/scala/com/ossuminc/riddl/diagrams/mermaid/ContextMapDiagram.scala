@@ -3,6 +3,8 @@ package com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.analyses.ContextDiagramData
 import com.ossuminc.riddl.language.AST.{Context, Definition, Processor}
 
+import scalajs.js.annotation.JSExportTopLevel
+
 /** Context Diagram generator using a DataFlow Diagram from Mermaid
   *
   * @param context
@@ -10,7 +12,7 @@ import com.ossuminc.riddl.language.AST.{Context, Definition, Processor}
   * @param data
   *   The data collected by the ((Diagrams Pass)) for this diagram.
   */
-
+@JSExportTopLevel("ContextMapDiagram")
 case class ContextMapDiagram(context: Context, data: ContextDiagramData)
     extends FlowchartDiagramGenerator(s"Context Map For ${context.identify}", "TB") {
 

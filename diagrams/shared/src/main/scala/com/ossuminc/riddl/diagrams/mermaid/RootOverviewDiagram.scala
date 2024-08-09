@@ -3,6 +3,9 @@ package com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.language.AST.{Domain, Root, VitalDefinition}
 import com.ossuminc.riddl.language.AST
 
+import scala.scalajs.js.annotation.JSExportTopLevel
+
+@JSExportTopLevel("RootOverviewDiagram$")
 object RootOverviewDiagram {
   private val containerStyles: Seq[String] = Seq(
     "font-size:1pc,fill:#000088,stroke:black,stroke-width:6,border:solid,color:white,margin-top:36px",
@@ -14,6 +17,7 @@ object RootOverviewDiagram {
   )
 }
 
+@JSExportTopLevel("RootOverviewDiagram")
 class RootOverviewDiagram(root: Root) extends FlowchartDiagramGenerator("Root Overview", "TB", "elk") {
 
   private val topLevelDomains = AST.getTopLevelDomains(root).sortBy(_.id.value)

@@ -1,6 +1,7 @@
 package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Processor, VitalDefinition}
+import scalajs.js.annotation.JSExportTopLevel
 
 /** Flowchart generator abstraction * Example output: * {{{ * --- * title: "Context Diagram For Domain Foo" * init: *
   * theme: dark * flowchartConfig: * defaultRenderer: dagre * width: 100% * --- * flowchart LR * classDef default

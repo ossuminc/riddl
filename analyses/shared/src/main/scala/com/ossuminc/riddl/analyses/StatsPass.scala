@@ -13,7 +13,9 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 
 import scala.collection.mutable
+import scala.scalajs.js.annotation.{JSExport,JSExportTopLevel}
 
+@JSExportTopLevel("StatsPass$")
 object StatsPass extends PassInfo[PassOptions] {
   val name: String = "stats"
   def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
@@ -21,7 +23,8 @@ object StatsPass extends PassInfo[PassOptions] {
   }
 }
 
-/** @param isEmpty
+/** DefinitionStats
+  * @param isEmpty
   *   An indication if the definition is completely empty
   * @param descriptionLines
   *   The number of lines of documentation between the description and brief fields
@@ -42,6 +45,7 @@ object StatsPass extends PassInfo[PassOptions] {
   * @param numStatements
   *   The number of statements used
   */
+@JSExportTopLevel("DefinitionStats")
 case class DefinitionStats(
   kind: String = "",
   isEmpty: Boolean = true, // if Definition.isEmpty returns true
@@ -56,7 +60,8 @@ case class DefinitionStats(
   numStatements: Long = 0
 )
 
-case class KindStats(
+@JSExportTopLevel("KindStats")
+class KindStats(
   var count: Long = 0,
   var numEmpty: Long = 0,
   var descriptionLines: Long = 0,
@@ -78,6 +83,7 @@ case class KindStats(
   def percent_documented: Double = Math.min(descriptionLines / 5d, 100d)
 }
 
+@JSExportTopLevel("StatsOutput")
 case class StatsOutput(
   root: Root = Root.empty, 
   messages: Messages = Messages.empty,
@@ -85,9 +91,16 @@ case class StatsOutput(
   categories: Map[String, KindStats] = Map.empty
 ) extends CollectingPassOutput[DefinitionStats]
 
-/** Unit Tests For StatsPass */
+/** Pass that generates statistics about a RIDDL Model 
+ * @param input 
+ *   The input to the pass
+ * @param outputs
+ *   The outputs from the passes
+ */
+@JSExportTopLevel("StatsPass")
 case class StatsPass(input: PassInput, outputs: PassesOutput) extends CollectingPass[DefinitionStats](input, outputs) {
 
+  @JSExport
   def name: String = StatsPass.name
 
   requires(SymbolsPass)
