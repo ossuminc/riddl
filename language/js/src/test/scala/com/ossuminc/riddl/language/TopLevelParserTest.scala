@@ -1,18 +1,19 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{Loader, URL}
-import com.ossuminc.riddl.language.parsing.{RiddlParserInput,TopLevelParser} 
-
-import scala.concurrent.{ExecutionContext, Future}
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.must.Matchers
+
+import scala.concurrent.{ExecutionContext, Future}
 
 class TopLevelParserTest extends AsyncFunSpec with Matchers:
   implicit override def executionContext: ExecutionContext = 
     scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-
+  println("Created TopLevelParserTest")
   describe("TopLevelParser") {
+    it("something") { println("foo"); succeed }
     it("do some parsing") {
       println("constructing URL")
       val url = URL("https://raw.githubusercontent.com/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl")
