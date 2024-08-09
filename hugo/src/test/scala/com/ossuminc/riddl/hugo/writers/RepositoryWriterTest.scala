@@ -39,7 +39,7 @@ class RepositoryWriterTest extends WriterTest {
                          || _Briefly_ | Brief description missing. |
                          || _Authors_ |  |
                          || _Definition Path_ | Root.Repository.One.Repo |
-                         || _View Source Link_ | [repository.riddl(3:5)]() |
+                         || _View Source Link_ | [hugo/src/test/input/repository.riddl(3:5)]() |
                          || _Used By_ | None |
                          || _Uses_ | None |
                          |""".stripMargin

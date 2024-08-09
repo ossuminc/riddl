@@ -5,8 +5,9 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassesResult}
 import com.ossuminc.riddl.utils.SysLogger
+import org.scalatest.Suite
 
-abstract class RunPassTestBase extends ValidatingTest {
+class RunPassTestBase extends ValidatingTest with Suite{
 
   def runPassesWith(
     input: RiddlParserInput,

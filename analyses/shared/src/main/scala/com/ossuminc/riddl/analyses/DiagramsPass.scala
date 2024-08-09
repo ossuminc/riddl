@@ -151,7 +151,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _: Repository  => Seq.empty[ContextRelationship]
       case _: Streamlet   => Seq.empty[ContextRelationship]
     }
-    rel1 ++ rel2 ++ rel3 ++ rel4 ++ rel5 ++ rel6
+    val result = rel1 ++ rel2 ++ rel3 ++ rel4 ++ rel5 ++ rel6
+    result.distinct
   }
 
   private def makeFunctionRelationships(context: Context, functions: Seq[Function]): Seq[ContextRelationship] = {

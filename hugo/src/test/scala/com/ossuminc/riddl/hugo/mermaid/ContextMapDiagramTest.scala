@@ -7,7 +7,7 @@ import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
 import com.ossuminc.riddl.diagrams.mermaid.ContextMapDiagram
 
 import org.scalatest.TestData
-import java.nio.file.Path 
+import java.nio.file.Path
 
 class ContextMapDiagramTest extends RunPassTestBase {
 
@@ -79,7 +79,6 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |    direction TB
                   |    B((fa:fa-house<br/>Context 'B'))
                   |    A((fa:fa-house<br/>Context 'A'))
-                  |    B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>Context 'A'))
                   |    B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>Context 'A'))
                   |  end
                   |  class B B_class

@@ -67,7 +67,7 @@ case class URL(scheme: String="", authority: String="", basis: String="", path: 
   }
 
   @JSExport def resolve(pathElement: String): URL = {
-    require(!pathElement.contains('/'),"Invalid path element content: /")
+    require(!pathElement.startsWith("/"),"Invalid path element starts with: /")
     URL(scheme, authority, basis, path + "/" + pathElement)
   }
 }

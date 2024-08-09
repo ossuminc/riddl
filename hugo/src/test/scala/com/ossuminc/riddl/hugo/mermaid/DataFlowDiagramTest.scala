@@ -11,7 +11,7 @@ import org.scalatest.TestData
 class DataFlowDiagramTest extends ValidatingTest {
   "DataFlowDiagram" should {
     "generate a simple diagram correctly" in { (td: TestData) =>
-      val path = Path.of("language/src/test/input/everything.riddl")
+      val path = Path.of("language/jvm/src/test/input/everything.riddl")
       val input = RiddlParserInput.rpiFromPath(path)
       simpleParseAndValidate(input) match {
         case Left(messages) => fail(messages.justErrors.format)

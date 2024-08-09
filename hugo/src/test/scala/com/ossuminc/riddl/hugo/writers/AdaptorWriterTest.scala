@@ -7,6 +7,10 @@ import com.ossuminc.riddl.passes.{Riddl,PassesResult}
 import org.scalatest.Assertion
 
 import java.nio.file.Path
+import com.ossuminc.riddl.utils.URL
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class AdaptorWriterTest extends WriterTest {
 
@@ -26,7 +30,8 @@ class AdaptorWriterTest extends WriterTest {
           val result = mkd.toString
           info(result)
           result mustNot be(empty)
-          val expected = """---
+          val expected =
+            """---
               |title: "FromTwo"
               |weight: 10
               |draft: "false"
@@ -42,7 +47,7 @@ class AdaptorWriterTest extends WriterTest {
               || _Briefly_ | Brief description missing. |
               || _Authors_ |  |
               || _Definition Path_ | Root.Adaptors.One.FromTwo |
-              || _View Source Link_ | [adaptors.riddl(4:5)]() |
+              || _View Source Link_ | [hugo/src/test/input/adaptors.riddl(4:5)]() |
               || _Used By_ | None |
               || _Uses_ | None |
               |
@@ -58,7 +63,7 @@ class AdaptorWriterTest extends WriterTest {
               || :---: | :---  |
               || _Briefly_ | Brief description missing. |
               || _Definition Path_ | FromTwo.Root.Adaptors.One.Adaptation |
-              || _View Source Link_ | [adaptors.riddl(6:15)]() |
+              || _View Source Link_ | [hugo/src/test/input/adaptors.riddl(6:15)]() |
               || _Used By_ | None |
               || _Uses_ | None |
               |
