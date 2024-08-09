@@ -38,7 +38,6 @@ case class URL(scheme: String="", authority: String="", basis: String="", path: 
   /** Determine if the URL is valid. URLs are valid if they are empty or they have a valid scheme name
    * and the path is not empty  */
   @JSExport def isValid: Boolean = {
-    println(this.toString) 
     isEmpty | (
       scheme.matches("(file)|(https?)") &&
         (path.isEmpty | (path.nonEmpty && path.head != '/' && path.last != '/'))
@@ -100,7 +99,6 @@ object URL {
     url match {
       case s: String if s.isEmpty => URL()
       case s: String if s.startsWith(fileScheme) =>
-        println(filePattern.pattern.pattern())
         s match {
           case filePattern(authority,_,_,_,maybePath) =>
             val path = Option(maybePath).getOrElse("")
