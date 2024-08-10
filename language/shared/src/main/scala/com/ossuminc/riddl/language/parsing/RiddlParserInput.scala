@@ -104,7 +104,7 @@ object RiddlParserInput {
       }
     }
     val cwd = Option(System.getProperty("user.dir")).getOrElse("")
-    val url = URL("file", "", cwd.drop(1), file.getPath.drop(1))
+    val url = URL("file", "", cwd.drop(1), file.getPath)
     StringParserInput(data, url, purpose)
   }
 

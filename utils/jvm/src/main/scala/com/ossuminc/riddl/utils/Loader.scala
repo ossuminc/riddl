@@ -29,7 +29,8 @@ case class Loader(url: URL) {
         case file: String if file == URL.fileScheme.dropRight(1) =>
           import java.io.FileNotFoundException
           import java.nio.file.Files
-          val path = java.nio.file.Path.of("/" + url.path)
+          val path = if url.basis.nonEmpty then java.nio.file.Path.of("/" + url.basis + "/" + url.path ) 
+          else java.nio.file.Path.of("/" + url.path)
           if Files.exists(path) then Source.fromFile(path.toFile)(Codec.UTF8)
           else throw FileNotFoundException(s"While loading $path")
         case _ =>

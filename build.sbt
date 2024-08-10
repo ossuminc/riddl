@@ -18,10 +18,15 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
   .configure(With.noPublishing, With.git, With.dynver)
   .aggregate(
     utils,
+    utilsJS,
     language,
+    languageJS,
     passes,
+    passesJS,
     analyses,
+    analysesJS,
     diagrams,
+    diagramsJS,
     command,
     prettify,
     hugo,
@@ -36,9 +41,6 @@ lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .configure(With.typical)
   .configure(With.build_info)
-  .jvmConfigure(With.coverage(70))
-  .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
@@ -46,22 +48,20 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
     buildInfoObject := "RiddlBuildInfo",
     description := "Various utilities used throughout riddl libraries"
   )
+  .jvmConfigure(With.coverage(70))
+  .jvmConfigure(With.publishing)
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
+  .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
   .jsSettings(
-    scalaJSLinkerConfig ~= {
-      // Enable CommonJS module output for smallest output size
-      _.withModuleKind(ModuleKind.CommonJSModule)
-        .withSourceMap(true)
-        .withJSHeader("// RIDDL modules: utils\n")
-    },
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalactic" %%% "scalactic" % V.scalatest % "test",
-      "org.scalatest" %%% "scalatest" % V.scalatest % "test"
+      "org.scalactic" %%% "scalactic" % V.scalatest  % "test",
+      "org.scalatest" %%% "scalatest" % V.scalatest  % "test",
+      "org.scalacheck" %%% "scalacheck" % V.scalacheck  % "test"
     )
   )
 
@@ -70,113 +70,73 @@ lazy val utilsJS = utils_cp.js
 
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
+  .dependsOn(cpDep(utils_cp))
   .configure(With.typical)
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings")
   )
-  .dependsOn(cpDep(utils_cp))
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
     libraryDependencies += Dep.commons_io % Test
   )
-  // .jsSettings(ScalaJSPlugin.testConfigSettings)
+  .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsSettings(
-    scalaJSLinkerConfig ~= {
-      // Enable ECMAScript module output.
-      _.withModuleKind(ModuleKind.CommonJSModule)
-        .withSourceMap(true)
-        .withJSHeader("// RIDDL modules: language, utils\n")
-    },
-    libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "fastparse" % V.fastparse
-    )
+    libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
   )
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
-  .configure(With.typical)
-  .jvmConfigure(With.coverage(30))
-  .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp))
+  .configure(With.typical, With.publishing)
   .settings(
     scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "AST Pass infrastructure and essential passes"
   )
+  .jvmConfigure(With.coverage(30))
+  .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
-    libraryDependencies ++= Dep.testing
   )
-  .jsSettings(
-    scalaJSLinkerConfig ~= {
-      // Enable CommonJS module output.
-      _.withModuleKind(ModuleKind.CommonJSModule)
-        .withSourceMap(true)
-        .withJSHeader("// RIDDL modules: passes, language, utils\n")
-
-    }
-  )
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp))
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
 val Analyses = config("analyses")
 lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(JVM, JS)
-  .configure(With.typical)
-  .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
+  .configure(With.typical, With.publishing)
   .settings(
     scalaVersion := "3.4.2",
     description := "Implementation of various AST analyses passes other libraries may use"
   )
+  .jvmConfigure(With.coverage(50))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .jsSettings(
-    scalaJSLinkerConfig ~= {
-      // Enable CommonJS module output.
-      _.withModuleKind(ModuleKind.CommonJSModule)
-        .withSourceMap(true)
-        .withJSHeader("// RIDDL modules: analyses, passes, language, utils\n")
-    }
-  )
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
+  .jsConfigure(With.js("RIDDL: analyses", withCommonJSModule = true))
 val analyses = analyses_cp.jvm
 val analysesJS = analyses_cp.js
 
 val Diagrams = config("diagrams")
 lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
-  .configure(With.typical)
-  .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.publishing)
-  .jsConfigure(With.js(hasMain = false, forProd = true, withCommonJSModule = false))
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(analyses_cp))
+  .configure(With.typical,With.publishing)
   .settings(
     scalaVersion := "3.4.2",
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
+  .jvmConfigure(With.coverage(50))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
-  .jsSettings(
-    scalaJSLinkerConfig ~= {
-      // Enable CommonJS module output.
-      _.withModuleKind(ModuleKind.CommonJSModule)
-        .withSourceMap(true)
-        .withJSHeader("// RIDDL modules: diagrams, analyses, passes, language, utils\n")
-    }
-  )
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(analyses_cp))
+  .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
 
