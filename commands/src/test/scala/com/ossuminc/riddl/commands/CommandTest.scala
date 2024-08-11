@@ -7,20 +7,21 @@ package com.ossuminc.riddl.commands
 
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
-import com.ossuminc.riddl.utils.{Plugin, PluginSpecBase}
+import com.ossuminc.riddl.utils.TestingBasis
 import com.ossuminc.riddl.command.{Command,CommandOptions}
 import pureconfig.*
 import scopt.*
 
 import java.nio.file.Path
 
-class CommandTest extends PluginSpecBase(
-      svcClassPath = Path.of("com/ossuminc/riddl/command/CommandPlugin.class"),
-      implClassPath = Path
-        .of("com/ossuminc/riddl/command/ASimpleTestCommand.class"),
-      moduleName = "command",
-      jarFilename = "test-command.jar"
-    ) {
+class CommandTest extends TestingBasis {
+//PluginSpecBase(
+//      svcClassPath = Path.of("com/ossuminc/riddl/command/CommandPlugin.class"),
+//      implClassPath = Path
+//        .of("com/ossuminc/riddl/commands/ASimpleTestCommand.class"),
+//      moduleName = "command",
+//      jarFilename = "test-command.jar"
+//    ) {
 
   "CommandPlugin " should {
     "get options from command line" in {
@@ -39,7 +40,7 @@ class CommandTest extends PluginSpecBase(
     "get options from config file" in {
       val cmd = ASimpleTestCommand()
       val reader = cmd.getConfigReader
-      val path: Path = Path.of("command/src/test/input/test.conf")
+      val path: Path = Path.of("commands/src/test/input/test.conf")
       ConfigSource
         .file(path.toFile)
         .load[ASimpleTestCommand.Options](reader) match {
@@ -48,8 +49,8 @@ class CommandTest extends PluginSpecBase(
       }
     }
 
-    "run a command via a plugin" in {
-      val args = Array(s"--plugins-dir=${tmpDir.toString}", "test", "inputfile", "test")
+    "run a command" in {
+      val args = Array("info")
       Commands.runMain(args) mustBe 0
     }
 
@@ -58,12 +59,12 @@ class CommandTest extends PluginSpecBase(
         "--verbose",
         "--suppress-style-warnings",
         "--suppress-missing-warnings",
-        "test",
-        "command/src/test/input/foo.riddl", // wrong file!
+        "parse",
+        "commands/src/test/input/foo.riddl", // wrong file!
         "hugo"
       )
       val rc = Commands.runMain(args)
-      rc must be(0)
+      rc must be(6)
     }
 
     "handle wrong command as target" in {
@@ -72,11 +73,11 @@ class CommandTest extends PluginSpecBase(
         "--suppress-style-warnings",
         "--suppress-missing-warnings",
         "test",
-        "command/src/test/input/repeat-options.conf",
+        "commands/src/test/input/repeat-options.conf",
         "flumox" // unknown command
       )
       val rc = Commands.runMain(args)
-      rc must be(0)
+      rc must be(6)
     }
   }
 }

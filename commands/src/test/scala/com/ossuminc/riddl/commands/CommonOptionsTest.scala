@@ -169,7 +169,7 @@ class CommonOptionsTest extends TestingBasis {
     }
 
     "empty args are eliminated" in {
-      val opts = Array("--show-times", "test",  "", "  ", "file.riddl", "arg1")
+      val opts = Array("--show-times", "parse",  "", "  ", "file.riddl")
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options) =>
@@ -183,7 +183,7 @@ class CommonOptionsTest extends TestingBasis {
     }
 
     "load message related common options from a file" in {
-      val optionFile = Path.of("command/src/test/input/message-options.conf")
+      val optionFile = Path.of("commands/src/test/input/message-options.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Right(opts: CommonOptions) =>
           opts.showTimes mustBe true
@@ -217,7 +217,7 @@ class CommonOptionsTest extends TestingBasis {
         "--plugins-dir:.",
         "--max-include-wait:5",
         "--max-parallel-parsing:12",
-        "test", "", "  ", "file.riddl", "arg1")
+        "parse", "", "  ", "file.riddl")
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options: CommonOptions) =>

@@ -7,7 +7,7 @@ import java.nio.file.Path
 /** Unit Tests For StatsCommandTest */
 class StatsCommandTest extends CommandTestBase("commands/src/test/input") {
 
-  val inputFile = "testkit/src/test/input/rbbq.riddl"
+  val inputFile = "commands/src/test/input/rbbq.riddl"
 
   "StatsCommand" should {
     "run correctly" in {

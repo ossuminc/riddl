@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.{Command,CommandOptions}  
+import com.ossuminc.riddl.command.{Command,CommandOptions}
 
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers

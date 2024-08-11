@@ -106,7 +106,7 @@ object HugoPass extends PassInfo[HugoPass.Options] {
     )
   }
 
-  private val geekDoc_version = "v0.44.1"
+  private val geekDoc_version = "v0.47.0"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL = java.net.URI
     .create(
