@@ -1,16 +1,15 @@
 package com.ossuminc.riddl.prettify
 
-import com.ossuminc.riddl.command.PassCommandOptions
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.language.{AST, Messages}
-import com.ossuminc.riddl.language.Messages.nl
+import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.passes.translate.TranslatingOptions
 import com.ossuminc.riddl.command.TranslationCommand
+import com.ossuminc.riddl.command.PassCommandOptions
 
 import java.nio.file.Path
 import scala.annotation.unused
@@ -70,6 +69,12 @@ object PrettifyPass extends PassInfo[PrettifyPass.Options] {
   }
 }
 
+case class PrettifyOutput(
+  root: Root = Root.empty,
+  messages: Messages = empty,
+  state: PrettifyState
+) extends PassOutput
+
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: PrettifyState = PrettifyState())
     extends HierarchyPass(input, outputs) {
@@ -85,7 +90,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
     * @return
     *   an instance of the output type
     */
-  override def result(root: Root): PassOutput = PrettifyOutput(root, Messages.empty, state)
+  override def result(root: Root): PassOutput = PrettifyOutput(root, empty, state)
 
   def openContainer(container: Definition, parents: Seq[Definition]): Unit = {
     container match {
@@ -102,7 +107,7 @@ case class PrettifyPass(input: PassInput, outputs: PassesOutput, state: Prettify
         state.withCurrent(_.openDef(container).emitOptions(processor).emitStreamlets(processor))
       case handler: Handler =>
         state.withCurrent(_.openDef(handler))
-      case onClause: OnClause => 
+      case onClause: OnClause =>
         processOnClause(onClause)
       case saga: Saga =>
         state.withCurrent(_.openDef(saga))

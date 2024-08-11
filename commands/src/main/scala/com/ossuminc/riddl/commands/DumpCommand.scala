@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.utils.{Logger,StringHelpers}
-import com.ossuminc.riddl.command.InputFileCommandPlugin
+import com.ossuminc.riddl.command.Command
 
 import java.nio.file.Path
 
@@ -21,8 +21,8 @@ object DumpCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class DumpCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
-  import InputFileCommandPlugin.Options
+class DumpCommand extends InputFileCommand(DumpCommand.cmdName) {
+  import InputFileCommand.Options
 
   override def run(
                     options: Options,
@@ -39,12 +39,7 @@ class DumpCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
       }
     }
   }
-
-  override def replaceInputFile(
-    opts: Options,
-    inputFile: Path
-  ): Options = { opts.copy(inputFile = Some(inputFile)) }
-
+  
   override def loadOptionsFrom(
     configFile: Path,
     commonOptions: CommonOptions

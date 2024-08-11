@@ -6,14 +6,14 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.command.{CommandOptions,CommandPlugin}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.Logger
-
+import com.ossuminc.riddl.command.CommandOptions
+import com.ossuminc.riddl.command.CommandOptions.optional
+import com.ossuminc.riddl.commands.Commands
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -28,6 +28,8 @@ import java.time.Instant
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
+import com.ossuminc.riddl.command.{Command, CommandOptions}
+
 
 object OnChangeCommand {
   final val cmdName: String = "onchange"
@@ -46,10 +48,10 @@ object OnChangeCommand {
 }
 
 class OnChangeCommand
-    extends CommandPlugin[OnChangeCommand.Options](OnChangeCommand.cmdName) {
+    extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
 
-  override def getOptions: (OParser[Unit, Options], Options) = {
+  override def getOptionsParser: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
     import builder.*
     OParser.sequence(

@@ -8,7 +8,7 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.testkit.RunCommandOnExamplesTest
+import com.ossuminc.riddl.commands.RunCommandOnExamplesTest
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}

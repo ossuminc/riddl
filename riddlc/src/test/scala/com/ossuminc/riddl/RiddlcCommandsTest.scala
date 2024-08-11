@@ -6,8 +6,8 @@
 
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.command.CommandPlugin
-import com.ossuminc.riddl.testkit.RunCommandSpecBase
+
+import com.ossuminc.riddl.commands.{Commands, RunCommandSpecBase}
 import org.scalatest.Assertion
 
 class RiddlcCommandsTest extends RunCommandSpecBase {
@@ -37,7 +37,7 @@ class RiddlcCommandsTest extends RunCommandSpecBase {
     }
     "rc=1 on parse errors" in {
       val args = Seq("parse","testkit/src/test/input/check/fd-error/fd-error.riddl")
-      val rc = CommandPlugin.runMain(args.toArray)
+      val rc = Commands.runMain(args.toArray)
       rc mustBe 6
     }
   }

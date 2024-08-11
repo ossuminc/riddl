@@ -6,11 +6,12 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.{CommandPlugin, CommandOptions}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{Interrupt, Logger}
+import com.ossuminc.riddl.command.{Command, CommandOptions}
+import com.ossuminc.riddl.commands.Commands
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -41,7 +42,7 @@ object RepeatCommand {
   }
 }
 
-class RepeatCommand extends CommandPlugin[RepeatCommand.Options](RepeatCommand.cmdName) {
+class RepeatCommand extends Command[RepeatCommand.Options](RepeatCommand.cmdName) {
   import RepeatCommand.Options
 
   /** Provide an scopt OParser for the commands options type, OPT
@@ -49,7 +50,7 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](RepeatCommand.c
     * @return
     *   A pair: the OParser and the default values for OPT
     */
-  override def getOptions: (OParser[Unit, Options], Options) = {
+  override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(RepeatCommand.cmdName)
       .text("""This command supports the edit-build-check cycle. It doesn't end
@@ -176,15 +177,12 @@ class RepeatCommand extends CommandPlugin[RepeatCommand.Options](RepeatCommand.c
     var shouldContinue = true
     var i: Int = 0
     while i < maxCycles && shouldContinue && !userHasCancelled do {
-      val result = CommandPlugin
-        .runFromConfig(
-          options.inputFile,
-          options.targetCommand,
-          commonOptions,
-          log,
-          pluginName
-        )
-        .map { _ =>
+      val result = Commands.runFromConfig(
+        options.inputFile,
+        options.targetCommand,
+        commonOptions,
+        log, "repeat"
+      ).map { _ =>
           if !userHasCancelled then {
             cancel.map(_.apply())
             shouldContinue = false

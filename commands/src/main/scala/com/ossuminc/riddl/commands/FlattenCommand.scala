@@ -1,12 +1,11 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2024 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.InputFileCommandPlugin
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -21,8 +20,8 @@ object FlattenCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class FlattenCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
-  import InputFileCommandPlugin.Options
+class FlattenCommand extends InputFileCommand(DumpCommand.cmdName) {
+  import InputFileCommand.Options
 
   override def run(
     options: Options,
@@ -38,11 +37,6 @@ class FlattenCommand extends InputFileCommandPlugin(DumpCommand.cmdName) {
       }
     }
   }
-
-  override def replaceInputFile(
-    opts: Options,
-    inputFile: Path
-  ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
   override def loadOptionsFrom(
     configFile: Path,

@@ -6,8 +6,6 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandOptions
-import com.ossuminc.riddl.command.CommandPlugin
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
@@ -19,6 +17,7 @@ import pureconfig.ConfigReader
 import scopt.OParser
 
 import java.nio.file.Path
+import com.ossuminc.riddl.command.{Command, CommandOptions}
 
 /** Unit Tests For FromCommand */
 object VersionCommand {
@@ -29,9 +28,9 @@ object VersionCommand {
       extends CommandOptions
 }
 
-class VersionCommand extends CommandPlugin[VersionCommand.Options]("version") {
+class VersionCommand extends Command[VersionCommand.Options]("version") {
   import VersionCommand.Options
-  override def getOptions: (OParser[Unit, Options], Options) = {
+  override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
       .text("Print the version of riddlc and exits") -> VersionCommand.Options()

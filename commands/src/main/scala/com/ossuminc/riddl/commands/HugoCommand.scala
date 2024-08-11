@@ -6,8 +6,6 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.command.{CommandOptions, PassCommand, PassCommandOptions}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
@@ -19,6 +17,9 @@ import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
 import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.analyses.DiagramsPass
+import com.ossuminc.riddl.command.CommandOptions
+import com.ossuminc.riddl.command.CommandOptions.optional
+import com.ossuminc.riddl.commands.Commands
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -26,13 +27,14 @@ import scopt.OParser
 import java.net.URL
 import java.nio.file.Path
 import scala.annotation.unused
+import com.ossuminc.riddl.command.PassCommand 
 
 
 class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
 
   import HugoPass.Options
 
-  override def getOptions: (OParser[Unit, Options], Options) = {
+  override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd("hugo")
       .text(
@@ -124,29 +126,14 @@ class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
       inputPath <- inputPathRes.asString
       outputPathRes <- objCur.atKey("output-dir")
       outputPath <- outputPathRes.asString
-      eraseOutput <- optional(objCur, "erase-output", true) { cc =>
-        cc.asBoolean
-      }
-      projectName <- optional(objCur, "project-name", "No Project Name") { cur =>
-        cur.asString
-      }
+      eraseOutput <- optional(objCur, "erase-output", false) { cc =>cc.asBoolean }
+      projectName <- optional(objCur, "project-name", "No Project Name") { cur => cur.asString }
       hugoThemeName <- optional(objCur, "hugo-theme-name", "GeekDoc") { cur => cur.asString }
-      enterpriseName <-
-        optional(objCur, "enterprise-name", "No Enterprise Name") { cur =>
-          cur.asString
-        }
-      siteTitle <- optional(objCur, "site-title", "No Site Title") { cur =>
-        cur.asString
-      }
-      siteDescription <-
-        optional(objCur, "site-description", "No Site Description") { cur =>
-          cur.asString
-        }
-      siteLogoPath <- optional(objCur, "site-logo-path", "static/somewhere") { cc =>
-        cc.asString
-      }
-      siteLogoURL <- optional(objCur, "site-logo-url", Option.empty[String]) { cc =>
-        cc.asString.map(Option[String])
+      enterpriseName <- optional(objCur, "enterprise-name", "No Enterprise Name") { cur => cur.asString }
+      siteTitle <- optional(objCur, "site-title", "No Site Title") { cur => cur.asString }
+      siteDescription <- optional(objCur, "site-description", "No Site Description") { cur => cur.asString}
+      siteLogoPath <- optional(objCur, "site-logo-path", "static/somewhere") { cc => cc.asString }
+      siteLogoURL <- optional(objCur, "site-logo-url", Option.empty[String]) { cc =>cc.asString.map(Option[String])
       }
       baseURL <- optional(objCur, "base-url", Option.empty[String]) { cc =>
         cc.asString.map(Option[String])

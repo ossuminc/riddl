@@ -6,14 +6,15 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.command.TranslationCommand
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.Pass.standardPasses
-import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesCreator}
+import com.ossuminc.riddl.passes.{PassInput, PassesCreator, PassesOutput}
 import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.prettify.*
-
+import com.ossuminc.riddl.command.TranslationCommand
+import com.ossuminc.riddl.command.CommandOptions
+import com.ossuminc.riddl.command.CommandOptions.optional
+import com.ossuminc.riddl.commands.Commands
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -33,7 +34,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  override def getOptions: (OParser[Unit, PrettifyPass.Options], PrettifyPass.Options) = {
+  override def getOptionsParser: (OParser[Unit, PrettifyPass.Options], PrettifyPass.Options) = {
     val builder = OParser.builder[PrettifyPass.Options]
     import builder.*
     cmd(PrettifyCommand.cmdName)
@@ -65,10 +66,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
       inputPath <- inputPathRes.asString
       outputPathRes <- content.atKey("output-dir")
       outputPath <- outputPathRes.asString
-      projectName <-
-        optional(content, "project-name", "No Project Name Specified") { cur =>
-          cur.asString
-        }
+      projectName <- optional(content, "project-name", "No Project Name Specified") { cur => cur.asString }
       singleFileRes <- objCur.atKey("single-file")
       singleFile <- singleFileRes.asBoolean
     yield PrettifyPass.Options(

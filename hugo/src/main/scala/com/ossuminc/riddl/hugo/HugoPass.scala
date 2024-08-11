@@ -13,15 +13,15 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.Pass.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
-import com.ossuminc.riddl.passes.symbols.{SymbolsPass, Symbols}
+import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.passes.translate.{TranslatingOptions, TranslatingState}
-import com.ossuminc.riddl.command.PassCommandOptions
-import com.ossuminc.riddl.analyses.{StatsPass, DiagramsPass}
+import com.ossuminc.riddl.analyses.{DiagramsPass, StatsPass}
 import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.hugo.utils.TreeCopyFileVisitor
 import com.ossuminc.riddl.hugo.themes.{ThemeGenerator, ThemeWriter}
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
+import com.ossuminc.riddl.command.{PassCommand,PassCommandOptions}
 
 import java.io.File
 import java.net.URL

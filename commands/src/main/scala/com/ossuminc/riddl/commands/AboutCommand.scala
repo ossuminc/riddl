@@ -6,13 +6,12 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandOptions
-import com.ossuminc.riddl.command.CommandPlugin
-import com.ossuminc.riddl.command.CommonOptionsHelper
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.command.{Command, CommandOptions,CommonOptionsHelper}
+
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -29,9 +28,9 @@ object AboutCommand {
       extends CommandOptions
 }
 
-class AboutCommand extends CommandPlugin[AboutCommand.Options]("about") {
+class AboutCommand extends Command[AboutCommand.Options]("about") {
   import AboutCommand.Options
-  override def getOptions: (OParser[Unit, Options], Options) = {
+  override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
       .text("Print out information about RIDDL") -> AboutCommand.Options()

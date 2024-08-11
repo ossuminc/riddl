@@ -20,6 +20,7 @@ import pureconfig.{ConfigCursor, ConfigReader}
 import java.io.{File, PrintStream}
 import java.nio.charset.Charset
 import java.nio.file.Path
+import com.ossuminc.riddl.command.{PassCommand,PassCommandOptions}
 
 object StatsCommand {
   val cmdName: String = "stats"
@@ -53,7 +54,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     }
   }
 
-  def getOptions: (OParser[Unit, Options], StatsCommand.Options) = {
+  def getOptionsParser: (OParser[Unit, Options], StatsCommand.Options) = {
     import builder.*
     cmd(StatsCommand.cmdName)
       .children(
@@ -69,11 +70,6 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
 
   // Members declared in com.ossuminc.riddl.commands.PassCommand
   def overrideOptions(options: Options, newOutputDir: Path): Options = { options }
-
-  override def replaceInputFile(
-    opts: Options,
-    inputFile: Path
-  ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
   override def loadOptionsFrom(
     configFile: Path,

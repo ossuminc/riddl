@@ -1,11 +1,11 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.command.CommandPlugin
+import com.ossuminc.riddl.commands.Commands
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.testkit.ValidatingTest
+import com.ossuminc.riddl.passes.validate.ValidatingTest
 import org.scalatest.{TestData,Assertion}
 
 import java.nio.file.Path
@@ -26,7 +26,7 @@ class ReportedIssuesTest extends ValidatingTest {
       dir ++ "/" ++ configFile,
       command
     )
-    CommandPlugin.runMain(commandArgs.toArray) must be(0)
+    Commands.runMain(commandArgs.toArray) must be(0)
   }
 
   def doOne(fileName: String, options: CommonOptions = defaultOptions)(

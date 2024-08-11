@@ -104,12 +104,6 @@ class EntityValidatorTest extends ValidatingTest {
           MissingWarning,
           "Entity 'Hamburger' should have a description"
         )
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
-          "State 'foo' in Entity 'Hamburger' should have content"
-        )
-
       }
     }
 

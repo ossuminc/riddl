@@ -17,7 +17,7 @@ import org.scalatest.TestData
 class ParserTest extends ParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
-  
+
   "ParserContext" must {
     "throw on underflow" in { (td: TestData) =>
       val riddlParserInput = RiddlParserInput("", td)

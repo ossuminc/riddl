@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandTestBase
+import com.ossuminc.riddl.commands.CommandTestBase
 
 import java.nio.file.Path
 

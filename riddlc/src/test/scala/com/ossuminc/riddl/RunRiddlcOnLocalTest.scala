@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.testkit.RunCommandSpecBase
+import com.ossuminc.riddl.commands.RunCommandSpecBase
 import org.scalatest.Assertion
 
 import java.nio.file.Files

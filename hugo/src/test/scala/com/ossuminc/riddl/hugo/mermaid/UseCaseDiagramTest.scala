@@ -3,8 +3,7 @@ package com.ossuminc.riddl.hugo.mermaid
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.AST.{Definition, Domain, Identifier, NamedValue, PathIdentifier, Root}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.testkit.{RunPassTestBase, ValidatingTest}
-import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult}
+import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult, RunPassTestBase}
 import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
 import com.ossuminc.riddl.diagrams.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
 import org.scalatest.TestData

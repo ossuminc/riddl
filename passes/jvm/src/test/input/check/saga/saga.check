@@ -1,0 +1,68 @@
+passes/jvm/src/test/input/check/saga/saga.riddl(4:5):
+ Command 'UndoSomething' should have a description:
+     type UndoSomething = command { ??? }
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(3:5):
+ Command 'Something' should have a description:
+     type Something = command { ??? }
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(1:1):
+ Vital definitions should have an author reference:
+ domain ignore1 is {
+ ^
+passes/jvm/src/test/input/check/saga/saga.riddl(2:3):
+ Vital definitions should have an author reference:
+   context ignore2 is {
+   ^
+passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
+ Vital definitions should have an author reference:
+     function AnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
+ Vital definitions should have an author reference:
+     function UndoAnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
+ Entity 'blah' must define at least one state:
+     entity blah is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
+ Entity 'blah' should have a description:
+     entity blah is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
+ Vital definitions should have an author reference:
+     entity blah is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(15:5):
+ Saga 'name' should have a description:
+     saga name is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(15:5):
+ Vital definitions should have an author reference:
+     saga name is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(13:13):
+ Inlet identifier 'in' is too short. The minimum length is 3:
+       inlet in is command Something
+             ^
+passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
+ Entity 'blah' is unused:
+     entity blah is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(13:7):
+ Inlet 'in' is not connected:
+       inlet in is command Something
+       ^
+passes/jvm/src/test/input/check/saga/saga.riddl(4:5):
+ Command 'UndoSomething' is unused:
+     type UndoSomething = command { ??? }
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
+ Function 'AnotherThing' is unused:
+     function AnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
+ Function 'UndoAnotherThing' is unused:
+     function UndoAnotherThing {
+     ^

@@ -11,14 +11,13 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.command.InputFileCommandPlugin
 
 import java.nio.file.Path
 import scala.annotation.unused
 
 /** Validate Command */
-class ValidateCommand extends InputFileCommandPlugin("validate") {
-  import InputFileCommandPlugin.Options
+class ValidateCommand extends InputFileCommand("validate") {
+  import InputFileCommand.Options
 
   override def run(
     options: Options,
@@ -31,11 +30,6 @@ class ValidateCommand extends InputFileCommandPlugin("validate") {
       Riddl.parseAndValidate(rpi, commonOptions)
     }
   }
-
-  override def replaceInputFile(
-    opts: Options,
-    inputFile: Path
-  ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
   override def loadOptionsFrom(
     configFile: Path,

@@ -103,8 +103,18 @@ object RiddlParserInput {
         source.close()
       }
     }
+    val fileAsStr = file.getPath
     val cwd = Option(System.getProperty("user.dir")).getOrElse("")
-    val url = URL("file", "", cwd.drop(1), file.getPath)
+    val url =
+      if fileAsStr.startsWith("/") then
+        if cwd.nonEmpty && fileAsStr.startsWith(cwd) then
+          URL("file","",cwd.drop(1),fileAsStr.drop(cwd.length+1))
+        else
+          URL("file","","",fileAsStr.drop(1))
+        end if
+      else
+        URL("file", "", cwd.drop(1), fileAsStr)
+      end if   
     StringParserInput(data, url, purpose)
   }
 

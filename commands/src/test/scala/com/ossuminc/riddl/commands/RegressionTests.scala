@@ -6,7 +6,6 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandPlugin
 import com.ossuminc.riddl.language.parsing.ParsingTest
 import org.scalatest.TestData
 
@@ -28,7 +27,7 @@ class RegressionTests extends ParsingTest {
         "--with-todo-list=true",
         regressionsFolder + source
       )
-      CommandPlugin.runMainForTest(args) match {
+      Commands.runMainForTest(args) match {
         case Left(messages) => fail(messages.format)
         case Right(pr) => succeed
       }

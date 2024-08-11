@@ -1,3 +1,0 @@
-domain test is {
-  type foo is range ( 1, 2 )
-}

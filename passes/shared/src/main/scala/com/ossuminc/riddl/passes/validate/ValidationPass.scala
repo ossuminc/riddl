@@ -411,7 +411,8 @@ case class ValidationPass(
     s: State,
     parents: Seq[Definition]
   ): Unit = {
-    checkContainer(parents, s)
+    checkDefinition(parents, s)
+    checkDescription(s)
     checkRefAndExamine[Type](s.typ, s, parents) { (typ: Type) =>
       typ.typ match {
         case agg: AggregateTypeExpression =>

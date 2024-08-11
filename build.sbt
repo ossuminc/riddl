@@ -30,7 +30,6 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     command,
     prettify,
     hugo,
-    testkit,
     commands,
     riddlc,
     docsite,
@@ -74,7 +73,6 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .configure(With.typical)
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
-    scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings")
   )
   .jvmConfigure(With.coverage(65))
@@ -96,15 +94,14 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.publishing)
   .settings(
-    scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "AST Pass infrastructure and essential passes"
   )
   .jvmConfigure(With.coverage(30))
-  .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
   )
+  .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
@@ -113,7 +110,6 @@ lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(J
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
   .configure(With.typical, With.publishing)
   .settings(
-    scalaVersion := "3.4.2",
     description := "Implementation of various AST analyses passes other libraries may use"
   )
   .jvmConfigure(With.coverage(50))
@@ -129,7 +125,6 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(analyses_cp))
   .configure(With.typical,With.publishing)
   .settings(
-    scalaVersion := "3.4.2",
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
   .jvmConfigure(With.coverage(50))
@@ -145,8 +140,6 @@ lazy val command = Module("command", "riddl-command")
   .configure(With.typical, With.coverage(30))
   .configure(With.publishing)
   .settings(
-    scalaVersion := "3.4.2",
-    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
@@ -154,25 +147,6 @@ lazy val command = Module("command", "riddl-command")
   .dependsOn(pDep(utils), pDep(language), passes)
 
 def testDep(project: Project): ClasspathDependency = project % "compile->compile;compile->test;test->test"
-
-val TestKit = config("testkit")
-lazy val testkit: Project = Module("testkit", "riddl-testkit")
-  .configure(With.typical)
-  .configure(With.publishing)
-  .settings(
-    coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
-    scalacOptions += "--no-warnings",
-    description := "A Testkit for testing RIDDL code, and a suite of those tests",
-    libraryDependencies ++= Dep.testKitDeps
-  )
-  .dependsOn(
-    testDep(language),
-    testDep(passes),
-    testDep(command)
-  )
-
-def testKitDep: ClasspathDependency = testkit % "test->compile;test->test"
 
 val Prettify = config("prettify")
 lazy val prettify = Module("prettify", "riddl-prettify")
@@ -185,7 +159,7 @@ lazy val prettify = Module("prettify", "riddl-prettify")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils, language, pDep(passes), command, testKitDep)
+  .dependsOn(utils, language, pDep(passes),command)
 
 val Hugo = config("hugo")
 lazy val hugo = Module("hugo", "riddl-hugo")
@@ -199,7 +173,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing
   )
-  .dependsOn(utils, pDep(language), pDep(passes), analyses, diagrams, pDep(command), prettify, testKitDep)
+  .dependsOn(utils, pDep(language), pDep(passes), analyses, diagrams, pDep(command), prettify)
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
@@ -208,10 +182,9 @@ lazy val commands: Project = Module("commands", "riddl-commands")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "RIDDL Command Infrastructure and basic command definitions",
-    libraryDependencies ++= Dep.testing
+    libraryDependencies ++= Seq(Dep.scopt,Dep.pureconfig) ++ Dep.testing
   )
   .dependsOn(
     pDep(utils),
@@ -220,8 +193,7 @@ lazy val commands: Project = Module("commands", "riddl-commands")
     command,
     analyses,
     prettify,
-    hugo,
-    testKitDep
+    hugo
   )
 
 val Riddlc = config("riddlc")
@@ -232,11 +204,10 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
   .dependsOn(
     utils,
     language,
-    passes,
+    testDep(passes),
     analyses,
     prettify,
-    commands,
-    testkit % "test->compile"
+    testDep(commands)
   )
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
@@ -261,7 +232,6 @@ lazy val docProjects = List(
   (passes, Passes),
   (analyses, Analyses),
   (command, Command),
-  (testkit, TestKit),
   (prettify, Prettify),
   (hugo, Hugo),
   (commands, Commands),

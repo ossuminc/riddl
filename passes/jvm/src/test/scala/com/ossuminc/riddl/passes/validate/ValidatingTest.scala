@@ -197,7 +197,7 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidateTestInput(
     label: String,
     fileName: String,
-    directory: String = "language/src/test/input/",
+    directory: String = "language/jvm/src/test/input/",
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
@@ -262,5 +262,22 @@ abstract class ValidatingTest extends ParsingTest {
   ): Assertion = {
     val condition = msgs.filter(_.kind == expectedKind).exists(_.message.contains(content))
     assert(condition, s"; expecting, but didn't find $content', in:\n${msgs.format}")
+  }
+  
+  def validateFile(
+    label: String,
+    fileName: String,
+    options: CommonOptions = CommonOptions()
+  )(validation: (Root, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
+    val directory = "testkit/src/test/input/"
+    val file = new File(directory + fileName)
+    val rpi = RiddlParserInput.rpiFromFile(file)
+    simpleParseAndValidate(rpi, options) match {
+      case Left(errors:Messages ) =>
+        val msgs = errors.format
+        fail(s"In $label:\n$msgs")
+      case Right(result) =>
+        validation(result.root, result.messages)
+    }
   }
 }

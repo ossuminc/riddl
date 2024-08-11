@@ -59,6 +59,7 @@ case class TestParser(
       case x if x == classOf[AST.Projector]  => projector(_)
       case x if x == classOf[AST.Epic]       => epic(_)
       case x if x == classOf[AST.Connector]  => connector(_)
+      case x if x == classOf[AST.Root]       => root(_)
       case _ =>
         throw new RuntimeException(
           s"No parser defined for ${classTag[T].runtimeClass}"

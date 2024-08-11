@@ -3,30 +3,21 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
 import com.ossuminc.riddl.utils.{RiddlBuildInfo, SysLogger}
-import com.ossuminc.riddl.command.CommandOptions.optional 
-import scopt.DefaultOEffectSetup
-import scopt.DefaultOParserSetup
-import scopt.OParser
-import scopt.OParserBuilder
-import scopt.OParserSetup
-import scopt.RenderingMode
+import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
 import pureconfig.error.ConfigReaderFailures
-import pureconfig.ConfigCursor
-import pureconfig.ConfigObjectCursor
-import pureconfig.ConfigReader
-import pureconfig.ConfigSource
+import scopt.*
 
-import scala.concurrent.duration.FiniteDuration
 import java.io.File
 import java.nio.file.Path
 import java.util.Calendar
+import scala.concurrent.duration.FiniteDuration
 
 /** Handle processing of Language module's CommonOptions */
 object CommonOptionsHelper {
@@ -290,7 +281,7 @@ object CommonOptionsHelper {
       )
     }
   }}
-  
+
   final def loadCommonOptions(
     path: Path
   ): Either[Messages, CommonOptions] = {
