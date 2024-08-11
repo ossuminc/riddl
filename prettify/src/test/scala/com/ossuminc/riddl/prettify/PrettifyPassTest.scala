@@ -58,26 +58,26 @@ class PrettifyPassTest extends RiddlFilesTestBase {
 
   "PrettifyTranslator" should {
     "check domains" in { (td: TestData) =>
-      processADirectory("testkit/src/test/input/domains")
+      processADirectory("passes/jvm/src/test/input/domains")
     }
     "check enumerations" in { (td: TestData) =>
-      processADirectory("testkit/src/test/input/enumerations")
+      processADirectory("passes/jvm/src/test/input/enumerations")
     }
     "check mappings" in { (td: TestData) =>
-      processADirectory("testkit/src/test/input/mappings")
+      processADirectory("passes/jvm/src/test/input/mappings")
     }
     "check ranges" in { (td: TestData) =>
-      processADirectory("testkit/src/test/input/ranges")
+      processADirectory("passes/jvm/src/test/input/ranges")
     }
     "check everything.riddl" in { (td: TestData) =>
-      pending // FIXME: prettify doesn't handle this well 
-      // processAFile("testkit/jvm/src/test/input/everything.riddl")
+      pending // FIXME: this isn't handled well by PrettifyPass
+      // processAFile("passes/jvm/src/test/input/everything.riddl")
     }
     "check petstore.riddl" in { (td: TestData) =>
-      processAFile("testkit/src/test/input/petstore.riddl")
+      processAFile("passes/jvm/src/test/input/petstore.riddl")
     }
     "check rbbq.riddl" in { (td: TestData) =>
-      processAFile("testkit/src/test/input/rbbq.riddl")
+      processAFile("passes/jvm/src/test/input/rbbq.riddl")
       println("done")
     }
   }
