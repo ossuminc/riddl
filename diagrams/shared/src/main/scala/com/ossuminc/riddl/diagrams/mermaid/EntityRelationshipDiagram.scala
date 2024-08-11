@@ -4,7 +4,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.resolve.ReferenceMap
 
-import scala.scalajs.js.annotation.JSExportTopLevel
+import scala.scalajs.js.annotation.*
 
 @JSExportTopLevel("EntityRelationshipDiagram")
 class EntityRelationshipDiagram(refMap: ReferenceMap) {

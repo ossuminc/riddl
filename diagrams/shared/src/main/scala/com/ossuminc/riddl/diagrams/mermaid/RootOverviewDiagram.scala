@@ -3,7 +3,7 @@ package com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.language.AST.{Domain, Root, VitalDefinition}
 import com.ossuminc.riddl.language.AST
 
-import scala.scalajs.js.annotation.JSExportTopLevel
+import scala.scalajs.js.annotation.*
 
 @JSExportTopLevel("RootOverviewDiagram$")
 object RootOverviewDiagram {

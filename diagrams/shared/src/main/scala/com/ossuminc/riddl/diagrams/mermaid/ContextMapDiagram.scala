@@ -3,7 +3,7 @@ package com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.analyses.ContextDiagramData
 import com.ossuminc.riddl.language.AST.{Context, Definition, Processor}
 
-import scalajs.js.annotation.JSExportTopLevel
+import scalajs.js.annotation.*
 
 /** Context Diagram generator using a DataFlow Diagram from Mermaid
   *

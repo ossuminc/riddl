@@ -12,7 +12,7 @@ import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.utils.FileBuilder
 
-import scala.scalajs.js.annotation.JSExportTopLevel
+import scala.scalajs.js.annotation.*
 
 /** Generate a data flow diagram Like this:
   * {{{

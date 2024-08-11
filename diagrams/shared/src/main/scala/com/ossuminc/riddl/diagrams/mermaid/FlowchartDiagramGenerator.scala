@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Processor, VitalDefinition}
-import scalajs.js.annotation.JSExportTopLevel
+import scalajs.js.annotation.*
 
 /** Flowchart generator abstraction * Example output: * {{{ * --- * title: "Context Diagram For Domain Foo" * init: *
   * theme: dark * flowchartConfig: * defaultRenderer: dagre * width: 100% * --- * flowchart LR * classDef default
@@ -28,8 +28,10 @@ trait FlowchartDiagramGenerator(
   frontMatter()
   addLine(s"flowchart $direction")
   incr // indent the content from subclass
+  
   def kind: String = "flowchart"
 
+  @JSExport 
   def frontMatterItems: Map[String, String] = Map(
     "defaultRenderer" -> s"$renderer",
     "width" -> "100%",

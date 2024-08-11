@@ -1,6 +1,6 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
 import com.ossuminc.sbt.{OssumIncPlugin, Plugin}
-import sbt.Keys.description
+import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
 
@@ -142,7 +142,10 @@ lazy val command = Module("command", "riddl-command")
   .settings(
     coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
-    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
+    libraryDependencies ++= Seq(
+      Dep.scopt, Dep.pureconfig,
+      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
+      ) ++ Dep.testing
   )
   .dependsOn(pDep(utils), pDep(language), passes)
 
@@ -157,7 +160,9 @@ lazy val prettify = Module("prettify", "riddl-prettify")
     coverageExcludedFiles := """<empty>;$anon""",
     scalaVersion := "3.4.2",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
-    libraryDependencies ++= Dep.testing
+    libraryDependencies ++= Dep.testing ++ Seq(
+      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
+    )
   )
   .dependsOn(utils, language, pDep(passes),command)
 
@@ -171,7 +176,9 @@ lazy val hugo = Module("hugo", "riddl-hugo")
     scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
-    libraryDependencies ++= Dep.testing
+    libraryDependencies ++= Dep.testing ++ Seq(
+      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
+    )
   )
   .dependsOn(utils, pDep(language), pDep(passes), analyses, diagrams, pDep(command), prettify)
 
@@ -184,7 +191,9 @@ lazy val commands: Project = Module("commands", "riddl-commands")
     coverageExcludedFiles := """<empty>;$anon""",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "RIDDL Command Infrastructure and basic command definitions",
-    libraryDependencies ++= Seq(Dep.scopt,Dep.pureconfig) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.scopt,Dep.pureconfig) ++ Dep.testing ++ Seq(
+      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
+    )
   )
   .dependsOn(
     pDep(utils),

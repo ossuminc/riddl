@@ -3,7 +3,7 @@ package com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.analyses.DomainDiagramData
 import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, Processor}
 
-import scala.scalajs.js.annotation.JSExportTopLevel
+import scala.scalajs.js.annotation.*
 
 @JSExportTopLevel("DomainMapDiagram")
 class DomainMapDiagram(domain: Domain)
