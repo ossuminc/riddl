@@ -197,7 +197,7 @@ abstract class ValidatingTest extends ParsingTest {
   def parseAndValidateTestInput(
     label: String,
     fileName: String,
-    directory: String = "language/jvm/src/test/input/",
+    directory: String = "passes/jvm/src/test/input/",
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
@@ -269,7 +269,7 @@ abstract class ValidatingTest extends ParsingTest {
     fileName: String,
     options: CommonOptions = CommonOptions()
   )(validation: (Root, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
-    val directory = "testkit/src/test/input/"
+    val directory = "passes/jvm/src/test/input/"
     val file = new File(directory + fileName)
     val rpi = RiddlParserInput.rpiFromFile(file)
     simpleParseAndValidate(rpi, options) match {

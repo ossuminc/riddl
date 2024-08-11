@@ -60,7 +60,7 @@ class IncludeAndImportTest extends ParsingTest {
       import com.ossuminc.riddl.utils.URL
       val cwd = System.getProperty("user.dir", ".")
       val urlStr: String = s"file:///$cwd/"
-      val url = URL("file","",cwd,"testkit/src/test/input/domains/simpleDomain.riddl")
+      val url = URL("file","",cwd,"language/jvm/src/test/input/domains/simpleDomain.riddl")
       val future = rpiFromURL(url, td).map { rpi =>
         parseDomainDefinition(rpi, identity) match {
           case Right(_) =>

@@ -1,0 +1,5 @@
+domain test is {
+    type Vikings = any of {
+        Ragnar Lagertha bjorn Floki Rollo ivar Aslaug Ubbe
+    }
+}
