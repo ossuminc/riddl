@@ -28,7 +28,7 @@ jobs:
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
       with:
-        hugo-version: 'latest'
+        hugo-version: '0.112.0'
         extended: true
 
     - name: Coursier Caching
