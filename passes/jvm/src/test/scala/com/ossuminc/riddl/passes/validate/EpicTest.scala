@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.AST.{Domain, Epic, LiteralString}
+import com.ossuminc.riddl.utils.URL 
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import org.scalatest.TestData
@@ -32,13 +33,13 @@ class EpicTest extends ValidatingTest {
         val epic: Epic = domain.epics.head
         epic.id.format mustBe "WritingABook"
         epic.userStory mustNot be(empty)
-        val us = epic.userStory.get
+        val us = epic.userStory
         us mustNot be(empty)
         us.user.pathId.value mustBe Seq("foo", "Author")
         us.capability mustBe LiteralString((4, 28, rpi), "edit on the screen")
         us.benefit mustBe LiteralString((4, 57, rpi), "he can revise content more easily")
         epic.shownBy mustNot be(empty)
-        epic.shownBy.head.toString mustBe "http://example.com:80/path/to/WritingABook"
+        epic.shownBy.head must be(ShownBy((5,3,rpi),List(URL("http://example.com:80/path/to/WritingABook"))))
         epic.cases mustNot be(empty)
         val uc = epic.cases.head
         uc.id.value mustBe "perfection"

@@ -42,28 +42,28 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            """Path 'EntityCommand' was not resolved, in OnMessageClause 'On command EntityCommand'
+            """Path 'EntityCommand' was not resolved, in OnMessageClause 'command EntityCommand'
               |because the sought name, 'EntityCommand', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
           )
           assertValidationMessage(
             msgs,
             Error,
-            """Path 'EntityEvent' was not resolved, in OnMessageClause 'On event EntityEvent'
+            """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
               |because the sought name, 'EntityEvent', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
           )
           assertValidationMessage(
             msgs,
             Error,
-            """Path 'HamburgerState.field1' was not resolved, in OnMessageClause 'On command EntityCommand'
+            """Path 'HamburgerState.field1' was not resolved, in OnMessageClause 'command EntityCommand'
               |because definition 'field1' was not found inside State 'HamburgerState'
               |and it should refer to a Field""".stripMargin
           )
           assertValidationMessage(
             msgs,
             Error,
-            """Path 'HamburgerState.field2' was not resolved, in OnMessageClause 'On event EntityEvent'
+            """Path 'HamburgerState.field2' was not resolved, in OnMessageClause 'event EntityEvent'
               |because definition 'field2' was not found inside State 'HamburgerState'
               |and it should refer to a Field""".stripMargin
           )
@@ -95,7 +95,7 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'On event EntityContext.Incoming'
+            """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'event EntityContext.Incoming'
               |because definition 'Incoming' was not found inside Context 'EntityContext'
               |and it should refer to a Type""".stripMargin
           )

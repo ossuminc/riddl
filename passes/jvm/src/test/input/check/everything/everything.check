@@ -87,7 +87,7 @@ passes/jvm/src/test/input/check/everything/everything.riddl(23:5):
      type tim is Time               // Define tim as a Time
      ^
 passes/jvm/src/test/input/check/everything/everything.riddl(72:9):
- OnMessageClause 'On event ItHappened' should have a description:
+ OnMessageClause 'event ItHappened' should have a description:
          on event ItHappened {
          ^
 passes/jvm/src/test/input/check/everything/everything.riddl(18:5):
@@ -239,7 +239,7 @@ passes/jvm/src/test/input/check/everything/everything.riddl(20:5):
      type boo is Boolean            // Define boo as a Boolean
      ^
 passes/jvm/src/test/input/check/everything/everything.riddl(60:9):
- OnMessageClause 'On command ACommand' should have a description:
+ OnMessageClause 'command ACommand' should have a description:
          on command ACommand {
          ^
 passes/jvm/src/test/input/check/everything/everything.riddl(42:5):
@@ -283,7 +283,7 @@ passes/jvm/src/test/input/check/everything/everything.riddl(24:5):
      type stamp is TimeStamp        // Define stamp as a TimeStamp
      ^
 passes/jvm/src/test/input/check/everything/everything.riddl(73:21):
- Path 'SomeOtherThing.otherThingState.someField1' was not resolved, in OnMessageClause 'On event ItHappened'
+ Path 'SomeOtherThing.otherThingState.someField1' was not resolved, in OnMessageClause 'event ItHappened'
  because definition 'someField1' was not found inside State 'otherThingState'
  and it should refer to a Field:
            set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"

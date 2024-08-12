@@ -13,9 +13,9 @@ class TestVisitor extends PassVisitor:
   var depth = 0
   var leaves = 0
   var values = 0
-  def incr(): Unit = 
+  def incr(): Unit =
     depth = depth + 1; opens = opens + 1
-  def decr(): Unit = 
+  def decr(): Unit =
     require(depth > 0); depth = depth - 1; closes = closes + 1
   def leaf(): Unit = leaves += 1
   def value(): Unit = values += 1
@@ -37,6 +37,7 @@ class TestVisitor extends PassVisitor:
   def openGroup(group: Group, parents: Parents): Unit = incr()
   def openOutput(output: Output, parents: Parents): Unit = incr()
   def openInput(input: Input, parents: Parents): Unit = incr()
+  def openInclude(include: Include[?], parents: Parents): Unit = incr()
 
   // Close for each type of container definition
   def closeType(typ: Type, parents: Parents): Unit = decr()
@@ -57,6 +58,7 @@ class TestVisitor extends PassVisitor:
   def closeGroup(group: Group, parents: Parents): Unit = decr()
   def closeOutput(output: Output, parents: Parents): Unit = decr()
   def closeInput(input: Input, parents: Parents): Unit = decr()
+  def closeInclude(include: Include[?], parents: Parents): Unit = decr()
 
   // LeafDefinitions
   def doField(field: Field): Unit = leaf()
@@ -80,8 +82,8 @@ class TestVisitor extends PassVisitor:
   def doAuthorRef(reference: AuthorRef): Unit = value()
   def doBriefDescription(brief: BriefDescription): Unit = value()
   def doDescription(description: Description): Unit = value()
-  def doStatement(statement: Statement): Unit = value()
-  def doInteraction(interation: Interaction): Unit = value()
+  def doStatement(statement: Statements): Unit = value()
+  def doInteraction(interation: UseCaseContents): Unit = value()
   def doOptionValue(optionValue: OptionValue): Unit = value()
   def doUserStory(userStory: UserStory): Unit = value()
 end TestVisitor

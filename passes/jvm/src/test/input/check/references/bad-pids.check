@@ -35,7 +35,7 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(2:3):
    context ExampleContext is {
    ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(13:20):
- Path 'DooFoo' was not resolved, in OnMessageClause 'On command DooFoo'
+ Path 'DooFoo' was not resolved, in OnMessageClause 'command DooFoo'
  because the sought name, 'DooFoo', was not found in the symbol table,
  and it should refer to a Type:
          on command DooFoo {
@@ -45,7 +45,7 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
  domain foo {
  ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(13:9):
- OnMessageClause 'On command DooFoo' should have a description:
+ OnMessageClause 'command DooFoo' should have a description:
          on command DooFoo {
          ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(1:8):
@@ -71,7 +71,7 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(13:9):
          on command DooFoo {
          ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(14:21):
- Path 'FooExamplexxxx.garbage' was not resolved, in OnMessageClause 'On command DooFoo'
+ Path 'FooExamplexxxx.garbage' was not resolved, in OnMessageClause 'command DooFoo'
  because the PathId is invalid since it's first element, FooExamplexxxx, does not exist in the model
  and it should refer to a Field:
            set field FooExamplexxxx.garbage to "record Foo"

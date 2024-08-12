@@ -318,7 +318,10 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
     * @param parents
     *   The parent definitions of value
     */
-  protected def processValue(value: RiddlValue, parents: Parents): Unit = ()
+  protected def processValue(value: RiddlValue, parents: Parents): Unit
+
+  protected def openInclude(include: Include[?], parents: Parents): Unit = ()
+  protected def closeInclude(include: Include[?], parents: Parents): Unit = ()
 
   /** Called by traverse after all leaf nodes of an opened node have been processed and the opened node is now being
     * closed. Subclasses must implement this method.
@@ -341,7 +344,8 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
       case leaf: LeafDefinition =>
         processLeaf(leaf, parents.toSeq)
       case container: Definition =>
-        openContainer(container, parents.toSeq)
+        val def_parents = parents.toSeq 
+        openContainer(container, def_parents)
         if container.contents.nonEmpty then
           parents.push(container)
           container.contents.foreach {
@@ -352,9 +356,11 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
           }
           parents.pop()
         end if
-        closeContainer(container, parents.toSeq)
+        closeContainer(container, def_parents)
       case include: Include[?] =>
+        openInclude(include, parents.toSeq)
         include.contents.foreach { item => traverse(item, parents) }
+        closeInclude(include, parents.toSeq)
       case value: RiddlValue => processValue(value, parents.toSeq)
     }
   }
@@ -383,6 +389,7 @@ trait PassVisitor:
   def openGroup(group: Group, parents: Parents): Unit
   def openOutput(output: Output, parents: Parents): Unit
   def openInput(input: Input, parents: Parents): Unit
+  def openInclude(include: Include[?], parents: Parents): Unit
 
   // Close for each type of container definition
   def closeType(typ: Type, parents: Parents): Unit
@@ -403,6 +410,7 @@ trait PassVisitor:
   def closeGroup(group: Group, parents: Parents): Unit
   def closeOutput(output: Output, parents: Parents): Unit
   def closeInput(input: Input, parents: Parents): Unit
+  def closeInclude(include: Include[?], parents: Parents): Unit
 
   // LeafDefinitions
   def doField(field: Field): Unit
@@ -426,10 +434,9 @@ trait PassVisitor:
   def doAuthorRef(reference: AuthorRef): Unit
   def doBriefDescription(brief: BriefDescription): Unit
   def doDescription(description: Description): Unit
-  def doStatement(statement: Statement): Unit
-  def doInteraction(interation: Interaction): Unit
+  def doStatement(statement: Statements): Unit
+  def doInteraction(interaction: UseCaseContents): Unit
   def doOptionValue(optionValue: OptionValue): Unit
-  def doUserStory(userStory: UserStory): Unit
 
 /** An abstract Pass that uses the Visitor pattern (https://refactoring.guru/design-patterns/visitor)
   * @param input
@@ -437,7 +444,7 @@ trait PassVisitor:
   * @param outputs
   *   The outputs of previous passes in case this pass needs it
   */
-abstract class VisitingPass(input: PassInput, outputs: PassesOutput, visitor: PassVisitor)
+abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs: PassesOutput, val visitor: VT)
     extends HierarchyPass(input, outputs):
   protected final def openContainer(container: Definition, parents: Parents): Unit =
     container match
@@ -468,7 +475,7 @@ abstract class VisitingPass(input: PassInput, outputs: PassesOutput, visitor: Pa
     end match
   end openContainer
 
-  protected def closeContainer(container: Definition, parents: Parents): Unit =
+  protected final def closeContainer(container: Definition, parents: Parents): Unit =
     container match
       case typ: Type                => visitor.closeType(typ, parents)
       case domain: Domain           => visitor.closeDomain(domain, parents)
@@ -476,7 +483,7 @@ abstract class VisitingPass(input: PassInput, outputs: PassesOutput, visitor: Pa
       case entity: Entity           => visitor.closeEntity(entity, parents)
       case adaptor: Adaptor         => visitor.closeAdaptor(adaptor, parents)
       case epic: Epic               => visitor.closeEpic(epic, parents)
-      case uc: UseCase              => visitor.closeUseCase(uc, parents)
+      case useCase: UseCase         => visitor.closeUseCase(useCase, parents)
       case function: Function       => visitor.closeFunction(function, parents)
       case saga: Saga               => visitor.closeSaga(saga, parents)
       case streamlet: Streamlet     => visitor.closeStreamlet(streamlet, parents)
@@ -496,7 +503,7 @@ abstract class VisitingPass(input: PassInput, outputs: PassesOutput, visitor: Pa
     end match
   end closeContainer
 
-  protected def processLeaf(definition: LeafDefinition, parents: Parents): Unit =
+  protected final def processLeaf(definition: LeafDefinition, parents: Parents): Unit =
     definition match
       case field: Field                   => visitor.doField(field)
       case method: Method                 => visitor.doMethod(method)
@@ -516,7 +523,7 @@ abstract class VisitingPass(input: PassInput, outputs: PassesOutput, visitor: Pa
     end match
   end processLeaf
 
-  override protected def processValue(value: RiddlValue, parents: Parents): Unit =
+  protected final def processValue(value: RiddlValue, parents: Parents): Unit =
     value match
       case comment: Comment         => visitor.doComment(comment)
       case authorRef: AuthorRef     => visitor.doAuthorRef(authorRef)
@@ -525,10 +532,18 @@ abstract class VisitingPass(input: PassInput, outputs: PassesOutput, visitor: Pa
       case statement: Statement     => visitor.doStatement(statement)
       case interaction: Interaction => visitor.doInteraction(interaction)
       case optionValue: OptionValue => visitor.doOptionValue(optionValue)
-      case userStory: UserStory     => visitor.doUserStory(userStory)
       case _                        => ()
     end match
   end processValue
+
+  override protected final def openInclude(include: Include[?], parents: Parents): Unit =
+    visitor.openInclude(include, parents)
+  end openInclude
+
+  override protected final def closeInclude(include: Include[?], parents: Parents): Unit =
+    visitor.closeInclude(include, parents)
+  end closeInclude
+end VisitingPass
 
 /** An abstract PassOutput for use with passes that derive from CollectingPass. This just provides a standard field name
   * for the data that is collected, being `collected`.

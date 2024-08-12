@@ -19,7 +19,7 @@ class FunctionValidatorTest extends ValidatingTest {
                                           |  function foo is {
                                           |    requires {b: Boolean }
                                           |    returns {r: Integer }
-                                          |    body ???
+                                          |    body { ??? }
                                           |  }
                                           |}
                                           |""".stripMargin) { (e, _, msgs) =>

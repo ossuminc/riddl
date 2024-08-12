@@ -3,10 +3,10 @@ domain ignore1 is {
     type Something = command { ??? }
     type UndoSomething = command { ??? }
     function AnotherThing {
-      requires { a: Integer described by "a"} returns { b: Integer described by "b"} body ???
+      requires { a: Integer described by "a"} returns { b: Integer described by "b"} body { ??? }
     } explained as "A simple function for another"
     function UndoAnotherThing {
-      requires { c: Integer described by "c"} returns { d: Integer described by "d"} body ???
+      requires { c: Integer described by "c"} returns { d: Integer described by "d"} body { ??? }
     } explained as "A reversion function for undoing AnotherThing"
 
     entity blah is {

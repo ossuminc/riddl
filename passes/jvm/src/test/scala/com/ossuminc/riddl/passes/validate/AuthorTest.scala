@@ -171,7 +171,11 @@ class AuthorTest extends ValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  epic Bar is { by author Reid  }
+          |  user U is "foo"
+          |  epic Bar is {
+          |   user U wants to "hum" so that "haw"
+          |   by author Reid  
+          |  }
           |}
           |""".stripMargin,td)
       parseAndValidateDomain(input) { case (_, _, msgs) =>
