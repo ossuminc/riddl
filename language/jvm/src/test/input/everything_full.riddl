@@ -62,7 +62,7 @@ context full is {
     function misc is {
       requires { n: Nothing }
       returns { b: Boolean }
-      body ???
+      body { ??? }
     }
     type somethingDate is Date
 

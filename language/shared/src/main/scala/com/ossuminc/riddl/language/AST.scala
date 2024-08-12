@@ -338,7 +338,7 @@ object AST {
     *   The text of the comment, everything after the // to the end of line
     */
   case class LineComment(loc: At, text: String = "") extends Comment:
-    def format: String = "//" + text + "\n"
+    def format: String = "// " + text + "\n"
   end LineComment
 
   /** The AST representation of a comment that can span across lines and is inline with the definitions.
@@ -349,7 +349,7 @@ object AST {
     *   The lines of the comment without line terminators
     */
   case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment {
-    def format: String = lines.mkString("/*", "\n * ", "*/")
+    def format: String = lines.mkString("/* ", "\n * ", "\n */\n")
   }
 
   /** Base trait of all [[RiddlValue]]s that have an optional Description */
@@ -674,6 +674,11 @@ object AST {
     /** A lazily constructed [[Seq]] of [[UseCase]] filtered from the contents */
     lazy val cases: Contents[UseCase] = contents.filter[UseCase]
   }
+  
+  sealed trait WithShownBy extends Container[ContentValues] {
+    /** A lazily constructed [[Seq]] of [[ShownBy]] filtered from the contents */
+    lazy val shownBy: Contents[ShownBy] = contents.filter[ShownBy]
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
   ///// This section defines various abstract things needed by the rest of the definitions
@@ -690,7 +695,7 @@ object AST {
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema | SimpleContainer[?]
+    MethodArgument | Schema | ShownBy | SimpleContainer[?]
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInRoot = Comment | Domain | Author
@@ -703,11 +708,11 @@ object AST {
     Comment | Term | AuthorRef | Type | BriefDescription | BlockDescription | URLDescription
 
   /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition | 
+  type OccursInProcessor = OccursInVitalDefinition |
     Constant | Invariant | Function | OptionValue | Handler | Inlet | Outlet
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
-  type OccursInDomain = OccursInVitalDefinition | 
+  type OccursInDomain = OccursInVitalDefinition |
     Author | Context | Domain | User | Application | Epic | Saga
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] */
@@ -729,7 +734,7 @@ object AST {
   type OccursInOutput = Output | TypeRef
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
-  type OccursInContext = OccursInProcessor | 
+  type OccursInContext = OccursInProcessor |
     Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
 
   /** Type of definitions that occur in a [[Context]] with [[Include]] */
@@ -763,16 +768,16 @@ object AST {
   type StreamletContents = OccursInStreamlet | Include[OccursInStreamlet]
 
   /** Type of definitions that occur in an [[Epic]] without [[Include]] */
-  private type OccursInEpic = OccursInVitalDefinition | UseCase
+  private type OccursInEpic = OccursInVitalDefinition | ShownBy | UseCase
 
   /** Type of definitions that occur in an [[Epic]] with [[Include]] */
   type EpicContents = OccursInEpic | Include[OccursInEpic]
 
   /** Type of definitions that occur in a [[UseCase]] */
-  private type UseCaseContents = Interaction | Comment
+  type UseCaseContents = Interaction | Comment
 
   /** Type of definitions that occur in a [[InteractionContainer]] */
-  private type InteractionContainerContents = Interaction | Comment
+  type InteractionContainerContents = Interaction | Comment
 
   /** Type of definitions that occur in a [[Projector]] without [[Include]] */
   private type OccursInProjector = OccursInProcessor | RepositoryRef
@@ -2365,7 +2370,7 @@ object AST {
     language: LiteralString,
     body: String
   ) extends Statement {
-    def format: String = s"```${language.s}$body```"
+    def format: String = s"```${language.s}\n$body```"
   }
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
@@ -2533,7 +2538,7 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
-    def id: Identifier = Identifier(loc, s"Other")
+    def id: Identifier = Identifier(loc, s"pther")
 
     override def kind: String = "On Other"
 
@@ -2558,7 +2563,7 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
-    def id: Identifier = Identifier(loc, s"Init")
+    def id: Identifier = Identifier(loc, s"init")
 
     override def kind: String = "On Init"
 
@@ -2590,7 +2595,7 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
-    def id: Identifier = Identifier(msg.loc, s"On ${msg.format}")
+    def id: Identifier = Identifier(msg.loc, msg.format)
     def format: String = ""
   }
 
@@ -2612,7 +2617,7 @@ object AST {
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends OnClause {
-    def id: Identifier = Identifier(loc, s"Term")
+    def id: Identifier = Identifier(loc, s"term")
 
     override def kind: String = "On Term"
 
@@ -3588,6 +3593,7 @@ object AST {
       with Container[UseCaseContents] {
     override def kind: String = "UseCase"
     override def format: String = s"case ${id.format}"
+    override def isEmpty: Boolean = userStory.isEmpty && contents.isEmpty
   }
 
   /** An agile user story definition in the usual "As a {role} I want {capability} so that {benefit}" style.
@@ -3609,10 +3615,22 @@ object AST {
     benefit: LiteralString = LiteralString.empty
   ) extends RiddlValue {
     def format: String = {
-      user.format + " wants to " + capability.s + " so that " + benefit.s
+      user.format + " wants to \"" + capability.s + "\" so that \"" + benefit.s + "\""
     }
     override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
   }
+  object UserStory {
+    val empty: UserStory = UserStory()
+  }
+  
+  @JSExportTopLevel("ShownBy")
+  case class ShownBy(
+    loc: At = At.empty,
+    urls: Seq[URL] = Seq.empty
+  ) extends RiddlValue: 
+    def format: String = "shown by "
+  end ShownBy
+  
 
   /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an overall story about user interactions
     * with the system. This define functionality from the perspective of users (men or machines) interactions with the
@@ -3637,15 +3655,15 @@ object AST {
   case class Epic(
     loc: At,
     id: Identifier,
-    userStory: Option[UserStory] = Option.empty[UserStory],
-    shownBy: Seq[com.ossuminc.riddl.utils.URL] = Seq.empty[com.ossuminc.riddl.utils.URL],
+    userStory: UserStory = UserStory.empty, 
     contents: Seq[EpicContents] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[EpicContents]
-      with WithUseCases {
+      with WithUseCases 
+      with WithShownBy {
 
-    override def isEmpty: Boolean = contents.isEmpty && shownBy.isEmpty && userStory.isEmpty
+    override def isEmpty: Boolean = userStory.isEmpty && contents.isEmpty 
 
     override def format: String = s"$kind ${id.format}"
   }

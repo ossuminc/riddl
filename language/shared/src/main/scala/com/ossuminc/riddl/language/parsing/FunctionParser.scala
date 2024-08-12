@@ -12,7 +12,7 @@ import fastparse.MultiLineWhitespace.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait FunctionParser {
-  this: VitalDefinitionParser &  StatementParser  =>
+  this: VitalDefinitionParser & StatementParser =>
 
   private def functionInclude[u: P]: P[Include[FunctionContents]] = {
     include[u, FunctionContents](functionDefinitions(_))
@@ -28,7 +28,7 @@ private[parsing] trait FunctionParser {
 
   private def statementBlock[u: P]: P[Seq[Statements]] = {
     P(
-      Keywords.body./ ~ (undefined(Seq.empty[Statements]) | pseudoCodeBlock(StatementsSet.FunctionStatements))
+      Keywords.body./ ~ pseudoCodeBlock(StatementsSet.FunctionStatements)./
     )
   }
 

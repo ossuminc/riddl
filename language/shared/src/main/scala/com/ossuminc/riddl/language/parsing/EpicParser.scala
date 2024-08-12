@@ -11,8 +11,8 @@ import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-private[parsing] trait EpicParser { 
-  this: VitalDefinitionParser => 
+private[parsing] trait EpicParser {
+  this: VitalDefinitionParser =>
 
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
@@ -158,11 +158,12 @@ private[parsing] trait EpicParser {
     }
   }
 
-  def shownBy[u: P]: P[Seq[URL]] = {
+  def shownBy[u: P]: P[ShownBy] = {
     P(
-      Keywords.shown ~ by ~ open ~
-        httpUrl.rep(0, Punctuation.comma) ~ close
-    ).?.map { (x: Option[Seq[URL]]) => x.getOrElse(Seq.empty[URL]) }
+      location ~ Keywords.shown ~ by ~ open ~ httpUrl.rep(1) ~ close
+    ).map {
+      case (loc, urls) => ShownBy(loc,urls)
+    }
   }
 
   private def epicInclude[u: P]: P[Include[EpicContents]] = {
@@ -170,12 +171,11 @@ private[parsing] trait EpicParser {
   }
 
   private def epicDefinitions[u: P]: P[Seq[EpicContents]] = {
-    P( vitalDefinitionContents | useCase  | epicInclude  ).asInstanceOf[P[EpicContents]].rep(1)
+    P( vitalDefinitionContents | useCase  | shownBy | epicInclude  ).asInstanceOf[P[EpicContents]].rep(1)
   }
 
   private type EpicBody = (
-    Option[UserStory],
-    Seq[URL],
+    UserStory,
     Seq[EpicContents]
   )
 
@@ -183,21 +183,20 @@ private[parsing] trait EpicParser {
     P(
       undefined(
         (
-          Option.empty[UserStory],
-          Seq.empty[URL],
+          UserStory.empty,
           Seq.empty[EpicContents]
         )
       )./ |
-        (userStory.? ~ shownBy ~ epicDefinitions)./
+        (userStory ~ epicDefinitions)./
     )
   }
 
   def epic[u: P]: P[Epic] = {
     P(
       location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ briefly ~ description
-    ).map { case (loc, id, (userStory, shownBy, contents), briefly, description) =>
+    ).map { case (loc, id, (userStory, contents), briefly, description) =>
       checkForDuplicateIncludes(contents)
-      Epic(loc, id, userStory, shownBy, contents, briefly, description)
+      Epic(loc, id, userStory, contents, briefly, description)
     }
   }
 }
