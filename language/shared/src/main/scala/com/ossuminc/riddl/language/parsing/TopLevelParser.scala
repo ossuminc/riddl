@@ -28,22 +28,18 @@ import scala.scalajs.js.annotation._
 class TopLevelParser(
   val input: RiddlParserInput,
   val commonOptions: CommonOptions = CommonOptions.empty
-) extends DomainParser
+) extends ProcessorParser 
+    with DomainParser
     with AdaptorParser
     with ApplicationParser
     with ContextParser
     with EntityParser
     with EpicParser
-    with FunctionParser
-    with HandlerParser
     with ProjectorParser
-    with ReferenceParser
     with RepositoryParser
     with SagaParser
     with StreamingParser
     with StatementParser
-    with TypeParser
-    with CommonParser
     with ParsingContext {
 
   import scala.concurrent.Future

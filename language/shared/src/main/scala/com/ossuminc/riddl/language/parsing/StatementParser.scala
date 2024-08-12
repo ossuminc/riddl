@@ -10,7 +10,6 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 /** StatementParser Define actions that various constructs can take for modelling behavior in a message-passing system
   */
@@ -29,20 +28,19 @@ private[parsing] trait StatementParser {
 
   private def theSetStatement[u: P]: P[SetStatement] = {
     P(
-      location ~ Keywords.set ~/ fieldRef ~/ Readability.to ~ literalString
+      location ~ Keywords.set ~/ fieldRef ~/ to ~ literalString
     )./.map { tpl => SetStatement.apply.tupled(tpl) }
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
-      location ~ Keywords.send ~/ messageRef ~/
-        Readability.to ~ (outletRef | inletRef)
+      location ~ Keywords.send ~/ messageRef ~/ to ~ (outletRef | inletRef)
     )./.map { t => SendStatement.apply.tupled(t) }
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      location ~ Keywords.tell ~/ messageRef ~/ Readability.to ~ processorRef
+      location ~ Keywords.tell ~/ messageRef ~/ to ~ processorRef
     )./.map { t => TellStatement.apply.tupled(t) }
   }
 
@@ -95,25 +93,25 @@ private[parsing] trait StatementParser {
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      location ~ Keywords.morph ~/ entityRef ~/ Readability.to ~ stateRef ~/ Readability.with_ ~ messageRef
+      location ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ with_ ~ messageRef
     )./.map { tpl => MorphStatement.apply.tupled(tpl) }
   }
 
   private def becomeStatement[u: P]: P[BecomeStatement] = {
     P(
-      location ~ Keywords.become ~/ entityRef ~ Readability.to ~ handlerRef
+      location ~ Keywords.become ~/ entityRef ~ to ~ handlerRef
     )./.map { tpl => BecomeStatement.apply.tupled(tpl) }
   }
 
   private def focusStatement[u: P]: P[FocusStatement] = {
     P(
-      location ~ Keywords.focus ~/ Readability.on ~ groupRef
+      location ~ Keywords.focus ~/ on ~ groupRef
     )./.map { tpl => FocusStatement.apply.tupled(tpl) }
   }
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
     P(
-      location ~ Keywords.reply ~/ Readability.with_.?./ ~ messageRef
+      location ~ Keywords.reply ~/ with_.?./ ~ messageRef
     )./.map { tpl => ReplyStatement.apply.tupled(tpl) }
   }
 
@@ -126,7 +124,7 @@ private[parsing] trait StatementParser {
   private def readStatement[u: P]: P[ReadStatement] = {
     P(
       location ~ StringIn("read", "get", "query", "find", "select").! ~ literalString ~
-        Readability.from ~ typeRef ~ Keywords.where ~ literalString
+        from ~ typeRef ~ Keywords.where ~ literalString
     ).map { case (loc, keyword, what, from, where) =>
       ReadStatement(loc, keyword, what, from, where)
     }
@@ -135,7 +133,7 @@ private[parsing] trait StatementParser {
   private def writeStatement[u: P]: P[WriteStatement] = {
     P(
       location ~ StringIn("write", "put", "create", "update", "delete", "remove", "append", "insert", "modify").! ~
-        literalString ~ Readability.to ~ typeRef
+        literalString ~ to ~ typeRef
     ).map { case (loc, keyword, what, to) =>
       WriteStatement(loc, keyword, what, to)
     }

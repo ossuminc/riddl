@@ -9,12 +9,11 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 /** Parsing rules for Context definitions */
-private[parsing] trait ContextParser {
-  this: HandlerParser & AdaptorParser & EntityParser & FunctionParser & ProjectorParser & ReferenceParser &
-    RepositoryParser & SagaParser & StreamingParser & StatementParser & TypeParser =>
+private[parsing] trait ContextParser  {
+  this: ProcessorParser & AdaptorParser & EntityParser  & ProjectorParser  &
+    RepositoryParser & SagaParser & StreamingParser  =>
 
   private def contextInclude[u: P]: P[Include[ContextContents]] = {
     include[u, ContextContents](contextDefinitions(_))
@@ -22,9 +21,8 @@ private[parsing] trait ContextParser {
 
   private def contextDefinition[u: P]: P[ContextContents] = {
     P(
-      typeDef | handler(StatementsSet.ContextStatements) | entity | authorRef |
-        adaptor | function | saga | streamlet | projector | repository |
-        inlet | outlet | connector | term | contextInclude | comment | option
+      processorDefinitionContents(StatementsSet.ContextStatements) |
+        entity | adaptor | saga | streamlet | projector | repository | connector | contextInclude
     ).asInstanceOf[P[ContextContents]]
   }
 

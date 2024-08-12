@@ -8,16 +8,14 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
-import Readability.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 import scala.concurrent.{Await, Future}
 
 /** Parsing rules for domains. */
-private[parsing] trait DomainParser {
-  this: ApplicationParser & ContextParser & EpicParser & ReferenceParser & SagaParser & StreamingParser &
-    StatementParser & TypeParser & CommonParser & ParsingContext =>
+private[parsing] trait DomainParser  {
+  this: VitalDefinitionParser & ApplicationParser & ContextParser & EpicParser &  SagaParser & StreamingParser =>
 
   private def user[u: P]: P[User] = {
     P(
@@ -33,9 +31,8 @@ private[parsing] trait DomainParser {
   }
 
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
-    P(
-      author | authorRef | typeDef | context | user | epic | saga | domain | term |
-        constant | application | importDef | domainInclude | comment | option
+    P( vitalDefinitionContents |
+      author | context | domain | user | application | epic | saga | importDef | domainInclude
     ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 

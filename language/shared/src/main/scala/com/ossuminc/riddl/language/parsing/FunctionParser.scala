@@ -9,11 +9,10 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 /** Unit Tests For FunctionParser */
 private[parsing] trait FunctionParser {
-  this: ReferenceParser & TypeParser & StatementParser & CommonParser =>
+  this: VitalDefinitionParser &  StatementParser  =>
 
   private def functionInclude[u: P]: P[Include[FunctionContents]] = {
     include[u, FunctionContents](functionDefinitions(_))

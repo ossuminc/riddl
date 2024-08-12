@@ -9,17 +9,16 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 /** SagaParser Implements the parsing of saga definitions in context definitions.
   */
 private[parsing] trait SagaParser {
-  this: ReferenceParser & FunctionParser & StreamingParser & StatementParser & CommonParser =>
+  this: ProcessorParser & FunctionParser & StreamingParser & StatementParser =>
 
   private def sagaStep[u: P]: P[SagaStep] = {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
-        Keywords.reverted ~ Readability.by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
+        Keywords.reverted ~ by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         briefly ~ description
     ).map(x => SagaStep.apply.tupled(x))
   }

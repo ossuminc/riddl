@@ -9,15 +9,13 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 private[parsing] trait ApplicationParser {
-  this: StreamingParser & FunctionParser & ReferenceParser & HandlerParser & StatementParser & TypeParser &
-    CommonParser =>
+  this: ProcessorParser &  StreamingParser  =>
 
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
-      location ~ Keywords.contains ~ identifier ~ Readability.as ~ groupRef ~ briefly ~ description
+      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ briefly ~ description
     ).map { case (loc, id, group, brief, description) =>
       ContainedGroup(loc, id, group, brief, description)
     }
@@ -29,7 +27,7 @@ private[parsing] trait ApplicationParser {
 
   private def group[u: P]: P[Group] = {
     P(
-      location ~ groupAliases ~ identifier ~/ (Keywords.shown ~ Readability.byAsIn ~ httpUrl).? ~/ is ~ open ~
+      location ~ groupAliases ~ identifier ~/ (Keywords.shown ~ byAsIn ~ httpUrl).? ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
         close ~ briefly ~ description
     ).map { case (loc, alias, id, url, elements, brief, description) =>
@@ -113,9 +111,7 @@ private[parsing] trait ApplicationParser {
   }
 
   private def applicationDefinition[u: P]: P[ApplicationContents] = {
-    P(
-      group | handler(StatementsSet.ApplicationStatements) | function | invariant |
-        inlet | outlet | term | typeDef | constant | authorRef | comment | applicationInclude | option
+    P( processorDefinitionContents(StatementsSet.ApplicationStatements) | group | applicationInclude
     ).asInstanceOf[P[ApplicationContents]]
   }
 

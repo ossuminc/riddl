@@ -237,6 +237,31 @@ object AST {
     val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
   }
 
+  /** A trait to add a brief description string to a RiddlValue */
+  sealed trait BrieflyDescribedValue extends RiddlValue {
+
+    /** The optional brief description of the value */
+    def brief: Option[LiteralString]
+
+    /** A reliable extractor of the brief description, dealing with the Optionality of it */
+    def briefValue: String = {
+      brief.map(_.s).getOrElse("No brief description.")
+    }
+
+    override def hasBriefDescription: Boolean = brief.exists(_.s.nonEmpty)
+  }
+  
+  /** A single line description for any vital definition
+   * @param brief
+   *   The brief description 
+   *   */
+  case class BriefDescription(
+    loc: At,
+    brief: LiteralString
+  ) extends RiddlValue {
+    def format: String = s"briefly"
+  }
+
   /** The description of a definition. All definitions have a name and an optional description. This class provides the
     * description part.
     */
@@ -292,27 +317,6 @@ object AST {
     override def format: String = url.toExternalForm
   }
 
-  /** A trait to add a brief description string to a RiddlValue */
-  sealed trait BrieflyDescribedValue extends RiddlValue {
-
-    /** The optional brief description of the value */
-    def brief: Option[LiteralString]
-
-    /** A reliable extractor of the brief description, dealing with the Optionality of it */
-    def briefValue: String = {
-      brief.map(_.s).getOrElse("No brief description.")
-    }
-    override def hasBriefDescription: Boolean = brief.exists(_.s.nonEmpty)
-  }
-
-  /** Base trait of all [[RiddlValue]]s that have an optional Description */
-  sealed trait DescribedValue extends RiddlValue {
-
-    /** The optional full description of the value */
-    def description: Option[Description]
-    override def hasDescription: Boolean = description.exists(_.hasDescription)
-  }
-
   /** This trait represents the base trait of all comments recognized by the parser */
   sealed trait Comment extends RiddlValue {
     final inline override def isComment: Boolean = true
@@ -326,10 +330,9 @@ object AST {
     * @param text
     *   The text of the comment, everything after the // to the end of line
     */
-  case class LineComment(loc: At, text: String = "") extends Comment {
+  case class LineComment(loc: At, text: String = "") extends Comment:
     def format: String = "//" + text + "\n"
-
-  }
+  end LineComment 
 
   /** The AST representation of a comment that can span across lines and is inline with the definitions.
     *
@@ -342,6 +345,15 @@ object AST {
     def format: String = lines.mkString("/*", "\n * ", "*/")
   }
 
+  /** Base trait of all [[RiddlValue]]s that have an optional Description */
+  sealed trait DescribedValue extends RiddlValue {
+
+    /** The optional full description of the value */
+    def description: Option[Description]
+
+    override def hasDescription: Boolean = description.exists(_.hasDescription)
+  }
+  
   /** Base trait for option values for any option of a definition.
     *
     * @param loc
@@ -420,15 +432,15 @@ object AST {
   }
 
   /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
-  sealed trait WithDocumentation extends RiddlValue {
-
+  sealed trait WithDescriptions extends Container[ContentValues] {
+  
     /** The optional brief description as a single (short) line of text */
-    def brief: Option[LiteralString]
+    lazy val briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
 
     /** The optional [[Description]] which can be provided in several ways such as [[BlockDescription]] or
       * [[URLDescription]]
       */
-    def description: Option[Description]
+    lazy val descriptions: Contents[Description] = contents.filter[Description]
   }
 
   /** A trait that includes the `comments` field to extract the comments from the contents */
@@ -680,10 +692,11 @@ object AST {
   type RootContents = Comment | Domain | Author | Include[OccursInRoot]
 
   /** Type of definitions that occurs within all Vital Definitions */
-  private type OccursInVitalDefinition = Comment | Term | AuthorRef | Type
+  type OccursInVitalDefinition = 
+    Comment | Term | AuthorRef | Type | BriefDescription | BlockDescription | URLDescription  
 
   /** Type of definitions that occur within all Processor types */
-  private type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler |
+  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler |
     Inlet | Outlet
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
@@ -787,10 +800,11 @@ object AST {
     */
   sealed trait Definition
       extends Container[ContentValues]
-      with NamedValue
-      with DescribedValue
-      with BrieflyDescribedValue
-      with WithComments {
+        with NamedValue
+        with WithDescriptions
+        with DescribedValue
+        with BrieflyDescribedValue
+        with WithComments {
 
     /** True iff there are contained definitions */
     override def hasDefinitions: Boolean = contents.definitions.nonEmpty
@@ -818,7 +832,7 @@ object AST {
       extends Definition
       with WithIncludes[CT]
       with WithComments
-      with WithDocumentation
+      with WithDescriptions 
       with WithOptions
       with WithAuthorRefs
       with WithTerms {

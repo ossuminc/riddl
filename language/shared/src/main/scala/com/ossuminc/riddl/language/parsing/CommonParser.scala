@@ -7,9 +7,8 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.URL
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{Comment, *}
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.language.parsing.Readability.*
 import fastparse.{P, *}
 import fastparse.MultiLineWhitespace.*
 
@@ -20,11 +19,11 @@ import scala.concurrent.Future
 
 
 /** Common Parsing Rules */
-private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
+private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers with ParsingContext {
 
-  def author[u: P]: P[Author] = {
+  def author[u: P]: P[Author] =
     P(
-      location ~ Keywords.author ~/ identifier ~ Readability.is ~ open ~
+      location ~ Keywords.author ~/ identifier ~ is ~ open ~
         (undefined(
           (
             LiteralString(At(), ""),
@@ -34,21 +33,21 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
             Option.empty[URL]
           )
         ) |
-          (Keywords.name ~ Readability.is ~ literalString ~ Keywords.email ~ Readability.is ~
-            literalString ~ (Keywords.organization ~ Readability.is ~ literalString).? ~
-            (Keywords.title ~ Readability.is ~ literalString).? ~
-            (Keywords.url ~ Readability.is ~ httpUrl).?)) ~ close ~ briefly ~ description
+          (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
+            literalString ~ (Keywords.organization ~ is ~ literalString).? ~
+            (Keywords.title ~ is ~ literalString).? ~
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
     ).map { case (loc, id, (name, email, org, title, url), brief, description) =>
       Author(loc, id, name, email, org, title, url, brief, description)
     }
-  }
+  end author
 
 
   def importDef[u: P]: P[OccursInDomain] = {
     P(
-      location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ Readability.from ~ literalString
+      location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ from ~ literalString
     ).map { case(loc, id, litStr) =>
-      doImport(loc, id, litStr) 
+      doImport(loc, id, litStr)
     }
   }
 
@@ -64,6 +63,16 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
 
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
+  def briefly[u: P]: P[Option[LiteralString]] = {
+    P(Keywords.briefly ~/ literalString)
+  }.?
+  
+  def briefDescription[u:P]: P[BriefDescription] = {
+    P(location ~ Keywords.briefly ~ literalString).map {
+      case (loc, brief: LiteralString) => BriefDescription(loc, brief)
+    }
+  }
+
   def docBlock[u: P]: P[Seq[LiteralString]] = {
     P(
       (open ~
@@ -72,32 +81,28 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     )
   }
 
-  private def blockDescription[u: P]: P[BlockDescription] = {
+  def blockDescription[u: P]: P[BlockDescription] = {
     P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
   }
 
-  private def fileDescription[u: P](implicit ctx: P[?]): P[URLDescription] = {
-    P(location ~ Keywords.file ~ literalString).map { case(loc, file) =>
+  def fileDescription[u: P](implicit ctx: P[?]): P[URLDescription] = {
+    P(location ~ Keywords.file ~ literalString).map { case (loc, file) =>
       val url = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
       URLDescription(loc, url)
     }
   }
 
-  private def urlDescription[u: P]: P[URLDescription] = {
+  def urlDescription[u: P]: P[URLDescription] = {
     P(location ~ httpUrl).map { case (loc, url) =>
       URLDescription(loc, url)
     }
   }
-
-  def briefly[u: P]: P[Option[LiteralString]] = {
-    P(Keywords.briefly ~/ literalString)
-  }.?
-
+  
   def description[u: P]: P[Option[Description]] = P(
     P(
       Keywords.described ~/
-        ((Readability.byAs ~ blockDescription) | (Readability.in ~ fileDescription) |
-          (Readability.at ~ urlDescription))
+        ((byAs ~ blockDescription) | (in ~ fileDescription) |
+          (at ~ urlDescription))
     )
   ).?
 
@@ -179,17 +184,6 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
     }
   }
 
-  def option[u: P]: P[OptionValue] = {
-    P(
-      Keywords.option ~/ Readability.is.? ~
-        location ~ CharsWhile(ch => ch.isLower | ch.isDigit | ch == '_' | ch == '-').! ~
-        (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~
-          Punctuation.roundClose).?
-    ).map { case (loc, option, params) =>
-      OptionValue(loc, option, params.getOrElse(Seq.empty[LiteralString]))
-    }
-  }
-
   extension (map: Map[Class[RiddlValue], Seq[RiddlValue]])
     def extract[T <: RiddlValue: ClassTag]: Seq[T] = {
       val clazzTag = classTag[T].runtimeClass
@@ -224,7 +218,7 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ Readability.is ~ briefly ~ description)./.map(tpl =>
+    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl =>
       Term.apply.tupled(tpl)
     )
   }
@@ -293,5 +287,4 @@ private[parsing] trait CommonParser extends NoWhiteSpaceParsers {
       )
     )
   }
-
 }

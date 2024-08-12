@@ -10,14 +10,14 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 /** Parsing rules for Type definitions */
-private[parsing] trait TypeParser extends CommonParser {
+private[parsing] trait TypeParser {
+  this: CommonParser =>
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
-      location ~ Keywords.reference ~ Readability.to.? ~/
+      location ~ Keywords.reference ~ to.? ~/
         maybe(Keyword.entity) ~ pathIdentifier
     ).map { tpl => EntityReferenceTypeExpression.apply.tupled(tpl) }
   }
@@ -326,13 +326,13 @@ private[parsing] trait TypeParser extends CommonParser {
 
   def enumeration[u: P]: P[Enumeration] = {
     P(
-      location ~ Keywords.any ~ Readability.of.? ~/ open ~/ enumerators ~ close./
+      location ~ Keywords.any ~ of.? ~/ open ~/ enumerators ~ close./
     ).map(enums => Enumeration.apply.tupled(enums))
   }
 
   private def alternation[u: P]: P[Alternation] = {
     P(
-      location ~ Keywords.one ~ Readability.of.? ~/ open ~
+      location ~ Keywords.one ~ of.? ~/ open ~
         (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close./
     ).map { x =>
@@ -436,8 +436,8 @@ private[parsing] trait TypeParser extends CommonParser {
     */
   private def mappingFromTo[u: P]: P[Mapping] = {
     P(
-      location ~ Keywords.mapping ~ Readability.from ~/ typeExpression ~
-        Readability.to ~ typeExpression
+      location ~ Keywords.mapping ~ from ~/ typeExpression ~
+        to ~ typeExpression
     ).map(tpl => Mapping.apply.tupled(tpl))
   }
 
@@ -448,7 +448,7 @@ private[parsing] trait TypeParser extends CommonParser {
     */
   private def aSetType[u: P]: P[Set] = {
     P(
-      location ~ Keywords.set ~ Readability.of ~ typeExpression
+      location ~ Keywords.set ~ of ~ typeExpression
     )./.map { tpl => Set.apply.tupled(tpl) }
   }
 
@@ -459,26 +459,26 @@ private[parsing] trait TypeParser extends CommonParser {
     */
   private def sequenceType[u: P]: P[Sequence] = {
     P(
-      location ~ Keywords.sequence ~ Readability.of ~ typeExpression
+      location ~ Keywords.sequence ~ of ~ typeExpression
     )./.map { tpl => Sequence.apply.tupled(tpl) }
   }
 
   /** Parses graphs whose nodes can be any type */
   private def graphType[u: P]: P[Graph] = {
-    P(location ~ Keywords.graph ~ Readability.of ~ typeExpression)./.map { tpl => Graph.apply.tupled(tpl) }
+    P(location ~ Keywords.graph ~ of ~ typeExpression)./.map { tpl => Graph.apply.tupled(tpl) }
   }
 
   /** Parses tables of at least one dimension of cells of an arbitrary type */
   private def tableType[u: P]: P[Table] = {
     P(
-      location ~ Keywords.table ~ Readability.of ~ typeExpression ~ Readability.of ~ Punctuation.squareOpen ~
+      location ~ Keywords.table ~ of ~ typeExpression ~ of ~ Punctuation.squareOpen ~
         integer.rep(1, ",") ~ Punctuation.squareClose
     )./.map { tpl => Table.apply.tupled(tpl) }
   }
 
   private def replicaType[x: P]: P[Replica] = {
     P(
-      location ~ Keywords.replica ~ Readability.of ~ replicaTypeExpression
+      location ~ Keywords.replica ~ of ~ replicaTypeExpression
     ).map { tpl => Replica.apply.tupled(tpl) }
   }
 

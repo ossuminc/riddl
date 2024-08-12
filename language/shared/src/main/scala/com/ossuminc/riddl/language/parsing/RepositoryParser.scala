@@ -10,16 +10,9 @@ import com.ossuminc.riddl.language.AST.*
 
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 private[parsing] trait RepositoryParser {
-
-  this: HandlerParser
-    & ReferenceParser
-    & StatementParser
-    & StreamingParser
-    & FunctionParser
-    & TypeParser =>
+  this: ProcessorParser & StreamingParser =>
 
   private def repositoryInclude[u: P]: P[Include[RepositoryContents]] = {
     include[u, RepositoryContents](repositoryDefinitions(_))
@@ -55,10 +48,10 @@ private[parsing] trait RepositoryParser {
 
   private def schema[u: P]: P[Schema] = {
     P(
-      location ~ Keywords.schema ~ identifier ~ Readability.is ~ schemaKind ~
-        (Readability.of ~ identifier ~ Readability.as ~ typeRef).rep(1) ~
-        (Readability.with_ ~ identifier ~ Readability.as ~ (typeRef ~ Readability.to ~ typeRef)).rep(0) ~
-        (Keywords.index ~ Readability.on ~ fieldRef).rep(0)
+      location ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
+        (of ~ identifier ~ as ~ typeRef).rep(1) ~
+        (with_ ~ identifier ~ as ~ (typeRef ~ to ~ typeRef)).rep(0) ~
+        (Keywords.index ~ on ~ fieldRef).rep(0)
     ).map { case (at, id, kind, records, relations, indices) =>
       Schema(
         at,

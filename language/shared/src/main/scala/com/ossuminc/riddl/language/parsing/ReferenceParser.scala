@@ -9,9 +9,9 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
-private[parsing] trait ReferenceParser extends CommonParser {
+private[parsing] trait ReferenceParser {
+  this: CommonParser =>
 
   private def adaptorRef[u: P]: P[AdaptorRef] = {
     P(location ~ Keywords.adaptor ~ pathIdentifier)

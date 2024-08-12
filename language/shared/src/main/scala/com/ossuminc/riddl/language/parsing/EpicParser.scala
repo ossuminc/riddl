@@ -10,10 +10,9 @@ import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
-private[parsing] trait EpicParser {
-  this: CommonParser & ReferenceParser =>
+private[parsing] trait EpicParser { 
+  this: VitalDefinitionParser => 
 
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
@@ -27,7 +26,7 @@ private[parsing] trait EpicParser {
   private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
       location ~ Keywords.from ~/ anyInteractionRef ~
-        literalString ~ Readability.to.? ~ anyInteractionRef ~/ briefly ~ description
+        literalString ~ to.? ~ anyInteractionRef ~/ briefly ~ description
     )./.map { case (loc, from, ls, to, brief, desc) =>
       ArbitraryInteraction(loc, from, ls, to, brief, desc)
     }
@@ -35,8 +34,8 @@ private[parsing] trait EpicParser {
 
   private def sendMessageStep[u: P]: P[SendMessageInteraction] = {
     P(
-      location ~ Keywords.send ~ messageRef ~ Readability.from ~ anyInteractionRef ~
-        Readability.to ~ processorRef ~/ briefly ~ description
+      location ~ Keywords.send ~ messageRef ~ from ~ anyInteractionRef ~
+        to ~ processorRef ~/ briefly ~ description
     )./.map { case (loc, message, from, to, brief, description) =>
       SendMessageInteraction(loc, from, message, to, brief, description)
     }
@@ -52,7 +51,7 @@ private[parsing] trait EpicParser {
 
   private def focusOnGroupStep[u: P]: P[FocusOnGroupInteraction] = {
     P(
-      location ~ Keywords.focus ~ userRef ~ Readability.on ~
+      location ~ Keywords.focus ~ userRef ~ on ~
         groupRef ~/ briefly ~ description
     )./.map { case (loc, userRef, groupRef, brief, description) =>
       FocusOnGroupInteraction(loc, userRef, groupRef, brief, description)
@@ -61,7 +60,7 @@ private[parsing] trait EpicParser {
 
   private def directUserToURL[u: P]: P[DirectUserToURLInteraction] = {
     P(
-      location ~ Keywords.direct ~ userRef ~/ Readability.to ~ httpUrl ~/
+      location ~ Keywords.direct ~ userRef ~/ to ~ httpUrl ~/
         briefly ~ description
     )./.map { case (loc, user, url, brief, description) =>
       DirectUserToURLInteraction(loc, user, url, brief, description)
@@ -71,7 +70,7 @@ private[parsing] trait EpicParser {
   private def showOutputStep[u: P]: P[ShowOutputInteraction] = {
     P(
       location ~ Keywords.show ~/
-        outputRef ~ Readability.to ~ userRef ~/ briefly ~ description
+        outputRef ~ to ~ userRef ~/ briefly ~ description
     )./.map { case (loc, from, to, brief, description) =>
       ShowOutputInteraction(loc, from, LiteralString.empty, to, brief, description)
     }
@@ -80,7 +79,7 @@ private[parsing] trait EpicParser {
   private def takeInputStep[u: P]: P[TakeInputInteraction] = {
     P(
       location ~ Keywords.take ~/
-        inputRef ~ Readability.from ~ userRef ~/ briefly ~ description
+        inputRef ~ from ~ userRef ~/ briefly ~ description
     )./.map { case (loc, input, user, brief, description) =>
       TakeInputInteraction(loc, from = user, to = input, brief, description)
     }
@@ -152,8 +151,8 @@ private[parsing] trait EpicParser {
 
   def userStory[u: P]: P[UserStory] = {
     P(
-      location ~ userRef ~ Readability.wants ~ Readability.to.? ~
-        literalString ~ Readability.so ~ Readability.that.? ~ literalString
+      location ~ userRef ~ wants ~ to.? ~
+        literalString ~ so ~ that.? ~ literalString
     ).map { case (loc, user, capability, benefit) =>
       UserStory(loc, user, capability, benefit)
     }
@@ -161,7 +160,7 @@ private[parsing] trait EpicParser {
 
   def shownBy[u: P]: P[Seq[URL]] = {
     P(
-      Keywords.shown ~ Readability.by ~ open ~
+      Keywords.shown ~ by ~ open ~
         httpUrl.rep(0, Punctuation.comma) ~ close
     ).?.map { (x: Option[Seq[URL]]) => x.getOrElse(Seq.empty[URL]) }
   }
@@ -171,7 +170,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicDefinitions[u: P]: P[Seq[EpicContents]] = {
-    P(useCase | term | epicInclude | comment | authorRef | option).asInstanceOf[P[EpicContents]].rep(1)
+    P( vitalDefinitionContents | useCase  | epicInclude  ).asInstanceOf[P[EpicContents]].rep(1)
   }
 
   private type EpicBody = (

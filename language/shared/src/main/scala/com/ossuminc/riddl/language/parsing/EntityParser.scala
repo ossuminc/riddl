@@ -9,15 +9,14 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
 /** Parsing rules for entity definitions */
-private[parsing] trait EntityParser {
-  this: FunctionParser & HandlerParser & ReferenceParser & StatementParser & StreamingParser & TypeParser =>
+private[parsing] trait EntityParser  {
+  this: ProcessorParser & StreamingParser =>
 
   private def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~ identifier ~/ (Readability.of | Readability.is) ~ typeRef ~/ briefly ~ description
+      location ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ briefly ~ description
     )./.map { case (loc, id, typRef, brief, description) =>
       State(loc, id, typRef, brief, description)
     }

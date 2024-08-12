@@ -9,32 +9,15 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 import com.ossuminc.riddl.language.At
 
 /** Unit Tests For StreamingParser */
 private[parsing] trait StreamingParser {
-  this: HandlerParser & ReferenceParser & StatementParser & FunctionParser & TypeParser =>
-
-  def inlet[u: P]: P[Inlet] = {
-    P(
-      location ~ Keywords.inlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description
-    )./.map { tpl => Inlet.apply.tupled(tpl) }
-  }
-
-  def outlet[u: P]: P[Outlet] = {
-    P(
-      location ~ Keywords.outlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description
-    )./.map { tpl => Outlet.apply.tupled(tpl) }
-  }
-
+  this: ProcessorParser =>
+  
   private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
     P(
-        Readability.from ~ outletRef ~/
-        Readability.to ~ inletRef ~/
-        option.rep(0)
+        from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0)
     )
   }
 

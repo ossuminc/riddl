@@ -11,7 +11,8 @@ import fastparse.*
 import fastparse.NoWhitespace.*
 
 /** Parser rules that should not collect white space */
-private[parsing] trait NoWhiteSpaceParsers extends ParsingContext {
+private[parsing] trait NoWhiteSpaceParsers { 
+  this: ParsingContext =>
 
   def toEndOfLine[u: P]: P[String] = {
     P(

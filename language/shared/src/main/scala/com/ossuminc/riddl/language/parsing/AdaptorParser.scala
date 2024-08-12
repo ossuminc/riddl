@@ -9,15 +9,13 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 import com.ossuminc.riddl.language.AST
 import sourcecode.Text.generate
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {
-  this: HandlerParser & FunctionParser & StreamingParser & StatementParser & ReferenceParser & TypeParser &
-    CommonParser =>
-
+  this: ProcessorParser =>
+  
   import scala.concurrent.Future
 
   private def adaptorInclude[u: P]: P[Include[AdaptorContents]] = {
@@ -26,8 +24,7 @@ private[parsing] trait AdaptorParser {
 
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorContents]] = {
     P(
-      (handler(StatementsSet.AdaptorStatements) | option | inlet | outlet
-        | function | term | constant | authorRef | comment)
+      handler(StatementsSet.AdaptorStatements) | vitalDefinitionContents | inlet | outlet | function
     ).asInstanceOf[P[AdaptorContents]].rep(1)
   }
 
@@ -36,7 +33,7 @@ private[parsing] trait AdaptorParser {
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {
-    P(location ~ (Readability.from.! | Readability.to.!)).map {
+    P(location ~ (from.! | to.!)).map {
       case (loc, "from") => InboundAdaptor(loc)
       case (loc, "to")   => OutboundAdaptor(loc)
       case (loc, str) =>

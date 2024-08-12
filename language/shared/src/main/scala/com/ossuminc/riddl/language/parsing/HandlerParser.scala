@@ -9,11 +9,9 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
-import Readability.*
 
-private[parsing] trait HandlerParser {
-  this: ReferenceParser & StatementParser & CommonParser =>
-
+private[parsing] trait HandlerParser extends CommonParser with ReferenceParser with StatementParser {
+  
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
       location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ briefly ~ description
@@ -42,7 +40,7 @@ private[parsing] trait HandlerParser {
 
   private def onMessageClause[u: P](set: StatementsSet): P[OnMessageClause] = {
     location ~ Keywords.on ~ messageRef ~
-      (Readability.from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
+      (from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~
       briefly ~ description
   }.map(tpl => OnMessageClause.apply.tupled(tpl))
 

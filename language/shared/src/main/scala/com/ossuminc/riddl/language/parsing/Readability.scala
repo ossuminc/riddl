@@ -4,7 +4,7 @@ import fastparse.*
 import MultiLineWhitespace.*
 import com.ossuminc.riddl.language.parsing.Keywords.keyword
 
-object Readability {
+trait Readability {
 
   def and[u: P]: P[Unit] = keyword("and")
   def are[u: P]: P[Unit] = keyword("are")
