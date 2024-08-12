@@ -6,25 +6,23 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.{URL, TestingBasisWithTestData}
-import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.CommonOptions
-
+import com.ossuminc.riddl.language.{AST, CommonOptions}
+import com.ossuminc.riddl.utils.{TestingBasisWithTestData, URL}
 import fastparse.*
 
-import java.nio.file.{Path, Files}
+import java.nio.file.{Files, Path}
+import scala.annotation.unused
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import scala.annotation.unused
 import scala.reflect.*
 
 /** A helper class for testing the parser */
 trait ParsingTest extends TestingBasisWithTestData {
 
   import com.ossuminc.riddl.language.AST.RiddlValue
-  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 
   protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
 

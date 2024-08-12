@@ -6,17 +6,24 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.{URL, Path}
-import com.ossuminc.riddl.language.AST.{OccursInProjector, ProcessorRef}
+import com.ossuminc.riddl.utils.{Path, URL}
+import com.ossuminc.riddl.language.AST.{
+  BrieflyDescribedValue,
+  DescribedValue,
+  NamedValue,
+  OccursInProjector,
+  ProcessorRef,
+  WithComments,
+  WithDescriptions
+}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.tailrec
 import scala.io.{BufferedSource, Codec}
-import scala.scalajs.js.annotation._
+import scala.scalajs.js.annotation.*
 
 /** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax Tree. This raw AST
   * has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
@@ -250,11 +257,11 @@ object AST {
 
     override def hasBriefDescription: Boolean = brief.exists(_.s.nonEmpty)
   }
-  
+
   /** A single line description for any vital definition
-   * @param brief
-   *   The brief description 
-   *   */
+    * @param brief
+    *   The brief description
+    */
   case class BriefDescription(
     loc: At,
     brief: LiteralString
@@ -332,7 +339,7 @@ object AST {
     */
   case class LineComment(loc: At, text: String = "") extends Comment:
     def format: String = "//" + text + "\n"
-  end LineComment 
+  end LineComment
 
   /** The AST representation of a comment that can span across lines and is inline with the definitions.
     *
@@ -353,7 +360,7 @@ object AST {
 
     override def hasDescription: Boolean = description.exists(_.hasDescription)
   }
-  
+
   /** Base trait for option values for any option of a definition.
     *
     * @param loc
@@ -433,7 +440,7 @@ object AST {
 
   /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
   sealed trait WithDescriptions extends Container[ContentValues] {
-  
+
     /** The optional brief description as a single (short) line of text */
     lazy val briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
 
@@ -692,15 +699,16 @@ object AST {
   type RootContents = Comment | Domain | Author | Include[OccursInRoot]
 
   /** Type of definitions that occurs within all Vital Definitions */
-  type OccursInVitalDefinition = 
-    Comment | Term | AuthorRef | Type | BriefDescription | BlockDescription | URLDescription  
+  type OccursInVitalDefinition =
+    Comment | Term | AuthorRef | Type | BriefDescription | BlockDescription | URLDescription
 
   /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler |
-    Inlet | Outlet
+  type OccursInProcessor = OccursInVitalDefinition | 
+    Constant | Invariant | Function | OptionValue | Handler | Inlet | Outlet
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
-  type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
+  type OccursInDomain = OccursInVitalDefinition | 
+    Author | Context | Domain | User | Application | Epic | Saga
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] */
   type DomainContents = OccursInDomain | Include[OccursInDomain]
@@ -721,7 +729,8 @@ object AST {
   type OccursInOutput = Output | TypeRef
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
-  type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
+  type OccursInContext = OccursInProcessor | 
+    Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
 
   /** Type of definitions that occur in a [[Context]] with [[Include]] */
   type ContextContents = OccursInContext | Include[OccursInContext]
@@ -800,11 +809,11 @@ object AST {
     */
   sealed trait Definition
       extends Container[ContentValues]
-        with NamedValue
-        with WithDescriptions
-        with DescribedValue
-        with BrieflyDescribedValue
-        with WithComments {
+      with NamedValue
+      with WithDescriptions
+      with DescribedValue
+      with BrieflyDescribedValue
+      with WithComments {
 
     /** True iff there are contained definitions */
     override def hasDefinitions: Boolean = contents.definitions.nonEmpty
@@ -832,7 +841,7 @@ object AST {
       extends Definition
       with WithIncludes[CT]
       with WithComments
-      with WithDescriptions 
+      with WithDescriptions
       with WithOptions
       with WithAuthorRefs
       with WithTerms {
@@ -1046,8 +1055,8 @@ object AST {
     def isAggregateOf(useCase: AggregateUseCase): Boolean = {
       this match {
         case AliasedTypeExpression(_, keyword, _) if keyword.compareToIgnoreCase(useCase.useCase) == 0 => true
-        case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == useCase                      => true
-        case _                                                                                        => false
+        case AggregateUseCaseTypeExpression(_, usecase, _) if usecase == useCase                       => true
+        case _                                                                                         => false
       }
     }
   }
@@ -1408,8 +1417,10 @@ object AST {
       extends Container[RiddlValue]
       with TypeExpression
       with WithComments {
-    /** The list of aggregated [[Field]]  */
+
+    /** The list of aggregated [[Field]] */
     def fields: Seq[Field] = contents.filter[Field]
+
     /** Thelist of aggregated [[Method]] */
     def methods: Seq[Method] = contents.filter[Method]
     override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
@@ -2501,9 +2512,7 @@ object AST {
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends Definition with WithComments {
-    override def contents: Contents[Statements] = Seq.empty
-  }
+  sealed trait OnClause extends Definition with Container[Statements] with WithComments
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
     * corresponds to the "other" case of an [[Handler]].
