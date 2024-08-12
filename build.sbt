@@ -23,8 +23,6 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     languageJS,
     passes,
     passesJS,
-    analyses,
-    analysesJS,
     diagrams,
     diagramsJS,
     command,
@@ -105,24 +103,9 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
-val Analyses = config("analyses")
-lazy val analyses_cp: CrossProject = CrossModule("analyses", "riddl-analyses")(JVM, JS)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
-  .configure(With.typical, With.publishing)
-  .settings(
-    description := "Implementation of various AST analyses passes other libraries may use"
-  )
-  .jvmConfigure(With.coverage(50))
-  .jvmSettings(
-    coverageExcludedFiles := """<empty>;$anon""",
-  )
-  .jsConfigure(With.js("RIDDL: analyses", withCommonJSModule = true))
-val analyses = analyses_cp.jvm
-val analysesJS = analyses_cp.js
-
 val Diagrams = config("diagrams")
 lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(analyses_cp))
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
   .configure(With.typical,With.publishing)
   .settings(
     description := "Implementation of various AST diagrams passes other libraries may use"
@@ -180,7 +163,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
     )
   )
-  .dependsOn(utils, pDep(language), pDep(passes), analyses, diagrams, pDep(command), prettify)
+  .dependsOn(utils, pDep(language), pDep(passes), diagrams, pDep(command), prettify)
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
@@ -200,7 +183,6 @@ lazy val commands: Project = Module("commands", "riddl-commands")
     pDep(language),
     pDep(passes),
     command,
-    analyses,
     prettify,
     hugo
   )
@@ -214,7 +196,6 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
     utils,
     language,
     testDep(passes),
-    analyses,
     prettify,
     testDep(commands)
   )
@@ -239,7 +220,6 @@ lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
   (passes, Passes),
-  (analyses, Analyses),
   (command, Command),
   (prettify, Prettify),
   (hugo, Hugo),

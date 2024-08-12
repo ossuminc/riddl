@@ -1,13 +1,14 @@
-package com.ossuminc.riddl.analyses
+package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.{Domain, Identifier, Root}
-import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.validate.ValidatingTest
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.passes.diagrams.{ContextDiagramData, DiagramsPass, DiagramsPassOutput}
+import com.ossuminc.riddl.passes.validate.ValidatingTest
+import org.scalatest.TestData
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.TestData
 
 import java.nio.file.Path
 

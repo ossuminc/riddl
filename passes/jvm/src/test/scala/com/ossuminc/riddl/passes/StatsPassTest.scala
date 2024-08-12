@@ -1,10 +1,12 @@
-package com.ossuminc.riddl.analyses
+package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{AST, CommonOptions, Messages}
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult}
+import com.ossuminc.riddl.passes.stats.{DefinitionStats, KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.passes.validate.ValidatingTest
+import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult}
 import org.scalatest.*
+
 import java.nio.file.Path
 
 class StatsPassTest extends ValidatingTest {

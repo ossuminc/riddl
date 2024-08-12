@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package com.ossuminc.riddl.analyses
+package com.ossuminc.riddl.passes.stats
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
@@ -13,7 +13,7 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 
 import scala.collection.mutable
-import scala.scalajs.js.annotation.{JSExport,JSExportTopLevel}
+import scala.scalajs.js.annotation.*
 
 @JSExportTopLevel("StatsPass$")
 object StatsPass extends PassInfo[PassOptions] {

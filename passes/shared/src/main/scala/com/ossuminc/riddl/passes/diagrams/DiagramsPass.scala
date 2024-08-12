@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.analyses
+package com.ossuminc.riddl.passes.diagrams
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, Messages}
@@ -12,9 +12,9 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import scalajs.js.annotation.*
 
 import scala.collection.mutable
+import scala.scalajs.js.annotation.*
 
 /** The information needed to generate a Data Flow Diagram. DFDs are generated for each
   * [[com.ossuminc.riddl.language.AST.Context]] and consist of the streaming components that that are connected.
