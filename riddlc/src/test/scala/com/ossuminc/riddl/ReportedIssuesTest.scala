@@ -1,11 +1,12 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.utils.URL 
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.passes.validate.ValidatingTest
+import com.ossuminc.riddl.commands.Commands
 import org.scalatest.{TestData,Assertion}
 
 import java.nio.file.Path
@@ -32,8 +33,8 @@ class ReportedIssuesTest extends ValidatingTest {
   def doOne(fileName: String, options: CommonOptions = defaultOptions)(
     checkResult: Either[Messages.Messages, PassesResult] => Assertion
   ): Assertion = {
-    val file = Path.of(dir, fileName).toFile
-    val rpi = RiddlParserInput.rpiFromFile(file)
+    val path = Path.of(dir).resolve(fileName)
+    val rpi = RiddlParserInput.fromCwdPath(path)
     val either = Riddl.parseAndValidate(rpi, options)
     checkResult(either)
   }
