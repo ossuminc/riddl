@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesCreator, PassesOutput}
 import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.prettify.*
+import com.ossuminc.riddl.prettify.{PrettifyPass, PrettifyState, *}
 import com.ossuminc.riddl.command.TranslationCommand
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
@@ -84,8 +84,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
   ): PassesCreator = {
     standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
-        val state = PrettifyState(options)
-        PrettifyPass(input, outputs, state)
+        PrettifyPass(input, outputs, options)
       }
     )
   }

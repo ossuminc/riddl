@@ -7,7 +7,6 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.prettify.PrettifyPass
-
 import java.nio.file.Path
 
 class PrettifyCommandTest extends RunCommandSpecBase {

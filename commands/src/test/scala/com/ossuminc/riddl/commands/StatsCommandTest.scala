@@ -16,7 +16,7 @@ class StatsCommandTest extends CommandTestBase("commands/src/test/input") {
     }
 
     "read stats option" in {
-      val expected = StatsCommand.Options(Some(Path.of(s"$inputDir/stats.riddl")))
+      val expected = StatsCommand.Options(Some(Path.of(s"stats.riddl")))
       check(new StatsCommand, expected)
     }
   }

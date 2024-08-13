@@ -11,12 +11,10 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesCreator, PassesOutput, PassesResult}
-import com.ossuminc.riddl.analyses.StatsPass
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
 import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.analyses.DiagramsPass
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.commands.Commands
@@ -27,7 +25,9 @@ import scopt.OParser
 import java.net.URL
 import java.nio.file.Path
 import scala.annotation.unused
-import com.ossuminc.riddl.command.PassCommand 
+import com.ossuminc.riddl.command.PassCommand
+import com.ossuminc.riddl.passes.diagrams.DiagramsPass
+import com.ossuminc.riddl.passes.stats.StatsPass
 
 
 class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {

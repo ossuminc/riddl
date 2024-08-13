@@ -12,7 +12,6 @@ import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.analyses.{StatsOutput, StatsPass, KindStats}
 
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
@@ -21,6 +20,7 @@ import java.io.{File, PrintStream}
 import java.nio.charset.Charset
 import java.nio.file.Path
 import com.ossuminc.riddl.command.{PassCommand,PassCommandOptions}
+import com.ossuminc.riddl.passes.stats.{KindStats, StatsOutput, StatsPass}
 
 object StatsCommand {
   val cmdName: String = "stats"

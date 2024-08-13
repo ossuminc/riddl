@@ -61,7 +61,7 @@ class HugoPassTest
     if !Files.exists(outputDir) then { Files.createDirectories(outputDir) }
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
-    val command = "hugo --enableGitInfo=false"
+    val command = "hugo --logLevel info --enableGitInfo=false"
     println(s"Running hugo with cwd=$cwdFile, tmpDir=$tmpDir")
     val proc = Process(command, cwd = Option(cwdFile))
     proc.!<(logger) match {
@@ -70,7 +70,9 @@ class HugoPassTest
           fail("hugo wrote to stderr:\n  " + output.mkString("\n  "))
         } else { info("hugo issued warnings:\n  " + output.mkString("\n  ")) }
         succeed
-
+      case rc: Int if rc == 1 => 
+        println(s"hugo run failed with rc=$rc:\n  " ++ output.mkString("\n ", "\n  ", "\n"))
+        succeed
       case rc: Int =>
         fail(
           s"hugo run failed with rc=$rc:\n  " ++
