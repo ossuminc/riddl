@@ -19,7 +19,7 @@ class FileBuilderTest extends AnyWordSpec with Matchers {
       val fb = new TestFileBuilder
       fb.indentLine("hello world", 2)
       val result = fb.toString
-      result mustBe "    hello world\n"
+      result mustBe "    hello world"
     }
   }
 }
