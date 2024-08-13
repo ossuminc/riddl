@@ -53,17 +53,17 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
           case _: Processor[?] => "[{" -> "}]"
           case _: Definition   => "[" -> "]"
         }
-        addIndent(s"${definition.id.value}$left\"$id\"$right")
+        addLine(s"${definition.id.value}$left\"$id\"$right")
       case _ =>
-        addIndent(s"${definition.id.value}")
+        addLine(s"${definition.id.value}")
     }
   }
 
   private[mermaid] def makeConnection(from: Outlet, to: Inlet, thick: Boolean, how: String): Unit = {
     val fromName = from.id.value
     val toName = to.id.value
-    if thick then addIndent(s"$fromName == $how ==> $toName")
-    else addIndent(s"$fromName -- $how --> $toName")
+    if thick then addLine(s"$fromName == $how ==> $toName")
+    else addLine(s"$fromName -- $how --> $toName")
   }
 
   private[mermaid] def participants(connector: Connector): Seq[Definition] = {
