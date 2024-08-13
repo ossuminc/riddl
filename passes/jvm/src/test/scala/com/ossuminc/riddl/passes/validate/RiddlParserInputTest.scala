@@ -17,15 +17,6 @@ import scala.io.Source
 class RiddlParserInputTest extends TestingBasisWithTestData {
 
   "RiddlParserInput" should {
-    "produce input from scala.io.Source" in { (td: TestData) =>
-      val string = "helloooo"
-      val source: Source = Source.fromString(string)
-      val riddlParserInput = RiddlParserInput.rpiFromSource(source)
-      riddlParserInput.data.mustBe(string)
-      riddlParserInput.innerLength.mustBe(8)
-      riddlParserInput.length.mustBe(8)
-    }
-
     "length" should {
       "be equal to input length" in { (td: TestData) =>
         val inputs = List(
@@ -96,15 +87,4 @@ class RiddlParserInputTest extends TestingBasisWithTestData {
       }
     }
   }
-
-  "SourceParserInput" should {
-    "read data from a source" in { (td: TestData) =>
-      val string = """
-                     |hello I
-                     |am a
-                     |String""".stripMargin
-      RiddlParserInput.rpiFromSource(Source.fromString(string)).data.mustBe(string)
-    }
-  }
-
 }

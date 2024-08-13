@@ -46,7 +46,7 @@ class RiddlParserInputTest extends TestingBasis {
 
     "construct from URL" in {
       val url = URL(src)
-      val rpi2 = Await.result(rpiFromURL(url), 10.seconds)
+      val rpi2 = Await.result(fromURL(url), 10.seconds)
       checkRPI(rpi2, url)
     }
   }

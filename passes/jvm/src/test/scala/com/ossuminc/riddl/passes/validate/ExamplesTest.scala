@@ -19,7 +19,7 @@ class ExamplesTest extends ValidatingTest {
 
   def doOne(fileName: String): Assertion = {
     parseAndValidateFile(
-      Path.of(dir, fileName).toFile,
+      Path.of(dir, fileName),
       CommonOptions(
         showTimes = true,
         showWarnings = false,

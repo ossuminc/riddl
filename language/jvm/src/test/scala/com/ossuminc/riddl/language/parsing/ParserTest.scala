@@ -362,7 +362,7 @@ class ParserTest extends ParsingTest {
       }
     }
     "parse from a complex file" in { (td: TestData) =>
-      val rpi = rpiFromPath(java.nio.file.Path.of("language/jvm/src/test/input/everything.riddl"))
+      val rpi = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"),td)
       parseTopLevelDomains(rpi) match {
         case Left(errors) =>
           fail(errors.format)

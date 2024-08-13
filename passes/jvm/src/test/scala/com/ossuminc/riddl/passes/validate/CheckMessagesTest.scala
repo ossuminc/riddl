@@ -13,9 +13,9 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
 import org.scalatest.{Assertion, TestData}
 
-import java.io.File
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
+import scala.jdk.StreamConverters.StreamHasToScala
 import scala.runtime.stdLibPatches.Predef.assert
 
 /** CheckMessage This test suite runs through the files in input/check directory and validates them each as their own
@@ -30,25 +30,24 @@ class CheckMessagesTest extends ValidatingTest {
     fail(s"Path of pos test cases must exist and be a directory, not a file.")
   }
 
-  override def validateFile(
-    label: String,
-    fileName: String,
+  def validatePath(
+    path: Path,
     options: CommonOptions = CommonOptions(noANSIMessages = true)
   )(
     validation: (Root, Messages) => Assertion
   ): Assertion = {
-    val input = RiddlParserInput.rpiFromPath(Path.of(fileName))
+    val input = RiddlParserInput.fromCwdPath(path)
     Riddl.parseAndValidate(input, options, shouldFailOnError = false) match {
       case Left(errors) =>
-        fail(s"In $label:\n${errors.format}")
+        fail(s"In ${path.toString}:\n${errors.format}")
       case Right(result) =>
         validation(result.root, result.messages)
     }
   }
 
-  def runForFile(file: File, readMessages: Set[String]): Unit = {
+  def runForFile(path: Path, readMessages: Set[String]): Unit = {
     val expectedMessages = readMessages.map(_.trim)
-    validateFile(file.getName, file.getAbsolutePath) { (_, msgs) =>
+    validatePath(path) { (_, msgs) =>
       val msgSet = msgs.map(_.format).map(_.trim).toSet
       if msgSet == expectedMessages then { succeed }
       else {
@@ -84,11 +83,9 @@ class CheckMessagesTest extends ValidatingTest {
 
   def checkADirectory(dirName: String, testName: String): Unit = {
     val dir = checkPath.resolve(dirName)
-    val dirContents = dir.toFile.listFiles()
-    val checkFiles = dirContents
-      .filter(dc => dc.isFile && dc.getName.endsWith(".check"))
-    val riddlFiles = dirContents
-      .filter(dc => dc.isFile && dc.getName.endsWith(".riddl"))
+    val dirContents: List[Path] = Files.list(dir).toScala(List)
+    val checkFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".check"))
+    val riddlFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".riddl"))
 
     if riddlFiles.isEmpty then {
       fail(s"No riddl files in directory $dirName.")
@@ -101,7 +98,7 @@ class CheckMessagesTest extends ValidatingTest {
       val riddlFile = riddlFiles.head
       import scala.jdk.CollectionConverters.*
       val checkFileLines = checkFiles.iterator.flatMap { file =>
-        java.nio.file.Files.readAllLines(file.toPath).iterator().asScala
+        java.nio.file.Files.readAllLines(file).iterator().asScala
       }
       val fixedLines = checkFileLines
         .filterNot { (l: String) => l.isEmpty }

@@ -15,7 +15,6 @@ import fastparse.internal.Lazy
 import fastparse.*
 
 
-import java.io.File
 import java.nio.file.Path
 import java.util.concurrent.{ExecutorService, Executors}
 import java.util.concurrent.atomic.AtomicReference

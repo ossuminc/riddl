@@ -64,7 +64,7 @@ class ValidationTest extends ParsingTest {
 
     "parse correctly" in { (td:TestData) =>
       val rootFile = "language/jvm/src/test/input/full/domain.riddl"
-      val rpi = RiddlParserInput.rpiFromPath(Path.of(rootFile))
+      val rpi = RiddlParserInput.fromCwdPath(Path.of(rootFile))
       Riddl.parseAndValidate(rpi) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>

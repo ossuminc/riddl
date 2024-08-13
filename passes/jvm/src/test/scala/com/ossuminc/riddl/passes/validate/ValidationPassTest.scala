@@ -12,7 +12,7 @@ class ValidationPassTest extends ValidatingTest {
 
   "ValidationPass" should {
     "parse and validation rbbq.riddl" in { (td:TestData) =>
-      val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
+      val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"), td)
       parseAndValidateAggregate(input, CommonOptions.noMinorWarnings) { (vo: PassesResult) =>
         // info(vo.messages.format)
         vo.messages.justErrors.size mustBe 0
@@ -31,7 +31,7 @@ class ValidationPassTest extends ValidatingTest {
 
       "parse correctly" in { (td:TestData) =>
         val rootFile = "language/jvm/src/test/input/full/domain.riddl"
-        val rpi = RiddlParserInput.rpiFromPath(Path.of(rootFile))
+        val rpi = RiddlParserInput.fromCwdPath(Path.of(rootFile))
         val parseResult = parseTopLevelDomains(rpi)
         parseResult match {
           case Left(errors) => fail(errors.format)

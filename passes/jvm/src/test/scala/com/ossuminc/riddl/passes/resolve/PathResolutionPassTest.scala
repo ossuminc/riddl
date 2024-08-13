@@ -356,7 +356,7 @@ class PathResolutionPassTest extends ResolvingTest {
       }
     }
     "resolve rbbq.riddl" in { (td: TestData) =>
-      val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
+      val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"), td)
       parseAndResolve(input) { (_, _) => succeed }
     }
     "resolve references in morph action" in { (td: TestData) =>

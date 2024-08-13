@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.{Path, TestingBasis}
+import com.ossuminc.riddl.utils.TestingBasis
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.AST.*
 import org.scalatest.matchers.must.Matchers

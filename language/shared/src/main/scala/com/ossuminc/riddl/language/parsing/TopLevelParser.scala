@@ -13,7 +13,6 @@ import com.ossuminc.riddl.utils.Timer
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

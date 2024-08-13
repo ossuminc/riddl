@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.{Path, URL}
+import com.ossuminc.riddl.utils.URL
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -44,7 +44,7 @@ class IncludeAndImportTest extends ParsingTest {
       val nonExistentURL =
         "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
       intercept[java.io.FileNotFoundException] {
-        val future = rpiFromURL(URL(nonExistentURL), td).map { (rpi: RiddlParserInput) =>
+        val future = fromURL(URL(nonExistentURL), td).map { (rpi: RiddlParserInput) =>
           parseDomainDefinition(rpi, identity) match {
             case Right(_) =>
               fail("Should have gotten 'port out of range' error")
@@ -61,7 +61,7 @@ class IncludeAndImportTest extends ParsingTest {
       val cwd = System.getProperty("user.dir", ".")
       val urlStr: String = s"file:///$cwd/"
       val url = URL("file","",cwd,"language/jvm/src/test/input/domains/simpleDomain.riddl")
-      val future = rpiFromURL(url, td).map { rpi =>
+      val future = fromURL(url, td).map { rpi =>
         parseDomainDefinition(rpi, identity) match {
           case Right(_) =>
             succeed
@@ -111,7 +111,7 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "warn about duplicate includes" in { (td: TestData) =>
       val path = java.nio.file.Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl")
-      val input = rpiFromPath(path)
+      val input = RiddlParserInput.fromCwdPath(path,td)
       TopLevelParser.parseInput(input) match {
         case Right(_) =>
           fail("Should have failed with warnings")

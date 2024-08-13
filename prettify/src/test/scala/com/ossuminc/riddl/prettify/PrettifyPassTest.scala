@@ -45,7 +45,7 @@ class PrettifyPassTest extends RiddlFilesTestBase {
   def checkAFile(
     file: File
   ): Assertion = {
-    val input1 = RiddlParserInput.rpiFromPath(file.toPath)
+    val input1 = RiddlParserInput.fromCwdPath(file.toPath)
     val output1 = runPrettify(input1, "first")
     val input2 = RiddlParserInput(output1,"checkAFile")
     val output2 = runPrettify(input2, "second")

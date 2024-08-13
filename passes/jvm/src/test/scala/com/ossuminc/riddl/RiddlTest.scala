@@ -13,7 +13,6 @@ import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 
 import org.scalatest.{TestData,Assertion}
-import java.io.File
 import java.nio.file.Path
 import java.util.UUID
 import scala.io.Source
@@ -22,7 +21,7 @@ class RiddlTest extends ParsingTest {
 
   "parse" should {
     "parse a file" in { (td:TestData) =>
-      val rpi = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/rbbq.riddl"))
+      val rpi = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/rbbq.riddl"), td)
       TopLevelParser.parseInput(rpi, commonOptions = CommonOptions(showTimes = true)
       ) match {
         case Left(errors) => fail(errors.format)
@@ -32,9 +31,9 @@ class RiddlTest extends ParsingTest {
 
     "return an error when file does not exist" in { (td:TestData) =>
       val options = CommonOptions(showTimes = true)
-      val file = new File(UUID.randomUUID().toString)
+      val path = Path.of(UUID.randomUUID().toString)
       val xcptn = intercept[java.io.FileNotFoundException] {
-        RiddlParserInput.rpiFromFile(file)
+        RiddlParserInput.fromCwdPath(path, td)
       }
     }
     "record errors" in { (td:TestData) =>
@@ -56,7 +55,7 @@ class RiddlTest extends ParsingTest {
   "parseAndValidate" should {
     def runOne(pathname: String): Either[Messages, PassesResult] = {
       val common = CommonOptions(showTimes = true)
-      val rpi = RiddlParserInput.rpiFromFile(new File(pathname))
+      val rpi = RiddlParserInput.fromCwdPath(Path.of(pathname))
       Riddl.parseAndValidate(rpi, common)
     }
 
@@ -77,11 +76,7 @@ class RiddlTest extends ParsingTest {
 
     "parse and validate a simple domain from input" in { (td:TestData) =>
       val content: String = {
-        val source = Source.fromFile(
-          new File(
-            "language/jvm//src/test/input/domains/simpleDomain.riddl"
-          )
-        )
+        val source = Source.fromFile(Path.of("language/jvm//src/test/input/domains/simpleDomain.riddl").toFile)
         try source.mkString
         finally source.close()
       }

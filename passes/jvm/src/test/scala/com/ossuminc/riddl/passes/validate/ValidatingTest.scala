@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.{At, CommonOptions}
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
 import org.scalatest.Assertion
 
-import java.io.File
+import java.nio.file.Path 
 import scala.reflect.*
 
 /** Convenience functions for tests that do validation */
@@ -203,8 +203,7 @@ abstract class ValidatingTest extends ParsingTest {
   )(
     validation: (Root, PassesResult) => Assertion = (_, msgs) => defaultFail(msgs)
   ): Assertion = {
-    val file = new File(directory + fileName)
-    val rpi = RiddlParserInput.rpiFromFile(file)
+    val rpi = RiddlParserInput.fromCwdPath(Path.of(directory + fileName))
     TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
         val msgs = errors.format
@@ -220,11 +219,11 @@ abstract class ValidatingTest extends ParsingTest {
   }
 
   def parseAndValidateFile(
-    file: File,
+    file: Path,
     options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   ): Assertion = {
-    val rpi = RiddlParserInput.rpiFromFile(file)
+    val rpi = RiddlParserInput.fromCwdPath(file)
     TopLevelParser.parseInput(rpi) match {
       case Left(errors) => fail(errors.format)
       case Right(root) =>
@@ -270,8 +269,7 @@ abstract class ValidatingTest extends ParsingTest {
     options: CommonOptions = CommonOptions()
   )(validation: (Root, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
     val directory = "passes/jvm/src/test/input/"
-    val file = new File(directory + fileName)
-    val rpi = RiddlParserInput.rpiFromFile(file)
+    val rpi = RiddlParserInput.fromCwdPath(Path.of(directory + fileName))
     simpleParseAndValidate(rpi, options) match {
       case Left(errors:Messages ) =>
         val msgs = errors.format

@@ -11,7 +11,7 @@ class TestParserTest extends ParsingTest {
 
   "TestParser" should {
     val path = Path.of("language/jvm/src/test/input/everything.riddl")
-    val input = RiddlParserInput.rpiFromPath(path)
+    val input = RiddlParserInput.fromCwdPath(path)
     val tp = TestParser(input)
 
     "provide expect" in { (td: TestData) =>

@@ -92,7 +92,7 @@ object Riddl {
     passes: PassesCreator = Pass.standardPasses,
     logger: Logger = SysLogger()
   ): Either[Messages, PassesResult] = {
-    val rpi = RiddlParserInput.rpiFromPath(path)
+    val rpi = RiddlParserInput.fromCwdPath(path)
     parseAndValidate(rpi, commonOptions, shouldFailOnError, passes, logger)
   }
 }

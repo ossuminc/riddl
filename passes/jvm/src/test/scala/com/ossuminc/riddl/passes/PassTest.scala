@@ -1,5 +1,6 @@
 package com.ossuminc.riddl.passes
 
+import com.ossuminc.riddl.utils.TestingBasis
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.Accumulator
@@ -16,7 +17,7 @@ import scala.collection.mutable
 import java.nio.file.Path
 
 /** Test case for Pass and its related classes */
-class PassTest extends AnyWordSpec with Matchers {
+class PassTest extends TestingBasis {
 
   "PassOutput" must {
     "have an empty value" in {
@@ -82,7 +83,7 @@ class PassTest extends AnyWordSpec with Matchers {
     }
 
     "runValidation works" in {
-      val testInput = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
       Riddl.parse(testInput) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
@@ -95,7 +96,7 @@ class PassTest extends AnyWordSpec with Matchers {
     }
 
     "runThesePasses catches exceptions" in {
-      val testInput = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
       Riddl.parse(testInput) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
@@ -130,7 +131,7 @@ class PassTest extends AnyWordSpec with Matchers {
 
   "HierarchyPass" must {
     "traverses all kinds of nodes" in {
-      val testInput = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
       Riddl.parseAndValidate(testInput) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(result: PassesResult) =>

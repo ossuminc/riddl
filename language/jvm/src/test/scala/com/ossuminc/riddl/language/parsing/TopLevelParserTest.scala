@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, At}
 
-import java.io.File
+import java.nio.file.Path 
 import scala.io.Source
 import org.scalatest.TestData
 
@@ -20,8 +20,8 @@ class TopLevelParserTest extends ParsingTest {
 
   val origin = "simpleDomain.riddl"
 
-  val simpleDomainFile = new File(s"language/jvm/src/test/input/domains/$origin")
-  val rpi: RiddlParserInput = rpiFromFile(simpleDomainFile)
+  val simpleDomainFile = Path.of(s"language/jvm/src/test/input/domains/$origin")
+  val rpi: RiddlParserInput = RiddlParserInput.fromCwdPath(simpleDomainFile)
 
   val simpleDomain: AST.Domain = Domain(
     At(1, 1, rpi),
@@ -31,15 +31,15 @@ class TopLevelParserTest extends ParsingTest {
 
   "parse" should {
     "parse RiddlParserInput" in { (td: TestData) =>
-      val input = rpiFromFile(simpleDomainFile)
+      val input = RiddlParserInput.fromCwdPath(simpleDomainFile)
       TopLevelParser.parseInput(input) mustBe Right(simpleDomainResults)
     }
     "parse File" in { (td: TestData) =>
-      val input = rpiFromFile(simpleDomainFile)
+      val input = RiddlParserInput.fromCwdPath(simpleDomainFile)
       TopLevelParser.parseInput(input) mustBe Right(simpleDomainResults)
     }
     "parse String" in { (td: TestData) =>
-      val source = Source.fromFile(simpleDomainFile)
+      val source = Source.fromFile(simpleDomainFile.toFile)
       try {
         val stringContents = source.mkString
         val result = TopLevelParser.parseInput(rpi)

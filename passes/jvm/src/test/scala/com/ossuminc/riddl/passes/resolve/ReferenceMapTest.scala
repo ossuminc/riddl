@@ -16,7 +16,7 @@ import org.scalatest.TestData
 class ReferenceMapTest extends ValidatingTest {
 
   protected def create: PassesResult = {
-    val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+    val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
     simpleParseAndValidate(input) match {
       case Left(messages) => fail(messages.format)
       case Right(result) => result

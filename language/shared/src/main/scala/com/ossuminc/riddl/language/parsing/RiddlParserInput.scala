@@ -7,13 +7,12 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{Path, URL, Loader}
+import com.ossuminc.riddl.utils.{URL, Loader}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
-import java.io.File
+import java.nio.file.Path
 import scala.collection.Searching
-import scala.io.Source
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration.DurationInt
@@ -66,67 +65,40 @@ object RiddlParserInput {
     *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
     */
   @JSExport
-  def rpiFromURL(url: URL, purpose: String = ""): Future[RiddlParserInput] = {
+  def fromURL(url: URL, purpose: String = ""): Future[RiddlParserInput] = {
     Loader(url).load.map(data => apply(data, url, purpose))
   }
-
-  /** Set up a parser input for parsing directly from a Scala Source
-    *
-    * @param source
-    *   The Source from which UTF-8 text will be read and parsed
-    * @note
-    *   JVM Only
-    */
-  def rpiFromSource(source: scala.io.Source): RiddlParserInput = {
-    val data: String =
-      try {
-        source.getLines().mkString("\n")
-      } finally {
-        source.close()
-      }
-    StringParserInput(data, URL.empty, source.descr)
-  }
-
-  /** Set up a parser input for parsing directly from a Java File
-    *
-    * @param file
-    *   The java.io.File from which UTF-8 text will be read and parsed.
-    * @note
-    *   JVM Only
-    */
-  def rpiFromFile(file: java.io.File, purpose: String = ""): RiddlParserInput = {
-    val data: String = {
-      val source: scala.io.Source = scala.io.Source.fromFile(file)
-      try {
-        source.getLines().mkString("\n")
-      } finally {
-        source.close()
-      }
-    }
-    val fileAsStr = file.getPath
-    val cwd = Option(System.getProperty("user.dir")).getOrElse("")
-    val url =
-      if fileAsStr.startsWith("/") then
-        if cwd.nonEmpty && fileAsStr.startsWith(cwd) then
-          URL("file","",cwd.drop(1),fileAsStr.drop(cwd.length+1))
-        else
-          URL("file","","",fileAsStr.drop(1))
-        end if
-      else
-        URL("file", "", cwd.drop(1), fileAsStr)
-      end if   
-    StringParserInput(data, url, purpose)
-  }
-
+  
+  def fromPaths(basis: String, path: String, purpose: String = ""): RiddlParserInput =
+    val url = URL("file", "", basis.dropWhile(_ == '/'), path.dropWhile(_ == '/'))
+    val future = fromURL(url, purpose)
+    Await.result(future, 10.seconds)
+  
   /** Set up a parser input for parsing directly from a file at a specific Path
+    * @param basis
+    *   The path basis for subsequent include statements. Think of this as the root path
+    *   from which all includes will be derived
     *
     * @param path
-    *   The java.nio.path.Path from which UTF-8 text will be read and parsed.
+    *   The java.nio.path.Path from which UTF-8 text will be read and parsed as the first file
+    *
+    * @param purpose
+    *. The description string of the purpose of the constructed URL 
     * @note
     *   JVM Only
     */
-  def rpiFromPath(path: java.nio.file.Path): RiddlParserInput = rpiFromFile(path.toFile)
+  def fromPaths(basis: java.nio.file.Path, path: java.nio.file.Path, purpose: String): RiddlParserInput =
+    fromPaths(basis.toString, path.toString, purpose)
 
+  /** Set up a parser input for parsing directly from a local file based on the current 
+   *  working directory
+   * @param path
+   *   The path that will be added to the current working directory 
+   *   
+   */
+  def fromCwdPath(path:Path, purpose: String =""): RiddlParserInput =
+    val cwd = Path.of(Option(System.getProperty("user.dir")).getOrElse(""))
+    fromPaths(cwd, path, purpose)
 }
 
 /** This class provides the loaded data for fastparse to parse. It is the same as fastparse.IndexedParserInput but adds

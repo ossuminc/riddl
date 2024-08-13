@@ -41,7 +41,7 @@ class DiagramsPassTest extends ValidatingTest {
       pass.isInstanceOf[IllegalArgumentException] mustBe true
     }
     "generate diagrams output" in { (td: TestData) =>
-      val input = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
       parseValidateAndThen(input) {
         (passesResult: PassesResult, root: Root, rpi: RiddlParserInput, messages: Messages.Messages) =>
           val pass = new DiagramsPass(passesResult.input, passesResult.outputs)

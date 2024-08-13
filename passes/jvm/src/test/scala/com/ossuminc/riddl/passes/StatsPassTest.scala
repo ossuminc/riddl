@@ -39,7 +39,7 @@ class StatsPassTest extends ValidatingTest {
 
   "StatsPass" must {
     "generate statistics" in { (td: TestData) =>
-      val rpi = RiddlParserInput.rpiFromPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val rpi = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"),td)
       parseValidateAndThen(rpi) { (pr: PassesResult, root: AST.Root, rpi: RiddlParserInput, messages: Messages.Messages) =>
         if messages.justErrors.nonEmpty then
           fail(messages.justErrors.format)

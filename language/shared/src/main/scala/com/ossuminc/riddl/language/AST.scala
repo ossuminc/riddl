@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.{Path, URL}
+import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.{
   BrieflyDescribedValue,
   DescribedValue,

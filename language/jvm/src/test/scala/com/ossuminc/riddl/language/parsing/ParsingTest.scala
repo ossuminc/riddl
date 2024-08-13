@@ -35,7 +35,7 @@ trait ParsingTest extends TestingBasisWithTestData {
   ): Either[Messages, Root] = {
     if Files.exists(path) then
       if Files.isReadable(path) then {
-        val input = rpiFromPath(path)
+        val input = RiddlParserInput.fromCwdPath(path)
         TopLevelParser.parseInput(input, commonOptions)
       } else {
         val message: Message = error(s"Input file `${path.toString} is not readable.")
@@ -66,7 +66,7 @@ trait ParsingTest extends TestingBasisWithTestData {
   }
 
   def parseRoot(path: java.nio.file.Path): Either[Messages, Root] = {
-    val rpi = rpiFromPath(path)
+    val rpi = RiddlParserInput.fromCwdPath(path)
     parseTopLevelDomains(rpi)
   }
 
@@ -190,7 +190,7 @@ trait ParsingTest extends TestingBasisWithTestData {
     directory: String = defaultInputDir 
   ): (Root, RiddlParserInput) = {
     val path = java.nio.file.Path.of(directory, fileName)
-    val rpi = rpiFromPath(path)
+    val rpi = fromCwdPath(path)
     TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
         fail(errors.format)

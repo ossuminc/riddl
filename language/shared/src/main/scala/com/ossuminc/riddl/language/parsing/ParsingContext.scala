@@ -84,7 +84,6 @@ trait ParsingContext extends ParsingErrors {
     }
     try {
       import com.ossuminc.riddl.utils.Await
-
       val future: Future[Include[CT]] = Loader(newURL).load.map { (data: String) =>
         val rpi = RiddlParserInput(data, newURL)
         val contents = doParse[CT](loc, rpi, newURL, rule)
@@ -113,7 +112,7 @@ trait ParsingContext extends ParsingErrors {
         Seq.empty[CT]
     }
   }
-  
+
   def checkForDuplicateIncludes[CT <: RiddlValue](contents: Contents[CT]): Unit = {
     import com.ossuminc.riddl.language.Finder
     val allIncludes = Finder(contents).findByType[Include[?]]
