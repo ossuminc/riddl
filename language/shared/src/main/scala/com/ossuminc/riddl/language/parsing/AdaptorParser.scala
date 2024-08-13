@@ -15,7 +15,7 @@ import sourcecode.Text.generate
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {
   this: ProcessorParser =>
-  
+
   import scala.concurrent.Future
 
   private def adaptorInclude[u: P]: P[Include[AdaptorContents]] = {
@@ -24,7 +24,8 @@ private[parsing] trait AdaptorParser {
 
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorContents]] = {
     P(
-      handler(StatementsSet.AdaptorStatements) | vitalDefinitionContents | inlet | outlet | function
+      processorDefinitionContents(StatementsSet.AdaptorStatements) |
+        handler(StatementsSet.AdaptorStatements)
     ).asInstanceOf[P[AdaptorContents]].rep(1)
   }
 
