@@ -34,7 +34,7 @@ private[parsing] trait FunctionParser {
 
   private def functionDefinitions[u: P]: P[Seq[FunctionContents]] = {
     P(
-      typeDef | function | term | functionInclude | authorRef | comment
+      vitalDefinitionContents | function | functionInclude
     ).asInstanceOf[P[FunctionContents]]./.rep(0)
   }
 

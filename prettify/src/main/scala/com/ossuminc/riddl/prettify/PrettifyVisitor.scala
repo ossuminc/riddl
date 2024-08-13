@@ -60,7 +60,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def openContext(context: Context, parents: Parents): Unit = open(context)
   def closeContext(context: Context, parents: Parents): Unit = close(context)
-  
+
   def openEntity(entity: Entity, parents: Parents): Unit = open(entity)
   def closeEntity(entity: Entity, parents: Parents): Unit = close(entity)
 
@@ -111,15 +111,16 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end openFunction
   def closeFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      if function.statements.nonEmpty then 
+      if function.statements.nonEmpty then
+        function.statements.foreach(doStatement)
         rfe.decr
           .addIndent("}")
           .nl
-      end if   
+      end if
       rfe.closeDef(function)
     }
   end closeFunction
-  
+
   def openSaga(saga: Saga, parents: Parents): Unit = open(saga)
   def openStreamlet(streamlet: Streamlet, parents: Parents): Unit = open(streamlet)
   def openRepository(repository: Repository, parents: Parents): Unit = open(repository)
