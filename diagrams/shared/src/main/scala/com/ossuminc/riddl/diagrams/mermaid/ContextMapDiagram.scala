@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.diagrams.mermaid
 
-import com.ossuminc.riddl.analyses.ContextDiagramData
 import com.ossuminc.riddl.language.AST.{Context, Definition, Processor}
+import com.ossuminc.riddl.passes.diagrams.ContextDiagramData
 
 import scalajs.js.annotation.*
 

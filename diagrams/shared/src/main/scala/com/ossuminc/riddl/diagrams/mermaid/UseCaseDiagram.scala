@@ -6,9 +6,9 @@
 
 package com.ossuminc.riddl.diagrams.mermaid
 
-import com.ossuminc.riddl.analyses.UseCaseDiagramData
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.passes.diagrams.UseCaseDiagramData
 import com.ossuminc.riddl.utils.FileBuilder
 
 import scala.reflect.ClassTag
