@@ -4,8 +4,8 @@ import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.AST.{Definition, Domain, Identifier, NamedValue, PathIdentifier, Root}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult, RunPassTestBase}
-import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
 import com.ossuminc.riddl.diagrams.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
+import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
 import org.scalatest.TestData
 
 import java.nio.file.Path

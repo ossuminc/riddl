@@ -71,7 +71,7 @@ domain Everything is {
       function whenUnderTheInfluence is {
         requires {n: Nothing}
         returns {b: Boolean}
-        body ???
+        body { ??? }
       }
     }
 
@@ -88,7 +88,7 @@ domain Everything is {
     function misc is {
       requires { n: Nothing }
       returns { b: Boolean }
-      body ???
+      body { ??? }
     }
   }
 }

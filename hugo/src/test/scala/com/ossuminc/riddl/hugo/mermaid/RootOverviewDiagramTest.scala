@@ -1,9 +1,9 @@
 package com.ossuminc.riddl.hugo.mermaid
 
-import com.ossuminc.riddl.analyses.DiagramsPass
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.diagrams.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.passes.RunPassTestBase
+import com.ossuminc.riddl.passes.diagrams.DiagramsPass
 import org.scalatest.TestData
 
 import java.nio.file.Path

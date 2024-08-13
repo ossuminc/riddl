@@ -16,12 +16,13 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.ValidationPass
 import com.ossuminc.riddl.passes.translate.{TranslatingOptions, TranslatingState}
-import com.ossuminc.riddl.analyses.{DiagramsPass, StatsPass}
 import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.hugo.utils.TreeCopyFileVisitor
 import com.ossuminc.riddl.hugo.themes.{ThemeGenerator, ThemeWriter}
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
-import com.ossuminc.riddl.command.{PassCommand,PassCommandOptions}
+import com.ossuminc.riddl.command.{PassCommand, PassCommandOptions}
+import com.ossuminc.riddl.passes.diagrams.DiagramsPass
+import com.ossuminc.riddl.passes.stats.StatsPass
 
 import java.io.File
 import java.net.URL
@@ -189,7 +190,7 @@ case class HugoPass(
           case r: Repository => mkd.emitRepository(r, stack)
           case s: Saga       => mkd.emitSaga(s, stack)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
-          case r: Root => ()
+          case r: Root       => ()
         }
 
       case u: UseCase   => setUpContainer(u, stack).emitUseCase(u, stack)
@@ -197,9 +198,9 @@ case class HugoPass(
 
       // ignore the non-processors
       case _: Function | _: Handler | _: State | _: OnOtherClause | _: OnInitializationClause | _: OnMessageClause |
-           _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
-           _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root |
-           _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type =>
+          _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
+          _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root | _: BriefDescription |
+          _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type =>
         ()
       // All of these are handled above in their containers content output
       case _: AST.NonDefinitionValues => ()

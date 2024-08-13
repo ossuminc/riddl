@@ -5,9 +5,9 @@ import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.*
 import com.ossuminc.riddl.passes.symbols.*
-import com.ossuminc.riddl.analyses.*
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.diagrams.mermaid.*
+import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
 
 import java.nio.file.Path
 
