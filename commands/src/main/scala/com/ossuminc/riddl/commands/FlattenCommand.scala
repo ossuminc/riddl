@@ -30,7 +30,7 @@ class FlattenCommand extends InputFileCommand(DumpCommand.cmdName) {
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.rpiFromPath(inputFile)
+      val rpi = RiddlParserInput.fromCwdPath(inputFile)
       Riddl.parseAndValidate(rpi, commonOptions).map { result =>
         // TODO: output the model to System.out without spacing and with a line break only after every Definition
         result

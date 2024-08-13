@@ -17,7 +17,7 @@ class AdaptorWriterTest extends WriterTest {
   "AdaptorWriter" must {
     "handle a message rename" in {
       val path = base.resolve("adaptors.riddl")
-      val input = RiddlParserInput.rpiFromPath(path)
+      val input = RiddlParserInput.fromCwdPath(path)
       validateRoot(input,CommonOptions()) {
         case passesResult: PassesResult =>
           val mkd = makeMDW(output, PassesResult.empty)

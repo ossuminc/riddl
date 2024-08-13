@@ -19,5 +19,5 @@ class StatsCommandTest extends CommandTestBase("commands/src/test/input") {
       val expected = StatsCommand.Options(Some(Path.of(s"stats.riddl")))
       check(new StatsCommand, expected)
     }
-  }
+  } // file:///Users/reid/Code/ossuminc/riddl/commands/src/test/input/rbbq.riddl
 }

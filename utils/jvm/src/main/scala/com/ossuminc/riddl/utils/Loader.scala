@@ -26,11 +26,19 @@ case class Loader(url: URL) {
     val source: Source = {
       import scala.io.Codec
       url.scheme match {
-        case file: String if file == URL.fileScheme.dropRight(1) =>
+        case file: String if file == URL.fileScheme =>
           import java.io.FileNotFoundException
-          import java.nio.file.Files
-          val path = if url.basis.nonEmpty then java.nio.file.Path.of("/" + url.basis + "/" + url.path )
-          else java.nio.file.Path.of("/" + url.path)
+          import java.nio.file.{Files,Path}
+          val path: Path =
+            if url.basis.nonEmpty && url.path.nonEmpty then
+              Path.of("/" + url.basis + "/" + url.path )
+            else if url.basis.isEmpty && url.path.nonEmpty then 
+              Path.of(url.path)
+            else if url.basis.nonEmpty && url.path.isEmpty then
+              Path.of("/" + url.basis)
+            else 
+              throw new IllegalStateException("URL is invalid!")
+            end if
           if Files.exists(path) then Source.fromFile(path.toFile)(Codec.UTF8)
           else throw FileNotFoundException(s"While loading $path")
         case _ =>

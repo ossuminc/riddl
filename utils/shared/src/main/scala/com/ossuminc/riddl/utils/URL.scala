@@ -5,6 +5,7 @@
  */
 package com.ossuminc.riddl.utils
 
+import java.nio.file.Path
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
 
@@ -40,6 +41,7 @@ case class URL(scheme: String="", authority: String="", basis: String="", path: 
   @JSExport def isValid: Boolean = {
     isEmpty | (
       scheme.matches("(file)|(https?)") &&
+        (basis.isEmpty | (basis.nonEmpty && basis.head != '/' && basis.last != '/')) &&
         (path.isEmpty | (path.nonEmpty && path.head != '/' && path.last != '/'))
       )
   }
@@ -62,20 +64,30 @@ case class URL(scheme: String="", authority: String="", basis: String="", path: 
 
   @JSExport def parent: URL = {
     val index = path.lastIndexOf('/')
-    URL(scheme, authority, basis, path.substring(0, index))
+    val url_path = if (index < 0) then "" else path.substring(0,index)
+    URL(scheme, authority, basis, path)
   }
 
   @JSExport def resolve(pathElement: String): URL = {
     require(!pathElement.startsWith("/"),"Invalid path element starts with: /")
-    URL(scheme, authority, basis, path + "/" + pathElement)
+    val p = 
+      if path.isEmpty then 
+        pathElement
+      else if path.contains("/") then
+        val prefix = path.substring(0, path.lastIndexOf('/'))
+        prefix + "/" + pathElement
+      else 
+        pathElement   
+      end if  
+    URL(scheme, authority, basis, p)
   }
 }
 
 @JSExportTopLevel("URL$")
 object URL {
-  final val fileScheme = "file:"
-  final val httpScheme = "http:"
-  final val httpsScheme = "https:"
+  final val fileScheme = "file"
+  final val httpScheme = "http"
+  final val httpsScheme = "https"
   private final val namePattern = """[A-Za-z0-9_:.+-]*""".r
   private final val authorityPattern = s"""(?<authority>(($namePattern@)?$namePattern(:[0-9]{1,5})?))""".r
   private final val pathPattern = """(?<path>[A-Za-z0-9_:.+-][A-Za-z0-9_:.+/-]*)""".r
@@ -92,7 +104,7 @@ object URL {
     filePattern.matches(url) | httpPattern.matches(url)
 
   /** Create a URL from a string, ensuring validity first. */
-  @JSExport("apply") 
+  @JSExport("apply")
   def apply(url:String): URL = {
     import StringHelpers._
     import scala.util.matching.Regex
@@ -102,18 +114,41 @@ object URL {
         s match {
           case filePattern(authority,_,_,_,maybePath) =>
             val path = Option(maybePath).getOrElse("")
-            URL(fileScheme.dropRight(1), authority, "", path)
+            URL(fileScheme, authority, "", path)
           case _ =>
             throw new IllegalArgumentException(s"Invalid URL provided: $s")
         }
-      case s: String if s.startsWith(httpScheme) | s.startsWith(httpsScheme) =>
-        val scheme = if s.startsWith(httpScheme) then httpScheme else httpsScheme
+      case s: String if s.startsWith(httpsScheme) | s.startsWith(httpScheme) =>
+        val scheme = if s.startsWith(httpsScheme) then httpsScheme else httpScheme
         s match {
           case httpPattern(authority,_,_,_,maybePath,_) =>
             val path = Option(maybePath).getOrElse("")
-            URL(scheme.dropRight(1), authority, "", path)
+            URL(scheme, authority, "", path)
         }
       case _ => throw IllegalArgumentException("Invalid URL scheme")
     }
+  }
+  
+  def fromCwdPath(path: String): URL = {
+    require(path.head != '/')
+    val cwd = Option(System.getProperty("user.dir")).getOrElse("").drop(1)
+    URL(fileScheme, "", cwd, path)
+  }
+  
+  def fromFullPath(path: String): URL = {
+    require(path.startsWith("/"))
+    if path.endsWith("/") then
+      URL(fileScheme, "", path.drop(1).dropRight(1), "")
+    else
+      val pathStr = path.drop(1)
+      val lastSlash = pathStr.lastIndexOf('/')
+      if lastSlash > 0 then
+        val basis = pathStr.substring(0,lastSlash)
+        val newPath = pathStr.substring(lastSlash+1)
+        URL(fileScheme, "", basis, newPath)
+      else
+        URL(fileScheme, "", pathStr, "")
+      end if
+    end if
   }
 }

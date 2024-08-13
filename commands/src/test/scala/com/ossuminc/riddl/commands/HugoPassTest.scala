@@ -12,7 +12,7 @@ import com.ossuminc.riddl.commands.RunCommandOnExamplesTest
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 
 class HugoPassTest
     extends RunCommandOnExamplesTest[HugoPass.Options, HugoCommand](
@@ -48,7 +48,7 @@ class HugoPassTest
 
   def runHugo(outputDir: Path, tmpDir: Path): Assertion = {
     import scala.sys.process.*
-    val output = ArrayBuffer[String]()
+    val output = mutable.ArrayBuffer[String]()
     var hadErrorOutput: Boolean = output.nonEmpty
 
     def fout(line: String): Unit = { output.append(line) }

@@ -28,7 +28,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
   "UseCaseDiagram" should {
     "generate a simple diagram correctly" in { (td:TestData) =>
       val path  = Path.of("hugo/src/test/input/epic.riddl")
-      val input = RiddlParserInput.rpiFromPath(path)
+      val input = RiddlParserInput.fromCwdPath(path)
       val result = runPassesWith(input, DiagramsPass.creator())
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match

@@ -13,7 +13,7 @@ class RepositoryWriterTest extends WriterTest {
   "RepositoryWriter" must {
     "handle a repository" in {
       val path = base.resolve("repository.riddl")
-      val input = RiddlParserInput.rpiFromPath(path)
+      val input = RiddlParserInput.fromCwdPath(path)
       validateRoot(input, CommonOptions()) { case passesResult: PassesResult =>
         val mkd = makeMDW(output, PassesResult.empty)
         val root = passesResult.root

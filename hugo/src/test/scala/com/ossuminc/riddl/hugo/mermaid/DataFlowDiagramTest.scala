@@ -12,7 +12,7 @@ class DataFlowDiagramTest extends ValidatingTest {
   "DataFlowDiagram" should {
     "generate a simple diagram correctly" in { (td: TestData) =>
       val path = Path.of("language/jvm/src/test/input/everything.riddl")
-      val input = RiddlParserInput.rpiFromPath(path)
+      val input = RiddlParserInput.fromCwdPath(path)
       simpleParseAndValidate(input) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right(passesResult: PassesResult) =>

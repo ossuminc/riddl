@@ -68,12 +68,12 @@ object RiddlParserInput {
   def fromURL(url: URL, purpose: String = ""): Future[RiddlParserInput] = {
     Loader(url).load.map(data => apply(data, url, purpose))
   }
-  
+
   def fromPaths(basis: String, path: String, purpose: String = ""): RiddlParserInput =
     val url = URL("file", "", basis.dropWhile(_ == '/'), path.dropWhile(_ == '/'))
     val future = fromURL(url, purpose)
     Await.result(future, 10.seconds)
-  
+
   /** Set up a parser input for parsing directly from a file at a specific Path
     * @param basis
     *   The path basis for subsequent include statements. Think of this as the root path
@@ -83,22 +83,35 @@ object RiddlParserInput {
     *   The java.nio.path.Path from which UTF-8 text will be read and parsed as the first file
     *
     * @param purpose
-    *. The description string of the purpose of the constructed URL 
+    *. The description string of the purpose of the constructed URL
     * @note
     *   JVM Only
     */
   def fromPaths(basis: java.nio.file.Path, path: java.nio.file.Path, purpose: String): RiddlParserInput =
     fromPaths(basis.toString, path.toString, purpose)
 
-  /** Set up a parser input for parsing directly from a local file based on the current 
+  /** Set up a parser input for parsing directly from a local file based on the current
    *  working directory
    * @param path
-   *   The path that will be added to the current working directory 
-   *   
+   *   The path that will be added to the current working directory
+   *
    */
   def fromCwdPath(path:Path, purpose: String =""): RiddlParserInput =
-    val cwd = Path.of(Option(System.getProperty("user.dir")).getOrElse(""))
-    fromPaths(cwd, path, purpose)
+    val url = URL.fromCwdPath(path.toString)
+    val future = fromURL(url, purpose)
+    Await.result(future, 10.seconds)
+   
+  def fromFullPath(path:Path, purpose: String = ""): RiddlParserInput =
+    require(path.toString.startsWith("/"))
+    val url = URL.fromFullPath(path.toString)
+    val future = fromURL(url, purpose)
+    Await.result(future, 10.seconds)
+
+  def fromPath(path:Path, purpose: String = ""): RiddlParserInput =
+    if path.toString.startsWith("/") then
+      fromFullPath(path, purpose)
+    else
+      fromCwdPath(path, purpose)
 }
 
 /** This class provides the loaded data for fastparse to parse. It is the same as fastparse.IndexedParserInput but adds
