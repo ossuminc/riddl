@@ -674,8 +674,9 @@ object AST {
     /** A lazily constructed [[Seq]] of [[UseCase]] filtered from the contents */
     lazy val cases: Contents[UseCase] = contents.filter[UseCase]
   }
-  
+
   sealed trait WithShownBy extends Container[ContentValues] {
+
     /** A lazily constructed [[Seq]] of [[ShownBy]] filtered from the contents */
     lazy val shownBy: Contents[ShownBy] = contents.filter[ShownBy]
   }
@@ -708,12 +709,11 @@ object AST {
     Comment | Term | AuthorRef | Type | BriefDescription | BlockDescription | URLDescription
 
   /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition |
-    Constant | Invariant | Function | OptionValue | Handler | Inlet | Outlet
+  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler | Inlet |
+    Outlet
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
-  type OccursInDomain = OccursInVitalDefinition |
-    Author | Context | Domain | User | Application | Epic | Saga
+  type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] */
   type DomainContents = OccursInDomain | Include[OccursInDomain]
@@ -734,8 +734,7 @@ object AST {
   type OccursInOutput = Output | TypeRef
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
-  type OccursInContext = OccursInProcessor |
-    Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
+  type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
 
   /** Type of definitions that occur in a [[Context]] with [[Include]] */
   type ContextContents = OccursInContext | Include[OccursInContext]
@@ -3622,15 +3621,14 @@ object AST {
   object UserStory {
     val empty: UserStory = UserStory()
   }
-  
+
   @JSExportTopLevel("ShownBy")
   case class ShownBy(
     loc: At = At.empty,
     urls: Seq[URL] = Seq.empty
-  ) extends RiddlValue: 
+  ) extends RiddlValue:
     def format: String = "shown by "
   end ShownBy
-  
 
   /** The definition of an Epic that bundles multiple Jacobsen Use Cases into an overall story about user interactions
     * with the system. This define functionality from the perspective of users (men or machines) interactions with the
@@ -3655,15 +3653,15 @@ object AST {
   case class Epic(
     loc: At,
     id: Identifier,
-    userStory: UserStory = UserStory.empty, 
+    userStory: UserStory = UserStory.empty,
     contents: Seq[EpicContents] = Seq.empty,
     brief: Option[LiteralString] = Option.empty[LiteralString],
     description: Option[Description] = None
   ) extends VitalDefinition[EpicContents]
-      with WithUseCases 
+      with WithUseCases
       with WithShownBy {
 
-    override def isEmpty: Boolean = userStory.isEmpty && contents.isEmpty 
+    override def isEmpty: Boolean = userStory.isEmpty && contents.isEmpty
 
     override def format: String = s"$kind ${id.format}"
   }
