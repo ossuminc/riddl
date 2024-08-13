@@ -6,14 +6,12 @@
 
 package com.ossuminc.riddl.prettify
 
-import java.nio.file.Files
-import java.nio.file.Path
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
-import com.ossuminc.riddl.prettify.PrettifyPass.keyword
 import com.ossuminc.riddl.utils.{Logger, TextFileWriter}
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Path}
 
 /** Unit Tests For RiddlFileEmitter */
 case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
@@ -39,22 +37,33 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    addIndent().add(s"${keyword(definition)} ${definition.id.format} is ")
-    if withBrace then {
-      if definition.isEmpty then add("{ ??? }")
+    addIndent(s"${keyword(definition)} ${definition.id.format} is ")
+    if withBrace then
+      if definition.isEmpty then add("{ ??? }\n")
       else add("{").nl.incr
-    }
-    this
+    else this
+    end if
   }
 
   def closeDef(
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    if withBrace && !definition.isEmpty then { decr.addIndent("}") }
+    if withBrace then
+      if definition.nonEmpty then decr.addIndent("}")
+      end if
+    end if
     emitBrief(definition.brief)
     emitDescription(definition.description).nl
+    if !withBrace && definition.nonEmpty then nl.decr else this
   }
+
+  def emitComment(comment: Comment): this.type =
+    comment match
+      case inline: InlineComment => this.add(inline.format)
+      case block: LineComment    => this.add(block.format)
+    end match
+  end emitComment
 
   def emitBrief(brief: Option[LiteralString]): this.type = {
     brief.map { (ls: LiteralString) => this.add(s" briefly ${ls.format}") }
@@ -69,7 +78,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
         add(spc + "|" + line.s).nl
       }
       decr
-      addIndent("}")
+      addIndent("}").nl 
     }
     this
   }
@@ -100,7 +109,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
         enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)") +
           mkEnumeratorDescription(enumerator.description)
       }
-      .mkString(s"$spc", s",$new_line", new_line)
+      .mkString(s"$spc", s",$new_line$spc", new_line)
     head.add(enumerators).decr.addLine("}")
     this
   }
@@ -249,10 +258,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitUndefined(): this.type = { add(" ???") }
 
-  def emitOptions(optionDef: WithOptions): this.type = {
-    if optionDef.options.nonEmpty then
-      optionDef.options.map{ option => option.format + new_line}.foreach(addIndent); this
-    else this
+  def emitOption(option: OptionValue): this.type = {
+    addIndent(option.format + new_line)
   }
 
   def emit(): Path = {
@@ -270,4 +277,21 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     }
     this
   }
+
+  def emitSchemaKind(schemaKind: RepositorySchemaKind): this.type =
+    val str = schemaKind match {
+      case RepositorySchemaKind.Other        => "other"
+      case RepositorySchemaKind.Flat         => "flat"
+      case RepositorySchemaKind.Relational   => "relational"
+      case RepositorySchemaKind.TimeSeries   => "time-series"
+      case RepositorySchemaKind.Graphical    => "graphical"
+      case RepositorySchemaKind.Hierarchical => "hierarchical"
+      case RepositorySchemaKind.Star         => "star"
+      case RepositorySchemaKind.Document     => "document"
+      case RepositorySchemaKind.Columnar     => "columnar"
+      case RepositorySchemaKind.Vector       => "vector"
+    }
+    add(str)
+  end emitSchemaKind
+
 }

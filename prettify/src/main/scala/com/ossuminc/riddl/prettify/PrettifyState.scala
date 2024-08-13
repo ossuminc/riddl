@@ -6,13 +6,11 @@
 
 package com.ossuminc.riddl.prettify
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.translate.TranslatingState
 
 import java.net.URL
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.collection.mutable
 
 case class PrettifyState(
@@ -48,7 +46,7 @@ case class PrettifyState(
 
   def filesAsString: String = {
     closeStack()
-    files.map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.toString}").mkString
+    files.map(fe => fe.toString).mkString
   }
 
   private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack

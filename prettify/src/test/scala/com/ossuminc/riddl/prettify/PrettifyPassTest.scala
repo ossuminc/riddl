@@ -10,7 +10,6 @@ import com.ossuminc.riddl.language.{CommonOptions, RiddlFilesTestBase}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
-import com.ossuminc.riddl.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
 import org.scalatest.{Assertion, TestData}
 
 import java.io.File
@@ -25,8 +24,7 @@ class PrettifyPassTest extends RiddlFilesTestBase {
     val passes = standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         val options = PrettifyPass.Options(inputFile = Some(Path.of("aFile")))
-        val state = PrettifyState(options)
-        PrettifyPass(input, outputs, state)
+        PrettifyPass(input, outputs, options)
       }
     )
     Riddl.parseAndValidate(source, CommonOptions(), shouldFailOnError = true, passes) match {
@@ -56,7 +54,7 @@ class PrettifyPassTest extends RiddlFilesTestBase {
     output1 mustEqual output3
   }
 
-  "PrettifyTranslator" should {
+  "PrettifyPass" should {
     "check domains" in { (td: TestData) =>
       processADirectory("passes/jvm/src/test/input/domains")
     }
@@ -70,8 +68,7 @@ class PrettifyPassTest extends RiddlFilesTestBase {
       processADirectory("passes/jvm/src/test/input/ranges")
     }
     "check everything.riddl" in { (td: TestData) =>
-      pending // FIXME: this isn't handled well by PrettifyPass
-      // processAFile("passes/jvm/src/test/input/everything.riddl")
+      processAFile("passes/jvm/src/test/input/everything.riddl")
     }
     "check petstore.riddl" in { (td: TestData) =>
       processAFile("passes/jvm/src/test/input/petstore.riddl")
