@@ -55,7 +55,7 @@ trait ParsingTest extends TestingBasisWithTestData {
   ): Either[Messages, Root] = {
     parsePath(file.toPath, commonOptions)
   }
-  
+
   def parse[T <: RiddlValue, U <: RiddlValue](
     input: RiddlParserInput,
     parser: P[?] => P[T],
@@ -187,7 +187,7 @@ trait ParsingTest extends TestingBasisWithTestData {
   def checkFile(
     @unused label: String,
     fileName: String,
-    directory: String = defaultInputDir 
+    directory: String = defaultInputDir
   ): (Root, RiddlParserInput) = {
     val path = java.nio.file.Path.of(directory, fileName)
     val rpi = fromCwdPath(path)

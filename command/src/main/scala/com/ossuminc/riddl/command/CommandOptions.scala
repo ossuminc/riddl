@@ -7,7 +7,6 @@ package com.ossuminc.riddl.command
 
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Messages, errors}
-import com.ossuminc.riddl.utils.Plugin
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader}
 import pureconfig.error.ConfigReaderFailures
 import scopt.OParser

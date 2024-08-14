@@ -71,7 +71,7 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "handle inclusions into domain" in { (td: TestData) =>
       val (root, rpi) = checkFile("Domain Includes", "includes/domainIncludes.riddl")
-      val url = URL("file", "", "", defaultInputDir + "/includes/domainIncluded.riddl")
+      val url = URL.fromCwdPath(defaultInputDir + "/includes/domainIncluded.riddl")
       val inc = StringParserInput("", url)
       root.domains mustNot be(empty)
       root.domains.head.includes mustNot be(empty)

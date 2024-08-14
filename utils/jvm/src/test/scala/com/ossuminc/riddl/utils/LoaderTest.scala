@@ -15,7 +15,7 @@ class LoaderTest extends AnyWordSpec with Matchers {
       )
       val contentF = Loader(url).load
       val content = Await.result(contentF, 5.seconds)
-      info(content)
+      // info(content)
     }
   }
 }

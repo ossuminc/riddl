@@ -97,7 +97,7 @@ object RiddlParserInput {
    *
    */
   def fromCwdPath(path:Path, purpose: String =""): RiddlParserInput =
-    val url = URL.fromFullPath(path.toString)
+    val url = URL.fromCwdPath(path.toString)
     val future = fromURL(url, purpose)
     Await.result(future, 10.seconds)
    

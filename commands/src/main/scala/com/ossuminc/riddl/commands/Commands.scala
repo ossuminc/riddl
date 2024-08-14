@@ -39,7 +39,7 @@ object Commands:
     end match
   end loadCommandNamed
 
-  private def runCommandWithArgs(
+  def runCommandWithArgs(
     name: String,
     args: Array[String],
     log: Logger,
