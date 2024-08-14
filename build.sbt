@@ -220,6 +220,7 @@ lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
   (passes, Passes),
+  (diagrams, Diagrams),
   (command, Command),
   (prettify, Prettify),
   (hugo, Hugo),
@@ -235,10 +236,11 @@ lazy val docsite = DocSite("doc", docOutput, docProjects)
     scalaVersion := "3.4.2",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
-  )
+  ).dependsOn(utils,language,passes,diagrams,command,prettify,hugo,commands)
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info)
+  .configure(With.scala2)
   .configure(With.publishing)
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",

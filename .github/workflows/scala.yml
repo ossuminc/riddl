@@ -60,7 +60,6 @@ jobs:
       env:
         RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
       run: |
-        export RIDDLC_PATH=riddlc/target/universal/stage/bin/riddlc
         sbt -v clean compile publishLocal riddlc/stage sbt-riddl/scripted
 
     - name: Cleanup Before Caching

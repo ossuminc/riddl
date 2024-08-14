@@ -40,8 +40,8 @@ object DocSite {
           s"-source-links:github://${gitHubOrganization.value}/${gitHubRepository.value}/main",
           s"-siteroot:${apiOutput.toString}", {
             val mappings: Seq[Seq[String]] = Seq(
-              Seq(".*scala", "scaladoc3", "https://scala-lang.org/api/3.x/"),
-              Seq(".*java", "javadoc", "https://docs.oracle.com/javase/8/docs/api/")
+              Seq(".*scala", "scaladoc3", s"https://scala-lang.org/api/${scalaVersion.value}/"),
+              Seq(".*java", "javadoc", "https://docs.oracle.com/javase/21/docs/api/")
             )
             s"-external-mappings:${mappings.map(_.mkString("::")).mkString(",")}"
           }
