@@ -173,7 +173,7 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: Command[OP
           val errors = messages.justErrors
           if errors.nonEmpty then {
             fail(s"Test case $name failed:\n${errors.format}")
-          } else { info(messages.format) }
+          } else { info(errors.format) }
       }
     }
   }

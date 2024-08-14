@@ -242,7 +242,7 @@ class EpicTest extends ValidatingTest {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           val errors = msgs.justErrors
           if errors.nonEmpty then
-            info(msgs.format)
+            info(errors.format)
             fail("Shouldn't have errors")
           else
             domain mustNot be(empty)

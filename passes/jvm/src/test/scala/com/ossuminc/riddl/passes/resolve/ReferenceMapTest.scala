@@ -27,10 +27,12 @@ class ReferenceMapTest extends ValidatingTest {
     val result: PassesResult = create
     val refMap = result.refMap
     "convert to a pretty string" in { (td: TestData) =>
-      info("pretty: " + refMap.toString)
+      // info("pretty: " + refMap.toString)
+      refMap.toString must not be(empty)
     }
     "have correct size" in { (td: TestData) =>
       info("size: " + refMap.size.toString)
+      refMap.size must be(29)
     }
 
     "have definitionOf(pathId:String) work" in { (td: TestData) =>

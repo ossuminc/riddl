@@ -49,7 +49,7 @@ class DiagramsPassTest extends ValidatingTest {
           output.messages.justErrors must be(empty)
           output.contextDiagrams must not be (empty)
           output.useCaseDiagrams must not be (empty)
-          output.dataFlowDiagrams must be (empty) // NOTE: Not implemented yet
+          output.dataFlowDiagrams must be (empty) // FIXME: change to 'not be(empty)' when implemented
       }
     }
   }

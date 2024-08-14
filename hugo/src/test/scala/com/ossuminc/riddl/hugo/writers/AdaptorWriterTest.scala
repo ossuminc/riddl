@@ -28,7 +28,7 @@ class AdaptorWriterTest extends WriterTest {
           val parents = Seq(root, domain, context)
           mkd.emitAdaptor(adaptor, parents)
           val result = mkd.toString
-          info(result)
+          // info(result)
           result mustNot be(empty)
           val expected =
             """---

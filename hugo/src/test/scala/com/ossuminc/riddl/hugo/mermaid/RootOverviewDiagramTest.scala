@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 class RootOverviewDiagramTest extends RunPassTestBase {
 
-  "ContextDiagram" should {
+  "RootOverviewDiagram" should {
     "generate a simple diagram correctly" in { (td:TestData) =>
       val path = Path.of("hugo/src/test/input/context-relationships.riddl")
       val input = RiddlParserInput.fromCwdPath(path)
@@ -19,7 +19,6 @@ class RootOverviewDiagramTest extends RunPassTestBase {
       val lines = diagram.generate
       lines mustNot be(empty)
       val actual = lines.mkString("\n")
-      info(actual)
       val expected: String =
         """---
           |title: Root Overview

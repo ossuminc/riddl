@@ -37,7 +37,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
             case Some((uc, useCaseDiagramData)) =>
               val useCaseDiagram = UseCaseDiagram(TestUCDSupport(result), useCaseDiagramData)
               val lines = useCaseDiagram.generate
-              info(lines.mkString("\n"))
+              // info(lines.mkString("\n"))
               lines mustNot be(empty)
               succeed
             case None => fail("No use cases or epic")

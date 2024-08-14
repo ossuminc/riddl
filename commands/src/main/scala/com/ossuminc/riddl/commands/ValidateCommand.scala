@@ -26,7 +26,7 @@ class ValidateCommand extends InputFileCommand("validate") {
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.fromCwdPath(inputFile)
+      val rpi = RiddlParserInput.fromPath(inputFile)
       Riddl.parseAndValidate(rpi, commonOptions)
     }
   }

@@ -23,7 +23,7 @@ class RepositoryWriterTest extends WriterTest {
         val parents = Seq(root, domain, context)
         mkd.emitRepository(repository, parents)
         val result = mkd.toString
-        info(result)
+        // info(result)
         result mustNot be(empty)
         val expected = """---
                          |title: "Repo"

@@ -43,7 +43,7 @@ class MarkdownWriterTest extends HugoTestBase {
           val diagram = DomainMapDiagram(domain)
           mkd.emitDomain(domain, Seq(root))
           val emitted = mkd.toString
-          info(emitted)
+          // info(emitted)
           val expected =
             """---
               |title: "TestDomain"

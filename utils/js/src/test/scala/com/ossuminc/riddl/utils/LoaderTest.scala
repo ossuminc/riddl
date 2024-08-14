@@ -19,8 +19,10 @@ class LoaderTest extends AnyWordSpec with Matchers {
       val url = URL(
         "https://raw.githubusercontent.com/ossuminc/riddl/scalaJs-support/language/jvm/src/test/input/domains/rbbq.riddl"
       )
-      val contentF = Loader(url).load.map[String] { (content: String) =>
-        info(content); content
+      Loader(url).load.map[String] { (content: String) =>
+        content must not be(empty)
+        content.startsWith("domain ReactiveBBQ") must be(true)
+        content
       }
     }
   }

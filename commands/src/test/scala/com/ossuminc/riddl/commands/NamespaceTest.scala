@@ -24,9 +24,8 @@ class NamespaceTest
     @unused messages: Messages,
     @unused tempDir: Path
   ): Assertion = {
-    info(messages.format)
     info(s"tempDir = ${tempDir.toAbsolutePath}")
-    fail(messages.format)
+    fail(messages.justErrors.format)
   }
 
   "FooBarSameDomain" should {

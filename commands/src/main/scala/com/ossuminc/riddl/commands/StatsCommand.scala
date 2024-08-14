@@ -87,7 +87,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
   def printStats(stats: StatsOutput): Unit = {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
-    System.out.println(s)
+    println(s)
     for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)

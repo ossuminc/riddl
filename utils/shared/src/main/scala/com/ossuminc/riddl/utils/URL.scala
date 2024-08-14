@@ -5,7 +5,6 @@
  */
 package com.ossuminc.riddl.utils
 
-import java.nio.file.Path
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
 
