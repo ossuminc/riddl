@@ -68,7 +68,7 @@ jobs:
 
       - name: Generate ScalaDoc
         run: |
-          sbt doc/unidoc
+          sbt doc/test doc/unidoc
 
       - name: Build with Hugo
         env:
@@ -79,9 +79,7 @@ jobs:
           cd doc/src/main/hugo ; \
           hugo --minify --baseURL "https://riddl.tech" \
           --printMemoryUsage --noBuildLock --cleanDestinationDir \
-          --enableGitInfo --noBuildLock --printPathWarnings --printMemoryUsage ; \
-          cd ../../../.. ; \
-          sbt "project doc" "test"
+          --enableGitInfo --noBuildLock --printPathWarnings --printMemoryUsage
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
