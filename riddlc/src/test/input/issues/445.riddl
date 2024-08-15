@@ -12,6 +12,7 @@ domain example is {
     }
   }
   epic allow_groups_to_receive {
+    user Admin wants to "have easy administration" so that "he can go to lunch more frequently"
     case UserCreatesANewCompany {
       user Admin wants to "create a new tenant" so that "the tenant can do stuff"
       step from user Admin "presses" to application App

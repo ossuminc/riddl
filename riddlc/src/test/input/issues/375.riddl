@@ -8,11 +8,10 @@ domain Example is {
       record FooExampleState is {
         foo: Foo
       }
-      state FooExample of FooExampleState is {
-        handler HandleFoo is {
-          on command ExampleContext.DooFoo {
-            "do something"
-          }
+      state FooExample of FooExampleState
+      handler HandleFoo is {
+        on command ExampleContext.DooFoo {
+          "do something"
         }
       }
     }

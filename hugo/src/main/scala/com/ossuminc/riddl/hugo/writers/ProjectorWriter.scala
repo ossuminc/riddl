@@ -1,7 +1,6 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.language.AST.{OccursInProjector, Projector}
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
+import com.ossuminc.riddl.language.AST.{Parents, ProjectorContents, Projector}
 
 trait ProjectorWriter { this: MarkdownWriter =>
 
@@ -9,7 +8,7 @@ trait ProjectorWriter { this: MarkdownWriter =>
     containerHead(projector)
     emitDefDoc(projector, parents)
     list("Repository", projector.repositories)
-    emitProcessorDetails[OccursInProjector](projector, parents)
+    emitProcessorDetails[ProjectorContents](projector, parents)
   }
 
 }

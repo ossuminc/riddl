@@ -6,13 +6,11 @@
 
 package com.ossuminc.riddl.prettify
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.{CommonOptions, RiddlFilesTestBase}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
-import com.ossuminc.riddl.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
-import com.ossuminc.riddl.testkit.RiddlFilesTestBase
-import org.scalatest.Assertion
+import org.scalatest.{Assertion, TestData}
 
 import java.io.File
 import java.nio.file.Path
@@ -26,12 +24,13 @@ class PrettifyPassTest extends RiddlFilesTestBase {
     val passes = standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         val options = PrettifyPass.Options(inputFile = Some(Path.of("aFile")))
-        val state = PrettifyState(options)
-        PrettifyPass(input, outputs, state)
+        PrettifyPass(input, outputs, options)
       }
     )
     Riddl.parseAndValidate(source, CommonOptions(), shouldFailOnError = true, passes) match {
-      case Left(errors) =>
+      case Left(messages) =>
+        val errors = messages.justErrors
+        require(errors.nonEmpty, "No actual errors!")
         fail(
           s"Errors on $run generation:\n" + errors.format +
             s"\nIn Source:\n ${source.data}\n" + "\n"
@@ -46,36 +45,36 @@ class PrettifyPassTest extends RiddlFilesTestBase {
   def checkAFile(
     file: File
   ): Assertion = {
-    val input1 = RiddlParserInput(file.toPath)
+    val input1 = RiddlParserInput.fromCwdPath(file.toPath)
     val output1 = runPrettify(input1, "first")
-    val input2 = RiddlParserInput(output1)
+    val input2 = RiddlParserInput(output1,"checkAFile")
     val output2 = runPrettify(input2, "second")
-    val input3 = RiddlParserInput(output2)
+    val input3 = RiddlParserInput(output2,"checkAFile")
     val output3 = runPrettify(input3, "third")
     output1 mustEqual output3
   }
 
-  "PrettifyTranslator" should {
-    "check domains" in {
-      processADirectory("testkit/src/test/input/domains")
+  "PrettifyPass" should {
+    "check domains" in { (td: TestData) =>
+      processADirectory("passes/jvm/src/test/input/domains")
     }
-    "check enumerations" in {
-      processADirectory("testkit/src/test/input/enumerations")
+    "check enumerations" in { (td: TestData) =>
+      processADirectory("passes/jvm/src/test/input/enumerations")
     }
-    "check mappings" in {
-      processADirectory("testkit/src/test/input/mappings")
+    "check mappings" in { (td: TestData) =>
+      processADirectory("passes/jvm/src/test/input/mappings")
     }
-    "check ranges" in {
-      processADirectory("testkit/src/test/input/ranges")
+    "check ranges" in { (td: TestData) =>
+      processADirectory("passes/jvm/src/test/input/ranges")
     }
-    "check everything.riddl" in {
-      processAFile("testkit/src/test/input/everything.riddl")
+    "check everything.riddl" in { (td: TestData) =>
+      processAFile("passes/jvm/src/test/input/everything.riddl")
     }
-    "check petstore.riddl" in {
-      processAFile("testkit/src/test/input/petstore.riddl")
+    "check petstore.riddl" in { (td: TestData) =>
+      processAFile("passes/jvm/src/test/input/petstore.riddl")
     }
-    "check rbbq.riddl" in {
-      processAFile("testkit/src/test/input/rbbq.riddl")
+    "check rbbq.riddl" in { (td: TestData) =>
+      processAFile("passes/jvm/src/test/input/rbbq.riddl")
       println("done")
     }
   }

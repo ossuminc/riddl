@@ -51,7 +51,7 @@ abstract class HugoTestBase extends ValidatingTest {
       case Left(messages) =>
         fail(messages.format)
       case Right((passesResult: PassesResult, root: Root, rpi: RiddlParserInput)) =>
-        val filePath = rpi.root.toPath
+        val filePath = Path.of(rpi.root.path) 
         passesResult.outputOf[HugoOutput](HugoPass.name) match
           case None => fail("No output from hugo pass")
           case Some(_) =>

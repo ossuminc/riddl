@@ -23,3 +23,5 @@ target
 *.lock
 /hugo-input/
 /scoverage-report/
+/package-lock.json
+/node_modules

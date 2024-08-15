@@ -2,7 +2,7 @@ package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.hugo.{GlossaryEntry, MessageInfo, ToDoItem}
 import com.ossuminc.riddl.language.AST.{Domain, User, Author}
-import com.ossuminc.riddl.analyses.{KindStats, StatsOutput, StatsPass}
+import com.ossuminc.riddl.passes.stats.{KindStats, StatsOutput, StatsPass}
 
 trait SummariesWriter { this: MarkdownWriter =>
 

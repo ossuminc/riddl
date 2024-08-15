@@ -3,13 +3,12 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
-import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, PassesCreator}
+import com.ossuminc.riddl.language.parsing.TopLevelParser
+import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.passes.{Pass, PassInput, PassesCreator, PassesResult}
 import com.ossuminc.riddl.utils.Logger
 
 import java.nio.file.Path
@@ -31,11 +30,11 @@ trait PassCommandOptions extends CommandOptions {
 /** An abstract base class for commands that use passes.
   *
   * @param name
-  *   The name of the command to pass to [[CommandPlugin]]
+  *   The name of the command to pass to [[Command]]
   * @tparam OPT
   *   The option type for the command
   */
-abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) extends CommandPlugin[OPT](name) {
+abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) extends Command[OPT](name) {
 
   def getPasses(
     log: Logger,
@@ -51,7 +50,9 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) ex
     log: Logger
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputPath: Path) =>
-      TopLevelParser.parsePath(inputPath, commonOptions) match {
+      import com.ossuminc.riddl.language.parsing.RiddlParserInput
+      val rpi = RiddlParserInput.fromPath(inputPath)
+      TopLevelParser.parseInput(rpi, commonOptions) match {
         case Left(errors) =>
           Left[Messages, PassesResult](errors)
         case Right(root) =>

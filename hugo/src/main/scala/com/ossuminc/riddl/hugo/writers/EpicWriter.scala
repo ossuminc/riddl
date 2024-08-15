@@ -1,9 +1,8 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
-import com.ossuminc.riddl.hugo.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
-import com.ossuminc.riddl.language.AST.{Definition, Epic, UseCase, User, UserStory}
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
+import com.ossuminc.riddl.language.AST.{Definition, Epic, UseCase, User, UserStory, Parents}
+import com.ossuminc.riddl.diagrams.mermaid.UseCaseDiagram
+import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
 
 trait EpicWriter { this: MarkdownWriter =>
 
@@ -12,7 +11,7 @@ trait EpicWriter { this: MarkdownWriter =>
     h2(epic.identify)
     emitVitalDefTable(epic, parents)
     if epic.userStory.nonEmpty then {
-      val userPid = epic.userStory.getOrElse(UserStory()).user.pathId
+      val userPid = epic.userStory.user.pathId
       val parent = parents.head
       val maybeUser = generator.refMap.definitionOf[User](userPid, parent)
       h2("User Story")
@@ -21,7 +20,7 @@ trait EpicWriter { this: MarkdownWriter =>
         case Some(user) =>
           val name = user.id.value
           val role = user.is_a.s
-          val us = epic.userStory.get
+          val us = epic.userStory
           val benefit = us.benefit.s
           val capability = us.capability.s
           val storyText =
@@ -53,6 +52,7 @@ trait EpicWriter { this: MarkdownWriter =>
           case Some(dpo) =>
             dpo.useCaseDiagrams.get(uc) match
               case Some(useCaseDiagramData: UseCaseDiagramData) =>
+
                 val ucd = UseCaseDiagram(generator, useCaseDiagramData)
                 val lines = ucd.generate
                 emitMermaidDiagram(lines)

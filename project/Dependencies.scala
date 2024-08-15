@@ -5,7 +5,7 @@ import sbt.librarymanagement.ModuleID
 
 object V {
   val commons_io = "2.16.1"
-  val compress = "1.26.2"
+  val compress = "1.27.0"
   val config = "1.4.2"
   val fastparse = "3.1.1"
   val jgit = "6.5.0"
@@ -21,6 +21,7 @@ object Dep {
   val compress = "org.apache.commons" % "commons-compress" % V.compress
   val commons_io = "commons-io" % "commons-io" % V.commons_io
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
+  val jacabi_w3c = "com.jcabi" % "jcabi-w3c" % "1.4.0"
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
   val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3
   val pureconfig = "com.github.pureconfig" %% "pureconfig-core" % V.pureconfig
@@ -29,7 +30,6 @@ object Dep {
   val scalacheck = "org.scalacheck" %% "scalacheck" % V.scalacheck
   val scopt = "com.github.scopt" %% "scopt" % V.scopt
   val slf4j = "org.slf4j" % "slf4j-nop" % V.slf4j
-  val jacabi_w3c = "com.jcabi" % "jcabi-w3c" % "1.4.0"
 
   val testing: Seq[ModuleID] = Seq(scalactic % "test", scalatest % "test", scalacheck % "test")
   val testKitDeps: Seq[ModuleID] = Seq(scalactic, scalatest, scalacheck)

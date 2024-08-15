@@ -1,13 +1,13 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandTestBase
+import com.ossuminc.riddl.commands.CommandTestBase
 
 import java.nio.file.Path
 
 /** Unit Tests For StatsCommandTest */
 class StatsCommandTest extends CommandTestBase("commands/src/test/input") {
 
-  val inputFile = "testkit/src/test/input/rbbq.riddl"
+  val inputFile = "commands/src/test/input/rbbq.riddl"
 
   "StatsCommand" should {
     "run correctly" in {
@@ -16,7 +16,7 @@ class StatsCommandTest extends CommandTestBase("commands/src/test/input") {
     }
 
     "read stats option" in {
-      val expected = StatsCommand.Options(Some(Path.of(s"$inputDir/stats.riddl")))
+      val expected = StatsCommand.Options(Some(Path.of(s"stats.riddl")))
       check(new StatsCommand, expected)
     }
   }
