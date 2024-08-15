@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.{TestingBasis, TestingBasisWithTestData}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.Accumulator
@@ -17,17 +17,17 @@ import scala.collection.mutable
 import java.nio.file.Path
 
 /** Test case for Pass and its related classes */
-class PassTest extends TestingBasis {
+class PassTest extends TestingBasisWithTestData {
 
   "PassOutput" must {
-    "have an empty value" in {
+    "have an empty value" in { td =>
       val mt = PassOutput.empty
       mt.messages.isEmpty mustBe true
     }
   }
 
   "PassesOutput" must {
-    "yield values with no input" in {
+    "yield values with no input" in { td =>
       val po = PassesOutput()
       po.messages mustBe empty
       po.symbols mustBe SymbolsOutput()
@@ -45,7 +45,7 @@ class PassTest extends TestingBasis {
 
     protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = ???
 
-    def result(root:Root): com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
 
   object TestPass extends PassInfo[PassOptions] {
@@ -63,16 +63,17 @@ class PassTest extends TestingBasis {
 
     protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {}
 
-    def result(root:Root): com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
 
   object TestPass2 extends PassInfo[PassOptions] {
     val name: String = "TestPass2"
-    override def creator(options:PassOptions): PassCreator = (input, output) => new TestPass2(input, output)
+
+    override def creator(options: PassOptions): PassCreator = (input, output) => new TestPass2(input, output)
   }
 
   "Pass" must {
-    "validate requires method" in {
+    "validate requires method" in { td =>
       val input = PassInput(Root.empty)
       val output = PassesOutput()
       val tp = TestPass(input, output)
@@ -82,8 +83,8 @@ class PassTest extends TestingBasis {
       thrown.getMessage mustBe "requirement failed: Required pass 'TestPass' was not run prior to 'TestPass2'"
     }
 
-    "runValidation works" in {
-      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+    "runValidation works" in { td =>
+      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
       Riddl.parse(testInput) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
@@ -95,8 +96,8 @@ class PassTest extends TestingBasis {
           vo.messages.justErrors mustBe empty
     }
 
-    "runThesePasses catches exceptions" in {
-      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+    "runThesePasses catches exceptions" in { td =>
+      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
       Riddl.parse(testInput) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
@@ -114,6 +115,7 @@ class PassTest extends TestingBasis {
     }
 
     var (opens, closes, leaves, values) = (0, 0, 0, 0)
+
     override protected def openContainer(definition: Definition, parents: Parents): Unit = opens = opens + 1
 
     override protected def processLeaf(definition: LeafDefinition, parents: Parents): Unit = leaves = leaves + 1
@@ -126,12 +128,12 @@ class PassTest extends TestingBasis {
 
     override def postProcess(root: Root): Unit = ()
 
-    override def result(root:Root): PassOutput = PassOutput.empty
+    override def result(root: Root): PassOutput = PassOutput.empty
   }
 
   "HierarchyPass" must {
-    "traverses all kinds of nodes" in {
-      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+    "traverses all kinds of nodes" in { td =>
+      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
       Riddl.parseAndValidate(testInput) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(result: PassesResult) =>
@@ -141,17 +143,17 @@ class PassTest extends TestingBasis {
           val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens.mustBe(closes)
-          opens.mustBe(50)
+          opens.mustBe(54)
           values.mustBe(23)
-          leaves.mustBe(20)
+          leaves.mustBe(23)
     }
-    "traverses partial trees" in {
+    "traverses partial trees" in { td =>
       val input = RiddlParserInput(
         """domain foo is { context bar is {
           | /* comment */
           | term baz is briefly "a character in a play"
           |}}
-          |""".stripMargin
+          |""".stripMargin, td
       )
       Riddl.parseAndValidate(input) match
         case Left(messages) => fail(messages.justErrors.format)
@@ -167,4 +169,5 @@ class PassTest extends TestingBasis {
           leaves must be(1)
 
     }
+  }
 }

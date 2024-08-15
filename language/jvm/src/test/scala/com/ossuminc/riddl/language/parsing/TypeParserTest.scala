@@ -19,7 +19,7 @@ class TypeParserTest extends ParsingTest {
     //        decimalType | otherPredefTypes
     //    )./
     //  }
-    "support all the predefined types" in {
+    "support all the predefined types" in { td =>
       val input = RiddlParserInput("""
           |type ref is reference to entity A.B.C.D
           |type str is String(10,20)
@@ -210,7 +210,7 @@ class TypeParserTest extends ParsingTest {
           |type nada = Nothing
           |type uuid = UUID
           |type userId = UserId
-          |""".stripMargin)
+          |""".stripMargin,td)
       parseInContext[Type](input, _.types.last) match {
         case Left(messages)        => fail(messages.format)
         case Right(typ: Type, rpi) => succeed
@@ -438,7 +438,7 @@ class TypeParserTest extends ParsingTest {
     "allow command, event, query, and result message aggregations" in { (td: TestData) =>
       for mk <- Seq("command", "event", "query", "result") do {
         val prefix = s"type mkt = $mk {"
-        val rip = RiddlParserInput(prefix + 
+        val rip = RiddlParserInput(prefix +
           """
             |  key: Number,
             |  id: Id(entity foo),

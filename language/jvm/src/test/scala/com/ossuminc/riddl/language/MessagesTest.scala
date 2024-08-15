@@ -184,7 +184,8 @@ class MessagesTest extends TestingBasis {
     }
 
     "has inquiry methods" in {
-      mix.format.size must be(45)
+      val mix_formatted = mix.format
+      mix_formatted.length must be(115)
       mix.isOnlyWarnings must be(false)
       mix.isOnlyIgnorable must be(false)
       mix.hasErrors must be(true)
