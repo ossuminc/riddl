@@ -32,7 +32,7 @@ class ReferenceMapTest extends ValidatingTest {
     }
     "have correct size" in { (td: TestData) =>
       info("size: " + refMap.size.toString)
-      refMap.size must be(29)
+      refMap.size must be(30)
     }
 
     "have definitionOf(pathId:String) work" in { (td: TestData) =>

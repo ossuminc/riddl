@@ -367,7 +367,7 @@ object Messages {
      * @param message
      * The text of the message to add
      * @param loc
-     * The location in the source related to the message. 
+     * The location in the source related to the message.
      * @return
      * This type, so you can chain another call to this accumulator
      */
@@ -389,12 +389,12 @@ object Messages {
       this
     }
 
-    /** Add a [[StyleWarning]] message to the accumulated [[Messages]] 
-     * 
+    /** Add a [[StyleWarning]] message to the accumulated [[Messages]]
+     *
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -407,7 +407,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -420,7 +420,7 @@ object Messages {
      * @param message
      * The text of the message to add
      * @param loc
-     * The location in the source related to the message. 
+     * The location in the source related to the message.
      * @return
      * This type, so you can chain another call to this accumulator
      */
@@ -433,7 +433,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -446,7 +446,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -459,7 +459,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -472,7 +472,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -485,7 +485,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -498,7 +498,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -511,7 +511,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */
@@ -524,7 +524,7 @@ object Messages {
      * @param message
      *   The text of the message to add
      * @param loc
-     *   The location in the source related to the message. 
+     *   The location in the source related to the message.
      * @return
      *   This type, so you can chain another call to this accumulator
      */

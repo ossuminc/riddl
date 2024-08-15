@@ -5,8 +5,8 @@ import com.ossuminc.riddl.language.{AST, CommonOptions, Messages}
 import com.ossuminc.riddl.passes.stats.{DefinitionStats, KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult}
-import org.scalatest.*
 
+import org.scalatest.*
 import java.nio.file.Path
 
 class StatsPassTest extends ValidatingTest {
@@ -51,10 +51,10 @@ class StatsPassTest extends ValidatingTest {
           if statsOutput.messages.nonEmpty then fail(statsOutput.messages.format)
           statsOutput.maximum_depth > 0 mustBe true
           statsOutput.categories mustNot be(empty)
-          statsOutput.categories.size mustBe(29)
+          statsOutput.categories.size mustBe(31)
           val ksAll: KindStats = statsOutput.categories("All")
-          ksAll.count mustBe 28
-          ksAll.numEmpty mustBe 36
+          ksAll.count mustBe 30
+          ksAll.numEmpty mustBe 40
           ksAll.numStatements mustBe 6
           succeed
       }

@@ -344,7 +344,7 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
       case leaf: LeafDefinition =>
         processLeaf(leaf, parents.toSeq)
       case container: Definition =>
-        val def_parents = parents.toSeq 
+        val def_parents = parents.toSeq
         openContainer(container, def_parents)
         if container.contents.nonEmpty then
           parents.push(container)
@@ -361,7 +361,8 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
         openInclude(include, parents.toSeq)
         include.contents.foreach { item => traverse(item, parents) }
         closeInclude(include, parents.toSeq)
-      case value: RiddlValue => processValue(value, parents.toSeq)
+      case value: RiddlValue =>
+        processValue(value, parents.toSeq)
     }
   }
 }

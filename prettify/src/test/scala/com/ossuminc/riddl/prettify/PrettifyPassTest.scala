@@ -7,6 +7,8 @@
 package com.ossuminc.riddl.prettify
 
 import com.ossuminc.riddl.language.{CommonOptions, RiddlFilesTestBase}
+import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
@@ -76,6 +78,21 @@ class PrettifyPassTest extends RiddlFilesTestBase {
     "check rbbq.riddl" in { (td: TestData) =>
       processAFile("passes/jvm/src/test/input/rbbq.riddl")
       println("done")
+    }
+  }
+
+  "PrettifyOutput" must {
+    "construct" in { td =>
+      intercept[IllegalArgumentException] {
+        PrettifyOutput(Root.empty, Messages.empty, PrettifyState())
+      }
+      val options = PrettifyPass.Options(Some(Path.of("foo")), Some(Path.of("destination")))
+      options.singleFile must be(true)
+      val ps = PrettifyState(options)
+      ps.files.size must be(1)
+      ps.dirs must be(empty)
+      val po = PrettifyOutput(Root.empty, Messages.empty, ps)
+      po.messages must be(empty)
     }
   }
 }

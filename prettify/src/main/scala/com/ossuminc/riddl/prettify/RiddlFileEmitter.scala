@@ -78,7 +78,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
         add(spc + "|" + line.s).nl
       }
       decr
-      addIndent("}").nl 
+      addIndent("}").nl
     }
     this
   }
@@ -216,7 +216,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
       case EntityReferenceTypeExpression(_, er) =>
         this
-          .add(s"${Keyword.reference} to ${er.format}")
+          .add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
       case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
       case Optional(_, typex)   => this.emitTypeExpression(typex).add("?")
@@ -258,9 +258,17 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
 
   def emitUndefined(): this.type = { add(" ???") }
 
-  def emitOption(option: OptionValue): this.type = {
+  def emitOption(option: OptionValue): this.type =
     addIndent(option.format + new_line)
-  }
+  end emitOption
+
+  def emitOptions(optionDef: WithOptions): this.type =
+    if optionDef.options.nonEmpty then
+      optionDef.options.map { option => option.format + new_line }.foreach(addIndent); this
+    else
+      this
+    end if
+  end emitOptions
 
   def emit(): Path = {
     Files.createDirectories(filePath.getParent)

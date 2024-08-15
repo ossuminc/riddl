@@ -18,7 +18,7 @@ private[parsing] trait TypeParser {
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
       location ~ Keywords.reference ~ to.? ~/
-        maybe(Keyword.entity) ~ pathIdentifier
+        maybe(Keyword.entity) ~/ pathIdentifier
     ).map { tpl => EntityReferenceTypeExpression.apply.tupled(tpl) }
   }
 

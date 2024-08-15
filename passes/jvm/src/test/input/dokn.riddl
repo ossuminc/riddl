@@ -20,7 +20,7 @@ domain dokn is {
     type NoteId = Id(dokn.Note.Note)
     type MediaId is Id(dokn.Media.Media)
     type LocationId is Id(dokn.Location.Location)
-    type NoteList is reference to dokn.Note.Note*
+    type NoteList is reference to entity dokn.Note.Note
 
     context Company is {
         connector CompanyEvents is {
