@@ -1,5 +1,5 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.*
-import com.ossuminc.sbt.{OssumIncPlugin, Plugin}
+import com.ossuminc.sbt.{OssumIncPlugin, Plugin,DocSite,CrossModule}
 import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
@@ -230,13 +230,25 @@ lazy val docProjects = List(
 
 lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "apidoc"
 
-lazy val docsite = DocSite("doc", docOutput, docProjects)
+//def akkaMappings: Map[(String, String), URL] = Map(
+//  ("com.typesafe.akka", "akka-actor") -> url(s"http://doc.akka.io/api/akka/"),
+//  ("com.typesafe", "config") -> url("http://typesafehub.github.io/config/latest/api/")
+//)
+
+lazy val docsite = DocSite(
+  dirName = "doc",
+  apiOutput = file( "src") / "main" / "hugo" / "static" / "apidoc",
+  baseURL = Some("https://riddl.tech/apidoc"),
+  inclusions = Seq(utils,language,passes,diagrams,command,prettify,hugo,commands),
+  logoPath = Some("doc/src/main/hugo/static/images/RIDDL-Logo-128x128.png")
+)
   .settings(
     name := "riddl-doc",
     scalaVersion := "3.4.2",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
   ).dependsOn(utils,language,passes,diagrams,command,prettify,hugo,commands)
+
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info)
