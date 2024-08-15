@@ -43,8 +43,10 @@ jobs:
     - name: Coverage For JVM projects only
       run: |
         sbt -v clean coverage \
-          utils/test language/test passes/test language/test diagrams/test \
-          command/test diagrams/test command/test prettify/test hugo/test \
+          utils/Test/compile language/Test/compile passes/Test/compile diagrams/Test/compile \
+          command/Test/compile  prettify/Test/compile hugo/Test/compile commands/Test/compile \
+          riddlc/Test/compile \
+          utils/test language/test passes/test diagrams/test command/test prettify/test hugo/test \
           commands/test riddlc/test coverageAggregate coveralls
 
     - name: Coverage Results Collection
