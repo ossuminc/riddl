@@ -112,12 +112,12 @@ object Messages {
   /** The system's notion of a newline for sensible error message termination */
   @JSExport val nl: String = System.lineSeparator()
 
-  /** A Message instance
+  /** A Message instance. There are helper functions below to help you create these.
     *
     * @param loc
-    *   THe location in the model that generated the message
+    *   The location in the model that generated the message
     * @param message
-    *   The message text itself (may be multiple lines)
+    *   The message text itself (there may be multiple lines, typically indent them 2 spaces, no tabs)
     * @param kind
     *   The kind of message as one of the case objects of [[KindOfMessage]]
     * @param context
@@ -141,7 +141,7 @@ object Messages {
       else comparison
     }
 
-    /** A standard way of formatting the message */
+    /** A standard way of formatting the message. It is common to call this just before doing I/O with it */
     def format: String = {
       val ctxt = if context.nonEmpty then {
         s"${nl}Context: $context"
@@ -220,37 +220,61 @@ object Messages {
     List(Message(loc, message, Messages.SevereError))
   }
 
+  /** A frequently used shortcut for a [[scala.collection.immutable.List]] of [[Message]]. Note that this
+   * has an <code>extension</code> that extends the capability of the list.  */
   type Messages = List[Message]
 
-  /** Extensions to [[scala.List[Message] ]] */
+  /** Extensions to [[scala.collection.immutable.List]] of [[Messages]] */
   extension (msgs: Messages) {
+    /** Format all the messages with a newline in between them. */
     @JSExport def format: String = {
       msgs.map(_.format).mkString(System.lineSeparator())
     }
+    /** Return true iff all the messages are only warnings  */
     @JSExport def isOnlyWarnings: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
+    /** Return true iff all the messages are considered ignorable (all warnings) */
     @JSExport def isOnlyIgnorable: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
+    /** Return true iff at least one of the messages is an [[Error]] */
     @JSExport def hasErrors: Boolean = {
       msgs.nonEmpty && msgs.exists(_.kind >= Error)
     }
+    /** Return true iff at least one of the messages is of a [[Warning]] type. */
     @JSExport def hasWarnings: Boolean = {
       msgs.nonEmpty && msgs.exists(_.kind < Error)
     }
+    /** Return a filtered list of just the [[Info]] messages. */
     @JSExport def justInfo: Messages = msgs.filter(_.isInfo)
+    /** Return a filtered list of just the [[MissingWarning]] messages. */
     @JSExport def justMissing: Messages = msgs.filter(_.isMissing)
+    /** Return a filtered list of just the [[StyleWarning]] messages. */
     @JSExport def justStyle: Messages = msgs.filter(_.isStyle)
+    /** Return a filtered list of just the [[UsageWarning]] messages. */
     @JSExport def justUsage: Messages = msgs.filter(_.isUsage)
+    /** Return a filtered list of just the [[Warning]] messages. */
     @JSExport def justWarnings: Messages = msgs.filter(m => m.kind < Error && m.kind > Info)
+    /** Return a filtered list of just the [[Error]] messages. */
     @JSExport def justErrors: Messages = msgs.filter(_.kind >= Error)
+    /** Return a filtered list of just the [[Info]] messages. */
     @JSExport def highestSeverity: Int = msgs.foldLeft(0) { case (n, m) => Math.max(m.kind.severity, n) }
   }
 
   /** Canonical definition of an empty message list */
   @JSExport val empty: Messages = List.empty[Message]
 
+  /** Format and log the <code>messages</code> to the <code>log</code> per the <code>options</code>
+   *
+   * @param messages
+   *   The list of messages to log
+   * @param log
+   *   The [[com.ossuminc.riddl.utils.Logger]] instance to which the messages are sent.
+   * @param options
+   *   The [[com.ossuminc.riddl.language.CommonOptions]] that can control how the logged messages appear.
+   * @return
+   */
   @JSExport
   def logMessages(
     messages: Messages,
