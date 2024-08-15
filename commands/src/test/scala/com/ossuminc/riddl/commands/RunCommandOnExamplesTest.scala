@@ -7,17 +7,13 @@
 package com.ossuminc.riddl.commands
 
 /** Unit Tests For RunCommandOnExamplesTest */
-import com.ossuminc.riddl.utils.{Logger, PathUtils, SysLogger, Zip}
+import com.ossuminc.riddl.utils.{Logger, PathUtils, SysLogger, TestingBasis, Zip}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.{Messages, errors, warnings}
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.commands.Commands 
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.{DirectoryFileFilter, NotFileFilter, TrueFileFilter}
 import org.scalatest.*
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 import java.net.URL
 import java.nio.file.{Files, Path}
@@ -30,18 +26,12 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   * It will download the riddl-examples repo, unzip it, and run the command on each example. The command is run in a
   * temporary directory, and the output is compared to the expected output in the example.
   *
-  * @tparam OPT
-  *   The class for the RiddlOptions of the command
-  * @tparam CMD
-  *   The class for the Command
-  * @param commandName
-  *   The name of the command to run.
+  * @param shouldDelete
+  *   Whether to delete the temporary files needed to run the test
   */
-abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: Command[OPT]](
-  val commandName: String,
+trait RunCommandOnExamplesTest(
   shouldDelete: Boolean = true
-) extends AnyWordSpec
-    with Matchers
+) extends TestingBasis
     with BeforeAndAfterAll {
 
   val examplesRepo: String =
@@ -72,17 +62,15 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: Command[OP
   }
 
   override def afterAll(): Unit = {
-    if shouldDelete then
-      FileUtils.forceDeleteOnExit(tmpDir.toFile)
-    else
-      info(s"Leaving ${tmpDir} undeleted")
+    if shouldDelete then FileUtils.forceDeleteOnExit(tmpDir.toFile)
+    else info(s"Leaving $tmpDir undeleted")
   }
 
   private final val suffix = "conf"
 
   def validateTestName(@unused name: String): Boolean = true
 
-  private def forEachConfigFile[T](
+  private def forEachConfigFile[T](commandName: String)(
     f: (String, Path) => T
   ): Seq[Either[(String, Messages), T]] = {
     val configs = FileUtils
@@ -109,7 +97,9 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: Command[OP
     }
   }
 
-  def forAFolder(folderName: String)(f: (String, Path) => Either[Messages, PassesResult]): Either[Messages, PassesResult] = {
+  def forAFolder(folderName: String, commandName: String)(
+    validate: (String, Path) => Either[Messages, PassesResult]
+  ): Either[Messages, PassesResult] = {
     FileUtils
       .iterateFilesAndDirs(
         srcDir.toFile,
@@ -127,10 +117,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: Command[OP
             folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
               case Some(config) =>
                 Commands.loadCandidateCommands(config.toPath).flatMap { commands =>
-                  if commands.contains(commandName) then
-                    f(folderName, config.toPath)
-                  else
-                    Left(errors(s"Config file $commandName not found in $config"))
+                  if commands.contains(commandName) then validate(folderName, config.toPath)
+                  else Left(errors(s"Config file $commandName not found in $config"))
 
                 }
               case None =>
@@ -148,8 +136,8 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: Command[OP
 
   /** Call this from your test suite subclass to run all the examples found.
     */
-  def runTests(): Unit = {
-    val results = forEachConfigFile { case (name, path) =>
+  def runTests(commandName: String): Unit = {
+    val results = forEachConfigFile(commandName) { case (name, path) =>
       val outputDir = outDir.resolve(name)
 
       val result = Commands.runCommandNamed(
@@ -178,10 +166,30 @@ abstract class RunCommandOnExamplesTest[OPT <: CommandOptions, CMD <: Command[OP
     }
   }
 
+  def runTestWithArgs(
+    folderName: String,
+    commandName:String,
+    args: Array[String],
+    logger: Logger,
+    commonOptions: CommonOptions 
+ ): Unit = {
+    forAFolder(folderName, commandName) { case (name, config) =>
+      val outputDir = outDir.resolve(name)
+      val result = Commands.runCommandWithArgs(commandName, args, logger, commonOptions)
+      result match {
+        case Right(passesResult) =>
+          onSuccess(commandName, folderName, passesResult, outputDir)
+        case Left(messages) =>
+          onFailure(commandName, folderName, messages, outputDir)
+      }
+      result
+    }
+  }
+  
   /** Call this from your test suite subclass to run all the examples found.
     */
-  def runTest(folderName: String): Unit = {
-    forAFolder(folderName) { case (name, config) =>
+  def runTest(folderName: String, commandName: String): Unit = {
+    forAFolder(folderName, commandName) { case (name, config) =>
       val outputDir = outDir.resolve(name)
       val result = Commands.runCommandNamed(
         commandName,

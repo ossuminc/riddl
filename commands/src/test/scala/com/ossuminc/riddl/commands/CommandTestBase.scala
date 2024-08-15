@@ -24,7 +24,7 @@ trait CommandTestBase(val inputDir: String = "command/src/test/input/") extends 
     val rc = Commands.runMain(args.toArray)
     rc mustBe 0
   }
-
+  
   def check[OPTS <: CommandOptions](
     cmd: Command[OPTS],
     expected: OPTS,

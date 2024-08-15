@@ -6,22 +6,17 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.commands.RunCommandOnExamplesTest
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
 
-class HugoPassTest
-    extends RunCommandOnExamplesTest[HugoPass.Options, HugoCommand](
-      commandName = "hugo"
-    ) {
+class HugoPassTest extends RunCommandOnExamplesTest() {
 
   "HugoTranslator" should {
     "handle all example sources" in {
-      runTests()
+      runTests("hugo")
     }
   }
 

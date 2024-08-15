@@ -6,17 +6,14 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.ASimpleTestCommand
 import com.ossuminc.riddl.language.Messages.*
 import org.scalatest.Assertion
-import org.scalatest.exceptions.TestFailedException
 
 import java.nio.file.Path
 import scala.annotation.unused
 
 /** Compilation Tests For Includes Examples */
-class NamespaceTest
-    extends RunCommandOnExamplesTest[ASimpleTestCommand.Options, ASimpleTestCommand](commandName = "validate") {
+class NamespaceTest extends RunCommandOnExamplesTest() {
 
   override def onFailure(
     @unused commandName: String,
@@ -30,17 +27,19 @@ class NamespaceTest
 
   "FooBarSameDomain" should {
     "error with highest severity level 5" in {
-      runTest("FooBarSameDomain")
+      runTest("FooBarSameDomain", "validate")
     }
   }
 
   "FooBarTwoDomains" should {
     "succeed in validation" in {
-      runTest("FooBarTwoDomains")
+      runTest("FooBarTwoDomains", "validate")
     }
   }
 
   "FooBarSuccess" should {
-    "succeed in validation" in { runTest("FooBarSuccess") mustEqual () }
+    "succeed in validation" in {
+      runTest("FooBarSuccess", "validate") mustEqual ()
+    }
   }
 }
