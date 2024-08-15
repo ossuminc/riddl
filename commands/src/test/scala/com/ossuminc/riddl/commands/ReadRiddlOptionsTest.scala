@@ -1,7 +1,8 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.{CommandTestBase,InputFileCommandPlugin,CommonOptionsHelper}
+import com.ossuminc.riddl.commands.CommandTestBase
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.command.CommonOptionsHelper
 import org.scalatest.exceptions.TestFailedException
 
 import java.nio.file.Path
@@ -11,7 +12,7 @@ class ReadRiddlOptionsTest extends CommandTestBase("commands/src/test/input/") {
   
   "RiddlOptions" should {
     "read for dump" in {
-      val expected = InputFileCommandPlugin
+      val expected = InputFileCommand
         .Options(Some(Path.of(s"$inputDir/dump.riddl")), "dump")
       check(new DumpCommand, expected)
     }
@@ -43,12 +44,12 @@ class ReadRiddlOptionsTest extends CommandTestBase("commands/src/test/input/") {
     }
 
     "read for parse" in {
-      val expected = InputFileCommandPlugin
+      val expected = InputFileCommand
         .Options(Some(Path.of(s"$inputDir/parse.riddl")), "parse")
       check(new ParseCommand, expected)
     }
     "read for validate" in {
-      val expected = InputFileCommandPlugin
+      val expected = InputFileCommand
         .Options(Some(Path.of(s"$inputDir/validate.riddl")), "validate")
       check(new ValidateCommand, expected)
     }

@@ -5,6 +5,7 @@
  */
 
 package com.ossuminc.riddl.command
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -20,7 +21,7 @@ object InputFileCommandPlugin {
   * @param name
   *   The name of the command
   */
-abstract class InputFileCommandPlugin(name: String) extends CommandPlugin[InputFileCommandPlugin.Options](name) {
+abstract class InputFileCommandPlugin(name: String) extends Command[InputFileCommandPlugin.Options](name) {
   import InputFileCommandPlugin.Options
   def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*

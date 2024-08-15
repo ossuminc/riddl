@@ -12,7 +12,8 @@ class RepositoryWriterTest extends WriterTest {
 
   "RepositoryWriter" must {
     "handle a repository" in {
-      val input = RiddlParserInput(base.resolve("repository.riddl"))
+      val path = base.resolve("repository.riddl")
+      val input = RiddlParserInput.fromCwdPath(path)
       validateRoot(input, CommonOptions()) { case passesResult: PassesResult =>
         val mkd = makeMDW(output, PassesResult.empty)
         val root = passesResult.root
@@ -22,7 +23,7 @@ class RepositoryWriterTest extends WriterTest {
         val parents = Seq(root, domain, context)
         mkd.emitRepository(repository, parents)
         val result = mkd.toString
-        info(result)
+        // info(result)
         result mustNot be(empty)
         val expected = """---
                          |title: "Repo"
@@ -38,7 +39,7 @@ class RepositoryWriterTest extends WriterTest {
                          || _Briefly_ | Brief description missing. |
                          || _Authors_ |  |
                          || _Definition Path_ | Root.Repository.One.Repo |
-                         || _View Source Link_ | [repository.riddl(3:5)]() |
+                         || _View Source Link_ | [hugo/src/test/input/repository.riddl(3:5)]() |
                          || _Used By_ | None |
                          || _Uses_ | None |
                          |""".stripMargin

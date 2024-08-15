@@ -1,10 +1,10 @@
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.AST.{Domain, Root, Context, Entity}
+import com.ossuminc.riddl.language.AST.{Domain, Root, Context, Entity, Parents}
 import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.utils.Timer
+import com.ossuminc.riddl.diagrams.mermaid.RootOverviewDiagram
 
 import scala.reflect.ClassTag
 
@@ -95,7 +95,7 @@ trait Summarizer {
     mdw.emitAuthors(authorsWeight, authors)
   }
 
-  protected def makeMessageSummary(parents: Symbols.Parents, domain: Domain): Unit = {
+  protected def makeMessageSummary(parents: Parents, domain: Domain): Unit = {
     if options.withMessageSummary then
       val fileName = s"messages-summary.md"
       val stringParents = generator.makeStringParents(parents)

@@ -20,6 +20,7 @@ case class ToDoItem(
 )
 
 case class ToDoListOutput(
+  root: Root,
   messages: Messages.Messages,
   collected: Seq[ToDoItem] = Seq.empty
 ) extends CollectingPassOutput[ToDoItem]
@@ -28,7 +29,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
     extends CollectingPass[ToDoItem](input, outputs) {
 
   private val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
-  
+
   protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
     definition match {
       case _: Root | _: Interaction | _: Include[Definition] @unchecked =>
@@ -43,7 +44,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
         val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)
         val prnts = generator.makeStringParents(pars)
         val path = (prnts :+ d.id.value).mkString(".")
-        val link = generator. makeDocLink(d, prnts)
+        val link = generator.makeDocLink(d, prnts)
         auths.map(auth => ToDoItem(item, auth, path, link))
       case _ =>
         Seq.empty[ToDoItem]
@@ -66,38 +67,16 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
       }
   }
 
-  override def result: ToDoListOutput = {
-    ToDoListOutput(messages.toMessages, collectedValues.toSeq)
+  override def result(root: Root): ToDoListOutput = {
+    ToDoListOutput(root, messages.toMessages, collectedValues.toSeq)
   }
 
   def name: String = ToDoListPass.name
-  def postProcess(root: Root): Unit = ()
 }
 
 object ToDoListPass extends PassInfo[HugoPass.Options] {
   val name: String = "ToDoList"
-  def creator(options: HugoPass.Options): PassCreator = { 
-    (in: PassInput, out: PassesOutput) => ToDoListPass(in, out, options ) 
+  def creator(options: HugoPass.Options): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    ToDoListPass(in, out, options)
   }
 }
-
-// val finder: Finder = Finder(root)
-//       val items: Seq[(String, String, String, String)] = {
-//         for {
-//           (defn: Definition, pars: Seq[Definition]) <- finder.findEmpty
-//           item = defn.identify
-//           authors = AST.findAuthors(defn, pars)
-//           author = mkAuthor(authors, pars)
-//           parents = makeParents(pars)
-//           path = parents.mkString(".")
-//           link = makeDocLink(defn, parents)
-//         } yield (item, author, path, link)
-//       }
-//
-//       val map = items
-//         .groupBy(_._2)
-//         .view
-//         .mapValues(_.map { case (item, _, path, link) =>
-//           s"[$item In $path]($link)"
-//         })
-//         .toMap
