@@ -178,6 +178,7 @@ object AST {
   }
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
+  @JSExport
   case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] {
     def format: String = ""
     def loc: At = At.empty

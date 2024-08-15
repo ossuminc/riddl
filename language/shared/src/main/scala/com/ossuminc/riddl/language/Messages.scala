@@ -362,6 +362,16 @@ object Messages {
 
     @inline def toMessages: Messages = msgs.toList
 
+    /** Add an arbitrary [[Message]] to the accumulated [[Messages]]
+     *
+     * @param message
+     * The text of the message to add
+     * @param loc
+     * The location in the source related to the message. 
+     * @return
+     * This type, so you can chain another call to this accumulator
+     */
+    @JSExport
     def add(msg: Message): this.type = {
       msg.kind match {
         case Warning =>
@@ -379,46 +389,145 @@ object Messages {
       this
     }
 
+    /** Add a [[StyleWarning]] message to the accumulated [[Messages]] 
+     * 
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def style(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, StyleWarning))
     }
 
+    /** Add an [[Info]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def info(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, Info))
     }
 
+    /** Add a [[Warning]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     * The text of the message to add
+     * @param loc
+     * The location in the source related to the message. 
+     * @return
+     * This type, so you can chain another call to this accumulator
+     */
     @inline def warning(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, Warning))
     }
 
+    /** Add an [[Error]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def error(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, Error))
     }
 
+    /** Add a [[SevereError]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def severe(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, SevereError))
     }
 
+    /** Add a [[StyleWarning]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def addStyle(loc: At, msg: String): this.type = {
       add(Message(loc, msg, StyleWarning))
     }
 
+    /** Add a [[UsageWarning]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def addUsage(loc: At, msg: String): this.type = {
       add(Message(loc, msg, UsageWarning))
     }
 
+    /** Add a [[MissingWarning]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def addMissing(loc: At, msg: String): this.type = {
       add(Message(loc, msg, MissingWarning))
     }
 
+    /** Add a [[Warning]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def addWarning(loc: At, msg: String): this.type = {
       add(Message(loc, msg, Warning))
     }
 
+    /** Add an [[Error]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def addError(loc: At, msg: String): this.type = {
       add(Message(loc, msg, Error))
     }
 
+    /** Add a [[SevereError]] message to the accumulated [[Messages]]
+     *
+     * @param message
+     *   The text of the message to add
+     * @param loc
+     *   The location in the source related to the message. 
+     * @return
+     *   This type, so you can chain another call to this accumulator
+     */
     @inline def addSevere(loc: At, msg: String): this.type = {
       add(Message(loc, msg, SevereError))
     }
