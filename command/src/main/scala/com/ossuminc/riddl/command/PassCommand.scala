@@ -45,7 +45,7 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String) ex
     * @param options
     *   The command options
     * @return
-    *   A [[PassCreator]] function that creates the pass
+    *   A [[com.ossuminc.riddl.passes.PassCreator]] function that creates the pass
     */
   def getPasses(
     log: Logger,
