@@ -6,18 +6,16 @@
 
 package com.ossuminc.riddl.prettify
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.passes.translate.TranslatingState
 
 import java.net.URL
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 import scala.collection.mutable
 
 case class PrettifyState(
   options: PrettifyPass.Options = PrettifyPass.Options()
-) extends TranslatingState[RiddlFileEmitter] {
+)   extends TranslatingState[RiddlFileEmitter] {
 
   require(options.inputFile.nonEmpty, "No input file specified")
   require(options.outputDir.nonEmpty, "No output directory specified")
@@ -57,7 +55,7 @@ case class PrettifyState(
 
   def filesAsString: String = {
     closeStack()
-    files.map(fe => s"\n// From '${fe.filePath.toString}'\n${fe.toString}").mkString
+    files.map(fe => fe.toString).mkString
   }
 
   private def closeStack(): Unit = { while fileStack.nonEmpty do popFile() }

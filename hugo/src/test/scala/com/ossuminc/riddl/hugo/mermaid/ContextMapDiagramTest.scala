@@ -1,21 +1,25 @@
 package com.ossuminc.riddl.hugo.mermaid
 
+import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.testkit.RunPassTestBase
-import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.hugo.mermaid.ContextMapDiagram
+import com.ossuminc.riddl.diagrams.mermaid.ContextMapDiagram
+import com.ossuminc.riddl.passes.RunPassTestBase
+import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
 
+import org.scalatest.TestData
 import java.nio.file.Path
 
 class ContextMapDiagramTest extends RunPassTestBase {
 
   "ContextDiagram" should {
-    "generate a simple diagram correctly" in {
-      val input = RiddlParserInput(Path.of("hugo/src/test/input/context-relationships.riddl"))
+    "generate a simple diagram correctly" in { (td:TestData) =>
+      val path = Path.of("hugo/src/test/input/context-relationships.riddl")
+      val input = RiddlParserInput.fromCwdPath(path)
       val result = runPassesWith(input, DiagramsPass.creator())
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match
         case Some(dpo: DiagramsPassOutput) =>
+
           var failures = Seq.empty[String]
           for {
             (context, data) <- dpo.contextDiagrams
@@ -75,7 +79,6 @@ class ContextMapDiagramTest extends RunPassTestBase {
                   |    direction TB
                   |    B((fa:fa-house<br/>Context 'B'))
                   |    A((fa:fa-house<br/>Context 'A'))
-                  |    B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>Context 'A'))
                   |    B-->|Uses Type 'AEvents' from|A((fa:fa-house<br/>Context 'A'))
                   |  end
                   |  class B B_class

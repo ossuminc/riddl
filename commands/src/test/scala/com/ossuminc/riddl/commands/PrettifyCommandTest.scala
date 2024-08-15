@@ -6,9 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.testkit.RunCommandSpecBase
-import com.ossuminc.riddl.prettify.PrettifyPass 
-
+import com.ossuminc.riddl.prettify.PrettifyPass
 import java.nio.file.Path
 
 class PrettifyCommandTest extends RunCommandSpecBase {
@@ -17,7 +15,7 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     "parse a simple command" in {
       val options = Seq(
         "prettify",
-        "testkit/src/test/input/everything.riddl",
+        "passes/jvm/src/test/input/everything.riddl",
         "-o",
         "prettify/target/test/"
       )

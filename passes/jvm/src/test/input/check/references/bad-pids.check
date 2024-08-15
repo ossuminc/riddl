@@ -1,0 +1,78 @@
+passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
+ Entity 'FooEntity' should have a description:
+     entity FooEntity is {
+     ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(12:15):
+ Handler 'HandleFoo' should have a description:
+       handler HandleFoo is {
+               ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
+ Entity 'FooEntity' is unused:
+     entity FooEntity is {
+     ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
+ Vital definitions should have an author reference:
+     entity FooEntity is {
+     ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(4:5):
+ Type 'Foo' should have a description:
+     type Foo is {
+     ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(3:5):
+ Command 'DoFoo' should have a description:
+     command DoFoo is {foo: Foo}
+     ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
+ Domain 'foo' should have a description:
+ domain foo {
+ ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(3:5):
+ Command 'DoFoo' is unused:
+     command DoFoo is {foo: Foo}
+     ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(2:3):
+ Context 'ExampleContext' should have a description:
+   context ExampleContext is {
+   ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(13:20):
+ Path 'DooFoo' was not resolved, in OnMessageClause 'command DooFoo'
+ because the sought name, 'DooFoo', was not found in the symbol table,
+ and it should refer to a Type:
+         on command DooFoo {
+                    ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
+ Vital definitions should have an author reference:
+ domain foo {
+ ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(13:9):
+ OnMessageClause 'command DooFoo' should have a description:
+         on command DooFoo {
+         ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(1:8):
+ Models without any streaming data will exhibit minimal effect:
+ domain foo {
+        ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(8:7):
+ Record 'FooExampleState' should have a description:
+       record FooExampleState is {
+       ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
+ Domain 'foo' overloads:
+   Field 'foo' at passes/jvm/src/test/input/check/references/bad-pids.riddl(3:23),
+   Field 'foo' at passes/jvm/src/test/input/check/references/bad-pids.riddl(9:9):
+ domain foo {
+ ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(2:3):
+ Vital definitions should have an author reference:
+   context ExampleContext is {
+   ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(13:9):
+ Processing for commands should result in sending an event:
+         on command DooFoo {
+         ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(14:21):
+ Path 'FooExamplexxxx.garbage' was not resolved, in OnMessageClause 'command DooFoo'
+ because the PathId is invalid since it's first element, FooExamplexxxx, does not exist in the model
+ and it should refer to a Field:
+           set field FooExamplexxxx.garbage to "record Foo"
+                     ^

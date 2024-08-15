@@ -2,7 +2,6 @@ package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 
 trait SagaWriter { this: MarkdownWriter =>
 

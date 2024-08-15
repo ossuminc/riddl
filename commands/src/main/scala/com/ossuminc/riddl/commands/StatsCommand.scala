@@ -12,7 +12,6 @@ import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.analyses.{StatsOutput, StatsPass, KindStats}
 
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
@@ -20,6 +19,8 @@ import pureconfig.{ConfigCursor, ConfigReader}
 import java.io.{File, PrintStream}
 import java.nio.charset.Charset
 import java.nio.file.Path
+import com.ossuminc.riddl.command.{PassCommand,PassCommandOptions}
+import com.ossuminc.riddl.passes.stats.{KindStats, StatsOutput, StatsPass}
 
 object StatsCommand {
   val cmdName: String = "stats"
@@ -53,7 +54,7 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     }
   }
 
-  def getOptions: (OParser[Unit, Options], StatsCommand.Options) = {
+  def getOptionsParser: (OParser[Unit, Options], StatsCommand.Options) = {
     import builder.*
     cmd(StatsCommand.cmdName)
       .children(
@@ -69,11 +70,6 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
 
   // Members declared in com.ossuminc.riddl.commands.PassCommand
   def overrideOptions(options: Options, newOutputDir: Path): Options = { options }
-
-  override def replaceInputFile(
-    opts: Options,
-    inputFile: Path
-  ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
   override def loadOptionsFrom(
     configFile: Path,
@@ -91,8 +87,8 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
   def printStats(stats: StatsOutput): Unit = {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
-    System.out.println(s)
-    for { 
+    println(s)
+    for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)
     } do {
@@ -110,10 +106,10 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     }
   }
   override def run(
-    originalOptions: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    originalOptions: Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val result = super.run(originalOptions, commonOptions, log, outputDirOverride)
     result match

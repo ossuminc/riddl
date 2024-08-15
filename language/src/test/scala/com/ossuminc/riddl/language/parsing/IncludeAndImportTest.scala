@@ -86,13 +86,13 @@ class IncludeAndImportTest extends ParsingTest {
       actual mustBe expected
     }
     "handle inclusions into contexts" in {
-      val rc = checkFile("Context Includes", "includes/contextIncludes.riddl")
+      val r: Root = checkFile("Context Includes", "includes/contextIncludes.riddl")
       val inc = StringParserInput("", "contextIncluded.riddl")
-      rc.domains mustNot be(empty)
-      rc.domains.head.contexts mustNot be(empty)
-      rc.domains.head.contexts.head.includes mustNot be(empty)
-      rc.domains.head.contexts.head.includes.head.contents mustNot be(empty)
-      val actual = rc.domains.head.contexts.head.includes.head.contents.head
+      r.domains mustNot be(empty)
+      r.domains.head.contexts mustNot be(empty)
+      r.domains.head.contexts.head.includes mustNot be(empty)
+      r.domains.head.contexts.head.includes.head.contents mustNot be(empty)
+      val actual = r.domains.head.contexts.head.includes.head.contents.head
       val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),

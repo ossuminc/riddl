@@ -6,11 +6,12 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.{CommandPlugin, CommandOptions}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{Logger,RiddlBuildInfo}
+import com.ossuminc.riddl.command.{Command,CommandOptions}
+
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -27,9 +28,9 @@ object InfoCommand {
       extends CommandOptions
 }
 
-class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
+class InfoCommand extends Command[InfoCommand.Options]("info") {
   import InfoCommand.Options
-  override def getOptions: (OParser[Unit, Options], Options) = {
+  override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(pluginName).action((_, c) => c.copy(command = pluginName))
       .text("Print out build information about this program") ->
@@ -46,10 +47,10 @@ class InfoCommand extends CommandPlugin[InfoCommand.Options]("info") {
   }
 
   override def run(
-    options: InfoCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: InfoCommand.Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     log.info("About riddlc:")
     log.info(s"           name: riddlc")
