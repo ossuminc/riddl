@@ -13,6 +13,16 @@ import scala.util.control.NonFatal
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 object Commands:
+
+  /** Convert a string and some [[com.ossuminc.riddl.language.CommonOptions]] into either a
+   * [[com.ossuminc.riddl.command.Command]] or some [[com.ossuminc.riddl.language.Messages.Messages]]
+   * Note that the [[com.ossuminc.riddl.command.CommandOptions]] will be passed to the command when you run it.
+   * @param name
+   *   THe name of the command to be converted
+   * @param commonOptions
+   *   The [[com.ossuminc.riddl.language.CommonOptions]] to provide to the command.
+   * @return
+   */
   def loadCommandNamed(
     name: String,
     commonOptions: CommonOptions = CommonOptions()
@@ -39,6 +49,31 @@ object Commands:
     end match
   end loadCommandNamed
 
+  /** Probably the easiest way to run a command if you're familiar with the command line options and
+   * still get the [[com.ossuminc.riddl.language.Messages.Messages]] or
+   * [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
+   *
+   * @param name
+   *   The name of the command that should be run
+   * @param args
+   *   An [[Array[String]] of arguments, one argument per array element. This should follow the same
+   *   pattern as by the `riddlc` command line options (run `riddlc help` to discover that syntax).
+   * @param log
+   *   An instance of one of the [[com.ossuminc.riddl.utils.Logger]] subclasses. This is where all the output from
+   *   the command will flow, should it succeed. The volume of output can be affected by many of the
+   *   [[com.ossuminc.riddl.language.CommonOptions]]
+   * @param commonOptions
+   *   The [[com.ossuminc.riddl.language.CommonOptions]] that control things like which kinds of messages to put out,
+   *   whether verbose, debug or quiet mode should be used, whether to show pass and include run times, how to sort
+   *   the message, whether ANSI color codes should be emitted, etc.
+   * @return
+   *   One of two things:
+   *   - [[scala.util.Left]] of [[com.ossuminc.riddl.language.Messages.Messages]] if the command fails and the contained
+   *     [[com.ossuminc.riddl.language.Messages.Messages]], a [[scala.collection.immutable.List]] of
+   *     [[com.ossuminc.riddl.language.Messages.Message]], that explain why it failed
+   *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
+   *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
+   */
   def runCommandWithArgs(
     name: String,
     args: Array[String],
@@ -98,6 +133,33 @@ object Commands:
     end match
   end loadCandidateCommands
 
+  /** An easy way to run the `from` command which loads commands and their options from a `.config` file and uses
+   * them as defaults. The [[com.ossuminc.riddl.language.CommonOptions]] specification in the `.config` file can be
+   * overridden with the `commonOptions` argument.
+   *
+   * @param configFile
+   *   An optional [[java.nio.file.Path]] for the config file. Relative or full paths are fine.
+   *
+   * @param targetCommand
+   *   The command to run. This must match a config setting in the `configFile` that provides the arguments for
+   *   that command.
+   *
+   * @param commonOptions
+   *   Overrides the `common-options` section in the `configFile`.
+
+   * @param log
+   *   Where to send the commands output. See [[com.ossuminc.riddl.utils.Logger]] and its subclasses for options.
+   *
+   * @param commandName
+   *   The name of the command that is invoking this method, if it matters
+   *
+   * @return
+   *   One of two things:
+   *   - [[scala.util.Left]] of [[com.ossuminc.riddl.language.Messages.Messages]], which is a list of
+   *     [[com.ossuminc.riddl.language.Messages.Message]], that explain why it failed.
+   *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
+   *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
+   */
   def runFromConfig(
     configFile: Option[Path],
     targetCommand: String,

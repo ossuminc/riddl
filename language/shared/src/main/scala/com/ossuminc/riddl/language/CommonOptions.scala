@@ -10,7 +10,8 @@ import java.nio.file.Path
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js.annotation.JSExportTopLevel
 
-/** The common options available to any pass. Common options occur before the command name on the `riddlc` command line
+/** The common options available to any pass. Common options occur before the command name on the
+  *  <code>riddlc</code> command line
   *
   * @param showTimes
   * Controls whether pass timing is printed out
