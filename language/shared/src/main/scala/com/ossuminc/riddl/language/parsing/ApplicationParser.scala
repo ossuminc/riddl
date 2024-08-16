@@ -22,16 +22,16 @@ private[parsing] trait ApplicationParser {
   }
 
   private def groupDefinitions[u: P]: P[Seq[OccursInGroup]] = {
-    P(group | containedGroup | appOutput | appInput | comment).asInstanceOf[P[OccursInGroup]].rep(1)
+    P(group | containedGroup | shownBy | appOutput | appInput | comment).asInstanceOf[P[OccursInGroup]].rep(1)
   }
 
   private def group[u: P]: P[Group] = {
     P(
-      location ~ groupAliases ~ identifier ~/ (Keywords.shown ~ byAsIn ~ httpUrl).? ~/ is ~ open ~
+      location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
         close ~ briefly ~ description
-    ).map { case (loc, alias, id, url, elements, brief, description) =>
-      Group(loc, alias, id, url, elements, brief, description)
+    ).map { case (loc, alias, id, contents, brief, description) =>
+      Group(loc, alias, id, foldDescriptions[OccursInGroup](contents, brief, description))
     }
   }
 
@@ -58,19 +58,20 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/ (literalString | constantRef | typeRef) ~/
         outputDefinitions ~ briefly ~ description
-    ).map { case (loc, nounAlias, id, verbAlias, putOut, outputs, brief, description) =>
+    ).map { case (loc, nounAlias, id, verbAlias, putOut, contents, brief, description) =>
       putOut match {
         case t: TypeRef =>
-          Output(loc, nounAlias, id, verbAlias, t, outputs, brief, description)
+          Output(loc, nounAlias, id, verbAlias, t, foldDescriptions[OccursInOutput](contents, brief, description))
         case c: ConstantRef =>
-          Output(loc, nounAlias, id, verbAlias, c, outputs, brief, description)
+          Output(loc, nounAlias, id, verbAlias, c, foldDescriptions[OccursInOutput](contents, brief, description))
         case l: LiteralString =>
-          Output(loc, nounAlias, id, verbAlias, l, outputs, brief, description)
+          Output(loc, nounAlias, id, verbAlias, l, foldDescriptions[OccursInOutput](contents, brief, description))
         case x: RiddlValue =>
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
           error(s"Expected a type reference, constant reference, or literal string, not: $xval")
-          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"), outputs, brief, description)
+          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"),
+            foldDescriptions[OccursInOutput](contents, brief, description))
       }
     }
   }
@@ -105,8 +106,9 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~
         inputDefinitions ~ briefly ~ description
-    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description) =>
-      Input(loc, inputAlias, id, acquisitionAlias, putIn, inputs, brief, description)
+    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, brief, description) =>
+      val folded = foldDescriptions[OccursInInput](contents, brief, description)
+      Input(loc, inputAlias, id, acquisitionAlias, putIn, folded)
     }
   }
 
@@ -136,7 +138,7 @@ private[parsing] trait ApplicationParser {
       location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
       checkForDuplicateIncludes(contents)
-      Application(loc, id, contents, brief, description)
+      Application(loc, id, foldDescriptions[ApplicationContents](contents, brief, description))
     }
   }
 }

@@ -90,11 +90,11 @@ class FoldingTest extends ParsingTest {
           val result = Folding.foldLeftWithStack(empty, content, mutable.Stack.empty) {
             case (track, definition, stack) =>
               val previous: Seq[String] = stack.map {
-                case nv: NamedValue => nv.identify
+                case nv: WithIdentifier => nv.identify
                 case rv: RiddlValue => rv.toString
               }.reverse
               definition match {
-                case nv: NamedValue => track :+ (previous :+ nv.identify)
+                case nv: WithIdentifier => track :+ (previous :+ nv.identify)
                 case rv: RiddlValue => track :+ (previous :+ rv.toString)
               }
           }

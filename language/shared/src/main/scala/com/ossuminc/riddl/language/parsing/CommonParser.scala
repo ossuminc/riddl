@@ -17,7 +17,6 @@ import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.Future
 
-
 /** Common Parsing Rules */
 private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers with ParsingContext {
 
@@ -42,11 +41,10 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     }
   end author
 
-
   def importDef[u: P]: P[OccursInDomain] = {
     P(
       location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ from ~ literalString
-    ).map { case(loc, id, litStr) =>
+    ).map { case (loc, id, litStr) =>
       doImport(loc, id, litStr)
     }
   }
@@ -63,13 +61,15 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
 
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
-  def briefly[u: P]: P[Option[LiteralString]] = {
-    P(Keywords.briefly ~/ literalString)
+  def briefly[u: P]: P[Option[BriefDescription]] = {
+    P(location ~ Keywords.briefly ~/ literalString).map { case (loc, litStr) =>
+      BriefDescription(loc, litStr)
+    }
   }.?
-  
-  def briefDescription[u:P]: P[BriefDescription] = {
-    P(location ~ Keywords.briefly ~ literalString).map {
-      case (loc, brief: LiteralString) => BriefDescription(loc, brief)
+
+  def briefDescription[u: P]: P[BriefDescription] = {
+    P(location ~ Keywords.briefly ~ literalString).map { case (loc, brief: LiteralString) =>
+      BriefDescription(loc, brief)
     }
   }
 
@@ -97,7 +97,7 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
       URLDescription(loc, url)
     }
   }
-  
+
   def description[u: P]: P[Option[Description]] = P(
     P(
       Keywords.described ~/
@@ -164,12 +164,10 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
   def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
 
   def include[u: P, CT <: RiddlValue](parser: P[?] => P[Seq[CT]]): P[Include[CT]] = {
-    P(location ~ Keywords.include ~ literalString)./.map {
-      case (loc: At, str: LiteralString) =>
-        doIncludeParsing[CT](loc, str.s, parser)
+    P(location ~ Keywords.include ~ literalString)./.map { case (loc: At, str: LiteralString) =>
+      doIncludeParsing[CT](loc, str.s, parser)
     }
   }
-
 
   private def maybeOptionWithArgs[u: P](
     validOptions: => P[String]
@@ -218,21 +216,18 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl =>
-      Term.apply.tupled(tpl)
-    )
+    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl => Term.apply.tupled(tpl))
   }
 
   def invariant[u: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-        ) ~ briefly ~ description
+      ) ~ briefly ~ description
     ).map { case (loc, id, condition, brief, description) =>
       Invariant(loc, id, condition, brief, description)
     }
   }
-
 
   def groupAliases[u: P]: P[String] = {
     P(
@@ -286,5 +281,13 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
         ).!
       )
     )
+  }
+
+  def shownBy[u: P]: P[ShownBy] = {
+    P(
+      location ~ Keywords.shown ~ by ~ open ~ httpUrl.rep(1) ~ close
+    ).map { case (loc, urls) =>
+      ShownBy(loc, urls)
+    }
   }
 }

@@ -46,7 +46,7 @@ private[parsing] trait DomainParser  {
         briefly ~ description
     ).map { case (loc, id, contents, brief, description) =>
       checkForDuplicateIncludes(contents)
-      Domain(loc, id, contents, brief, description)
+      Domain(loc, id, foldDescriptions[DomainContents](contents, brief, description))
     }
   }
 }

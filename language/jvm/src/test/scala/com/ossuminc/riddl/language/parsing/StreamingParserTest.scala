@@ -34,13 +34,12 @@ class StreamingParserTest extends ParsingTest {
           (row + 2, 3, rpi),
           Identifier((row + 2, 10, rpi), "Weather"),
           TypeRef(
-            (row + 2, 21, rpi), "command",
+            (row + 2, 21, rpi),
+            "command",
             PathIdentifier((row + 2, 29, rpi), List("Forecast"))
           )
-        )
-      ),
-      Some(LiteralString((row + 3, 9, rpi), "foo")),
-      Option(
+        ),
+        BriefDescription((row + 3, 3, rpi), LiteralString((row + 3, 9, rpi), "foo")),
         BlockDescription(
           (row + 3, 28, rpi),
           List(
@@ -54,11 +53,11 @@ class StreamingParserTest extends ParsingTest {
     )
 
   "StreamingParser" should {
-    "recognize a source processor" in { (td:TestData) =>
-      val rpi = RiddlParserInput(sourceInput,td)
+    "recognize a source processor" in { (td: TestData) =>
+      val rpi = RiddlParserInput(sourceInput, td)
       checkDefinition[Streamlet, Streamlet](rpi, sourceExpected(rpi), identity)
     }
-    "recognize a source processor in a context" in {  (td:TestData) =>
+    "recognize a source processor in a context" in { (td: TestData) =>
       val input = s"context foo is { $sourceInput }"
       val rpi = RiddlParserInput(input, td)
       val expected = Context(
@@ -69,7 +68,7 @@ class StreamingParserTest extends ParsingTest {
       checkDefinition[Context, Context](rpi, expected, identity)
     }
 
-    "recognize a streaming context" in { (td:TestData) =>
+    "recognize a streaming context" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """
           |domain AnyDomain is {
@@ -93,7 +92,8 @@ class StreamingParserTest extends ParsingTest {
           |"A complete plant definition for temperature based sensor attenuation."
           |
           |} explained as "Plants can only be specified in a domain definition"
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       val expected = Context(
         loc = (3, 1, rpi),
@@ -122,13 +122,11 @@ class StreamingParserTest extends ParsingTest {
                 (7, 5, rpi),
                 Identifier((7, 12, rpi), "Weather"),
                 TypeRef(
-                  (7, 23, rpi), "command",
+                  (7, 23, rpi),
+                  "command",
                   PathIdentifier((7, 31, rpi), List("Forecast"))
                 )
-              )
-            ),
-            None,
-            Option(
+              ),
               BlockDescription(
                 (8, 18, rpi),
                 List(
@@ -149,7 +147,8 @@ class StreamingParserTest extends ParsingTest {
                 (11, 5, rpi),
                 Identifier((11, 11, rpi), "Weather"),
                 TypeRef(
-                  (11, 22, rpi), "command",
+                  (11, 22, rpi),
+                  "command",
                   PathIdentifier((11, 30, rpi), List("Forecast"))
                 )
               ),
@@ -157,13 +156,11 @@ class StreamingParserTest extends ParsingTest {
                 (12, 5, rpi),
                 Identifier((12, 12, rpi), "CurrentTemp"),
                 TypeRef(
-                  (12, 27, rpi), "command",
+                  (12, 27, rpi),
+                  "command",
                   PathIdentifier((12, 35, rpi), List("Temperature"))
                 )
-              )
-            ),
-            None,
-            Option(
+              ),
               BlockDescription(
                 (13, 18, rpi),
                 List(
@@ -184,13 +181,11 @@ class StreamingParserTest extends ParsingTest {
                 (16, 5, rpi),
                 Identifier((16, 11, rpi), "CurrentTemp"),
                 TypeRef(
-                  (16, 26, rpi), "command",
+                  (16, 26, rpi),
+                  "command",
                   PathIdentifier((16, 34, rpi), List("Temperature"))
                 )
-              )
-            ),
-            None,
-            Option(
+              ),
               BlockDescription(
                 (17, 18, rpi),
                 List(
@@ -201,9 +196,7 @@ class StreamingParserTest extends ParsingTest {
                 )
               )
             )
-          )
-        ),
-        description = Option(
+          ),
           BlockDescription(
             (20, 1, rpi),
             List(

@@ -158,14 +158,6 @@ private[parsing] trait EpicParser {
     }
   }
 
-  def shownBy[u: P]: P[ShownBy] = {
-    P(
-      location ~ Keywords.shown ~ by ~ open ~ httpUrl.rep(1) ~ close
-    ).map {
-      case (loc, urls) => ShownBy(loc,urls)
-    }
-  }
-
   private def epicInclude[u: P]: P[Include[EpicContents]] = {
     include[u, EpicContents](epicDefinitions(_))
   }
@@ -196,7 +188,7 @@ private[parsing] trait EpicParser {
       location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ briefly ~ description
     ).map { case (loc, id, (userStory, contents), briefly, description) =>
       checkForDuplicateIncludes(contents)
-      Epic(loc, id, userStory, contents, briefly, description)
+      Epic(loc, id, userStory, foldDescriptions(contents, briefly, description))
     }
   }
 }

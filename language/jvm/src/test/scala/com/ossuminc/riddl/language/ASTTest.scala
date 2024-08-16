@@ -52,7 +52,6 @@ class ASTTest extends TestingBasis {
     }
   }
 
-
   "Types" should {
     "support domain definitions" in {
       Domain((0, 0), Identifier((1, 1), "foo")) must be
@@ -138,8 +137,10 @@ class ASTTest extends TestingBasis {
     LiteralString.empty,
     LiteralString.empty
   )
-  val brief: Option[LiteralString] = Some(LiteralString(At.empty, "brief"))
+  val brief: Option[BriefDescription] = Some(BriefDescription(At.empty, LiteralString(At.empty, "brief")))
+  val briefs: Seq[BriefDescription] = Seq(brief.get)
   val description: Option[Description] = Some(BlockDescription(At.empty, Seq(LiteralString(At.empty, "Description"))))
+  val descriptions: Seq[Description] = Seq(description.get)
   val entityRef: EntityRef = EntityRef(At.empty, PathIdentifier(At.empty, Seq("Entity")))
   val aggregate: AggregateUseCaseTypeExpression = AggregateUseCaseTypeExpression(
     At.empty,
@@ -174,16 +175,16 @@ class ASTTest extends TestingBasis {
     WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
   )
   val function: Function =
-    Function(At.empty, Identifier(At(), "Lambda"), None, None, Seq.empty, statements, brief, description)
+    Function(At.empty, Identifier(At(), "Lambda"), None, None, brief.toSeq ++ description.toSeq, statements)
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Seq[OnClause] = Seq(
-    OnInitializationClause(At.empty, statements, brief, description),
-    OnMessageClause(At.empty, messageRef, None, statements, brief, description),
-    OnOtherClause(At.empty, statements, brief, description),
-    OnTerminationClause(At.empty, statements, brief, description)
+    OnInitializationClause(At.empty, foldDescriptions(statements, brief, description)),
+    OnMessageClause(At.empty, messageRef, None, foldDescriptions(statements, brief, description)),
+    OnOtherClause(At.empty, foldDescriptions(statements, brief, description)),
+    OnTerminationClause(At.empty, foldDescriptions(statements, brief, description))
   )
-  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), onClauses, brief, description)
-  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Seq(handler), brief, description)
+  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), foldDescriptions(onClauses, brief, description))
+  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), foldDescriptions[Handler](Seq(handler), brief, description))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
   val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
@@ -301,8 +302,7 @@ class ASTTest extends TestingBasis {
         val entity = AST.Entity(
           loc = At(),
           id = Identifier(At(), "foo"),
-          contents = entityContents,
-          description = None
+          contents = entityContents
         )
 
         entity.contents.toSet mustBe
@@ -316,13 +316,13 @@ class ASTTest extends TestingBasis {
       function.statements mustBe statements
       function.input mustBe empty
       function.output mustBe empty
-      function.brief mustBe brief
-      function.description mustBe description
+      function.briefs mustBe briefs
+      function.descriptions mustBe descriptions
     }
   }
 
   "Group" should {
-    val group = Group(At(), "panel", Identifier(At(), "42"), None, Seq.empty)
+    val group = Group(At(), "panel", Identifier(At(), "42"), Seq.empty)
     "has an alias" in {
       group.alias must be("panel")
     }
@@ -330,7 +330,7 @@ class ASTTest extends TestingBasis {
 
   "Handler" should {
     "have some onClauses" in {
-      handler.contents mustBe onClauses
+      handler.clauses mustBe onClauses
     }
     "be named 'handler'" in {
       handler.id.value mustBe "handler"
@@ -340,7 +340,7 @@ class ASTTest extends TestingBasis {
   "Include" should {
     "identify as root container, etc" in {
       import com.ossuminc.riddl.utils.URL
-      val incl = Include(At.empty,URL.empty, Seq.empty)
+      val incl = Include(At.empty, URL.empty, Seq.empty)
       incl.isRootContainer mustBe true
       incl.loc mustBe At.empty
       incl.format mustBe "include \"\""
@@ -364,17 +364,15 @@ class ASTTest extends TestingBasis {
 
   "RootContainer" should {
     "be at location 0,0" in { Root(Nil).loc mustBe At.empty }
-    "have no description" in { Root(Nil).description mustBe None }
-    "have no brief" in { Root(Nil).brief mustBe None }
+    "have no description" in { Root(Nil).descriptions mustBe empty }
+    "have no brief" in { Root(Nil).briefs mustBe empty }
     "have no id" in { Root(Nil).identify mustBe "Root" }
     "identify as root container" in {
       Root(Nil).isRootContainer mustBe true
     }
   }
 
-  "Saga" should { "have a test" in {
-
-  } }
+  "Saga" should { "have a test" in {} }
   "SagaStep" should { "have a test" in { pending } }
   "State" should { "format correctly" in { state.format mustBe "state state" } }
   "Story Case" should {

@@ -51,7 +51,7 @@ private[parsing] trait SagaParser {
       location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ briefly ~ description
     ).map { case (location, identifier, (input, output, contents), briefly, description) =>
       checkForDuplicateIncludes(contents)
-      Saga(location, identifier, input, output, contents, briefly, description)
+      Saga(location, identifier, input, output, foldDescriptions(contents, briefly, description))
     }
   }
 }
