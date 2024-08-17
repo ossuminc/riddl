@@ -29,7 +29,7 @@ class BuildInfoTest extends TestingBasis {
       RiddlBuildInfo.buildInfoPackage must be("com.ossuminc.riddl.utils")
       RiddlBuildInfo.buildInfoObject must be("RiddlBuildInfo")
       RiddlBuildInfo.startYear must be("2019")
-      RiddlBuildInfo.scalaCompatVersion must be("3.4.2")
+      RiddlBuildInfo.scalaCompatVersion must be("3.4.3")
       val now: Long = Instant.now().toEpochMilli
       val yesterday: Long = now - 1000 * 24 * 60 * 60
       RiddlBuildInfo.builtAtMillis must be > yesterday
