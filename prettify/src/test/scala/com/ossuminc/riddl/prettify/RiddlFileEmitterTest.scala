@@ -56,7 +56,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       val defn = Domain(At.empty, Identifier(At.empty, "domain"))
       rfe.openDef(defn)
       defn.isEmpty mustBe true
-      rfe.toString mustBe "domain domain is { ??? }"
+      rfe.toString mustBe "domain domain is { ??? }\n"
       rfe.clear()
       rfe.openDef(defn, withBrace = false)
       rfe.toString mustBe "domain domain is "

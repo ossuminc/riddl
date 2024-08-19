@@ -1,7 +1,6 @@
 package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 
 trait StreamletWriter { this: MarkdownWriter =>
 

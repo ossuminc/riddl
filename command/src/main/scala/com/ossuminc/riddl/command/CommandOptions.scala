@@ -3,16 +3,12 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package com.ossuminc.riddl.command
+
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.Messages.errors
-import com.ossuminc.riddl.utils.Plugin
+import com.ossuminc.riddl.language.Messages.{Messages, errors}
+import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader}
 import pureconfig.error.ConfigReaderFailures
-import pureconfig.ConfigCursor
-import pureconfig.ConfigObjectCursor
-import pureconfig.ConfigReader
 import scopt.OParser
 
 import java.nio.file.Path
@@ -29,7 +25,7 @@ trait CommandOptions {
   ): Either[Messages, S] = {
     CommandOptions.withInputFile(inputFile, command)(f)
   }
-  
+
   def check: Messages = {
     if inputFile.isEmpty then {
       Messages.errors("An input path was not provided.")
@@ -58,31 +54,7 @@ object CommandOptions {
     def command: String = "unspecified"
     def inputFile: Option[Path] = Option.empty[Path]
   }
-
-  def parseCommandOptions(
-    args: Array[String]
-  ): Either[Messages, CommandOptions] = {
-    require(args.nonEmpty)
-    val result = CommandPlugin.loadCommandNamed(args.head)
-    result match {
-      case Right(cmd) =>
-        cmd.parseOptions(args) match {
-          case Some(options) => Right(options)
-          case None          => Left(errors("RiddlOption parsing failed"))
-        }
-      case Left(messages) => Left(messages)
-    }
-  }
-
-  val commandOptionsParser: OParser[Unit, CommandOptions] = {
-    val plugins = Plugin.loadPluginsFrom[CommandPlugin[CommandOptions]]()
-    val list =
-      for plugin <- plugins yield { plugin.pluginName -> plugin.getOptions }
-    val parsers = list.sortBy(_._1).map(_._2._1) // alphabetize
-    require(parsers.nonEmpty, "No command line options parsers!")
-    OParser.sequence(parsers.head, parsers.drop(1)*)
-  }
-
+  
   /** A helper function for reading optional items from a config file.
     *
     * @param objCur

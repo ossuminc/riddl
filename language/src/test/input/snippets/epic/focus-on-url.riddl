@@ -1,8 +1,0 @@
-domain Ignore {
-  user U is "an example user"
-  epic TestCase is {
-    case one is {
-      step direct user U to http://google.com/
-    }
-  }
-}

@@ -1,0 +1,12 @@
+domain foo {
+  user U is "an example user"
+  application App is { ??? }
+  context Gateway is { ??? }
+  command DoSomething is { ??? }
+  epic TestCase is {
+    user U wants to "hmm" so that "haw"
+    case one is {
+      step send command DoSomething from application App to context Gateway
+    }
+  }
+}

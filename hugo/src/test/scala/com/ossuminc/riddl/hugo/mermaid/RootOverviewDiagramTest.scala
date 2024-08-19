@@ -1,23 +1,24 @@
 package com.ossuminc.riddl.hugo.mermaid
 
-import com.ossuminc.riddl.analyses.DiagramsPass
-import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.testkit.RunPassTestBase
+import com.ossuminc.riddl.diagrams.mermaid.RootOverviewDiagram
+import com.ossuminc.riddl.passes.RunPassTestBase
+import com.ossuminc.riddl.passes.diagrams.DiagramsPass
+import org.scalatest.TestData
 
 import java.nio.file.Path
 
 class RootOverviewDiagramTest extends RunPassTestBase {
 
-  "ContextDiagram" should {
-    "generate a simple diagram correctly" in {
-      val input = RiddlParserInput(Path.of("hugo/src/test/input/context-relationships.riddl"))
+  "RootOverviewDiagram" should {
+    "generate a simple diagram correctly" in { (td:TestData) =>
+      val path = Path.of("hugo/src/test/input/context-relationships.riddl")
+      val input = RiddlParserInput.fromCwdPath(path)
       val result = runPassesWith(input, DiagramsPass.creator())
       val diagram = RootOverviewDiagram(result.root)
       val lines = diagram.generate
       lines mustNot be(empty)
       val actual = lines.mkString("\n")
-      info(actual)
       val expected: String =
         """---
           |title: Root Overview
@@ -80,8 +81,6 @@ class RootOverviewDiagramTest extends RunPassTestBase {
           |  class A A_class
           |  class B B_class
           |  class C C_class""".stripMargin
-
-
       actual mustBe expected
     }
   }

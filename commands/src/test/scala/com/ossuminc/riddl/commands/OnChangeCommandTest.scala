@@ -10,5 +10,9 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 class OnChangeCommandTest extends AnyWordSpec with Matchers {
-  "OnChangeCommand" should { "have a test" in { true must be(true) } }
+  "OnChangeCommand" should {
+    "have a test" in {
+      true must be(true)
+    }
+  }
 }

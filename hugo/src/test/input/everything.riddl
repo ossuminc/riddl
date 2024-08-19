@@ -59,38 +59,36 @@ domain Everything is {
       event Inebriated is { ??? }
 
       record fields is { field:  SomeType }
-      state someState of Something.fields is {
-        handler foo is {
-          on command ACommand {
-            "if and(Something arrives, misc()) then"
-              send event Inebriated to inlet Everything.full.input
-            "end"
-          }
+      state someState of Something.fields
+      handler foo is {
+        on command ACommand {
+          "if and(Something arrives, misc()) then"
+            send event Inebriated to inlet Everything.full.input
+          "end"
         }
       }
 
       function whenUnderTheInfluence is {
         requires {n: Nothing}
         returns {b: Boolean}
-        body ???
+        body { ??? }
       }
     }
 
     entity SomeOtherThing is {
       type ItHappened is event { field: String }
       record fields is { field: String }
-      state otherThingState of SomeOtherThing.fields is {
-        handler fee is {
-          on event ItHappened {
-             set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
-          }
+      state otherThingState of SomeOtherThing.fields
+      handler fee is {
+        on event ItHappened {
+           set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
         }
       }
     }
     function misc is {
       requires { n: Nothing }
       returns { b: Boolean }
-      body ???
+      body { ??? }
     }
   }
 }

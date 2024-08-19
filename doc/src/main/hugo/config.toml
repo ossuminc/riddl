@@ -9,7 +9,7 @@ description = "Technical documentation for RIDDL"
 homepage = "https://riddl.tech/"
 demosite = "https://riddl.tech/"
 tags = ["docs", "documentation", "responsive", "simple", "riddl"]
-min_version = "0.94.2"
+min_version = "0.112.0"
 # googleAnalytics = "" # example : UA-123-45
 #disableLanguages = [] # disable language from here
 

@@ -1,0 +1,25 @@
+domain PersonalBanking is {
+  user Member is "A person holding an account at Personal Bank"
+
+  epic CreateAccount is {
+    user Member wants to "establish an account" so that "they can apply for a loan"
+    case HappyPath {
+      step show output PersonalBanking.PersonalBankingApp.Test.HomePage.AccountDetailsPage
+        to  user PersonalBanking.Member
+    }
+  }
+
+  domain PersonalBankingApp is {
+    application Test is {
+        option is technology("react.js")
+        result Title is { value: String }
+        command Name is { value: String }
+        group HomePage is {
+          output AccountDetailsPage  presents result Title
+            described as "Show a blank page with a title"
+          input Two acquires command Name
+            described as "Show a blank page with a title, collect a Name"
+        }
+    } described as "A very simple app for testing"
+  } briefly "The user interface for the Personal Banking Application"
+}

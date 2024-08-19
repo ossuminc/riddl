@@ -1,8 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid.EntityRelationshipDiagram
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
+import com.ossuminc.riddl.diagrams.mermaid.EntityRelationshipDiagram
 
 import scala.annotation.unused
 
@@ -23,7 +22,6 @@ trait EntityWriter { this: MarkdownWriter =>
     emitERD(state.id.format, fields, parents)
     h3("Fields")
     emitFields(fields)
-    for h <- state.handlers do emitHandler(h, state +: parents,4)
   }
 
   def emitHandler(handler: Handler, parents: Parents, level: Int = 3): Unit = {
@@ -31,12 +29,12 @@ trait EntityWriter { this: MarkdownWriter =>
     emitDefDoc(handler, parents)
     handler.clauses.foreach { clause =>
       clause match {
-        case oic: OnInitClause => heading("Initialize", level + 1)
+        case oic: OnInitializationClause => heading("Initialize", level + 1)
         case omc: OnMessageClause => heading(" On " + omc.msg.format, level + 1)
         case otc: OnTerminationClause => heading("Terminate", level + 1)
         case ooc: OnOtherClause => heading("Other", level + 1)
       }
-      codeBlock(clause.statements)
+      codeBlock(clause.contents.filter[Statement])
     }
   }
 

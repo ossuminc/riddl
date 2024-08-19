@@ -3,30 +3,21 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
 import com.ossuminc.riddl.utils.{RiddlBuildInfo, SysLogger}
-import com.ossuminc.riddl.command.CommandOptions.optional 
-import scopt.DefaultOEffectSetup
-import scopt.DefaultOParserSetup
-import scopt.OParser
-import scopt.OParserBuilder
-import scopt.OParserSetup
-import scopt.RenderingMode
+import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
 import pureconfig.error.ConfigReaderFailures
-import pureconfig.ConfigCursor
-import pureconfig.ConfigObjectCursor
-import pureconfig.ConfigReader
-import pureconfig.ConfigSource
+import scopt.*
 
-import scala.concurrent.duration.FiniteDuration
 import java.io.File
 import java.nio.file.Path
 import java.util.Calendar
+import scala.concurrent.duration.FiniteDuration
 
 /** Handle processing of Language module's CommonOptions */
 object CommonOptionsHelper {
@@ -55,7 +46,7 @@ object CommonOptionsHelper {
         .optional()
         .action((_, c) => c.copy(showTimes = true))
         .text("Show parsing phase execution times"),
-      opt[Unit]('i', name = "show-include-times")
+      opt[Unit]('I', name = "show-include-times")
         .optional()
         .action((_, c) => c.copy(showIncludeTimes = true))
         .text("Show parsing of included files execution times"),
@@ -102,7 +93,7 @@ object CommonOptionsHelper {
         .optional()
         .action((_, c) => c.copy(showUsageWarnings = false))
         .text("Suppress warnings about usage of definitions. "),
-      opt[Unit](name = "suppress-info-messages")
+      opt[Unit]('i', name = "suppress-info-messages")
         .optional()
         .action((_, c) => c.copy(showInfoMessages = false))
         .text("Suppress information output"),
@@ -148,7 +139,7 @@ object CommonOptionsHelper {
         .text(
           "Print all messages by their severity kind"
         ),
-      opt[Int]('x', name = "max-parallel-processing")
+      opt[Int]('x', name = "max-parallel-parsing")
         .optional()
         .action((v, c) => c.copy(maxParallelParsing = v))
         .text(
@@ -290,7 +281,7 @@ object CommonOptionsHelper {
       )
     }
   }}
-  
+
   final def loadCommonOptions(
     path: Path
   ): Either[Messages, CommonOptions] = {

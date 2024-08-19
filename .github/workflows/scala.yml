@@ -28,32 +28,42 @@ jobs:
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
       with:
-        hugo-version: 'latest'
+        hugo-version: '0.112.0'
         extended: true
 
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
-    - name: Build, Run Test, Coverage
+    - name: Build, Run Test
       env:
-        COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        COVERALLS_FLAG_NAME: Scala ${{ matrix.scala }}
         RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
       run: |
-        sbt -v clean coverage Test/compile test coverageAggregate coveralls
+        sbt -v clean Test/compile test
 
-    - name: Archive code coverage results
+    - name: Coverage For JVM projects only
+      run: |
+        sbt -v clean coverage \
+          utils/Test/compile language/Test/compile passes/Test/compile diagrams/Test/compile \
+          command/Test/compile  prettify/Test/compile hugo/Test/compile commands/Test/compile \
+          riddlc/Test/compile \
+          utils/test language/test passes/test diagrams/test command/test prettify/test hugo/test \
+          commands/test riddlc/test coverageAggregate coveralls
+
+    - name: Coverage Results Collection
       uses: actions/upload-artifact@v4
       with:
         name: code-coverage-report
         path: |
-          - **/target/scala-3.4.1/scoverage-report/scoverage.xml
+          - **/jvm/target/scala-3.4.2/scoverage-report/scoverage.xml
+          - **/target/scala-3.4.2/scoverage-report/scoverage.xml
+          - target/scala-3.4.2/scoverage-report/scoverage.xml
           - sbt-riddl/target/scala-2.12/scoverage-report/scoverage.xml
 
     - name: Test sbt-riddl plugin
+      env:
+        RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
       run: |
-        export RIDDLC_PATH=riddlc/target/universal/stage/bin/riddlc
-        sbt -v clean compile publishLocal "project riddlc" "stage" "project sbt-riddl" scripted
+        sbt -v clean compile publishLocal riddlc/stage sbt-riddl/scripted
 
     - name: Cleanup Before Caching
       shell: bash

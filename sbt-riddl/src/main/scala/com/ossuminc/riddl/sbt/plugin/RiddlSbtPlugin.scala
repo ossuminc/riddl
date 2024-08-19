@@ -47,9 +47,9 @@ object RiddlSbtPlugin extends AutoPlugin {
   import autoImport.*
 
   private object V {
-    val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
-    val scalacheck = "1.17.0" // NOTE: Synchronize with Helpers.V.scalacheck
-    val scalatest = "3.2.18" // NOTE: Synchronize with Helpers.V.scalatest
+    val scala = "3.4.2" // NOTE: Synchronize with Helpers.C.withScala3
+    val scalacheck = "1.18.0" // NOTE: Synchronize with Dependencies.V.scalacheck
+    val scalatest = "3.2.19" // NOTE: Synchronize with Depenendencies.V.scalatest
     val riddl: String = SbtRiddlPluginBuildInfo.version
   }
 
@@ -81,8 +81,8 @@ object RiddlSbtPlugin extends AutoPlugin {
     // Global / excludeLintKeys ++= Seq(riddlcConf, riddlcOptions),
     scalaVersion := V.scala,
     libraryDependencies ++= Seq(
-      "com.ossuminc" %% "riddlc" % V.riddl,
-      "com.ossuminc" %% "riddl-testkit" % V.riddl % Test,
+      "com.ossuminc" %% "riddl-commands" % V.riddl,
+      "com.ossuminc" %% "riddl-commands" % V.riddl % Test,
       "org.scalactic" %% "scalactic" % V.scalatest % Test,
       "org.scalatest" %% "scalatest" % V.scalatest % Test,
       "org.scalacheck" %% "scalacheck" % V.scalacheck % Test

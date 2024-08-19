@@ -3,22 +3,23 @@ package com.ossuminc.riddl.hugo.writers
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.passes.{Riddl,PassesResult}
 import org.scalatest.Assertion
 
 import java.nio.file.Path
+import com.ossuminc.riddl.utils.URL
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class AdaptorWriterTest extends WriterTest {
 
-  val base = Path.of("hugo", "src", "test", "input")
   "AdaptorWriter" must {
     "handle a message rename" in {
-      val output = Path.of("hugo", "target", "test", "adaptors")
-      val testFile = base.resolve("adaptors.riddl")
-      val input = RiddlParserInput(testFile)
-      val options = CommonOptions()
-      validateRoot(input,options) {
-        case (passesResult: PassesResult) =>
+      val path = base.resolve("adaptors.riddl")
+      val input = RiddlParserInput.fromCwdPath(path)
+      validateRoot(input,CommonOptions()) {
+        case passesResult: PassesResult =>
           val mkd = makeMDW(output, PassesResult.empty)
           val root = passesResult.root
           val domain = root.domains.head
@@ -27,9 +28,10 @@ class AdaptorWriterTest extends WriterTest {
           val parents = Seq(root, domain, context)
           mkd.emitAdaptor(adaptor, parents)
           val result = mkd.toString
-          info(result)
+          // info(result)
           result mustNot be(empty)
-          val expected = """---
+          val expected =
+            """---
               |title: "FromTwo"
               |weight: 10
               |draft: "false"
@@ -45,12 +47,12 @@ class AdaptorWriterTest extends WriterTest {
               || _Briefly_ | Brief description missing. |
               || _Authors_ |  |
               || _Definition Path_ | Root.Adaptors.One.FromTwo |
-              || _View Source Link_ | [adaptors.riddl(4:5)]() |
+              || _View Source Link_ | [hugo/src/test/input/adaptors.riddl(4:5)]() |
               || _Used By_ | None |
               || _Uses_ | None |
               |
               |## *RiddlOptions*
-              |* css("background: blue")
+              |* option css("background: blue")
               |
               |## *Direction: from context Two*
               |
@@ -61,7 +63,7 @@ class AdaptorWriterTest extends WriterTest {
               || :---: | :---  |
               || _Briefly_ | Brief description missing. |
               || _Definition Path_ | FromTwo.Root.Adaptors.One.Adaptation |
-              || _View Source Link_ | [adaptors.riddl(6:15)]() |
+              || _View Source Link_ | [hugo/src/test/input/adaptors.riddl(6:15)]() |
               || _Used By_ | None |
               || _Uses_ | None |
               |

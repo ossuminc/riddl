@@ -8,7 +8,7 @@ domain foo {
 
     entity AEntity {
       record AData is { a01: Integer, a02: String }
-      state AState of record AData is { ??? }
+      state AState of record AData
       handler AHandler is {
         on command ACommand {
           set field B.BEntity.BData.b01 to "initial value"
