@@ -7,7 +7,7 @@ class RunCommandsOnExamplesTest extends RunCommandOnExamplesTest(shouldDelete = 
 
   "RunCommandsOnExamplesTest" should {
     "handle from as in IDEA Plugin" in {
-      runTestWithArgs("ReactiveBBQ", "from", Array("ReactiveBBQ.conf"),
+      runTestWithArgs("ReactiveBBQ", Array("from", "ReactiveBBQ.conf"),
         StringLogger(withHighlighting = false),
         CommonOptions(noANSIMessages = true)
       )
