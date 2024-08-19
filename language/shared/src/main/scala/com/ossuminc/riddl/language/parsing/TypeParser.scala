@@ -384,13 +384,13 @@ private[parsing] trait TypeParser {
     }
   }
 
-  private def aggregateContent[u: P]: P[RiddlValue] = {
-    P(field | method | comment)
+  private def aggregateContent[u: P]: P[AggregateContents] = {
+    P(field | method | comment).asInstanceOf[P[AggregateContents]]
   }
 
-  private def aggregateDefinitions[u: P]: P[Seq[RiddlValue]] = {
+  private def aggregateDefinitions[u: P]: P[Seq[AggregateContents]] = {
     P(
-      undefined(Seq.empty[RiddlValue]) | aggregateContent.rep(min = 1, Punctuation.comma.?)
+      undefined(Seq.empty[AggregateContents]) | aggregateContent.rep(min = 1, Punctuation.comma.?)
     )
   }
 

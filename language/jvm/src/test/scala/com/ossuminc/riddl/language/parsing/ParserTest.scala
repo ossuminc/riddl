@@ -356,7 +356,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
           val typ = domain.contexts.head.types.head
-          typ.typ mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
+          typ.typEx mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
       }
     }
     "parse from a complex file" in { (td: TestData) =>

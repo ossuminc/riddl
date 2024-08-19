@@ -85,14 +85,14 @@ class KindStats(
 
 @JSExportTopLevel("StatsOutput")
 case class StatsOutput(
-  root: Root = Root.empty, 
+  root: Root = Root.empty,
   messages: Messages = Messages.empty,
   maximum_depth: Int = 0,
   categories: Map[String, KindStats] = Map.empty
 ) extends CollectingPassOutput[DefinitionStats]
 
-/** Pass that generates statistics about a RIDDL Model 
- * @param input 
+/** Pass that generates statistics about a RIDDL Model
+ * @param input
  *   The input to the pass
  * @param outputs
  *   The outputs from the passes
@@ -110,7 +110,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
   private val kind_stats: mutable.HashMap[String, KindStats] = mutable.HashMap.empty
   private var total_stats: Option[KindStats] = None
 
-  private def computeNumStatements(definition: Definition): Long = {
+  private def computeNumStatements(definition: Parent): Long = {
     def handlerStatements(handlers: Seq[Handler]): Long = {
       val sizes: Seq[Long] = for {
         handler <- handlers
@@ -142,7 +142,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       .sum[Long]
   }
 
-  protected def collect(definition: RiddlValue, parents: mutable.Stack[AST.Definition]): Seq[DefinitionStats] = {
+  protected def collect(definition: RiddlValue, parents: ParentStack): Seq[DefinitionStats] = {
     if parents.size >= maximum_depth then maximum_depth = parents.size + 1
 
     val (options: Int, authors: Int, terms: Int, includes: Int) = definition match {
@@ -153,15 +153,22 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     val specs: Int = specificationsFor(definition)
     val completes: Int = completedCount(definition)
     definition match {
-      case definition: Definition =>
+      case definition: Parent =>
         Seq(
           DefinitionStats(
             kind = definition.kind,
             isEmpty = definition.isEmpty,
             descriptionLines = {
-              definition.description.getOrElse(Description.empty).lines.size + {
-                if definition.brief.nonEmpty then 1 else 0
+              var lines = if definition.hasBriefDescription then 1 else 0
+              if definition.hasDescription then 
+                lines += definition.asInstanceOf[WithADescription].description.getOrElse(Description.empty).lines.size
+              end if   
+              definition.contents.filter[Description].foreach {
+                case bd: BlockDescription => lines += bd.lines.size
+                case _: URLDescription => lines += 1
+                case _ => ()
               }
+              lines
             },
             numSpecifications = specs,
             numCompleted = completes,

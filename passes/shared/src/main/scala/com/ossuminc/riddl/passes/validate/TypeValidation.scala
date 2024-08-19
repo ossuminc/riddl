@@ -55,7 +55,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkAlternation(
     alternation: Alternation,
     typeDef: Definition,
-    parents: Seq[Definition]
+    parents: Parents 
   ): this.type = {
     checkSequence(alternation.of) { (typex: TypeExpression) =>
       checkTypeExpression(typex, typeDef, parents)
@@ -95,7 +95,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkAggregateUseCase(
     mt: AggregateUseCaseTypeExpression,
     typeDef: Definition,
-    parents: Seq[Definition]
+    parents: Parents 
   ): this.type = {
     checkSequence(mt.fields) { (field: Field) =>
       checkIdentifierLength(field)
@@ -111,18 +111,18 @@ trait TypeValidation extends DefinitionValidation {
     this
   }
 
-  private def checkSet(set: Set, definition: Definition, parents: Seq[Definition]): Unit = {
+  private def checkSet(set: Set, definition: Definition, parents: Parents): Unit = {
     checkTypeExpression(set.of, definition, parents)
   }
 
-  private def checkSeq(sequence: Sequence, definition: Definition, parents: Seq[Definition]): Unit = {
+  private def checkSeq(sequence: Sequence, definition: Definition, parents: Parents): Unit = {
     checkTypeExpression(sequence.of, definition, parents)
   }
 
   private def checkMapping(
     mapping: Mapping,
     typeDef: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): this.type = {
     this
       .checkTypeExpression(mapping.from, typeDef, parents)
@@ -132,7 +132,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkGraph(
     graph: Graph,
     typeDef: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): this.type = {
     this.checkTypeExpression(graph.of, typeDef, parents)
   }
@@ -140,7 +140,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkTable(
     table: Table,
     typeDef: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): this.type = {
     this.checkTypeExpression(table.of, typeDef, parents)
   }
@@ -148,7 +148,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkReplica(
     replica: Replica,
     typeDef: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): Unit = {
     checkTypeExpression(replica.of, typeDef, parents)
     replica.of match {
@@ -164,11 +164,11 @@ trait TypeValidation extends DefinitionValidation {
   def checkTypeExpression(
     typ: TypeExpression,
     defn: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): this.type = {
     typ match {
       case AliasedTypeExpression(_, _, id: PathIdentifier) =>
-        checkPathRef[Type](id, defn, parents)
+        checkPathRef[Type](id, parents)
       case mt: AggregateUseCaseTypeExpression =>
         checkAggregateUseCase(mt, defn, parents)
       case agg: Aggregation            => checkAggregation(agg)
@@ -205,12 +205,12 @@ trait TypeValidation extends DefinitionValidation {
           Error,
           typ.loc
         )
-      case UniqueId(_, pid) => checkPathRef[Entity](pid, defn, parents)
+      case UniqueId(_, pid) => checkPathRef[Entity](pid, parents)
       case Decimal(loc, whole, fractional) =>
         check(whole >= 1, "The whole number part must be positive", Error, loc)
         check(fractional >= 1, "The fractional part must be positive", Error, loc)
       case EntityReferenceTypeExpression(_, pid) =>
-        checkPathRef[Entity](pid, defn, parents)
+        checkPathRef[Entity](pid, parents)
       case _: PredefinedType => () // nothing needed
     }
     this

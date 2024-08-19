@@ -56,7 +56,7 @@ class ReferenceMapTest extends ValidatingTest {
       val context = result.root.domains.head.includes.head.contents.filter[Context].head
       val parent = context.connectors.head
       parent.id.value mustBe "AChannel"
-      refMap.definitionOf[Inlet](pid, parent) match {
+      refMap.definitionOf[Inlet](pid) match {
         case Some(actual: Inlet) =>
           actual.id.value mustBe("Commands")
           val expected = context.streamlets.find("Sink")

@@ -13,11 +13,11 @@ import scala.collection.mutable
 
 trait UsageBase {
 
-  type UseMap = mutable.HashMap[Definition, Seq[NamedValue]]
-  type UsedByMap = mutable.HashMap[NamedValue, Seq[Definition]]
+  type UseMap = mutable.HashMap[Definition, Seq[Definition]]
+  type UsedByMap = mutable.HashMap[Definition, Seq[Definition]]
 
-  protected val uses: UseMap = mutable.HashMap.empty[Definition, Seq[NamedValue]]
-  protected val usedBy: UsedByMap = mutable.HashMap.empty[NamedValue, Seq[Definition]]
+  protected val uses: UseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
+  protected val usedBy: UsedByMap = mutable.HashMap.empty[Definition, Seq[Definition]]
 }
 
 /** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call associateUsage. After
@@ -50,9 +50,9 @@ trait UsageResolution extends UsageBase {
     this
   }
 
-  def associateUsage(user: Definition, use: NamedValue): this.type = {
+  def associateUsage(user: Definition, use: Definition): this.type = {
 
-    val used = uses.getOrElse(user, Seq.empty[NamedValue])
+    val used = uses.getOrElse(user, Seq.empty[Definition])
     if !used.contains(use) then {
       uses.update(user, used :+ use)
     }

@@ -84,7 +84,7 @@ class TestParserTest extends ParsingTest {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((typ: Type, rpi: RiddlParserInput)) =>
           rpi must be(input)
-          typ.typ must be(Integer(At((1, 27))))
+          typ.typEx must be(Integer(At((1, 27))))
       }
     }
     "provide parseContextDefinition(extractor)" in { (td: TestData) =>
@@ -95,7 +95,7 @@ class TestParserTest extends ParsingTest {
         case Left(messages: Messages) => fail(messages.justErrors.format)
         case Right((typ: Type, rpi: RiddlParserInput)) =>
           rpi.origin must be(input.origin)
-          typ.typ must be(Integer(At((1, 28))))
+          typ.typEx must be(Integer(At((1, 28))))
       }
     }
   }

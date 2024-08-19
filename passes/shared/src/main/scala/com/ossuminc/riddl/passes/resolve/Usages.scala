@@ -58,7 +58,7 @@ case class Usages(
     * @return
     *   True iff `user` uses `used`
     */
-  def uses(user: Definition, used: NamedValue): Boolean = {
+  def uses(user: Definition, used: Definition): Boolean = {
     this.uses.get(user).exists(list => list.contains(used))
   }
 
@@ -69,7 +69,7 @@ case class Usages(
     * @return
     *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.Definition]] that are using `used`
     */
-  def getUsers(used: NamedValue): Seq[Definition] = {
+  def getUsers(used: Definition): Seq[Definition] = {
     usedBy.getOrElse(used, Seq.empty)
   }
 
@@ -80,7 +80,7 @@ case class Usages(
     * @return
     *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.NamedValue]] that are used by `user`
     */
-  def getUses(user: Definition): Seq[NamedValue] = {
+  def getUses(user: Definition): Seq[Definition] = {
     uses.getOrElse(user, Seq.empty)
   }
 

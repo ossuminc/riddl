@@ -29,7 +29,7 @@ class PathResolutionPassTest extends ResolvingTest {
         val pid: Type = input.root.domains.head.types.head
         val parent = input.root.domains.head
         val resolution = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
-        resolution.refMap.definitionOf[Type](pid.typ.asInstanceOf[AliasedTypeExpression].pathId, parent) match {
+        resolution.refMap.definitionOf[Type](pid.typEx.asInstanceOf[AliasedTypeExpression].pathId, parent) match {
           case Some(definition) =>
             definition must be(target)
           case None =>
@@ -52,7 +52,7 @@ class PathResolutionPassTest extends ResolvingTest {
       parseAndResolve(rpi) { (in, outs) =>
         val target: Type = in.root.domains.head.domains.head.domains.head.types.head
         val parent = in.root.domains.head.domains.head.types.head
-        val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
+        val pid = parent.typEx.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolved) =>
@@ -72,7 +72,7 @@ class PathResolutionPassTest extends ResolvingTest {
       parseAndResolve(input) { (in, outs) =>
         val target: Type = in.root.domains.head.types.find(_.id.value == "Top").get
         val parent: Type = in.root.domains.head.types.find(_.id.value == "aTop").get
-        val pid = parent.typ.asInstanceOf[AliasedTypeExpression].pathId
+        val pid = parent.typEx.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
           case Some(resolvedDef) =>
@@ -195,7 +195,7 @@ class PathResolutionPassTest extends ResolvingTest {
         val Top = in.root.domains.head.types.head
         val D = in.root.domains.head.domains.head.contexts.find(_.id.value == "D").get
         val ATop = D.types.find(_.id.value == "ATop").get
-        val pid = ATop.typ.asInstanceOf[AliasedTypeExpression].pathId
+        val pid = ATop.typEx.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, ATop) match {
           case Some(resolved) => resolved mustBe Top
@@ -339,8 +339,8 @@ class PathResolutionPassTest extends ResolvingTest {
         entity.getClass mustBe classOf[Entity]
         val cid = in.root.domains.head.types.head
         cid.getClass mustBe classOf[Type]
-        cid.typ.getClass mustBe classOf[UniqueId]
-        val pid = cid.typ.asInstanceOf[UniqueId].entityPath
+        cid.typEx.getClass mustBe classOf[UniqueId]
+        val pid = cid.typEx.asInstanceOf[UniqueId].entityPath
         pid.value mustBe Seq("ReactiveBBQ", "Customer", "Customer")
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Entity](pid, cid) match {

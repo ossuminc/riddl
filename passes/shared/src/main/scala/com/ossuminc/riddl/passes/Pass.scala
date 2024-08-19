@@ -255,7 +255,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
       case include: Include[?] =>
         // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
         include.contents.foreach { value => traverse(value, parents) }
-      case container: Definition =>
+      case container: BranchDefinition[?] =>
         process(container, parents)
         parents.push(container)
         container.contents.foreach { value => traverse(value, parents) }
@@ -343,7 +343,7 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
     definition match {
       case leaf: LeafDefinition =>
         processLeaf(leaf, parents.toSeq)
-      case container: Definition =>
+      case container: BranchDefinition[?] =>
         val def_parents = parents.toSeq
         openContainer(container, def_parents)
         if container.contents.nonEmpty then
@@ -471,7 +471,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Enumerator            => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: GenericInteraction | _: SelfInteraction |
-          _: VagueInteraction | _: ContainedGroup =>
+          _: VagueInteraction | _: ContainedGroup | _: Definition =>
         () // not  containers
     end match
   end openContainer
@@ -499,7 +499,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Root                  => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup =>
+          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | _: Definition =>
         () // not  containers
     end match
   end closeContainer
@@ -508,6 +508,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
     definition match
       case field: Field                   => visitor.doField(field)
       case method: Method                 => visitor.doMethod(method)
+      case enumerator: Enumerator         => visitor.doEnumerator(enumerator)
       case term: Term                     => visitor.doTerm(term)
       case author: Author                 => visitor.doAuthor(author)
       case constant: Constant             => visitor.doConstant(constant)
@@ -520,7 +521,6 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case schema: Schema                 => visitor.doSchema(schema)
       case state: State                   => visitor.doState(state)
       case containedGroup: ContainedGroup => visitor.doContainedGroup(containedGroup)
-      case enumerator: Enumerator         => visitor.doEnumerator(enumerator)
     end match
   end processLeaf
 
@@ -692,7 +692,7 @@ object Pass {
   ): PassOutput = {
     val pass: Pass = mkPass
     Timer.time[PassOutput](pass.name, commonOptions.showTimes, logger) {
-      val parents: ParentStack = mutable.Stack.empty[Definition]
+      val parents: ParentStack = ParentStack.empty
       val root1: Root = pass.preProcess(root)
       pass.traverse(root1, parents)
       pass.postProcess(root1)

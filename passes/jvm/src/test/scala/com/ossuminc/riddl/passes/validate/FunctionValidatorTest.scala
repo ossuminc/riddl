@@ -32,8 +32,6 @@ class FunctionValidatorTest extends ValidatingTest {
                   Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _, _)))),
                   _,
                   _,
-                  _,
-                  _
                 )
               ) =>
         }

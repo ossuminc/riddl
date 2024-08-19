@@ -42,8 +42,8 @@ trait StreamingValidation extends TypeValidation {
       symbols.contextOf(connector) match {
         case None => require(false, "Connector with no Context")
         case Some(pipeContext) =>
-          val maybeToInlet = resolvePath[Inlet](connector.to.pathId, connector +: connParents)
-          val maybeFromOutlet = resolvePath[Outlet](connector.from.pathId, connector +: connParents)
+          val maybeToInlet = resolvePath[Inlet](connector.to.pathId, connParents)
+          val maybeFromOutlet = resolvePath[Outlet](connector.from.pathId, connParents)
           val maybeInletContext = maybeToInlet.flatMap(inlet => symbols.contextOf(inlet))
           val maybeOutletContext = maybeFromOutlet.flatMap(outlet => symbols.contextOf(outlet))
           val inletIsSameContext = maybeInletContext.nonEmpty &&
@@ -77,8 +77,8 @@ trait StreamingValidation extends TypeValidation {
       parents = symbols.parentsOf(conn)
       inletRef = conn.to
       outletRef = conn.from
-      inlet <- resolvePath[Inlet](inletRef.pathId, conn +: parents)
-      outlet <- resolvePath[Outlet](outletRef.pathId, conn +: parents)
+      inlet <- resolvePath[Inlet](inletRef.pathId, parents)
+      outlet <- resolvePath[Outlet](outletRef.pathId, parents)
     yield {
       (outlet, inlet)
     }

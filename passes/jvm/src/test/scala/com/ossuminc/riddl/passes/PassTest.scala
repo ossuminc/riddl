@@ -43,7 +43,7 @@ class PassTest extends TestingBasisWithTestData {
 
     override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
 
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = ???
+    protected def process(definition: RiddlValue, parents: ParentStack): Unit = ???
 
     def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
@@ -61,7 +61,7 @@ class PassTest extends TestingBasisWithTestData {
 
     override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
 
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {}
+    protected def process(definition: RiddlValue, parents: ParentStack): Unit = {}
 
     def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
@@ -109,7 +109,7 @@ class PassTest extends TestingBasisWithTestData {
   }
 
   case class TestHierarchyPass(input: PassInput, outputs: PassesOutput) extends HierarchyPass(input, outputs) {
-    def processForTest(node: RiddlValue, parents: Symbols.ParentStack): (Int, Int, Int, Int) = {
+    def processForTest(node: RiddlValue, parents: ParentStack): (Int, Int, Int, Int) = {
       super.process(node, parents)
       (opens, closes, leaves, values)
     }

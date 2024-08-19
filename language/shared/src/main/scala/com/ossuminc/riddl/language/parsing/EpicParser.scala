@@ -145,7 +145,7 @@ private[parsing] trait EpicParser {
         )./ | (userStory.? ~ interactions)) ~
         close ~ briefly ~ description
     ).map { case (loc, id, (userStory, contents), brief, description) =>
-      UseCase(loc, id, userStory.getOrElse(UserStory()), contents, brief, description)
+      UseCase(loc, id, userStory.getOrElse(UserStory()), foldDescriptions(contents, brief, description))
     }
   }
 
