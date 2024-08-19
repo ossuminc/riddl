@@ -168,14 +168,14 @@ trait RunCommandOnExamplesTest(
 
   def runTestWithArgs(
     folderName: String,
-    commandName:String,
     args: Array[String],
     logger: Logger,
     commonOptions: CommonOptions 
  ): Unit = {
-    forAFolder(folderName, commandName) { case (name, config) =>
+    val commandName = args.head 
+    forAFolder(folderName, commandName) { case (name, _) =>
       val outputDir = outDir.resolve(name)
-      val result = Commands.runCommandWithArgs(commandName, args, logger, commonOptions)
+      val result = Commands.runCommandWithArgs(args, logger, commonOptions)
       result match {
         case Right(passesResult) =>
           onSuccess(commandName, folderName, passesResult, outputDir)

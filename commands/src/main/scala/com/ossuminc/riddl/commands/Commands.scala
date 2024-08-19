@@ -217,12 +217,11 @@ object Commands:
       log.error("No command argument was provided")
       1
     else
-      val name = remaining.head
       if commonOptions.dryRun then
         log.info(s"Would have executed: ${remaining.mkString(" ")}")
         0
       else
-        val result = runCommandWithArgs(name, remaining, log, commonOptions)
+        val result = runCommandWithArgs(remaining, log, commonOptions)
         handleCommandResult(result, commonOptions, log)
   end handleCommandRun
 
@@ -235,8 +234,7 @@ object Commands:
           if remaining.isEmpty then
             Left(List(error("No command argument was provided")))
           else
-            val name = remaining.head
-            runCommandWithArgs(name, remaining, log, commonOptions)
+            runCommandWithArgs(remaining, log, commonOptions)
         case None =>
           Left(List(error("Option parsing failed, terminating.")))
       end match
