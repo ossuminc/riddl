@@ -53,11 +53,11 @@ object Commands:
    * still get the [[com.ossuminc.riddl.language.Messages.Messages]] or
    * [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
    *
-   * @param name
-   *   The name of the command that should be run
    * @param args
    *   An [[Array[String]] of arguments, one argument per array element. This should follow the same
    *   pattern as by the `riddlc` command line options (run `riddlc help` to discover that syntax).
+   *   Unlike `riddlc`, the first argument must be the name of the command to run. The common options
+   *   cannot occur ahead of it and are provided by the `commonOptions` argument to this function.
    * @param log
    *   An instance of one of the [[com.ossuminc.riddl.utils.Logger]] subclasses. This is where all the output from
    *   the command will flow, should it succeed. The volume of output can be affected by many of the
@@ -75,11 +75,12 @@ object Commands:
    *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
    */
   def runCommandWithArgs(
-    name: String,
     args: Array[String],
     log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, PassesResult] =
+    require(args.nonEmpty, "Empty argument list provided")
+    val name = args.head
     val result = loadCommandNamed(name, commonOptions)
       .flatMap { cmd => cmd.run(args, commonOptions, log) }
     if commonOptions.verbose then
