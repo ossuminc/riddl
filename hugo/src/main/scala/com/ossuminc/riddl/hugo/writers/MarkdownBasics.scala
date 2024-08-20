@@ -130,7 +130,7 @@ trait MarkdownBasics extends TextFileWriter with ThemeWriter { this: MarkdownWri
     }
   }
 
-  def listOf[T <: NamedValue](
+  def listOf[T <: Definition](
     kind: String,
     items: Seq[T],
     level: Int = 2

@@ -302,7 +302,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def doBriefDescription(brief: BriefDescription): Unit =
     state.withCurrent { rfe =>
-      rfe.emitBrief(Some(brief.brief))
+      rfe.emitBrief(Some(brief))
     }
   end doBriefDescription
 

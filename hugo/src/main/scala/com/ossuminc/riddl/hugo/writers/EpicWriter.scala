@@ -28,7 +28,7 @@ trait EpicWriter { this: MarkdownWriter =>
           p(italic(storyText))
       }
     }
-    emitDescription(epic.description)
+    emitDescriptions(epic.descriptions) // FIXME: there could be more description
     emitOptions(epic.options)
     list("Visualizations", epic.shownBy.map(u => s"($u)[$u]"))
     emitTerms(epic.terms)
@@ -42,7 +42,7 @@ trait EpicWriter { this: MarkdownWriter =>
   }
 
   def emitUseCase(uc: UseCase, parents: Parents): Unit = {
-    leafHead(uc, weight = 20)
+    containerHead(uc)
     emitDefDoc(uc, parents)
     h2("Sequence Diagram")
     parents.headOption match

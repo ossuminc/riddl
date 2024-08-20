@@ -66,10 +66,10 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
     else addLine(s"$fromName -- $how --> $toName")
   }
 
-  private[mermaid] def participants(connector: Connector): Seq[Definition] = {
+  private[mermaid] def participants(connector: Connector, parent: Parent): Seq[Definition] = {
     for {
-      toDef <- pr.refMap.definitionOf[Inlet](connector.to, connector)
-      fromDef <- pr.refMap.definitionOf[Outlet](connector.from, connector)
+      toDef <- pr.refMap.definitionOf[Inlet](connector.to, parent)
+      fromDef <- pr.refMap.definitionOf[Outlet](connector.from, parent)
     } yield {
       val toUsers: Seq[Definition] = pr.usage.getUsers(toDef).flatMap {
         case oc: OnClause => pr.symbols.parentOf(oc).flatMap(pr.symbols.parentOf)
@@ -85,13 +85,13 @@ case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
     sb.append("flowchart LR"); nl
     val parts = for
       connector <- context.connectors
-      participants <- this.participants(connector)
+      participants <- this.participants(connector, context)
     yield participants
     for part <- parts.distinct do makeNodeLabel(part)
     for {
       conn <- context.connectors
-      toDef <- pr.refMap.definitionOf[Inlet](conn.to, conn)
-      fromDef <- pr.refMap.definitionOf[Outlet](conn.from, conn)
+      toDef <- pr.refMap.definitionOf[Inlet](conn.to, context)
+      fromDef <- pr.refMap.definitionOf[Outlet](conn.from, context)
     } do {
       makeConnection(fromDef, toDef, false, fromDef.type_.identify)
     }

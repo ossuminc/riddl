@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.language.AST.{Definition, Domain, Identifier, NamedValue, PathIdentifier, Root}
+import com.ossuminc.riddl.language.AST.{Definition, Domain, Identifier, PathIdentifier, Root}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult, RunPassTestBase}
 import com.ossuminc.riddl.diagrams.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
@@ -16,7 +16,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
 
   case class TestUCDSupport(passesResult: PassesResult) extends UseCaseDiagramSupport {
     private val symTab = passesResult.symbols
-    def makeDocLink(namedValue: NamedValue): String = {
+    def makeDocLink(namedValue: Definition): String = {
       val parents = symTab.parentsOf(namedValue)
       val uri = new URI(
         "http", "example.com", parents.map(_.id.value).mkString("//", "/", "/") + s"${namedValue.id.value}", null, null
@@ -56,7 +56,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
       outputs.refMap.add[Domain](pid, parent, item)
       val passesResult = PassesResult(PassInput.empty, outputs )
       case class TestUseCaseDiagramSupport(passesResult: PassesResult) extends UseCaseDiagramSupport {
-        def makeDocLink(definition: NamedValue): String = ???
+        def makeDocLink(definition: Definition): String = ???
       }
       val tucds = TestUseCaseDiagramSupport(passesResult)
       tucds.getDefinitionFor[Domain](pid, parent) match {

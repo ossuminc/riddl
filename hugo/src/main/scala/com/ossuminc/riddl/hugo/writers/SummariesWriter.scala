@@ -96,7 +96,7 @@ trait SummariesWriter { this: MarkdownWriter =>
       list(
         Seq(
           s"Is a: ${user.is_a.format}",
-          s"Brief: ${user.brief.format}"
+          s"Brief: ${user.brief.map(_.format)}"
         )
       )
       user.description.foreach(d => p(d.lines.map(_.format).mkString("\n")))
@@ -114,7 +114,7 @@ trait SummariesWriter { this: MarkdownWriter =>
           s"Organization: ${author.organization.format}",
           s"URL: ${author.url.map(_.toString)}",
           s"Email: ${author.email.format}",
-          s"Brief: ${author.brief.format}"
+          s"Brief: ${author.brief.map(_.format)}"
         )
       )
       author.description.foreach(d => p(d.lines.map(_.format).mkString("\n")))

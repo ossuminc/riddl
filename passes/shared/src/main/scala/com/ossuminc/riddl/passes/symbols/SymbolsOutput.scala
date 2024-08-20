@@ -58,7 +58,7 @@ case class SymbolsOutput(
   /**
     * Find the bounded context in which a give named value is defined
     * @param definition
-    * The [[com.ossuminc.riddl.language.AST.WithIdentifier]] whose [[com.ossuminc.riddl.language.AST.Context]] should be
+    * The [[com.ossuminc.riddl.language.AST.Definition]] whose [[com.ossuminc.riddl.language.AST.Context]] should be
     * determined
     * @return
     * An [[scala.Option]] either providing `Some[Context]`, if found, or `None`, if not.
@@ -98,7 +98,7 @@ case class SymbolsOutput(
     * definition, as a Definition, and, if the definition matches the type of interest, D, then an Option[D] for
     * convenience.
     */
-  type LookupResult[D <: WithIdentifier] = List[(WithIdentifier, Option[D])]
+  type LookupResult[D <: Definition] = List[(Definition, Option[D])]
 
   /** Look up a symbol in the table
     *
@@ -110,7 +110,7 @@ case class SymbolsOutput(
     *   A list of matching definitions of 2-tuples giving the definition as a Definition type and optionally as the
     *   requested type
     */
-  def lookupSymbol[D <: WithIdentifier: ClassTag](
+  def lookupSymbol[D <: Definition: ClassTag](
     id: PathNames
   ): LookupResult[D] = {
     require(id.nonEmpty, "No name elements provided to lookupSymbol")
@@ -120,12 +120,12 @@ case class SymbolsOutput(
     symTab.get(leafName) match {
       case Some(set) =>
         set
-          .filter { case (_: WithIdentifier, parents: Parents) =>
+          .filter { case (_: Definition, parents: Parents) =>
             // whittle down the list of matches to the ones whose parents names
             // have the same as the nameList provided
             hasSameParentNames(nameList, parents)
           }
-          .map { case (d: WithIdentifier, _: Parents) =>
+          .map { case (d: Definition, _: Parents) =>
             // If a name match is also the same type as desired by the caller
             // then give them the definition in the requested type, optionally
             if clazz.isInstance(d) then { (d, Option(d.asInstanceOf[D])) }

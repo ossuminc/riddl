@@ -12,7 +12,7 @@ trait DomainWriter { this: MarkdownWriter =>
     emitVitalDefinitionDetails(domain, parents)
     h2("Domain Map")
     emitMermaidDiagram(diagram.generate)
-    emitTypes(domain, domain +: parents)
+    emitTypes(domain.types, domain +: parents)
     emitAuthorInfo(domain.authors)
     definitionToc("Subdomains", domain.domains)
     definitionToc("Contexts", domain.contexts)

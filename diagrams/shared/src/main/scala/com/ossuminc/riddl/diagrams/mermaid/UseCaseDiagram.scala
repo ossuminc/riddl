@@ -7,9 +7,7 @@
 package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.diagrams.UseCaseDiagramData
-import com.ossuminc.riddl.utils.FileBuilder
 
 import scala.reflect.ClassTag
 import scala.scalajs.js.annotation.*
@@ -30,12 +28,12 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
   def title: String = ucdd.name
 
   def frontMatterItems: Map[String, String] = Map(
-      "theme" -> "dark",
-      "forceMenus" -> "true",
-      "wrap" -> "true",
-      "mirrorActors" -> "false",
-      "messageFontFamily" -> "monospace"
-    )
+    "theme" -> "dark",
+    "forceMenus" -> "true",
+    "wrap" -> "true",
+    "mirrorActors" -> "false",
+    "messageFontFamily" -> "monospace"
+  )
 
   private def makeParticipants(parts: Seq[Definition]): Unit = {
     parts.foreach { (part: Definition) =>
@@ -72,7 +70,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
   private def actorName(key: String): String = {
     ucdd.actors.get(key) match {
       case Some(definition: Definition) => definition.id.value
-      case None             => key
+      case None                         => key
     }
   }
 
@@ -106,7 +104,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
   }
 
   private def parallelInteractions(pi: ParallelInteractions): Unit = {
-    addIndent(s"par ${pi.briefValue}")
+    addIndent(s"par ${pi.briefString}")
     incr
     generateInteractions(pi.contents.filter[Interaction])
     decr
@@ -114,7 +112,7 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
   }
 
   private def optionalInteractions(oi: OptionalInteractions): Unit = {
-    addIndent(s"opt ${oi.briefValue}")
+    addIndent(s"opt ${oi.briefString}")
     incr
     generateInteractions(oi.contents.filter[Interaction])
     decr

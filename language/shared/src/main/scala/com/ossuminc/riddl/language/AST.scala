@@ -148,6 +148,9 @@ object AST {
     /** find the elements of the [[Contents]] that are [[Definition]]s */
     def definitions: Contents[Definition] = container.filter[Definition].map(_.asInstanceOf[Definition])
 
+    /** find the elemetns of the [[Contents]] that are [[Parent]]s */
+    def parents: Contents[Parent] = container.filter[Parent].asInstanceOf[Contents[Parent]]
+
   /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
     *
     * @tparam CV
@@ -838,9 +841,9 @@ object AST {
   }
 
   /** A simple sequence of Parents from the closest all the way up to the Root */
-  type Parents = Seq[Parent]
+  type Parents = Contents[Parent]
   object Parents:
-    def empty: Parents = Seq.empty[Parent]
+    def empty: Parents = Contents.empty
 
   /** A mutable stack of Parent[?] for keeping track of the parent hierarchy */
   type ParentStack = mutable.Stack[Parent]

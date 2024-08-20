@@ -11,27 +11,24 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
 
   private def makeTypeName(
     pid: PathIdentifier,
-    parents: Seq[Definition]
+    parent: Parent
   ): String = {
-    parents.headOption match
+    refMap.definitionOf[Definition](pid, parent) match {
       case None => s"unresolved path: ${pid.format}"
-      case Some(parent) =>
-        refMap.definitionOf[Definition](pid, parent) match {
-          case None                   => s"unresolved path: ${pid.format}"
-          case Some(defn: Definition) => defn.id.format
-        }
+      case Some(definition: Definition) => definition.id.format
+    }
   }
 
   private def makeTypeName(
     typeEx: TypeExpression,
-    parents: Seq[Definition]
+    parent: Parent
   ): String = {
     val name = typeEx match {
-      case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parents)
-      case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
-      case UniqueId(_, pid)                      => makeTypeName(pid, parents)
+      case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parent)
+      case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parent)
+      case UniqueId(_, pid)                      => makeTypeName(pid, parent)
       case Alternation(_, of) =>
-        of.map(ate => makeTypeName(ate.pathId, parents))
+        of.map(ate => makeTypeName(ate.pathId, parent))
           .mkString("-")
       case _: Mapping                        => "Mapping"
       case _: Aggregation                    => "Aggregation"
@@ -44,9 +41,9 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
   private def makeERDRelationship(
     from: String,
     to: Field,
-    parents: Seq[Definition]
+    parent: Parent
   ): String = {
-    val typeName = makeTypeName(to.typeEx, parents)
+    val typeName = makeTypeName(to.typeEx, parent)
     if typeName.nonEmpty then
       val connector = to.typeEx match
         case _: OneOrMore                     => from + " ||--|{ " + typeName
@@ -63,18 +60,18 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
   def generate(
     name: String,
     fields: Seq[Field],
-    parents: Seq[Definition]
+    parent: Parent
   ): Seq[String] = {
 
     val typ: Seq[String] = s"$name {" +: fields.map { f =>
-      val typeName = makeTypeName(f.typeEx, parents)
+      val typeName = makeTypeName(f.typeEx, parent)
       val fieldName = f.id.format.replace(" ", "-")
-      val comment = "\"" + f.brief.map(_.s).getOrElse("") + "\""
+      val comment = "\"" + f.brief.map(_.brief.s).getOrElse("") + "\""
       s"  $typeName $fieldName $comment"
     } :+ "}"
 
     val relationships: Seq[String] = fields
-      .map(makeERDRelationship(name, _, parents))
+      .map(makeERDRelationship(name, _, parent))
       .filter(_.nonEmpty)
 
     Seq("erDiagram") ++ typ ++ relationships

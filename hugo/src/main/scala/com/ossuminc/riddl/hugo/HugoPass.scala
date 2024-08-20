@@ -166,7 +166,7 @@ case class HugoPass(
     mdw
   }
 
-  override def process(value: AST.RiddlValue, parents: Symbols.ParentStack): Unit = {
+  override def process(value: AST.RiddlValue, parents: ParentStack): Unit = {
     val stack = parents.toSeq
     value match {
       // We only process containers here since they start their own
@@ -200,7 +200,8 @@ case class HugoPass(
       case _: Function | _: Handler | _: State | _: OnOtherClause | _: OnInitializationClause | _: OnMessageClause |
           _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
           _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root | _: BriefDescription |
-          _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type =>
+          _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type |
+          _: Definition =>
         ()
       // All of these are handled above in their containers content output
       case _: AST.NonDefinitionValues => ()
@@ -358,7 +359,7 @@ case class HugoPass(
 
   private def setUpContainer(
     c: Definition,
-    stack: Seq[Definition]
+    stack: Parents
   ): MarkdownWriter = {
     addDir(c.id.format)
     val pars = generator.makeStringParents(stack)
@@ -367,7 +368,7 @@ case class HugoPass(
 
   private def setUpLeaf(
     d: Definition,
-    stack: Seq[Definition]
+    stack: Parents
   ): MarkdownWriter = {
     val pars = generator.makeStringParents(stack)
     makeWriter(pars, d.id.format + ".md")

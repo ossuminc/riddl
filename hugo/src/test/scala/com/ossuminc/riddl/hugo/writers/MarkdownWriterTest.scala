@@ -169,7 +169,7 @@ class MarkdownWriterTest extends HugoTestBase {
       val (passesResult: PassesResult, root: Root, mdw: MarkdownWriter) = makeMDWFor(input)
       val domain = root.domains.head
       val context = domain.contexts.head
-      mdw.emitDescription(domain.description, 0)
+      mdw.emitDescriptions(domain.descriptions, 0)
       println(mdw.toLines.mkString("\n"))
       succeed
     }

@@ -8,7 +8,7 @@ package com.ossuminc.riddl.prettify
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
-import com.ossuminc.riddl.utils.{Logger, TextFileWriter}
+import com.ossuminc.riddl.utils.TextFileWriter
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
@@ -53,8 +53,11 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       if definition.nonEmpty then decr.addIndent("}")
       end if
     end if
-    emitBrief(definition.brief)
-    emitDescription(definition.description).nl
+    if definition.hasBriefDescription then 
+      emitBrief(definition.asInstanceOf[WithABrief].brief)
+    end if  
+    if definition.hasDescription then 
+      emitDescription(definition.asInstanceOf[WithADescription].description).nl
     if !withBrace && definition.nonEmpty then nl.decr else this
   }
 
@@ -65,8 +68,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     end match
   end emitComment
 
-  def emitBrief(brief: Option[LiteralString]): this.type = {
-    brief.map { (ls: LiteralString) => this.add(s" briefly ${ls.format}") }
+  def emitBrief(brief: Option[BriefDescription]): this.type = {
+    brief.map { bd => this.add(s" briefly ${bd.format}") }
     this
   }
 
@@ -193,7 +196,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this.add(mt.usecase.useCase.toLowerCase).add(" ").emitFields(mt.fields)
   }
 
-  def emitMessageRef(mr: MessageRef): this.type = {
+  private def emitMessageRef(mr: MessageRef): this.type = {
     this.add(mr.format)
   }
 
@@ -242,7 +245,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitType(t: Type): this.type = {
     this
       .add(s"${spc}type ${t.id.value} is ")
-      .emitTypeExpression(t.typ)
+      .emitTypeExpression(t.typEx)
       .emitDescription(t.description)
       .nl
   }

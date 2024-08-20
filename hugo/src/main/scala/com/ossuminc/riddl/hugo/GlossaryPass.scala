@@ -40,15 +40,15 @@ case class GlossaryPass(
   // Members declared in com.ossuminc.riddl.passes.CollectingPass
   protected def collect(
     definition: RiddlValue,
-    parents: mutable.Stack[Definition]
+    parents: ParentStack
   ): Seq[GlossaryEntry] = {
     definition match {
       case ad: Definition if ad.isAnonymous => Seq.empty[GlossaryEntry]
       // Implicit definitions don't have a name so there's no word to define in the glossary
-      case d: Definition =>
+      case d: LeafDefinition =>
         // everything else does
-        val stack = parents.toSeq
-        Seq(makeGlossaryEntry(d, stack))
+        val parentsSeq = parents.toParentsSeq
+        Seq(makeGlossaryEntry(d, parentsSeq))
       case _: RiddlValue =>
         // None of these kinds of definitions contribute to the glossary
         Seq.empty[GlossaryEntry]
@@ -56,14 +56,14 @@ case class GlossaryPass(
   }
 
   private def makeGlossaryEntry(
-    d: Definition,
+    d: LeafDefinition,
     stack: Parents
   ): GlossaryEntry = {
     val parents = generator.makeStringParents(stack)
     val entry = GlossaryEntry(
       d.id.value,
       d.kind,
-      d.brief.map(_.s).getOrElse("-- undefined --"),
+      d.brief.map(_.brief.s).getOrElse("-- undefined --"),
       parents :+ d.id.value,
       generator.makeDocLink(d, parents),
       generator.makeSourceLink(d)

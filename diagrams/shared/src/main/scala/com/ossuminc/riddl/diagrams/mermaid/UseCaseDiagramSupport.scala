@@ -19,10 +19,10 @@ trait UseCaseDiagramSupport {
   @JSExport
   def passesResult: PassesResult
   @JSExport
-  def makeDocLink(definition: NamedValue): String
+  def makeDocLink(definition: Definition): String
 
   @JSExport
-  def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Definition): Option[T] = {
+  def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Parent): Option[T] = {
     passesResult.refMap.definitionOf[T](pathId, parent)
   }
 
