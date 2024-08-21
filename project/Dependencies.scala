@@ -5,7 +5,7 @@ import sbt.librarymanagement.ModuleID
 
 object V {
   val commons_io = "2.16.1"
-  val compress = "1.27.0"
+  val compress = "1.27.1"
   val config = "1.4.2"
   val fastparse = "3.1.1"
   val jgit = "6.5.0"
