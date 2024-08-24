@@ -11,11 +11,11 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 private[parsing] trait ApplicationParser {
-  this: ProcessorParser &  StreamingParser  =>
+  this: ProcessorParser & StreamingParser =>
 
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
-      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ briefly ~ description
+      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ briefly ~ maybeDescription
     ).map { case (loc, id, group, brief, description) =>
       ContainedGroup(loc, id, group, brief, description)
     }
@@ -29,7 +29,7 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
-        close ~ briefly ~ description
+        close ~ briefly ~ maybeDescription
     ).map { case (loc, alias, id, contents, brief, description) =>
       Group(loc, alias, id, foldDescriptions[OccursInGroup](contents, brief, description))
     }
@@ -57,7 +57,7 @@ private[parsing] trait ApplicationParser {
   private def appOutput[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/ (literalString | constantRef | typeRef) ~/
-        outputDefinitions ~ briefly ~ description
+        outputDefinitions ~ briefly ~ maybeDescription
     ).map { case (loc, nounAlias, id, verbAlias, putOut, contents, brief, description) =>
       putOut match {
         case t: TypeRef =>
@@ -70,8 +70,14 @@ private[parsing] trait ApplicationParser {
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
           error(s"Expected a type reference, constant reference, or literal string, not: $xval")
-          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"),
-            foldDescriptions[OccursInOutput](contents, brief, description))
+          Output(
+            loc,
+            nounAlias,
+            id,
+            verbAlias,
+            LiteralString(loc, s"INVALID: `$xval``"),
+            foldDescriptions[OccursInOutput](contents, brief, description)
+          )
       }
     }
   }
@@ -105,7 +111,7 @@ private[parsing] trait ApplicationParser {
   private def appInput[u: P]: P[Input] = {
     P(
       location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~
-        inputDefinitions ~ briefly ~ description
+        inputDefinitions ~ briefly ~ maybeDescription
     ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, brief, description) =>
       val folded = foldDescriptions[OccursInInput](contents, brief, description)
       Input(loc, inputAlias, id, acquisitionAlias, putIn, folded)
@@ -113,8 +119,8 @@ private[parsing] trait ApplicationParser {
   }
 
   private def applicationDefinition[u: P]: P[ApplicationContents] = {
-    P( processorDefinitionContents(StatementsSet.ApplicationStatements) | group | applicationInclude
-    ).asInstanceOf[P[ApplicationContents]]
+    P(processorDefinitionContents(StatementsSet.ApplicationStatements) | group | applicationInclude)
+      .asInstanceOf[P[ApplicationContents]]
   }
 
   private def applicationDefinitions[u: P]: P[Seq[ApplicationContents]] = {
@@ -135,7 +141,8 @@ private[parsing] trait ApplicationParser {
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ briefly ~ description
+      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody
+        ~ close ~ briefly ~ maybeDescription
     ).map { case (loc, id, contents, brief, description) =>
       checkForDuplicateIncludes(contents)
       Application(loc, id, foldDescriptions[ApplicationContents](contents, brief, description))

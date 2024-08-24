@@ -46,7 +46,7 @@ private[parsing] trait AdaptorParser {
   def adaptor[u: P]: P[Adaptor] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~
-        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ briefly ~ description
+        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ briefly ~ maybeDescription
     ).map { case (loc, id, direction, cRef, contents, brief, description) =>
       checkForDuplicateIncludes(contents)
       Adaptor(loc, id, direction, cRef, foldDescriptions(contents, brief, description))

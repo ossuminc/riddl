@@ -35,7 +35,7 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
           (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
             literalString ~ (Keywords.organization ~ is ~ literalString).? ~
             (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ description
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ maybeDescription
     ).map { case (loc, id, (name, email, org, title, url), brief, description) =>
       Author(loc, id, name, email, org, title, url, brief, description)
     }
@@ -98,13 +98,15 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     }
   }
 
-  def description[u: P]: P[Option[Description]] = P(
+  def description[u: P]: P[Description] =
     P(
       Keywords.described ~/
         ((byAs ~ blockDescription) | (in ~ fileDescription) |
           (at ~ urlDescription))
     )
-  ).?
+
+  def maybeDescription[u: P]: P[Option[Description]] =
+    P(description).?
 
   private def inlineComment[u: P]: P[InlineComment] = {
     P(
@@ -216,14 +218,14 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
   }
 
   def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ description)./.map(tpl => Term.apply.tupled(tpl))
+    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ maybeDescription)./.map(tpl => Term.apply.tupled(tpl))
   }
 
   def invariant[u: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ briefly ~ description
+      ) ~ briefly ~ maybeDescription
     ).map { case (loc, id, condition, brief, description) =>
       Invariant(loc, id, condition, brief, description)
     }

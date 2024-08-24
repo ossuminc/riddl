@@ -24,7 +24,7 @@ private[parsing] trait StreamingParser {
   
   def connector[u: P]: P[Connector] = {
     P(
-      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~/  briefly ~/ description
+      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~/  briefly ~/ maybeDescription
     )./.map { case (loc, id, (out, in, opts), brief, description) =>
       Connector(loc, id, out, in, opts, brief, description)
     }
@@ -92,7 +92,7 @@ private[parsing] trait StreamingParser {
     P(
       location ~ keyword ~ identifier ~ is ~ open ~
         streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ briefly ~ description
+        close ~ briefly ~ maybeDescription
     )./.map { case (loc, id, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
