@@ -15,9 +15,9 @@ import scala.collection.mutable
   *
   * @param uses
   *   A hashmap with a [[com.ossuminc.riddl.language.AST.Definition]] as the key and the list of
-  *   [[com.ossuminc.riddl.language.AST.NamedValue]]s it uses
+  *   [[com.ossuminc.riddl.language.AST.Definition]]s it uses
   * @param usedBy
-  *   A hashmap with a [[com.ossuminc.riddl.language.AST.NamedValue]] as the key and the list of
+  *   A hashmap with a [[com.ossuminc.riddl.language.AST.Definition]] as the key and the list of
   *   [[com.ossuminc.riddl.language.AST.Definition]] used by it
   */
 case class Usages(
@@ -59,7 +59,8 @@ case class Usages(
     *   True iff `user` uses `used`
     */
   def uses(user: Definition, used: Definition): Boolean = {
-    this.uses.get(user).exists(list => list.contains(used))
+    val usage = this.uses.get(user)
+    usage.exists(list => list.contains(used))
   }
 
   /** Retrieve the list of users that use a [[com.ossuminc.riddl.language.AST.NamedValue]]

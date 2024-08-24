@@ -34,9 +34,13 @@ trait BasicValidation {
     pid: PathIdentifier,
     parents: Parents
   ): Option[Definition] = {
-    parents.headOption.flatMap { (head: Parent) =>
-      resolution.refMap.definitionOf[Definition](pid, head)
-    }
+    if pid.value.length == 1 then 
+      // Let's try the symbol table
+      symbols.lookup[Definition](pid.value.reverse).headOption
+    else   
+      parents.headOption.flatMap { (head: Parent) =>
+        resolution.refMap.definitionOf[Definition](pid, head)
+      }
   }
 
   @inline

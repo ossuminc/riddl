@@ -246,19 +246,20 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     */
   protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case leaf: LeafDefinition =>
-        process(leaf, parents)
       case root: Root =>
+        process(root, parents)
         parents.push(root)
         root.contents.foreach { value => traverse(value, parents) }
         parents.pop()
       case include: Include[?] =>
         // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
         include.contents.foreach { value => traverse(value, parents) }
-      case container: BranchDefinition[?] =>
-        process(container, parents)
-        parents.push(container)
-        container.contents.foreach { value => traverse(value, parents) }
+      case leaf: LeafDefinition =>
+        process(leaf, parents)
+      case branch: BranchDefinition[?] =>
+        process(branch, parents)
+        parents.push(branch)
+        branch.contents.foreach { value => traverse(value, parents) }
         parents.pop()
       case value: RiddlValue =>
         // NOTE: everything else is just a non-definition non-container
@@ -342,27 +343,27 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case leaf: LeafDefinition =>
-        processLeaf(leaf, parents.toSeq)
+        processLeaf(leaf, parents.toParents)
       case container: BranchDefinition[?] =>
-        val def_parents = parents.toSeq
+        val def_parents = parents.toParents
         openContainer(container, def_parents)
         if container.contents.nonEmpty then
           parents.push(container)
           container.contents.foreach {
-            case leaf: LeafDefinition   => processLeaf(leaf, parents.toSeq)
+            case leaf: LeafDefinition   => processLeaf(leaf, parents.toParents)
             case definition: Definition => traverse(definition, parents)
             case include: Include[?]    => traverse(include, parents)
-            case value: RiddlValue      => processValue(value, parents.toSeq)
+            case value: RiddlValue      => processValue(value, parents.toParents)
           }
           parents.pop()
         end if
         closeContainer(container, def_parents)
       case include: Include[?] =>
-        openInclude(include, parents.toSeq)
+        openInclude(include, parents.toParents)
         include.contents.foreach { item => traverse(item, parents) }
-        closeInclude(include, parents.toSeq)
+        closeInclude(include, parents.toParents)
       case value: RiddlValue =>
-        processValue(value, parents.toSeq)
+        processValue(value, parents.toParents)
     }
   }
 }

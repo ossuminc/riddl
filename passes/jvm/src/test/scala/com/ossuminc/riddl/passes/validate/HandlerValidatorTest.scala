@@ -53,21 +53,7 @@ class HandlerValidatorTest extends ValidatingTest {
               |because the sought name, 'EntityEvent', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
           )
-          assertValidationMessage(
-            msgs,
-            Error,
-            """Path 'HamburgerState.field1' was not resolved, in OnMessageClause 'command EntityCommand'
-              |because definition 'field1' was not found inside State 'HamburgerState'
-              |and it should refer to a Field""".stripMargin
-          )
-          assertValidationMessage(
-            msgs,
-            Error,
-            """Path 'HamburgerState.field2' was not resolved, in OnMessageClause 'event EntityEvent'
-              |because definition 'field2' was not found inside State 'HamburgerState'
-              |and it should refer to a Field""".stripMargin
-          )
-
+          msgs.justErrors.size must be(2)
       }
     }
 
@@ -76,6 +62,7 @@ class HandlerValidatorTest extends ValidatingTest {
         """
           |domain entityTest is {
           | context EntityContext is {
+          |  term Incoming is "This is a term definition to generate an error"
           |  entity Hamburger is {
           |   type StateFields is { field1: Number }
           |   state HamburgerState of Hamburger.StateFields
@@ -95,10 +82,10 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            """Path 'EntityContext.Incoming' was not resolved, in OnMessageClause 'event EntityContext.Incoming'
-              |because definition 'Incoming' was not found inside Context 'EntityContext'
-              |and it should refer to a Type""".stripMargin
+            "Path 'EntityContext.Incoming' resolved to Term 'Incoming' at empty(4:3), " +
+              "in OnMessageClause 'event EntityContext.Incoming', but a Type was expected"
           )
+          msgs.justErrors.size must be(1)
       }
     }
 

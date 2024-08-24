@@ -35,9 +35,9 @@ case class SymbolsOutput(
     * @return
     *   optionally, the parent definition of the given definition
     */
-  def parentOf(definition: Definition): Option[Definition] =
+  def parentOf(definition: Definition): Option[Parent] =
     parentage.get(definition) match {
-      case Some(container) => container.headOption
+      case Some(parents) => parents.headOption
       case None            => None
     }
 

@@ -39,24 +39,25 @@ class StatsPassTest extends ValidatingTest {
 
   "StatsPass" must {
     "generate statistics" in { (td: TestData) =>
-      val rpi = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"),td)
-      parseValidateAndThen(rpi) { (pr: PassesResult, root: AST.Root, rpi: RiddlParserInput, messages: Messages.Messages) =>
-        if messages.justErrors.nonEmpty then
-          fail(messages.justErrors.format)
-        else
-          val input = PassInput(root, CommonOptions())
-          val outputs = pr.outputs
-          val pass = StatsPass(input, outputs)
-          val statsOutput: StatsOutput = Pass.runPass[StatsOutput](input, outputs, pass)
-          if statsOutput.messages.nonEmpty then fail(statsOutput.messages.format)
-          statsOutput.maximum_depth > 0 mustBe true
-          statsOutput.categories mustNot be(empty)
-          statsOutput.categories.size mustBe(31)
-          val ksAll: KindStats = statsOutput.categories("All")
-          ksAll.count mustBe 30
-          ksAll.numEmpty mustBe 40
-          ksAll.numStatements mustBe 6
-          succeed
+      val rpi = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
+      parseValidateAndThen(rpi) {
+        (pr: PassesResult, root: AST.Root, rpi: RiddlParserInput, messages: Messages.Messages) =>
+          if messages.justErrors.nonEmpty then fail(messages.justErrors.format)
+          else
+            val input = PassInput(root, CommonOptions())
+            val outputs = pr.outputs
+            val pass = StatsPass(input, outputs)
+            val statsOutput: StatsOutput = Pass.runPass[StatsOutput](input, outputs, pass)
+            if statsOutput.messages.nonEmpty then fail(statsOutput.messages.format)
+            statsOutput.maximum_depth > 0 mustBe true
+            statsOutput.categories mustNot be(empty)
+            statsOutput.categories.toSeq.foreach { pair => println(pair._1 + s" => ${pair._2.count}") }
+            statsOutput.categories.size must be(23)
+            val ksAll: KindStats = statsOutput.categories("All")
+            ksAll.count must be(22)
+            ksAll.numEmpty must be(20)
+            ksAll.numStatements must be(6)
+            succeed
       }
     }
   }

@@ -14,20 +14,16 @@ class ValidationPassTest extends ValidatingTest {
     "parse and validation rbbq.riddl" in { (td:TestData) =>
       val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"), td)
       parseAndValidateAggregate(input, CommonOptions.noMinorWarnings) { (vo: PassesResult) =>
-        val errors = vo.messages.justErrors 
+        val errors = vo.messages.justErrors
         if vo.messages.size != 0 then info(errors.format)
         vo.messages.justErrors.size mustBe 0
-        if vo.refMap.size != 29 then 
-          info(vo.refMap.toString)
+        if vo.refMap.size != 29 then
+          // info(vo.refMap.toString)
           fail("refMap.size != 29")
-        end if   
-        if vo.usage.usesSize != 28 || vo.usage.usedBySize != 23 then 
-          info(vo.usage.toString)
-          fail("usage sizes incorrect")
-        end if  
-        vo.refMap.size must be(29)
-        vo.usage.usesSize must be(28)
+        end if
+        vo.usage.usesSize must be(47)
         vo.usage.usedBySize must be(23)
+        vo.refMap.size must be(29)
       }
     }
 

@@ -10,6 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 trait UsageBase {
 
@@ -50,19 +51,25 @@ trait UsageResolution extends UsageBase {
     this
   }
 
-  def associateUsage(user: Definition, use: Definition): this.type = {
-
+  def associateUsage[T <: Definition: ClassTag](user: Definition, resolution: Resolution[T]): Resolution[T] =
+    resolution match
+      case None => None
+      case resolution @ Some((use: Definition, _)) => 
+        associateUsage(user, use)
+        resolution 
+    end match
+  end associateUsage
+    
+  def associateUsage(user: Definition, use: Definition): this.type =
     val used = uses.getOrElse(user, Seq.empty[Definition])
-    if !used.contains(use) then {
+    if !used.contains(use) then
       uses.update(user, used :+ use)
-    }
 
     val usages = usedBy.getOrElse(use, Seq.empty[Definition])
-    if !usages.contains(user) then {
+    if !usages.contains(user) then
       usedBy.update(use, usages :+ user)
-    }
     this
-  }
+  end associateUsage
 
   def checkUnused(): this.type = {
     if commonOptions.showUsageWarnings then {

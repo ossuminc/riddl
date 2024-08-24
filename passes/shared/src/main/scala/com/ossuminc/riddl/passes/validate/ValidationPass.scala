@@ -54,11 +54,10 @@ case class ValidationPass(
     ValidationOutput(
       root,
       messages.toMessages,
-      inlets,
-      outlets,
-      connectors,
-      streamlets,
-      resolution.kindMap.definitionsOfKind[Processor[?]]
+      inlets.toSeq,
+      outlets.toSeq,
+      connectors.toSeq,
+      streamlets.toSeq,
     )
   }
 
@@ -68,7 +67,7 @@ case class ValidationPass(
   }
 
   def process(value: RiddlValue, parents: ParentStack): Unit = {
-    val parentsAsSeq: Parents = parents.toParentsSeq
+    val parentsAsSeq: Parents = parents.toParents
     value match {
       case f: AggregateValue =>
         f match {
@@ -87,16 +86,14 @@ case class ValidationPass(
         validateUser(sa, parentsAsSeq)
       case omc: OnMessageClause =>
         validateOnMessageClause(omc, parentsAsSeq)
-        validateStatements(omc.contents, omc, parentsAsSeq)
       case oic: OnInitializationClause =>
         checkDefinition(parentsAsSeq, oic)
-        validateStatements(oic.contents, oic, parentsAsSeq)
       case otc: OnTerminationClause =>
         checkDefinition(parentsAsSeq, otc)
-        validateStatements(otc.contents, otc, parentsAsSeq)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
-        validateStatements(ooc.contents, ooc, parentsAsSeq)
+      case statement: Statement =>
+        validateStatement(statement, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
       case c: Constant =>
@@ -145,16 +142,20 @@ case class ValidationPass(
         validateOutput(out, parentsAsSeq)
       case cg: ContainedGroup =>
         validateContainedGroup(cg, parentsAsSeq)
-      case _: BriefDescription    => () // Just text, nothing to validate
-      case _: Root                => () // No validation needed
-      case _: Definition          => () // No validation on abstract type
+      case root: Root => 
+        checkContents(root, parentsAsSeq)
+      case _: Definition => () // abstract type  
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
   }
+  private def validateOnClause(onClause: OnClause, parents: Parents): Unit =
+    if onClause.statements.isEmpty then messages.add(missing(s"${onClause.identify} should have statements"))
+  end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
     checkDefinition(parents, omc)
+    validateOnClause(omc, parents)
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
@@ -180,94 +181,84 @@ case class ValidationPass(
     omc.from.foreach { (_: Option[Identifier], ref: Reference[Definition]) =>
       checkRef[Definition](ref, parents)
     }
-    checkDescriptions(omc,omc.contents)
+    checkDescriptions(omc, omc.contents)
   }
 
-  private def validateStatements(
-    statements: Seq[Statements],
-    onClause: OnClause,
+  private def validateStatement(
+    statement: Statement,
     parents: Parents
-  ): Unit = {
-    if statements.isEmpty then
-      messages.add(
-        missing(s"${onClause.identify} should have statements")
-      )
-    else
-      val newParents = onClause +: parents
-      for { statement <- statements } do {
-        statement match {
-          case ArbitraryStatement(loc, what) =>
-            checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
-          case FocusStatement(loc, group) =>
-            checkRef[Group](group, newParents)
-          case ErrorStatement(loc, message) =>
-            checkNonEmptyValue(message, "error description", onClause, loc, MissingWarning, required = true)
-          case SetStatement(loc, field, value) =>
-            checkRef[Field](field, newParents)
-            checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
-          case ReturnStatement(loc, value) =>
-            checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
-          case SendStatement(loc, msg, portlet) =>
-            checkRef[Type](msg, newParents)
-            checkRef[Portlet](portlet, newParents)
-          case ReplyStatement(loc, message) =>
-            checkRef[Type](message, newParents)
-          case MorphStatement(loc, entity, state, value) =>
-            checkRef[Entity](entity, newParents)
-            checkRef[State](state, newParents)
-            checkRef[Type](value, newParents)
-          case BecomeStatement(loc, entityRef, handlerRef) =>
-            checkRef[Entity](entityRef, newParents).foreach { entity =>
-              checkCrossContextReference(entityRef.pathId, entity, onClause)
-            }
-            checkRef[Handler](handlerRef, newParents).foreach { handler =>
-              checkCrossContextReference(handlerRef.pathId, handler, onClause)
-            }
-          case TellStatement(loc, msg, processorRef) =>
-            val maybeProc = checkRef[Processor[?]](processorRef, parents)
-            maybeProc.foreach { entity =>
-              checkCrossContextReference(processorRef.pathId, entity, onClause)
-            }
-            val maybeType = checkRef[Type](msg, newParents)
-            maybeType.foreach { typ =>
-              checkCrossContextReference(msg.pathId, typ, onClause)
-            }
-
-          case CallStatement(loc, funcRef) =>
-            checkRef[Function](funcRef, newParents).foreach { function =>
-              checkCrossContextReference(funcRef.pathId, function, onClause)
-            }
-
-          case ForEachStatement(loc, ref, do_) =>
-            checkPathRef[Type](ref.pathId, newParents).foreach { typ =>
-              checkCrossContextReference(ref.pathId, typ, onClause)
-              check(
-                typ.typEx.hasCardinality,
-                s"The foreach statement requires a type with cardinality but ${ref.pathId.format} does not",
-                Messages.Error,
-                loc
-              )
-            }
-            checkNonEmpty(do_, "statement list", onClause, MissingWarning)
-          case IfThenElseStatement(loc, cond, thens, elses) =>
-            checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
-            checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
-            checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
-          case ReadStatement(loc, keyword, what, from, where) =>
-            checkNonEmpty(keyword, "read keyword", onClause, loc, Messages.Error, required = true)
-            checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-            checkTypeRef(from, parents)
-            checkNonEmptyValue(where, "where", onClause, loc, MissingWarning, required = false)
-          case WriteStatement(loc, keyword, what, to) =>
-            checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
-            checkTypeRef(to, parents)
-            checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-          case _: CodeStatement => ()
-          case _: StopStatement => ()
-          case _: Comment       => ()
+  ): Unit =
+    val onClause: OnClause = parents.head.asInstanceOf[OnClause]
+    statement match
+      case ArbitraryStatement(loc, what) =>
+        checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
+      case FocusStatement(_, group) =>
+        checkRef[Group](group, parents)
+      case ErrorStatement(loc, message) =>
+        checkNonEmptyValue(message, "error description", onClause, loc, MissingWarning, required = true)
+      case SetStatement(loc, field, value) =>
+        checkRef[Field](field, parents)
+        checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
+      case ReturnStatement(loc, value) =>
+        checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
+      case SendStatement(loc, msg, portlet) =>
+        checkRef[Type](msg, parents)
+        checkRef[Portlet](portlet, parents)
+      case ReplyStatement(loc, message) =>
+        checkRef[Type](message, parents)
+      case MorphStatement(loc, entity, state, value) =>
+        checkRef[Entity](entity, parents)
+        checkRef[State](state, parents)
+        checkRef[Type](value, parents)
+      case BecomeStatement(loc, entityRef, handlerRef) =>
+        checkRef[Entity](entityRef, parents).foreach { entity =>
+          checkCrossContextReference(entityRef.pathId, entity, onClause)
         }
-      }
-  }
+        checkRef[Handler](handlerRef, parents).foreach { handler =>
+          checkCrossContextReference(handlerRef.pathId, handler, onClause)
+        }
+      case TellStatement(loc, msg, processorRef) =>
+        val maybeProc = checkRef[Processor[?]](processorRef, parents)
+        maybeProc.foreach { entity =>
+          checkCrossContextReference(processorRef.pathId, entity, onClause)
+        }
+        val maybeType = checkRef[Type](msg, parents)
+        maybeType.foreach { typ =>
+          checkCrossContextReference(msg.pathId, typ, onClause)
+        }
+      case CallStatement(loc, funcRef) =>
+        checkRef[Function](funcRef, parents).foreach { function =>
+          checkCrossContextReference(funcRef.pathId, function, onClause)
+        }
+
+      case ForEachStatement(loc, ref, do_) =>
+        checkPathRef[Type](ref.pathId, parents).foreach { typ =>
+          checkCrossContextReference(ref.pathId, typ, onClause)
+          check(
+            typ.typEx.hasCardinality,
+            s"The foreach statement requires a type with cardinality but ${ref.pathId.format} does not",
+            Messages.Error,
+            loc
+          )
+        }
+        checkNonEmpty(do_, "statement list", onClause, MissingWarning)
+      case IfThenElseStatement(loc, cond, thens, elses) =>
+        checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
+        checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
+        checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
+      case ReadStatement(loc, keyword, what, from, where) =>
+        checkNonEmpty(keyword, "read keyword", onClause, loc, Messages.Error, required = true)
+        checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
+        checkTypeRef(from, parents)
+        checkNonEmptyValue(where, "where", onClause, loc, MissingWarning, required = false)
+      case WriteStatement(loc, keyword, what, to) =>
+        checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
+        checkTypeRef(to, parents)
+        checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
+      case _: CodeStatement => ()
+      case _: StopStatement => ()
+    end match
+  end validateStatement
 
   private def validateTerm(
     t: Term,
@@ -343,6 +334,7 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, inlet)
     checkRef[Type](inlet.type_, parents)
+    addInlet(inlet)
   }
 
   private def validateOutlet(
@@ -351,6 +343,7 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, outlet)
     checkRef[Type](outlet.type_, parents)
+    addOutlet(outlet)
   }
 
   private def validateConnector(
@@ -358,6 +351,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     if connector.nonEmpty then
+      addConnector(connector)
       val maybeOutlet = checkRef[Outlet](connector.from, parents)
       val maybeInlet = checkRef[Inlet](connector.to, parents)
 
@@ -369,8 +363,8 @@ case class ValidationPass(
             messages.addError(
               inlet.loc,
               s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
-                s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} which are " +
-                s"not the same types"
+                s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} " +
+                s"which are not the same types"
             )
           }
         case _ =>
@@ -572,6 +566,7 @@ case class ValidationPass(
     streamlet: Streamlet,
     parents: Parents
   ): Unit = {
+    addStreamlet(streamlet)
     checkContainer(parents, streamlet)
     checkDescriptions(streamlet, streamlet.contents)
   }

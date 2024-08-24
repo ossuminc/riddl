@@ -95,7 +95,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     definition match
       case c: Context =>
         val aggregates = c.entities.filter(_.hasOption("aggregate"))
-        val domain = parents.head.asInstanceOf[Domain]
+        val domain = parents.top.asInstanceOf[Domain]
         val root = parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
         val relationships = makeRelationships(c,root)
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates, relationships))

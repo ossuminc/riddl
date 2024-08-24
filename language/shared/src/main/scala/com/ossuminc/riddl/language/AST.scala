@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.{ClassTag, classTag}
-import scala.annotation.{tailrec, unused}
+import scala.annotation.{tailrec, targetName, unused}
 import scala.io.{BufferedSource, Codec}
 import scala.scalajs.js.annotation.*
 
@@ -30,7 +30,7 @@ object AST {
     * a RiddlNode. Subclasses implement the definitions in various ways because this is the most abstract notion of what
     * is parsed.
     */
-  sealed trait RiddlValue {
+  sealed trait RiddlValue:
 
     /** The location in the parse at which this RiddlValue occurs */
     def loc: At
@@ -99,7 +99,7 @@ object AST {
     /** Provide a string to specify the kind of thing this value is */
     def kind: String = this.getClass.getSimpleName
 
-  }
+  end RiddlValue
 
   /** The kinds of things that are valid content, either immediate or future */
   type ContentValues = RiddlValue
@@ -108,6 +108,7 @@ object AST {
   type Contents[+CV <: ContentValues] = Seq[CV]
   object Contents:
     def empty = Seq.empty
+  end Contents
 
   /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
   extension [CV <: ContentValues](container: Contents[CV])
@@ -123,10 +124,10 @@ object AST {
       * @return
       *   The Seq of type `T` found in the [[Contents]]
       */
-    def filter[T <: RiddlValue: ClassTag]: Contents[T] = {
+    def filter[T <: RiddlValue: ClassTag]: Contents[T] =
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
-    }
+    end filter
 
     /** Returns the elements of the [[Contents]] that are [[VitalDefinition]]s */
     def vitals: Contents[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
@@ -146,18 +147,18 @@ object AST {
     def includes: Contents[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
 
     /** find the elements of the [[Contents]] that are [[Definition]]s */
-    def definitions: Contents[Definition] = container.filter[Definition].map(_.asInstanceOf[Definition])
+    def definitions: Definitions = container.filter[Definition].map(_.asInstanceOf[Definition])
 
     /** find the elemetns of the [[Contents]] that are [[Parent]]s */
     def parents: Contents[Parent] = container.filter[Parent].asInstanceOf[Contents[Parent]]
+  end extension
 
   /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
     *
     * @tparam CV
     *   The kind of contained value that is contained within.
     */
-  sealed trait Container[+CV <: ContentValues] extends RiddlValue {
-
+  sealed trait Container[+CV <: ContentValues] extends RiddlValue:
     /** The definitional contents of this Container value. The [[contents]] are constrained by the type parameter CV so
       * subclasses must honor that constraint.
       */
@@ -167,14 +168,13 @@ object AST {
 
     /** Force all subclasses to return true as they are containers */
     final inline override def isContainer: Boolean = true
-
-  }
+  end Container
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
-  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] {
+  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV]:
     def format: String = ""
     def loc: At = At.empty
-  }
+  end SimpleContainer
 
   /** Represents a literal string parsed between quote characters in the input
     *
@@ -184,19 +184,19 @@ object AST {
     *   The parsed value of the string content
     */
 
-  case class LiteralString(loc: At, s: String) extends RiddlValue {
+  case class LiteralString(loc: At, s: String) extends RiddlValue:
     override def format = s"\"$s\""
 
     /** Only empty if the string is empty too */
     override def isEmpty: Boolean = s.isEmpty
-  }
+  end LiteralString
 
   /** Companion for LiteralString class to provide the empty value */
-  object LiteralString {
+  object LiteralString:
 
     /** Definition of the empty LiteralString */
     val empty: LiteralString = LiteralString(At.empty, "")
-  }
+  end LiteralString
 
   /** A RiddlValue that is a parsed identifier, typically the name of a definition.
     *
@@ -205,17 +205,16 @@ object AST {
     * @param value
     *   The parsed value of the [[Identifier]]
     */
-  case class Identifier(loc: At, value: String) extends RiddlValue {
+  case class Identifier(loc: At, value: String) extends RiddlValue:
     override def format: String = value
     override def isEmpty: Boolean = value.isEmpty
-  }
+  end Identifier
 
   /** Companion object for the Identifier class to provide the empty value */
-  object Identifier {
-
+  object Identifier:
     /** Definition of the empty [[Identifier]] */
     val empty: Identifier = Identifier(At.empty, "")
-  }
+  end Identifier
 
   /** Represents a segmented identifier to a definition in the model. Path Identifiers are parsed from a dot-separated
     * list of identifiers in the input. Path identifiers are used to reference other definitions in the model.
@@ -225,17 +224,16 @@ object AST {
     * @param value
     *   The list of strings that make up the path identifier
     */
-  case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue {
-    override def format: String = { value.mkString(".") }
+  case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue:
+    override def format: String = value.mkString(".")
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
-  }
+  end PathIdentifier
 
   /** Companion object of the PathIdentifier class to provide its empty value */
-  object PathIdentifier {
-
+  object PathIdentifier:
     /** The empty [[PathIdentifier]] */
     val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
-  }
+  end PathIdentifier
 
   /** A single line description for any vital definition
     * @param brief
@@ -244,33 +242,32 @@ object AST {
   case class BriefDescription(
     loc: At,
     brief: LiteralString
-  ) extends RiddlValue {
+  ) extends RiddlValue:
     def format: String = s"briefly"
-  }
+  end BriefDescription
 
   /** The description of a definition. All definitions have a name and an optional description. This class provides the
     * description part.
     */
-  sealed trait Description extends RiddlValue {
+  sealed trait Description extends RiddlValue:
 
     /** All kinds of [[Description]] have a location provided by an [[At]] value. */
     def loc: At
 
     /** The lines of the description abstractly defined to be provided by subclasses */
     def lines: Seq[LiteralString]
-  }
+  end Description
 
   /** Companion class for Description only to define the empty value */
   @JSExportTopLevel("Description$")
-  object Description {
-
+  object Description:
     /** The empty [[Description]] definition */
     lazy val empty: Description = new Description {
       val loc: At = At.empty
       val lines = Seq.empty[LiteralString]
       def format: String = ""
     }
-  }
+  end Description
 
   /** An implementation of a [[Description]] that implements the lines directly as a [[Seq]] of [[LiteralString]]
     * @param loc
@@ -281,11 +278,11 @@ object AST {
   case class BlockDescription(
     loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString]
-  ) extends Description {
+  ) extends Description:
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
     override def hasDescription: Boolean = lines.nonEmpty
     def format: String = ""
-  }
+  end BlockDescription
 
   /** An URL based implementation of [[Description]] that provides the description in a Markdown file
     * @param loc
@@ -293,20 +290,19 @@ object AST {
     * @param url
     *   The URL for the file content that is the description.
     */
-  case class URLDescription(loc: At, url: URL) extends Description {
-
+  case class URLDescription(loc: At, url: URL) extends Description:
     lazy val lines: Seq[LiteralString] = {
       import com.ossuminc.riddl.utils.{Loader, Await}
       val future = Loader(url).load.map(_.split("\n").toSeq.map(LiteralString(loc, _)))
       Await.result(future, 10)
     }
     override def format: String = url.toExternalForm
-  }
+  end URLDescription
 
   /** This trait represents the base trait of all comments recognized by the parser */
-  sealed trait Comment extends RiddlValue {
+  sealed trait Comment extends RiddlValue:
     final inline override def isComment: Boolean = true
-  }
+  end Comment
 
   /** The AST Representation of a single line comment in the input. LineComments can only occur after the closing brace,
     * }, of a definition. The comment is stored within the [[Definition]]
@@ -327,9 +323,9 @@ object AST {
     * @param lines
     *   The lines of the comment without line terminators
     */
-  case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment {
+  case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment:
     def format: String = lines.mkString("/* ", "\n * ", "\n */\n")
-  }
+  end InlineComment
 
   /** Base trait for option values for any option of a definition.
     *
@@ -340,17 +336,16 @@ object AST {
     * @param args
     *   THe arguments of the option as [[LiteralString]] which may be empty
     */
-  case class OptionValue(loc: At, name: String, args: Seq[LiteralString] = Seq.empty) extends RiddlValue {
+  case class OptionValue(loc: At, name: String, args: Seq[LiteralString] = Seq.empty) extends RiddlValue:
     override def format: String = "option " + name + args.map(_.format).mkString("(", ", ", ")")
-  }
+  end OptionValue
 
   /** A reference to a definition of a specific type.
     *
     * @tparam T
     *   The type of definition to which the references refers.
     */
-  sealed abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue {
-
+  sealed abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue:
     /** The Path identifier to the referenced definition
       */
     def pathId: PathIdentifier
@@ -362,16 +357,16 @@ object AST {
     /** @return
       *   String A string that describes this reference
       */
-    def identify: String = {
+    def identify: String =
       s"${classTag[T].runtimeClass.getSimpleName} ${
           if id.nonEmpty then {
             id.map(_.format + ": ")
           } else ""
         }'${pathId.format}'${loc.toShort}"
-    }
+    end identify
 
     override def isEmpty: Boolean = pathId.isEmpty
-  }
+  end Reference
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
   ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
@@ -379,7 +374,7 @@ object AST {
   /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]],
     * [[Definition]] and any other thing that needs to be identified by name.
     */
-  sealed trait WithIdentifier extends RiddlValue {
+  sealed trait WithIdentifier extends RiddlValue:
 
     /** the name/identifier of this value. All definitions have one */
     def id: Identifier
@@ -390,83 +385,80 @@ object AST {
     override final inline def isAnonymous: Boolean = id.value.isEmpty
 
     /** Convert the identifier into a string format with its [[kind]] and dealing with anonymity. */
-    def identify: String = {
+    def identify: String =
       if id.isEmpty then {
         s"Anonymous $kind"
       } else {
         s"$kind '${id.format}'"
       }
-    }
+    end identify
 
     /** Same as [[identify]] but also adds the value's location via [[loc]] */
     def identifyWithLoc: String = s"$identify at $loc"
-  }
+  end WithIdentifier
 
   /** A trait to add a brief description string to a RiddlValue */
-  sealed trait WithBriefs extends Container[ContentValues] {
+  sealed trait WithBriefs extends Container[ContentValues]:
 
     /** The optional brief description of the value */
     def briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
 
     /** A reliable extractor of the brief description, dealing with the Optionality of it */
     @unused
-    def briefString: String = {
+    def briefString: String =
       if briefs.isEmpty then "No brief description."
       else briefs.map(_.brief.s).mkString("\n")
-    }
+    end briefString
 
     override def hasBriefDescription: Boolean = briefs.exists(_.brief.s.nonEmpty)
-  }
+  end WithBriefs
 
-  sealed trait WithABrief extends RiddlValue {
+  sealed trait WithABrief extends RiddlValue:
     def brief: Option[BriefDescription]
-    def briefString: String = {
-      brief.map(_.brief.s).getOrElse("No brief description")
-    }
-  }
+    def briefString: String = brief.map(_.brief.s).getOrElse("No brief description")
+  end WithABrief
 
-  sealed trait WithADescription extends RiddlValue {
+  sealed trait WithADescription extends RiddlValue:
     def description: Option[Description]
-  }
+  end WithADescription
 
   /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
-  sealed trait WithDescriptions extends Container[ContentValues] {
-
+  sealed trait WithDescriptions extends Container[ContentValues]:
     /** The optional [[Description]] which can be provided in several ways such as [[BlockDescription]] or
       * [[URLDescription]]
       */
     lazy val descriptions: Contents[Description] = contents.filter[Description]
-  }
+  end WithDescriptions
 
   /** A trait that includes the `comments` field to extract the comments from the contents */
-  sealed trait WithComments extends Container[ContentValues] {
+  sealed trait WithComments extends Container[ContentValues]:
 
     /** A lazily constructed [[Seq]] of [[Comment]] filtered from the contents */
     lazy val comments: Contents[Comment] = contents.filter[Comment]
-  }
+  end WithComments
 
   /** Added to definitions that support includes */
-  sealed trait WithIncludes[CT <: ContentValues] extends Container[CT] {
+  sealed trait WithIncludes[CT <: ContentValues] extends Container[CT]:
 
     /** A lazily constructed [[Seq]] of [[Include]] filtered from the contents */
     lazy val includes: Contents[Include[CT]] = contents.filter[Include[CT]]
     final override def hasIncludes = true
-  }
+  end WithIncludes
 
   /** Added to definitions that support a list of term definitions */
-  sealed trait WithTerms extends Container[ContentValues] {
+  sealed trait WithTerms extends Container[ContentValues]:
 
     /** A lazily constructed [[Seq]] of [[Term]] filtered from the contents */
     lazy val terms: Contents[Term] = contents.filter[Term]
-  }
+  end WithTerms
 
   /** A trait that provides the [[AuthorRef]] to indicate who authored the definition */
-  sealed trait WithAuthorRefs extends Container[ContentValues] {
+  sealed trait WithAuthorRefs extends Container[ContentValues]:
 
     /** A lazily constructed [[Seq]] of [[AuthorRef]] filtered from the contents */
     lazy val authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
     override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
-  }
+  end WithAuthorRefs
 
   /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
     * queried, and formatted.
@@ -687,12 +679,13 @@ object AST {
   ///// This section defines various abstract things needed by the rest of the definitions
 
   /** The list of definitions to which a reference cannot be made */
-  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant | Definition
+  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant |
+    Definition
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
-    TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema | ShownBy | SimpleContainer[?]
+    TypeExpression | Comment | OptionValue | Reference[?] | StreamletShape | AdaptorDirection | UserStory |
+    MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInRoot = Comment | Domain | Author
@@ -814,10 +807,13 @@ object AST {
     * @see
     *   [[BranchDefinition]] and [[LeafDefinition]]
     */
-  sealed trait Definition extends WithIdentifier {
+  sealed trait Definition extends WithIdentifier:
     /** Yes anything deriving from here is a definition */
     override def isDefinition: Boolean = true
-  }
+    override def isParent: Boolean = false
+    override def hasDefinitions: Boolean = false
+  end Definition
+
   object Definition:
     /** The canonical value for "empty" Definition which can usually be interpeted as "Not Found" */
     lazy val empty: Definition = new Definition {
@@ -829,43 +825,66 @@ object AST {
   end Definition
 
   /** The Base trait for a definition that contains some unrestricted kind of content, ContentValues */
-  sealed trait Parent extends Definition with Container[ContentValues] {
+  sealed trait Parent extends Definition with Container[ContentValues]:
     override def isParent: Boolean = true
-  }
-
-  /** Base trait for all definitions that have a specific kind of contents */
-  sealed trait BranchDefinition[CV <: ContentValues] extends Parent with Container[CV] {
 
     /** True iff there are contained definitions */
     override def hasDefinitions: Boolean = contents.definitions.nonEmpty
-  }
-
-  /** A simple sequence of Parents from the closest all the way up to the Root */
-  type Parents = Contents[Parent]
-  object Parents:
-    def empty: Parents = Contents.empty
-
-  /** A mutable stack of Parent[?] for keeping track of the parent hierarchy */
-  type ParentStack = mutable.Stack[Parent]
-
-  /** Extension methods for the ParentStack type */
-  extension (ps: ParentStack)
-    /** Convert the mutable ParentStack into an immutable Parents Seq */
-    def toParentsSeq: Parents = ps.toSeq.asInstanceOf[Parents]
-
-  /** A Companion to the ParentStack class */
-  object ParentStack:
-    /** @return  an empty ParentStack */
-    def empty: ParentStack = mutable.Stack.empty[Parent]
-
-  /** The kind of thing that can be returned by PathId Resolution Pass optionally providing
-   * the referent and its Parental context, or None */
-  type Resolution[T <: Definition] = Option[(T, Parents)]
+  end Parent
 
   /** A leaf node in the hierarchy of definitions. Leaves have no content, unlike [[Parent]]. They do permit a single
     * [[BriefDescription]] value and single [[Description]] value. There are no contents.
     */
   sealed trait LeafDefinition extends Definition with WithABrief with WithADescription
+
+  /** Base trait for all definitions that have a specific kind of contents */
+  sealed trait BranchDefinition[CV <: ContentValues] extends Parent with Container[CV]
+
+  type Definitions = Contents[Definition] // TODO: Make this opaque some day
+
+  object Definitions:
+    def empty: Definitions = Contents.empty
+  end Definitions
+
+  /** A simple sequence of Parents from the closest all the way up to the Root */
+  type Parents = Contents[Parent] // TODO: Make this opaque some day
+
+  object Parents:
+    def empty: Parents = Contents.empty
+  end Parents
+
+  /** A mutable stack of Parent[?] for keeping track of the parent hierarchy */
+  type ParentStack = mutable.Stack[Parent] // TODO: Make this opaque some day
+
+  /** Extension methods for the ParentStack type */
+  extension (ps: ParentStack)
+    /** Convert the mutable ParentStack into an immutable Parents Seq */
+    def toParents: Parents = ps.toSeq.asInstanceOf[Parents]
+  end extension
+
+  /** A Companion to the ParentStack class */
+  object ParentStack:
+    /** @return  an empty ParentStack */
+    def empty: ParentStack = mutable.Stack.empty[Parent]
+  end ParentStack
+
+  type DefinitionStack = mutable.Stack[Definition] // TODO: Make this opaque some day
+
+  extension (ds: DefinitionStack)
+    def toDefinitions: Definitions = ds.toSeq.asInstanceOf[Definitions]
+    def isOnlyParents: Boolean = ds.forall(_.isParent)
+    def toParentStack: ParentStack = ds.filter(_.isParent).map(_.asInstanceOf[Parent]).asInstanceOf[ParentStack]
+    def toParentsSeq: Seq[Parent] = ds.filter(_.isParent).map(_.asInstanceOf[Parent]).toSeq
+  end extension
+
+  object DefinitionStack:
+    def empty: DefinitionStack = mutable.Stack.empty[Definition]
+  end DefinitionStack
+
+  /** The kind of thing that can be returned by PathId Resolution Pass optionally providing the referent and its
+    * Parental context, or None
+    */
+  type Resolution[T <: Definition] = Option[(T, Parents)]
 
   /** The base class of the primary, or vital, definitions. Most of the important definitions are derivatives of this
     * sealed trait. All vital definitions contain comments, documentation, options, authors that defined it, include
@@ -881,10 +900,9 @@ object AST {
       with WithBriefs
       with WithOptions
       with WithAuthorRefs
-      with WithTerms {
-
+      with WithTerms:
     final override def isVital: Boolean = true
-  }
+  end VitalDefinition
 
   /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
     * handlers, functions, and take messages directly with a reference). Processors are the active portion of a model
@@ -900,11 +918,9 @@ object AST {
       with WithFunctions
       with WithHandlers
       with WithInlets
-      with WithOutlets {
-
+      with WithOutlets:
     final override def isProcessor: Boolean = true
-
-  }
+  end Processor
 
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
   //// The types defined in this section provide utility to the other definitions for includes and references.
@@ -924,13 +940,13 @@ object AST {
     loc: At = At.empty,
     origin: URL = URL.empty,
     contents: Contents[CT]
-  ) extends Container[CT] {
+  ) extends Container[CT]:
 
     override def isRootContainer: Boolean = true
 
     def format: String = s"include \"$origin\""
     override def toString: String = format
-  }
+  end Include
 
   /** Base trait of a reference to definitions that can accept a message directly via a reference
     *
@@ -1994,7 +2010,9 @@ object AST {
     typEx: TypeExpression,
     brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends BranchDefinition[TypeContents] with WithABrief with WithADescription {
+  ) extends BranchDefinition[TypeContents]
+      with WithABrief
+      with WithADescription {
     def contents: Contents[TypeContents] = {
       typEx match {
         case a: Aggregation                    => a.fields ++ a.methods
@@ -2680,9 +2698,9 @@ object AST {
     typ: TypeRef,
     brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends LeafDefinition {
+  ) extends LeafDefinition:
     def format: String = Keyword.state + " " + id.format
-  }
+  end State
 
   /** A reference to an entity's state definition
     *
@@ -2692,9 +2710,9 @@ object AST {
     *   The path identifier of the referenced state definition
     */
   @JSExportTopLevel("StateRef")
-  case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State] {
+  case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State]:
     def format: String = Keyword.state + " " + pathId.format
-  }
+  end StateRef
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ENTITY
 
@@ -2714,9 +2732,9 @@ object AST {
     contents: Contents[EntityContents] = Seq.empty
   ) extends Processor[EntityContents]
       with WithStates
-      with WithOptions {
+      with WithOptions:
     override def format: String = Keyword.entity + " " + id.format
-  }
+  end Entity
 
   /** A reference to an entity
     *
@@ -2726,9 +2744,9 @@ object AST {
     *   The path identifier of the referenced entity.
     */
   @JSExportTopLevel("EntityRef")
-  case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity] {
+  case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity]:
     def format: String = Keyword.entity + " " + pathId.format
-  }
+  end EntityRef
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
 
@@ -2762,9 +2780,9 @@ object AST {
     indices: Seq[FieldRef] = Seq.empty[FieldRef],
     brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends LeafDefinition {
+  ) extends LeafDefinition:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
-  }
+  end Schema
 
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
     * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
@@ -3636,7 +3654,9 @@ object AST {
     id: Identifier,
     contents: Contents[OccursInGroup] = Seq.empty[OccursInGroup]
   ) extends BranchDefinition[OccursInGroup]
-      with WithShownBy with WithBriefs with WithDescriptions {
+      with WithShownBy
+      with WithBriefs
+      with WithDescriptions {
     override def identify: String = s"$alias ${id.value}"
 
     /** Format the node to a string */

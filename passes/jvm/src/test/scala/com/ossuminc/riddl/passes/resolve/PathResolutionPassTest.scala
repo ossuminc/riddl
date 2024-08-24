@@ -13,7 +13,7 @@ import org.scalatest.TestData
 class PathResolutionPassTest extends ResolvingTest {
 
   "PathResolutionPass" must {
-    "resolve a full path" in {(td: TestData) =>
+    "resolve a full path" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain A {
           |  domain B {
@@ -22,7 +22,8 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |  type APrime = A.B.C.D
-          |}""".stripMargin,td
+          |}""".stripMargin,
+        td
       )
       parseAndResolve(rpi) { (input, outputs) =>
         val target: Type = input.root.domains.head.domains.head.domains.head.types.head
@@ -48,7 +49,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    type FromB = B.C.D
           |  }
           |
-          |}""".stripMargin, td)
+          |}""".stripMargin,
+        td
+      )
       parseAndResolve(rpi) { (in, outs) =>
         val target: Type = in.root.domains.head.domains.head.domains.head.types.head
         val parent = in.root.domains.head.domains.head.types.head
@@ -68,7 +71,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |  type Top = String
           |  type aTop = type A.Top
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (in, outs) =>
         val target: Type = in.root.domains.head.types.find(_.id.value == "Top").get
         val parent: Type = in.root.domains.head.types.find(_.id.value == "aTop").get
@@ -93,7 +98,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    type InC = A.B.InB
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (_, _) => succeed }
     }
 
@@ -111,7 +118,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (_, _) => succeed }
     }
 
@@ -133,7 +142,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (_, _) => succeed }
     }
 
@@ -155,7 +166,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (_, _) => succeed }
     }
 
@@ -189,7 +202,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (in, outs) =>
         outs.getAllMessages mustBe Messages.empty
         val Top = in.root.domains.head.types.head
@@ -222,10 +237,12 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin, td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (_, _) => succeed }
     }
-    "deal with cyclic references" in { (td: TestData) =>
+    "deal with cyclic references" in { td =>
       val input = RiddlParserInput(
         """domain A {
           |  type T is { tp: A.TPrime } // Refers to T.TPrime
@@ -245,15 +262,17 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (_, _) => succeed } { messages =>
         val errors = messages.justErrors
+        info(errors.format)
         errors must be(empty)
-        fail(errors.format)
       }
     }
 
-    "resolve simple path directly" in { (td: TestData) =>
+    "resolve simple path directly" in { td =>
       val input = RiddlParserInput(
         """domain D {
           |  context C {
@@ -271,11 +290,13 @@ class PathResolutionPassTest extends ResolvingTest {
           |    }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (_, _) => succeed }
     }
-    "resolve simple path through an include" in { (td: TestData) =>
-      import com.ossuminc.riddl.utils.URL 
+    "resolve simple path through an include" in { td =>
+      import com.ossuminc.riddl.utils.URL
       val eL = At.empty
       val root = Root(
         contents = Seq(
@@ -333,7 +354,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    entity Customer is { ??? }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(input) { (in, outs) =>
         val entity = in.root.domains.head.contexts.head.entities.head
         entity.getClass mustBe classOf[Entity]
@@ -364,22 +387,30 @@ class PathResolutionPassTest extends ResolvingTest {
         """domain Ignore is {
           |  context Ignore2 is {
           |    entity OfInterest is {
-          |      command MorphIt is {}
+          |      command MorphIt is { ??? }
           |      record Data is { field: Integer }
-          |      state First of Data is { ??? }
-          |      state Second of Data is {
-          |        handler only is {
-          |          on command MorphIt {
-          |            |morph entity Ignore2.OfInterest to state OfInterest.First
-          |            |  with !OfInterest.Data(field=3)
-          |          }
+          |      state First of record Data
+          |      state Second of record Data
+          |      handler only is {
+          |        on command MorphIt {
+          |          morph entity Ignore2.OfInterest to state OfInterest.First
+          |            with command MorphIt // WTF is this for?
           |        }
           |      }
           |    }
           |  }
           |}
-          |""".stripMargin, td)
-      parseAndResolve(input) { (_, _) => succeed }
+          |""".stripMargin,
+        td
+      )
+      parseAndResolve(input) { (_, _) => succeed } { messages => 
+        val errors = messages.justErrors
+        if errors.nonEmpty then
+          info(errors.format)
+          fail("Should have succeeded")
+        else
+          succeed  
+      }
     }
     "resolve a path identifier" in { (td: TestData) =>
       val rpi = RiddlParserInput(
@@ -395,7 +426,9 @@ class PathResolutionPassTest extends ResolvingTest {
           |    command foo is { ??? }
           |  }
           |}
-          |""".stripMargin, td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(rpi)()()
     }
     "groups contain groups" in { (td: TestData) =>
@@ -406,11 +439,12 @@ class PathResolutionPassTest extends ResolvingTest {
           |    group container { contains member as group contained }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
         val app: Application = pi.root.domains.head.applications.head
         val contained: Group = app.groups.head
-        val container: Group = app.groups(1)
         po.refMap.definitionOf[Group]("contained") match
           case Some(group: Group) =>
             group mustBe contained

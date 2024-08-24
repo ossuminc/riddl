@@ -9,8 +9,14 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Messages}
 import scala.math.abs
+import scala.collection.mutable
 
 trait StreamingValidation extends TypeValidation {
+
+  def addInlet(inlet: Inlet): Unit = inlets.addOne(inlet)
+  def addOutlet(outlet: Outlet): Unit = outlets.addOne(outlet)
+  def addStreamlet(streamlet: Streamlet): Unit = streamlets.addOne(streamlet)
+  def addConnector(connector: Connector): Unit = connectors.addOne(connector)
 
   def checkStreaming(root: Root): Unit = {
     val start = root.domains.headOption.map(_.id.loc).getOrElse(At.empty)
@@ -19,11 +25,10 @@ trait StreamingValidation extends TypeValidation {
     checkUnattachedOutlets()
   }
 
-  val inlets: Seq[Inlet] = resolution.kindMap.definitionsOfKind[Inlet]
-  val outlets: Seq[Outlet] = resolution.kindMap.definitionsOfKind[Outlet]
-  val streamlets: Seq[Streamlet] = resolution.kindMap.definitionsOfKind[Streamlet]
-  val connectors: Seq[Connector] = resolution.kindMap.definitionsOfKind[Connector]
-  val processors: Seq[Processor[?]] = resolution.kindMap.definitionsOfKind[Processor[?]]
+  protected val inlets: mutable.ListBuffer[Inlet] = mutable.ListBuffer.empty
+  protected val outlets: mutable.ListBuffer[Outlet] = mutable.ListBuffer.empty
+  protected val streamlets: mutable.ListBuffer[Streamlet] = mutable.ListBuffer.empty
+  protected val connectors: mutable.ListBuffer[Connector] = mutable.ListBuffer.empty
 
   private def checkStreamingUsage(loc: At): Unit = {
     if inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty then {
@@ -73,7 +78,7 @@ trait StreamingValidation extends TypeValidation {
 
   private def checkUnattachedOutlets(): Unit = {
     val connected: Seq[(Outlet, Inlet)] = for
-      conn <- connectors
+      conn <- connectors.toSeq 
       parents = symbols.parentsOf(conn)
       inletRef = conn.to
       outletRef = conn.from

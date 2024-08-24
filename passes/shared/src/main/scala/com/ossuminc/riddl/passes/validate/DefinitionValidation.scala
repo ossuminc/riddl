@@ -7,7 +7,6 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
@@ -53,18 +52,20 @@ trait DefinitionValidation extends BasicValidation {
       MissingWarning,
       definition.loc
     )
-    if definition.isVital then {
-      definition.asInstanceOf[WithAuthorRefs].authorRefs.foreach { (authorRef: AuthorRef) =>
-        pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Parent] +: parents) match {
-          case None =>
-            messages.addError(
-              authorRef.loc,
-              s"${authorRef.format} is not defined"
-            )
-          case _ =>
+    definition match
+      case vd: VitalDefinition[?] =>
+        vd.authorRefs.foreach { (authorRef: AuthorRef) =>
+          pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Parent] +: parents) match
+            case None =>
+              messages.addError(
+                authorRef.loc,
+                s"${authorRef.format} is not defined"
+              )
+            case _ =>
+          end match
         }
-      }
-    }
+      case _ => ()
+    end match
 
     val path = symbols.pathOf(definition)
     if !definition.id.isEmpty then {
@@ -78,18 +79,24 @@ trait DefinitionValidation extends BasicValidation {
     }
   }
 
-  def checkContainer(
-    parents: Parents,
-    container: Parent
-  ): Unit = {
+  def checkContents(
+    container: Parent, parents: Parents
+  ): Unit =
     val parent: Parent = parents.headOption.getOrElse(Root.empty)
-    checkDefinition(parents, container)
     check(
-      container.nonEmpty || container.isInstanceOf[Field],
+      container.contents.definitions.nonEmpty || container.isInstanceOf[Field],
       s"${container.identify} in ${parent.identify} should have content",
       MissingWarning,
       container.loc
     )
+  end checkContents
+
+  def checkContainer(
+    parents: Parents,
+    container: Parent
+  ): Unit = {
+    checkDefinition(parents, container)
+    checkContents(container, parents)
     checkUniqueContent(container)
   }
 
@@ -122,7 +129,7 @@ trait DefinitionValidation extends BasicValidation {
       }
     end if
   end checkDescriptions
-  
+
   def checkDescription[TD <: WithADescription](
     value: TD
   ): Unit = {

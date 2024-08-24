@@ -282,9 +282,7 @@ passes/jvm/src/test/input/check/everything/everything.riddl(24:5):
  Type 'stamp' should start with a capital letter:
      type stamp is TimeStamp        // Define stamp as a TimeStamp
      ^
-passes/jvm/src/test/input/check/everything/everything.riddl(73:21):
- Path 'SomeOtherThing.otherThingState.someField1' was not resolved, in OnMessageClause 'event ItHappened'
- because definition 'someField1' was not found inside State 'otherThingState'
- and it should refer to a Field:
-           set field SomeOtherThing.otherThingState.someField1 to "field ItHappened.when"
-                     ^
+passes/jvm/src/test/input/check/everything/everything.riddl(51:7):
+ Function 'whenUnderTheInfluence' in Entity 'Something' should have content:
+       function whenUnderTheInfluence is {
+       ^

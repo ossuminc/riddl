@@ -66,3 +66,11 @@ passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
  Function 'UndoAnotherThing' is unused:
      function UndoAnotherThing {
      ^
+passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
+ Function 'AnotherThing' in Context 'ignore2' should have content:
+     function AnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
+ Function 'UndoAnotherThing' in Context 'ignore2' should have content:
+     function UndoAnotherThing {
+     ^

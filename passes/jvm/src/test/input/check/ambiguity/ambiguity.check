@@ -68,3 +68,11 @@ passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(1:8):
  Models without any streaming data will exhibit minimal effect:
  domain Inventory is {
         ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(3:5):
+ Entity 'Product' should have a description:
+     entity Product is {???}
+     ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
+ Entity 'Product' should have a description:
+     entity Product is {???}
+     ^

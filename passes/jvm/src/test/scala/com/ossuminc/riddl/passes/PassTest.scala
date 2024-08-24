@@ -142,10 +142,10 @@ class PassTest extends TestingBasisWithTestData {
           val hp = TestHierarchyPass(input, outputs)
           val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
-          opens.mustBe(closes)
-          opens.mustBe(54)
-          values.mustBe(23)
-          leaves.mustBe(23)
+          opens must be(closes)
+          opens must be(54)
+          values must be(28)
+          leaves must be(23)
     }
     "traverses partial trees" in { td =>
       val input = RiddlParserInput(

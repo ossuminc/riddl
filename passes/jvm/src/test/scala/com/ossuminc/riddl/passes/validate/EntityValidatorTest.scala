@@ -33,7 +33,7 @@ class EntityValidatorTest extends ValidatingTest {
           // msgs.count(_.kind.isWarning) mustBe 1
           val numMissing =
             msgs.count(_.kind.isMissing)
-          numMissing mustBe 3
+          numMissing mustBe 4
           entity.options must contain(OptionValue((3, 9, rpi), "finite-state-machine"))
           entity.options must contain(OptionValue((4, 9, rpi),"message-queue"))
           entity.options must contain(OptionValue((5, 9, rpi), "aggregate"))
@@ -90,7 +90,7 @@ class EntityValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           Error,
-          """Path 'SomeType' was not resolved, in Field 'field'
+          """Path 'SomeType' was not resolved, in Record 'fields'
             |because the sought name, 'SomeType', was not found in the symbol table,
             |and it should refer to a Type""".stripMargin
         )

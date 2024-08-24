@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.{At, CommonOptions}
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
 import org.scalatest.Assertion
 
-import java.nio.file.Path 
+import java.nio.file.Path
 import scala.reflect.*
 
 /** Convenience functions for tests that do validation */
@@ -260,9 +260,9 @@ abstract class ValidatingTest extends ParsingTest {
     content: String
   ): Assertion = {
     val condition = msgs.filter(_.kind == expectedKind).exists(_.message.contains(content))
-    assert(condition, s"; expecting, but didn't find $content', in:\n${msgs.format}")
+    assert(condition, s"; expecting, but didn't find:\n$content'\nin:\n${msgs.format}")
   }
-  
+
   def validateFile(
     label: String,
     fileName: String,

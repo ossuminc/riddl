@@ -20,7 +20,6 @@ case class ResolutionOutput(
   root: Root = Root.empty,
   messages: Messages.Messages = Messages.empty,
   refMap: ReferenceMap = ReferenceMap.empty,
-  kindMap: KindMap = KindMap.empty,
   usage: Usages = Usages.empty
 ) extends PassOutput {}
 
@@ -68,7 +67,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
   override def result(root: Root): ResolutionOutput =
-    ResolutionOutput(root, messages.toMessages, refMap, kindMap, Usages(uses, usedBy))
+    ResolutionOutput(root, messages.toMessages, refMap, Usages(uses, usedBy))
 
   override def close(): Unit = ()
 
@@ -76,192 +75,178 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     checkUnused()
   }
 
-  def process(value: RiddlValue, parents: ParentStack): Unit =
-    val resolution: Resolution[Definition] =
-      if value.isDefinition then
-        val definition = value.asInstanceOf[Definition]
-        kindMap.add(definition)
-        Some(definition -> parents.toParentsSeq)
-      else Some(parents.head -> parents.tail.toParentsSeq)
-      end if
-    resolution match
-      case None => ()
-      case Some((definition: Definition, resolutionParents: Parents)) =>
-        val parentsAsSeq =
-          if definition.isParent then definition.asInstanceOf[Parent] +: resolutionParents
-          else resolutionParents
-          end if
-        definition match
-          case ad: AggregateValue =>
-            resolveTypeExpression(ad.typeEx, parentsAsSeq)
-          case t: Type =>
-            resolveType(t, parentsAsSeq)
-          case mc: OnMessageClause =>
-            resolveOnMessageClause(mc, parentsAsSeq)
-          case ic: OnInitializationClause =>
-            resolveOnClauses(ic, parentsAsSeq)
-          case tc: OnTerminationClause =>
-            resolveOnClauses(tc, parentsAsSeq)
-          case oc: OnOtherClause =>
-            resolveOnClauses(oc, parentsAsSeq)
-          case e: Entity =>
-            e.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-            resolveStateReferences(e, parentsAsSeq)
-            addEntity(e)
-          case s: State =>
-          // resolveATypeRef(s.typ, parentsAsSeq)
-          case f: Function =>
-            resolveFunction(f, parentsAsSeq)
-          case i: Inlet =>
-            resolveATypeRef(i.type_, parentsAsSeq)
-          case o: Outlet =>
-            resolveATypeRef(o.type_, parentsAsSeq)
-          case c: Connector =>
-            resolveConnector(c, parentsAsSeq)
-          case c: Constant =>
-            resolveTypeExpression(c.typeEx, parentsAsSeq)
-          case a: Adaptor =>
-            resolveARef[Context](a.context, parentsAsSeq)
-            a.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case s: Streamlet =>
-            s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case p: Projector =>
-            p.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-            p.repositories.foreach(ref => resolveARef[Repository](ref, parentsAsSeq))
-          case r: Repository =>
-            r.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case s: Saga =>
-            s.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case d: Domain =>
-            d.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case a: Application =>
-            a.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case c: Context =>
-            c.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case e: Epic =>
-            e.authorRefs.foreach(resolveARef[Author](_, parentsAsSeq))
-          case uc: UseCase =>
-            if uc.userStory.nonEmpty then resolveARef(uc.userStory.user, parentsAsSeq)
-            if uc.contents.nonEmpty then resolveInteractions(uc.contents, parentsAsSeq)
-          case in: Input =>
-            resolveATypeRef(in.putIn, parentsAsSeq)
-          case out: Output =>
-            out.putOut match {
-              case typ: TypeRef       => resolveATypeRef(typ, parentsAsSeq)
-              case const: ConstantRef => resolveARef[Constant](const, parentsAsSeq)
-              case _: LiteralString   => () // not a reference
-            }
-          case cg: ContainedGroup =>
-            resolveARef[Group](cg.group, parentsAsSeq)
-          case _: BriefDescription           => ()
-          case _: NonReferencableDefinitions => () // These can't be referenced
-          // case _: NonDefinitionValues        => () // Neither can these values
-          // case _ => () // NOTE: Never have this catchall! Want compile time errors!
-        end match
+  def process(value: RiddlValue, parentsStack: ParentStack): Unit =
+    val parents: Parents =
+      value match
+        case p: Parent =>
+          kindMap.add(p)
+          p +: parentsStack.toParents
+        case _ => parentsStack.toParents
+      end match
+    value match
+      case av: AggregateValue => // Field, Method
+        val resolution = resolveTypeExpression(av, av.typeEx, parents)
+        associateUsage[Type](av, resolution)
+      case t: Type =>
+        associateUsage[Type](t, resolveType(t, parents))
+      case mc: OnMessageClause =>
+        resolveOnMessageClause(mc, parents)
+      case statement: Statement =>
+        resolveStatement(statement, parents)
+      case tc: OnTerminationClause => ()
+      case oc: OnOtherClause       => ()
+      case e: Entity =>
+        resolveAuthorRefs(e, parents)
+        addEntity(e)
+      case s: State =>
+        associateUsage(s, resolveATypeRef(s.typ, parents))
+      case f: Function =>
+        resolveFunction(f, parents)
+      case i: Inlet =>
+        associateUsage(i, resolveATypeRef(i.type_, parents))
+      case o: Outlet =>
+        associateUsage(o, resolveATypeRef(o.type_, parents))
+      case c: Connector =>
+        associateUsage(c, resolveARef[Outlet](c.from, parents))
+        associateUsage(c, resolveARef[Inlet](c.to, parents))
+      case c: Constant =>
+        associateUsage(c, resolveTypeExpression(c, c.typeEx, parents))
+      case a: Adaptor =>
+        associateUsage(a, resolveARef[Context](a.context, parents))
+        resolveAuthorRefs(a, parents)
+      case s: Streamlet =>
+        resolveAuthorRefs(s, parents)
+      case p: Projector =>
+        resolveAuthorRefs(p, parents)
+        p.repositories.foreach{ ref => associateUsage(p, resolveARef[Repository](ref, parents)) }
+      case r: Repository =>
+        resolveAuthorRefs(r, parents)
+      case s: Saga =>
+        resolveAuthorRefs(s, parents)
+      case d: Domain =>
+        resolveAuthorRefs(d, parents)
+      case a: Application =>
+        resolveAuthorRefs(a, parents)
+      case c: Context =>
+        resolveAuthorRefs(c, parents)
+      case e: Epic =>
+        resolveAuthorRefs(e, parents)
+      case uc: UseCase =>
+        if uc.userStory.nonEmpty then associateUsage[User](uc, resolveARef(uc.userStory.user, parents))
+        val interactions = uc.contents.filter[Interaction]
+        if interactions.nonEmpty then resolveInteractions(uc, interactions, parents)
+      case in: Input =>
+        associateUsage(in, resolveATypeRef(in.putIn, parents))
+      case out: Output =>
+        out.putOut match {
+          case typ: TypeRef       => associateUsage(out, resolveATypeRef(typ, parents))
+          case const: ConstantRef => associateUsage(out, resolveARef[Constant](const, parents))
+          case _: LiteralString   => () // not a reference
+        }
+      case cg: ContainedGroup =>
+        associateUsage(cg, resolveARef[Group](cg.group, parents))
+      case _: NonReferencableDefinitions => () // These can't be referenced
+      case _: NonDefinitionValues        => () // Neither can these values
+      // case _ => () // NOTE: Never have this catchall! Want compile time errors!
     end match
   end process
 
+  private def resolveAuthorRefs(definition: Parent & WithAuthorRefs, parents: Parents): Unit =
+    definition.authorRefs.foreach { item => associateUsage(definition, resolveARef[Author](item, parents)) }
+  end resolveAuthorRefs
+
   private def resolveFunction(f: Function, parents: Parents): Unit = {
-    f.authorRefs.foreach(resolveARef[Author](_, parents))
     addFunction(f)
-    f.input.foreach(resolveTypeExpression(_, parents))
-    f.output.foreach(resolveTypeExpression(_, parents))
+    f.authorRefs.foreach { item => associateUsage[Author](f, resolveARef[Author](item, parents)) }
+    f.input.foreach(resolveTypeExpression(f, _, parents))
+    f.output.foreach(resolveTypeExpression(f, _, parents))
   }
 
-  private def resolveConnector(connector: Connector, parents: Parents): Unit = {
-    if connector.nonEmpty then
-      resolveARef[Outlet](connector.from, parents)
-      resolveARef[Inlet](connector.to, parents)
-  }
-
-  private def resolveType(typ: Type, parents: Parents): Unit = {
+  private def resolveType(typ: Type, parents: Parents): Resolution[Type] = {
     addType(typ)
-    resolveTypeExpression(typ.typEx, parents)
+    resolveTypeExpression(typ, typ.typEx, parents)
   }
 
-  private def resolveTypeExpression(typ: TypeExpression, parents: Parents): Unit = {
+  private def resolveTypeExpression(
+    user: Definition,
+    typ: TypeExpression,
+    parents: Parents
+  ): Resolution[Type] = {
     typ match {
       case UniqueId(_, entityPath) =>
-        resolveAPathId[Entity](entityPath, parents)
+        val resolution = resolveAPathId[Entity](entityPath, parents)
+        associateUsage[Entity](user, resolution)
+        None
       case AliasedTypeExpression(_, _, pathId) =>
-        resolveAPathId[Type](pathId, parents)
+        associateUsage[Type](user, resolveAPathId[Type](pathId, parents))
       case agg: AggregateTypeExpression =>
         agg.fields.foreach { (fld: Field) =>
-          resolveTypeExpression(fld.typeEx, parents)
+          associateUsage[Type](fld, resolveTypeExpression(fld, fld.typeEx, parents))
         }
+        None
       case EntityReferenceTypeExpression(_, entity) =>
-        resolveAPathId[Entity](entity, parents)
+        associateUsage[Entity](user, resolveAPathId[Entity](entity, parents))
+        None
       case Alternation(_, of) =>
-        of.foreach(resolveTypeExpression(_, parents))
+        of.foreach(resolveTypeExpression(user, _, parents))
+        None
       case Sequence(_, of) =>
-        resolveTypeExpression(of, parents)
+        resolveTypeExpression(user, of, parents)
       case Mapping(_, from, _) =>
-        resolveTypeExpression(from, parents)
+        resolveTypeExpression(user, from, parents)
       case Set(_, of) =>
-        resolveTypeExpression(of, parents)
+        resolveTypeExpression(user, of, parents)
       case Graph(_, of) =>
-        resolveTypeExpression(of, parents)
+        resolveTypeExpression(user, of, parents)
       case Table(_, of, _) =>
-        resolveTypeExpression(of, parents)
+        resolveTypeExpression(user, of, parents)
       case Replica(_, of) =>
-        resolveTypeExpression(of, parents)
+        resolveTypeExpression(user, of, parents)
       case c: Cardinality =>
-        resolveTypeExpression(c.typeExp, parents)
-      case _: Enumeration | _: NumericType | _: PredefinedType => ()
+        associateUsage[Type](user, resolveTypeExpression(user, c.typeExp, parents))
+      case _: Enumeration | _: NumericType | _: PredefinedType => None // no references
     }
   }
 
   private def resolveOnMessageClause(mc: OnMessageClause, parents: Parents): Unit = {
-    resolveARef[Type](mc.msg, parents)
+    val resolution = resolveARef[Type](mc.msg, parents)
+    associateUsage[Type](mc, resolution)
     mc.from match
-      case None               => ()
-      case Some(_, reference) => resolveARef[Definition](reference, parents)
-    resolveStatements(mc.contents, parents)
+      case None => ()
+      case Some(_, reference) =>
+        val resolution = resolveARef[Definition](reference, parents)
+        associateUsage[Definition](mc, resolution)
   }
 
-  private def resolveStateReferences(e: Entity, parents: Parents): Unit = {
-    for { state: State <- e.states } do {
-      resolveATypeRef(state.typ, parents)
-    }
-  }
-
-  private def resolveOnClauses(oc: OnClause, parents: Parents): Unit = {
-    resolveStatements(oc.contents, parents)
-  }
-
-  private def resolveStatements(statements: Seq[OnClauseContents], parents: Parents): Unit = {
-    statements.foreach(resolveStatement(_, parents))
-  }
-
-  private def resolveStatement(statement: OnClauseContents, parents: Parents): Unit = {
+  private def resolveStatement(statement: Statement, parents: Parents): Unit = {
     statement match {
       case SetStatement(_, field, _) =>
-        resolveARef[Field](field, parents)
+        associateUsage[Field](parents.head, resolveARef[Field](field, parents))
       case BecomeStatement(_, entity, handler) =>
-        resolveARef[Entity](entity, parents)
-        resolveARef[Handler](handler, parents)
+        associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
+        associateUsage[Handler](parents.head, resolveARef[Handler](handler, parents))
       case FocusStatement(_, group) =>
-        resolveARef[Group](group, parents)
+        associateUsage[Group](parents.head, resolveARef[Group](group, parents))
       case ForEachStatement(_, ref, _) =>
         ref match {
-          case ir: InletRef  => resolveAPathId[Inlet](ir.pathId, parents)
-          case or: OutletRef => resolveAPathId[Outlet](or.pathId, parents)
-          case fr: FieldRef  => resolveAPathId[Type](fr.pathId, parents)
+          case ir: InletRef  => associateUsage[Inlet](parents.head, resolveAPathId[Inlet](ir.pathId, parents))
+          case or: OutletRef => associateUsage[Outlet](parents.head, resolveAPathId[Outlet](or.pathId, parents))
+          case fr: FieldRef  => associateUsage[Type](parents.head, resolveAPathId[Type](fr.pathId, parents))
         }
       case SendStatement(_, msg, portlet) =>
-        resolveARef[Type](msg, parents)
-        resolveARef[Portlet](portlet, parents)
+        associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
+        associateUsage[Portlet](parents.head, resolveARef[Portlet](portlet, parents))
       case MorphStatement(_, entity, state, message) =>
-        resolveARef[Entity](entity, parents)
-        resolveARef[State](state, parents)
-        resolveARef[Type](message, parents)
+        associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
+        associateUsage[State](parents.head, resolveARef[State](state, parents))
+        associateUsage[Type](parents.head, resolveARef[Type](message, parents))
       case TellStatement(_, msg, processorRef) =>
-        resolveARef[Type](msg, parents)
-        resolveARef[Processor[?]](processorRef, parents)
+        associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
+        associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
       case CallStatement(_, func) =>
-        resolveARef[Function](func, parents)
+        associateUsage[Function](parents.head, resolveARef[Function](func, parents))
       case ReplyStatement(_, message) =>
-        resolveARef[Type](message, parents)
+        associateUsage[Type](parents.head, resolveARef[Type](message, parents))
       case _: CodeStatement       => () // no references
       case _: ReadStatement       => () // no references
       case _: WriteStatement      => () // no references
@@ -270,44 +255,43 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case _: ReturnStatement     => () // no references
       case _: IfThenElseStatement => () // no references
       case _: StopStatement       => () // no references
-      case _: Comment             => () // no references
     }
   }
 
   private def resolveInteractions(
-    interactions: Seq[Interaction | Comment],
+    useCase: UseCase,
+    interactions: Seq[Interaction],
     parentsAsSeq: Parents
   ): Unit = {
     for interaction <- interactions do {
       interaction match {
         case ArbitraryInteraction(_, from, _, to, _, _) =>
-          resolveARef[Definition](from, parentsAsSeq)
-          resolveARef[Definition](to, parentsAsSeq)
+          associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))
         case fi: FocusOnGroupInteraction =>
-          resolveARef[User](fi.from, parentsAsSeq)
-          resolveARef[Group](fi.to, parentsAsSeq)
+          associateUsage[Definition](useCase, resolveARef[User](fi.from, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveARef[Group](fi.to, parentsAsSeq))
         case fou: DirectUserToURLInteraction =>
-          resolveARef[User](fou.from, parentsAsSeq)
+          associateUsage[Definition](useCase, resolveARef[User](fou.from, parentsAsSeq))
         case ti: ShowOutputInteraction =>
-          resolveARef[User](ti.to, parentsAsSeq)
-          resolveARef[Output](ti.from, parentsAsSeq)
+          associateUsage[Definition](useCase, resolveARef[User](ti.to, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveARef[Output](ti.from, parentsAsSeq))
         case si: SelectInputInteraction =>
-          resolveARef[User](si.from, parentsAsSeq)
-          resolveARef[Input](si.to, parentsAsSeq)
+          associateUsage[Definition](useCase, resolveARef[User](si.from, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveARef[Input](si.to, parentsAsSeq))
         case pi: TakeInputInteraction =>
-          resolveARef[User](pi.from, parentsAsSeq)
-          resolveARef[Input](pi.to, parentsAsSeq)
+          associateUsage[Definition](useCase, resolveARef[User](pi.from, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveARef[Input](pi.to, parentsAsSeq))
         case si: SelfInteraction =>
-          resolveARef[Definition](si.from, parentsAsSeq)
+          associateUsage[Definition](useCase, resolveARef[Definition](si.from, parentsAsSeq))
         case SendMessageInteraction(_, from, message, to, _, _) =>
-          resolveARef[Definition](from, parentsAsSeq)
-          resolveAMessageRef(message, parentsAsSeq)
-          resolveARef[Definition](to, parentsAsSeq)
-        case _: VagueInteraction       => () // no resolution required
+          associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveAMessageRef(message, parentsAsSeq))
+          associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))
+        case _: VagueInteraction       => () // no references
         case _: OptionalInteractions   => () // no references
         case _: ParallelInteractions   => () // no references
         case _: SequentialInteractions => () // no references
-        case _: Comment                => () // no references
       }
     }
   }
@@ -315,7 +299,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private def resolveARef[T <: Definition: ClassTag](
     ref: Reference[T],
     parents: Parents
-  ): Unit = {
+  ): Resolution[T] = {
     resolveAPathId[T](ref.pathId, parents)
   }
 
@@ -343,7 +327,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     parents.headOption match
       case None =>
         // shouldn't happen
-        notResolved[T](pathId, parents, "there are no parents of the found symbol")
+        notResolved[T](pathId, parents.headOption, "there are no parents of the found symbol")
         None
       case Some(parent) =>
         list match
@@ -351,7 +335,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             // List is empty so this is the NotFound case
             notResolved[T](
               pathId,
-              parents,
+              parents.headOption,
               s"the sought name, '${pathId.value.last}', was not found in the symbol table,"
             )
             None
@@ -388,9 +372,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private case class AnchorNotFoundInParents(topName: String) extends AnchorCase
   private case class AnchorNotFoundAnywhere(topName: String) extends AnchorCase
   private case class AnchorIsAmbiguous(topName: String, list: List[SymTabItem]) extends AnchorCase
-  private case class AnchorFoundInSymTab(anchor: Parent, anchor_parents: Parents) extends AnchorCase
-  private case class AnchorFoundInParents(anchor: Parent, anchor_parents: Parents) extends AnchorCase
-  private case class AnchorIsRoot(anchor: Parent, anchor_parents: Parents) extends AnchorCase
+  private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Parents) extends AnchorCase
+  private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Parents) extends AnchorCase
+  private case class AnchorIsRoot(anchor: Definition, anchor_parents: Parents) extends AnchorCase
 
   private def findAnchorInParents(
     topName: String,
@@ -416,7 +400,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     symbols.lookupParentage(Seq(topName)) match {
       case Nil =>
         AnchorNotFoundInSymTab(topName)
-      case (anchor: Parent, anchor_parents: Parents) :: Nil =>
+      case (anchor: Definition, anchor_parents: Parents) :: Nil =>
         // it is unique
         // Found the top node uniquely in the symbol table
         // now just run down the children and see if all levels of the
@@ -460,147 +444,204 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private def resolvePathFromAnchor[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Parents,
-    anchor: Parent,
+    anchor: Definition,
     anchor_parents: Parents
   ): Resolution[T] = {
-    val stack: ParentStack = ParentStack.empty
+    val stack = DefinitionStack.empty
     val parents_to_add = anchor_parents.reverse
     if anchor_parents.nonEmpty && anchor_parents.last.isRootContainer then stack.pushAll(parents_to_add.drop(1))
     else stack.pushAll(parents_to_add)
     stack.push(anchor)
     val pathIdStart = pathId.value.drop(1) // we already resolved the anchor
     var continue: Boolean = true
-    var result: Option[Definition] = None
-    for { soughtName: String <- pathIdStart if continue } do {
-      // Get the list of candidates for potential matches to the name.
-
-      val candidates = findCandidates(stack)
-      val isLastItem = soughtName == pathId.value.last
-
-      // Now find the match, if any, and handle appropriately
-      val maybeFound = candidates.find(candidate => findResolution(soughtName, candidate))
-      maybeFound match
-        case Some(q: Parent) if isLastItem =>
-          // Found the named item, and it is the last item in the Path so we have found the result
-          result = Some(q)
-          continue = false
-
-        case Some(q: Parent) if !isLastItem =>
-          // Found the named item, and it is a Parent, but there are more things to resolve so put it on
-          // the stack
-          stack.push(q)
-        // continue = true
-
-        case Some(_: LeafDefinition) if !isLastItem =>
-          // Found the named item, but it is not the last item in the PID
-          // We are at a leaf node but in the middle of the PathId so bad PathID because we can't descend any further
-          notResolved[T](
-            pathId,
-            parents,
-            s"definition '$soughtName' was found in middle of PathId ${stack.toSeq.reverse.mkString(".")}"
-          )
-          continue = false
-
-        case Some(definition: LeafDefinition) if isLastItem =>
-          result = Some(definition)
-
-        case Some(_) =>
-          notResolved[T](pathId, parents, s"definition '$soughtName' was found but in wrong context")
-          continue = false
-
+    var resolution: Resolution[T] = None
+    var elementCounter: Int = pathIdStart.length
+    for { soughtName: String <- pathIdStart if continue } do
+      // Because names in a PathId are not unique, we can't use comparison against
+      // the last name to determine if we're at the end of the names. Instead, we
+      // count down the number of elements remaining
+      elementCounter -= 1
+      val isLastPathElement = elementCounter <= 0
+      // Find matching item at head of stack and return the candidates derived
+      // from it for the next loop. If nothing is returned, the head of stack
+      // didn't match the sought name.
+      findMatchingCandidate(soughtName, stack) match
         case None =>
-          // None of the candidates match the name we're seeking, so this Path Id isn't valid, say so
+          // None of the candidates match the name we're seeking, so this PathId doesn't match the model
           notResolved[T](
             pathId,
-            parents,
-            s"definition '$soughtName' was not in PathId ${stack.toSeq.reverse.mkString(".")}"
+            stack.headOption,
+            s"the name '$soughtName' was not found in ${stack.head.identify}"
           )
           continue = false
-    }
-    if continue then
+        case Some(definition) =>
+          if isLastPathElement then
+            // The soughtName is the last one in the pathId, no point continuing the loop
+            continue = false
+            // Since we are on the last element, let's try to find the match
+            resolution = checkMatch[T](pathId, definition, parents)
+          else
+            // We have matched the current element and found some candidates for
+            // the next round, so we must push and continue
+            stack.push(definition)
+          end if
+      end match
+    end for
+    if !continue then
+      // return the resolution
+      resolution
+    else
       val maybeFound = stack.toSeq
-      checkResultingPath(pathId, parents, maybeFound)
       stack.headOption match
         case Some(_: Root) if stack.size == 1 =>
           // then pop it off because RootContainers don't count and we want to
           // rightfully return an empty sequence for "not found"
           stack.pop()
           // Convert parent stack to immutable sequence
-          Some(stack.head.asInstanceOf[T] -> stack.tail.toSeq)
+          Some(stack.head.asInstanceOf[T] -> stack.tail.toSeq.asInstanceOf[Seq[Parent]])
         case Some(dfntn: T) =>
           // Not the root, just convert the result to immutable Seq
-          Some(dfntn -> stack.tail.toSeq)
+          Some(dfntn -> stack.tail.toSeq.asInstanceOf[Seq[Parent]])
         case Some(_) =>
           None
         case None =>
           None
-    else
-      result match
-        case Some(definition) =>
-          Some(definition.asInstanceOf[T] -> stack.toSeq)
-        case None =>
-          None
+      end match
+    end if
   }
 
-  private def checkResultingPath[T <: Definition: ClassTag](
+  private def resolved[T <: Definition: ClassTag](
     pathId: PathIdentifier,
-    parents: Parents,
-    maybeFound: Seq[Parent]
-  ): Unit = {
-    maybeFound.toList match {
-      case Nil =>
-        notResolved[T](pathId, parents)
-      case head :: Nil =>
-        // shouldn't happen, but ...
-        messages.addSevere(pathId.loc, s"Single path entry found, '${head.format}' should not be possible'")
-        notResolved[T](pathId, parents, s"'${head.format}' should not be possible")
-      case found :: _ =>
-        // we have at least two names, let's find the first one
-        // and see if it is
-        if checkThatPathIdMatchesFoundParentStack(pathId, parents, maybeFound) then
-          if isSameKind[T](found) then
-            // a candidate was found and it has the same type as expected
-            resolved[T](pathId, parents.head, found)
-          else
-            // Not the same type, report the error
-            wrongType[T](pathId, parents.head, found)
-        else wrongType[T](pathId, parents.head, found)
-    }
-  }
+    pidDirectParent: Parent,
+    definition: Definition
+  ): T =
+    // a candidate was found and it has the same type as expected
+    val t = definition.asInstanceOf[T]
+    refMap.add[T](pathId, pidDirectParent, t)
+    associateUsage(pidDirectParent, t)
+    if commonOptions.debug then
+      messages.add(
+        Messages.info(
+          s"Path Identifier ${pathId.format} in ${pidDirectParent.identify} resolved to ${definition.identify}",
+          pathId.loc
+        )
+      )
+    end if
+    if commonOptions.debug then println(s"Resolved: ${pathId.format} ==> ${t.identify}")
+    t
+  end resolved
 
-  private def checkThatPathIdMatchesFoundParentStack[T <: Definition: ClassTag](
+  private def wrongType[T <: Definition: ClassTag](
     pathId: PathIdentifier,
-    parents: Parents,
-    maybeResult: Seq[WithIdentifier]
-  ): Boolean = {
-    pathId.value.headOption match {
-      case Some(_) =>
-        val foundDefinition = maybeResult.head
-        val foundName = foundDefinition.id.value
-        val soughtName = pathId.value.last
-        val foundClass = foundDefinition.getClass
-        val soughtClass = classTag[T].runtimeClass
-        if foundName != soughtName then
-          notResolved[T](
-            pathId,
-            parents,
-            s"the found name, '$foundName', is not the same as the sought name, '$soughtName'"
-          )
-          false
-        else if !soughtClass.isAssignableFrom(foundClass) then
-          notResolved[T](
-            pathId,
-            parents,
-            s"the found class ${foundClass.getSimpleName} is not compatible with the sough class, " +
-              s"'${soughtClass.getSimpleName}"
-          )
-          false
-        else true
+    container: Definition,
+    foundDef: WithIdentifier
+  ): Unit =
+    val referTo = classTag[T].runtimeClass.getSimpleName
+    val message = s"Path '${pathId.format}' resolved to ${foundDef.identifyWithLoc}," +
+      s" in ${container.identify}, but ${article(referTo)} was expected"
+    messages.addError(pathId.loc, message)
+    if commonOptions.debug then
+      println(s"WrongType: ${pathId.format} ==> ${foundDef.identifyWithLoc} not ${article(referTo)}")
+    end if
+
+  end wrongType
+
+  private def notResolved[T <: Definition: ClassTag](
+    pathId: PathIdentifier,
+    container: Option[Definition],
+    why: String = ""
+  ): Unit =
+    val tc = classTag[T].runtimeClass
+    val message = container match
       case None =>
-        messages.addSevere(pathId.loc, "Empty path id")
-        false
-    }
-  }
+        s"Path '${pathId.format}' is not resolvable, because it has no container"
+      case Some(definition) =>
+        s"Path '${pathId.format}' was not resolved, in ${definition.identify}${
+            if why.isEmpty then "\n"
+            else "\nbecause " + why + "\n"
+          }"
+
+    val referTo = tc.getSimpleName
+    messages.addError(
+      pathId.loc,
+      message + {
+        if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
+        else ""
+      }
+    )
+    if commonOptions.debug then println(s"Unresolved: ${pathId.format} ==> ???")
+  end notResolved
+
+  private def checkMatch[T <: Definition: ClassTag](
+    pathId: PathIdentifier,
+    definition: Definition,
+    parents: Parents
+  ): Resolution[T] =
+    parents.headOption match
+      case Some(parent) =>
+        if isSameKind[T](definition) then
+          // we found a matching definition in both name and type
+          val t: T = resolved[T](pathId, parent, definition)
+          // return the resolution
+          Some(t -> symbols.parentsOf(t))
+        else
+          // the name matches, the type does not, emit error
+          wrongType[T](pathId, parent, definition)
+          None
+        end if
+      case None =>
+        // No parent of the node, shouldn't happen!
+        notResolved[T](pathId, None, s"because ${definition.identify} does have parents!")
+        None
+    end match
+  end checkMatch
+
+  private def findMatchingCandidate(
+    soughtName: String,
+    defStack: DefinitionStack
+  ): Option[Definition] =
+    require(defStack.nonEmpty, "No stack to consider in findCandidates")
+    defStack.headOption match
+      case None =>
+        Option.empty[Definition] // nothing to search to provide candidates
+      case Some(head) =>
+        val candidates: Definitions =
+          head match
+            case st: State =>
+              // We found a state so the fields of the state
+              // the contained handlers and the fields of the state's data
+              candidatesFromPathIdentifier[Type](st.typ.pathId, defStack)
+            case omc: OnMessageClause if omc.msg.id.nonEmpty =>
+              // we found an onClause that references a named message
+              // need to push that message's path on the name stack
+              candidatesFromPathIdentifier[Type](omc.msg.pathId, defStack)
+            case field: Field =>
+              candidatesFromTypeExpression(field.typeEx, defStack).definitions
+            case constant: Constant =>
+              candidatesFromTypeExpression(constant.typeEx, defStack)
+            case typ: Type =>
+              candidatesFromTypeExpression(typ.typEx, defStack)
+            case inlet: Inlet =>
+              candidatesFromPathIdentifier[Type](inlet.type_.pathId, defStack)
+            case outlet: Outlet =>
+              candidatesFromPathIdentifier[Type](outlet.type_.pathId, defStack)
+            case include: Include[?] =>
+              candidatesFromContents(include.contents)
+            case vital: VitalDefinition[?] =>
+              vital.contents.flatMap {
+                case include: Include[ContentValues] @unchecked => include.contents.definitions
+                case value: Definition                          => Seq(value)
+                case _                                          => Seq.empty[Definition]
+              }
+            case p: Parent =>
+              p.contents.definitions
+            case _ =>
+              // No match so no candidates
+              Seq.empty[Definition]
+          end match
+        candidates.find(_.id.value == soughtName)
+    end match
+  end findMatchingCandidate
 
   private def resolveAMessageRef(ref: MessageRef, parents: Parents): Resolution[Type] =
     val loc: At = ref.loc
@@ -658,51 +699,48 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     val resolution: Resolution[Type] = resolveAPathId[Type](pathId, parents)
     resolution match
       case None => None
-      case Some((found: Definition, _: Parents)) =>
-        found match
-          case typ: Type =>
-            keyword match
-              case Keyword.type_ | "" => resolution // this is generic, any type so just pass the result
-              case Keyword.command    => handleTypeResolution(loc, typ, CommandCase, resolution)
-              case Keyword.query      => handleTypeResolution(loc, typ, QueryCase, resolution)
-              case Keyword.event      => handleTypeResolution(loc, typ, EventCase, resolution)
-              case Keyword.result     => handleTypeResolution(loc, typ, ResultCase, resolution)
-              case Keyword.record     => handleTypeResolution(loc, typ, RecordCase, resolution)
-              case Keyword.graph =>
-                typ.typEx match
-                  case _: Graph => resolution // success
-                  case typeEx: Alternation =>
-                    if typeEx.of.forall(_.getClass == Graph.getClass) then resolution // success
-                    else
-                      messages.addError(
-                        typeEx.loc,
-                        s"Type expression `${typeEx.format}` needs all elements to be a graph type for keyword `graph` at $loc"
-                      )
-                      None
-                    end if
-                  case _ =>
-                    require(false, "Shouldn't get here")
-                    None // shouldn't happen
-                end match
-              case Keyword.table =>
-                typ.typEx match
-                  case _: Table => resolution // success
-                  case typeEx: Alternation =>
-                    if typeEx.of.forall(_.getClass == Table.getClass) then resolution // success
-                    else
-                      messages.addError(
-                        typ.typEx.loc,
-                        s"Type expression `${typ.typEx.format}` needs to be a table for keyword `table` at $loc"
-                      )
-                      None
-                    end if
-                  case _: TypeExpression => 
-                    require(false, "Should not get here")
-                    None
-                end match
+      case Some((typ: Type, _: Parents)) =>
+        keyword match
+          case Keyword.type_ | "" => resolution // this is generic, any type so just pass the result
+          case Keyword.command    => handleTypeResolution(loc, typ, CommandCase, resolution)
+          case Keyword.query      => handleTypeResolution(loc, typ, QueryCase, resolution)
+          case Keyword.event      => handleTypeResolution(loc, typ, EventCase, resolution)
+          case Keyword.result     => handleTypeResolution(loc, typ, ResultCase, resolution)
+          case Keyword.record     => handleTypeResolution(loc, typ, RecordCase, resolution)
+          case Keyword.graph =>
+            typ.typEx match
+              case _: Graph => resolution // success
+              case typeEx: Alternation =>
+                if typeEx.of.forall(_.getClass == Graph.getClass) then resolution // success
+                else
+                  messages.addError(
+                    typeEx.loc,
+                    s"Type expression `${typeEx.format}` needs all elements to be a graph type for keyword `graph` at $loc"
+                  )
+                  None
+                end if
+              case _ =>
+                require(false, "Shouldn't get here")
+                None // shouldn't happen
+            end match
+          case Keyword.table =>
+            typ.typEx match
+              case _: Table => resolution // success
+              case typeEx: Alternation =>
+                if typeEx.of.forall(_.getClass == Table.getClass) then resolution // success
+                else
+                  messages.addError(
+                    typ.typEx.loc,
+                    s"Type expression `${typ.typEx.format}` needs to be a table for keyword `table` at $loc"
+                  )
+                  None
+                end if
+              case _: TypeExpression =>
+                require(false, s"Type $typ is not a")
+                None
             end match
         end match
-    end match     
+    end match
   end resolveATypeRef
 
   private def resolveAPathId[T <: Definition: ClassTag](
@@ -711,113 +749,61 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   ): Resolution[T] =
     if pathId.value.isEmpty then
       // The pathId is empty, can't resolve that
-      notResolved[T](pathId, parents, "the PathId is empty")
+      notResolved[T](pathId, parents.headOption, "the PathId is empty")
       None
     else
       // If we already resolved this one, return it
-      refMap.definitionOf[T](pathId, parents.head) match
-        case Some(result) =>
-          Some(result -> symbols.parentsOf(result))
-        case None =>
-          if pathId.value.size == 1 then
-            // Easy case, just search the symbol table and deal with it there.
-            // In other words, there really isn't a path to search here, just the
-            // symbol table
-            searchSymbolTable[T](pathId, parents)
-          else
-            // Okay, we have multiple names so we first have to find the anchor
-            // node from the first name in the PathId. This can be "Root" for the
-            // root of the model, a node name directly above, or a node from the
-            // symbol table.
-            findAnchor[T](pathId, parents) match
-              case AnchorNotFoundInParents(topName) =>
-                notResolved(
-                  pathId,
-                  parents,
-                  s"the PathId is invalid since it's first element, $topName, is not found in PathId ancestors"
-                )
-                None
-              case AnchorFoundInSymTab(anchor, anchor_parents) =>
-                // We found the anchor in the
-                resolvePathFromAnchor[T](pathId, parents, anchor, anchor_parents)
-              case AnchorFoundInParents(anchor, anchor_parents) =>
-                // We found the anchor in the parents list
-                resolvePathFromAnchor[T](pathId, parents, anchor, anchor_parents)
-              case AnchorNotFoundInSymTab(topName) =>
-                notResolved(
-                  pathId,
-                  parents,
-                  s"the PathId is invalid since it's first element, $topName, does not exist in the model"
-                )
-                None
-              case AnchorNotFoundAnywhere(_) =>
-                notResolved(pathId, parents)
-                None
-              case AnchorIsRoot(anchor, anchor_parents) =>
-                // The first name in the path id was "Root" so start from there
-                resolvePathFromAnchor[T](pathId, parents, anchor, anchor_parents)
-              case AnchorIsAmbiguous(_, list) =>
-                // The anchor is ambiguous so generate that message
-                ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one"))
-                None
-  end resolveAPathId
-
-  private def resolved[T <: Definition: ClassTag](
-    pathId: PathIdentifier,
-    pidDirectParent: Parent,
-    definition: Definition
-  ): Option[T] =
-    // a candidate was found and it has the same type as expected
-    val t = definition.asInstanceOf[T]
-    refMap.add[T](pathId, pidDirectParent, t)
-    associateUsage(pidDirectParent, t)
-    if commonOptions.debug then
-      messages.add(
-        Messages.info(
-          s"Path Identifier ${pathId.format} in ${pidDirectParent.identify} resolved to ${definition.identify}",
-          pathId.loc
-        )
-      )
+      val result =
+        refMap.definitionOf[T](pathId, parents.head) match
+          case Some(definition) =>
+            Some(definition -> symbols.parentsOf(definition))
+          case None =>
+            if pathId.value.size == 1 then
+              // Easy case, just search the symbol table and deal with it there.
+              // In other words, there really isn't a path to search here, just the
+              // symbol table
+              searchSymbolTable[T](pathId, parents)
+            else
+              // Okay, we have multiple names so we first have to find the anchor
+              // node from the first name in the PathId. This can be "Root" for the
+              // root of the model, a node name directly above, or a node from the
+              // symbol table.
+              findAnchor[T](pathId, parents) match
+                case AnchorNotFoundInParents(topName) =>
+                  notResolved(
+                    pathId,
+                    parents.headOption,
+                    s"the PathId is invalid since it's first element, $topName, is not found in PathId ancestors"
+                  )
+                  None
+                case AnchorFoundInSymTab(anchor, anchor_parents) =>
+                  // We found the anchor in the
+                  resolvePathFromAnchor[T](pathId, parents, anchor, anchor_parents)
+                case AnchorFoundInParents(anchor, anchor_parents) =>
+                  // We found the anchor in the parents list
+                  resolvePathFromAnchor[T](pathId, parents, anchor, anchor_parents)
+                case AnchorNotFoundInSymTab(topName) =>
+                  notResolved(
+                    pathId,
+                    parents.headOption,
+                    s"the PathId is invalid since it's first element, $topName, does not exist in the model"
+                  )
+                  None
+                case AnchorNotFoundAnywhere(_) =>
+                  notResolved(pathId, parents.headOption, "PathID anchor not found")
+                  None
+                case AnchorIsRoot(anchor, anchor_parents) =>
+                  // The first name in the path id was "Root" so start from there
+                  resolvePathFromAnchor[T](pathId, parents, anchor, anchor_parents)
+                case AnchorIsAmbiguous(_, list) =>
+                  // The anchor is ambiguous so generate that message
+                  ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one"))
+                  None
+              end match
+        end match
+      result
     end if
-    Some(t)
-  end resolved
-
-  private def wrongType[T <: Definition: ClassTag](
-    pid: PathIdentifier,
-    container: Definition,
-    foundDef: WithIdentifier
-  ): Unit =
-    val referTo = classTag[T].runtimeClass.getSimpleName
-    val message = s"Path '${pid.format}' resolved to ${foundDef.identifyWithLoc}," +
-      s" in ${container.identify}, but ${article(referTo)} was expected"
-    messages.addError(pid.loc, message)
-  end wrongType
-
-  private def notResolved[T <: Definition: ClassTag](
-    pid: PathIdentifier,
-    parents: Parents,
-    why: String = ""
-  ): Unit =
-    val tc = classTag[T].runtimeClass
-    val container = parents.headOption
-    val message = container match
-      case None =>
-        s"Path '${pid.format}' is not resolvable, because it has no container"
-      case Some(definition) =>
-        s"Path '${pid.format}' was not resolved, in ${definition.identify}${
-            if why.isEmpty then "\n"
-            else "\nbecause " + why + "\n"
-          }"
-
-    val referTo = tc.getSimpleName
-    messages.addError(
-      pid.loc,
-      message + {
-        if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
-        else ""
-      }
-    )
-  end notResolved
+  end resolveAPathId
 
   private def ambiguous[T <: Definition: ClassTag](
     pid: PathIdentifier,
@@ -857,33 +843,35 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     s"$article $thing"
   }
 
-  private def adjustStacksForPid[T <: Definition: ClassTag](
+  private def candidatesFromPathIdentifier[T <: Definition: ClassTag](
     pid: PathIdentifier,
-    parentStack: ParentStack
-  ): Contents[Definition] =
-
+    defStack: DefinitionStack
+  ): Definitions =
     // Recursively resolve this PathIdentifier
-    val resolution: Resolution[T] = resolveAPathId[T](pid, parentStack.toParentsSeq)
+    val resolution: Resolution[T] = resolveAPathId[T](pid, defStack.toParentsSeq)
     resolution match
-      case None => Contents.empty
-      case Some((_: Definition, parents: Parents)) => 
+      case None                                             => Contents.empty
+      case Some((definition: Definition, parents: Parents)) =>
         // if we found the definition
         // Replace the parent stack with the resolved one
-        parentStack.clear()
-        parentStack.pushAll(parents.reverse)
+        defStack.clear()
+        defStack.pushAll(parents.reverse)
 
         // Return the name and candidates we should next search for
-        parentStack.headOption match
-          case None       => Seq.empty[T] // shouldn't happen?
-          case Some(head) => head.contents.definitions
+        definition match
+          case foundType: Parent =>
+            defStack.push(foundType)
+            foundType.contents.definitions
+          case definition: T =>
+            Seq(definition)
         end match
     end match
-  end adjustStacksForPid
+  end candidatesFromPathIdentifier
 
   private def candidatesFromTypeExpression(
     typEx: TypeExpression,
-    parentStack: ParentStack
-  ): Contents[Definition] = {
+    parentStack: DefinitionStack
+  ): Definitions = {
     typEx match {
       case a: Aggregation => a.fields
       // if we're at a field composed of more fields, then those fields
@@ -898,9 +886,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         // if we're at a field that references another type then the candidates
         // are that type's fields. To solve this we need to push
         // that type's path on the name stack to be resolved
-        adjustStacksForPid[Type](pid, parentStack)
+        candidatesFromPathIdentifier[Type](pid, parentStack)
       case EntityReferenceTypeExpression(_, entityRef) =>
-        adjustStacksForPid[Entity](entityRef, parentStack)
+        candidatesFromPathIdentifier[Entity](entityRef, parentStack)
       case _ =>
         // We cannot descend into any other type expression
         Seq.empty[Definition]
@@ -908,8 +896,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   }
 
   private def candidatesFromContents(
-    contents: Contents[RiddlValue],
-    stack: ParentStack
+    contents: Contents[RiddlValue]
   ): Contents[Definition] =
     contents.flatMap { item =>
       item match
@@ -918,18 +905,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           // NOTE: We need to recursively descend that stack.  An include in a nested definitional level
           // NOTE: will not be picked up by contents.includes because it would be inside another definition.
           // NOTE: So we take the WithIdentifiers from the contents as well as from the includes
-          val nested = candidatesFromContents(contents.includes, stack)
+          val nested = candidatesFromContents(contents.includes)
           val current = contents.definitions
           current ++ nested
-        case st: State =>
-          // At a state the fields of the state's data can be referenced
-          candidatesFromStateTypeRef(st.typ, stack.toParentsSeq)
-        case field: Field =>
-          candidatesFromTypeExpression(field.typeEx, stack).definitions
-        case constant: Constant =>
-          candidatesFromTypeExpression(constant.typeEx, stack)
-        case typ: Type =>
-          candidatesFromTypeExpression(typ.typEx, stack)
         case definition: Definition =>
           Seq(definition)
         case _ =>
@@ -945,27 +923,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case Some((typ: Type, _: Parents)) =>
         typ.typEx match {
           case agg: AggregateTypeExpression => agg.fields
-          case _ => Seq.empty
+          case _                            => Seq.empty
         }
     }
   }
-
-  private def findCandidates(stack: ParentStack): Contents[Definition] =
-    require(stack.nonEmpty, "No stack to consider in findCandidates")
-    stack.headOption match
-      case None =>
-        Seq.empty[Definition] // nothing to search to provide candidates
-      case Some(head) =>
-        head match
-          case oc: OnMessageClause =>
-            // FIXME: Dubious utility. OnMessageClause doesn't define any mutable state
-            // if we're at an onClause that references a named message then we
-            // need to push that message's path on the name stack
-            adjustStacksForPid[Type](oc.msg.pathId, stack)
-          case d: Parent =>
-            candidatesFromContents(d.contents, stack)
-    end match
-  end findCandidates
 
   private def findResolution(soughtName: String, candidate: Definition): Boolean = {
     candidate match {

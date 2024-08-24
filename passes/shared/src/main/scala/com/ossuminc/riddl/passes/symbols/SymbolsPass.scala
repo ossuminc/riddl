@@ -57,7 +57,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(inp
       case namedValue: Definition => // NOTE: Anything with a name goes in symbol table
         val name = namedValue.id.value
         if name.nonEmpty then {
-          val parentsCopy: Parents = rootLessParents(parents.toParentsSeq)
+          val parentsCopy: Parents = rootLessParents(parents.toParents)
           val existing = symTab.getOrElse(name, Seq.empty[SymTabItem])
           val pairToAdd = namedValue -> parentsCopy
           if existing.contains(pairToAdd) then

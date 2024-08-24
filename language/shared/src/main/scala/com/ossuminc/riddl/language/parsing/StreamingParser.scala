@@ -17,19 +17,14 @@ private[parsing] trait StreamingParser {
   
   private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
     P(
-        from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0)
+      (open ~ from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0) ~ close) |
+        (from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0))
     )
   }
-
-  private def connectorBody[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
-    P(
-      undefined((OutletRef.empty, InletRef.empty, Seq.empty)) | connectorDefinitions
-    )
-  }
-
+  
   def connector[u: P]: P[Connector] = {
     P(
-      location ~ Keywords.connector ~/ identifier ~ is ~/ open ~ connectorBody ~/ close ~/ briefly ~/ description
+      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~/  briefly ~/ description
     )./.map { case (loc, id, (out, in, opts), brief, description) =>
       Connector(loc, id, out, in, opts, brief, description)
     }
