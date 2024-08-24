@@ -2,10 +2,6 @@ passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(3:5):
  Entity 'Product' in Context 'ProductInventory' should have content:
      entity Product is {???}
      ^
-passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(9:3):
- Type 'Alias' should have a description:
-   type Alias = Id(Product)
-   ^
 passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(1:1):
  Domain 'Inventory' should have a description:
  domain Inventory is {

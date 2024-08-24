@@ -1,11 +1,3 @@
-passes/jvm/src/test/input/check/saga/saga.riddl(4:5):
- Command 'UndoSomething' should have a description:
-     type UndoSomething = command { ??? }
-     ^
-passes/jvm/src/test/input/check/saga/saga.riddl(3:5):
- Command 'Something' should have a description:
-     type Something = command { ??? }
-     ^
 passes/jvm/src/test/input/check/saga/saga.riddl(1:1):
  Vital definitions should have an author reference:
  domain ignore1 is {

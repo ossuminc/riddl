@@ -3574,7 +3574,7 @@ object AST {
     */
   @JSExportTopLevel("UserStory")
   case class UserStory(
-    loc: At = At.empty,
+    loc: At,
     user: UserRef,
     capability: LiteralString,
     benefit: LiteralString

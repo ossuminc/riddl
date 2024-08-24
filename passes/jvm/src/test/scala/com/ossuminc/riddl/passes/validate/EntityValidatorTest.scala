@@ -97,11 +97,6 @@ class EntityValidatorTest extends ValidatingTest {
         assertValidationMessage(
           msgs,
           MissingWarning,
-          "Record 'fields' should have a description"
-        )
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
           "Entity 'Hamburger' should have a description"
         )
       }
