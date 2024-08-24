@@ -63,7 +63,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
       case t: Type =>
         val result = t.typEx match {
           case _: AggregateUseCaseTypeExpression =>
-            val pars = generator.makeStringParents(parents.toParentsSeq)
+            val pars = generator.makeStringParents(parents.toParents)
             val link = generator.makeDocLink(t, pars)
             val users = usages.getUsers(t)
             val userLinks = users

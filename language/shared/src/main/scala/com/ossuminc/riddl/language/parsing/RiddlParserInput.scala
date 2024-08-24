@@ -100,7 +100,7 @@ object RiddlParserInput {
     val url = URL.fromCwdPath(path.toString)
     val future = fromURL(url, purpose)
     Await.result(future, 10.seconds)
-   
+
   def fromFullPath(path:Path, purpose: String = ""): RiddlParserInput =
     require(path.toString.startsWith("/"))
     val url = URL.fromFullPath(path.toString)
@@ -207,7 +207,7 @@ abstract class RiddlParserInput extends ParserInput {
 @JSExportTopLevel("EmptyParserInput")
 case object EmptyParserInput extends RiddlParserInput {
   override def origin: String = "empty"
-  override def root: URL = URL("/")
+  override def root: URL = URL.empty
   override def offsetOf(line: Int): Int = { line * 80 }
   override def lineOf(offset: Int): Int = { offset / 80 }
   def data: String = ""

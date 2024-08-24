@@ -38,7 +38,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
       case ad: Definition if ad.isAnonymous => Seq.empty[ToDoItem]
       // Implicit definitions don't have a name so there's no word to define in the glossary
       case d: Definition if d.isEmpty =>
-        val pars = parents.toParentsSeq
+        val pars = parents.toParents
         val item = d.identify
         val authors = AST.findAuthors(d, pars)
         val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)

@@ -362,7 +362,7 @@ object AST {
           if id.nonEmpty then {
             id.map(_.format + ": ")
           } else ""
-        }'${pathId.format}'${loc.toShort}"
+        }'${pathId.format}'"
     end identify
 
     override def isEmpty: Boolean = pathId.isEmpty

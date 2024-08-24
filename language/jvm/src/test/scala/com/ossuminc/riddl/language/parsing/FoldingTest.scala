@@ -17,7 +17,7 @@ class FoldingTest extends ParsingTest {
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
       |  context one is {
-      |    connector a is { ??? }
+      |    connector a is from outlet foo to inlet bar
       |    term whomprat is described by "a 2m long rat on Tatooine"
       |    flow b is {
       |      inlet b_in is String

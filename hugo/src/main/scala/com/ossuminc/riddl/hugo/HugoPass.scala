@@ -201,7 +201,7 @@ case class HugoPass(
           _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
           _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root | _: BriefDescription |
           _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type |
-          _: Definition =>
+          _: Definition | _: Statement =>
         ()
       // All of these are handled above in their containers content output
       case _: AST.NonDefinitionValues => ()

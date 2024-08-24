@@ -8,7 +8,7 @@ class GlossaryPassTest extends ValidatingTest {
   val dir = "hugo/src/test/input/"
 
   "GlossaryPass" must {
-    "product glossary entries" in { (td: TestData) => 
+    "product glossary entries" in { (td: TestData) =>
       parseAndValidateTestInput("glossary entries", "everything.riddl", dir) { case (root, pr: PassesResult) =>
         if pr.messages.hasErrors then
           val errors = pr.messages.justErrors.format
@@ -16,7 +16,7 @@ class GlossaryPassTest extends ValidatingTest {
         else
           val pass = new GlossaryPass(pr.input, pr.outputs, HugoPass.Options())
           val output: GlossaryOutput = Pass.runPass[GlossaryOutput](pr.input, pr.outputs, pass)
-          output.entries.size must be(58) // TODO: Enhance this test to check entry contents
+          output.entries.size must be(59) // TODO: Enhance this test to check entry contents
       }
     }
   }

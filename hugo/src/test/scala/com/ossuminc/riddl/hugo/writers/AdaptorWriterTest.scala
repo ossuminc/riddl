@@ -35,7 +35,7 @@ class AdaptorWriterTest extends WriterTest {
               |title: "FromTwo"
               |weight: 10
               |draft: "false"
-              |description: "FromTwo has no brief description."
+              |description: "FromTwo has no brief description"
               |geekdocAnchor: true
               |geekdocToC: 4
               |geekdocCollapseSection: true
@@ -50,6 +50,8 @@ class AdaptorWriterTest extends WriterTest {
               || _View Source Link_ | [hugo/src/test/input/adaptors.riddl(4:5)]() |
               || _Used By_ | None |
               || _Uses_ | None |
+              |
+              |## *Description*
               |
               |## *RiddlOptions*
               |* option css("background: blue")
