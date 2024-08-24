@@ -47,7 +47,6 @@ trait TypeValidation extends DefinitionValidation {
           StyleWarning,
           id.loc
         )
-        .checkDescription[Enumerator](enumerator)
     }
     this
   }

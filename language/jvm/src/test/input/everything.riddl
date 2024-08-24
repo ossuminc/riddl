@@ -17,7 +17,8 @@ domain Everything is {
 
   epic WritingABook is {
     user Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
-    case primary is { ??? }
+    case primary is { user Everything.Author wants "to open the screen" so that "he can start editing" ??? }
+    case secondary is { user Everything.Author wants "to make edits" so that "he can effect changes in the document" ??? }
   } described as "A simple authoring epic"
 
   include "everything_full"

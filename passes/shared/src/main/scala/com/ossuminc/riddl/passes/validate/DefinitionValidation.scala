@@ -101,33 +101,36 @@ trait DefinitionValidation extends BasicValidation {
   }
 
   def checkDescriptions(definition: Definition, contents: Contents[ContentValues]): Unit =
-    val descriptions: Contents[Description] = contents.filter[Description]
-    if descriptions.isEmpty then
-      check(
-        predicate = false,
-        s"${definition.identify} should have a description",
-        MissingWarning,
-        definition.loc
-      )
-    else
-      descriptions.foreach {
-        case bd: BlockDescription =>
+    definition match
+      case wd: WithDescriptions => 
+        val descriptions = wd.descriptions
+        if descriptions.isEmpty then
           check(
-            bd.lines.nonEmpty && !bd.lines.forall(_.s.isEmpty),
-            s"For ${definition.identify}, description at ${bd.loc} is declared but empty",
+            predicate = false,
+            s"${definition.identify} should have a description",
             MissingWarning,
-            bd.loc
+            definition.loc
           )
-        case ud: URLDescription =>
-          check(
-            ud.url.isValid,
-            s"For ${definition.identify}, description at ${ud.loc} has an invalid URL: ${ud.url}",
-            Error,
-            ud.loc
-          )
-        case _ => ()
-      }
-    end if
+        else
+          descriptions.foreach {
+            case bd: BlockDescription =>
+              check(
+                bd.lines.nonEmpty && !bd.lines.forall(_.s.isEmpty),
+                s"For ${definition.identify}, description at ${bd.loc} is declared but empty",
+                MissingWarning,
+                bd.loc
+              )
+            case ud: URLDescription =>
+              check(
+                ud.url.isValid,
+                s"For ${definition.identify}, description at ${ud.loc} has an invalid URL: ${ud.url}",
+                Error,
+                ud.loc
+              )
+            case _ => ()
+          }
+        end if
+      case _ => ()  
   end checkDescriptions
 
   def checkDescription[TD <: WithADescription](
@@ -135,11 +138,7 @@ trait DefinitionValidation extends BasicValidation {
   ): Unit = {
     val id = if value.isIdentified then value.asInstanceOf[Definition].identify else value.format
     val description: Option[Description] = value.description
-    val shouldCheck: Boolean = {
-      value.isInstanceOf[Type] |
-        (value.isInstanceOf[Definition] && value.nonEmpty)
-    }
-    if description.isEmpty && shouldCheck then {
+    if description.isEmpty then {
       check(
         predicate = false,
         s"$id should have a description",

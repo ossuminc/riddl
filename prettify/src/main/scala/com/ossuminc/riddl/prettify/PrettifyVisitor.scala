@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.prettify
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.parsing.Keyword
+import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
 import com.ossuminc.riddl.passes.PassVisitor
 
 import java.nio.file.Path
@@ -279,13 +279,11 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def doContainedGroup(containedGroup: ContainedGroup): Unit =
     state.withCurrent { rfe =>
-      rfe.openDef(containedGroup, withBrace = false)
-      if containedGroup.nonEmpty then
-        rfe.add(containedGroup.group.format)
-        rfe.emitBrief(containedGroup.brief)
-        rfe.emitDescription(containedGroup.description)
-      end if
-      rfe.closeDef(containedGroup, withBrace = false)
+      rfe
+        .addIndent(s"${keyword(containedGroup)} ${containedGroup.id.format} as ")
+        .add(containedGroup.group.format)
+        .emitBrief(containedGroup.brief)
+        .emitDescription(containedGroup.description)
     }
   end doContainedGroup
 
@@ -312,13 +310,13 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   end doDescription
 
-  def doStatement(statement: Statements): Unit =
+  def doStatement(statement: Statement): Unit =
     state.withCurrent { rfe =>
       rfe.addLine(statement.format)
     }
   end doStatement
 
-  def doInteraction(interaction: UseCaseContents): Unit =
+  def doInteraction(interaction: Interaction): Unit =
     state.withCurrent { rfe =>
       interaction match
         case si: SequentialInteractions     => () // TODO: implement
@@ -326,7 +324,6 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         case oi: OptionalInteractions       => () // TODO: implement
         case twori: TwoReferenceInteraction => () // TODO: implement
         case gi: GenericInteraction         => () // TODO: implement
-        case comment: Comment               => rfe.emitComment(comment)
       end match
     }
   end doInteraction

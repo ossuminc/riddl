@@ -17,6 +17,7 @@ domain foo {
   epic TestCase is {
     user U wants to "hum" so that "haw"
     case one is {
+      user U wants to "hum" so that "haw"
       step from user U "select" button foo.foo2.choice.b
       step focus user U on page target
     }

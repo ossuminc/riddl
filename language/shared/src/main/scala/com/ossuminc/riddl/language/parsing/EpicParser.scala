@@ -139,13 +139,11 @@ private[parsing] trait EpicParser {
 
   private def useCase[u: P]: P[UseCase] = {
     P(
-      location ~ Keywords.case_ ~/ identifier ~ is ~ open ~
-        (undefined(
-          (Option.empty[UserStory], Seq.empty[TwoReferenceInteraction])
-        )./ | (userStory.? ~ interactions)) ~
+      location ~ Keywords.case_ ~/ identifier ~ is ~ open ~ userStory ~
+        (undefined(Seq.empty[TwoReferenceInteraction]) | interactions) ~
         close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, (userStory, contents), brief, description) =>
-      UseCase(loc, id, userStory.getOrElse(UserStory()), foldDescriptions(contents, brief, description))
+    ).map { case (loc, id, userStory, contents, brief, description) =>
+      UseCase(loc, id, userStory, foldDescriptions(contents, brief, description))
     }
   }
 
@@ -171,17 +169,12 @@ private[parsing] trait EpicParser {
     Seq[EpicContents]
   )
 
-  private def epicBody[u: P]: P[EpicBody] = {
+  private def epicBody[u: P]: P[EpicBody] =
     P(
-      undefined(
-        (
-          UserStory.empty,
-          Seq.empty[EpicContents]
-        )
-      )./ |
-        (userStory ~ epicDefinitions)./
+      userStory ~ (
+        undefined(Seq.empty[EpicContents]) | epicDefinitions
+      )./
     )
-  }
 
   def epic[u: P]: P[Epic] = {
     P(

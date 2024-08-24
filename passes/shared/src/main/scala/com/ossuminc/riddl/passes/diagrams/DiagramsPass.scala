@@ -316,6 +316,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
               tri.to.pathId.format -> toDef
             )
           case _: InteractionContainer | _: Interaction | _: Comment => Seq.empty
+          case brief: BriefDescription => Seq.empty
+          case description: Description => Seq.empty
         }
         .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq

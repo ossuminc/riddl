@@ -30,7 +30,7 @@ class ReferenceMapTest extends ValidatingTest {
     }
     "have correct size" in { _ =>
       info("size: " + refMap.size.toString)
-      refMap.size must be(29)
+      refMap.size must be(31)
     }
 
     "have definitionOf(pathId:String) work" in { _ =>

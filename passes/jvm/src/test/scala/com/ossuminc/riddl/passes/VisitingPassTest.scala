@@ -8,32 +8,68 @@ import scala.collection.mutable
 
 import java.nio.file.Path
 
+
+case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
+
+class VisitingPassTest extends ParsingTest {
+
+  "VisitingPass" must {
+    "descend cleanly" in { td =>
+      val path: Path = Path.of("language/jvm/src/test/input/everything.riddl")
+      parsePath(path) match
+        case Left(msgs) => fail(msgs.justErrors.format)
+        case Right(root) =>
+          // info(s"root.domains.contents.size= ${root.domains.head.contents.size}")
+          val visitor = new TestVisitor
+          val input = PassInput(root)
+          val outputs = PassesOutput()
+          val pass = new VisitingPass(input, outputs, visitor) {
+            def name: String = "VisitingPassTest"
+            override def result(root: Root): PassOutput = TestPassOutput(root, List.empty)
+          }
+          val result = Pass.runPass[TestPassOutput](input, outputs, pass)
+          // info(visitor.kindMap.toSeq.sortBy(_._1).map(_.toString).mkString("\n"))
+          // info(s"""depth=${visitor.depth}
+          //      |leaves=${visitor.leaves}
+          //      |values=${visitor.values}
+          //      |opens=${visitor.opens}
+          //      |closes=${visitor.closes}
+          //      |""".stripMargin)
+          visitor.depth must be(0)
+          visitor.leaves must be(23)
+          visitor.values must be(28)
+          visitor.opens must be(visitor.closes)
+      end match
+    }
+  }
+}
+
 class TestVisitor extends PassVisitor:
   var opens = 0
   var closes = 0
   var depth = 0
   var leaves = 0
   var values = 0
-  val kindMap: mutable.HashMap[String, Int] = mutable.HashMap.empty 
+  val kindMap: mutable.HashMap[String, Int] = mutable.HashMap.empty
   def incr(parent: Container[?]): Unit =
-    depth = depth + 1 
+    depth = depth + 1
     opens = opens + 1
     val old = kindMap.getOrElse(parent.kind, 0)
     kindMap.put(parent.kind, old + 1)
-    
+
   def decr(parent: Container[?]): Unit =
     require(depth > 0); depth = depth - 1; closes = closes + 1
-    
-  def leaf(leaf: LeafDefinition): Unit = 
+
+  def leaf(leaf: LeafDefinition): Unit =
     leaves = leaves + 1
     val old = kindMap.getOrElse(leaf.kind, 0)
     kindMap.put(leaf.kind, old + 1)
-    
-  def value(value: RiddlValue): Unit = 
+
+  def value(value: RiddlValue): Unit =
     values = values + 1
     val old = kindMap.getOrElse(value.kind, 0)
     kindMap.put(value.kind, old + 1)
-    
+
   def openType(typ: Type, parents: Parents): Unit = incr(typ)
   def openDomain(domain: Domain, parents: Parents): Unit = incr(domain)
   def openContext(context: Context, parents: Parents): Unit = incr(context)
@@ -73,7 +109,7 @@ class TestVisitor extends PassVisitor:
   def closeGroup(group: Group, parents: Parents): Unit = decr(group)
   def closeOutput(output: Output, parents: Parents): Unit = decr(output)
   def closeInput(input: Input, parents: Parents): Unit = decr(input)
-  def closeInclude(include: Include[?], parents: Parents): Unit = decr(include) 
+  def closeInclude(include: Include[?], parents: Parents): Unit = decr(include)
 
   // LeafDefinitions
   def doField(field: Field): Unit = leaf(field)
@@ -97,43 +133,8 @@ class TestVisitor extends PassVisitor:
   def doAuthorRef(reference: AuthorRef): Unit = value(reference)
   def doBriefDescription(brief: BriefDescription): Unit = value(brief)
   def doDescription(description: Description): Unit = value(description)
-  def doStatement(statement: Statements): Unit = value(statement)
-  def doInteraction(interaction: UseCaseContents): Unit = value(interaction)
+  def doStatement(statement: Statement): Unit = value(statement)
+  def doInteraction(interaction: Interaction): Unit = value(interaction)
   def doOptionValue(optionValue: OptionValue): Unit = value(optionValue)
   def doUserStory(userStory: UserStory): Unit = value(userStory)
 end TestVisitor
-
-case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
-
-class VisitingPassTest extends ParsingTest {
-
-  "VisitingPass" must {
-    "descend cleanly" in { td =>
-      val path: Path = Path.of("passes/jvm/src/test/input/everything.riddl")
-      parsePath(path) match
-        case Left(msgs) => fail(msgs.justErrors.format)
-        case Right(root) =>
-          info(s"root.domains.contents.size= ${root.domains.head.contents.size}")
-          val visitor = new TestVisitor
-          val input = PassInput(root)
-          val outputs = PassesOutput()
-          val pass = new VisitingPass(input, outputs, visitor) {
-            def name: String = "VisitingPassTest"
-            override def result(root: Root): PassOutput = TestPassOutput(root, List.empty)
-          }
-          val result = Pass.runPass[TestPassOutput](input, outputs, pass)
-          info(visitor.kindMap.toSeq.sortBy(_._1).map(_.toString).mkString("\n"))
-          info(s"""depth=${visitor.depth}
-               |leaves=${visitor.leaves}
-               |values=${visitor.values}
-               |opens=${visitor.opens}
-               |closes=${visitor.closes}
-               |""".stripMargin)
-          visitor.depth must be(0)
-          visitor.leaves must be(20)
-          visitor.values must be(16)
-          visitor.opens must be(visitor.closes)
-      end match
-    }
-  }
-}

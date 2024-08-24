@@ -70,13 +70,13 @@ class PrettifyPassTest extends RiddlFilesTestBase {
       processADirectory("passes/jvm/src/test/input/ranges")
     }
     "check everything.riddl" in { (td: TestData) =>
-      processAFile("passes/jvm/src/test/input/everything.riddl")
+      processAFile("language/jvm/src/test/input/everything.riddl")
     }
     "check petstore.riddl" in { (td: TestData) =>
-      processAFile("passes/jvm/src/test/input/petstore.riddl")
+      processAFile("language/jvm/src/test/input/petstore.riddl")
     }
     "check rbbq.riddl" in { (td: TestData) =>
-      processAFile("passes/jvm/src/test/input/rbbq.riddl")
+      processAFile("language/jvm/src/test/input/rbbq.riddl")
       println("done")
     }
   }

@@ -3,6 +3,7 @@ domain Ignore {
   epic TestCase is {
     user U wants to "hum" so that "haw"
     case one is {
+      user U wants to "wee" so that "hum"
       step direct user U to http://google.com/
     }
   }

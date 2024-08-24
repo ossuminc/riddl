@@ -47,7 +47,7 @@ class ContextValidationTest extends ValidatingTest {
         """function bar is {
           |  requires { i: Integer }
           |  returns { o: Integer }
-          |  body { ??? }
+          |  ???
           |}
           |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>

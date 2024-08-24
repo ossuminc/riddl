@@ -73,7 +73,7 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     }
   }
 
-  def docBlock[u: P]: P[Seq[LiteralString]] = {
+  private def docBlock[u: P]: P[Seq[LiteralString]] = {
     P(
       (open ~
         (markdownLines | literalStrings | undefined(Seq.empty[LiteralString])) ~
@@ -81,18 +81,18 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     )
   }
 
-  def blockDescription[u: P]: P[BlockDescription] = {
+  private def blockDescription[u: P]: P[BlockDescription] = {
     P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
   }
 
-  def fileDescription[u: P](implicit ctx: P[?]): P[URLDescription] = {
+  private def fileDescription[u: P](implicit ctx: P[?]): P[URLDescription] = {
     P(location ~ Keywords.file ~ literalString).map { case (loc, file) =>
       val url = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
       URLDescription(loc, url)
     }
   }
 
-  def urlDescription[u: P]: P[URLDescription] = {
+  private def urlDescription[u: P]: P[URLDescription] = {
     P(location ~ httpUrl).map { case (loc, url) =>
       URLDescription(loc, url)
     }

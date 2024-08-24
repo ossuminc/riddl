@@ -46,42 +46,64 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   def closeDef(
-    definition: Definition,
-    withBrace: Boolean = true
+    definition: Definition
   ): this.type = {
-    if withBrace then
-      if definition.nonEmpty then decr.addIndent("}")
-      end if
+    definition match
+      case brief: WithABrief => emitBrief(brief.brief)
+      case _ =>
+    definition match
+      case definition: WithADescription => 
+        emitDescription(definition.asInstanceOf[WithADescription].description)
+      case _ =>
+    if definition.nonEmpty then 
+      decr.addIndent("}").nl
+    else
+      nl 
     end if
-    if definition.hasBriefDescription then 
-      emitBrief(definition.asInstanceOf[WithABrief].brief)
-    end if  
-    if definition.hasDescription then 
-      emitDescription(definition.asInstanceOf[WithADescription].description).nl
-    if !withBrace && definition.nonEmpty then nl.decr else this
+    this    
   }
 
   def emitComment(comment: Comment): this.type =
     comment match
       case inline: InlineComment => this.add(inline.format)
-      case block: LineComment    => this.add(block.format)
+      case block: LineComment    => this.addIndent(block.format).nl
     end match
   end emitComment
 
-  def emitBrief(brief: Option[BriefDescription]): this.type = {
-    brief.map { bd => this.add(s" briefly ${bd.format}") }
+  def emitBrief(brief: Option[BriefDescription], withIndent: Boolean = true ): this.type = {
+    brief.map { bd =>
+      if withIndent then
+        addIndent(bd.format)
+      else
+        add(bd.format)
+      end if
+    }
     this
   }
 
-  def emitDescription(description: Option[Description]): this.type = {
+  def emitDescription(description: Option[Description], withIndent: Boolean = true): this.type = {
     description.map { (desc: Description) =>
-      add(" described as {").nl
-      incr
-      desc.lines.foreach { line =>
-        add(spc + "|" + line.s).nl
-      }
-      decr
-      addIndent("}").nl
+      desc match
+        case bd: BlockDescription =>
+          if withIndent then
+            addIndent(" described as {").nl
+          else
+            add(" described as {").nl
+          incr
+          bd.lines.foreach { line => addIndent("|").add(line.s).nl }
+          decr
+          addIndent("}").nl
+        case URLDescription(_, url) =>
+          if withIndent then
+            addIndent(" described ")
+          else
+            add(" described ")
+          url.scheme match
+            case "file" => add("in file ")
+            case "http" | "https" => add("at ")
+          end match
+          add(url.toExternalForm).nl
+        case _ => // ignore
     }
     this
   }
@@ -125,22 +147,31 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
   }
 
-  private def emitField(field: Field): this.type = {
-    this
-      .add(s"${field.id.value}: ")
+  private def emitField(field: Field): this.type =
+    this.add(s"${field.id.value}: ")
       .emitTypeExpression(field.typeEx)
+      .emitBrief(field.brief)
       .emitDescription(field.description)
-  }
+    this
+  end emitField
 
   private def emitFields(of: Seq[Field]): this.type = {
     of.headOption match {
       case None => this.add("{ ??? }")
       case Some(field) if of.size == 1 =>
-        add(s"{ ").emitField(field).add(" }").emitDescription(field.description)
+        add(s"{ ")
+          .emitField(field)
+          .add(" } ")
+          .emitBrief(field.brief, false)
+          .emitDescription(field.description, false)
       case Some(_) =>
         this.add("{").nl.incr
         of.foldLeft(this) { case (s, f) =>
-          s.add(spc).emitField(f).emitDescription(f.description).add(",").nl
+          s.add(spc)
+            .emitField(f)
+            .emitBrief(f.brief, false)
+            .emitDescription(f.description, false)
+            .add(",").nl
         }
         sb.deleteCharAt(sb.length - 2)
         decr.add(s"$spc} ")
@@ -246,7 +277,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
       .add(s"${spc}type ${t.id.value} is ")
       .emitTypeExpression(t.typEx)
-      .emitDescription(t.description)
+      .emitBrief(t.brief, false)
+      .emitDescription(t.description,false)
       .nl
   }
 

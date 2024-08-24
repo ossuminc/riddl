@@ -30,7 +30,7 @@ class FoldingTest extends ParsingTest {
       |    function foo is {
       |       requires { a: Integer, b: String }
       |       returns { ??? }
-      |       body { ??? }
+      |       ???
       |     }
       |    type oneState is Integer
       |    entity one is {

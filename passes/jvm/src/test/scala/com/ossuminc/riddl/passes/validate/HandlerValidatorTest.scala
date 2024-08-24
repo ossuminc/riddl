@@ -62,7 +62,7 @@ class HandlerValidatorTest extends ValidatingTest {
         """
           |domain entityTest is {
           | context EntityContext is {
-          |  term Incoming is "This is a term definition to generate an error"
+          |  term Incoming is briefly "This is a term definition to generate an error"
           |  entity Hamburger is {
           |   type StateFields is { field1: Number }
           |   state HamburgerState of Hamburger.StateFields

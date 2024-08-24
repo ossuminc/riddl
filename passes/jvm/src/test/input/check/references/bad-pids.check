@@ -2,10 +2,6 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
  Entity 'FooEntity' should have a description:
      entity FooEntity is {
      ^
-passes/jvm/src/test/input/check/references/bad-pids.riddl(12:15):
- Handler 'HandleFoo' should have a description:
-       handler HandleFoo is {
-               ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
  Entity 'FooEntity' is unused:
      entity FooEntity is {
@@ -44,10 +40,6 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
  Vital definitions should have an author reference:
  domain foo {
  ^
-passes/jvm/src/test/input/check/references/bad-pids.riddl(13:9):
- OnMessageClause 'command DooFoo' should have a description:
-         on command DooFoo {
-         ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(1:8):
  Models without any streaming data will exhibit minimal effect:
  domain foo {

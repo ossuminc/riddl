@@ -26,30 +26,17 @@ private[parsing] trait FunctionParser {
     P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)./
   }
 
-  private def statementBlock[u: P]: P[Seq[Statements]] = {
-    P(
-      Keywords.body./ ~ pseudoCodeBlock(StatementsSet.FunctionStatements)./
-    )
-  }
-
   private def functionDefinitions[u: P]: P[Seq[FunctionContents]] = {
     P(
-      vitalDefinitionContents | function | functionInclude
-    ).asInstanceOf[P[FunctionContents]]./.rep(0)
+      undefined(Seq.empty[FunctionContents]) | (
+        vitalDefinitionContents | function | functionInclude | statement(StatementsSet.FunctionStatements)
+      ).asInstanceOf[P[FunctionContents]]./.rep(0)
+    )
   }
 
-  private def functionBody[u: P]: P[
-    (
-      Option[Aggregation],
-      Option[Aggregation],
-      Seq[FunctionContents],
-      Seq[Statements]
-    )
-  ] = {
-    P(undefined(None).map { _ =>
-      (None, None, Seq.empty[FunctionContents], Seq.empty[Statements])
-    } | (input.? ~ output.? ~ functionDefinitions ~ statementBlock))
-  }
+  type BodyType = (Option[Aggregation], Option[Aggregation], Seq[FunctionContents])
+  private def functionBody[u: P]: P[BodyType] =
+    P(input.? ~ output.? ~ functionDefinitions)
 
   /** Parses function literals, i.e.
     *
@@ -57,16 +44,16 @@ private[parsing] trait FunctionParser {
     *   function myFunction is {
     *     requires is Boolean
     *     returns is Integer
-    *     body { statements }
+    *     statements | comments | functions | terms
     *   }
     * }}}
     */
   def function[u: P]: P[Function] = {
     P(
       location ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~/ close ~/ briefly ~/ maybeDescription
-    )./.map { case (loc, id, (ins, outs, contents, statements), briefly, description) =>
+    )./.map { case (loc, id, (ins, outs, contents), briefly, description) =>
       checkForDuplicateIncludes(contents)
-      Function(loc, id, ins, outs, foldDescriptions(contents, briefly, description), statements)
+      Function(loc, id, ins, outs, foldDescriptions(contents, briefly, description))
     }
   }
 }

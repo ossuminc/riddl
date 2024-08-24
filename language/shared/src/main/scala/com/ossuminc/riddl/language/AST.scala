@@ -243,7 +243,7 @@ object AST {
     loc: At,
     brief: LiteralString
   ) extends RiddlValue:
-    def format: String = s"briefly"
+    def format: String = s"briefly \"${brief.s}\""
   end BriefDescription
 
   /** The description of a definition. All definitions have a name and an optional description. This class provides the
@@ -324,7 +324,7 @@ object AST {
     *   The lines of the comment without line terminators
     */
   case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment:
-    def format: String = lines.mkString("/* ", "\n * ", "\n */\n")
+    def format: String = lines.mkString("/* ", "\n", "\n*/\n")
   end InlineComment
 
   /** Base trait for option values for any option of a definition.
@@ -719,10 +719,10 @@ object AST {
   type OccursInGroup = Group | ContainedGroup | Input | Output | Comment | BriefDescription | Description
 
   /** Type of definitions that occur in an [[Input]] */
-  type OccursInInput = Input | TypeRef
+  type OccursInInput = Input | TypeRef | BriefDescription | Description
 
   /** Type of definitions that occur in an [[Output]] */
-  type OccursInOutput = Output | TypeRef
+  type OccursInOutput = Output | TypeRef | BriefDescription | Description
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
@@ -764,7 +764,7 @@ object AST {
   type EpicContents = OccursInEpic | Include[OccursInEpic]
 
   /** Type of definitions that occur in a [[UseCase]] */
-  type UseCaseContents = Interaction | Comment
+  type UseCaseContents = Interaction | Comment | BriefDescription | Description
 
   /** Type of definitions that occur in a [[InteractionContainer]] */
   type InteractionContainerContents = Interaction | Comment
@@ -782,7 +782,7 @@ object AST {
   type RepositoryContents = OccursInRepository | Include[OccursInRepository]
 
   /** Type of definitions that occur in a [[Function]] */
-  private type OccursInFunction = OccursInVitalDefinition | Aggregation
+  private type OccursInFunction = OccursInVitalDefinition | Statement | Function
 
   /** Type of definitions that occur in a [[Function]], with Include */
   type FunctionContents = OccursInFunction | Include[OccursInFunction]
@@ -2500,11 +2500,11 @@ object AST {
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Contents[FunctionContents] = Seq.empty,
-    statements: Seq[Statements] = Seq.empty
+    contents: Contents[FunctionContents] = Seq.empty
   ) extends VitalDefinition[FunctionContents]
       with WithTypes
-      with WithFunctions {
+      with WithFunctions
+      with WithStatements {
     override def format: String = Keyword.function + " " + id.format
     final override inline def kind: String = "Function"
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty && output.isEmpty
@@ -3551,7 +3551,7 @@ object AST {
   case class UseCase(
     loc: At,
     id: Identifier,
-    userStory: UserStory = UserStory(),
+    userStory: UserStory,
     contents: Contents[UseCaseContents] = Seq.empty
   ) extends BranchDefinition[UseCaseContents]
       with WithBriefs
@@ -3575,17 +3575,14 @@ object AST {
   @JSExportTopLevel("UserStory")
   case class UserStory(
     loc: At = At.empty,
-    user: UserRef = UserRef(At.empty, PathIdentifier.empty),
-    capability: LiteralString = LiteralString.empty,
-    benefit: LiteralString = LiteralString.empty
+    user: UserRef,
+    capability: LiteralString,
+    benefit: LiteralString
   ) extends RiddlValue {
     def format: String = {
       user.format + " wants to \"" + capability.s + "\" so that \"" + benefit.s + "\""
     }
     override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
-  }
-  object UserStory {
-    val empty: UserStory = UserStory()
   }
 
   @JSExportTopLevel("ShownBy")
@@ -3613,7 +3610,7 @@ object AST {
   case class Epic(
     loc: At,
     id: Identifier,
-    userStory: UserStory = UserStory.empty,
+    userStory: UserStory,
     contents: Contents[EpicContents] = Seq.empty
   ) extends VitalDefinition[EpicContents]
       with WithUseCases

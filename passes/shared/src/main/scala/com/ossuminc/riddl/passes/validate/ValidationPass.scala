@@ -181,14 +181,13 @@ case class ValidationPass(
     omc.from.foreach { (_: Option[Identifier], ref: Reference[Definition]) =>
       checkRef[Definition](ref, parents)
     }
-    checkDescriptions(omc, omc.contents)
   }
 
   private def validateStatement(
     statement: Statement,
     parents: Parents
   ): Unit =
-    val onClause: OnClause = parents.head.asInstanceOf[OnClause]
+    val onClause: Parent = parents.head
     statement match
       case ArbitraryStatement(loc, what) =>
         checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
@@ -273,7 +272,6 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, e)
-    checkDescription(e)
   }
 
   private def validateField(
@@ -291,7 +289,6 @@ case class ValidationPass(
       )
     }
     checkTypeExpression(f.typeEx, f, parents)
-    checkDescription(f)
   }
   private def validateMethod(
     m: Method,
@@ -396,7 +393,6 @@ case class ValidationPass(
     if !t.typEx.isInstanceOf[AggregateTypeExpression] then {
       checkTypeExpression(t.typEx, t, parents)
     }
-    checkDescription(t)
   }
 
   private def validateConstant(
@@ -448,7 +444,6 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, h)
-    checkDescriptions(h, h.contents)
   }
 
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
@@ -755,6 +750,8 @@ case class ValidationPass(
                 )
               }
           }
+        case bd: BriefDescription => ()
+        case bd: Description => ()
         case _: Comment => ()
       }
     }

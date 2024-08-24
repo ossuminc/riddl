@@ -627,6 +627,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
               candidatesFromPathIdentifier[Type](outlet.type_.pathId, defStack)
             case include: Include[?] =>
               candidatesFromContents(include.contents)
+            case function: Function =>
+              function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++ 
+                function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++ 
+                function.contents.definitions
             case vital: VitalDefinition[?] =>
               vital.contents.flatMap {
                 case include: Include[ContentValues] @unchecked => include.contents.definitions

@@ -175,7 +175,9 @@ class ASTTest extends TestingBasis {
     WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
   )
   val function: Function =
-    Function(At.empty, Identifier(At(), "Lambda"), None, None, brief.toSeq ++ description.toSeq, statements)
+    Function(At.empty, Identifier(At(), "Lambda"), None, None,
+      (statements ++ brief.toSeq ++ description.toSeq).asInstanceOf[Seq[FunctionContents]]
+    )
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Seq[OnClause] = Seq(
     OnInitializationClause(At.empty, foldDescriptions(statements, brief, description)),
@@ -184,13 +186,17 @@ class ASTTest extends TestingBasis {
     OnTerminationClause(At.empty, foldDescriptions(statements, brief, description))
   )
   val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), foldDescriptions(onClauses, brief, description))
-  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), foldDescriptions[Handler](Seq(handler), brief, description))
+  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"),
+    foldDescriptions[Handler](Seq(handler), brief, description))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
   val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
   val stateRef: StateRef = StateRef(At.empty, PathIdentifier(At(), Seq("state")))
-  val storyCase: UseCase = UseCase(At.empty, Identifier(At.empty, "story-case"))
-  val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"))
+  val user: User = User(At.empty, Identifier(At.empty, "john"), LiteralString(At.empty, "GenericUser"))
+  val userStory: UserStory = UserStory(At.empty, UserRef(At.empty, PathIdentifier(At.empty, Seq("user"))),
+    LiteralString(At.empty, "do something"), LiteralString(At.empty, "he can reap obvious benefits"))
+  val storyCase: UseCase = UseCase(At.empty, Identifier(At.empty, "story-case"), userStory)
+  val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"), userStory)
   val term: Term = Term(At.empty, Identifier(At.empty, "term"))
 
   "User" should {

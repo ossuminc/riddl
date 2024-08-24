@@ -13,7 +13,6 @@ import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
 import com.ossuminc.riddl.passes.PassCreator
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
-import com.ossuminc.riddl.passes.symbols.Symbols.*
 
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
 import com.ossuminc.riddl.utils.ExceptionUtils
@@ -220,7 +219,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * entire AST
     *
     * @param root
-    *   The root of the parsed model just as a convenience for post processing
+    *   The root of the parsed model just as a convenience for post-processing
     */
   def postProcess(root: Root): Unit = ()
 
@@ -240,7 +239,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * no need to override in non-RIDDL code.
     *
     * @param definition
-    *   The root (starting point) of the traveral
+    *   The root (starting point) of the traversal
     * @param parents
     *   The parents of the definition
     */
@@ -436,8 +435,8 @@ trait PassVisitor:
   def doAuthorRef(reference: AuthorRef): Unit
   def doBriefDescription(brief: BriefDescription): Unit
   def doDescription(description: Description): Unit
-  def doStatement(statement: Statements): Unit
-  def doInteraction(interaction: UseCaseContents): Unit
+  def doStatement(statement: Statement): Unit
+  def doInteraction(interaction: Interaction): Unit
   def doOptionValue(optionValue: OptionValue): Unit
 
 /** An abstract Pass that uses the Visitor pattern (https://refactoring.guru/design-patterns/visitor)
@@ -591,7 +590,7 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput) exten
 
   protected val collectedValues: mutable.ArrayBuffer[ET] = mutable.ArrayBuffer.empty[ET]
 
-  /** The processing method called at each node, similar to [[Pass.process]] but modified to return an sequence of the
+  /** The processing method called at each node, similar to [[Pass.process]] but modified to return a sequence of the
     * collectable, [[ET]].
     *
     * @param definition
@@ -610,7 +609,7 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput) exten
 object Pass {
 
   /** A PassesCreator of the standard passes that should be run on every AST pass. These generate the symbol table,
-    * resolve path references, and validate the input. Only after these three have passed successfull should the model
+    * resolve path references, and validate the input. Only after these three have passed successful should the model
     * be considered processable by other passes
     */
   val standardPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
@@ -640,8 +639,8 @@ object Pass {
       }
       PassesResult(input, outputs, Messages.empty)
     } catch {
-      case NonFatal(xcptn) =>
-        val message = ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
+      case NonFatal(exception) =>
+        val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n")
         val messages: Messages.Messages = List(Messages.severe(message, At.empty))
         PassesResult(input, outputs, messages)
     }

@@ -55,7 +55,13 @@ class ParsingTestTest extends ParsingTest {
     }
 
     "parseTopLevelDomain[Epic]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { epic X is { ??? } }", td)
+      val input = RiddlParserInput(
+        """domain foo is {
+          |  epic X is {
+          |    user foo wants "to do a thing" so that "he gets bar"
+          |    ???
+          |  }
+          |}""".stripMargin, td)
       parseTopLevelDomain[Epic](input, _.domains.head.epics.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
