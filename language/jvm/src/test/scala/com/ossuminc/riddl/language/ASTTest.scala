@@ -18,6 +18,23 @@ import scala.concurrent.duration.DurationInt
 /** Unit Tests For Abstract Syntax Tree */
 class ASTTest extends TestingBasis {
 
+  "RiddlValue" should {
+    "accept storage of arbitrary named values in a map" in {
+      val container = SimpleContainer(Contents.empty)
+      container.put("this", "that")
+      val result = container.get("this")
+      result must be(Some("that"))
+    }
+    "reject incorrectly typed values in attachments" in {
+      val container = SimpleContainer(Contents.empty)
+      container.put("this", "that")
+      intercept[ClassCastException] {
+        val result: Option[Double] = container.get[Double]("this")
+        val timesTwo = result.get * 2.0
+        println(timesTwo)
+      }
+    }
+  }
   "Descriptions" should {
     "have empty Description.empty" in {
       Description.empty.format mustBe ("")

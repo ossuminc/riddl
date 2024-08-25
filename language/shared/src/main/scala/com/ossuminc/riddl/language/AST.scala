@@ -32,6 +32,30 @@ object AST {
     */
   sealed trait RiddlValue:
 
+    private val attachments: mutable.Map[String,Any] = mutable.Map.empty[String,Any]
+
+    /** Put an arbitrary named value in this AST node.
+     * @param name
+     *   The name by which the arbitrary value can be retrieved
+     * @param value
+     *   A value of Any type
+     * @tparam T
+     *   The actual type of the value which must also be used upon retrieval
+     */
+    def put[T <: Any](name: String, value: T): Unit = attachments.put(name, value)
+
+    /** Get an arbitrary named value from this AST Node
+     * @param name
+     *   The name of the atribrary value to be retrieved
+     * @tparam T
+     *   The type of the value to be retrieved to whic the value will be cast.
+     *   A failure may occur if the wrong T value is used
+     * @return
+     *   The T value requests, optionally. None will be returned if the
+     *   value is not in the attachments map
+     */
+    def get[T <: Any](name: String): Option[T] = attachments.get(name).map(_.asInstanceOf[T])
+
     /** The location in the parse at which this RiddlValue occurs */
     def loc: At
 
