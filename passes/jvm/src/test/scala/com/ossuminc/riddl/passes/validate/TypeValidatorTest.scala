@@ -120,16 +120,16 @@ class TypeValidatorTest extends ValidatingTest {
         val rng = domain.types.find("rng").get
         val d = domain.types.find("d").get
         val c = domain.types.find("c").get
-        si.typ.isInstanceOf[Set] must be(true)
-        si.typ.asInstanceOf[Set].format must be("set of Integer")
-        sn.typ.isInstanceOf[Sequence] must be(true)
-        sn.typ.asInstanceOf[Sequence].format must be("sequence of Number")
-        r.typ.isInstanceOf[Replica] must be(true)
-        r.typ.asInstanceOf[Replica].format must be("replica of Integer")
-        rng.typ.isInstanceOf[RangeType] must be(true)
-        rng.typ.asInstanceOf[RangeType].format must be("Range(23,42)")
-        c.typ.isInstanceOf[AggregateUseCaseTypeExpression] must be(true)
-        c.typ.asInstanceOf[AggregateUseCaseTypeExpression].format must be("command { int: Integer, str: String }")
+        si.typEx.isInstanceOf[Set] must be(true)
+        si.typEx.asInstanceOf[Set].format must be("set of Integer")
+        sn.typEx.isInstanceOf[Sequence] must be(true)
+        sn.typEx.asInstanceOf[Sequence].format must be("sequence of Number")
+        r.typEx.isInstanceOf[Replica] must be(true)
+        r.typEx.asInstanceOf[Replica].format must be("replica of Integer")
+        rng.typEx.isInstanceOf[RangeType] must be(true)
+        rng.typEx.asInstanceOf[RangeType].format must be("Range(23,42)")
+        c.typEx.isInstanceOf[AggregateUseCaseTypeExpression] must be(true)
+        c.typEx.asInstanceOf[AggregateUseCaseTypeExpression].format must be("command { int: Integer, str: String }")
       }
 
     }

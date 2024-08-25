@@ -32,25 +32,28 @@ trait BasicValidation {
 
   def pathIdToDefinition(
     pid: PathIdentifier,
-    parents: Seq[Definition]
+    parents: Parents
   ): Option[Definition] = {
-    parents.headOption.flatMap[Definition] { (head: Definition) =>
-      resolution.refMap.definitionOf[Definition](pid, head)
-    }
+    if pid.value.length == 1 then 
+      // Let's try the symbol table
+      symbols.lookup[Definition](pid.value.reverse).headOption
+    else   
+      parents.headOption.flatMap { (head: Parent) =>
+        resolution.refMap.definitionOf[Definition](pid, head)
+      }
   }
 
   @inline
   def resolvePath[T <: Definition](
     pid: PathIdentifier,
-    parents: Seq[Definition]
+    parents: Parents
   ): Option[T] = {
     pathIdToDefinition(pid, parents).map(_.asInstanceOf[T])
   }
 
   def checkPathRef[T <: Definition: ClassTag](
     pid: PathIdentifier,
-    container: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): Option[T] = {
     if pid.value.isEmpty then
       val tc = classTag[T].runtimeClass
@@ -59,64 +62,52 @@ trait BasicValidation {
       messages.addError(pid.loc, message)
       Option.empty[T]
     else
-      val pars: Seq[Definition] = parents.headOption match
-        case Some(head: Definition) if head != container =>
-          container +: parents
-        case Some(_: Definition) =>
-          parents
-        case None =>
-          parents
-      resolvePath[T](pid, pars)
+      resolvePath[T](pid, parents)
   }
 
   def checkRef[T <: Definition: ClassTag](
     reference: Reference[T],
-    definition: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): Option[T] = {
-    checkPathRef[T](reference.pathId, definition, parents)
+    checkPathRef[T](reference.pathId, parents)
   }
 
   def checkRefAndExamine[T <: Definition: ClassTag](
     reference: Reference[T],
-    definition: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   )(examiner: T => Unit): this.type = {
-    checkPathRef[T](reference.pathId, definition, parents).foreach { (resolved: T) =>
+    checkPathRef[T](reference.pathId, parents).foreach { (resolved: T) =>
       examiner(resolved)
     }
     this
   }
 
-  def checkMaybeRef[T <: Definition: ClassTag](
+  private def checkMaybeRef[T <: Definition: ClassTag](
     reference: Option[Reference[T]],
-    definition: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): Option[T] = {
     reference.flatMap { ref =>
-      checkPathRef[T](ref.pathId, definition, parents)
+      checkPathRef[T](ref.pathId, parents)
     }
   }
 
   def checkTypeRef(
     ref: TypeRef,
-    topDef: Definition,
-    parents: Seq[Definition]
+    parents: Parents
   ): Option[Type] = {
-    checkRef[Type](ref, topDef, parents)
+    checkRef[Type](ref, parents)
   }
 
   def checkMessageRef(
     ref: MessageRef,
-    topDef: Definition,
-    parents: Seq[Definition],
+    parents: Parents,
     kinds: Seq[AggregateUseCase]
   ): this.type = {
     if ref.isEmpty then {
       messages.addError(ref.pathId.loc, s"${ref.identify} is empty")
       this
     } else {
-      checkRefAndExamine[Type](ref, topDef, parents) { (definition: Definition) =>
+      checkRefAndExamine[Type](ref, parents) { (definition: Definition) =>
         definition match {
           case Type(_, _, typ, _, _) =>
             typ match {
@@ -169,7 +160,7 @@ trait BasicValidation {
   }
 
   def checkOverloads(): this.type = {
-    symbols.foreachOverloadedSymbol { (defs: Seq[Seq[NamedValue]]) =>
+    symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
       this.checkSequence(defs) { defList =>
         defList.toList match {
           case Nil =>
@@ -188,7 +179,7 @@ trait BasicValidation {
     this
   }
 
-  def checkIdentifierLength[T <: NamedValue](d: T, min: Int = 3): this.type = {
+  def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
     if d.id.value.nonEmpty && d.id.value.length < min then {
       messages.addStyle(
         d.id.loc,

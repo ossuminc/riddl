@@ -4,14 +4,12 @@ import com.ossuminc.riddl.command.{PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
 
 import java.nio.file.Path
-import scala.annotation.unused
 
 object PrettifyPass extends PassInfo[PrettifyPass.Options]:
   val name: String = "prettify"

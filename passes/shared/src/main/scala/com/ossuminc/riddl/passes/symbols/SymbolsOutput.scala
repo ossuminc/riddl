@@ -35,9 +35,9 @@ case class SymbolsOutput(
     * @return
     *   optionally, the parent definition of the given definition
     */
-  def parentOf(namedValue: NamedValue): Option[Definition] =
-    parentage.get(namedValue) match {
-      case Some(container) => container.headOption
+  def parentOf(definition: Definition): Option[Parent] =
+    parentage.get(definition) match {
+      case Some(parents) => parents.headOption
       case None            => None
     }
 
@@ -48,27 +48,27 @@ case class SymbolsOutput(
     * @return
     *   the sequence of ParentDefOf parents or empty if none.
     */
-  def parentsOf(namedValue: NamedValue): Parents = {
-    parentage.get(namedValue) match {
+  def parentsOf(definition: Definition): Parents = {
+    parentage.get(definition) match {
       case Some(list) => list
-      case None       => Seq.empty[Definition]
+      case None       => Parents.empty 
     }
   }
 
   /**
     * Find the bounded context in which a give named value is defined
-    * @param namedValue
-    * The [[com.ossuminc.riddl.language.AST.NamedValue]] whose [[com.ossuminc.riddl.language.AST.Context]] should be
+    * @param definition
+    * The [[com.ossuminc.riddl.language.AST.Definition]] whose [[com.ossuminc.riddl.language.AST.Context]] should be
     * determined
     * @return
     * An [[scala.Option]] either providing `Some[Context]`, if found, or `None`, if not.
     */
-  def contextOf(namedValue: NamedValue): Option[Context] = {
-    namedValue match {
+  def contextOf(definition: Definition): Option[Context] = {
+    definition match {
       case c: Context =>
         Some(c)
       case _ =>
-        val parents = parentsOf(namedValue)
+        val parents = parentsOf(definition)
         val tail = parents.dropWhile(_.getClass != classOf[Context])
         val result = tail.headOption.asInstanceOf[Option[Context]]
         result
@@ -82,8 +82,8 @@ case class SymbolsOutput(
     * @return
     *   A list of strings from leaf to root giving the names of the definition and its parents.
     */
-  def pathOf(namedValue: NamedValue): PathNames = {
-    namedValue.id.value +: parentsOf(namedValue).map(_.id.value)
+  def pathOf(definition: Definition): PathNames = {
+    definition.id.value +: parentsOf(definition).map(_.id.value)
   }
 
   private def hasSameParentNames(id: PathNames, parents: Parents): Boolean = {
@@ -98,7 +98,7 @@ case class SymbolsOutput(
     * definition, as a Definition, and, if the definition matches the type of interest, D, then an Option[D] for
     * convenience.
     */
-  type LookupResult[D <: NamedValue] = List[(NamedValue, Option[D])]
+  type LookupResult[D <: Definition] = List[(Definition, Option[D])]
 
   /** Look up a symbol in the table
     *
@@ -110,7 +110,7 @@ case class SymbolsOutput(
     *   A list of matching definitions of 2-tuples giving the definition as a Definition type and optionally as the
     *   requested type
     */
-  def lookupSymbol[D <: NamedValue: ClassTag](
+  def lookupSymbol[D <: Definition: ClassTag](
     id: PathNames
   ): LookupResult[D] = {
     require(id.nonEmpty, "No name elements provided to lookupSymbol")
@@ -120,12 +120,12 @@ case class SymbolsOutput(
     symTab.get(leafName) match {
       case Some(set) =>
         set
-          .filter { case (_: NamedValue, parents: Parents) =>
+          .filter { case (_: Definition, parents: Parents) =>
             // whittle down the list of matches to the ones whose parents names
             // have the same as the nameList provided
             hasSameParentNames(nameList, parents)
           }
-          .map { case (d: NamedValue, _: Parents) =>
+          .map { case (d: Definition, _: Parents) =>
             // If a name match is also the same type as desired by the caller
             // then give them the definition in the requested type, optionally
             if clazz.isInstance(d) then { (d, Option(d.asInstanceOf[D])) }
@@ -187,7 +187,7 @@ case class SymbolsOutput(
     }
   }
 
-  def foreachOverloadedSymbol(f: Seq[Seq[NamedValue]] => Unit): Unit = {
+  def foreachOverloadedSymbol(f: Seq[Seq[Definition]] => Unit): Unit = {
     val overloads = symTab.filterNot(_._1.isEmpty).filter(_._2.size > 1)
     val defs = overloads.toSeq.map(_._2).map(_.map(_._1).toSeq)
     f(defs)

@@ -25,7 +25,7 @@ private[parsing] trait AdaptorParser {
   private def adaptorDefinitions[u: P]: P[Seq[AdaptorContents]] = {
     P(
       processorDefinitionContents(StatementsSet.AdaptorStatements) |
-        handler(StatementsSet.AdaptorStatements)
+        handler(StatementsSet.AdaptorStatements) | adaptorInclude 
     ).asInstanceOf[P[AdaptorContents]].rep(1)
   }
 
@@ -46,10 +46,10 @@ private[parsing] trait AdaptorParser {
   def adaptor[u: P]: P[Adaptor] = {
     P(
       location ~ Keywords.adaptor ~/ identifier ~
-        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ briefly ~ description
+        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ briefly ~ maybeDescription
     ).map { case (loc, id, direction, cRef, contents, brief, description) =>
       checkForDuplicateIncludes(contents)
-      Adaptor(loc, id, direction, cRef, contents, brief, description)
+      Adaptor(loc, id, direction, cRef, foldDescriptions(contents, brief, description))
     }
   }
 }

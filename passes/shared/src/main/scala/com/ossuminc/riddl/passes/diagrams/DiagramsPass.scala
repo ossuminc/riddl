@@ -91,11 +91,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private val useCaseDiagrams: mutable.HashMap[UseCase, UseCaseDiagramData] = mutable.HashMap.empty
   private val contextDiagrams: mutable.HashMap[Context, ContextDiagramData] = mutable.HashMap.empty
 
-  protected def process(definition: RiddlValue, parents: mutable.Stack[Definition]): Unit = {
+  protected def process(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match
       case c: Context =>
         val aggregates = c.entities.filter(_.hasOption("aggregate"))
-        val domain = parents.head.asInstanceOf[Domain]
+        val domain = parents.top.asInstanceOf[Domain]
         val root = parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
         val relationships = makeRelationships(c,root)
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates, relationships))
@@ -143,8 +143,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     val rel1 = makeTypeRelationships(context, processor.types, processor)
     val rel2 = makeFunctionRelationships(context, processor.functions)
     val rel3 = makeHandlerRelationships(context, processor.handlers)
-    val rel4 = makeInletRelationships(context, processor.inlets)
-    val rel5 = makeOutletRelationships(context, processor.outlets)
+    val rel4 = makeInletRelationships(context, processor.inlets, processor)
+    val rel5 = makeOutletRelationships(context, processor.outlets, processor)
     val rel6 = processor match {
       case a: Adaptor     => inferRelationship(context, a)
       case _: Application => Seq.empty[ContextRelationship]
@@ -169,22 +169,22 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     }
   }
 
-  private def makeOutletRelationships(context: Context, outlets: Seq[Outlet]): Seq[ContextRelationship] = {
+  private def makeOutletRelationships(context: Context, outlets: Seq[Outlet], parent: Parent): Seq[ContextRelationship] = {
     for {
       o <- outlets
       r = o.type_
-      t <- this.refMap.definitionOf[Type](r, o)
+      t <- this.refMap.definitionOf[Type](r, parent)
       relationship <- inferRelationship(context, t)
     } yield {
       relationship
     }
   }
 
-  private def makeInletRelationships(context: Context, inlets: Seq[Inlet]): Seq[ContextRelationship] = {
+  private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Parent): Seq[ContextRelationship] = {
     for {
       i <- inlets
       r = i.type_
-      t <- this.refMap.definitionOf[Type](r, i)
+      t <- this.refMap.definitionOf[Type](r, parent)
       relationship <- inferRelationship(context, t)
     } yield {
       relationship
@@ -242,11 +242,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private def makeTypeRelationships(
     context: Context,
     types: Seq[Type],
-    parent: Definition
+    parent: Parent
   ): Seq[ContextRelationship] = {
     for {
       typ <- types
-      typEx = typ.typ
+      typEx = typ.typEx
       ref: Reference[Definition] <- getTypeReferences(typEx)
       definition <- refMap.definitionOf[Definition](ref, parent)
       relationship <- inferRelationship(context, definition)
@@ -258,7 +258,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private def makeFieldRelationships(
     context: Context,
     fields: Seq[Field],
-    parent: Definition
+    parent: Parent
   ): Seq[ContextRelationship] = {
     for {
       f <- fields
@@ -316,6 +316,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
               tri.to.pathId.format -> toDef
             )
           case _: InteractionContainer | _: Interaction | _: Comment => Seq.empty
+          case brief: BriefDescription => Seq.empty
+          case description: Description => Seq.empty
         }
         .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq

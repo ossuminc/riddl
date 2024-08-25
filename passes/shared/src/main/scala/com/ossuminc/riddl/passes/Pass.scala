@@ -13,7 +13,6 @@ import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
 import com.ossuminc.riddl.passes.PassCreator
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
-import com.ossuminc.riddl.passes.symbols.Symbols.*
 
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
 import com.ossuminc.riddl.utils.ExceptionUtils
@@ -220,7 +219,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * entire AST
     *
     * @param root
-    *   The root of the parsed model just as a convenience for post processing
+    *   The root of the parsed model just as a convenience for post-processing
     */
   def postProcess(root: Root): Unit = ()
 
@@ -240,25 +239,26 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     * no need to override in non-RIDDL code.
     *
     * @param definition
-    *   The root (starting point) of the traveral
+    *   The root (starting point) of the traversal
     * @param parents
     *   The parents of the definition
     */
   protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case leaf: LeafDefinition =>
-        process(leaf, parents)
       case root: Root =>
+        process(root, parents)
         parents.push(root)
         root.contents.foreach { value => traverse(value, parents) }
         parents.pop()
       case include: Include[?] =>
         // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
         include.contents.foreach { value => traverse(value, parents) }
-      case container: Definition =>
-        process(container, parents)
-        parents.push(container)
-        container.contents.foreach { value => traverse(value, parents) }
+      case leaf: LeafDefinition =>
+        process(leaf, parents)
+      case branch: BranchDefinition[?] =>
+        process(branch, parents)
+        parents.push(branch)
+        branch.contents.foreach { value => traverse(value, parents) }
         parents.pop()
       case value: RiddlValue =>
         // NOTE: everything else is just a non-definition non-container
@@ -342,27 +342,27 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case leaf: LeafDefinition =>
-        processLeaf(leaf, parents.toSeq)
-      case container: Definition =>
-        val def_parents = parents.toSeq
+        processLeaf(leaf, parents.toParents)
+      case container: BranchDefinition[?] =>
+        val def_parents = parents.toParents
         openContainer(container, def_parents)
         if container.contents.nonEmpty then
           parents.push(container)
           container.contents.foreach {
-            case leaf: LeafDefinition   => processLeaf(leaf, parents.toSeq)
+            case leaf: LeafDefinition   => processLeaf(leaf, parents.toParents)
             case definition: Definition => traverse(definition, parents)
             case include: Include[?]    => traverse(include, parents)
-            case value: RiddlValue      => processValue(value, parents.toSeq)
+            case value: RiddlValue      => processValue(value, parents.toParents)
           }
           parents.pop()
         end if
         closeContainer(container, def_parents)
       case include: Include[?] =>
-        openInclude(include, parents.toSeq)
+        openInclude(include, parents.toParents)
         include.contents.foreach { item => traverse(item, parents) }
-        closeInclude(include, parents.toSeq)
+        closeInclude(include, parents.toParents)
       case value: RiddlValue =>
-        processValue(value, parents.toSeq)
+        processValue(value, parents.toParents)
     }
   }
 }
@@ -436,7 +436,7 @@ trait PassVisitor:
   def doBriefDescription(brief: BriefDescription): Unit
   def doDescription(description: Description): Unit
   def doStatement(statement: Statements): Unit
-  def doInteraction(interaction: UseCaseContents): Unit
+  def doInteraction(interaction: Interaction): Unit
   def doOptionValue(optionValue: OptionValue): Unit
 
 /** An abstract Pass that uses the Visitor pattern (https://refactoring.guru/design-patterns/visitor)
@@ -471,7 +471,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Enumerator            => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: GenericInteraction | _: SelfInteraction |
-          _: VagueInteraction | _: ContainedGroup =>
+          _: VagueInteraction | _: ContainedGroup | _: Definition => // not containers
         () // not  containers
     end match
   end openContainer
@@ -499,8 +499,8 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Root                  => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup =>
-        () // not  containers
+          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | 
+         _: Definition => () // not  containers
     end match
   end closeContainer
 
@@ -508,6 +508,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
     definition match
       case field: Field                   => visitor.doField(field)
       case method: Method                 => visitor.doMethod(method)
+      case enumerator: Enumerator         => visitor.doEnumerator(enumerator)
       case term: Term                     => visitor.doTerm(term)
       case author: Author                 => visitor.doAuthor(author)
       case constant: Constant             => visitor.doConstant(constant)
@@ -520,19 +521,25 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case schema: Schema                 => visitor.doSchema(schema)
       case state: State                   => visitor.doState(state)
       case containedGroup: ContainedGroup => visitor.doContainedGroup(containedGroup)
-      case enumerator: Enumerator         => visitor.doEnumerator(enumerator)
     end match
   end processLeaf
 
   protected final def processValue(value: RiddlValue, parents: Parents): Unit =
     value match
-      case comment: Comment         => visitor.doComment(comment)
-      case authorRef: AuthorRef     => visitor.doAuthorRef(authorRef)
-      case brief: BriefDescription  => visitor.doBriefDescription(brief)
-      case description: Description => visitor.doDescription(description)
-      case statement: Statement     => visitor.doStatement(statement)
-      case interaction: Interaction => visitor.doInteraction(interaction)
-      case optionValue: OptionValue => visitor.doOptionValue(optionValue)
+      case comment: Comment         => 
+        visitor.doComment(comment)
+      case authorRef: AuthorRef     => 
+        visitor.doAuthorRef(authorRef)
+      case brief: BriefDescription  => 
+        visitor.doBriefDescription(brief)
+      case description: Description => 
+        visitor.doDescription(description)
+      case statement: Statement     => 
+        visitor.doStatement(statement)
+      case interaction: Interaction => 
+        visitor.doInteraction(interaction)
+      case optionValue: OptionValue => 
+        visitor.doOptionValue(optionValue)
       case _                        => ()
     end match
   end processValue
@@ -590,7 +597,7 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput) exten
 
   protected val collectedValues: mutable.ArrayBuffer[ET] = mutable.ArrayBuffer.empty[ET]
 
-  /** The processing method called at each node, similar to [[Pass.process]] but modified to return an sequence of the
+  /** The processing method called at each node, similar to [[Pass.process]] but modified to return a sequence of the
     * collectable, [[ET]].
     *
     * @param definition
@@ -609,8 +616,8 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput) exten
 object Pass {
 
   /** A PassesCreator of the standard passes that should be run on every AST pass. These generate the symbol table,
-    * resolve path references, and validate the input. Only after these three have passed successfull should the model
-    * be considered processable by other passes
+    * resolve path references, and validate the input. Only after these three have passed successful should the model be
+    * considered processable by other passes
     */
   val standardPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
@@ -639,8 +646,8 @@ object Pass {
       }
       PassesResult(input, outputs, Messages.empty)
     } catch {
-      case NonFatal(xcptn) =>
-        val message = ExceptionUtils.getRootCauseStackTrace(xcptn).mkString("\n")
+      case NonFatal(exception) =>
+        val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n")
         val messages: Messages.Messages = List(Messages.severe(message, At.empty))
         PassesResult(input, outputs, messages)
     }
@@ -692,7 +699,7 @@ object Pass {
   ): PassOutput = {
     val pass: Pass = mkPass
     Timer.time[PassOutput](pass.name, commonOptions.showTimes, logger) {
-      val parents: ParentStack = mutable.Stack.empty[Definition]
+      val parents: ParentStack = ParentStack.empty
       val root1: Root = pass.preProcess(root)
       pass.traverse(root1, parents)
       pass.postProcess(root1)

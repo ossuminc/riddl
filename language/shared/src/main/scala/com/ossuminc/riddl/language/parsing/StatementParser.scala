@@ -61,7 +61,7 @@ private[parsing] trait StatementParser {
   private def ifThenElseStatement[u: P](set: StatementsSet): P[IfThenElseStatement] = {
     P(
       location ~ Keywords.if_ ~/ literalString ~ Keywords.then_ ~/ pseudoCodeBlock(set) ~ (
-        Keywords.else_ ~ pseudoCodeBlock(set)
+        Keywords.else_ ~ pseudoCodeBlock(set) ~ Keywords.end_
       ).?
     )./.map { case (loc, cond, thens, maybeElses) =>
       val elses = maybeElses.getOrElse(Seq.empty[Statement])
@@ -158,10 +158,9 @@ private[parsing] trait StatementParser {
     ).asInstanceOf[P[Statements]]
   }
 
-
   def statement[u: P](set: StatementsSet): P[Statements] = {
     set match {
-      case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement 
+      case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
       case StatementsSet.ApplicationStatements => anyDefStatements(set) | focusStatement
       case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
       case StatementsSet.EntityStatements =>
@@ -181,9 +180,9 @@ private[parsing] trait StatementParser {
 
   def pseudoCodeBlock[u: P](set: StatementsSet): P[Seq[Statements]] = {
     P(
-      open ~/ (
-        undefined(Seq.empty[Statements]) | statement(set).rep(1)
-      ) ~ close./
+      open.? ~/ (
+        undefined(Seq.empty[Statements]) | statement(set).rep(0)
+      ) ~ close.?./
     )
   }
 }

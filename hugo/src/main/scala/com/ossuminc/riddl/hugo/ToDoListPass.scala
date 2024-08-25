@@ -30,7 +30,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
   private val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
 
-  protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[ToDoItem] = {
+  protected def collect(definition: RiddlValue, parents: ParentStack): Seq[ToDoItem] = {
     definition match {
       case _: Root | _: Interaction | _: Include[Definition] @unchecked =>
         // None of these kinds of definitions contribute to the TODO List because they have a weird name
@@ -38,7 +38,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
       case ad: Definition if ad.isAnonymous => Seq.empty[ToDoItem]
       // Implicit definitions don't have a name so there's no word to define in the glossary
       case d: Definition if d.isEmpty =>
-        val pars = parents.toSeq
+        val pars = parents.toParents
         val item = d.identify
         val authors = AST.findAuthors(d, pars)
         val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)
@@ -51,12 +51,12 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
     }
   }
 
-  private def mkAuthor(authors: Seq[AuthorRef], parents: Seq[Definition]): Seq[String] = {
+  private def mkAuthor(authors: Seq[AuthorRef], parents: Parents): Seq[String] = {
     if authors.isEmpty then Seq.empty
     else
       parents.headOption match {
         case None => Seq.empty
-        case Some(parent: Definition) =>
+        case Some(parent: Parent) =>
           authors
             .map { (ref: AuthorRef) =>
               outputs.refMap.definitionOf[Author](ref.pathId, parent)

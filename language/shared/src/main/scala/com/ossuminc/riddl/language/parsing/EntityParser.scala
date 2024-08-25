@@ -16,7 +16,7 @@ private[parsing] trait EntityParser  {
 
   private def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ briefly ~ description
+      location ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ briefly ~ maybeDescription
     )./.map { case (loc, id, typRef, brief, description) =>
       State(loc, id, typRef, brief, description)
     }
@@ -28,8 +28,7 @@ private[parsing] trait EntityParser  {
 
   private def entityDefinitions[u: P]: P[Seq[EntityContents]] = {
     P(
-      handler(StatementsSet.EntityStatements) | function | invariant | state | entityInclude | inlet | outlet |
-        typeDef | term | authorRef | comment | constant | option
+      processorDefinitionContents(StatementsSet.EntityStatements) | state | entityInclude
     ).asInstanceOf[P[EntityContents]]./.rep(1)
   }
 
@@ -41,10 +40,10 @@ private[parsing] trait EntityParser  {
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ briefly ~ description
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ briefly ~ maybeDescription
     ).map { case (loc, id, contents, brief, description) =>
       checkForDuplicateIncludes(contents)
-      Entity(loc, id, contents, brief, description)
+      Entity(loc, id, foldDescriptions[EntityContents](contents, brief, description))
     }
   }
 }

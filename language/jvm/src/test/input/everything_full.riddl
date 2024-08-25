@@ -62,7 +62,7 @@ context full is {
     function misc is {
       requires { n: Nothing }
       returns { b: Boolean }
-      body { ??? }
+      ???
     }
     type somethingDate is Date
 
@@ -84,9 +84,7 @@ context full is {
     function whenUnderTheInfluence is {
       requires { n: Nothing }
       returns  { b: Boolean }
-      body {
         "aribtrary statement"
-      }
     }
   } briefly "Something is nothing interesting"
 

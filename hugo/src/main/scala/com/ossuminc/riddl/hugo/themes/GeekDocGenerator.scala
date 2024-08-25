@@ -41,7 +41,7 @@ case class GeekDocGenerator(
     }
   }
 
-  def makeDocLink(definition: NamedValue, parents: Seq[String]): String = {
+  def makeDocLink(definition: Definition, parents: Seq[String]): String = {
     val pars = ("/" + parents.mkString("/")).toLowerCase
     val result = definition match {
       case _: OnMessageClause | _: OnInitializationClause | _: OnTerminationClause | _: OnOtherClause | _: Inlet | _: Outlet =>
@@ -57,7 +57,7 @@ case class GeekDocGenerator(
     result.replace(" ", "-")
   }
 
-  def makeDocAndParentsLinks(definition: NamedValue): String = {
+  def makeDocAndParentsLinks(definition: Definition): String = {
     val parents = outputs.symbols.parentsOf(definition)
     val docLink = makeDocLink(definition, makeStringParents(parents))
     if parents.isEmpty then {

@@ -6,9 +6,7 @@ domain Everything is {
   context APlant is {
     source Source is { outlet Commands is DoAThing } described by "Data Source"
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-    connector AChannel is {
-      from  outlet APlant.Source.Commands  to inlet APlant.Sink.Commands
-    } explained as "A Channel"
+    connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands explained as "A Channel"
   }
 
   type StateType is { someField1: SomeType }
@@ -51,9 +49,7 @@ domain Everything is {
       function whenUnderTheInfluence is {
         requires { n: Nothing }
         returns { b: Boolean }
-        body {
-          "some pseudo-code"
-        }
+        "some pseudo-code"
       }
 
       handler foo is {

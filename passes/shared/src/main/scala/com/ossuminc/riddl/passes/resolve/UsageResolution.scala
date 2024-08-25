@@ -10,14 +10,15 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 trait UsageBase {
 
-  type UseMap = mutable.HashMap[Definition, Seq[NamedValue]]
-  type UsedByMap = mutable.HashMap[NamedValue, Seq[Definition]]
+  type UseMap = mutable.HashMap[Definition, Seq[Definition]]
+  type UsedByMap = mutable.HashMap[Definition, Seq[Definition]]
 
-  protected val uses: UseMap = mutable.HashMap.empty[Definition, Seq[NamedValue]]
-  protected val usedBy: UsedByMap = mutable.HashMap.empty[NamedValue, Seq[Definition]]
+  protected val uses: UseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
+  protected val usedBy: UsedByMap = mutable.HashMap.empty[Definition, Seq[Definition]]
 }
 
 /** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call associateUsage. After
@@ -50,19 +51,25 @@ trait UsageResolution extends UsageBase {
     this
   }
 
-  def associateUsage(user: Definition, use: NamedValue): this.type = {
-
-    val used = uses.getOrElse(user, Seq.empty[NamedValue])
-    if !used.contains(use) then {
+  def associateUsage[T <: Definition: ClassTag](user: Definition, resolution: Resolution[T]): Resolution[T] =
+    resolution match
+      case None => None
+      case resolution @ Some((use: Definition, _)) => 
+        associateUsage(user, use)
+        resolution 
+    end match
+  end associateUsage
+    
+  def associateUsage(user: Definition, use: Definition): this.type =
+    val used = uses.getOrElse(user, Seq.empty[Definition])
+    if !used.contains(use) then
       uses.update(user, used :+ use)
-    }
 
     val usages = usedBy.getOrElse(use, Seq.empty[Definition])
-    if !usages.contains(user) then {
+    if !usages.contains(user) then
       usedBy.update(use, usages :+ user)
-    }
     this
-  }
+  end associateUsage
 
   def checkUnused(): this.type = {
     if commonOptions.showUsageWarnings then {

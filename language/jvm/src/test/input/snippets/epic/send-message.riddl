@@ -6,6 +6,7 @@ domain foo {
   epic TestCase is {
     user U wants to "hmm" so that "haw"
     case one is {
+      user U wants to "hmm" so that "haw"
       step send command DoSomething from application App to context Gateway
     }
   }

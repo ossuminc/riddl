@@ -79,7 +79,12 @@ trait FileBuilder {
     * @return
     *   This object for call chaining
     */
-  def addLine(line: String): this.type = { sb.append(spc).append(line).append(new_line); this }
+  def addLine(line: String): this.type =
+    sb.append(spc)
+      .append(line)
+      .append(new_line)
+    this
+  end addLine  
 
   /**
     * Add just the indent spaces

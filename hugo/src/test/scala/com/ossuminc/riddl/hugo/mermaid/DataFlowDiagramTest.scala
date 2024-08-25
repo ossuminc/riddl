@@ -24,8 +24,9 @@ class DataFlowDiagramTest extends ValidatingTest {
           val expected = """flowchart LR
                            |Commands[\"Outlet Source.Commands"\]
                            |Commands[/"Inlet Sink.Commands"/]
+                           |APlant[{"Context Everything.APlant"}]
                            |command ACommand["OnMessageClause adaptCommands.command ACommand"]
-                           |Commands -- Type 'DoAThing'(2:41) --> Commands
+                           |Commands -- Type 'DoAThing' --> Commands
                            |""".stripMargin
           actual must be(expected)
       }

@@ -1,6 +1,5 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.CommandTestBase
 
 class HugoCommandTest extends CommandTestBase  {
 

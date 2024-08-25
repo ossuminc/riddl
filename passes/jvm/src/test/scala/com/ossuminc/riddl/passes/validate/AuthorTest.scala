@@ -22,14 +22,15 @@ class AuthorTest extends ValidatingTest {
           |    email: "reid@ossum.biz"
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }
     }
     "not supported in contexts" in { (td: TestData) =>
-      val input = RiddlParserInput(
-        """domain foo is { context bar is { author FooBar is { ??? } } }""".stripMargin,td)
+      val input = RiddlParserInput("""domain foo is { context bar is { author FooBar is { ??? } } }""".stripMargin, td)
       parseDomainDefinition(input, identity) match {
         case Left(msgs) =>
           msgs.isOnlyIgnorable must be(false)
@@ -38,7 +39,7 @@ class AuthorTest extends ValidatingTest {
       }
     }
     "author must be defined" in { (td: TestData) =>
-      val input = RiddlParserInput(s"""domain foo is { by author Bar }""",td)
+      val input = RiddlParserInput(s"""domain foo is { by author Bar }""", td)
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) { case (_, _, msgs) =>
         val errs = msgs.justErrors
         errs mustNot be(empty)
@@ -61,7 +62,9 @@ class AuthorTest extends ValidatingTest {
           |domain Foo is {
           |  application Bar  is { by author Reid }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       Riddl.parseAndValidate(input) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
@@ -77,7 +80,9 @@ class AuthorTest extends ValidatingTest {
           |  }
           |  context Bar  is { by author Reid }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }
@@ -91,7 +96,9 @@ class AuthorTest extends ValidatingTest {
           |  }
           |}
           |domain Bar  is { by author Reid }
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.hasErrors must be(false)
       }
@@ -105,7 +112,9 @@ class AuthorTest extends ValidatingTest {
           |  }
           |  domain Bar  is { by author Foo.Reid }
           |}
-          |""".stripMargin, td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }
@@ -122,7 +131,9 @@ class AuthorTest extends ValidatingTest {
           |    entity Bar is { by author Reid  }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
         msgs.isOnlyWarnings must be(true)
@@ -130,7 +141,7 @@ class AuthorTest extends ValidatingTest {
     }
     "referenced from Function" in { (td: TestData) =>
       val input = RiddlParserInput(
-      """domain Foo is {
+        """domain Foo is {
         |  author Reid is {
         |    name: "Reid Spencer"
         |    email: "reid@ossum.biz"
@@ -138,11 +149,12 @@ class AuthorTest extends ValidatingTest {
         |  context Bar {
         |    function FooBar is {
         |      by author Reid
-        |      body { ??? }
         |    }
         |  }
         |}
-        |""".stripMargin,td)
+        |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
         msgs.isOnlyWarnings must be(true)
@@ -159,7 +171,9 @@ class AuthorTest extends ValidatingTest {
           |    repository FooBar  is { by author Reid }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }
@@ -177,7 +191,9 @@ class AuthorTest extends ValidatingTest {
           |   by author Reid  
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         msgs.isOnlyIgnorable must be(true)
       }

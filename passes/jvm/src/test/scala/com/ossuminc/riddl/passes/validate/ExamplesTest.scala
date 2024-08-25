@@ -15,7 +15,7 @@ import java.nio.file.Path
 /** Unit Tests For ExamplesTest */
 class ExamplesTest extends ValidatingTest {
 
-  val dir = "passes/jvm/src/test/input/"
+  val dir = "language/jvm/src/test/input/"
 
   def doOne(fileName: String): Assertion = {
     parseAndValidateFile(

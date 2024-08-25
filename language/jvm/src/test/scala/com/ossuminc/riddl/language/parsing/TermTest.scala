@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term, NamedValue}
+import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term, WithIdentifier}
 import com.ossuminc.riddl.language.{At, Finder}
 import org.scalatest.TestData
 
@@ -42,11 +42,11 @@ class TermTest extends ParsingTest {
             None,
             Some(BlockDescription(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
           )
-          val result: Finder[RiddlValue]#DefWithParents[NamedValue]  =  finder.findEmpty
-          result.size mustBe 1
+          val result: Finder[RiddlValue]#DefWithParents[WithIdentifier]  =  finder.findEmpty
+          result.size mustBe 3
           result.head match {
-            case (entity: NamedValue,_) =>
-              entity.id.value mustBe "foo"
+            case (entity: WithIdentifier,_) =>
+              entity.id.value mustBe "one"
           }
       }
     }

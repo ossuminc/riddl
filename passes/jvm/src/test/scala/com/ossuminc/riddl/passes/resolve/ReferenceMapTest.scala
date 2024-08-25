@@ -5,10 +5,8 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.validate.ValidatingTest
-import com.ossuminc.riddl.passes.{PassesResult}
-import com.ossuminc.riddl.passes.symbols.Symbols
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import com.ossuminc.riddl.passes.PassesResult
+
 
 import java.nio.file.Path
 import org.scalatest.TestData
@@ -26,16 +24,16 @@ class ReferenceMapTest extends ValidatingTest {
   "ReferenceMap" must {
     val result: PassesResult = create
     val refMap = result.refMap
-    "convert to a pretty string" in { (td: TestData) =>
-      // info("pretty: " + refMap.toString)
+    "convert to a pretty string" in { _ =>
+      info("pretty: " + refMap.toString)
       refMap.toString must not be(empty)
     }
-    "have correct size" in { (td: TestData) =>
+    "have correct size" in { _ =>
       info("size: " + refMap.size.toString)
-      refMap.size must be(30)
+      refMap.size must be(31)
     }
 
-    "have definitionOf(pathId:String) work" in { (td: TestData) =>
+    "have definitionOf(pathId:String) work" in { _ =>
       refMap.definitionOf[Author]("Reid") match {
         case None => fail("Expected to find 'Reid'")
         case Some(author: Author) => author.name.s mustBe("Reid")
@@ -43,7 +41,7 @@ class ReferenceMapTest extends ValidatingTest {
       }
     }
 
-    "inserts a value and finds it" in { (td: TestData) =>
+    "inserts a value and finds it" in { _ =>
       val context: Context = Context(At(), Identifier(At(), "context"))
       val parent: Parent = Domain(At(), Identifier(At(),"domain"))
       val pid = PathIdentifier(At(), Seq("wrong-name"))
@@ -51,12 +49,12 @@ class ReferenceMapTest extends ValidatingTest {
       refMap.definitionOf[Context](pid, parent) must not be(empty)
     }
 
-    "have definitionOf(pid: PathIdentifier, parent: Parent) work" in { (td: TestData) =>
+    "have definitionOf(pid: PathIdentifier, parent: Parent) work" in { _ =>
       val pid = PathIdentifier(At.empty, Seq("Sink", "Commands"))
       val context = result.root.domains.head.includes.head.contents.filter[Context].head
       val parent = context.connectors.head
       parent.id.value mustBe "AChannel"
-      refMap.definitionOf[Inlet](pid, parent) match {
+      refMap.definitionOf[Inlet](pid) match {
         case Some(actual: Inlet) =>
           actual.id.value mustBe("Commands")
           val expected = context.streamlets.find("Sink")

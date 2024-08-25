@@ -314,7 +314,7 @@ private[parsing] trait TypeParser {
   }
 
   private def enumerator[u: P]: P[Enumerator] = {
-    P(location ~ identifier ~ enumValue ~ briefly ~ description).map { tpl =>
+    P(location ~ identifier ~ enumValue ~ briefly ~ maybeDescription).map { tpl =>
       Enumerator.apply.tupled(tpl)
     }
   }
@@ -363,7 +363,7 @@ private[parsing] trait TypeParser {
 
   def field[u: P]: P[Field] = {
     P(
-      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ description
+      location ~ identifier ~ is ~ fieldTypeExpression ~ briefly ~ maybeDescription
     ).map(tpl => Field.apply.tupled(tpl))
   }
 
@@ -378,19 +378,19 @@ private[parsing] trait TypeParser {
   def method[u: P]: P[Method] = {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
-        is ~ fieldTypeExpression ~ briefly ~ description
+        is ~ fieldTypeExpression ~ briefly ~ maybeDescription
     ).map { case (loc, id, args, typeExp, briefly, description) =>
       Method.apply(loc, id, typeExp, args, briefly, description)
     }
   }
 
-  private def aggregateContent[u: P]: P[RiddlValue] = {
-    P(field | method | comment)
+  private def aggregateContent[u: P]: P[AggregateContents] = {
+    P(field | method | comment).asInstanceOf[P[AggregateContents]]
   }
 
-  private def aggregateDefinitions[u: P]: P[Seq[RiddlValue]] = {
+  private def aggregateDefinitions[u: P]: P[Seq[AggregateContents]] = {
     P(
-      undefined(Seq.empty[RiddlValue]) | aggregateContent.rep(min = 1, Punctuation.comma.?)
+      undefined(Seq.empty[AggregateContents]) | aggregateContent.rep(min = 1, Punctuation.comma.?)
     )
   }
 
@@ -545,7 +545,7 @@ private[parsing] trait TypeParser {
     P(
       location ~ aggregateUseCase ~/ identifier ~
         (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ briefly ~
-        description
+        maybeDescription
     ).map { case (loc, useCase, id, ateOrAgg, brief, description) =>
       ateOrAgg match {
         case agg: Aggregation =>
@@ -563,7 +563,7 @@ private[parsing] trait TypeParser {
 
   private def defOfType[u: P]: P[Type] = {
     P(
-      location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ briefly ~ description
+      location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ briefly ~ maybeDescription
     ).map { case (loc, id, typ, brief, description) =>
       Type(loc, id, typ, brief, description)
     }
@@ -576,7 +576,7 @@ private[parsing] trait TypeParser {
   def constant[u: P]: P[Constant] = {
     P(
       location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ briefly ~ description
+        Punctuation.equalsSign ~ literalString ~ briefly ~ maybeDescription
     ).map { tpl => Constant.apply.tupled(tpl) }
   }
 

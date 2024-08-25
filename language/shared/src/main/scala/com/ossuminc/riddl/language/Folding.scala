@@ -72,15 +72,15 @@ object Folding {
   @JSExport final def foldLeftWithStack[S, CT <: RiddlValue](
     zeroValue: S,
     top: Container[CT],
-    parents: mutable.Stack[Parent]
-  )(f: (S, CT | Container[CT], Seq[Parent]) => S ): S = {
-    val initial = f(zeroValue, top, parents.toSeq)
+    parents: ParentStack
+  )(f: (S, CT | Container[CT], Parents) => S ): S = {
+    val initial = f(zeroValue, top, parents.toParents)
     if !top.isAnonymous then parents.push(top.asInstanceOf[Parent])
     try {
       top.contents.foldLeft(initial) { (next, value) =>
         value match {
           case c: Container[CT] @unchecked if c.nonEmpty => foldLeftWithStack(next, c, parents)(f)
-          case v: CT                             => f(next, v, parents.toSeq)
+          case v: CT                             => f(next, v, parents.toParents)
         }
       }
     } finally {

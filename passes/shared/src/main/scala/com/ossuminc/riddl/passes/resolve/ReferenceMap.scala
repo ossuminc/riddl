@@ -14,18 +14,18 @@ import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
 /** The primary output of the [[ResolutionPass]]. It provides a mapping from a reference to the referenced definition.
-  * This is useful for fast resolution during validation and other Passes because the resolution logic doesn't need
-  * to be exercised again.
+  * This is useful for fast resolution during validation and other Passes because the resolution logic doesn't need to
+  * be exercised again.
   * @param messages
-  * A message accumulator for collecting messages when member functions are invoked
+  *   A message accumulator for collecting messages when member functions are invoked
   */
 case class ReferenceMap(messages: Messages.Accumulator) {
 
-  private case class Key(path: String, in: NamedValue) {
+  private case class Key(path: String, in: Definition) {
     override def toString: String = s"(k=$path,v=${in.identify})"
   }
 
-  private val map: mutable.HashMap[Key, NamedValue] = mutable.HashMap.empty
+  private val map: mutable.HashMap[Key, Definition] = mutable.HashMap.empty
 
   override def toString: String = {
     StringHelpers.toPrettyString(this)
@@ -33,15 +33,15 @@ case class ReferenceMap(messages: Messages.Accumulator) {
 
   def size: Int = map.size
 
-  def add[T <: NamedValue: ClassTag](ref: Reference[T], parent: Parent, definition: T): Unit = {
+  def add[T <: Definition: ClassTag](ref: Reference[T], parent: Parent, definition: T): Unit = {
     add(ref.pathId.format, parent, definition)
   }
 
-  def add[T <: NamedValue: ClassTag](pathId: PathIdentifier, parent: Parent, definition: T): Unit = {
+  def add[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Parent, definition: T): Unit = {
     add(pathId.format, parent, definition)
   }
 
-  private def add[T <: NamedValue: ClassTag](pathId: String, parent: Parent, definition: T): Unit = {
+  private def add[T <: Definition: ClassTag](pathId: String, parent: Parent, definition: T): Unit = {
     val key = Key(pathId, parent)
     val expected = classTag[T].runtimeClass
     val actual = definition.getClass
@@ -52,7 +52,11 @@ case class ReferenceMap(messages: Messages.Accumulator) {
     map.update(key, definition)
   }
 
-  def definitionOf[T <: NamedValue: ClassTag](pathId: String): Option[T] = {
+  def definitionOf[T <: Definition: ClassTag](pathId: PathIdentifier): Option[T] = {
+    definitionOf[T](pathId.format)
+  }
+
+  def definitionOf[T <: Definition: ClassTag](pathId: String): Option[T] = {
     val potentials = map.find(key => key._1.path == pathId)
     potentials match
       case None => Option.empty[T]
@@ -61,7 +65,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
         if definition.getClass == klass then Some(definition.asInstanceOf[T]) else Option.empty[T]
   }
 
-  def definitionOf[T <: NamedValue: ClassTag](pid: PathIdentifier, parent: Parent): Option[T] = {
+  def definitionOf[T <: Definition: ClassTag](pid: PathIdentifier, parent: Definition): Option[T] = {
     val key = Key(pid.format, parent)
     val value = map.get(key)
     value match

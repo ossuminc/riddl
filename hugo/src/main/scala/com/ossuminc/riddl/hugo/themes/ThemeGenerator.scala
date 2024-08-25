@@ -30,9 +30,9 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
     outputs.outputOf[DiagramsPassOutput](DiagramsPass.name).getOrElse(DiagramsPassOutput())
   lazy val passesResult: PassesResult = PassesResult(input, outputs)
 
-  def makeDocLink(definition: NamedValue, parents: Seq[String]): String
+  def makeDocLink(definition: Definition, parents: Seq[String]): String
 
-  def makeDocAndParentsLinks(definition: NamedValue): String
+  def makeDocAndParentsLinks(definition: Definition): String
 
   def makeSourceLink(definition: Definition): String
 
@@ -50,7 +50,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
     makeParents(parents).map(_.id.format)
   }
 
-  def makeDocLink(definition: NamedValue): String = {
+  def makeDocLink(definition: Definition): String = {
     val parents = makeStringParents(outputs.symbols.parentsOf(definition))
     makeDocLink(definition, parents)
   }

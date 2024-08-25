@@ -15,11 +15,14 @@ class ParsingTestTest extends ParsingTest {
 
   "ParsingTest" should {
 
-    "parse[Pipe]" in { (td: TestData) =>
-      val rpi = RiddlParserInput("""connector foo is { ??? }""", td)
+    "parse[Connector]" in { (td: TestData) =>
+      val rpi = RiddlParserInput("""connector foo is from outlet Foo.Outlet to inlet Foo.Inlet """, td)
       parseDefinition[Connector](rpi) match {
         case Right((pipe, _)) =>
-          val expected = Connector((1, 1, rpi), Identifier((1, 11, rpi), "foo"))
+          val expected = Connector(
+            (1, 1, rpi), Identifier((1, 11, rpi), "foo"),
+            OutletRef((1,23,rpi), PathIdentifier((1,30,rpi), List("Foo", "Outlet"))),
+            InletRef((1,44,rpi), PathIdentifier((1,50,rpi), List("Foo", "Inlet"))))
           pipe mustBe expected
         case Left(errors) => fail(errors.format)
       }
@@ -52,7 +55,13 @@ class ParsingTestTest extends ParsingTest {
     }
 
     "parseTopLevelDomain[Epic]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { epic X is { ??? } }", td)
+      val input = RiddlParserInput(
+        """domain foo is {
+          |  epic X is {
+          |    user foo wants "to do a thing" so that "he gets bar"
+          |    ???
+          |  }
+          |}""".stripMargin, td)
       parseTopLevelDomain[Epic](input, _.domains.head.epics.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"

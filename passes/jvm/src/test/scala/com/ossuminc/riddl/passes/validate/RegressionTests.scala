@@ -21,11 +21,8 @@ class RegressionTests extends ValidatingTest {
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
-        case Right((domain, _)) =>
-          domain.description match {
-            case Some(_) => succeed
-            case None    => fail("no description")
-          }
+        case Right((domain: Domain, _)) =>
+          domain.descriptions must not be(empty)
       }
     }
     "allow descriptions as a doc block" in { (td: TestData) =>
@@ -37,11 +34,8 @@ class RegressionTests extends ValidatingTest {
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
-        case Right((domain, _)) =>
-          domain.description match {
-            case Some(desc) => desc.lines.nonEmpty.mustBe(true)
-            case None       => fail("no description")
-          }
+        case Right((domain: Domain, _)) =>
+          domain.descriptions must not be(empty)
       }
     }
 

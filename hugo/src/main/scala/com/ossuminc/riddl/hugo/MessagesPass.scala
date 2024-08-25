@@ -58,12 +58,12 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
   def name: String = MessagesPass.name
 
-  protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[MessageInfo] = {
+  protected def collect(definition: RiddlValue, parents: ParentStack): Seq[MessageInfo] = {
     definition match {
       case t: Type =>
-        val result = t.typ match {
+        val result = t.typEx match {
           case _: AggregateUseCaseTypeExpression =>
-            val pars = generator.makeStringParents(parents.toSeq)
+            val pars = generator.makeStringParents(parents.toParents)
             val link = generator.makeDocLink(t, pars)
             val users = usages.getUsers(t)
             val userLinks = users
@@ -71,7 +71,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
                 s"[${definition.id.value}](${generator.makeDocLink(definition, pars)})"
               }
               .mkString(" <br> ")
-            val description: String = t.brief.map(_.s).getOrElse("No description provided.")
+            val description: String = t.brief.map(_.brief.s).getOrElse("No description provided.")
             val mi = MessageInfo(t.kind, t.id.value, link, userLinks, description)
             Seq(mi)
           case _ =>

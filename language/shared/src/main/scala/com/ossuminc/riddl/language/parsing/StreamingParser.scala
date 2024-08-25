@@ -17,19 +17,14 @@ private[parsing] trait StreamingParser {
   
   private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
     P(
-        from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0)
+      (open ~ from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0) ~ close) |
+        (from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0))
     )
   }
-
-  private def connectorBody[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
-    P(
-      undefined((OutletRef.empty, InletRef.empty, Seq.empty)) | connectorDefinitions
-    )
-  }
-
+  
   def connector[u: P]: P[Connector] = {
     P(
-      location ~ Keywords.connector ~/ identifier ~ is ~/ open ~ connectorBody ~/ close ~/ briefly ~/ description
+      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~/  briefly ~/ maybeDescription
     )./.map { case (loc, id, (out, in, opts), brief, description) =>
       Connector(loc, id, out, in, opts, brief, description)
     }
@@ -55,8 +50,8 @@ private[parsing] trait StreamingParser {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
-        ( handler(StatementsSet.StreamStatements) | term | authorRef | comment | function | invariant | constant |
-          typeDef | option | streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
+        ( processorDefinitionContents(StatementsSet.StreamStatements) |
+          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
           (inlets ++ outlets ++ definitions).asInstanceOf[Seq[StreamletContents]]
       }
@@ -97,11 +92,11 @@ private[parsing] trait StreamingParser {
     P(
       location ~ keyword ~ identifier ~ is ~ open ~
         streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ briefly ~ description
+        close ~ briefly ~ maybeDescription
     )./.map { case (loc, id, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
-      Streamlet(loc, id, shape, contents, brief, description)
+      Streamlet(loc, id, shape, foldDescriptions(contents, brief, description))
     }
   }
 

@@ -45,15 +45,15 @@ class UsageSpec extends ParsingTest {
         td
       )
       Riddl.parseAndValidate(input, CommonOptions()) match {
-        case Left(messages:Messages) => fail(messages.format)
+        case Left(messages: Messages) => fail(messages.format)
         case Right(result: PassesResult) =>
           val usage = result.usage
           // ensure usedBy and uses are reflective
           usage.verifyReflective must be(true)
 
           // print it out for debugging
-          // info("Uses:\n" + result.usage.usesAsString)
-          // info("Used By:\n" + result.usage.usedByAsString)
+          info("Uses:\n" + result.usage.usesAsString)
+          info("Used By:\n" + result.usage.usedByAsString)
 
           // Now let's make sure we get the right results, first extract
           // all the definitions
@@ -62,22 +62,24 @@ class UsageSpec extends ParsingTest {
           val D_T = domain.types.find(_.id.value == "T").get
           val context = domain.contexts.head
           val DoIt = context.types.find(_.id.value == "DoIt").get
-          val ref = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
-          val f1 = DoIt.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
+          val ref = DoIt.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
+          val f1 = DoIt.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
           val C_T = context.types.find(_.id.value == "T").get
           val entityE = context.entities.head
           val SFields = entityE.types.head
-          val f2 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f2").get
-          val f3 = SFields.typ.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f3").get
+          val f2 = SFields.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f2").get
+          val f3 = SFields.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f3").get
           val S = entityE.states.head
+          val omc = entityE.handlers.head.clauses.head
 
           // now validate the containment hierarchy
-          usage.uses(ref, entityE) must be(true)
           usage.uses(f1, C_T) must be(true)
           usage.uses(C_T, D_T) must be(true)
-          usage.uses(S, SFields) must be(true)
           usage.uses(f2, D_T) must be(true)
           usage.uses(f3, C_T) must be(true)
+          usage.uses(omc, DoIt) must be(true)
+          usage.uses(S, SFields) must be(true)
+          usage.uses(ref, entityE) must be(true)
       }
     }
     "unused entities generate a warning" in { (td: TestData) =>
@@ -100,10 +102,11 @@ class UsageSpec extends ParsingTest {
         td
       )
       Riddl.parseAndValidate(input, shouldFailOnError = false) match {
-        case Left(messages) => fail(messages.format)
-        case Right(result)  =>
-          // info(result.messages.format)
-          result.messages.hasErrors mustBe false
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(result) =>
+          info(result.messages.format)
+          result.messages.hasErrors must be(false)
           val warnings = result.messages.justUsage
           warnings.size mustBe 2
           val warnMessage = warnings.last.format

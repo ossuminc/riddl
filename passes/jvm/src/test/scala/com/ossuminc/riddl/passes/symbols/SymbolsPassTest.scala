@@ -36,8 +36,8 @@ class SymbolsPassTest extends ParsingTest {
   "SymbolsOutput" must {
     import org.scalatest.TestData
     "return empty list for non-existent namedValue" in { (td: TestData) =>
-    val nv: NamedValue = Domain(At(), Identifier(At(), "not-in-root"))
-      st.parentsOf(nv) must be(Seq.empty[Definition])
+    val d: Domain = Domain(At(), Identifier(At(), "not-in-root"))
+      st.parentsOf(d) must be(Parents.empty)
     }
     "lookupSymbol(id: PathNames) should fail if no names" in { (td: TestData) =>
       val xcption = intercept[IllegalArgumentException] { st.lookupSymbol[Context](Seq.empty[String]) }

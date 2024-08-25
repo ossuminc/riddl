@@ -1,11 +1,3 @@
-passes/jvm/src/test/input/check/saga/saga.riddl(4:5):
- Command 'UndoSomething' should have a description:
-     type UndoSomething = command { ??? }
-     ^
-passes/jvm/src/test/input/check/saga/saga.riddl(3:5):
- Command 'Something' should have a description:
-     type Something = command { ??? }
-     ^
 passes/jvm/src/test/input/check/saga/saga.riddl(1:1):
  Vital definitions should have an author reference:
  domain ignore1 is {
@@ -64,5 +56,13 @@ passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
      ^
 passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
  Function 'UndoAnotherThing' is unused:
+     function UndoAnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
+ Function 'AnotherThing' in Context 'ignore2' should have content:
+     function AnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
+ Function 'UndoAnotherThing' in Context 'ignore2' should have content:
      function UndoAnotherThing {
      ^

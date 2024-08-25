@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.utils.URL 
+import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -22,7 +22,7 @@ class EpicTest extends ValidatingTest {
           |epic WritingABook is {
           |  user foo.Author wants to "edit on the screen" so that "he can revise content more easily"
           |  shown by { http://example.com:80/path/to/WritingABook }
-          |  case perfection is { ???  }
+          |  case perfection is { user foo.Author wants "to open a document" so that "it can be edited" ???  }
           |} described as "A simple authoring story"
           |} described as "a parsing convenience"
           |""".stripMargin,td
@@ -86,11 +86,12 @@ class EpicTest extends ValidatingTest {
           |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  by author reid
+          |  by author ImprovingApp.reid
           |  term 'conduct business' briefly
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
+          |    user ImprovingApp.Owner wants "to incorporate an organization" so that "it can be used"
           |    optional {
           |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
           |        from user ImprovingApp.Owner briefly "create org"
@@ -160,6 +161,8 @@ class EpicTest extends ValidatingTest {
           | by author reid
           |
           |  case primary is {
+          |    user ImprovingApp.Owner wants "to establish an organization" so that
+          |      "they can conduct business as that organization"
           |    parallel {
           |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
           |        from  user ImprovingApp.Owner   briefly "create org"
@@ -224,6 +227,7 @@ class EpicTest extends ValidatingTest {
           |  "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
+          |    user Owner wants "to do it" so that "it is done"
           |    step take input ImprovingApp.Improving_app.OrganizationPage.accept
           |      from user ImprovingApp.Owner
           |      briefly "create org"

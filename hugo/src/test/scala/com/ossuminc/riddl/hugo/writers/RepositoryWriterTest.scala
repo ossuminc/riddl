@@ -29,7 +29,7 @@ class RepositoryWriterTest extends WriterTest {
                          |title: "Repo"
                          |weight: 10
                          |draft: "false"
-                         |description: "Repo has no brief description."
+                         |description: "Repo has no brief description"
                          |geekdocAnchor: true
                          |geekdocToC: 4
                          |geekdocCollapseSection: true
@@ -42,6 +42,8 @@ class RepositoryWriterTest extends WriterTest {
                          || _View Source Link_ | [hugo/src/test/input/repository.riddl(3:5)]() |
                          || _Used By_ | None |
                          || _Uses_ | None |
+                         |
+                         |## *Description*
                          |""".stripMargin
         result mustBe expected
       }

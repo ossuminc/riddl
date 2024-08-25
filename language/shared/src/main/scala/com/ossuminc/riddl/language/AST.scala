@@ -7,21 +7,13 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.utils.URL
-import com.ossuminc.riddl.language.AST.{
-  BrieflyDescribedValue,
-  DescribedValue,
-  NamedValue,
-  OccursInProjector,
-  ProcessorRef,
-  WithComments,
-  WithDescriptions
-}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.{ClassTag, classTag}
-import scala.annotation.tailrec
+import scala.annotation.{tailrec, targetName, unused}
 import scala.io.{BufferedSource, Codec}
 import scala.scalajs.js.annotation.*
 
@@ -38,7 +30,7 @@ object AST {
     * a RiddlNode. Subclasses implement the definitions in various ways because this is the most abstract notion of what
     * is parsed.
     */
-  sealed trait RiddlValue {
+  sealed trait RiddlValue:
 
     /** The location in the parse at which this RiddlValue occurs */
     def loc: At
@@ -63,6 +55,8 @@ object AST {
 
     /** Determine if this [[RiddlValue]] is a definition or not */
     def isDefinition: Boolean = false
+
+    def isParent: Boolean = false
 
     /** Determine if this [[RiddlValue]] is empty or not. Non-containers are always empty */
     def isEmpty: Boolean = true
@@ -105,13 +99,16 @@ object AST {
     /** Provide a string to specify the kind of thing this value is */
     def kind: String = this.getClass.getSimpleName
 
-  }
+  end RiddlValue
 
   /** The kinds of things that are valid content, either immediate or future */
   type ContentValues = RiddlValue
 
   /** A frequently use type alias for a Seq of [[RiddlValue]] */
   type Contents[+CV <: ContentValues] = Seq[CV]
+  object Contents:
+    def empty = Seq.empty
+  end Contents
 
   /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
   extension [CV <: ContentValues](container: Contents[CV])
@@ -127,10 +124,10 @@ object AST {
       * @return
       *   The Seq of type `T` found in the [[Contents]]
       */
-    def filter[T <: RiddlValue: ClassTag]: Contents[T] = {
+    def filter[T <: RiddlValue: ClassTag]: Contents[T] =
       val theClass = classTag[T].runtimeClass
       container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
-    }
+    end filter
 
     /** Returns the elements of the [[Contents]] that are [[VitalDefinition]]s */
     def vitals: Contents[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
@@ -143,22 +140,25 @@ object AST {
       identified.find(d => d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name)
 
     /** Find the first element of the [[Contents]] that */
-    def namedValues: Contents[NamedValue] =
-      container.filter(d => d.isInstanceOf[NamedValue]).map(_.asInstanceOf[NamedValue])
+    def identifiedValues: Contents[WithIdentifier] =
+      container.filter(d => d.isInstanceOf[WithIdentifier]).map(_.asInstanceOf[WithIdentifier])
 
     /** Returns the [[Include]] elements of [[Contents]] */
     def includes: Contents[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
 
     /** find the elements of the [[Contents]] that are [[Definition]]s */
-    def definitions: Contents[Definition] = container.filter[Definition].map(_.asInstanceOf[Definition])
+    def definitions: Definitions = container.filter[Definition].map(_.asInstanceOf[Definition])
+
+    /** find the elemetns of the [[Contents]] that are [[Parent]]s */
+    def parents: Contents[Parent] = container.filter[Parent].asInstanceOf[Contents[Parent]]
+  end extension
 
   /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
     *
     * @tparam CV
     *   The kind of contained value that is contained within.
     */
-  sealed trait Container[+CV <: ContentValues] extends RiddlValue {
-
+  sealed trait Container[+CV <: ContentValues] extends RiddlValue:
     /** The definitional contents of this Container value. The [[contents]] are constrained by the type parameter CV so
       * subclasses must honor that constraint.
       */
@@ -168,20 +168,13 @@ object AST {
 
     /** Force all subclasses to return true as they are containers */
     final inline override def isContainer: Boolean = true
-
-    /** The list of contained [[Definition]]s */
-    final def definitions: Contents[Definition] = contents.definitions
-
-    /** The list of contained [[NamedValue]]s */
-    final def namedValues: Contents[NamedValue] = contents.namedValues
-
-  }
+  end Container
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
-  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] {
+  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV]:
     def format: String = ""
     def loc: At = At.empty
-  }
+  end SimpleContainer
 
   /** Represents a literal string parsed between quote characters in the input
     *
@@ -191,19 +184,19 @@ object AST {
     *   The parsed value of the string content
     */
 
-  case class LiteralString(loc: At, s: String) extends RiddlValue {
+  case class LiteralString(loc: At, s: String) extends RiddlValue:
     override def format = s"\"$s\""
 
     /** Only empty if the string is empty too */
     override def isEmpty: Boolean = s.isEmpty
-  }
+  end LiteralString
 
   /** Companion for LiteralString class to provide the empty value */
-  object LiteralString {
+  object LiteralString:
 
     /** Definition of the empty LiteralString */
     val empty: LiteralString = LiteralString(At.empty, "")
-  }
+  end LiteralString
 
   /** A RiddlValue that is a parsed identifier, typically the name of a definition.
     *
@@ -212,17 +205,16 @@ object AST {
     * @param value
     *   The parsed value of the [[Identifier]]
     */
-  case class Identifier(loc: At, value: String) extends RiddlValue {
+  case class Identifier(loc: At, value: String) extends RiddlValue:
     override def format: String = value
     override def isEmpty: Boolean = value.isEmpty
-  }
+  end Identifier
 
   /** Companion object for the Identifier class to provide the empty value */
-  object Identifier {
-
+  object Identifier:
     /** Definition of the empty [[Identifier]] */
     val empty: Identifier = Identifier(At.empty, "")
-  }
+  end Identifier
 
   /** Represents a segmented identifier to a definition in the model. Path Identifiers are parsed from a dot-separated
     * list of identifiers in the input. Path identifiers are used to reference other definitions in the model.
@@ -232,31 +224,16 @@ object AST {
     * @param value
     *   The list of strings that make up the path identifier
     */
-  case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue {
-    override def format: String = { value.mkString(".") }
+  case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue:
+    override def format: String = value.mkString(".")
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
-  }
+  end PathIdentifier
 
   /** Companion object of the PathIdentifier class to provide its empty value */
-  object PathIdentifier {
-
+  object PathIdentifier:
     /** The empty [[PathIdentifier]] */
     val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
-  }
-
-  /** A trait to add a brief description string to a RiddlValue */
-  sealed trait BrieflyDescribedValue extends RiddlValue {
-
-    /** The optional brief description of the value */
-    def brief: Option[LiteralString]
-
-    /** A reliable extractor of the brief description, dealing with the Optionality of it */
-    def briefValue: String = {
-      brief.map(_.s).getOrElse("No brief description.")
-    }
-
-    override def hasBriefDescription: Boolean = brief.exists(_.s.nonEmpty)
-  }
+  end PathIdentifier
 
   /** A single line description for any vital definition
     * @param brief
@@ -265,33 +242,32 @@ object AST {
   case class BriefDescription(
     loc: At,
     brief: LiteralString
-  ) extends RiddlValue {
-    def format: String = s"briefly"
-  }
+  ) extends RiddlValue:
+    def format: String = s"briefly \"${brief.s}\""
+  end BriefDescription
 
   /** The description of a definition. All definitions have a name and an optional description. This class provides the
     * description part.
     */
-  sealed trait Description extends RiddlValue {
+  sealed trait Description extends RiddlValue:
 
     /** All kinds of [[Description]] have a location provided by an [[At]] value. */
     def loc: At
 
     /** The lines of the description abstractly defined to be provided by subclasses */
     def lines: Seq[LiteralString]
-  }
+  end Description
 
   /** Companion class for Description only to define the empty value */
   @JSExportTopLevel("Description$")
-  object Description {
-
+  object Description:
     /** The empty [[Description]] definition */
     lazy val empty: Description = new Description {
       val loc: At = At.empty
       val lines = Seq.empty[LiteralString]
       def format: String = ""
     }
-  }
+  end Description
 
   /** An implementation of a [[Description]] that implements the lines directly as a [[Seq]] of [[LiteralString]]
     * @param loc
@@ -302,11 +278,11 @@ object AST {
   case class BlockDescription(
     loc: At = At.empty,
     lines: Seq[LiteralString] = Seq.empty[LiteralString]
-  ) extends Description {
+  ) extends Description:
     override def isEmpty: Boolean = lines.isEmpty || lines.forall(_.isEmpty)
     override def hasDescription: Boolean = lines.nonEmpty
     def format: String = ""
-  }
+  end BlockDescription
 
   /** An URL based implementation of [[Description]] that provides the description in a Markdown file
     * @param loc
@@ -314,20 +290,19 @@ object AST {
     * @param url
     *   The URL for the file content that is the description.
     */
-  case class URLDescription(loc: At, url: URL) extends Description {
-
+  case class URLDescription(loc: At, url: URL) extends Description:
     lazy val lines: Seq[LiteralString] = {
       import com.ossuminc.riddl.utils.{Loader, Await}
       val future = Loader(url).load.map(_.split("\n").toSeq.map(LiteralString(loc, _)))
       Await.result(future, 10)
     }
     override def format: String = url.toExternalForm
-  }
+  end URLDescription
 
   /** This trait represents the base trait of all comments recognized by the parser */
-  sealed trait Comment extends RiddlValue {
+  sealed trait Comment extends RiddlValue:
     final inline override def isComment: Boolean = true
-  }
+  end Comment
 
   /** The AST Representation of a single line comment in the input. LineComments can only occur after the closing brace,
     * }, of a definition. The comment is stored within the [[Definition]]
@@ -338,7 +313,7 @@ object AST {
     *   The text of the comment, everything after the // to the end of line
     */
   case class LineComment(loc: At, text: String = "") extends Comment:
-    def format: String = "// " + text + "\n"
+    def format: String = "// " + text
   end LineComment
 
   /** The AST representation of a comment that can span across lines and is inline with the definitions.
@@ -348,18 +323,9 @@ object AST {
     * @param lines
     *   The lines of the comment without line terminators
     */
-  case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment {
-    def format: String = lines.mkString("/* ", "\n * ", "\n */\n")
-  }
-
-  /** Base trait of all [[RiddlValue]]s that have an optional Description */
-  sealed trait DescribedValue extends RiddlValue {
-
-    /** The optional full description of the value */
-    def description: Option[Description]
-
-    override def hasDescription: Boolean = description.exists(_.hasDescription)
-  }
+  case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment:
+    def format: String = lines.mkString("/* ", "\n", "*/")
+  end InlineComment
 
   /** Base trait for option values for any option of a definition.
     *
@@ -370,23 +336,16 @@ object AST {
     * @param args
     *   THe arguments of the option as [[LiteralString]] which may be empty
     */
-  case class OptionValue(loc: At, name: String, args: Seq[LiteralString] = Seq.empty) extends RiddlValue {
+  case class OptionValue(loc: At, name: String, args: Seq[LiteralString] = Seq.empty) extends RiddlValue:
     override def format: String = "option " + name + args.map(_.format).mkString("(", ", ", ")")
-  }
-
-  /** A [[RiddlValue]] that is named via the [[WithIdentifier]] trait */
-  sealed trait NamedValue extends RiddlValue with WithIdentifier
-
-  /** A [[NamedValue]] that is also a [[Container]] */
-  sealed trait NamedContainer[CV <: ContentValues] extends NamedValue with Container[CV]
+  end OptionValue
 
   /** A reference to a definition of a specific type.
     *
     * @tparam T
     *   The type of definition to which the references refers.
     */
-  sealed abstract class Reference[+T <: NamedValue: ClassTag] extends RiddlValue {
-
+  sealed abstract class Reference[+T <: Definition: ClassTag] extends RiddlValue:
     /** The Path identifier to the referenced definition
       */
     def pathId: PathIdentifier
@@ -398,24 +357,24 @@ object AST {
     /** @return
       *   String A string that describes this reference
       */
-    def identify: String = {
+    def identify: String =
       s"${classTag[T].runtimeClass.getSimpleName} ${
           if id.nonEmpty then {
             id.map(_.format + ": ")
           } else ""
-        }'${pathId.format}'${loc.toShort}"
-    }
+        }'${pathId.format}'"
+    end identify
 
     override def isEmpty: Boolean = pathId.isEmpty
-  }
+  end Reference
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
   ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
 
-  /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]],
+  /** A trait that includes an `id` field and various methods to support it. This is used by
     * [[Definition]] and any other thing that needs to be identified by name.
     */
-  sealed trait WithIdentifier extends RiddlValue {
+  sealed trait WithIdentifier extends RiddlValue:
 
     /** the name/identifier of this value. All definitions have one */
     def id: Identifier
@@ -426,59 +385,80 @@ object AST {
     override final inline def isAnonymous: Boolean = id.value.isEmpty
 
     /** Convert the identifier into a string format with its [[kind]] and dealing with anonymity. */
-    def identify: String = {
+    def identify: String =
       if id.isEmpty then {
         s"Anonymous $kind"
       } else {
         s"$kind '${id.format}'"
       }
-    }
+    end identify
 
-    /** Same as [[identify]] but also add the value's location via [[loc]] */
+    /** Same as [[identify]] but also adds the value's location via [[loc]] */
     def identifyWithLoc: String = s"$identify at $loc"
-  }
+  end WithIdentifier
+
+  /** A trait to add a brief description string to a RiddlValue */
+  sealed trait WithBriefs extends Container[ContentValues]:
+
+    /** The optional brief description of the value */
+    def briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
+
+    /** A reliable extractor of the brief description, dealing with the Optionality of it */
+    @unused
+    def briefString: String =
+      if briefs.isEmpty then "No brief description."
+      else briefs.map(_.brief.s).mkString("\n")
+    end briefString
+
+    override def hasBriefDescription: Boolean = briefs.exists(_.brief.s.nonEmpty)
+  end WithBriefs
+
+  sealed trait WithABrief extends RiddlValue:
+    def brief: Option[BriefDescription]
+    def briefString: String = brief.map(_.brief.s).getOrElse("No brief description")
+  end WithABrief
+
+  sealed trait WithADescription extends RiddlValue:
+    def description: Option[Description]
+  end WithADescription
 
   /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
-  sealed trait WithDescriptions extends Container[ContentValues] {
-
-    /** The optional brief description as a single (short) line of text */
-    lazy val briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
-
+  sealed trait WithDescriptions extends Container[ContentValues]:
     /** The optional [[Description]] which can be provided in several ways such as [[BlockDescription]] or
       * [[URLDescription]]
       */
     lazy val descriptions: Contents[Description] = contents.filter[Description]
-  }
+  end WithDescriptions
 
   /** A trait that includes the `comments` field to extract the comments from the contents */
-  sealed trait WithComments extends Container[ContentValues] {
+  sealed trait WithComments extends Container[ContentValues]:
 
     /** A lazily constructed [[Seq]] of [[Comment]] filtered from the contents */
     lazy val comments: Contents[Comment] = contents.filter[Comment]
-  }
+  end WithComments
 
   /** Added to definitions that support includes */
-  sealed trait WithIncludes[CT <: ContentValues] extends Container[CT] {
+  sealed trait WithIncludes[CT <: ContentValues] extends Container[CT]:
 
     /** A lazily constructed [[Seq]] of [[Include]] filtered from the contents */
     lazy val includes: Contents[Include[CT]] = contents.filter[Include[CT]]
     final override def hasIncludes = true
-  }
+  end WithIncludes
 
   /** Added to definitions that support a list of term definitions */
-  sealed trait WithTerms extends Container[ContentValues] {
+  sealed trait WithTerms extends Container[ContentValues]:
 
     /** A lazily constructed [[Seq]] of [[Term]] filtered from the contents */
     lazy val terms: Contents[Term] = contents.filter[Term]
-  }
+  end WithTerms
 
   /** A trait that provides the [[AuthorRef]] to indicate who authored the definition */
-  sealed trait WithAuthorRefs extends Container[ContentValues] {
+  sealed trait WithAuthorRefs extends Container[ContentValues]:
 
     /** A lazily constructed [[Seq]] of [[AuthorRef]] filtered from the contents */
     lazy val authorRefs: Contents[AuthorRef] = contents.filter[AuthorRef]
     override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
-  }
+  end WithAuthorRefs
 
   /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
     * queried, and formatted.
@@ -560,6 +540,20 @@ object AST {
 
     /** A lazily constructed [[Seq]] of [[Group]] filtered from the contents */
     lazy val groups: Contents[Group] = contents.filter[Group]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define a [[Output]] */
+  sealed trait WithOutputs extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
+    lazy val outputs: Contents[Output] = contents.filter[Output]
+  }
+
+  /** Base trait to use in any [[Definition]] that can define a [[Output]] */
+  sealed trait WithInputs extends Container[ContentValues] {
+
+    /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
+    lazy val inputs: Contents[Input] = contents.filter[Input]
   }
 
   /** Base trait to use to define the [[AST.Statement]]s that form the body of a [[Function]] or [[OnClause]] */
@@ -684,19 +678,14 @@ object AST {
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
   ///// This section defines various abstract things needed by the rest of the definitions
 
-  /** A [[Parent]] is always a [[Definition]] because it must have an identifier */
-  type Parent = Definition
-
-  /** A simple sequence of Parents from the closest all the way up to the Root */
-  type Parents = Seq[Parent]
-
   /** The list of definitions to which a reference cannot be made */
-  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant
+  type NonReferencableDefinitions = Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant |
+    Definition
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
-    TypeExpression | Comment | OptionValue | Reference[?] | Statement | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema | ShownBy | SimpleContainer[?]
+    TypeExpression | Comment | OptionValue | Reference[?] | StreamletShape | AdaptorDirection | UserStory |
+    MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInRoot = Comment | Domain | Author
@@ -706,7 +695,7 @@ object AST {
 
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition =
-    Comment | Term | AuthorRef | Type | BriefDescription | BlockDescription | URLDescription
+    Comment | Term | AuthorRef | Type | BriefDescription | Description
 
   /** Type of definitions that occur within all Processor types */
   type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler | Inlet |
@@ -724,14 +713,16 @@ object AST {
   /** Type of definitions that occur in an [[Application]] with [[Include]] */
   type ApplicationContents = OccursInApplication | Include[OccursInApplication]
 
+  type ApplicationRelated = Application | Group | Input | Output
+
   /** Type of definitions that occur in a [[Group]] */
-  type OccursInGroup = Group | ContainedGroup | Input | Output | Comment
+  type OccursInGroup = Group | ContainedGroup | Input | Output | Comment | BriefDescription | Description
 
   /** Type of definitions that occur in an [[Input]] */
-  type OccursInInput = Input | TypeRef
+  type OccursInInput = Input | TypeRef | BriefDescription | Description
 
   /** Type of definitions that occur in an [[Output]] */
-  type OccursInOutput = Output | TypeRef
+  type OccursInOutput = Output | TypeRef | BriefDescription | Description
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
@@ -773,7 +764,7 @@ object AST {
   type EpicContents = OccursInEpic | Include[OccursInEpic]
 
   /** Type of definitions that occur in a [[UseCase]] */
-  type UseCaseContents = Interaction | Comment
+  type UseCaseContents = Interaction | Comment | BriefDescription | Description
 
   /** Type of definitions that occur in a [[InteractionContainer]] */
   type InteractionContainerContents = Interaction | Comment
@@ -791,13 +782,15 @@ object AST {
   type RepositoryContents = OccursInRepository | Include[OccursInRepository]
 
   /** Type of definitions that occur in a [[Function]] */
-  private type OccursInFunction = OccursInVitalDefinition | Aggregation
+  private type OccursInFunction = OccursInVitalDefinition | Statement | Function
 
   /** Type of definitions that occur in a [[Function]], with Include */
   type FunctionContents = OccursInFunction | Include[OccursInFunction]
 
   /** Type of definitions that occur in a [[Type]] */
-  private type OccursInType = Field | Method | Enumerator
+  type TypeContents = Field | Method | Enumerator
+
+  type AggregateContents = Field | Method | Comment
 
   /** Type of definitions that occur in a block of [[Statement]] */
   type Statements = Statement | Comment
@@ -808,32 +801,90 @@ object AST {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
   //////// The Abstract classes for defining Definitions by using the foregoing traits
 
-  /** Base trait for all definitions requiring an identifier for the definition and providing the identify method to
-    * yield a string that provides the kind and name
+  /** Base trait for all Definitions. Their mere distinction at this level of abstraction is to simply have an
+    * identifier
+    *
+    * @see
+    *   [[BranchDefinition]] and [[LeafDefinition]]
     */
-  sealed trait Definition
-      extends Container[ContentValues]
-      with NamedValue
-      with WithDescriptions
-      with DescribedValue
-      with BrieflyDescribedValue
-      with WithComments {
+  sealed trait Definition extends WithIdentifier:
+    /** Yes anything deriving from here is a definition */
+    override def isDefinition: Boolean = true
+    override def isParent: Boolean = false
+    override def hasDefinitions: Boolean = false
+  end Definition
+
+  object Definition:
+    /** The canonical value for "empty" Definition which can usually be interpeted as "Not Found" */
+    lazy val empty: Definition = new Definition {
+      def id: Identifier = Identifier.empty
+      def format: String = ""
+      def loc: At = At.empty
+      override def isEmpty: Boolean = true
+    }
+  end Definition
+
+  /** The Base trait for a definition that contains some unrestricted kind of content, ContentValues */
+  sealed trait Parent extends Definition with Container[ContentValues]:
+    override def isParent: Boolean = true
 
     /** True iff there are contained definitions */
     override def hasDefinitions: Boolean = contents.definitions.nonEmpty
+  end Parent
 
-    /** Yes anything deriving from here is a definition */
-    override def isDefinition: Boolean = true
+  /** A leaf node in the hierarchy of definitions. Leaves have no content, unlike [[Parent]]. They do permit a single
+    * [[BriefDescription]] value and single [[Description]] value. There are no contents.
+    */
+  sealed trait LeafDefinition extends Definition with WithABrief with WithADescription
 
-    def isAppRelated: Boolean = false
-  }
+  /** Base trait for all definitions that have a specific kind of contents */
+  sealed trait BranchDefinition[CV <: ContentValues] extends Parent with Container[CV]
 
-  /** A definition with no content */
-  sealed trait LeafDefinition extends Definition {
-    override def isEmpty: Boolean = contents.isEmpty && description.isEmpty && brief.isEmpty
-    final override def contents: Contents[ContentValues] = Seq.empty[ContentValues]
-    final override def hasDefinitions: Boolean = false
-  }
+  type Definitions = Contents[Definition] // TODO: Make this opaque some day
+
+  object Definitions:
+    def empty: Definitions = Contents.empty
+  end Definitions
+
+  /** A simple sequence of Parents from the closest all the way up to the Root */
+  type Parents = Contents[Parent] // TODO: Make this opaque some day
+
+  object Parents:
+    def empty: Parents = Contents.empty
+  end Parents
+
+  /** A mutable stack of Parent[?] for keeping track of the parent hierarchy */
+  type ParentStack = mutable.Stack[Parent] // TODO: Make this opaque some day
+
+  /** Extension methods for the ParentStack type */
+  extension (ps: ParentStack)
+    /** Convert the mutable ParentStack into an immutable Parents Seq */
+    def toParents: Parents = ps.toSeq.asInstanceOf[Parents]
+  end extension
+
+  /** A Companion to the ParentStack class */
+  object ParentStack:
+    /** @return  an empty ParentStack */
+    def empty: ParentStack = mutable.Stack.empty[Parent]
+  end ParentStack
+
+  type DefinitionStack = mutable.Stack[Definition] // TODO: Make this opaque some day
+
+  extension (ds: DefinitionStack)
+    def toDefinitions: Definitions = ds.toSeq.asInstanceOf[Definitions]
+    def isOnlyParents: Boolean = ds.forall(_.isParent)
+    def toParentStack: ParentStack = ds.filter(_.isParent).map(_.asInstanceOf[Parent]).asInstanceOf[ParentStack]
+    def toParentsSeq: Seq[Parent] = ds.filter(_.isParent).map(_.asInstanceOf[Parent]).toSeq
+  end extension
+
+  object DefinitionStack:
+    def empty: DefinitionStack = mutable.Stack.empty[Definition]
+  end DefinitionStack
+
+  /** The kind of thing that can be returned by PathId Resolution Pass optionally providing the referent and its
+    * Parental context, or None
+    */
+  type Resolution[T <: Definition] = Option[(T, Parents)]
 
   /** The base class of the primary, or vital, definitions. Most of the important definitions are derivatives of this
     * sealed trait. All vital definitions contain comments, documentation, options, authors that defined it, include
@@ -842,16 +893,16 @@ object AST {
     *   The type of the contents of the Vital Definition which must be rooted in RiddlValue
     */
   sealed trait VitalDefinition[CT <: ContentValues]
-      extends Definition
+      extends BranchDefinition[CT]
       with WithIncludes[CT]
       with WithComments
       with WithDescriptions
+      with WithBriefs
       with WithOptions
       with WithAuthorRefs
-      with WithTerms {
-
+      with WithTerms:
     final override def isVital: Boolean = true
-  }
+  end VitalDefinition
 
   /** Definition of a Processor. This is a base class for all Processor definitions (things that have inlets, outlets,
     * handlers, functions, and take messages directly with a reference). Processors are the active portion of a model
@@ -867,11 +918,9 @@ object AST {
       with WithFunctions
       with WithHandlers
       with WithInlets
-      with WithOutlets {
-
+      with WithOutlets:
     final override def isProcessor: Boolean = true
-
-  }
+  end Processor
 
   ///////////////////////////////////////////////////////////////////////////////////////////////// UTILITY DEFINITIONS
   //// The types defined in this section provide utility to the other definitions for includes and references.
@@ -891,13 +940,13 @@ object AST {
     loc: At = At.empty,
     origin: URL = URL.empty,
     contents: Contents[CT]
-  ) extends Container[CT] {
+  ) extends Container[CT]:
 
     override def isRootContainer: Boolean = true
 
     def format: String = s"include \"$origin\""
     override def toString: String = format
-  }
+  end Include
 
   /** Base trait of a reference to definitions that can accept a message directly via a reference
     *
@@ -917,7 +966,10 @@ object AST {
     contents: Contents[RootContents] = Seq.empty
   ) extends VitalDefinition[RootContents]
       with WithAuthors
-      with WithDomains {
+      with WithBriefs
+      with WithDescriptions
+      with WithDomains
+      with WithIncludes[RootContents] {
 
     override def isRootContainer: Boolean = true
 
@@ -928,10 +980,6 @@ object AST {
     override def identify: String = "Root"
 
     override def identifyWithLoc: String = "Root"
-
-    override def description: Option[Description] = None
-
-    override def brief: Option[LiteralString] = None
 
     def format: String = ""
   }
@@ -961,7 +1009,7 @@ object AST {
     loc: At,
     id: Identifier,
     is_a: LiteralString,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends LeafDefinition {
     def format: String = s"${Keyword.user} ${id.format} is ${is_a.format}"
@@ -982,7 +1030,7 @@ object AST {
   case class Term(
     loc: At,
     id: Identifier,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends LeafDefinition {
     def format: String = s"${Keyword.term} ${id.format} is ${brief.map(_.format)}"
@@ -1017,7 +1065,7 @@ object AST {
     organization: Option[LiteralString] = None,
     title: Option[LiteralString] = None,
     url: Option[com.ossuminc.riddl.utils.URL] = None,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends LeafDefinition {
     override def isEmpty: Boolean = {
@@ -1216,7 +1264,7 @@ object AST {
     loc: At,
     id: Identifier,
     enumVal: Option[Long] = None,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
   ) extends LeafDefinition {
     override def format: String = id.format
@@ -1338,7 +1386,7 @@ object AST {
   /** The base trait of values of an aggregate type to provide the required `typeEx` field to give the
     * [[TypeExpression]] for that value of the aggregate
     */
-  sealed trait AggregateValue extends WithIdentifier {
+  sealed trait AggregateValue extends LeafDefinition {
     def typeEx: TypeExpression
   }
 
@@ -1361,10 +1409,9 @@ object AST {
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends LeafDefinition
-      with AggregateValue {
+  ) extends AggregateValue {
     override def format: String = s"${id.format}: ${typeEx.format}"
   }
 
@@ -1406,10 +1453,9 @@ object AST {
     id: Identifier,
     typeEx: TypeExpression,
     args: Seq[MethodArgument] = Seq.empty[MethodArgument],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends LeafDefinition
-      with AggregateValue {
+  ) extends AggregateValue {
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
   }
 
@@ -1417,8 +1463,8 @@ object AST {
     *
     * This is used as the [[TypeExpression]] of Aggregations and Messages
     */
-  sealed trait AggregateTypeExpression(contents: Contents[RiddlValue])
-      extends Container[RiddlValue]
+  sealed trait AggregateTypeExpression(contents: Contents[AggregateContents])
+      extends Container[AggregateContents]
       with TypeExpression
       with WithComments {
 
@@ -1457,7 +1503,7 @@ object AST {
   @JSExportTopLevel("Aggregation")
   case class Aggregation(
     loc: At,
-    contents: Seq[RiddlValue] = Seq.empty
+    contents: Contents[AggregateContents] = Seq.empty
   ) extends AggregateTypeExpression(contents)
 
   @JSExportTopLevel("Aggregation$")
@@ -1482,7 +1528,7 @@ object AST {
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
-    contents: Seq[RiddlValue] = Seq.empty
+    contents: Contents[AggregateContents] = Seq.empty
   ) extends AggregateTypeExpression(contents) {
     override def format: String = {
       usecase.useCase.toLowerCase() + " " + super.format
@@ -1950,7 +1996,7 @@ object AST {
     *   The location of the type definition
     * @param id
     *   The name of the type being defined
-    * @param typ
+    * @param typEx
     *   The type expression of the type being defined
     * @param brief
     *   A brief description (one sentence) for use in documentation
@@ -1961,22 +2007,23 @@ object AST {
   case class Type(
     loc: At,
     id: Identifier,
-    typ: TypeExpression,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    typEx: TypeExpression,
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends Definition
-      with Container[OccursInType] {
-    override def contents: Seq[OccursInType] = {
-      typ match {
+  ) extends BranchDefinition[TypeContents]
+      with WithABrief
+      with WithADescription {
+    def contents: Contents[TypeContents] = {
+      typEx match {
         case a: Aggregation                    => a.fields ++ a.methods
         case a: AggregateUseCaseTypeExpression => a.fields ++ a.methods
         case Enumeration(_, enumerators)       => enumerators
-        case _                                 => Seq.empty[OccursInType]
+        case _                                 => Seq.empty[TypeContents]
       }
     }
 
     final override def kind: String = {
-      typ match {
+      typEx match {
         case AggregateUseCaseTypeExpression(_, useCase, _) => useCase.useCase
         case _                                             => "Type"
       }
@@ -2035,7 +2082,7 @@ object AST {
     id: Identifier,
     typeEx: TypeExpression,
     value: LiteralString,
-    brief: Option[LiteralString],
+    brief: Option[BriefDescription],
     description: Option[Description]
   ) extends LeafDefinition {
 
@@ -2412,10 +2459,6 @@ object AST {
     *   A reference to the bounded context from which messages are adapted
     * @param contents
     *   The definitional contents of this Adaptor
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   Optional description of the adaptor.
     */
   @JSExportTopLevel("Adaptor")
   case class Adaptor(
@@ -2423,9 +2466,7 @@ object AST {
     id: Identifier,
     direction: AdaptorDirection,
     context: ContextRef,
-    contents: Seq[AdaptorContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    contents: Contents[AdaptorContents] = Seq.empty
   ) extends Processor[AdaptorContents]
       with WithOptions {
     def format: String = Keyword.adaptor + " " + id.format
@@ -2452,10 +2493,6 @@ object AST {
     *   The set of types, functions, statements, authors, includes and terms that define this FUnction
     * @param statements
     *   The set of statements that define the behavior of the function
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the function.
     */
   @JSExportTopLevel("Function")
   case class Function(
@@ -2463,13 +2500,11 @@ object AST {
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Contents[FunctionContents] = Seq.empty,
-    statements: Seq[Statements] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    contents: Contents[FunctionContents] = Seq.empty
   ) extends VitalDefinition[FunctionContents]
       with WithTypes
-      with WithFunctions {
+      with WithFunctions
+      with WithStatements {
     override def format: String = Keyword.function + " " + id.format
     final override inline def kind: String = "Function"
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty && output.isEmpty
@@ -2506,7 +2541,7 @@ object AST {
     loc: At,
     id: Identifier,
     condition: Option[LiteralString] = Option.empty[LiteralString],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
   ) extends LeafDefinition {
     override def isEmpty: Boolean = condition.isEmpty
@@ -2517,7 +2552,7 @@ object AST {
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends Definition with Container[Statements] with WithComments
+  sealed trait OnClause extends BranchDefinition[Statements] with WithComments with WithStatements
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
     * corresponds to the "other" case of an [[Handler]].
@@ -2526,17 +2561,11 @@ object AST {
     *   THe location of the "on other" clause
     * @param contents
     *   A set of examples that define the behavior when a message doesn't match
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the on clause.
     */
   @JSExportTopLevel("OnOtherClause")
   case class OnOtherClause(
     loc: At,
-    override val contents: Seq[Statements] = Seq.empty[Statements],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    override val contents: Contents[Statements] = Seq.empty[Statements]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"pther")
 
@@ -2551,17 +2580,11 @@ object AST {
     *   THe location of the "on other" clause
     * @param contents
     *   A set of statements that define the behavior when a message doesn't match
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the on clause.
     */
   @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
     loc: At,
-    override val contents: Contents[Statements] = Seq.empty[Statements],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    override val contents: Contents[Statements] = Seq.empty[Statements]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"init")
 
@@ -2581,19 +2604,13 @@ object AST {
     *   Optional message generating
     * @param contents
     *   A set of statements that define the behavior when the [[msg]] is received.
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the on clause.
     */
   @JSExportTopLevel("OnMessageClause")
   case class OnMessageClause(
     loc: At,
     msg: MessageRef,
     from: Option[(Option[Identifier], Reference[Definition])],
-    override val contents: Contents[Statements] = Seq.empty[Statements],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    override val contents: Contents[Statements] = Seq.empty[Statements]
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, msg.format)
     def format: String = ""
@@ -2605,17 +2622,11 @@ object AST {
     *   THe location of the "on other" clause
     * @param contents
     *   A set of statements that define the behavior when a message doesn't match
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the on clause.
     */
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
-    override val contents: Contents[Statements] = Seq.empty[Statements],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    override val contents: Contents[Statements] = Seq.empty[Statements]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"term")
 
@@ -2637,20 +2648,13 @@ object AST {
     * @param contents
     *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received
     *   messages.
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the handler
     */
   @JSExportTopLevel("Handler")
   case class Handler(
     loc: At,
     id: Identifier,
-    contents: Seq[HandlerContents] = Seq.empty[HandlerContents],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
-  ) extends Definition
-      with Container[HandlerContents] {
+    contents: Contents[HandlerContents] = Seq.empty[HandlerContents]
+  ) extends BranchDefinition[HandlerContents] {
     override def isEmpty: Boolean = clauses.isEmpty
 
     def clauses: Seq[OnClause] = contents.filter[OnClause]
@@ -2692,11 +2696,11 @@ object AST {
     loc: At,
     id: Identifier,
     typ: TypeRef,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends LeafDefinition {
+  ) extends LeafDefinition:
     def format: String = Keyword.state + " " + id.format
-  }
+  end State
 
   /** A reference to an entity's state definition
     *
@@ -2706,9 +2710,9 @@ object AST {
     *   The path identifier of the referenced state definition
     */
   @JSExportTopLevel("StateRef")
-  case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State] {
+  case class StateRef(loc: At, pathId: PathIdentifier) extends Reference[State]:
     def format: String = Keyword.state + " " + pathId.format
-  }
+  end StateRef
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ENTITY
 
@@ -2720,23 +2724,17 @@ object AST {
     *   The name of the entity
     * @param contents
     *   The definitional content of this entity: handlers, states, functions, invariants, etc.
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   Optional description of the entity
     */
   @JSExportTopLevel("Entity")
   case class Entity(
     loc: At,
     id: Identifier,
-    contents: Seq[EntityContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = Option.empty[Description]
+    contents: Contents[EntityContents] = Seq.empty
   ) extends Processor[EntityContents]
       with WithStates
-      with WithOptions {
+      with WithOptions:
     override def format: String = Keyword.entity + " " + id.format
-  }
+  end Entity
 
   /** A reference to an entity
     *
@@ -2746,9 +2744,9 @@ object AST {
     *   The path identifier of the referenced entity.
     */
   @JSExportTopLevel("EntityRef")
-  case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity] {
+  case class EntityRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Entity]:
     def format: String = Keyword.entity + " " + pathId.format
-  }
+  end EntityRef
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// REPOSITORY
 
@@ -2780,11 +2778,11 @@ object AST {
     data: Map[Identifier, TypeRef] = Map.empty[Identifier, TypeRef],
     connectors: Map[Identifier, (TypeRef, TypeRef)] = Map.empty[Identifier, (TypeRef, TypeRef)],
     indices: Seq[FieldRef] = Seq.empty[FieldRef],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
-  ) extends LeafDefinition {
+  ) extends LeafDefinition:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
-  }
+  end Schema
 
   /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
     * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
@@ -2800,18 +2798,12 @@ object AST {
     *   The unique identifier for this Repository
     * @param contents
     *   The definitional content of this Repository: types, handlers, inlets, outlets, etc.
-    * @param brief
-    *   A brief description of this repository
-    * @param description
-    *   A detailed description of this repository
     */
   @JSExportTopLevel("Repository")
   case class Repository(
     loc: At,
     id: Identifier,
-    contents: Contents[RepositoryContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    contents: Contents[RepositoryContents] = Seq.empty
   ) extends Processor[RepositoryContents]
       with WithOptions {
     def format: String = Keyword.entity + " " + id.format
@@ -2845,18 +2837,12 @@ object AST {
     *   The unique identifier for this Projector
     * @param contents
     *   The content of this Projectors' definition
-    * @param brief
-    *   A brief description of this Projector
-    * @param description
-    *   A detailed description of this Projector
     */
   @JSExportTopLevel("Projector")
   case class Projector(
     loc: At,
     id: Identifier,
-    contents: Contents[ProjectorContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    contents: Contents[ProjectorContents] = Seq.empty
   ) extends Processor[ProjectorContents]
       with WithOptions {
     lazy val repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
@@ -2888,18 +2874,12 @@ object AST {
     *   The name of the context
     * @param contents
     *   The definitional content for this Context
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the context
     */
   @JSExportTopLevel("Context")
   case class Context(
     loc: At,
     id: Identifier,
-    contents: Contents[ContextContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    contents: Contents[ContextContents] = Seq.empty
   ) extends Processor[ContextContents]
       with WithProjectors
       with WithRepositories
@@ -2951,7 +2931,7 @@ object AST {
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends Portlet {
     def format: String = s"inlet ${id.format} is ${type_.format}"
@@ -2975,7 +2955,7 @@ object AST {
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends Portlet {
     def format: String = s"outlet ${id.format} is ${type_.format}"
@@ -3003,7 +2983,7 @@ object AST {
     from: OutletRef = OutletRef.empty,
     to: InletRef = InletRef.empty,
     options: Seq[OptionValue] = Seq.empty[OptionValue],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = Option.empty[Description]
   ) extends LeafDefinition {
     def hasOption(name: String): Boolean = options.exists(_.name == name)
@@ -3077,17 +3057,13 @@ object AST {
     *   The shape of the processor's inputs and outputs
     * @param contents
     *   The definitional content for this Context
-    * @param description
-    *   An optional description of the processor
     */
   @JSExportTopLevel("Streamlet")
   case class Streamlet(
     loc: At,
     id: Identifier,
     shape: StreamletShape,
-    contents: Contents[StreamletContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    contents: Contents[StreamletContents] = Seq.empty
   ) extends Processor[StreamletContents]
       with WithOptions {
     final override def kind: String = shape.getClass.getSimpleName
@@ -3203,7 +3179,7 @@ object AST {
     id: Identifier,
     doStatements: Seq[Statements] = Seq.empty[Statements],
     undoStatements: Seq[Statements] = Seq.empty[Statements],
-    brief: Option[LiteralString] = Option.empty[LiteralString],
+    brief: Option[BriefDescription] = Option.empty[BriefDescription],
     description: Option[Description] = None
   ) extends LeafDefinition {
     def format: String = s"step ${id.format}"
@@ -3223,10 +3199,6 @@ object AST {
     *   A definition of the aggregate output values resulting from invoking the saga, if any.
     * @param contents
     *   The definitional content for this Context
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the saga.
     */
   @JSExportTopLevel("Saga")
   case class Saga(
@@ -3234,9 +3206,7 @@ object AST {
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Contents[SagaContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    contents: Contents[SagaContents] = Seq.empty
   ) extends VitalDefinition[SagaContents]
       with WithSagaSteps {
     override def format: String = Keyword.saga + " " + id.format
@@ -3263,7 +3233,7 @@ object AST {
     def format: String = s"user ${pathId.format}"
   }
 
-  sealed trait Interaction extends DescribedValue with BrieflyDescribedValue
+  sealed trait Interaction extends WithADescription with WithABrief
 
   sealed trait GenericInteraction extends Interaction {
     def relationship: LiteralString
@@ -3297,7 +3267,7 @@ object AST {
   case class ParallelInteractions(
     loc: At,
     contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
     override def kind: String = "Parallel Interaction"
@@ -3319,7 +3289,7 @@ object AST {
   case class SequentialInteractions(
     loc: At,
     contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
     override def kind: String = "Sequential Interaction"
@@ -3338,7 +3308,7 @@ object AST {
   case class OptionalInteractions(
     loc: At,
     contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends InteractionContainer {
     override def kind: String = "Optional Interaction"
@@ -3351,7 +3321,7 @@ object AST {
     from: LiteralString,
     relationship: LiteralString,
     to: LiteralString,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
     override def kind: String = "Vague Interaction"
@@ -3379,7 +3349,7 @@ object AST {
     from: Reference[Definition],
     message: MessageRef,
     to: ProcessorRef[?],
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
     def relationship: LiteralString = {
@@ -3409,7 +3379,7 @@ object AST {
     from: Reference[Definition],
     relationship: LiteralString,
     to: Reference[Definition],
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Arbitrary Interaction"
@@ -3436,7 +3406,7 @@ object AST {
     loc: At,
     from: Reference[Definition],
     relationship: LiteralString,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Self Interaction"
@@ -3460,7 +3430,7 @@ object AST {
     loc: At,
     from: UserRef,
     to: GroupRef,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Focus On Group"
@@ -3486,7 +3456,7 @@ object AST {
     loc: At,
     from: UserRef,
     url: com.ossuminc.riddl.utils.URL,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends GenericInteraction {
     def relationship: LiteralString =
@@ -3513,7 +3483,7 @@ object AST {
     from: OutputRef,
     relationship: LiteralString,
     to: UserRef,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Show Output Interaction"
@@ -3536,7 +3506,7 @@ object AST {
     loc: At,
     from: UserRef,
     to: InputRef,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Select Input Interaction"
@@ -3560,7 +3530,7 @@ object AST {
     loc: At,
     from: UserRef,
     to: InputRef,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
@@ -3576,24 +3546,20 @@ object AST {
     *   The unique identifier for this use case
     * @param contents
     *   The interactions between users and system components that define the use case.
-    * @param brief
-    *   A brief description of this use case
-    * @param description
-    *   A longer description of this use case
     */
   @JSExportTopLevel("UseCase")
   case class UseCase(
     loc: At,
     id: Identifier,
-    userStory: UserStory = UserStory(),
+    userStory: UserStory,
     contents: Contents[UseCaseContents] = Seq.empty,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
-  ) extends Definition
-      with Container[UseCaseContents] {
+  ) extends BranchDefinition[UseCaseContents]
+      with WithABrief
+      with WithADescription {
     override def kind: String = "UseCase"
     override def format: String = s"case ${id.format}"
-    override def isEmpty: Boolean = userStory.isEmpty && contents.isEmpty
   }
 
   /** An agile user story definition in the usual "As a {role} I want {capability} so that {benefit}" style.
@@ -3609,18 +3575,15 @@ object AST {
     */
   @JSExportTopLevel("UserStory")
   case class UserStory(
-    loc: At = At.empty,
-    user: UserRef = UserRef(At.empty, PathIdentifier.empty),
-    capability: LiteralString = LiteralString.empty,
-    benefit: LiteralString = LiteralString.empty
+    loc: At,
+    user: UserRef,
+    capability: LiteralString,
+    benefit: LiteralString
   ) extends RiddlValue {
     def format: String = {
       user.format + " wants to \"" + capability.s + "\" so that \"" + benefit.s + "\""
     }
     override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
-  }
-  object UserStory {
-    val empty: UserStory = UserStory()
   }
 
   @JSExportTopLevel("ShownBy")
@@ -3641,23 +3604,15 @@ object AST {
     *   The name of the Epic
     * @param userStory
     *   The [[UserStory]] (per agile and xP) that provides the overall big picture of this Epic
-    * @param shownBy
-    *   A list of URLs to visualizations or other materials related to the epic
     * @param contents
     *   The definitional content for this Context
-    * @param brief
-    *   A brief description (one sentence) for use in the glossary and summaries.
-    * @param description
-    *   An more detailed description of the Epic
     */
   @JSExportTopLevel("Epic")
   case class Epic(
     loc: At,
     id: Identifier,
-    userStory: UserStory = UserStory.empty,
-    contents: Seq[EpicContents] = Seq.empty,
-    brief: Option[LiteralString] = Option.empty[LiteralString],
-    description: Option[Description] = None
+    userStory: UserStory,
+    contents: Contents[EpicContents] = Seq.empty
   ) extends VitalDefinition[EpicContents]
       with WithUseCases
       with WithShownBy {
@@ -3683,30 +3638,23 @@ object AST {
   /** A group of GroupDefinition that can be treated as a whole. For example, a form, a button group, etc.
     * @param loc
     *   The location of the group
+    * @param alias
+    *   The buzzword used to define this group
     * @param id
     *   The unique identifier of the group
-    * @param elements
+    * @param contents
     *   The list of GroupDefinition
-    * @param brief
-    *   A brief description of the group
-    * @param description
-    *   A more detailed description of the group
     */
   @JSExportTopLevel("Group")
   case class Group(
     loc: At,
     alias: String,
     id: Identifier,
-    shownBy: Option[com.ossuminc.riddl.utils.URL] = None,
-    elements: Seq[OccursInGroup] = Seq.empty[OccursInGroup],
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None
-  ) extends Definition
-      with Container[OccursInGroup] {
-    override def isAppRelated: Boolean = true
-
-    override lazy val contents: Seq[OccursInGroup] = { elements }
-
+    contents: Contents[OccursInGroup] = Seq.empty[OccursInGroup]
+  ) extends BranchDefinition[OccursInGroup]
+      with WithShownBy
+      with WithBriefs
+      with WithDescriptions {
     override def identify: String = s"$alias ${id.value}"
 
     /** Format the node to a string */
@@ -3741,7 +3689,7 @@ object AST {
     loc: At,
     id: Identifier,
     group: GroupRef,
-    brief: Option[LiteralString] = None,
+    brief: Option[BriefDescription] = None,
     description: Option[Description] = None
   ) extends LeafDefinition {
     def format: String = s"contains ${id.format} as ${group.format}"
@@ -3755,12 +3703,8 @@ object AST {
     *   unique identifier oof the view
     * @param putOut
     *   A result reference for the data too be presented
-    * @param outputs
+    * @param contents
     *   Any contained outputs
-    * @param brief
-    *   A brief description of the view
-    * @param description
-    *   A detailed description of the view
     */
   @JSExportTopLevel("Output")
   case class Output(
@@ -3769,17 +3713,13 @@ object AST {
     id: Identifier,
     verbAlias: String,
     putOut: TypeRef | ConstantRef | LiteralString,
-    outputs: Seq[OccursInOutput] = Seq.empty[OccursInOutput],
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None
-  ) extends Definition
-      with Container[OccursInOutput] {
+    contents: Contents[OccursInOutput] = Seq.empty[OccursInOutput]
+  ) extends BranchDefinition[OccursInOutput]
+      with WithOutputs
+      with WithBriefs
+      with WithDescriptions {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
-    override def isAppRelated: Boolean = true
-
     override def identify: String = s"$verbAlias ${id.value}"
-
-    override lazy val contents: Seq[OccursInOutput] = outputs
 
     /** Format the node to a string */
     override def format: String = s"$kind ${id.value} $verbAlias ${putOut.format}"
@@ -3804,12 +3744,8 @@ object AST {
     *   Location of the Give
     * @param id
     *   Name of the give
-    * @param putIn
+    * @param takeIn
     *   a Type reference of the type given by the user
-    * @param brief
-    *   A brief description of the Give
-    * @param description
-    *   a detailed description of the Give
     */
   @JSExportTopLevel("Input")
   case class Input(
@@ -3817,22 +3753,16 @@ object AST {
     nounAlias: String,
     id: Identifier,
     verbAlias: String,
-    putIn: TypeRef,
-    inputs: Seq[OccursInInput] = Seq.empty[OccursInInput],
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None
-  ) extends Definition
-      with Container[OccursInInput] {
+    takeIn: TypeRef,
+    contents: Contents[OccursInInput] = Seq.empty[OccursInInput]
+  ) extends BranchDefinition[OccursInInput]
+      with WithInputs {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
-    override def isAppRelated: Boolean = true
-
-    override lazy val contents: Seq[OccursInInput] = inputs
-
     override def identify: String = s"$verbAlias ${id.value}"
 
     /** Format the node to a string */
     override def format: String = {
-      s"$kind $verbAlias ${putIn.format}"
+      s"$kind $verbAlias ${takeIn.format}"
     }
   }
 
@@ -3856,21 +3786,14 @@ object AST {
     *   The unique identifier for the application
     * @param contents
     *   The definitional content for this Context
-    * @param brief
-    *   A brief description of the application
-    * @param description
-    *   A longer description of the application.
     */
   @JSExportTopLevel("Application")
   case class Application(
     loc: At,
     id: Identifier,
-    contents: Seq[ApplicationContents] = Seq.empty,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    contents: Contents[ApplicationContents] = Seq.empty
   ) extends Processor[ApplicationContents]
       with WithGroups {
-    override def isAppRelated: Boolean = true
     override def format: String = Keyword.application + " " + id.format
   }
 
@@ -3898,18 +3821,12 @@ object AST {
     *   The name of the domain
     * @param contents
     *   The definitional content for this Context
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the domain.
     */
   @JSExportTopLevel("Domain")
   case class Domain(
     loc: At,
     id: Identifier,
-    contents: Contents[DomainContents] = Seq.empty,
-    brief: Option[LiteralString] = None,
-    description: Option[Description] = None
+    contents: Contents[DomainContents] = Seq.empty
   ) extends VitalDefinition[DomainContents]
       with WithTypes
       with WithAuthors
@@ -4125,5 +4042,16 @@ object AST {
       case _                  => "<unknown type expression>"
     }
   }
+
+  /** An AST node construction convenience. */
+  def foldDescriptions[CV <: ContentValues](
+    contents: Contents[CV],
+    briefly: Option[BriefDescription],
+    description: Option[Description]
+  ): Contents[CV] =
+    import sourcecode.Text.generate
+    val briefs: Contents[CV] = briefly.toSeq.asInstanceOf[Contents[CV]]
+    val descriptions: Contents[CV] = description.toSeq.asInstanceOf[Contents[CV]]
+    contents ++ briefs ++ descriptions
 
 }

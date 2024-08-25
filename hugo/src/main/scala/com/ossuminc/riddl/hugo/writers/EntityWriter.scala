@@ -13,7 +13,7 @@ trait EntityWriter { this: MarkdownWriter =>
   ): Unit = {
     h2(state.identify)
     emitDefDoc(state, parents)
-    val maybeType = generator.refMap.definitionOf[Type](state.typ.pathId, state)
+    val maybeType = generator.refMap.definitionOf[Type](state.typ.pathId, parents.head)
     val fields = maybeType match {
       case Some(typ: AggregateTypeExpression) => typ.fields
       case Some(_)                            => Seq.empty[Field]
@@ -41,11 +41,11 @@ trait EntityWriter { this: MarkdownWriter =>
   private def emitERD(
     name: String,
     fields: Seq[Field],
-    parents: Seq[Definition],
+    parents: Parents,
   ): Unit = {
     h3("Entity Relationships")
     val erd = EntityRelationshipDiagram(generator.refMap)
-    val lines = erd.generate(name, fields, parents)
+    val lines = erd.generate(name, fields, parents.head)
     emitMermaidDiagram(lines)
   }
 
@@ -59,7 +59,7 @@ trait EntityWriter { this: MarkdownWriter =>
       emitFiniteStateMachine(entity)
     }
     emitInvariants(entity.invariants)
-    emitTypes(entity, entity +: parents)
+    emitTypes(entity.types, entity +: parents)
     for state <- entity.states do emitState(state, entity +: parents)
     for handler <- entity.handlers do emitHandler(handler, entity +: parents)
     for function <- entity.functions do emitFunction(function, entity +: parents)

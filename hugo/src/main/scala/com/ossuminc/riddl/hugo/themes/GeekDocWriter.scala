@@ -58,14 +58,20 @@ case class GeekDocWriter(
     sb.append(headTemplate)
   }
 
-  def containerHead(cont: Definition): Unit = {
-
+  def containerHead(cont: Parent): Unit = {
+    val brief = 
+      cont match
+        case p: Parent if p.contents.filter[BriefDescription].nonEmpty => 
+          p.contents.filter[BriefDescription].foldLeft("")((x,y) => x + y.brief.s)
+        case d: Definition if d.hasBriefDescription => 
+          d.asInstanceOf[Definition & WithABrief].brief.map(_.brief.s)
+            .getOrElse(cont.id.format + " has no brief description")
+        case _ => cont.id.format + " has no brief description"
+      end match
     fileHead(
       cont.id.format,
       containerWeight,
-      Option(
-        cont.brief.fold(cont.id.format + " has no brief description.")(_.s)
-      ),
+      Some(brief),
       Map(
         "geekdocCollapseSection" -> "true"
         // FIXME: "geekdocFilePath" -> s"${generator.makeFilePath(cont).getOrElse("no-such-file")}"
@@ -73,13 +79,13 @@ case class GeekDocWriter(
     )
   }
 
-  def leafHead(definition: Definition, weight: Int): Unit = {
+  def leafHead(definition: LeafDefinition, weight: Int): Unit = {
     fileHead(
       s"${definition.id.format}: ${definition.getClass.getSimpleName}",
       weight,
       Option(
         definition.brief
-          .fold(definition.id.format + " has no brief description.")(_.s)
+          .fold(definition.id.format + " has no brief description.")(_.brief.s)
       )
     )
   }

@@ -43,7 +43,7 @@ class PassTest extends TestingBasisWithTestData {
 
     override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
 
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = ???
+    protected def process(definition: RiddlValue, parents: ParentStack): Unit = ???
 
     def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
@@ -61,7 +61,7 @@ class PassTest extends TestingBasisWithTestData {
 
     override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
 
-    protected def process(definition: RiddlValue, parents: Symbols.ParentStack): Unit = {}
+    protected def process(definition: RiddlValue, parents: ParentStack): Unit = {}
 
     def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
   }
@@ -109,7 +109,7 @@ class PassTest extends TestingBasisWithTestData {
   }
 
   case class TestHierarchyPass(input: PassInput, outputs: PassesOutput) extends HierarchyPass(input, outputs) {
-    def processForTest(node: RiddlValue, parents: Symbols.ParentStack): (Int, Int, Int, Int) = {
+    def processForTest(node: RiddlValue, parents: ParentStack): (Int, Int, Int, Int) = {
       super.process(node, parents)
       (opens, closes, leaves, values)
     }
@@ -142,10 +142,10 @@ class PassTest extends TestingBasisWithTestData {
           val hp = TestHierarchyPass(input, outputs)
           val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
-          opens.mustBe(closes)
-          opens.mustBe(54)
-          values.mustBe(23)
-          leaves.mustBe(23)
+          opens must be(closes)
+          opens must be(55)
+          values must be(29)
+          leaves must be(23)
     }
     "traverses partial trees" in { td =>
       val input = RiddlParserInput(

@@ -3,18 +3,6 @@ passes/jvm/src/test/input/check/overloading/overloading.riddl(1:8):
  domain ignore = {
         ^
 
-passes/jvm/src/test/input/check/overloading/overloading.riddl(2:1):
- Type 'Locale' should have a description:
- type Locale is String
- ^
-passes/jvm/src/test/input/check/overloading/overloading.riddl(3:1):
- Type 'Keyboard' should have a description:
- type Keyboard is {locale: Locale}
- ^
-passes/jvm/src/test/input/check/overloading/overloading.riddl(4:1):
- Type 'Device' should have a description:
- type Device is any of { Keyboard, Mouse, Monitor}
- ^
 passes/jvm/src/test/input/check/overloading/overloading.riddl(4:25):
  Enumerator 'Keyboard' overloads Type 'Keyboard' at passes/jvm/src/test/input/check/overloading/overloading.riddl(3:1):
  type Device is any of { Keyboard, Mouse, Monitor}

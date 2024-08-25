@@ -66,7 +66,7 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     Folding.foldLeftWithStack[Seq[(T, Parents)],RiddlValue](
       Seq.empty[(T, Parents)],
       root,
-      mutable.Stack.empty[Parent]
+      ParentStack.empty
     ) { case (state, definition: RiddlValue, parents) =>
       if lookingFor.isAssignableFrom(definition.getClass) then
         val value: T = definition.asInstanceOf[T]

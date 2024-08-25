@@ -44,9 +44,9 @@ case class DotdockWriter(
     extras: Map[String, String] = Map.empty[String, String]
   ): Unit = ???
 
-  def containerHead(cont: AST.Definition): Unit = ???
+  def containerHead(cont: Parent): Unit = ???
 
-  def leafHead(definition: Definition, weight: Int): Unit = ???
+  def leafHead(definition: LeafDefinition, weight: Int): Unit = ???
 
   def codeBlock(items: Seq[Statements]): Unit = ???
 

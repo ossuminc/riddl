@@ -17,7 +17,7 @@ class FoldingTest extends ParsingTest {
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
       |  context one is {
-      |    connector a is { ??? }
+      |    connector a is from outlet foo to inlet bar
       |    term whomprat is described by "a 2m long rat on Tatooine"
       |    flow b is {
       |      inlet b_in is String
@@ -30,7 +30,7 @@ class FoldingTest extends ParsingTest {
       |    function foo is {
       |       requires { a: Integer, b: String }
       |       returns { ??? }
-      |       body { ??? }
+      |       ???
       |     }
       |    type oneState is Integer
       |    entity one is {
@@ -87,14 +87,14 @@ class FoldingTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
-          val result = Folding.foldLeftWithStack(empty, content, mutable.Stack.empty) {
+          val result = Folding.foldLeftWithStack(empty, content, ParentStack.empty) {
             case (track, definition, stack) =>
               val previous: Seq[String] = stack.map {
-                case nv: NamedValue => nv.identify
+                case nv: WithIdentifier => nv.identify
                 case rv: RiddlValue => rv.toString
               }.reverse
               definition match {
-                case nv: NamedValue => track :+ (previous :+ nv.identify)
+                case nv: WithIdentifier => track :+ (previous :+ nv.identify)
                 case rv: RiddlValue => track :+ (previous :+ rv.toString)
               }
           }

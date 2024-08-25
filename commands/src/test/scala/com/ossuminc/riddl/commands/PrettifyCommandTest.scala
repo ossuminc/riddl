@@ -15,7 +15,7 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     "parse a simple command" in {
       val options = Seq(
         "prettify",
-        "passes/jvm/src/test/input/everything.riddl",
+        "language/jvm/src/test/input/everything.riddl",
         "-o",
         "prettify/target/test/"
       )

@@ -15,7 +15,6 @@ context context is {
     }
   }
   repository repository is { ??? }
-  connector pipe is { ??? }
   source source is { ??? }
   sink sink is { ??? }
   flow flow is { ??? }

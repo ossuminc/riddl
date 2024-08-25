@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.diagrams.mermaid
 
-import com.ossuminc.riddl.language.AST.{Definition, NamedValue, Processor, VitalDefinition}
+import com.ossuminc.riddl.language.AST.{Definition, Processor, VitalDefinition}
 import scalajs.js.annotation.*
 
 /** Flowchart generator abstraction * Example output: * {{{ * --- * title: "Context Diagram For Domain Foo" * init: *

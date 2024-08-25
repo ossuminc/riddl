@@ -19,7 +19,7 @@ class FunctionValidatorTest extends ValidatingTest {
                                           |  function foo is {
                                           |    requires {b: Boolean }
                                           |    returns {r: Integer }
-                                          |    body { ??? }
+                                          |    ???
                                           |  }
                                           |}
                                           |""".stripMargin) { (e, _, msgs) =>
@@ -31,9 +31,6 @@ class FunctionValidatorTest extends ValidatingTest {
                   Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _, _)))),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _, _)))),
                   _,
-                  _,
-                  _,
-                  _
                 )
               ) =>
         }
@@ -47,9 +44,7 @@ class FunctionValidatorTest extends ValidatingTest {
         """function percent {
         |  requires { number: Number }
         |  returns { result: Number }
-        |  body {
-        |    set field percent.result to "a percentage result"
-        |  }
+        |  set field percent.result to "a percentage result"
         |}
         |""".stripMargin
       parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
@@ -62,14 +57,12 @@ class FunctionValidatorTest extends ValidatingTest {
     "validate function empty statements" in { (td: TestData) =>
       val input = """
                     |  function AnAspect is {
-                    |    body {
-                    |      "if and(everybody hates me, I'm depressed) then"
-                    |        "I go fishing"
-                    |        "I'll just eat worms"
-                    |      "else"
-                    |        "I'm happy"
-                    |      "end"
-                    |    }
+                    |    "if and(everybody hates me, I'm depressed) then"
+                    |      "I go fishing"
+                    |      "I'll just eat worms"
+                    |    "else"
+                    |      "I'm happy"
+                    |    "end"
                     |  } described as "foo"
                     |""".stripMargin
 

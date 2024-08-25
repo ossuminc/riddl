@@ -9,14 +9,14 @@ trait ProcessorParser extends VitalDefinitionParser with FunctionParser with Han
   def inlet[u: P]: P[Inlet] = {
     P(
       location ~ Keywords.inlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description
+        typeRef ~/ briefly ~ maybeDescription
     )./.map { tpl => Inlet.apply.tupled(tpl) }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
       location ~ Keywords.outlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ description
+        typeRef ~/ briefly ~ maybeDescription
     )./.map { tpl => Outlet.apply.tupled(tpl) }
   }
 

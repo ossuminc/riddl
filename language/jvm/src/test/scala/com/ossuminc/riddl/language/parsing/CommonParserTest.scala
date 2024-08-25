@@ -50,7 +50,7 @@ class CommonParserTest extends ParsingTest {
           val expected = Domain(
             (1, 1),
             Identifier((1, 8), "foo"),
-            description = Some(
+            contents = Seq(
               URLDescription(
                 (2, 1),
                 URL("https://www.wordnik.com/words/phi")
@@ -93,8 +93,8 @@ class CommonParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((domain, _)) =>
-          domain.description match {
-            case Some(BlockDescription(_, lines)) =>
+          domain.descriptions match {
+            case Seq(BlockDescription(_, lines)) =>
               lines.size mustBe 1
               lines.head.s mustBe "this is an \\\"explanation\\\""
             case x: Any => fail(s"Expected a one line Description but got: $x")
@@ -112,8 +112,8 @@ class CommonParserTest extends ParsingTest {
       parseDefinition[Type](input) match {
         case Left(errors) =>
           fail(errors.format)
-        case Right((content, _)) =>
-          content.typ match {
+        case Right((content: Type, _)) =>
+          content.typEx match {
             case Pattern(_, Seq(LiteralString(_, str))) =>
               java.util.regex.Pattern.compile(str)
             case _ => fail("Expected a Pattern")

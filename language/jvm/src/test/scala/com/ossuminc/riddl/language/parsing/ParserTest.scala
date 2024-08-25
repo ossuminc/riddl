@@ -320,7 +320,7 @@ class ParserTest extends ParsingTest {
           |function foo is {
           |  requires { b : Boolean}
           |  returns { i : Integer}
-          |  body { ??? }
+          |  ???
           |}
           |""".stripMargin,
         td
@@ -336,13 +336,20 @@ class ParserTest extends ParsingTest {
                   Identifier(_, "foo"),
                   Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
                   Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
-                  _,
-                  _,
-                  _,
                   _
                 ) =>
           }
       }
+    }
+    "handle a comment" in { (td: TestData) =>
+      val input: RiddlParserInput = RiddlParserInput(
+        """/* this is a comment */""".stripMargin, td
+      )
+      parseInContext[InlineComment](input,_.contents.filter[InlineComment].head) match
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(comment, _ ) =>
+          comment.lines.head must be("this is a comment ")
     }
     "support Replica types in Contexts" in {  (td: TestData) =>
       val input = RiddlParserInput(
@@ -358,7 +365,7 @@ class ParserTest extends ParsingTest {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
           val typ = domain.contexts.head.types.head
-          typ.typ mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
+          typ.typEx mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
       }
     }
     "parse from a complex file" in { (td: TestData) =>

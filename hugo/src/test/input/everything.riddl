@@ -15,7 +15,7 @@ domain Everything is {
 
   epic WritingABook is {
     user Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
-    case primary is { ??? }
+    case primary is { user Everything.Author wants "to do something" so that "it is done" ??? }
   } described as "A simple authoring story"
 
   context full is {
@@ -71,7 +71,7 @@ domain Everything is {
       function whenUnderTheInfluence is {
         requires {n: Nothing}
         returns {b: Boolean}
-        body { ??? }
+        ???
       }
     }
 
@@ -88,7 +88,7 @@ domain Everything is {
     function misc is {
       requires { n: Nothing }
       returns { b: Boolean }
-      body { ??? }
+     ???
     }
   }
 }

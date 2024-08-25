@@ -1,11 +1,3 @@
-passes/jvm/src/test/input/check/streaming/streaming.riddl(3:3):
- Type 'Temperature' should have a description:
-   type Temperature is Real    type Forecast is any of { Rainy, Cloudy, Sunny }
-   ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(3:31):
- Type 'Forecast' should have a description:
-   type Temperature is Real    type Forecast is any of { Rainy, Cloudy, Sunny }
-                               ^
 passes/jvm/src/test/input/check/streaming/streaming.riddl(13:3):
  Vital definitions should have an author reference:
    sink AttenuateSensor is {

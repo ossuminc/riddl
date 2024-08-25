@@ -2,10 +2,6 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
  Entity 'FooEntity' should have a description:
      entity FooEntity is {
      ^
-passes/jvm/src/test/input/check/references/bad-pids.riddl(12:15):
- Handler 'HandleFoo' should have a description:
-       handler HandleFoo is {
-               ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
  Entity 'FooEntity' is unused:
      entity FooEntity is {
@@ -13,14 +9,6 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
 passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
  Vital definitions should have an author reference:
      entity FooEntity is {
-     ^
-passes/jvm/src/test/input/check/references/bad-pids.riddl(4:5):
- Type 'Foo' should have a description:
-     type Foo is {
-     ^
-passes/jvm/src/test/input/check/references/bad-pids.riddl(3:5):
- Command 'DoFoo' should have a description:
-     command DoFoo is {foo: Foo}
      ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
  Domain 'foo' should have a description:
@@ -44,18 +32,10 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
  Vital definitions should have an author reference:
  domain foo {
  ^
-passes/jvm/src/test/input/check/references/bad-pids.riddl(13:9):
- OnMessageClause 'command DooFoo' should have a description:
-         on command DooFoo {
-         ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(1:8):
  Models without any streaming data will exhibit minimal effect:
  domain foo {
         ^
-passes/jvm/src/test/input/check/references/bad-pids.riddl(8:7):
- Record 'FooExampleState' should have a description:
-       record FooExampleState is {
-       ^
 passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
  Domain 'foo' overloads:
    Field 'foo' at passes/jvm/src/test/input/check/references/bad-pids.riddl(3:23),
@@ -76,3 +56,7 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(14:21):
  and it should refer to a Field:
            set field FooExamplexxxx.garbage to "record Foo"
                      ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(11:7):
+ State 'FooExample' should have a description:
+       state FooExample of FooExampleState
+       ^

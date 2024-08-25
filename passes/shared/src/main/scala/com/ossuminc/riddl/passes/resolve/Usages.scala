@@ -15,9 +15,9 @@ import scala.collection.mutable
   *
   * @param uses
   *   A hashmap with a [[com.ossuminc.riddl.language.AST.Definition]] as the key and the list of
-  *   [[com.ossuminc.riddl.language.AST.NamedValue]]s it uses
+  *   [[com.ossuminc.riddl.language.AST.Definition]]s it uses
   * @param usedBy
-  *   A hashmap with a [[com.ossuminc.riddl.language.AST.NamedValue]] as the key and the list of
+  *   A hashmap with a [[com.ossuminc.riddl.language.AST.Definition]] as the key and the list of
   *   [[com.ossuminc.riddl.language.AST.Definition]] used by it
   */
 case class Usages(
@@ -58,18 +58,19 @@ case class Usages(
     * @return
     *   True iff `user` uses `used`
     */
-  def uses(user: Definition, used: NamedValue): Boolean = {
-    this.uses.get(user).exists(list => list.contains(used))
+  def uses(user: Definition, used: Definition): Boolean = {
+    val usage = this.uses.get(user)
+    usage.exists(list => list.contains(used))
   }
 
-  /** Retrieve the list of users that use a [[com.ossuminc.riddl.language.AST.NamedValue]]
+  /** Retrieve the list of users that use a [[com.ossuminc.riddl.language.AST.Definition]]
     *
     * @param used
-    *   The [[com.ossuminc.riddl.language.AST.NamedValue]] being used
+    *   The [[com.ossuminc.riddl.language.AST.Definition]] being used
     * @return
     *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.Definition]] that are using `used`
     */
-  def getUsers(used: NamedValue): Seq[Definition] = {
+  def getUsers(used: Definition): Seq[Definition] = {
     usedBy.getOrElse(used, Seq.empty)
   }
 
@@ -78,9 +79,9 @@ case class Usages(
     * @param user
     *   The [[com.ossuminc.riddl.language.AST.Definition]] that is the user
     * @return
-    *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.NamedValue]] that are used by `user`
+    *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.Definition]] that are used by `user`
     */
-  def getUses(user: Definition): Seq[NamedValue] = {
+  def getUses(user: Definition): Seq[Definition] = {
     uses.getOrElse(user, Seq.empty)
   }
 
