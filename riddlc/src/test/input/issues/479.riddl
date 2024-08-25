@@ -1,6 +1,9 @@
 domain Ignore {
 
   epic Ignore {
-    case Error is {}
+    user foo wants "to do" so that "it is done"
+    case Error is {
+      user foo wants "to do" so that "it is done"
+    }
   }
 }
