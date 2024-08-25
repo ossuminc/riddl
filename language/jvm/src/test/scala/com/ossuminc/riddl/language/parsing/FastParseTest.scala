@@ -1,19 +1,19 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, CommonOptions}
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.{At, CommonOptions}
+import com.ossuminc.riddl.utils.{TestingBasis, TestingBasisWithTestData}
+import fastparse.Parsed.{Failure, Success}
+import fastparse.{P, *}
+import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import fastparse.{P, *}
-import fastparse.Parsed.Failure
-import fastparse.Parsed.Success
-import org.scalatest.Assertion
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-class FastParseTest extends AnyWordSpec with Matchers with ParsingContext {
+class FastParseTest extends TestingBasisWithTestData with ParsingContext {
 
   def commonOptions: CommonOptions = CommonOptions()
 
