@@ -8,8 +8,8 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.utils.TestingBasis
-import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 /** Unit Tests For AssignmentCompatibility */
 class AssignmentCompatibilityTest extends TestingBasis {

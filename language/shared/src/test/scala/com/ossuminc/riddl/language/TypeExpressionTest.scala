@@ -6,9 +6,10 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.TestingBasis
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.PredefType
+import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.utils.TestingBasis
 
 /** Unit Tests For TypeExpressions */
 class TypeExpressionTest extends TestingBasis {

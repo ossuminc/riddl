@@ -53,6 +53,7 @@ object RiddlParserInput {
     StringParserInput(data, URL.empty, purpose)
   }
 
+  @JSExport("createFromTuple2")
   implicit def apply(data: (String, String)): RiddlParserInput = {
     StringParserInput(data._1, URL.empty, data._2)
   }
@@ -69,7 +70,7 @@ object RiddlParserInput {
     Loader(url).load.map(data => apply(data, url, purpose))
   }
 
-  def fromPaths(basis: String, path: String, purpose: String = ""): RiddlParserInput =
+  private def fromPaths(basis: String, path: String, purpose: String = ""): RiddlParserInput =
     val url = URL("file", "", basis.dropWhile(_ == '/'), path.dropWhile(_ == '/'))
     val future = fromURL(url, purpose)
     Await.result(future, 10.seconds)

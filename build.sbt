@@ -1,5 +1,5 @@
-import org.scoverage.coveralls.Imports.CoverallsKeys.*
-import com.ossuminc.sbt.{OssumIncPlugin, Plugin,DocSite,CrossModule}
+import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
+import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
 import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
@@ -78,11 +78,13 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
+    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.8.0",
     libraryDependencies += Dep.commons_io % Test
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsSettings(
-    libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse
+    libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.8.0"
   )
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
