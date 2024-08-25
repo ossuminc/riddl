@@ -660,7 +660,7 @@ case class ValidationPass(
   ): Unit = {
     val parentsSeq = parents
     checkDefinition(parentsSeq, input)
-    checkTypeRef(input.putIn, parentsSeq)
+    checkTypeRef(input.takeIn, parentsSeq)
     checkDescriptions(input, input.contents)
   }
 

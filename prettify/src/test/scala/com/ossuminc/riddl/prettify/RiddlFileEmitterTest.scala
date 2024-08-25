@@ -12,7 +12,7 @@ import java.nio.file.{Files, Path}
 class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 
   private val path: Path = Path.of("prettify/target/test/rfe.out")
-  private val rfe = RiddlFileEmitter(path)
+  val rfe = RiddlFileEmitter(path)
 
   "RiddlFileEmitter" should {
     "add literal strings" in {
@@ -79,7 +79,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear()
       val desc = BlockDescription(At.empty, Seq(LiteralString(At.empty, "foo")))
       rfe.emitDescription(Some(desc))
-      rfe.toString mustBe " described as {\n  |foo\n}\n"
+      rfe.toString mustBe "described as {\n  |foo\n}\n"
     }
 
     val patt = Pattern(At.empty, Seq(LiteralString(At.empty, "^stuff.*$")))

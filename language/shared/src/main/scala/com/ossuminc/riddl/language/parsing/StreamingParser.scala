@@ -50,8 +50,8 @@ private[parsing] trait StreamingParser {
     P(
       (inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
-        ( handler(StatementsSet.StreamStatements) | term | authorRef | comment | function | invariant | constant |
-          typeDef | option | streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
+        ( processorDefinitionContents(StatementsSet.StreamStatements) |
+          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
         case (inlets, outlets, definitions) =>
           (inlets ++ outlets ++ definitions).asInstanceOf[Seq[StreamletContents]]
       }

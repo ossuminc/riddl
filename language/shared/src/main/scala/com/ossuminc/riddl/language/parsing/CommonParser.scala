@@ -112,7 +112,8 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     P(
       location ~ "/*" ~ until('*', '/')
     ).map { case (loc, comment) =>
-      val lines = comment.split('\n').toList
+      val actual = comment.dropRight(2) // we don't want the */ in the comment text
+      val lines = actual.split('\n').toList
       InlineComment(loc, lines)
     }
   }

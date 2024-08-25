@@ -55,7 +55,7 @@ class StatsPassTest extends ValidatingTest {
             statsOutput.categories.size must be(23)
             val ksAll: KindStats = statsOutput.categories("All")
             ksAll.count must be(22)
-            ksAll.numEmpty must be(19)
+            ksAll.numEmpty must be(21)
             ksAll.numStatements must be(6)
             succeed
       }

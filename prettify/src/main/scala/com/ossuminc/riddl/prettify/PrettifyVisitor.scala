@@ -1,47 +1,16 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package com.ossuminc.riddl.prettify
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
+import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.PassVisitor
 
 import java.nio.file.Path
 import scala.annotation.unused
-
-/** A function to translate between a definition and the keyword that introduces them.
-  *
-  * @param definition
-  *   The definition to look up
-  * @return
-  *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
-  */
-def keyword(definition: Definition): String =
-  definition match
-    case _: Adaptor        => Keyword.adaptor
-    case _: UseCase        => Keyword.case_
-    case _: Context        => Keyword.context
-    case _: Connector      => Keyword.connector
-    case _: Domain         => Keyword.domain
-    case _: Entity         => Keyword.entity
-    case _: Enumerator     => ""
-    case _: Field          => ""
-    case _: Function       => Keyword.function
-    case _: Handler        => Keyword.handler
-    case _: Inlet          => Keyword.inlet
-    case _: Invariant      => Keyword.invariant
-    case _: Outlet         => Keyword.outlet
-    case s: Streamlet      => s.shape.keyword
-    case _: Root           => "root"
-    case _: Saga           => Keyword.saga
-    case _: SagaStep       => Keyword.step
-    case _: State          => Keyword.state
-    case _: Epic           => Keyword.epic
-    case _: Term           => Keyword.term
-    case _: Type           => Keyword.type_
-    case _: ContainedGroup => Keyword.contains
-    case _: OnClause       => Keyword.on
-    case _                 => "unknown"
-  end match
-end keyword
 
 class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   val state: PrettifyState = PrettifyState(options)
@@ -80,6 +49,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       end if
     }
   end openAdaptor
+
   def closeAdaptor(adaptor: Adaptor, parents: Parents): Unit = close(adaptor)
 
   def openEpic(epic: Epic, parents: Parents): Unit =
@@ -93,31 +63,28 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def openUseCase(useCase: UseCase, parents: Parents): Unit =
     state.withCurrent { (rfe: RiddlFileEmitter) =>
-      rfe.openDef(useCase)
-      if useCase.nonEmpty then rfe.addLine(useCase.userStory.format)
+      rfe.addIndent(s"${keyword(useCase)} ${useCase.id.format} is {").nl.incr
+      rfe.addLine(useCase.userStory.format)
+      if useCase.isEmpty then rfe.addLine("???")
     }
   end openUseCase
-  def closeUseCase(useCase: UseCase, parents: Parents): Unit = close(useCase)
+
+  def closeUseCase(useCase: UseCase, parents: Parents): Unit =
+    state.withCurrent { (rfe: RiddlFileEmitter) =>
+      rfe.decr.addLine("}")
+    }
+  end closeUseCase
 
   def openFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      rfe.openDef(function)
+      rfe.addIndent(s"${keyword(function)} ${function.id.format} is { ").nl.incr
       function.input.foreach(te => rfe.addIndent("requires ").emitTypeExpression(te).nl)
       function.output.foreach(te => rfe.addIndent("returns  ").emitTypeExpression(te).nl)
-      rfe
-        .addIndent("body ")
-      if function.statements.isEmpty then rfe.add(" { ??? }").nl else rfe.add("{ ").incr.nl
     }
   end openFunction
   def closeFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      if function.statements.nonEmpty then
-        function.statements.foreach(doStatement)
-        rfe.decr
-          .addIndent("}")
-          .nl
-      end if
-      rfe.closeDef(function)
+      rfe.decr.addLine("}")
     }
   end closeFunction
 
@@ -129,8 +96,34 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def openOnClause(onClause: OnClause, parents: Parents): Unit = open(onClause)
   def openApplication(application: Application, parents: Parents): Unit = open(application)
   def openGroup(group: Group, parents: Parents): Unit = open(group)
-  def openOutput(output: Output, parents: Parents): Unit = open(output)
-  def openInput(input: Input, parents: Parents): Unit = open(input)
+  def openOutput(output: Output, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      rfe
+        .addIndent(output.nounAlias)
+        .add(" ")
+        .add(output.identify)
+        .add(" ")
+        .add(output.verbAlias)
+        .add(" ")
+        .add(output.putOut.format)
+      if output.isEmpty then rfe.nl else rfe.add(" {").nl.incr
+    }
+  end openOutput
+
+  def openInput(input: Input, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      // form Identity takes record Whatever.Identity is { .. }
+      rfe
+        .addIndent(input.nounAlias)
+        .add(" ")
+        .add(input.id.format)
+        .add(" ")
+        .add(input.verbAlias)
+        .add(" ")
+        .add(input.takeIn.format)
+      if input.isEmpty then rfe.nl else rfe.add(" {").nl.incr
+    }
+  end openInput
 
   // Close for each type of container definition
 
@@ -142,8 +135,21 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def closeOnClause(onClause: OnClause, parents: Parents): Unit = close(onClause)
   def closeApplication(application: Application, parents: Parents): Unit = close(application)
   def closeGroup(group: Group, parents: Parents): Unit = close(group)
-  def closeOutput(output: Output, parents: Parents): Unit = close(output)
-  def closeInput(input: Input, parents: Parents): Unit = close(input)
+  def closeOutput(output: Output, parents: Parents): Unit =
+    if output.nonEmpty then
+      state.withCurrent { rfe =>
+        rfe.decr.addLine("}")
+      }
+    end if
+  end closeOutput
+
+  def closeInput(input: Input, parents: Parents): Unit =
+    if input.nonEmpty then
+      state.withCurrent { rfe =>
+        rfe.decr.addLine("}")
+      }
+    end if
+  end closeInput
 
   // LeafDefinitions
   def doField(field: Field): Unit = ()
@@ -163,7 +169,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def doAuthor(author: Author): Unit =
     state.withCurrent { rfe =>
       rfe
-        .addLine(s"author is {")
+        .addLine(s"author ${author.id.format} is {")
         .incr
         .addIndent(s"name = ${author.name.format}\n")
         .addIndent(s"email = ${author.email.format}\n")
@@ -221,21 +227,16 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def doConnector(connector: Connector): Unit =
     state.withCurrent { rfe =>
-      rfe.openDef(connector)
-      if connector.nonEmpty then
-        rfe
-          .addIndent {
-            val from =
-              if connector.from.nonEmpty then s"from ${connector.from.format} "
-              else "from empty"
-            val to =
-              if connector.to.nonEmpty then s"to ${connector.to.format}"
-              else "to empty"
-            from + to
-          }
-          .nl
-          .closeDef(connector)
-      end if
+      rfe.addIndent(s"${keyword(connector)} ${connector.id.format} is ")
+      rfe
+        .add {
+          val from = if connector.from.nonEmpty then s"from ${connector.from.format} " else "from empty "
+          val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
+          from + to
+        }
+        .nl
+        .emitBrief(connector.brief)
+        .emitDescription(connector.description)
     }
   end doConnector
 
@@ -310,20 +311,37 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   end doDescription
 
-  def doStatement(statement: Statement): Unit =
+  def doStatement(statement: Statements): Unit =
     state.withCurrent { rfe =>
-      rfe.addLine(statement.format)
+      statement match
+        case IfThenElseStatement(_, cond, thens, elses) =>
+          rfe.addIndent(s"if ${cond.format} then").nl.incr
+          thens.foreach(doStatement)
+          rfe.decr.addLine("else").incr
+          elses.foreach(doStatement)
+          rfe.decr.addLine("end")
+        case ForEachStatement(_, ref, statements) =>
+          rfe.addIndent(s"foreach ${ref.format} do").incr
+          statements.foreach(doStatement)
+          rfe.decr.addLine("end")
+        case SendStatement(_, msg, portlet) =>
+          rfe.addLine(s"send ${msg.format} to ${portlet.format}")
+        case TellStatement(_, msg, to) =>
+          rfe.addLine(s"tell ${msg.format} to ${to.format}")
+        case statement: Statement => rfe.addLine(statement.format)
+        case comment: Comment     => rfe.addLine(comment.format)
+      end match
     }
   end doStatement
 
   def doInteraction(interaction: Interaction): Unit =
     state.withCurrent { rfe =>
       interaction match
-        case si: SequentialInteractions     => () // TODO: implement
-        case pi: ParallelInteractions       => () // TODO: implement
-        case oi: OptionalInteractions       => () // TODO: implement
-        case twori: TwoReferenceInteraction => () // TODO: implement
-        case gi: GenericInteraction         => () // TODO: implement
+        case _: SequentialInteractions     => () // TODO: implement
+        case _: ParallelInteractions       => () // TODO: implement
+        case _: OptionalInteractions       => () // TODO: implement
+        case _: TwoReferenceInteraction => () // TODO: implement
+        case _: GenericInteraction         => () // TODO: implement
       end match
     }
   end doInteraction
@@ -357,3 +375,58 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     end if
   end closeInclude
 end PrettifyVisitor
+
+/** A function to translate between a definition and the keyword that introduces them.
+ *
+ * @param definition
+ *   The definition to look up
+ * @return
+ *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
+ */
+def keyword(definition: Definition): String =
+  definition match
+    case _: Adaptor     => Keyword.adaptor
+    case _: Application => Keyword.application
+    case _: UseCase     => Keyword.case_
+    case _: Context     => Keyword.context
+    case _: Connector   => Keyword.connector
+    case _: Domain      => Keyword.domain
+    case _: Entity      => Keyword.entity
+    case _: Enumerator  => ""
+    case _: Field       => ""
+    case _: Function    => Keyword.function
+    case group: Group   => group.alias
+    case input: Input   => input.nounAlias
+    case output: Output => output.nounAlias
+    case _: Handler     => Keyword.handler
+    case _: Inlet       => Keyword.inlet
+    case _: Invariant   => Keyword.invariant
+    case _: Outlet      => Keyword.outlet
+    case s: Streamlet   => s.shape.keyword
+    case _: Root        => "root"
+    case _: Saga        => Keyword.saga
+    case _: SagaStep    => Keyword.step
+    case _: State       => Keyword.state
+    case _: Epic        => Keyword.epic
+    case _: Term        => Keyword.term
+    case typ: Type =>
+      typ.typEx match
+        case AggregateUseCaseTypeExpression(_, useCase, _) =>
+          useCase match
+            case CommandCase => Keyword.command
+            case EventCase   => Keyword.event
+            case QueryCase   => Keyword.query
+            case ResultCase  => Keyword.result
+            case RecordCase  => Keyword.record
+            case TypeCase    => Keyword.type_
+          end match
+        case _ => Keyword.type_
+      end match
+    case _: ContainedGroup => Keyword.contains
+    case _: OnClause       => Keyword.on
+    case _: Projector      => Keyword.projector
+    case _: Repository     => Keyword.repository
+    case _: Definition     => "unknown"
+  end match
+end keyword
+

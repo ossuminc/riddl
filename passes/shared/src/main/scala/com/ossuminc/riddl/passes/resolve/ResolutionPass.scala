@@ -136,7 +136,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         val interactions = uc.contents.filter[Interaction]
         if interactions.nonEmpty then resolveInteractions(uc, interactions, parents)
       case in: Input =>
-        associateUsage(in, resolveATypeRef(in.putIn, parents))
+        associateUsage(in, resolveATypeRef(in.takeIn, parents))
       case out: Output =>
         out.putOut match {
           case typ: TypeRef       => associateUsage(out, resolveATypeRef(typ, parents))

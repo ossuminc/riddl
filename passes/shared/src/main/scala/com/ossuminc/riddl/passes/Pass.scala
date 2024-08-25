@@ -435,7 +435,7 @@ trait PassVisitor:
   def doAuthorRef(reference: AuthorRef): Unit
   def doBriefDescription(brief: BriefDescription): Unit
   def doDescription(description: Description): Unit
-  def doStatement(statement: Statement): Unit
+  def doStatement(statement: Statements): Unit
   def doInteraction(interaction: Interaction): Unit
   def doOptionValue(optionValue: OptionValue): Unit
 
@@ -471,7 +471,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Enumerator            => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: GenericInteraction | _: SelfInteraction |
-          _: VagueInteraction | _: ContainedGroup | _: Definition =>
+          _: VagueInteraction | _: ContainedGroup | _: Definition => // not containers
         () // not  containers
     end match
   end openContainer
@@ -499,8 +499,8 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Root                  => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | _: Definition =>
-        () // not  containers
+          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | 
+         _: Definition => () // not  containers
     end match
   end closeContainer
 
@@ -526,13 +526,20 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
 
   protected final def processValue(value: RiddlValue, parents: Parents): Unit =
     value match
-      case comment: Comment         => visitor.doComment(comment)
-      case authorRef: AuthorRef     => visitor.doAuthorRef(authorRef)
-      case brief: BriefDescription  => visitor.doBriefDescription(brief)
-      case description: Description => visitor.doDescription(description)
-      case statement: Statement     => visitor.doStatement(statement)
-      case interaction: Interaction => visitor.doInteraction(interaction)
-      case optionValue: OptionValue => visitor.doOptionValue(optionValue)
+      case comment: Comment         => 
+        visitor.doComment(comment)
+      case authorRef: AuthorRef     => 
+        visitor.doAuthorRef(authorRef)
+      case brief: BriefDescription  => 
+        visitor.doBriefDescription(brief)
+      case description: Description => 
+        visitor.doDescription(description)
+      case statement: Statement     => 
+        visitor.doStatement(statement)
+      case interaction: Interaction => 
+        visitor.doInteraction(interaction)
+      case optionValue: OptionValue => 
+        visitor.doOptionValue(optionValue)
       case _                        => ()
     end match
   end processValue
@@ -609,8 +616,8 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput) exten
 object Pass {
 
   /** A PassesCreator of the standard passes that should be run on every AST pass. These generate the symbol table,
-    * resolve path references, and validate the input. Only after these three have passed successful should the model
-    * be considered processable by other passes
+    * resolve path references, and validate the input. Only after these three have passed successful should the model be
+    * considered processable by other passes
     */
   val standardPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 

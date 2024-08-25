@@ -32,51 +32,49 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
         this
     }
   }
-
+  
   def openDef(
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
     addIndent(s"${keyword(definition)} ${definition.id.format} is ")
     if withBrace then
-      if definition.isEmpty then add("{ ??? }\n")
+      if definition.isEmpty then add("{ ??? }").nl
       else add("{").nl.incr
     else this
     end if
   }
 
   def closeDef(
-    definition: Definition
+    definition: Definition,
+    withBrace: Boolean = true
   ): this.type = {
     definition match
       case brief: WithABrief => emitBrief(brief.brief)
-      case _ =>
+      case _                 =>
     definition match
-      case definition: WithADescription => 
+      case definition: WithADescription =>
         emitDescription(definition.asInstanceOf[WithADescription].description)
       case _ =>
-    if definition.nonEmpty then 
-      decr.addIndent("}").nl
-    else
-      nl 
+    if withBrace then
+      if definition.nonEmpty then decr.addLine("}")
     end if
-    this    
+    this
   }
 
   def emitComment(comment: Comment): this.type =
     comment match
-      case inline: InlineComment => this.add(inline.format)
-      case block: LineComment    => this.addIndent(block.format).nl
+      case inline: InlineComment => this.addLine(inline.format)
+      case block: LineComment    => this.addLine(block.format)
     end match
   end emitComment
 
-  def emitBrief(brief: Option[BriefDescription], withIndent: Boolean = true ): this.type = {
+  def emitBrief(brief: Option[BriefDescription], withIndent: Boolean = true): this.type = {
     brief.map { bd =>
-      if withIndent then
-        addIndent(bd.format)
-      else
-        add(bd.format)
+      if withIndent then addIndent(bd.format)
+      else add(bd.format)
       end if
+      nl
     }
     this
   }
@@ -85,21 +83,17 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     description.map { (desc: Description) =>
       desc match
         case bd: BlockDescription =>
-          if withIndent then
-            addIndent(" described as {").nl
-          else
-            add(" described as {").nl
+          if withIndent then addIndent("described as {").nl
+          else add(" described as {").nl
           incr
           bd.lines.foreach { line => addIndent("|").add(line.s).nl }
           decr
           addIndent("}").nl
         case URLDescription(_, url) =>
-          if withIndent then
-            addIndent(" described ")
-          else
-            add(" described ")
+          if withIndent then addIndent("described ")
+          else add(" described ")
           url.scheme match
-            case "file" => add("in file ")
+            case "file"           => add("in file ")
             case "http" | "https" => add("at ")
           end match
           add(url.toExternalForm).nl
@@ -148,7 +142,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   }
 
   private def emitField(field: Field): this.type =
-    this.add(s"${field.id.value}: ")
+    this
+      .add(s"${field.id.value}: ")
       .emitTypeExpression(field.typeEx)
       .emitBrief(field.brief)
       .emitDescription(field.description)
@@ -171,7 +166,8 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
             .emitField(f)
             .emitBrief(f.brief, false)
             .emitDescription(f.description, false)
-            .add(",").nl
+            .add(",")
+            .nl
         }
         sb.deleteCharAt(sb.length - 2)
         decr.add(s"$spc} ")
@@ -278,7 +274,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       .add(s"${spc}type ${t.id.value} is ")
       .emitTypeExpression(t.typEx)
       .emitBrief(t.brief, false)
-      .emitDescription(t.description,false)
+      .emitDescription(t.description, false)
       .nl
   }
 
@@ -300,8 +296,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
   def emitOptions(optionDef: WithOptions): this.type =
     if optionDef.options.nonEmpty then
       optionDef.options.map { option => option.format + new_line }.foreach(addIndent); this
-    else
-      this
+    else this
     end if
   end emitOptions
 

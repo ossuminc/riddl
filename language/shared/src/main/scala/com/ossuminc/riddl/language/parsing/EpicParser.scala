@@ -143,7 +143,7 @@ private[parsing] trait EpicParser {
         (undefined(Seq.empty[TwoReferenceInteraction]) | interactions) ~
         close ~ briefly ~ maybeDescription
     ).map { case (loc, id, userStory, contents, brief, description) =>
-      UseCase(loc, id, userStory, foldDescriptions(contents, brief, description))
+      UseCase(loc, id, userStory, contents, brief, description)
     }
   }
 

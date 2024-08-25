@@ -4,10 +4,9 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput}
 import org.scalatest.{Assertion, TestData}
-import scala.collection.mutable 
+import scala.collection.mutable
 
 import java.nio.file.Path
-
 
 case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
 
@@ -17,7 +16,7 @@ class VisitingPassTest extends ParsingTest {
     "descend cleanly" in { td =>
       val path: Path = Path.of("language/jvm/src/test/input/everything.riddl")
       parsePath(path) match
-        case Left(msgs) => fail(msgs.justErrors.format)
+        case Left(msgs)  => fail(msgs.justErrors.format)
         case Right(root) =>
           // info(s"root.domains.contents.size= ${root.domains.head.contents.size}")
           val visitor = new TestVisitor
@@ -133,7 +132,7 @@ class TestVisitor extends PassVisitor:
   def doAuthorRef(reference: AuthorRef): Unit = value(reference)
   def doBriefDescription(brief: BriefDescription): Unit = value(brief)
   def doDescription(description: Description): Unit = value(description)
-  def doStatement(statement: Statement): Unit = value(statement)
+  def doStatement(statement: Statements): Unit = value(statement)
   def doInteraction(interaction: Interaction): Unit = value(interaction)
   def doOptionValue(optionValue: OptionValue): Unit = value(optionValue)
   def doUserStory(userStory: UserStory): Unit = value(userStory)

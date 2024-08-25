@@ -341,6 +341,16 @@ class ParserTest extends ParsingTest {
           }
       }
     }
+    "handle a comment" in { (td: TestData) =>
+      val input: RiddlParserInput = RiddlParserInput(
+        """/* this is a comment */""".stripMargin, td
+      )
+      parseInContext[InlineComment](input,_.contents.filter[InlineComment].head) match
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(comment, _ ) =>
+          comment.lines.head must be("this is a comment ")
+    }
     "support Replica types in Contexts" in {  (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {

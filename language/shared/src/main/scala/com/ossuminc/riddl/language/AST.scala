@@ -313,7 +313,7 @@ object AST {
     *   The text of the comment, everything after the // to the end of line
     */
   case class LineComment(loc: At, text: String = "") extends Comment:
-    def format: String = "// " + text + "\n"
+    def format: String = "// " + text
   end LineComment
 
   /** The AST representation of a comment that can span across lines and is inline with the definitions.
@@ -324,7 +324,7 @@ object AST {
     *   The lines of the comment without line terminators
     */
   case class InlineComment(loc: At, lines: Seq[String] = Seq.empty) extends Comment:
-    def format: String = lines.mkString("/* ", "\n", "\n*/\n")
+    def format: String = lines.mkString("/* ", "\n", "*/")
   end InlineComment
 
   /** Base trait for option values for any option of a definition.
@@ -3552,13 +3552,14 @@ object AST {
     loc: At,
     id: Identifier,
     userStory: UserStory,
-    contents: Contents[UseCaseContents] = Seq.empty
+    contents: Contents[UseCaseContents] = Seq.empty,
+    brief: Option[BriefDescription] = None,
+    description: Option[Description] = None
   ) extends BranchDefinition[UseCaseContents]
-      with WithBriefs
-      with WithDescriptions {
+      with WithABrief
+      with WithADescription {
     override def kind: String = "UseCase"
     override def format: String = s"case ${id.format}"
-    override def isEmpty: Boolean = userStory.isEmpty && contents.isEmpty
   }
 
   /** An agile user story definition in the usual "As a {role} I want {capability} so that {benefit}" style.
@@ -3743,7 +3744,7 @@ object AST {
     *   Location of the Give
     * @param id
     *   Name of the give
-    * @param putIn
+    * @param takeIn
     *   a Type reference of the type given by the user
     */
   @JSExportTopLevel("Input")
@@ -3752,7 +3753,7 @@ object AST {
     nounAlias: String,
     id: Identifier,
     verbAlias: String,
-    putIn: TypeRef,
+    takeIn: TypeRef,
     contents: Contents[OccursInInput] = Seq.empty[OccursInInput]
   ) extends BranchDefinition[OccursInInput]
       with WithInputs {
@@ -3761,7 +3762,7 @@ object AST {
 
     /** Format the node to a string */
     override def format: String = {
-      s"$kind $verbAlias ${putIn.format}"
+      s"$kind $verbAlias ${takeIn.format}"
     }
   }
 
