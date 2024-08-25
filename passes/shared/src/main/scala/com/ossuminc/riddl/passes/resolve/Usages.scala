@@ -63,10 +63,10 @@ case class Usages(
     usage.exists(list => list.contains(used))
   }
 
-  /** Retrieve the list of users that use a [[com.ossuminc.riddl.language.AST.NamedValue]]
+  /** Retrieve the list of users that use a [[com.ossuminc.riddl.language.AST.Definition]]
     *
     * @param used
-    *   The [[com.ossuminc.riddl.language.AST.NamedValue]] being used
+    *   The [[com.ossuminc.riddl.language.AST.Definition]] being used
     * @return
     *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.Definition]] that are using `used`
     */
@@ -79,7 +79,7 @@ case class Usages(
     * @param user
     *   The [[com.ossuminc.riddl.language.AST.Definition]] that is the user
     * @return
-    *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.NamedValue]] that are used by `user`
+    *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.Definition]] that are used by `user`
     */
   def getUses(user: Definition): Seq[Definition] = {
     uses.getOrElse(user, Seq.empty)

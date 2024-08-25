@@ -371,7 +371,7 @@ object AST {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
   ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
 
-  /** A trait that includes an `id` field and various methods to support it. This is used by [[NamedValue]],
+  /** A trait that includes an `id` field and various methods to support it. This is used by
     * [[Definition]] and any other thing that needs to be identified by name.
     */
   sealed trait WithIdentifier extends RiddlValue:
