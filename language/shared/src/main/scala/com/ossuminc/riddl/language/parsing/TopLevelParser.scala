@@ -27,13 +27,14 @@ import scala.scalajs.js.annotation._
 class TopLevelParser(
   val input: RiddlParserInput,
   val commonOptions: CommonOptions = CommonOptions.empty
-) extends ProcessorParser 
+) extends ProcessorParser
     with DomainParser
     with AdaptorParser
     with ApplicationParser
     with ContextParser
     with EntityParser
     with EpicParser
+    with ModuleParser
     with ProjectorParser
     with RepositoryParser
     with SagaParser
@@ -44,17 +45,18 @@ class TopLevelParser(
   import scala.concurrent.Future
 
   private def rootInclude[u: P]: P[Include[RootContents]] = {
-    include[u, RootContents](rootDefinitions(_))
+    include[u, RootContents](rootContents(_))
   }
 
-  private def rootDefinitions[u:P]: P[Seq[RootContents]] = {
-    P(comment | rootInclude[u] | domain | author).asInstanceOf[P[RootContents]]./.rep(1)
+  private def rootContent[u: P]: P[RootContents] = {
+    P(moduleContent | module | rootInclude[u]).asInstanceOf[P[RootContents]]
   }
   
+  private def rootContents[u:P]: P[Seq[RootContents]] =
+    P(rootContent).rep(1)
+
   def root[u: P]: P[Root] = {
-    P(Start ~ rootDefinitions ~ End).map { (content: Seq[RootContents]) =>
-      Root(content) 
-    }
+    P(Start ~ rootContents ~ End).map { (content: Seq[RootContents]) => Root(content) }
   }
 
   @JSExport
@@ -127,15 +129,14 @@ object TopLevelParser {
       tlp.parseRoot(withVerboseFailures)
     }
   }
-  
+
   @JSExport
   def parseString(
     input: String,
     commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
   ): Either[Messages, Root] = {
-    val rpi = RiddlParserInput(input,"")
+    val rpi = RiddlParserInput(input, "")
     parseInput(rpi)
   }
 }
-

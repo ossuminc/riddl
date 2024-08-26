@@ -706,6 +706,10 @@ object AST {
     lazy val shownBy: Contents[ShownBy] = contents.filter[ShownBy]
   }
 
+  sealed trait WithModules extends Container[ContentValues] {
+    lazy val modules: Contents[Module] = contents.filter[Module]
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
   ///// This section defines various abstract things needed by the rest of the definitions
 
@@ -719,10 +723,13 @@ object AST {
     MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
-  private type OccursInRoot = Comment | Domain | Author
+  private type OccursInModule = Domain | Author | Comment
 
-  /** Type of definitions that can be defined in a [[Root]] with [[Include]] */
-  type RootContents = Comment | Domain | Author | Include[OccursInRoot]
+  /** Type of definitions that can occur in a [[Module]] */
+  type ModuleContents = OccursInModule | Include[OccursInModule]
+
+  /** The root is a module that can have other modules */
+  type RootContents = ModuleContents | Module
 
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition =
@@ -988,19 +995,18 @@ object AST {
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// ROOT
 
+  /** An abstract definition of what can be in a module, used to make sure [[Root]] and [[Module]] */
+  trait AbstractModule[CT <: ContentValues] extends VitalDefinition[CT]
+    with WithDomains with WithAuthors with WithBriefs with WithDescriptions with WithIncludes[CT]
+
   /** The root of the containment hierarchy, corresponding roughly to a level about a file.
     *
     * @param contents
     *   The sequence top level definitions contained by this root container
     */
   case class Root(
-    contents: Contents[RootContents] = Seq.empty
-  ) extends VitalDefinition[RootContents]
-      with WithAuthors
-      with WithBriefs
-      with WithDescriptions
-      with WithDomains
-      with WithIncludes[RootContents] {
+    contents: Contents[RootContents] = Contents.empty
+  ) extends AbstractModule[RootContents] with WithModules {
 
     override def isRootContainer: Boolean = true
 
@@ -1020,6 +1026,18 @@ object AST {
     /** The value to use for an empty [[Root]] instance */
     val empty: Root = apply(Seq.empty[RootContents])
   }
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// MODULE
+
+  /** A Module represents a */
+  case class Module(
+    loc: At,
+    id: Identifier,
+    contents: Contents[ModuleContents] = Contents.empty
+  ) extends AbstractModule[ModuleContents]:
+    def format: String = s"${Keyword.module} ${id.format}"
+  end Module
+
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// USER
 
