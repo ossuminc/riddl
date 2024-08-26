@@ -190,7 +190,9 @@ case class HugoPass(
           case r: Repository => mkd.emitRepository(r, stack)
           case s: Saga       => mkd.emitSaga(s, stack)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
+          case m: Module     => mkd.emitModule(m, stack)
           case r: Root       => ()
+          case _: AbstractModule[?] => ()
         }
 
       case u: UseCase   => setUpContainer(u, stack).emitUseCase(u, stack)
@@ -201,7 +203,7 @@ case class HugoPass(
           _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
           _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root | _: BriefDescription |
           _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type |
-          _: Definition | _: Statement =>
+          _: Definition | _: Statement | _: AbstractModule[?] =>
         ()
       // All of these are handled above in their containers content output
       case _: AST.NonDefinitionValues => ()

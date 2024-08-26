@@ -32,6 +32,7 @@ trait MarkdownWriter
     with RepositoryWriter
     with SagaWriter
     with StreamletWriter
+    with ModuleWriter
     with SummariesWriter {
 
   def generator: ThemeGenerator
@@ -98,11 +99,10 @@ trait MarkdownWriter
 
     val containers = parents.filter(_.isContainer).reverse
     val systemBoundaries = containers.zipWithIndex
-    val openedBoundaries = systemBoundaries.map {
-      case (dom: Definition, n) =>
-        val nm = dom.id.format
-        val keyword = if n == 0 then "Enterprise_Boundary" else "System_Boundary"
-        " ".repeat((n + 1) * 2) + s"$keyword($nm,$nm,\"${brief(dom)}\") {"
+    val openedBoundaries = systemBoundaries.map { case (dom: Definition, n) =>
+      val nm = dom.id.format
+      val keyword = if n == 0 then "Enterprise_Boundary" else "System_Boundary"
+      " ".repeat((n + 1) * 2) + s"$keyword($nm,$nm,\"${brief(dom)}\") {"
     }
     val closedBoundaries = systemBoundaries.reverse.map { case (_, n) =>
       " ".repeat((n + 1) * 2) + "}"
@@ -151,7 +151,7 @@ trait MarkdownWriter
     definition match
       case wad: WithADescription => wad.description.foreach(d => p(d.lines.mkString("\n")))
       case wds: WithDescriptions => wds.descriptions.foreach(d => p(d.lines.mkString("\n")))
-      case _ => ()
+      case _                     => ()
     end match
   end emitDescriptionParagraphs
 
@@ -286,7 +286,7 @@ trait MarkdownWriter
     definition match
       case wad: WithADescription => emitDescriptions(wad.description.toSeq, level)
       case wds: WithDescriptions => emitDescriptions(wds.descriptions, level)
-      case _ => this
+      case _                     => this
   }
 
   protected def emitShortDefDoc(
@@ -445,18 +445,19 @@ trait MarkdownWriter
   }
 
   protected def emitTypes(types: Contents[Type], parents: Parents, level: Int = 2): Unit = {
-    val groups = types.groupBy { typ =>
-      typ.typEx match
-        case mt: AggregateUseCaseTypeExpression  => mt.usecase.toString + " "
-        case AliasedTypeExpression(_, _, _)      => "Alias "
-        case EntityReferenceTypeExpression(_, _) => "Reference "
-        case _: NumericType                      => "Numeric "
-        case PredefinedType(_)                   => "Predefined "
-        case _                                   => "Structural"
-      end match
-    }
-    .toSeq
-    .sortBy(_._2.size)
+    val groups = types
+      .groupBy { typ =>
+        typ.typEx match
+          case mt: AggregateUseCaseTypeExpression  => mt.usecase.toString + " "
+          case AliasedTypeExpression(_, _, _)      => "Alias "
+          case EntityReferenceTypeExpression(_, _) => "Reference "
+          case _: NumericType                      => "Numeric "
+          case PredefinedType(_)                   => "Predefined "
+          case _                                   => "Structural"
+        end match
+      }
+      .toSeq
+      .sortBy(_._2.size)
     heading("Types", level)
     for {
       (label, list) <- groups

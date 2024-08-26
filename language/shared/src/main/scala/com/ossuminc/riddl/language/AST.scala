@@ -720,7 +720,8 @@ object AST {
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     TypeExpression | Comment | OptionValue | Reference[?] | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription
+    MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription |
+    AbstractModule[?]
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -996,8 +997,13 @@ object AST {
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// ROOT
 
   /** An abstract definition of what can be in a module, used to make sure [[Root]] and [[Module]] */
-  trait AbstractModule[CT <: ContentValues] extends VitalDefinition[CT]
-    with WithDomains with WithAuthors with WithBriefs with WithDescriptions with WithIncludes[CT]
+  trait AbstractModule[CT <: ContentValues]
+      extends VitalDefinition[CT]
+      with WithDomains
+      with WithAuthors
+      with WithBriefs
+      with WithDescriptions
+      with WithIncludes[CT]
 
   /** The root of the containment hierarchy, corresponding roughly to a level about a file.
     *
@@ -1006,7 +1012,8 @@ object AST {
     */
   case class Root(
     contents: Contents[RootContents] = Contents.empty
-  ) extends AbstractModule[RootContents] with WithModules {
+  ) extends AbstractModule[RootContents]
+      with WithModules {
 
     override def isRootContainer: Boolean = true
 
@@ -1037,7 +1044,6 @@ object AST {
   ) extends AbstractModule[ModuleContents]:
     def format: String = s"${Keyword.module} ${id.format}"
   end Module
-
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////// USER
 
