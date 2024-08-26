@@ -20,4 +20,5 @@ trait StreamletWriter { this: MarkdownWriter =>
     emitOutlets(streamlet.outlets, streamlet +: parents)
     // TODO: emit a diagram of the streamlet's data flow
   }
+
 }

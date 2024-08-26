@@ -182,6 +182,8 @@ object Keywords {
   def merge[u: P]: P[Unit] = keyword(Keyword.merge)
 
   def message[u: P]: P[Unit] = keyword(Keyword.message)
+  
+  def module[u:P]: P[Unit] = keyword(Keyword.module)
 
   def morph[u: P]: P[Unit] = keyword(Keyword.morph)
 
@@ -382,6 +384,7 @@ object Keyword {
   final val mapping = "mapping"
   final val merge = "merge"
   final val message = "message"
+  final val module = "module"
   final val morph = "morph"
   final val name = "name"
   final val on = "on"

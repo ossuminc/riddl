@@ -10,7 +10,6 @@ import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import com.ossuminc.riddl.language.AST
-import sourcecode.Text.generate
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser {
@@ -19,18 +18,18 @@ private[parsing] trait AdaptorParser {
   import scala.concurrent.Future
 
   private def adaptorInclude[u: P]: P[Include[AdaptorContents]] = {
-    include[u, AdaptorContents](adaptorDefinitions(_))
+    include[u, AdaptorContents](adaptorContents(_))
   }
 
-  private def adaptorDefinitions[u: P]: P[Seq[AdaptorContents]] = {
+  private def adaptorContents[u: P]: P[Seq[AdaptorContents]] = {
     P(
       processorDefinitionContents(StatementsSet.AdaptorStatements) |
-        handler(StatementsSet.AdaptorStatements) | adaptorInclude 
+        handler(StatementsSet.AdaptorStatements) | adaptorInclude
     ).asInstanceOf[P[AdaptorContents]].rep(1)
   }
 
   private def adaptorBody[u: P]: P[Seq[AdaptorContents]] = {
-    undefined(Seq.empty[AdaptorContents])./ | adaptorDefinitions./
+    undefined(Seq.empty[AdaptorContents])./ | adaptorContents./
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {
