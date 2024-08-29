@@ -75,7 +75,6 @@ class PrettifyPassTest extends RiddlFilesTestBase {
       processADirectory("passes/jvm/src/test/input/ranges")
     }
     "check everything.riddl" in { (td: TestData) =>
-      pending
       processAFile("language/jvm/src/test/input/everything.riddl")
     }
     "check petstore.riddl" in { (td: TestData) =>

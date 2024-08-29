@@ -1,8 +1,11 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
+import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.mimaPreviousArtifacts
 import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
+
+import scala.collection.immutable.Set
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
@@ -49,16 +52,17 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .jvmConfigure(With.publishing)
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-utils" % "0.50.0")
   )
   .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
   .jsSettings(
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalactic" %%% "scalactic" % V.scalatest  % "test",
-      "org.scalatest" %%% "scalatest" % V.scalatest  % "test",
-      "org.scalacheck" %%% "scalacheck" % V.scalacheck  % "test"
+      "org.scalactic" %%% "scalactic" % V.scalatest % "test",
+      "org.scalatest" %%% "scalatest" % V.scalatest % "test",
+      "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
     )
   )
 
@@ -79,7 +83,8 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
     libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.8.0",
-    libraryDependencies += Dep.commons_io % Test
+    libraryDependencies += Dep.commons_io % Test,
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-language" % "0.50.0")
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsSettings(
@@ -100,6 +105,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .jvmConfigure(With.coverage(30))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-passes" % "0.50.0")
   )
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
 val passes = passes_cp.jvm
@@ -108,13 +114,14 @@ val passesJS = passes_cp.js
 val Diagrams = config("diagrams")
 lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
-  .configure(With.typical,With.publishing)
+  .configure(With.typical, With.publishing)
   .settings(
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
   .jvmConfigure(With.coverage(50))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-diagrams" % "0.50.0")
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
 val diagrams = diagrams_cp.jvm
@@ -128,9 +135,11 @@ lazy val command = Module("command", "riddl-command")
     coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
     libraryDependencies ++= Seq(
-      Dep.scopt, Dep.pureconfig,
+      Dep.scopt,
+      Dep.pureconfig,
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-      ) ++ Dep.testing
+    ) ++ Dep.testing,
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-command" % "0.50.0")
   )
   .dependsOn(pDep(utils), pDep(language), passes)
 
@@ -147,9 +156,10 @@ lazy val prettify = Module("prettify", "riddl-prettify")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing ++ Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-    )
+    ),
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-prettify" % "0.50.0")
   )
-  .dependsOn(utils, language, pDep(passes),command)
+  .dependsOn(utils, language, pDep(passes), command)
 
 val Hugo = config("hugo")
 lazy val hugo = Module("hugo", "riddl-hugo")
@@ -163,7 +173,8 @@ lazy val hugo = Module("hugo", "riddl-hugo")
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing ++ Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-    )
+    ),
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-hugo" % "0.50.0")
   )
   .dependsOn(utils, pDep(language), pDep(passes), diagrams, pDep(command), prettify)
 
@@ -176,9 +187,10 @@ lazy val commands: Project = Module("commands", "riddl-commands")
     coverageExcludedFiles := """<empty>;$anon""",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "RIDDL Command Infrastructure and basic command definitions",
-    libraryDependencies ++= Seq(Dep.scopt,Dep.pureconfig) ++ Dep.testing ++ Seq(
+    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing ++ Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-    )
+    ),
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddl-commands" % "0.50.0")
   )
   .dependsOn(
     pDep(utils),
@@ -203,7 +215,6 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
   )
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     maintainer := "reid@ossuminc.com",
@@ -215,7 +226,8 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
       "--enable-url-protocols=https,http",
       "-H:ResourceConfigurationFiles=../../src/native-image.resources"
     ),
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing,
+    mimaPreviousArtifacts := Set("com.ossuminc" %% "riddlc" % "0.50.0")
   )
 
 lazy val docProjects = List(
@@ -239,9 +251,9 @@ lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "a
 
 lazy val docsite = DocSite(
   dirName = "doc",
-  apiOutput = file( "src") / "main" / "hugo" / "static" / "apidoc",
+  apiOutput = file("src") / "main" / "hugo" / "static" / "apidoc",
   baseURL = Some("https://riddl.tech/apidoc"),
-  inclusions = Seq(utils,language,passes,diagrams,command,prettify,hugo,commands),
+  inclusions = Seq(utils, language, passes, diagrams, command, prettify, hugo, commands),
   logoPath = Some("doc/src/main/hugo/static/images/RIDDL-Logo-128x128.png")
 )
   .settings(
@@ -249,8 +261,8 @@ lazy val docsite = DocSite(
     scalaVersion := "3.4.2",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
-  ).dependsOn(utils,language,passes,diagrams,command,prettify,hugo,commands)
-
+  )
+  .dependsOn(utils, language, passes, diagrams, command, prettify, hugo, commands)
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info)

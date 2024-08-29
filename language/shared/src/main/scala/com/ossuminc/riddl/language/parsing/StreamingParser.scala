@@ -14,14 +14,14 @@ import com.ossuminc.riddl.language.At
 /** Unit Tests For StreamingParser */
 private[parsing] trait StreamingParser {
   this: ProcessorParser =>
-  
+
   private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
     P(
       (open ~ from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0) ~ close) |
         (from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0))
     )
   }
-  
+
   def connector[u: P]: P[Connector] = {
     P(
       location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~/  briefly ~/ maybeDescription
@@ -96,7 +96,8 @@ private[parsing] trait StreamingParser {
     )./.map { case (loc, id, contents, brief, description) =>
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
-      Streamlet(loc, id, shape, foldDescriptions(contents, brief, description))
+      val newContents = foldDescriptions(contents, brief, description)
+      Streamlet(loc, id, shape, newContents)
     }
   }
 

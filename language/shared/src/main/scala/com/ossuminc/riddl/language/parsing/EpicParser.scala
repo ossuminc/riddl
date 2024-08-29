@@ -181,7 +181,8 @@ private[parsing] trait EpicParser {
       location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ briefly ~ maybeDescription
     ).map { case (loc, id, (userStory, contents), briefly, description) =>
       checkForDuplicateIncludes(contents)
-      Epic(loc, id, userStory, foldDescriptions(contents, briefly, description))
+      val newContents = foldDescriptions(contents, briefly, description)
+      Epic(loc, id, userStory, newContents)
     }
   }
 }
