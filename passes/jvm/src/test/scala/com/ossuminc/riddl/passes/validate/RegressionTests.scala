@@ -125,9 +125,7 @@ class RegressionTests extends ValidatingTest {
                     (5, 17, rpi),
                     "type",
                     PathIdentifier((5, 22, rpi), List("SomePlace"))
-                  ),
-                  None,
-                  None
+                  )
                 ),
                 Field(
                   (6, 5, rpi),
@@ -139,14 +137,10 @@ class RegressionTests extends ValidatingTest {
                       "type",
                       PathIdentifier((6, 20, rpi), List("DateRange"))
                     )
-                  ),
-                  None,
-                  None
+                  )
                 )
               )
-            ),
-            None,
-            None
+            )
           )
           typ.mustBe(expected)
       }

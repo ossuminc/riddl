@@ -11,13 +11,13 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 private[parsing] trait ApplicationParser {
-  this: ProcessorParser & StreamingParser =>
+  this: ProcessorParser & StreamingParser & CommonParser =>
 
   private def containedGroup[u: P]: P[ContainedGroup] = {
     P(
-      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ briefly ~ maybeDescription
-    ).map { case (loc, id, group, brief, description) =>
-      ContainedGroup(loc, id, group, brief, description)
+      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withDescriptives
+    ).map { case (loc, id, group, descriptives) =>
+      ContainedGroup(loc, id, group, descriptives)
     }
   }
 
@@ -29,9 +29,9 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
-        close ~ briefly ~ maybeDescription
-    ).map { case (loc, alias, id, contents, brief, description) =>
-      Group(loc, alias, id, foldDescriptions[OccursInGroup](contents, brief, description))
+        close
+    ).map { case (loc, alias, id, contents) =>
+      Group(loc, alias, id, contents)
     }
   }
 
@@ -57,27 +57,20 @@ private[parsing] trait ApplicationParser {
   private def appOutput[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/ (literalString | constantRef | typeRef) ~/
-        outputDefinitions ~ briefly ~ maybeDescription
-    ).map { case (loc, nounAlias, id, verbAlias, putOut, contents, brief, description) =>
+        outputDefinitions
+    ).map { case (loc, nounAlias, id, verbAlias, putOut, contents) =>
       putOut match {
         case t: TypeRef =>
-          Output(loc, nounAlias, id, verbAlias, t, foldDescriptions[OccursInOutput](contents, brief, description))
+          Output(loc, nounAlias, id, verbAlias, t, contents)
         case c: ConstantRef =>
-          Output(loc, nounAlias, id, verbAlias, c, foldDescriptions[OccursInOutput](contents, brief, description))
+          Output(loc, nounAlias, id, verbAlias, c, contents)
         case l: LiteralString =>
-          Output(loc, nounAlias, id, verbAlias, l, foldDescriptions[OccursInOutput](contents, brief, description))
+          Output(loc, nounAlias, id, verbAlias, l, contents)
         case x: RiddlValue =>
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
           error(s"Expected a type reference, constant reference, or literal string, not: $xval")
-          Output(
-            loc,
-            nounAlias,
-            id,
-            verbAlias,
-            LiteralString(loc, s"INVALID: `$xval``"),
-            foldDescriptions[OccursInOutput](contents, brief, description)
-          )
+          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"), contents)
       }
     }
   }
@@ -110,11 +103,9 @@ private[parsing] trait ApplicationParser {
 
   private def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~
-        inputDefinitions ~ briefly ~ maybeDescription
-    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, brief, description) =>
-      val folded = foldDescriptions[OccursInInput](contents, brief, description)
-      Input(loc, inputAlias, id, acquisitionAlias, putIn, folded)
+      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions
+    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents) =>
+      Input(loc, inputAlias, id, acquisitionAlias, putIn, contents)
     }
   }
 
@@ -141,11 +132,10 @@ private[parsing] trait ApplicationParser {
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody
-        ~ close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, contents, brief, description) =>
+      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close
+    )./ map { case (loc, id, contents) =>
       checkForDuplicateIncludes(contents)
-      Application(loc, id, foldDescriptions[ApplicationContents](contents, brief, description))
+      Application(loc, id, contents)
     }
   }
 }

@@ -19,7 +19,6 @@ class HandlerTest extends ParsingTest {
         """context Foo is {
           |  type DoFoo is command { flux: Integer }
           |  type FooDone is event { flux: Integer }
-          |  outlet begone is event FooDone
           |  handler FooHandler is {
           |    on command FooMessage {
           |      send event FooDone to outlet begone
@@ -117,7 +116,8 @@ class HandlerTest extends ParsingTest {
           |      "if  ==(field ContainerNestedInContainer.id, parentContainer) then"
           |        set field DistributionItem.lastKnownWOrkCenter to "field ContainerNestedInContainer.workCenter"
           |      "end"
-          |    } explained as { "Helps update this item's location" }
+          |       
+          |    } with {explained as { "Helps update this item's location" }}
           |  }
           |}
           |""".stripMargin,
@@ -132,8 +132,11 @@ class HandlerTest extends ParsingTest {
     }
     "handle statements" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """entity DistributionItem is {
-          |  inlet incoming is event ItemPreInducted
+        """context Contextual is {
+          |  sink foo is {
+          |    inlet incoming is event ItemPreInducted
+          |  }
+          |entity DistributionItem is {
           |  type ArbitraryState is { value: String }
           |  state DistributionState of ArbitraryState
           | handler FromContainer  is {
@@ -141,7 +144,7 @@ class HandlerTest extends ParsingTest {
           |      "if ==(field ContainerNestedInContainer.id,parentContainer) then"
           |        set field DistributionItem.workCenter to "lastKnownWorkCenter"
           |      "end"
-          |    } explained as { "Helps update this item's location" }
+          |    } with { explained as { "Helps update this item's location" } }
           |    on other is { ??? }
           |  }
           |  handler FromDistributionItem  is {
@@ -150,7 +153,7 @@ class HandlerTest extends ParsingTest {
           |      set field DistributionItem.trackingId to "field CreateItem.trackingId"
           |      set field DistributionItem.manifestId to "field CreateItem.manifestId"
           |      set field DistributionItem.destination to "field CreatItem.postalCode"
-          |      send event DistributionItem.ItemPreInducted to inlet DistributionItem.incoming
+          |      send event DistributionItem.ItemPreInducted to inlet Contextual.foo.incoming
           |    }
           |    on command InductItem {
           |      set field DistributionItem.timeOfFirstScan to "field InductItem.originTimeStamp"
@@ -208,10 +211,11 @@ class HandlerTest extends ParsingTest {
           |    }
           |  }
           |}
+          |}
           |""".stripMargin,
         td
       )
-      parseDefinition[Entity](input) match {
+      parseDefinition[Context](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString("\n")
           fail(msg)

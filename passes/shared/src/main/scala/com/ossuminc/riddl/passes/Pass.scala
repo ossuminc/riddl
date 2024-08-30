@@ -272,6 +272,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
 /** A Pass base class that allows the processing to be done based on containers, and calling these methods:
   *   - openContainer at the start of container's processing
   *   - processLeaf for any leaf nodes within the container
+ *    - processValue for any non-definitions within the container
   *   - closeContainer after all the container's contents have been processed
   *
   * This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all their
@@ -341,27 +342,22 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
     */
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case leaf: LeafDefinition =>
-        processLeaf(leaf, parents.toParents)
-      case container: BranchDefinition[?] =>
-        val def_parents = parents.toParents
-        openContainer(container, def_parents)
-        if container.contents.nonEmpty then
-          parents.push(container)
-          container.contents.foreach {
-            case leaf: LeafDefinition   => processLeaf(leaf, parents.toParents)
-            case definition: Definition => traverse(definition, parents)
-            case include: Include[?]    => traverse(include, parents)
-            case value: RiddlValue      => processValue(value, parents.toParents)
-          }
-          parents.pop()
-        end if
-        closeContainer(container, def_parents)
-      case include: Include[?] =>
+      case include: Include[?] => // treat includes specially
         openInclude(include, parents.toParents)
         include.contents.foreach { item => traverse(item, parents) }
         closeInclude(include, parents.toParents)
-      case value: RiddlValue =>
+      case container: Parent => // must be a container so descend
+        val def_parents = parents.toParents // save this for the closeContainer below
+        openContainer(container, def_parents)
+        if container.contents.nonEmpty then // just optimize out the push/pop for empty contents, which is frequent
+          parents.push(container)
+          container.contents.foreach( item => traverse(item, parents)) // recurse!
+          parents.pop()
+        end if
+        closeContainer(container, def_parents)
+      case leaf: LeafDefinition  => // no further descent
+        processLeaf(leaf, parents.toParents)
+      case value: RiddlValue => // no further descent
         processValue(value, parents.toParents)
     }
   }
@@ -508,7 +504,6 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
     definition match
       case field: Field                   => visitor.doField(field)
       case method: Method                 => visitor.doMethod(method)
-      case enumerator: Enumerator         => visitor.doEnumerator(enumerator)
       case term: Term                     => visitor.doTerm(term)
       case author: Author                 => visitor.doAuthor(author)
       case constant: Constant             => visitor.doConstant(constant)
@@ -540,6 +535,8 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
         visitor.doInteraction(interaction)
       case optionValue: OptionValue => 
         visitor.doOptionValue(optionValue)
+      case enumerator: Enumerator   => 
+        visitor.doEnumerator(enumerator)
       case _                        => ()
     end match
   end processValue

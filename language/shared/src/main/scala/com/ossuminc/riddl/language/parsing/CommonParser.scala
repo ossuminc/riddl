@@ -20,6 +20,14 @@ import scala.concurrent.Future
 /** Common Parsing Rules */
 private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers with ParsingContext {
 
+  def open[u: P]: P[Unit] = {
+    P(Punctuation.curlyOpen)
+  }
+
+  def close[u: P]: P[Unit] = {
+    P(Punctuation.curlyClose)
+  }
+
   def author[u: P]: P[Author] =
     P(
       location ~ Keywords.author ~/ identifier ~ is ~ open ~
@@ -35,9 +43,9 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
           (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
             literalString ~ (Keywords.organization ~ is ~ literalString).? ~
             (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, (name, email, org, title, url), brief, description) =>
-      Author(loc, id, name, email, org, title, url, brief, description)
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ withDescriptives
+    ).map { case (loc, id, (name, email, org, title, url), withs) =>
+      Author(loc, id, name, email, org, title, url, withs)
     }
   end author
 
@@ -61,12 +69,6 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
 
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
-  def briefly[u: P]: P[Option[BriefDescription]] = {
-    P(location ~ Keywords.briefly ~/ literalString).map { case (loc, litStr) =>
-      BriefDescription(loc, litStr)
-    }
-  }.?
-
   def briefDescription[u: P]: P[BriefDescription] = {
     P(location ~ Keywords.briefly ~ literalString).map { case (loc, brief: LiteralString) =>
       BriefDescription(loc, brief)
@@ -81,29 +83,21 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     )
   }
 
-  private def blockDescription[u: P]: P[BlockDescription] = {
-    P(location ~ docBlock).map(tpl => BlockDescription(tpl._1, tpl._2))
-  }
-
-  private def fileDescription[u: P](implicit ctx: P[?]): P[URLDescription] = {
-    P(location ~ Keywords.file ~ literalString).map { case (loc, file) =>
-      val url = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
-      URLDescription(loc, url)
+  def description[u: P](implicit ctx: P[?]): P[Description] =
+    P(location ~ Keywords.described ~ (
+        (byAs ~/ docBlock) |
+        (at ~/ httpUrl) |
+        (in ~/ Keywords.file ~ literalString)
+      )
+    ).map {
+      case (loc, strings: Seq[LiteralString]) =>
+        BlockDescription(loc, strings)
+      case (loc, url: URL) =>
+        URLDescription(loc, url)
+      case (loc, file: LiteralString) =>
+        val url = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
+        URLDescription(loc, url)
     }
-  }
-
-  private def urlDescription[u: P]: P[URLDescription] = {
-    P(location ~ httpUrl).map { case (loc, url) =>
-      URLDescription(loc, url)
-    }
-  }
-
-  def description[u: P]: P[Description] =
-    P(
-      Keywords.described ~/
-        ((byAs ~ blockDescription) | (in ~ fileDescription) |
-          (at ~ urlDescription))
-    )
 
   def maybeDescription[u: P]: P[Option[Description]] =
     P(description).?
@@ -162,9 +156,25 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     }
   }
 
-  def open[u: P]: P[Unit] = { P(Punctuation.curlyOpen) }
+  def term[u: P]: P[Term] = {
+    P(
+      location ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withDescriptives
+    )./.map {
+      case (loc, id, definition, descriptives) =>
+        Term(loc, id, definition, descriptives)
+    }
+  }
 
-  def close[u: P]: P[Unit] = { P(Punctuation.curlyClose) }
+  def withDescriptives[u: P]: P[Contents[Descriptives]] = {
+    P(
+      Keywords.with_ ~ open ~ (briefDescription | description | comment | term).rep(1) ~ close
+    ).?./.map {
+      case Some(list: Contents[Descriptives]) =>
+        list
+      case None =>
+        Contents.empty
+    }
+  }
 
   def include[u: P, CT <: RiddlValue](parser: P[?] => P[Seq[CT]]): P[Include[CT]] = {
     P(location ~ Keywords.include ~ literalString)./.map { case (loc: At, str: LiteralString) =>
@@ -172,37 +182,18 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     }
   }
 
-  private def maybeOptionWithArgs[u: P](
-    validOptions: => P[String]
-  ): P[(At, String, Seq[LiteralString])] = {
-    P(
-      location ~ validOptions ~
-        (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~
-          Punctuation.roundClose).?
-    ).map {
-      case (loc, opt, Some(maybeArgs)) => (loc, opt, maybeArgs)
-      case (loc, opt, None)            => (loc, opt, Seq.empty[LiteralString])
-    }
-  }
-
-  extension (map: Map[Class[RiddlValue], Seq[RiddlValue]])
-    def extract[T <: RiddlValue: ClassTag]: Seq[T] = {
-      val clazzTag = classTag[T].runtimeClass
-      map
-        .get(clazzTag.asInstanceOf[Class[RiddlValue]])
-        .fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
-    }
-
-  def mapTo[T <: RiddlValue](seq: Option[Seq[RiddlValue]]): Seq[T] = {
-    seq.fold(Seq.empty[T])(_.map(_.asInstanceOf[T]))
-  }
-
   private def hostString[u: P]: P[String] = {
     P(CharsWhile { ch => ch.isLetterOrDigit || ch == '-' }.rep(1, ".", 32)).!
   }
 
   private def portNum[u: P]: P[String] = {
-    P(CharsWhileIn("0-9").rep(min = 1, max = 5)).!
+    P(CharsWhileIn("0-9").rep(min = 1, max = 5)).!.map { (numStr: String) =>
+      val num = numStr.toInt
+      if num > 0 && num < 65535 then numStr
+      else
+        error(s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
+        "0"
+    }
   }
 
   private def urlPath[u: P]: P[String] = {
@@ -218,17 +209,13 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     ).!.map(URL)
   }
 
-  def term[u: P]: P[Term] = {
-    P(location ~ Keywords.term ~ identifier ~ is ~ briefly ~ maybeDescription)./.map(tpl => Term.apply.tupled(tpl))
-  }
-
   def invariant[u: P]: P[Invariant] = {
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ briefly ~ maybeDescription
-    ).map { case (loc, id, condition, brief, description) =>
-      Invariant(loc, id, condition, brief, description)
+      ) ~ withDescriptives
+    ).map { case (loc, id, condition, withs) =>
+      Invariant(loc, id, condition, withs)
     }
   }
 

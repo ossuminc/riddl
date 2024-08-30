@@ -265,7 +265,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   ): Unit = {
     for interaction <- interactions do {
       interaction match {
-        case ArbitraryInteraction(_, from, _, to, _, _) =>
+        case ArbitraryInteraction(_, from, _, to, _) =>
           associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))
         case fi: FocusOnGroupInteraction =>
@@ -284,7 +284,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           associateUsage[Definition](useCase, resolveARef[Input](pi.to, parentsAsSeq))
         case si: SelfInteraction =>
           associateUsage[Definition](useCase, resolveARef[Definition](si.from, parentsAsSeq))
-        case SendMessageInteraction(_, from, message, to, _, _) =>
+        case SendMessageInteraction(_, from, message, to, _) =>
           associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveAMessageRef(message, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))

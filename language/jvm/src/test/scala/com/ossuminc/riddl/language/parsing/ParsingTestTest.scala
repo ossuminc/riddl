@@ -157,7 +157,7 @@ class ParsingTestTest extends ParsingTest {
       }
     }
     "parseDefinition[Domain,Term]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo { term X is briefly \"X\" }", td)
+      val input = RiddlParserInput("domain foo { term X is { \"foo\" } with { briefly \"X\" } }", td)
       parseDefinition[Domain, Term](input, _.terms.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value must be("X")
@@ -171,7 +171,7 @@ class ParsingTestTest extends ParsingTest {
       }
     }
     "parseInContext[Term]" in { (td: TestData) =>
-      val input = RiddlParserInput("term X is briefly \"X\"", td)
+      val input = RiddlParserInput("term X is { \"foo\" } with { briefly \"X\" }", td)
       parseInContext[Term](input, _.terms.head) match {
         case Left(messages)        => fail(messages.format)
         case Right((typ: Term, _)) => typ.id.value must be("X")

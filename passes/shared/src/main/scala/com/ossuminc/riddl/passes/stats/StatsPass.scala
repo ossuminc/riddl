@@ -159,10 +159,17 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
             kind = definition.kind,
             isEmpty = definition.isEmpty,
             descriptionLines = {
-              var lines = if definition.hasBriefDescription then 1 else 0
-              if definition.hasDescription then 
-                lines += definition.asInstanceOf[WithADescription].description.getOrElse(Description.empty).lines.size
-              end if   
+              var lines: Int = 0
+              definition match
+                case wb: WithBriefs => lines = lines + { if wb.briefs.nonEmpty then wb.briefs.size else 0 }
+                case wd: WithDescriptives => lines = lines + { if wd.briefs.nonEmpty then wd.briefs.size else 0 }
+                case _ => ()
+              end match   
+              definition match
+                case wd: WithDescriptives => lines = lines + wd.descriptions.map(_.lines.size).sum
+                case wd: WithDescriptions => lines = lines + wd.descriptions.map(_.lines.size).sum
+                case _ => ()
+              end match
               definition.contents.filter[Description].foreach {
                 case bd: BlockDescription => lines += bd.lines.size
                 case _: URLDescription => lines += 1
@@ -333,14 +340,31 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     }
   }
 
-  private def definitionCount(d: RiddlValue): Int =
+  private def definitionCount(value: RiddlValue): Int =
     var result = 0
-    if d.hasTypes then result += 1
-    if d.hasAuthors then result += 1
-    if d.hasOptions then result += 1
-    if d.hasDescription then result += 1
-    if d.hasBriefDescription then result += 1
+    value match
+      case _: WithTypes => result += 1
+      case _ => ()
+    end match  
+    value match
+      case _: WithAuthors => result += 1
+      case _ => ()
+    end match
+    value match
+      case _: WithOptions => result += 1
+      case _ => ()
+    end match
+    value match
+      case _: WithDescriptives => result += 1
+      case _: WithDescriptions => result += 1
+      case _ => ()
+    end match
+    value match
+      case _: WithBriefs => result += 1
+      case _ => ()
+    end match  
     result
+  end definitionCount
 
   private def processorCount(p: Processor[?]): Int =
     var result: Int = definitionCount(p)

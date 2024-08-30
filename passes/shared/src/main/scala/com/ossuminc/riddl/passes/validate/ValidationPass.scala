@@ -779,7 +779,7 @@ case class ValidationPass(
                 putOut match {
                   case typRef: TypeRef =>
                     checkTypeRef(typRef, parents) match {
-                      case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
+                      case Some(Type(_, _, typEx, _)) if typEx.isContainer =>
                         typEx match {
                           case ate: AggregateUseCaseTypeExpression
                               if ate.usecase == EventCase || ate.usecase == ResultCase =>
@@ -812,7 +812,7 @@ case class ValidationPass(
             o match {
               case input @ Input(loc, _, id, _, putIn, _) =>
                 checkTypeRef(putIn, parents) match {
-                  case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
+                  case Some(Type(_, _, typEx, _)) if typEx.isContainer =>
                     typEx match {
                       case ate: AggregateUseCaseTypeExpression
                           if ate.usecase == CommandCase || ate.usecase == QueryCase =>
@@ -844,29 +844,29 @@ case class ValidationPass(
     val useCase = parents.head
     checkDescription(interaction)
     interaction match {
-      case SelfInteraction(_, from, _, _, _) =>
+      case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)
-      case DirectUserToURLInteraction(_, user: UserRef, _, _, _) =>
+      case DirectUserToURLInteraction(_, user: UserRef, _, _) =>
         checkRef[User](user, parents)
-      case FocusOnGroupInteraction(_, user: UserRef, group: GroupRef, _, _) =>
+      case FocusOnGroupInteraction(_, user: UserRef, group: GroupRef, _) =>
         checkRef[Group](group, parents)
         checkRef[User](user, parents)
-      case SelectInputInteraction(_, user: UserRef, inputRef: InputRef, _, _) =>
+      case SelectInputInteraction(_, user: UserRef, inputRef: InputRef, _) =>
         checkRef[User](user, parents)
         checkRef[Input](inputRef, parents)
-      case TakeInputInteraction(_, user: UserRef, inputRef: InputRef, _, _) =>
+      case TakeInputInteraction(_, user: UserRef, inputRef: InputRef, _) =>
         checkRef[User](user, parents)
         checkRef[Input](inputRef, parents)
-      case ArbitraryInteraction(_, from, _, to, _, _) =>
+      case ArbitraryInteraction(_, from, _, to, _) =>
         checkRef[Definition](from, parents)
         checkRef[Definition](to, parents)
         val origin = resolution.refMap.definitionOf[Definition](from.pathId, parents.head)
         val destination = resolution.refMap.definitionOf[Definition](to.pathId, parents.head)
         validateArbitraryInteraction(origin, destination, parents)
-      case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _, _) =>
+      case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _) =>
         checkRef[Output](from, parents)
         checkRef[User](to, parents)
-      case SendMessageInteraction(_, from, msg, to, _, _) =>
+      case SendMessageInteraction(_, from, msg, to, _) =>
         checkMessageRef(msg, parents, Seq(msg.messageKind))
         checkRef[Definition](from, parents)
         checkRef[Processor[?]](to, parents)

@@ -6,20 +6,6 @@ import fastparse.MultiLineWhitespace.*
 
 trait ProcessorParser extends VitalDefinitionParser with FunctionParser with HandlerParser {
 
-  def inlet[u: P]: P[Inlet] = {
-    P(
-      location ~ Keywords.inlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ maybeDescription
-    )./.map { tpl => Inlet.apply.tupled(tpl) }
-  }
-
-  def outlet[u: P]: P[Outlet] = {
-    P(
-      location ~ Keywords.outlet ~ identifier ~ is ~
-        typeRef ~/ briefly ~ maybeDescription
-    )./.map { tpl => Outlet.apply.tupled(tpl) }
-  }
-
   def option[u: P]: P[OptionValue] = {
     P(
       Keywords.option ~/ is.? ~
@@ -32,6 +18,6 @@ trait ProcessorParser extends VitalDefinitionParser with FunctionParser with Han
   }
   
   def processorDefinitionContents[u:P](statementsSet: StatementsSet): P[OccursInProcessor] =
-    P(vitalDefinitionContents | constant | invariant | function | handler(statementsSet) | inlet | outlet | option)
+    P(vitalDefinitionContents | constant | invariant | function | handler(statementsSet) | option)
       .asInstanceOf[P[OccursInProcessor]]
 }

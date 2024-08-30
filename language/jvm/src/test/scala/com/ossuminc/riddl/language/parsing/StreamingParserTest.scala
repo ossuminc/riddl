@@ -18,7 +18,9 @@ class StreamingParserTest extends ParsingTest {
   val sourceInput: String =
     """source GetWeatherForecast is {
       |  outlet Weather is command Forecast
-      |} brief "foo" described by "This is a source for Forecast data"
+      |  brief "foo" 
+      |  described by "This is a source for Forecast data"
+      |} 
       |""".stripMargin
   def sourceExpected(
     rpi: RiddlParserInput,
@@ -41,10 +43,10 @@ class StreamingParserTest extends ParsingTest {
         ),
         BriefDescription((row + 3, 3, rpi), LiteralString((row + 3, 9, rpi), "foo")),
         BlockDescription(
-          (row + 3, 28, rpi),
+          (row + 4, 3, rpi),
           List(
             LiteralString(
-              (row + 3, 28, rpi),
+              (row + 4, 16, rpi),
               "This is a source for Forecast " + "data"
             )
           )
@@ -77,21 +79,23 @@ class StreamingParserTest extends ParsingTest {
           |  command Temperature is { ??? }
           |  source GetWeatherForecast is {
           |    outlet Weather is command Forecast
-          |  } described by "This is a source for Forecast data"
+          |    described by "This is a source for Forecast data"
+          |  } 
           |
           |  flow GetCurrentTemperature is {
           |    inlet Weather is command Forecast
           |    outlet CurrentTemp is command Temperature
-          |  } explained as "This is a Flow for the current temperature, when it changes"
+          |    explained as "This is a Flow for the current temperature, when it changes"
+          |  }
           |
           |  sink AttenuateSensor is {
           |    inlet CurrentTemp is command Temperature
-          |  } explained as "This is a Sink for making sensor adjustments based on temperature"
-          |
-          |} explained as
-          |"A complete plant definition for temperature based sensor attenuation."
-          |
-          |} explained as "Plants can only be specified in a domain definition"
+          |    explained as "This is a Sink for making sensor adjustments based on temperature"
+          |  } 
+          |  explained as "A complete plant definition for temperature based sensor attenuation."
+          |} 
+          |explained as "Plants can only be specified in a domain definition"
+          |}
           |""".stripMargin,
         td
       )
@@ -102,16 +106,12 @@ class StreamingParserTest extends ParsingTest {
           Type(
             (4, 3, rpi),
             Identifier((4, 11, rpi), "Forecast"),
-            AggregateUseCaseTypeExpression((4, 23, rpi), CommandCase, List()),
-            None,
-            None
+            AggregateUseCaseTypeExpression((4, 23, rpi), CommandCase, List())
           ),
           Type(
             (5, 3, rpi),
             Identifier((5, 11, rpi), "Temperature"),
-            AggregateUseCaseTypeExpression((5, 26, rpi), CommandCase, List()),
-            None,
-            None
+            AggregateUseCaseTypeExpression((5, 26, rpi), CommandCase, List())
           ),
           Streamlet(
             (6, 3, rpi),
@@ -128,7 +128,7 @@ class StreamingParserTest extends ParsingTest {
                 )
               ),
               BlockDescription(
-                (8, 18, rpi),
+                (8, 5, rpi),
                 List(
                   LiteralString(
                     (8, 18, rpi),
@@ -139,33 +139,33 @@ class StreamingParserTest extends ParsingTest {
             )
           ),
           Streamlet(
-            (9, 4, rpi),
-            Identifier((9, 9, rpi), "GetCurrentTemperature"),
-            Flow((9, 4, rpi)),
+            (11, 3, rpi),
+            Identifier((11, 8, rpi), "GetCurrentTemperature"),
+            Flow((11, 3, rpi)),
             List(
               Inlet(
-                (11, 5, rpi),
-                Identifier((11, 11, rpi), "Weather"),
+                (12, 5, rpi),
+                Identifier((12, 11, rpi), "Weather"),
                 TypeRef(
-                  (11, 22, rpi),
+                  (12, 22, rpi),
                   "command",
-                  PathIdentifier((11, 30, rpi), List("Forecast"))
+                  PathIdentifier((12, 30, rpi), List("Forecast"))
                 )
               ),
               Outlet(
-                (12, 5, rpi),
-                Identifier((12, 12, rpi), "CurrentTemp"),
+                (13, 5, rpi),
+                Identifier((13, 12, rpi), "CurrentTemp"),
                 TypeRef(
-                  (12, 27, rpi),
+                  (13, 27, rpi),
                   "command",
-                  PathIdentifier((12, 35, rpi), List("Temperature"))
+                  PathIdentifier((13, 35, rpi), List("Temperature"))
                 )
               ),
               BlockDescription(
-                (13, 18, rpi),
+                (14, 5, rpi),
                 List(
                   LiteralString(
-                    (13, 18, rpi),
+                    (14, 18, rpi),
                     "This is a Flow for the current temperature, when it changes"
                   )
                 )
@@ -173,24 +173,24 @@ class StreamingParserTest extends ParsingTest {
             )
           ),
           Streamlet(
-            (15, 3, rpi),
-            Identifier((15, 8, rpi), "AttenuateSensor"),
-            Sink((15, 3, rpi)),
+            (17, 3, rpi),
+            Identifier((17, 8, rpi), "AttenuateSensor"),
+            Sink((17, 3, rpi)),
             List(
               Inlet(
-                (16, 5, rpi),
-                Identifier((16, 11, rpi), "CurrentTemp"),
+                (18, 5, rpi),
+                Identifier((18, 11, rpi), "CurrentTemp"),
                 TypeRef(
-                  (16, 26, rpi),
+                  (18, 26, rpi),
                   "command",
-                  PathIdentifier((16, 34, rpi), List("Temperature"))
+                  PathIdentifier((18, 34, rpi), List("Temperature"))
                 )
               ),
               BlockDescription(
-                (17, 18, rpi),
+                (19, 5, rpi),
                 List(
                   LiteralString(
-                    (17, 18, rpi),
+                    (19, 18, rpi),
                     "This is a Sink for making sensor adjustments based on temperature"
                   )
                 )
@@ -198,10 +198,10 @@ class StreamingParserTest extends ParsingTest {
             )
           ),
           BlockDescription(
-            (20, 1, rpi),
+            (21, 3, rpi),
             List(
               LiteralString(
-                (20, 1, rpi),
+                (21, 16, rpi),
                 "A complete plant definition for temperature based sensor attenuation."
               )
             )

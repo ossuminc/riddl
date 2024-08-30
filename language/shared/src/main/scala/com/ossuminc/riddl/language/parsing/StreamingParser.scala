@@ -15,7 +15,19 @@ import com.ossuminc.riddl.language.At
 private[parsing] trait StreamingParser {
   this: ProcessorParser =>
 
-  private def connectorDefinitions[u:P]: P[(OutletRef,InletRef,Seq[OptionValue])] = {
+  def inlet[u: P]: P[Inlet] = {
+    P(
+      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ withDescriptives
+    )./.map { tpl => Inlet.apply.tupled(tpl) }
+  }
+
+  def outlet[u: P]: P[Outlet] = {
+    P(
+      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ withDescriptives
+    )./.map { tpl => Outlet.apply.tupled(tpl) }
+  }
+  
+  private def connectorDefinitions[u: P]: P[(OutletRef, InletRef, Seq[OptionValue])] = {
     P(
       (open ~ from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0) ~ close) |
         (from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0))
@@ -24,9 +36,9 @@ private[parsing] trait StreamingParser {
 
   def connector[u: P]: P[Connector] = {
     P(
-      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~/  briefly ~/ maybeDescription
-    )./.map { case (loc, id, (out, in, opts), brief, description) =>
-      Connector(loc, id, out, in, opts, brief, description)
+      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~ withDescriptives
+    )./.map { case (loc, id, (out, in, opts), descriptives) =>
+      Connector(loc, id, out, in, opts, descriptives )
     }
   }
 
@@ -48,14 +60,15 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Seq[StreamletContents]] = {
     P(
-      (inlet./.rep(minInlets, " ", maxInlets) ~
+      inlet./.rep(minInlets, " ", maxInlets) ~
         outlet./.rep(minOutlets, " ", maxOutlets) ~
-        ( processorDefinitionContents(StatementsSet.StreamStatements) |
-          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.rep(0)).map {
-        case (inlets, outlets, definitions) =>
-          (inlets ++ outlets ++ definitions).asInstanceOf[Seq[StreamletContents]]
-      }
-    )
+      ( processorDefinitionContents(StatementsSet.StreamStatements) | description | briefDescription |
+        streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets)
+      ).asInstanceOf[P[StreamletContents]].rep(0)
+    )./.map {
+      case (inlets, outlets, contents) =>
+        (inlets ++ outlets ++ contents).asInstanceOf[Seq[StreamletContents]]
+    }
   }
 
   private def streamletBody[u: P](
@@ -65,8 +78,8 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Seq[StreamletContents]] = {
     P(
-      undefined(Seq.empty[StreamletContents]) |
-        streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)
+      streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets) |
+        undefined(Seq.empty[StreamletContents])
     )
   }
 
@@ -92,12 +105,11 @@ private[parsing] trait StreamingParser {
     P(
       location ~ keyword ~ identifier ~ is ~ open ~
         streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ briefly ~ maybeDescription
-    )./.map { case (loc, id, contents, brief, description) =>
+        close
+    )./.map { case (loc, id, contents) =>
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
-      val newContents = foldDescriptions(contents, brief, description)
-      Streamlet(loc, id, shape, newContents)
+      Streamlet(loc, id, shape, contents)
     }
   }
 

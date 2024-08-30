@@ -28,7 +28,7 @@ class ASTTest extends TestingBasis {
       container.put[ULID]("ulid", ulid)
     }
   }
-  
+
   "Descriptions" should {
     "have empty Description.empty" in {
       Description.empty.format mustBe ""
@@ -179,14 +179,13 @@ class ASTTest extends TestingBasis {
     )
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Seq[OnClause] = Seq(
-    OnInitializationClause(At.empty, foldDescriptions(statements, brief, description)),
-    OnMessageClause(At.empty, messageRef, None, foldDescriptions(statements, brief, description)),
-    OnOtherClause(At.empty, foldDescriptions(statements, brief, description)),
-    OnTerminationClause(At.empty, foldDescriptions(statements, brief, description))
+    OnInitializationClause(At.empty, statements),
+    OnMessageClause(At.empty, messageRef, None, statements),
+    OnOtherClause(At.empty, statements),
+    OnTerminationClause(At.empty, statements)
   )
-  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), foldDescriptions(onClauses, brief, description))
-  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"),
-    foldDescriptions[Handler](Seq(handler), brief, description))
+  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), onClauses)
+  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Seq(handler))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
   val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
@@ -196,7 +195,7 @@ class ASTTest extends TestingBasis {
     LiteralString(At.empty, "do something"), LiteralString(At.empty, "he can reap obvious benefits"))
   val storyCase: UseCase = UseCase(At.empty, Identifier(At.empty, "story-case"), userStory)
   val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"), userStory)
-  val term: Term = Term(At.empty, Identifier(At.empty, "term"))
+  val term: Term = Term(At.empty, Identifier(At.empty, "term"), Seq(LiteralString(At.empty, "definition")))
 
   "User" should {
     "have a test" in {
@@ -291,7 +290,7 @@ class ASTTest extends TestingBasis {
         )
 
         val invariants = Seq(
-          Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(), "true")), None)
+          Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(), "true")))
         )
         val types = Seq(
           Type(At(), Identifier(At(), "mytype"), Bool(At())),
@@ -376,7 +375,7 @@ class ASTTest extends TestingBasis {
 
   "Term" should {
     "format correctly" in {
-      term.format mustBe s"${Keyword.term} ${term.id.format} is None"
+      term.format mustBe s"${Keyword.term} ${term.id.format}"
     }
   }
 }

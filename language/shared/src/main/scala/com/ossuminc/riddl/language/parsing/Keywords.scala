@@ -182,8 +182,8 @@ object Keywords {
   def merge[u: P]: P[Unit] = keyword(Keyword.merge)
 
   def message[u: P]: P[Unit] = keyword(Keyword.message)
-  
-  def module[u:P]: P[Unit] = keyword(Keyword.module)
+
+  def module[u: P]: P[Unit] = keyword(Keyword.module)
 
   def morph[u: P]: P[Unit] = keyword(Keyword.morph)
 
@@ -314,6 +314,8 @@ object Keywords {
   def when[u: P]: P[Unit] = keyword(Keyword.when)
 
   def where[u: P]: P[Unit] = keyword(Keyword.where)
+
+  def with_[u: P]: P[Unit] = keyword(Keyword.with_)
 }
 
 object Keyword {
@@ -447,4 +449,5 @@ object Keyword {
   final val void = "void"
   final val when = "when"
   final val where = "where"
+  final val with_ = "with"
 }

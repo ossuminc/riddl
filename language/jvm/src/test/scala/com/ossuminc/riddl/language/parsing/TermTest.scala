@@ -16,9 +16,9 @@ class TermTest extends ParsingTest {
     "do something" in { (td:TestData) =>
       val input = RiddlParserInput(
         """domain foo {
-          |  term one is described by "uno"
+          |  term one is { "uno" }
           |  context bar is {
-          |    term two is described by "dos"
+          |    term two is { "dos" }
           |    entity foo is { ??? }
           |  }
           |}""".stripMargin,td)
@@ -33,14 +33,12 @@ class TermTest extends ParsingTest {
           found contains Term(
             2 -> 3,
             Identifier(At(), "one"),
-            None,
-            Some(BlockDescription(2 -> 15, Seq(LiteralString(2 -> 28, "uno"))))
+            Seq(LiteralString(2 -> 28, "uno"))
           )
           found contains Term(
             4 -> 5,
             Identifier(At(), "two"),
-            None,
-            Some(BlockDescription(4 -> 17, Seq(LiteralString(4 -> 30, "dos"))))
+            Seq(LiteralString(4 -> 30, "dos"))
           )
           val result: Finder[RiddlValue]#DefWithParents[WithIdentifier]  =  finder.findEmpty
           result.size mustBe 3

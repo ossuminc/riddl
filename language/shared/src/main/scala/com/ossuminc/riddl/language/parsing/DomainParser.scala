@@ -14,15 +14,14 @@ import fastparse.MultiLineWhitespace.*
 import scala.concurrent.{Await, Future}
 
 /** Parsing rules for domains. */
-private[parsing] trait DomainParser  {
-  this: VitalDefinitionParser & ApplicationParser & ContextParser & EpicParser &  SagaParser & StreamingParser =>
+private[parsing] trait DomainParser {
+  this: VitalDefinitionParser & ApplicationParser & ContextParser & EpicParser & SagaParser & StreamingParser =>
 
   private def user[u: P]: P[User] = {
     P(
-      location ~ Keywords.user ~ identifier ~/ is ~ literalString ~/ briefly ~/
-        maybeDescription
-    ).map { case (loc, id, is_a, brief, description) =>
-      User(loc, id, is_a, brief, description)
+      location ~ Keywords.user ~ identifier ~/ is ~ literalString ~/ withDescriptives
+    )./.map { case (loc, id, is_a, descriptives) =>
+      User(loc, id, is_a, descriptives)
     }
   }
 
@@ -31,8 +30,9 @@ private[parsing] trait DomainParser  {
   }
 
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
-    P( vitalDefinitionContents |
-      author | context | domain | user | application | epic | saga | importDef | domainInclude
+    P(
+      vitalDefinitionContents |
+        author | context | domain | user | application | epic | saga | importDef | domainInclude
     ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 
@@ -42,11 +42,10 @@ private[parsing] trait DomainParser  {
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~/
-        briefly ~ maybeDescription
-    ).map { case (loc, id, contents, brief, description) =>
+      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close
+    )./.map { case (loc, id, contents) =>
       checkForDuplicateIncludes(contents)
-      Domain(loc, id, foldDescriptions[DomainContents](contents, brief, description))
+      Domain(loc, id, contents)
     }
   }
 }

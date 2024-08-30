@@ -109,10 +109,10 @@ class ContextValidationTest extends ValidatingTest {
         val expected = Term(
           (2, 2, rpi),
           Identifier((2, 7, rpi), "bar"),
-          Some(BriefDescription((2,14,rpi),LiteralString((2, 22, rpi), "imaginary line in court room")))
+          Seq(LiteralString((2, 22, rpi), "imaginary line in court room"))
         )
-        context.terms.size mustBe 1
-        context.terms.head mustBe expected
+        context.terms.size must be(1)
+        context.terms.head must be(expected)
       }
     }
     "allow processors" in { (td: TestData) =>
@@ -156,9 +156,7 @@ class ContextValidationTest extends ValidatingTest {
                   (3, 17, rpi),
                   RecordCase,
                   List()
-                ),
-                None,
-                None
+                )
               ),
               Handler(
                 (4, 11, rpi),

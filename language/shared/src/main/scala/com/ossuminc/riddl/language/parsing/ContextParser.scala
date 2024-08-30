@@ -11,9 +11,9 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 /** Parsing rules for Context definitions */
-private[parsing] trait ContextParser  {
-  this: ProcessorParser & AdaptorParser & EntityParser  & ProjectorParser  &
-    RepositoryParser & SagaParser & StreamingParser  =>
+private[parsing] trait ContextParser {
+  this: ProcessorParser & AdaptorParser & EntityParser & ProjectorParser & RepositoryParser & SagaParser &
+    StreamingParser =>
 
   private def contextInclude[u: P]: P[Include[ContextContents]] = {
     include[u, ContextContents](contextDefinitions(_))
@@ -38,10 +38,10 @@ private[parsing] trait ContextParser  {
 
   def context[u: P]: P[Context] = {
     P(
-      location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, contents, brief, description) =>
+      location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close
+    )./.map { case (loc, id, contents) =>
       checkForDuplicateIncludes(contents)
-      Context(loc, id, foldDescriptions[ContextContents](contents, brief, description))
+      Context(loc, id, contents)
     }
   }
 }

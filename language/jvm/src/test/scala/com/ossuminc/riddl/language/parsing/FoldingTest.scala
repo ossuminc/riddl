@@ -18,7 +18,7 @@ class FoldingTest extends ParsingTest {
     """domain one is {
       |  context one is {
       |    connector a is from outlet foo to inlet bar
-      |    term whomprat is described by "a 2m long rat on Tatooine"
+      |    term whomprat is { "a 2m long rat on Tatooine" }
       |    flow b is {
       |      inlet b_in is String
       |      outlet b_out is Number
@@ -26,7 +26,7 @@ class FoldingTest extends ParsingTest {
       |  }
       |  // context one is { ??? }
       |  context two is {
-      |    term ForcePush is described by "an ability of the Jedi"
+      |    term ForcePush is { "an ability of the Jedi" }
       |    function foo is {
       |       requires { a: Integer, b: String }
       |       returns { ??? }

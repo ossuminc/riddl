@@ -79,10 +79,10 @@ private[parsing] trait RepositoryParser {
 
   def repository[u: P]: P[Repository] = {
     P(
-      location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, contents, brief, description) =>
+      location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close
+    ).map { case (loc, id, contents) =>
       checkForDuplicateIncludes(contents)
-      Repository(loc, id, foldDescriptions(contents, brief, description))
+      Repository(loc, id, contents)
     }
   }
 

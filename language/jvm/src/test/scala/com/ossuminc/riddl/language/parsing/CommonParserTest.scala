@@ -39,8 +39,7 @@ class CommonParserTest extends ParsingTest {
     "descriptions can be URLs" in { (td: TestData) =>
       import com.ossuminc.riddl.utils.URL
       val input = RiddlParserInput(
-        """domain foo is { ??? } described at
-          |https://www.wordnik.com/words/phi""".stripMargin,
+        """domain foo is { described at https://www.wordnik.com/words/phi }""".stripMargin,
         URL.empty,
         td
       )
@@ -52,7 +51,7 @@ class CommonParserTest extends ParsingTest {
             Identifier((1, 8), "foo"),
             contents = Seq(
               URLDescription(
-                (2, 1),
+                (1, 17),
                 URL("https://www.wordnik.com/words/phi")
               )
             )
@@ -85,7 +84,7 @@ class CommonParserTest extends ParsingTest {
     }
     "literal strings can successfully escape a quote" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain foo is { ??? } explained as "this is an \"explanation\"" """,
+        """domain foo is { explained as "this is an \"explanation\"" } """,
         td
       )
       parseDefinition[Domain](input) match {
