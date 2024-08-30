@@ -9,11 +9,10 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.PassVisitor
 
-import java.nio.file.Path
 import scala.annotation.unused
 
 class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
-  val state: PrettifyState = PrettifyState(options)
+  val state: PrettifyState = PrettifyState(options.flatten)
 
   def result: PrettifyState = state
 
@@ -21,7 +20,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   inline private def close(definition: Definition): Unit = state.withCurrent(_.closeDef(definition))
 
-  def openType(typ: Type, parents: Parents): Unit = state.current.emitType(typ)
+  def openType(typ: Type, parents: Parents): Unit = state.withCurrent(_.emitType(typ))
   def closeType(typ: Type, parents: Parents): Unit = () // handled by open
 
   def openDomain(domain: Domain, parents: Parents): Unit = open(domain)
@@ -110,6 +109,15 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   end openOutput
 
+  def closeOutput(output: Output, parents: Parents): Unit =
+    if output.nonEmpty then
+      state.withCurrent { rfe =>
+        rfe.decr.addLine("}")
+      }
+    end if
+  end closeOutput
+
+
   def openInput(input: Input, parents: Parents): Unit =
     state.withCurrent { rfe =>
       // form Identity takes record Whatever.Identity is { .. }
@@ -124,6 +132,13 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       if input.isEmpty then rfe.nl else rfe.add(" {").nl.incr
     }
   end openInput
+  def closeInput(input: Input, parents: Parents): Unit =
+    if input.nonEmpty then
+      state.withCurrent { rfe =>
+        rfe.decr.addLine("}")
+      }
+    end if
+  end closeInput
 
   // Close for each type of container definition
 
@@ -135,34 +150,19 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def closeOnClause(onClause: OnClause, parents: Parents): Unit = close(onClause)
   def closeApplication(application: Application, parents: Parents): Unit = close(application)
   def closeGroup(group: Group, parents: Parents): Unit = close(group)
-  def closeOutput(output: Output, parents: Parents): Unit =
-    if output.nonEmpty then
-      state.withCurrent { rfe =>
-        rfe.decr.addLine("}")
-      }
-    end if
-  end closeOutput
-
-  def closeInput(input: Input, parents: Parents): Unit =
-    if input.nonEmpty then
-      state.withCurrent { rfe =>
-        rfe.decr.addLine("}")
-      }
-    end if
-  end closeInput
 
   // LeafDefinitions
   def doField(field: Field): Unit = ()
   def doMethod(method: Method): Unit = ()
 
   def doTerm(term: Term): Unit =
-    state.withCurrent { rfe =>
+    state.withCurrent { (rfe: RiddlFileEmitter) =>
       rfe
         .addIndent("term ")
         .add(term.id.format)
         .add(" is ")
-        .emitBrief(term.brief)
-        .emitDescription(term.description)
+        .add(term.definition)
+        .emitDescriptives(term.descriptives)
     }
   end doTerm
 
@@ -180,16 +180,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doAuthor
 
   def doConstant(constant: Constant): Unit =
-    state.withCurrent { rfe =>
-      rfe
-        .addIndent("constant ")
-        .add(constant.id.format)
-        .add(" is ")
-        .add(constant.value.format)
-        .emitBrief(constant.brief)
-        .emitDescription(constant.description)
-        .nl
-    }
+    state.withCurrent { rfe => rfe.emitConstant(constant) }
   end doConstant
 
   def doInvariant(invariant: Invariant): Unit =
@@ -200,8 +191,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(" is ")
         .add(invariant.condition.format)
         .add(" ")
-        .emitBrief(invariant.brief)
-        .emitDescription(invariant.description)
+        .emitDescriptives(invariant.descriptives)
         .nl
     }
   end doInvariant
@@ -218,11 +208,19 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doSagaStep
 
   def doInlet(inlet: Inlet): Unit =
-    state.withCurrent { rfe => rfe.addLine(inlet.format) }
+    state.withCurrent { rfe =>
+      rfe.addIndent(inlet.format)
+      rfe.emitDescriptives(inlet.descriptives)
+      rfe.nl
+    }
   end doInlet
 
   def doOutlet(outlet: Outlet): Unit =
-    state.withCurrent { rfe => rfe.addLine(outlet.format) }
+    state.withCurrent { rfe =>
+      rfe.addLine(outlet.format)
+      rfe.emitDescriptives(outlet.descriptives)
+      rfe.nl
+    }
   end doOutlet
 
   def doConnector(connector: Connector): Unit =
@@ -234,9 +232,8 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
           val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
           from + to
         }
+        .emitDescriptives(connector.descriptives)
         .nl
-        .emitBrief(connector.brief)
-        .emitDescription(connector.description)
     }
   end doConnector
 
@@ -244,8 +241,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"user ${user.id.value} is \"${user.is_a.s}\"")
-        .emitBrief(user.brief)
-        .emitDescription(user.description)
+        .emitDescriptives(user.descriptives)
         .nl
     }
   end doUser
@@ -276,15 +272,14 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   end doState
 
-  def doEnumerator(enumerator: Enumerator): Unit = ()
+  def doEnumerator(enumerator: Enumerator): Unit = () // Note: Handled by RiddlFileEmitter.emitEnumeration
 
   def doContainedGroup(containedGroup: ContainedGroup): Unit =
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"${keyword(containedGroup)} ${containedGroup.id.format} as ")
         .add(containedGroup.group.format)
-        .emitBrief(containedGroup.brief)
-        .emitDescription(containedGroup.description)
+        .emitDescriptives(containedGroup.descriptives)
     }
   end doContainedGroup
 
@@ -301,13 +296,13 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def doBriefDescription(brief: BriefDescription): Unit =
     state.withCurrent { rfe =>
-      rfe.emitBrief(Some(brief))
+      rfe.emitBriefDescription(brief)
     }
   end doBriefDescription
 
   def doDescription(description: Description): Unit =
     state.withCurrent { rfe =>
-      rfe.emitDescription(Some(description))
+      rfe.emitDescription(description)
     }
   end doDescription
 
@@ -335,7 +330,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doStatement
 
   def doInteraction(interaction: Interaction): Unit =
-    state.withCurrent { rfe =>
+    state.withCurrent { _ =>
       interaction match
         case _: SequentialInteractions     => () // TODO: implement
         case _: ParallelInteractions       => () // TODO: implement
@@ -353,25 +348,19 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doOptionValue
 
   def openInclude(include: Include[?], parents: Parents): Unit =
-    if !state.options.singleFile then
-      include.origin.toExternalForm match
-        case path: String if path.startsWith("http") =>
-          val url = java.net.URI.create(path).toURL
-          state.current.add(s"include \"$path\"")
-          val outPath = state.outPathFor(url)
-          state.pushFile(RiddlFileEmitter(outPath))
-        case str: String =>
-          val path = Path.of(str)
-          val relativePath = state.relativeToInPath(path)
-          state.current.add(s"include \"$relativePath\"")
-          val outPath = state.outPathFor(path)
-          state.pushFile(RiddlFileEmitter(outPath))
-      end match
-    end if
+    state.withCurrent { (rfe: RiddlFileEmitter) =>
+      if !state.flatten then
+        val url = include.origin 
+        rfe.addLine(s"include \"${url.toExternalForm}")
+        val outputURL = state.toDestination(url)
+        val newRFE = RiddlFileEmitter(outputURL)
+        state.pushFile(newRFE)
+      end if
+    }
   end openInclude
 
   def closeInclude(@unused include: Include[?], parents: Parents): Unit =
-    if !state.options.singleFile then state.popFile()
+    if !state.flatten then state.popFile()
     end if
   end closeInclude
 end PrettifyVisitor

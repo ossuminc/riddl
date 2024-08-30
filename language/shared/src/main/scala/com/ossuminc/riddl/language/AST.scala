@@ -428,7 +428,6 @@ object AST:
     def briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
 
     /** A reliable extractor of the brief description, dealing with the Optionality of it */
-    @unused
     def briefString: String =
       if briefs.isEmpty then "No brief description."
       else briefs.map(_.brief.s).mkString("\n")
@@ -703,6 +702,13 @@ object AST:
     lazy val terms: Contents[Term] = descriptives.filter[Term]
     lazy val briefs: Contents[BriefDescription] = descriptives.filter[BriefDescription]
     lazy val descriptions: Contents[Description] = descriptives.filter[Description]
+
+    /** A reliable extractor of the brief description, dealing with the Optionality of it */
+    def briefString: String =
+      if briefs.isEmpty then "No brief description."
+      else briefs.map(_.brief.s).mkString("\n")
+    end briefString
+
   end WithDescriptives
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
@@ -734,8 +740,7 @@ object AST:
   type OccursInVitalDefinition = Descriptives | AuthorRef | Type
 
   /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler | Inlet |
-    Outlet
+  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
@@ -788,7 +793,7 @@ object AST:
   type SagaContents = OccursInSaga | Include[OccursInSaga]
 
   /** Type of definitions that occur in a [[Streamlet]] without [[Include]] */
-  private type OccursInStreamlet = OccursInProcessor
+  private type OccursInStreamlet = OccursInProcessor | Inlet | Outlet
 
   /** Type of definitions that occur in a [[Streamlet]] with [[Include]] */
   type StreamletContents = OccursInStreamlet | Include[OccursInStreamlet]
@@ -1304,10 +1309,6 @@ object AST:
     *   the identifier (name) of the Enumerator
     * @param enumVal
     *   the optional int value
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   the description of the enumerator. Each Enumerator in an enumeration may define independent descriptions
     */
   @JSExportTopLevel("Enumerator")
   case class Enumerator(

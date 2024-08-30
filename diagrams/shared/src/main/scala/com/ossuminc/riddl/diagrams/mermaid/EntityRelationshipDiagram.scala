@@ -1,7 +1,6 @@
 package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.resolve.ReferenceMap
 
 import scala.scalajs.js.annotation.*
@@ -66,7 +65,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
     val typ: Seq[String] = s"$name {" +: fields.map { f =>
       val typeName = makeTypeName(f.typeEx, parent)
       val fieldName = f.id.format.replace(" ", "-")
-      val comment = "\"" + f.brief.map(_.brief.s).getOrElse("") + "\""
+      val comment = "\"" + f.briefs.map(_.brief.s) + "\""
       s"  $typeName $fieldName $comment"
     } :+ "}"
 

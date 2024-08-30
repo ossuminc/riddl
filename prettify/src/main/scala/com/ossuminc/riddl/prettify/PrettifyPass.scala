@@ -8,26 +8,15 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
-
-import java.nio.file.Path
+import com.ossuminc.riddl.utils.URL
 
 object PrettifyPass extends PassInfo[PrettifyPass.Options]:
   val name: String = "prettify"
   def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator =
     (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, options)
   end creator
-
-  /** Options for the PrettifyPass and PrettifyCommand */
-  case class Options(
-    inputFile: Option[Path] = None,
-    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
-    projectName: Option[String] = None,
-    singleFile: Boolean = true
-  ) extends TranslationCommand.Options
-      with PassOptions
-      with PassCommandOptions:
-    def command: String = name
-  end Options
+  
+  case class Options(flatten: Boolean = false) extends PassOptions
 end PrettifyPass
 
 case class PrettifyOutput(

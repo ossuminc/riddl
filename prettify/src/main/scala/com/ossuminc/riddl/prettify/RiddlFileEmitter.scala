@@ -6,15 +6,13 @@
 
 package com.ossuminc.riddl.prettify
 
+import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
-import com.ossuminc.riddl.utils.TextFileWriter
-
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import com.ossuminc.riddl.utils.FileBuilder
 
 /** Unit Tests For RiddlFileEmitter */
-case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
+case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   def add(strings: Seq[LiteralString]): this.type = {
     if strings.sizeIs > 1 then {
@@ -32,7 +30,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
         this
     }
   }
-  
+
   def openDef(
     definition: Definition,
     withBrace: Boolean = true
@@ -49,13 +47,6 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    definition match
-      case brief: WithABrief => emitBrief(brief.brief)
-      case _                 =>
-    definition match
-      case definition: WithADescription =>
-        emitDescription(definition.asInstanceOf[WithADescription].description)
-      case _ =>
     if withBrace then
       if definition.nonEmpty then decr.addLine("}")
     end if
@@ -69,38 +60,59 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     end match
   end emitComment
 
-  def emitBrief(brief: Option[BriefDescription], withIndent: Boolean = true): this.type = {
-    brief.map { bd =>
-      if withIndent then addIndent(bd.format)
-      else add(bd.format)
-      end if
-      nl
+  def emitDescriptives(descriptives: Contents[Descriptives]): this.type = {
+    descriptives.foreach {
+      case c: Comment => emitComment(c)
+      case b: BriefDescription => emitBriefDescription(b)
+      case d: Description => emitDescription(d)
+      case t: Term => emitTerm(t)
     }
     this
   }
+  
+  def emitBriefDescription(brief: BriefDescription): this.type =
+    addLine(brief.format)
+  end emitBriefDescription
+  
+  def emitBriefs(briefs: Seq[BriefDescription]): this.type = {
+    briefs.foreach { brief => emitBriefDescription(brief) }
+    this
+  }
+  
+  def emitDescription(description: Description): this.type =
+    description match
+      case bd: BlockDescription =>
+        addLine("described as {")
+        incr
+        bd.lines.foreach { line => addIndent("|").add(line.s).nl }
+        decr
+        addLine("}")
+      case URLDescription(_, url) =>
+        addIndent("described ")
+        url.scheme match
+          case "file" => add("in file ")
+          case "http" | "https" => add("at ")
+        end match
+        add(url.toExternalForm).nl
+      case _ => // ignore
+    end match
+    this
+  end emitDescription
+   
+  def emitDescriptions(descriptions: Seq[Description]): this.type =
+    descriptions.foreach { (desc: Description) => 
+      emitDescription(desc)
+    }
+    this
+  end emitDescriptions
 
-  def emitDescription(description: Option[Description], withIndent: Boolean = true): this.type = {
-    description.map { (desc: Description) =>
-      desc match
-        case bd: BlockDescription =>
-          if withIndent then addIndent("described as {").nl
-          else add(" described as {").nl
-          incr
-          bd.lines.foreach { line => addIndent("|").add(line.s).nl }
-          decr
-          addIndent("}").nl
-        case URLDescription(_, url) =>
-          if withIndent then addIndent("described ")
-          else add(" described ")
-          url.scheme match
-            case "file"           => add("in file ")
-            case "http" | "https" => add("at ")
-          end match
-          add(url.toExternalForm).nl
-        case _ => // ignore
-    }
-    this
-  }
+  def emitTerm(term: Term): this.type =
+    addIndent("term ")
+    add(term.id.format)
+    add(" is ")
+    add(term.definition)
+    emitDescriptives(term.descriptives)
+  end emitTerm
 
   def emitString(s: String_): this.type = {
     (s.min, s.max) match {
@@ -110,26 +122,24 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
       case (None, None)       => this.add(s"String")
     }
   }
-
-  private def mkEnumeratorDescription(description: Option[Description]): String = {
-    description match {
-      case Some(desc) =>
-        " described as { " + {
-          desc.lines.map(_.format).mkString("", s"$new_line$spc", s" }$new_line")
-        }
-      case None => ""
-    }
-  }
+  
+  def emitConstant(constant: Constant): this.type =
+    addIndent("constant ")
+    add(constant.id.format)
+    add(" is ")
+    add(constant.value.format)
+    nl
+    emitDescriptives(constant.descriptives)  
+  end emitConstant
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
-    val head = this.add(s"any of {").nl.incr
+    add(s"any of {").nl.incr
     val enumerators: String = enumeration.enumerators
       .map { enumerator =>
-        enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)") +
-          mkEnumeratorDescription(enumerator.description)
+        enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)")
       }
       .mkString(s"$spc", s",$new_line$spc", new_line)
-    head.add(enumerators).decr.addLine("}")
+    add(enumerators).decr.addLine("}")
     this
   }
 
@@ -145,8 +155,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
       .add(s"${field.id.value}: ")
       .emitTypeExpression(field.typeEx)
-      .emitBrief(field.brief)
-      .emitDescription(field.description)
+      .emitDescriptives(field.descriptives)
     this
   end emitField
 
@@ -157,15 +166,11 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
         add(s"{ ")
           .emitField(field)
           .add(" } ")
-          .emitBrief(field.brief, false)
-          .emitDescription(field.description, false)
       case Some(_) =>
         this.add("{").nl.incr
         of.foldLeft(this) { case (s, f) =>
           s.add(spc)
             .emitField(f)
-            .emitBrief(f.brief, false)
-            .emitDescription(f.description, false)
             .add(",")
             .nl
         }
@@ -273,8 +278,7 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     this
       .add(s"${spc}type ${t.id.value} is ")
       .emitTypeExpression(t.typEx)
-      .emitBrief(t.brief, false)
-      .emitDescription(t.description, false)
+      .emitDescriptives(t.descriptives)
       .nl
   }
 
@@ -299,22 +303,6 @@ case class RiddlFileEmitter(filePath: Path) extends TextFileWriter {
     else this
     end if
   end emitOptions
-
-  def emit(): Path = {
-    Files.createDirectories(filePath.getParent)
-    Files.writeString(filePath, sb.toString(), StandardCharsets.UTF_8)
-    filePath
-  }
-
-  def emitStreamlets(proc: Processor[?]): this.type = {
-    proc.inlets.foreach { (inlet: Inlet) =>
-      addLine(s"inlet ${inlet.id.format} is ${inlet.type_.format}")
-    }
-    proc.outlets.foreach { (outlet: Outlet) =>
-      addLine(s"outlet ${outlet.id.format} is ${outlet.type_.format}")
-    }
-    this
-  }
 
   def emitSchemaKind(schemaKind: RepositorySchemaKind): this.type =
     val str = schemaKind match {
