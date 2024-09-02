@@ -162,7 +162,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(term.id.format)
         .add(" is ")
         .add(term.definition)
-        .emitDescriptives(term.descriptives)
+        .emitDescriptives(term.contents)
     }
   end doTerm
 
@@ -191,7 +191,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(" is ")
         .add(invariant.condition.format)
         .add(" ")
-        .emitDescriptives(invariant.descriptives)
+        .emitDescriptives(invariant.contents)
         .nl
     }
   end doInvariant
@@ -210,7 +210,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def doInlet(inlet: Inlet): Unit =
     state.withCurrent { rfe =>
       rfe.addIndent(inlet.format)
-      rfe.emitDescriptives(inlet.descriptives)
+      rfe.emitDescriptives(inlet.contents)
       rfe.nl
     }
   end doInlet
@@ -218,7 +218,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def doOutlet(outlet: Outlet): Unit =
     state.withCurrent { rfe =>
       rfe.addLine(outlet.format)
-      rfe.emitDescriptives(outlet.descriptives)
+      rfe.emitDescriptives(outlet.contents)
       rfe.nl
     }
   end doOutlet
@@ -232,7 +232,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
           val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
           from + to
         }
-        .emitDescriptives(connector.descriptives)
+        .emitDescriptives(connector.contents)
         .nl
     }
   end doConnector
@@ -241,7 +241,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"user ${user.id.value} is \"${user.is_a.s}\"")
-        .emitDescriptives(user.descriptives)
+        .emitDescriptives(user.contents)
         .nl
     }
   end doUser
@@ -257,8 +257,8 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       schema.data.toSeq.sortBy(_._1.value).foreach { (id: Identifier, typeRef: TypeRef) =>
         rfe.addIndent("of ").add(id.format).add(" as ").add(typeRef.format).nl
       }
-      schema.connectors.toSeq.sortBy(_._1.value).foreach { (id: Identifier, tr: (TypeRef, TypeRef)) =>
-        rfe.addIndent("with ").add(id.format).add(" as ").add(tr._1.format).add(" to ").add(tr._2.format).nl
+      schema.links.toSeq.sortBy(_._1.value).foreach { (id: Identifier, tr: (FieldRef, FieldRef)) =>
+        rfe.addIndent("link ").add(id.format).add(" as ").add(tr._1.format).add(" to ").add(tr._2.format).nl
       }
       schema.indices.foreach { fieldRef =>
         rfe.addIndent("index on ").add(fieldRef.format).nl
@@ -279,7 +279,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       rfe
         .addIndent(s"${keyword(containedGroup)} ${containedGroup.id.format} as ")
         .add(containedGroup.group.format)
-        .emitDescriptives(containedGroup.descriptives)
+        .emitDescriptives(containedGroup.contents)
     }
   end doContainedGroup
 
@@ -325,6 +325,11 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
           rfe.addLine(s"tell ${msg.format} to ${to.format}")
         case statement: Statement => rfe.addLine(statement.format)
         case comment: Comment     => rfe.addLine(comment.format)
+        case term: Term =>
+          rfe.addIndent(term.format).add(" is \"").add(term.definition).add("\"")
+          rfe.emitDescriptives(term.contents)
+        case description: Description => rfe.emitDescription(description)
+        case briefDescription: BriefDescription => rfe.emitBriefDescription(briefDescription)
       end match
     }
   end doStatement
@@ -350,7 +355,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def openInclude(include: Include[?], parents: Parents): Unit =
     state.withCurrent { (rfe: RiddlFileEmitter) =>
       if !state.flatten then
-        val url = include.origin 
+        val url = include.origin
         rfe.addLine(s"include \"${url.toExternalForm}")
         val outputURL = state.toDestination(url)
         val newRFE = RiddlFileEmitter(outputURL)

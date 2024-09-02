@@ -133,7 +133,7 @@ class EntityValidatorTest extends ValidatingTest {
           |
           |  entity Hamburger  is {
           |    option aggregate option transient
-          |    outlet ridOfIt is event Message
+          |    source ofitAll is { outlet ridOfIt is event Message }
           |    type SomeType is Number
           |    record fields is { field: SomeType } handler x is { ??? }
           |    state field of Hamburger.fields

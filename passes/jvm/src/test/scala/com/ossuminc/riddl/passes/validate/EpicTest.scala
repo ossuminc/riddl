@@ -64,10 +64,11 @@ class EpicTest extends ValidatingTest {
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
-          |   term xyz
-          |   brief "y"
-          |  } described as "nada"
-          |} described as "nada"
+          |   term xyz is "y"
+          |   described as "nada"
+          |  }
+          |  described as "nada"
+          |} 
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -79,7 +80,9 @@ class EpicTest extends ValidatingTest {
           |author reid is {
           |  name: "Reid Spencer"
           |  email: "reid.spencer@ossum.biz"
-          |} briefly "nada" described as "nada"
+          |} with {  
+          |  briefly "nada" described as "nada"
+          |}
           |
           |user Owner is "a person"
           |
@@ -87,22 +90,22 @@ class EpicTest extends ValidatingTest {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
           |  by author ImprovingApp.reid
-          |  term 'conduct business' briefly
-          |  "Any legal business activity supported by the terms of use."
+          |  term 'conduct business' is "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    user ImprovingApp.Owner wants "to incorporate an organization" so that "it can be used"
           |    optional {
           |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
-          |        from user ImprovingApp.Owner briefly "create org"
+          |        from user ImprovingApp.Owner with { briefly "create org" }
           |      step show output ImprovingApp.Improving_app.OrganizationPage.show
-          |        to user ImprovingApp.Owner
-          |        briefly "organization added"
+          |        to user ImprovingApp.Owner with { briefly "organization added" }
           |    }
           |  }
-          |} briefly "A story about establishing an organization in Improving.app"
+          |  briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
-          |} briefly "A placeholder" described by "Not important"
+          |}
+          |briefly "A placeholder" described by "Not important"
+          |} 
           |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
@@ -133,10 +136,11 @@ class EpicTest extends ValidatingTest {
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
-          |   term xyz
-          |   brief "y"
-          |  } described as "nada"
-          |} described as "nada"
+          |   term xyz "y"
+          |   described as "nada"
+          |  }
+          |  described as "nada" 
+          |} 
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -148,15 +152,14 @@ class EpicTest extends ValidatingTest {
           |author reid is {
           |  name: "Reid Spencer"
           |  email: "reid.spencer@ossum.biz"
-          |} briefly "nada" described as "nada"
+          |} with { briefly "nada" described as "nada" }
           |
           |user Owner is "a person"
           |
           |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  term 'conduct business' briefly
-          |  "Any legal business activity supported by the terms of use."
+          |  term 'conduct business' is "Any legal business activity supported by the terms of use."
           |
           | by author reid
           |
@@ -165,17 +168,19 @@ class EpicTest extends ValidatingTest {
           |      "they can conduct business as that organization"
           |    parallel {
           |      step take input ImprovingApp.Improving_app.OrganizationPage.accept
-          |        from  user ImprovingApp.Owner   briefly "create org"
+          |        from  user ImprovingApp.Owner with {   briefly "create org" }
           |      step show output ImprovingApp.Improving_app.OrganizationPage.show
-          |        to user ImprovingApp.Owner briefly "organization added"
+          |        to user ImprovingApp.Owner with { briefly "organization added" }
           |     }
           |  }
-          |} briefly "A story about establishing an organization in Improving.app"
+          |  briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
-          |} briefly "A placeholder" described by "Not important"
+          |}
+          |briefly "A placeholder" described by "Not important" 
+          |} 
           |""".stripMargin,td
       )
-      parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
+      parseAndValidateDomain(rpi, shouldFailOnErrors = true) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           val errors = msgs.justErrors
           if errors.isEmpty then
@@ -206,10 +211,11 @@ class EpicTest extends ValidatingTest {
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
-          |   term xyz
-          |   brief "y"
-          |  } described as "nada"
-          |} described as "nada"
+          |   term xyz "y"
+          |   described as "nada"
+          |  }
+          |  described as "nada" 
+          |} 
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -223,26 +229,25 @@ class EpicTest extends ValidatingTest {
           |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  term 'conduct business' briefly
-          |  "Any legal business activity supported by the terms of use."
+          |  term 'conduct business' "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    user Owner wants "to do it" so that "it is done"
           |    step take input ImprovingApp.Improving_app.OrganizationPage.accept
-          |      from user ImprovingApp.Owner
-          |      briefly "create org"
+          |      from user ImprovingApp.Owner with { briefly "create org" }
           |    step for user ImprovingApp.Owner "contemplates his navel"
-          |      briefly "self-processing"
+          |      with { briefly "self-processing" }
           |    step show output ImprovingApp.Improving_app.OrganizationPage.show
-          |      to user ImprovingApp.Owner
-          |      briefly "organization added"
+          |      to user ImprovingApp.Owner with { briefly "organization added" }
           |  }
-          |} briefly "A story about establishing an organization in Improving.app"
+          |  briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
-          |} briefly "A placeholder" described by "Not important"
+          |}
+          |briefly "A placeholder" described by "Not important"
+          |}
           |""".stripMargin,td
       )
-      parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
+      parseAndValidateDomain(rpi, shouldFailOnErrors = true) {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           val errors = msgs.justErrors
           if errors.nonEmpty then

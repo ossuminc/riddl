@@ -13,7 +13,7 @@ class RepositoryTest extends ValidatingTest {
       val input = RiddlParserInput(
         """domain foo is {
           |  context bar is {
-          |    outlet hereyougo is bar.fubar.Reply
+          |    source itin is { outlet hereyougo is bar.fubar.Reply }
           |    repository fubar is {
           |      query GetOne is { how: String }
           |      result Reply is { that: String }
@@ -25,7 +25,7 @@ class RepositoryTest extends ValidatingTest {
           |        on query GetOne {
           |          send result fubar.Reply to outlet hereyougo
           |        }
-          |        }
+          |      }
           |     }
           |  }
           |}

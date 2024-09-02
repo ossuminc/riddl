@@ -26,7 +26,7 @@ private[parsing] trait StreamingParser {
       location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ withDescriptives
     )./.map { tpl => Outlet.apply.tupled(tpl) }
   }
-  
+
   private def connectorDefinitions[u: P]: P[(OutletRef, InletRef, Seq[OptionValue])] = {
     P(
       (open ~ from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0) ~ close) |
@@ -60,11 +60,10 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Seq[StreamletContents]] = {
     P(
-      inlet./.rep(minInlets, " ", maxInlets) ~
-        outlet./.rep(minOutlets, " ", maxOutlets) ~
-      ( processorDefinitionContents(StatementsSet.StreamStatements) | description | briefDescription |
+      inlet./.rep(min=minInlets, max=maxInlets) ~ outlet./.rep(min=minOutlets, max=maxOutlets) ~
+      ( processorDefinitionContents(StatementsSet.StreamStatements) |
         streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets)
-      ).asInstanceOf[P[StreamletContents]].rep(0)
+      )./.asInstanceOf[P[StreamletContents]].rep(0)
     )./.map {
       case (inlets, outlets, contents) =>
         (inlets ++ outlets ++ contents).asInstanceOf[Seq[StreamletContents]]

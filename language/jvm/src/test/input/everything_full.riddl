@@ -8,12 +8,14 @@ context full is {
   type stamp is TimeStamp        // Define stamp as a TimeStamp
   type url is URL                // Define url as a Uniform Resource Locator
 
-  type PeachType is { a: Integer // can you put a comment here?
-  }
+  type PeachType is { a: Integer with { // can you put a comment here?
+  } }
   type enum is any of { Apple Pear Peach(23)   Persimmon(24) }
 
-  type alt is one of { enum or stamp or url } described as {
-    | Alternations select one type from a list of types
+  type alt is one of { enum or stamp or url } with {
+    described as {
+      | Alternations select one type from a list of types
+    }
   }
 
 
@@ -23,12 +25,19 @@ context full is {
     time is TimeStamp
   }
 
-  type oneOrMore is many agg
+  type moreThanNone is many agg
   type zeroOrMore is agg*
-  type optional is agg?
+  type optionality is agg?
 
   repository StoreIt is {
-    schema One is relational of a as type agg with link as type stamp to ident index on field agg.id
+    schema One is relational
+      of a as type agg
+      link relationship as field agg.time to field agg.ident
+      index on field agg.id
+      with { /* This is a comment */ }
+
+    described as "This is a simple repository"
+    term foo is "an arbitrary name as a contraction for fubar which is grotesque connotations"
     handler Putter is {
       on command ACommand {
         put "something" to type agg

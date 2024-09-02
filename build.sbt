@@ -42,7 +42,6 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .configure(With.typical)
   .configure(With.build_info)
   .settings(
-    scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -156,7 +155,6 @@ lazy val prettify = Module("prettify", "riddl-prettify")
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing ++ Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
@@ -172,7 +170,6 @@ lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.MiMa("0.50.0"))
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
     description := "Implementation for the RIDDL prettify command, a code reformatter",
     libraryDependencies ++= Dep.testing ++ Seq(
@@ -261,7 +258,6 @@ lazy val docsite = DocSite(
 )
   .settings(
     name := "riddl-doc",
-    scalaVersion := "3.4.2",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
   )

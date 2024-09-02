@@ -385,7 +385,7 @@ private[parsing] trait TypeParser {
   }
 
   private def aggregateContent[u: P]: P[AggregateContents] = {
-    P(field | method | comment).asInstanceOf[P[AggregateContents]]
+    P(field | method )./.asInstanceOf[P[AggregateContents]]
   }
 
   private def aggregateDefinitions[u: P]: P[Seq[AggregateContents]] = {
@@ -545,7 +545,7 @@ private[parsing] trait TypeParser {
     P(
       location ~ aggregateUseCase ~/ identifier ~
         (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withDescriptives
-    ).map { case (loc, useCase, id, ateOrAgg, withs) =>
+    )./.map { case (loc, useCase, id, ateOrAgg, withs) =>
       ateOrAgg match {
         case agg: Aggregation =>
           val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents)
@@ -563,7 +563,7 @@ private[parsing] trait TypeParser {
   private def defOfType[u: P]: P[Type] = {
     P(
       location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ withDescriptives
-    ).map { case (loc, id, typ, withs) =>
+    )./.map { case (loc, id, typ, withs) =>
       Type(loc, id, typ, withs)
     }
   }

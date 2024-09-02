@@ -3,31 +3,39 @@ domain ignore1 is {
     type Something = command { ??? }
     type UndoSomething = command { ??? }
     function AnotherThing {
-      requires { a: Integer described by "a"} returns { b: Integer described by "b"} ???
-    } explained as "A simple function for another"
+      requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
+      explained as "A simple function for another"
+    }
     function UndoAnotherThing {
-      requires { c: Integer described by "c"} returns { d: Integer described by "d"} ???
-    } explained as "A reversion function for undoing AnotherThing"
+      requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
+       explained as "A reversion function for undoing AnotherThing"
+    }
 
     entity blah is {
-      inlet in is command Something
+      sink trashCan is { inlet in is command Something }
      }
     saga name is {
       requires: { p1: String, p2: String }
       returns: {s: String }
       option parallel
       step One is {
-        send command Something to inlet blah.in
+        send command Something to inlet blah.trashCan.in
       } reverted by {
-        send command UndoSomething to inlet blah.in
-      } described as "First saga step"
+        send command UndoSomething to inlet blah.trashCan.in
+      } with {
+        described as "First saga step"
+      }
       step Two is {
         call function AnotherThing
         "Pass 42 to AnotherThing function"
         "Return AnotherThing's output"
       } reverted by {
         call function UndoAnotherThing
-      } described as "Second saga step"
+      } with {
+        described as "Second saga step"
+      }
     }
-  } described as "ignore"
-} described as "just for testing a saga"
+    described as "ignore"
+  }
+  described as "just for testing a saga"
+}

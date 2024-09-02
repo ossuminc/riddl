@@ -62,7 +62,7 @@ class HandlerValidatorTest extends ValidatingTest {
         """
           |domain entityTest is {
           | context EntityContext is {
-          |  term Incoming is briefly "This is a term definition to generate an error"
+          |  term Incoming is "This is a term definition to generate an error"
           |  entity Hamburger is {
           |   type StateFields is { field1: Number }
           |   state HamburgerState of Hamburger.StateFields
@@ -119,12 +119,12 @@ class HandlerValidatorTest extends ValidatingTest {
           |  context ignore is {
           |    command C is { field: Integer }
           |    command D is { field: Integer }
-          |    outlet results is Integer
+          |    source foo is { outlet results is Integer }
           |    entity example is {
           |      handler default is {
           |        on command C { ??? }
           |        on command D {
-          |          send result Foo to outlet results
+          |          send result Foo to outlet foo.results
           |        }
           |      }
           |    }

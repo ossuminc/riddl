@@ -96,35 +96,35 @@ private[parsing] trait EpicParser {
 
   private def sequentialInteractions[u: P]: P[SequentialInteractions] = {
     P(
-      location ~ Keywords.sequence ~ open ~ interactions ~ close ~/ withDescriptives
-    )./.map { case (loc, steps, withs) =>
-      SequentialInteractions(loc, steps, withs)
+      location ~ Keywords.sequence ~ open ~ interactions ~ close
+    )./.map { case (loc, interactions) =>
+      SequentialInteractions(loc, interactions)
     }
   }
 
   private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
-      location ~ Keywords.optional ~ open ~ interactions ~ close ~/ withDescriptives
-    )./.map { case (loc, steps, withs) =>
-      OptionalInteractions(loc, steps, withs)
+      location ~ Keywords.optional ~ open ~ interactions ~ close
+    )./.map { case (loc, interactions) =>
+      OptionalInteractions(loc, interactions)
     }
   }
 
   private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
-      location ~ Keywords.parallel ~ open ~ interactions ~ close ~ withDescriptives
-    )./.map { case (loc, steps, withs) =>
-      ParallelInteractions(loc, steps, withs)
+      location ~ Keywords.parallel ~ open ~ interactions ~ close
+    )./.map { case (loc, interactions) =>
+      ParallelInteractions(loc, interactions)
     }
   }
 
-  private def interaction[u: P]: P[Interaction | Comment] = {
+  private def interaction[u: P]: P[Interaction | Descriptives] = {
     P(
-      parallelInteractions | optionalInteractions | sequentialInteractions | stepInteractions | comment
+      parallelInteractions | optionalInteractions | sequentialInteractions | stepInteractions | descriptive
     )
   }
 
-  private def interactions[u: P]: P[Seq[Interaction | Comment]] = {
+  private def interactions[u: P]: P[Seq[InteractionContainerContents]] = {
     interaction.rep(1)
   }
 

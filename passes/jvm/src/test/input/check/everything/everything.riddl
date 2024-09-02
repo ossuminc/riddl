@@ -55,13 +55,13 @@ domain Everything is {
       handler foo is {
         on command ACommand {
           send event full.SomeOtherThing.ItHappened to
-            inlet SomeOtherThing.SOT_In
+            inlet SomeOtherThing.trashBin.SOT_In
         }
       }
     }
 
     entity SomeOtherThing is {
-      inlet SOT_In is SomeOtherThing.ItHappened
+      sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
       type ItHappened is event { when: String }
       state otherThingState of type Everything.StateType
       handler fee is {

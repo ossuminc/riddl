@@ -10,6 +10,7 @@ import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
+import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.{ClassTag, classTag}
@@ -31,37 +32,6 @@ object AST:
     * is parsed.
     */
   sealed trait RiddlValue:
-
-    private val attachments: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-
-    /** Put an arbitrary named value in this AST node.
-      * @param name
-      *   The name by which the arbitrary value can be retrieved
-      * @param value
-      *   A value of Any type
-      * @tparam T
-      *   The actual type of the value which must also be used upon retrieval
-      */
-    def put[T <: Any](name: String, value: T): Unit = attachments.put(name, value)
-
-    /** Get an arbitrary named value from this AST Node
-      * @param name
-      *   The name of the atribrary value to be retrieved
-      * @tparam T
-      *   The type of the value to be retrieved to whic the value will be cast. A failure may occur if the wrong T value
-      *   is used
-      * @return
-      *   The T value requests, optionally. None will be returned if the value is not in the attachments map
-      */
-    def get[T <: Any](name: String): Option[T] = attachments.get(name).map(_.asInstanceOf[T])
-
-    /** Determine if an arbitrary named value is associated with this AST Node
-      * @param name
-      *   The name of the atribrary value to be retrieved
-      * @return
-      *   True if the value exists, false otherwise
-      */
-    def has(name: String): Boolean = attachments.isDefinedAt(name)
 
     /** The location in the parse at which this RiddlValue occurs */
     def loc: At
@@ -196,7 +166,7 @@ object AST:
   end Container
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
-  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV]:
+  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] with WithAttachments:
     def format: String = ""
     def loc: At = At.empty
   end SimpleContainer
@@ -395,6 +365,43 @@ object AST:
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
   ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
 
+  sealed trait WithAttachments:
+    /** Where attachments are stored */
+    private val attachments: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
+
+    /** Put an arbitrary named value in this AST node.
+     *
+     * @param name
+     * The name by which the arbitrary value can be retrieved
+     * @param value
+     * A value of Any type
+     * @tparam T
+     * The actual type of the value which must also be used upon retrieval
+     */
+    def put[T <: Any](name: String, value: T): Unit = attachments.put(name, value)
+
+    /** Get an arbitrary named value from this AST Node
+     *
+     * @param name
+     * The name of the atribrary value to be retrieved
+     * @tparam T
+     * The type of the value to be retrieved to whic the value will be cast. A failure may occur if the wrong T value
+     * is used
+     * @return
+     * The T value requests, optionally. None will be returned if the value is not in the attachments map
+     */
+    def get[T <: Any](name: String): Option[T] = attachments.get(name).map(_.asInstanceOf[T])
+
+    /** Determine if an arbitrary named value is associated with this AST Node
+     *
+     * @param name
+     * The name of the atribrary value to be retrieved
+     * @return
+     * True if the value exists, false otherwise
+     */
+    def has(name: String): Boolean = attachments.isDefinedAt(name)
+  end WithAttachments
+
   /** A trait that includes an `id` field and various methods to support it. This is used by [[Definition]] and any
     * other thing that needs to be identified by name.
     */
@@ -421,26 +428,32 @@ object AST:
     def identifyWithLoc: String = s"$identify at $loc"
   end WithIdentifier
 
-  /** A trait to add a brief description string to a RiddlValue */
-  sealed trait WithBriefs extends Container[ContentValues]:
+  sealed trait WithDescriptives extends Container[ContentValues]:
 
     /** The optional brief description of the value */
-    def briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
+    lazy val briefs: Contents[BriefDescription] = contents.filter[BriefDescription]
+
+    /** The [[Description]]s of the definiton, either a [[BlockDescription]] or [[URLDescription]] */
+    lazy val descriptions: Contents[Description] = contents.filter[Description]
+
+    /** A lazily constructed [[Seq]] of [[Comment]] filtered from the contents */
+    lazy val comments: Contents[Comment] = contents.filter[Comment]
+
+    /** A lazily constructed [[Seq]] of [[Term]] filtered from the contents */
+    lazy val terms: Contents[Term] = contents.filter[Term]
 
     /** A reliable extractor of the brief description, dealing with the Optionality of it */
     def briefString: String =
       if briefs.isEmpty then "No brief description."
       else briefs.map(_.brief.s).mkString("\n")
     end briefString
-  end WithBriefs
 
-  /** A trait that includes the brief and description fields to a RiddlValue. All of the definitions have these */
-  sealed trait WithDescriptions extends Container[ContentValues]:
-    /** The optional [[Description]] which can be provided in several ways such as [[BlockDescription]] or
-      * [[URLDescription]]
-      */
-    lazy val descriptions: Contents[Description] = contents.filter[Description]
-  end WithDescriptions
+    def descriptionString: String =
+      if descriptions.isEmpty then "No descriptions."
+      else descriptions.map(_.lines.map(_.s).mkString("\n")).mkString("\n")
+    end descriptionString
+
+  end WithDescriptives
 
   /** A trait that includes the `comments` field to extract the comments from the contents */
   sealed trait WithComments extends Container[ContentValues]:
@@ -694,23 +707,6 @@ object AST:
     lazy val modules: Contents[Module] = contents.filter[Module]
   end WithModules
 
-  /** Base trait for definitions that need comments, terms, briefs, and descriptions without contents */
-  sealed trait WithDescriptives extends RiddlValue:
-    def descriptives: Contents[Descriptives]
-
-    lazy val comments: Contents[Comment] = descriptives.filter[Comment]
-    lazy val terms: Contents[Term] = descriptives.filter[Term]
-    lazy val briefs: Contents[BriefDescription] = descriptives.filter[BriefDescription]
-    lazy val descriptions: Contents[Description] = descriptives.filter[Description]
-
-    /** A reliable extractor of the brief description, dealing with the Optionality of it */
-    def briefString: String =
-      if briefs.isEmpty then "No brief description."
-      else briefs.map(_.brief.s).mkString("\n")
-    end briefString
-
-  end WithDescriptives
-
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
   ///// This section defines various abstract things needed by the rest of the definitions
 
@@ -740,7 +736,8 @@ object AST:
   type OccursInVitalDefinition = Descriptives | AuthorRef | Type
 
   /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler
+  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler |
+    Streamlet | Connector
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
@@ -766,7 +763,7 @@ object AST:
   type OccursInOutput = Output | TypeRef | Descriptives
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
-  type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Streamlet | Connector | Projector | Repository
+  type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Projector | Repository
 
   /** Type of definitions that occur in a [[Context]] with [[Include]] */
   type ContextContents = OccursInContext | Include[OccursInContext]
@@ -778,7 +775,9 @@ object AST:
   type EntityContents = OccursInEntity | Include[OccursInEntity]
 
   /** Type of definitions that occur in a [[Handler]] */
-  type HandlerContents = OnClause | Comment
+  type HandlerContents = Descriptives | OnClause
+
+  type OnClauseContents = Statement | Descriptives
 
   /** Type of definitions that occur in an [[Adaptor]] without [[Include]] */
   private type OccursInAdaptor = OccursInProcessor
@@ -793,7 +792,7 @@ object AST:
   type SagaContents = OccursInSaga | Include[OccursInSaga]
 
   /** Type of definitions that occur in a [[Streamlet]] without [[Include]] */
-  private type OccursInStreamlet = OccursInProcessor | Inlet | Outlet
+  private type OccursInStreamlet = OccursInProcessor | Inlet | Outlet | Connector
 
   /** Type of definitions that occur in a [[Streamlet]] with [[Include]] */
   type StreamletContents = OccursInStreamlet | Include[OccursInStreamlet]
@@ -805,10 +804,10 @@ object AST:
   type EpicContents = OccursInEpic | Include[OccursInEpic]
 
   /** Type of definitions that occur in a [[UseCase]] */
-  type UseCaseContents = Interaction | Comment | BriefDescription | Description
+  type UseCaseContents = Interaction | Descriptives
 
   /** Type of definitions that occur in a [[InteractionContainer]] */
-  type InteractionContainerContents = Interaction | Comment
+  type InteractionContainerContents = Interaction | Descriptives
 
   /** Type of definitions that occur in a [[Projector]] without [[Include]] */
   private type OccursInProjector = OccursInProcessor | RepositoryRef
@@ -829,26 +828,23 @@ object AST:
   type FunctionContents = OccursInFunction | Include[OccursInFunction]
 
   /** Type of definitions that occur in a [[Type]] */
-  type TypeContents = Field | Method | Enumerator
+  type TypeContents = Field | Method | Enumerator | Descriptives
 
-  type AggregateContents = Field | Method | Comment
+  type AggregateContents = Field | Method
 
   /** Type of definitions that occur in a block of [[Statement]] */
-  type Statements = Statement | Comment
-
-  /** Type of definitions that an occur in an OnClause */
-  type OnClauseContents = Statements
+  type Statements = Statement | Descriptives
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
   //////// The Abstract classes for defining Definitions by using the foregoing traits
 
   /** Base trait for all Definitions. Their mere distinction at this level of abstraction is to simply have an
-    * identifier
+    * identifier and can have attachments
     *
     * @see
     *   [[BranchDefinition]] and [[LeafDefinition]]
     */
-  sealed trait Definition extends WithIdentifier:
+  sealed trait Definition extends WithIdentifier with WithAttachments:
     /** Yes anything deriving from here is a definition */
     override def isDefinition: Boolean = true
     override def isParent: Boolean = false
@@ -936,12 +932,9 @@ object AST:
   sealed trait VitalDefinition[CT <: ContentValues]
       extends BranchDefinition[CT]
       with WithIncludes[CT]
-      with WithComments
-      with WithDescriptions
-      with WithBriefs
+      with WithDescriptives
       with WithOptions
-      with WithAuthorRefs
-      with WithTerms:
+      with WithAuthorRefs:
     final override def isVital: Boolean = true
   end VitalDefinition
 
@@ -1003,8 +996,6 @@ object AST:
       extends VitalDefinition[CT]
       with WithDomains
       with WithAuthors
-      with WithBriefs
-      with WithDescriptions
       with WithIncludes[CT]
 
   /** The root of the containment hierarchy, corresponding roughly to a level about a file.
@@ -1066,7 +1057,7 @@ object AST:
     loc: At,
     id: Identifier,
     is_a: LiteralString,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition:
     def format: String = s"${Keyword.user} ${id.format} is ${is_a.format}"
   end User
@@ -1087,7 +1078,7 @@ object AST:
     loc: At,
     id: Identifier,
     definition: Seq[LiteralString],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition:
     def format: String = s"${Keyword.term} ${id.format}"
   end Term
@@ -1121,7 +1112,7 @@ object AST:
     organization: Option[LiteralString] = None,
     title: Option[LiteralString] = None,
     url: Option[com.ossuminc.riddl.utils.URL] = None,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition:
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
@@ -1458,7 +1449,7 @@ object AST:
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends AggregateValue {
     override def format: String = s"${id.format}: ${typeEx.format}"
   }
@@ -1501,7 +1492,7 @@ object AST:
     id: Identifier,
     typeEx: TypeExpression,
     args: Seq[MethodArgument] = Seq.empty[MethodArgument],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends AggregateValue {
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
   }
@@ -2059,12 +2050,14 @@ object AST:
   ) extends BranchDefinition[TypeContents]
       with WithDescriptives:
     def contents: Contents[TypeContents] = {
-      typEx match {
-        case a: Aggregation                    => a.fields ++ a.methods
-        case a: AggregateUseCaseTypeExpression => a.fields ++ a.methods
-        case Enumeration(_, enumerators)       => enumerators
-        case _                                 => Seq.empty[TypeContents]
-      }
+      val type_contents: Contents[Field | Method | Enumerator] =
+        typEx match
+          case a: Aggregation                    => a.fields ++ a.methods
+          case a: AggregateUseCaseTypeExpression => a.fields ++ a.methods
+          case Enumeration(_, enumerators)       => enumerators
+          case _                                 => Seq.empty
+        end match
+      type_contents ++ descriptives
     }
 
     final override def kind: String = {
@@ -2127,7 +2120,7 @@ object AST:
     id: Identifier,
     typeEx: TypeExpression,
     value: LiteralString,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition {
 
     /** Format the node to a string */
@@ -2145,7 +2138,7 @@ object AST:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// STATEMENTS
 
-  /** Base trait of all Statements that can occur in OnClauses */
+  /** Base trait of all Statements that can occur in [[OnClause]]s */
   sealed trait Statement extends RiddlValue
 
   /** A statement whose behavior is specified as a text string allowing an arbitrary action to be specified handled by
@@ -2585,7 +2578,7 @@ object AST:
     loc: At,
     id: Identifier,
     condition: Option[LiteralString] = Option.empty[LiteralString],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition {
     override def isEmpty: Boolean = condition.isEmpty
     def format: String = Keyword.invariant + " " + id.format + condition.map(_.format)
@@ -2595,7 +2588,7 @@ object AST:
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends BranchDefinition[Statements] with WithStatements with WithDescriptives
+  sealed trait OnClause extends BranchDefinition[OnClauseContents] with WithStatements with WithDescriptives
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
     * corresponds to the "other" case of an [[Handler]].
@@ -2608,8 +2601,7 @@ object AST:
   @JSExportTopLevel("OnOtherClause")
   case class OnOtherClause(
     loc: At,
-    override val contents: Contents[Statements] = Seq.empty[Statements],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[OnClauseContents] = Seq.empty[OnClauseContents]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"pther")
 
@@ -2628,8 +2620,7 @@ object AST:
   @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
     loc: At,
-    override val contents: Contents[Statements] = Seq.empty[Statements],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[OnClauseContents] = Seq.empty[OnClauseContents]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"init")
 
@@ -2655,8 +2646,7 @@ object AST:
     loc: At,
     msg: MessageRef,
     from: Option[(Option[Identifier], Reference[Definition])],
-    override val contents: Contents[Statements] = Seq.empty[Statements],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[OnClauseContents] = Seq.empty[OnClauseContents]
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, msg.format)
     def format: String = ""
@@ -2672,8 +2662,7 @@ object AST:
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
-    override val contents: Contents[Statements] = Seq.empty[Statements],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[OnClauseContents] = Seq.empty[OnClauseContents]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"term")
 
@@ -2701,7 +2690,8 @@ object AST:
     loc: At,
     id: Identifier,
     contents: Contents[HandlerContents] = Seq.empty[HandlerContents]
-  ) extends BranchDefinition[HandlerContents] {
+  ) extends BranchDefinition[HandlerContents]
+      with WithDescriptives {
     override def isEmpty: Boolean = clauses.isEmpty
 
     def clauses: Seq[OnClause] = contents.filter[OnClause]
@@ -2743,7 +2733,7 @@ object AST:
     loc: At,
     id: Identifier,
     typ: TypeRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition:
     def format: String = Keyword.state + " " + id.format
   end State
@@ -2822,9 +2812,9 @@ object AST:
     id: Identifier,
     schemaKind: RepositorySchemaKind = RepositorySchemaKind.Other,
     data: Map[Identifier, TypeRef] = Map.empty[Identifier, TypeRef],
-    connectors: Map[Identifier, (TypeRef, TypeRef)] = Map.empty[Identifier, (TypeRef, TypeRef)],
+    links: Map[Identifier, (FieldRef, FieldRef)] = Map.empty[Identifier, (FieldRef, FieldRef)],
     indices: Seq[FieldRef] = Seq.empty[FieldRef],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   end Schema
@@ -2976,7 +2966,7 @@ object AST:
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends Portlet {
     def format: String = s"inlet ${id.format} is ${type_.format}"
   }
@@ -2999,7 +2989,7 @@ object AST:
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends Portlet {
     def format: String = s"outlet ${id.format} is ${type_.format}"
   }
@@ -3026,7 +3016,7 @@ object AST:
     from: OutletRef = OutletRef.empty,
     to: InletRef = InletRef.empty,
     options: Seq[OptionValue] = Seq.empty[OptionValue],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition {
     def hasOption(name: String): Boolean = options.exists(_.name == name)
     override def format: String = Keyword.connector + " " + id.format
@@ -3221,7 +3211,7 @@ object AST:
     id: Identifier,
     doStatements: Seq[Statements] = Seq.empty[Statements],
     undoStatements: Seq[Statements] = Seq.empty[Statements],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition {
     def format: String = s"step ${id.format}"
   }
@@ -3307,8 +3297,7 @@ object AST:
   @JSExportTopLevel("ParallelInteractions")
   case class ParallelInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[InteractionContainerContents] = Seq.empty[InteractionContainerContents]
   ) extends InteractionContainer {
     override def kind: String = "Parallel Interaction"
   }
@@ -3328,8 +3317,7 @@ object AST:
   @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[InteractionContainerContents] = Seq.empty[InteractionContainerContents]
   ) extends InteractionContainer {
     override def kind: String = "Sequential Interaction"
   }
@@ -3346,8 +3334,7 @@ object AST:
   @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Seq.empty[Interaction | Comment],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[InteractionContainerContents] = Seq.empty[InteractionContainerContents]
   ) extends InteractionContainer {
     override def kind: String = "Optional Interaction"
   }
@@ -3359,7 +3346,7 @@ object AST:
     from: LiteralString,
     relationship: LiteralString,
     to: LiteralString,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends GenericInteraction {
     override def kind: String = "Vague Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3386,7 +3373,7 @@ object AST:
     from: Reference[Definition],
     message: MessageRef,
     to: ProcessorRef[?],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends GenericInteraction {
     def relationship: LiteralString = {
       LiteralString(message.loc, s"sends ${message.format} to")
@@ -3415,7 +3402,7 @@ object AST:
     from: Reference[Definition],
     relationship: LiteralString,
     to: Reference[Definition],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Arbitrary Interaction"
 
@@ -3441,7 +3428,7 @@ object AST:
     loc: At,
     from: Reference[Definition],
     relationship: LiteralString,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Self Interaction"
     override def to: Reference[Definition] = from
@@ -3464,7 +3451,7 @@ object AST:
     loc: At,
     from: UserRef,
     to: GroupRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Focus On Group"
     override def relationship: LiteralString =
@@ -3489,7 +3476,7 @@ object AST:
     loc: At,
     from: UserRef,
     url: com.ossuminc.riddl.utils.URL,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends GenericInteraction {
     def relationship: LiteralString =
       LiteralString(loc + (6 + from.pathId.format.length), "directed to ")
@@ -3515,7 +3502,7 @@ object AST:
     from: OutputRef,
     relationship: LiteralString,
     to: UserRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Show Output Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3537,7 +3524,7 @@ object AST:
     loc: At,
     from: UserRef,
     to: InputRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Select Input Interaction"
     def format: String = s"${from.format} selects ${to.format}"
@@ -3560,7 +3547,7 @@ object AST:
     loc: At,
     from: UserRef,
     to: InputRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3678,8 +3665,9 @@ object AST:
     contents: Contents[OccursInGroup] = Seq.empty[OccursInGroup]
   ) extends BranchDefinition[OccursInGroup]
       with WithShownBy
-      with WithBriefs
-      with WithDescriptions {
+      with WithInputs
+      with WithOutputs
+      with WithDescriptives {
     override def identify: String = s"$alias ${id.value}"
 
     /** Format the node to a string */
@@ -3714,7 +3702,7 @@ object AST:
     loc: At,
     id: Identifier,
     group: GroupRef,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition {
     def format: String = s"contains ${id.format} as ${group.format}"
   }
@@ -3739,9 +3727,7 @@ object AST:
     putOut: TypeRef | ConstantRef | LiteralString,
     contents: Contents[OccursInOutput] = Seq.empty[OccursInOutput]
   ) extends BranchDefinition[OccursInOutput]
-      with WithOutputs
-      with WithBriefs
-      with WithDescriptions {
+      with WithOutputs with WithDescriptives {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 
@@ -3780,7 +3766,7 @@ object AST:
     takeIn: TypeRef,
     contents: Contents[OccursInInput] = Seq.empty[OccursInInput]
   ) extends BranchDefinition[OccursInInput]
-      with WithInputs {
+      with WithInputs with WithDescriptives {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 

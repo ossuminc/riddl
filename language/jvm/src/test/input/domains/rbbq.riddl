@@ -37,7 +37,7 @@ domain ReactiveBBQ is {
       |# see
       |* http://foo.com/
     }
-  } explained as {
+    explained as {
     |# brief
     |The kitchen is where food is prepared
     |# details
@@ -53,7 +53,8 @@ domain ReactiveBBQ is {
     |1. Order sends order status changes to Kitchen
     |1. Kitchen ignores drink items on order
     |1.
-  } // test end of definition comments
+    } // test end of definition comments
+  }
 
   context Loyalty is {
     type AccrualEvent is {
@@ -145,13 +146,14 @@ domain ReactiveBBQ is {
      handler ofInputs is {}
     }
   } // end of context
-} explained as {
-  |# brief
-  | Reactive BBQ Domain Definition
-  |#details
-  |This domain definition is designed to be instructive in the RIDDL language.
-  |It uses the case study from the Lightbend Reactive Architecture course as
-  |the basis for defining the domain. The course uses a set of interviews with
-  |Reactive BBQ employees to define the requirements. This domain specification
-  |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
-} // end of domain
+  explained as {
+    |# brief
+    | Reactive BBQ Domain Definition
+    |#details
+    |This domain definition is designed to be instructive in the RIDDL language.
+    |It uses the case study from the Lightbend Reactive Architecture course as
+    |the basis for defining the domain. The course uses a set of interviews with
+    |Reactive BBQ employees to define the requirements. This domain specification
+    |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+  } // end of domain
+}

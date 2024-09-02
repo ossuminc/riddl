@@ -1,1 +1,1 @@
-domain foo is { ??? } explained in file "bar.md"
+domain foo is { explained in file "bar.md" }

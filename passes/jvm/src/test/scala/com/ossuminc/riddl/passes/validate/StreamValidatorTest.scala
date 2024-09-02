@@ -11,44 +11,51 @@ class StreamValidatorTest extends ValidatingTest {
 
   "StreamValidator" must {
     "error on connector type mismatch" in { (td:TestData) =>
-      val input = RiddlParserInput("""domain uno {
-                    | type Typ1 = Integer
-                    | type Typ2 = Real
-                    | context a {
-                    |  inlet in is type uno.Typ1
-                    |  outlet out is type uno.Typ2
-                    |  connector c1 is { from outlet a.out to inlet a.in }
-                    | }
-                    |} """.stripMargin,td)
+      val input = RiddlParserInput(
+      """domain uno {
+        | type Typ1 = Integer
+        | type Typ2 = Real
+        | context a {
+        |  flow foo is {
+        |   inlet in is type uno.Typ1
+        |   outlet out is type uno.Typ2
+        |  }
+        |  connector c1 is { from outlet a.foo.out to inlet a.foo.in }
+        | }
+        |} """.stripMargin,td)
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
         case (domain, _, messages) =>
-          // info(messages.format)
-          domain.isEmpty mustBe false
-          messages.isEmpty mustBe false
-          messages.hasErrors mustBe true
-          messages.exists { (msg: Messages.Message) =>
+          domain.isEmpty must be(false)
+          messages.isEmpty must be(false)
+          messages.hasErrors must be(true)
+          val errors = messages.justErrors
+          info(errors.format)
+          errors.exists { (msg: Messages.Message) =>
             msg.message.startsWith("Type mismatch in Connector 'c1':")
           } must be(true)
       }
     }
     "error on unattached inlets" in { (td:TestData) =>
-      val input = RiddlParserInput("""domain solo {
-                    | type T = Integer
-                    | context a {
-                    |  inlet oops is type T
-                    |  inlet in is type T
-                    |  outlet out is type T
-                    |  connector c1 {
-                    |    from outlet a.out to inlet a.in
-                    |  }
-                    | }
-                    |} """.stripMargin,td)
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
+      val input = RiddlParserInput(
+        """domain solo {
+          | type T = Integer
+          | context a {
+          |  merge confluence is {
+          |    inlet one is type T
+          |    inlet two is type T
+          |    outlet out is type T
+          |  }
+          |  connector c1 {
+          |    from outlet a.confluence.out to inlet a.confluence.two
+          |  }
+          | }
+          |} """.stripMargin,td)
+      parseAndValidateDomain(input) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
         messages.hasErrors mustBe false
         messages.exists(
-          _.message.startsWith("Inlet 'oops' is not connected")
+          _.message.startsWith("Inlet 'one' is not connected")
         ) mustBe true
       }
     }
@@ -56,11 +63,13 @@ class StreamValidatorTest extends ValidatingTest {
       val input = RiddlParserInput(
         """domain solo {
           | type T = Integer
-          | context a {
-          |  outlet out is type T
+          | context a is {
+          |  source from is {
+          |    outlet out is type T
+          |  }
           | }
           |} """.stripMargin,td)
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
+      parseAndValidateDomain(input, shouldFailOnErrors = true) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
         messages.hasErrors mustBe false
@@ -75,13 +84,13 @@ class StreamValidatorTest extends ValidatingTest {
         """domain uno {
           | type T = Integer
           | context a {
-          |  outlet out is type T
+          |  source from is { outlet out is type T }
           |  connector c1 {
-          |    from outlet uno.a.out to inlet uno.b.in
+          |    from outlet a.from.out to inlet uno.b.to.in
           |  }
           | }
           | context b {
-          |   inlet in is type T
+          |   sink to  is { inlet in is type T }
           | }
           |} """.stripMargin,td)
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
@@ -100,10 +109,12 @@ class StreamValidatorTest extends ValidatingTest {
         """domain uno {
           | type T = Integer
           | context a {
-          |  outlet out is type T
-          |  inlet in is type T
+          |  flow through is {
+          |    inlet in is type T
+          |    outlet out is type T
+          |  }
           |  connector c1 {
-          |    from outlet a.out to inlet a.in
+          |    from outlet a.through.out to inlet uno.a.through.in
           |    option persistent
           |  }
           | }
@@ -148,7 +159,7 @@ class StreamValidatorTest extends ValidatingTest {
       )
     }
 
-    "validate Streamlet types" in { (td:TestData) =>
+    "validate Streamlet types" in { _ =>
       intercept[IllegalArgumentException] {
         Riddl.validate(
           root(

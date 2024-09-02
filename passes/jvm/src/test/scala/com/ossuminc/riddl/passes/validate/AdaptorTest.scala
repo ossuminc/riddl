@@ -33,16 +33,21 @@ class AdaptorTest extends ValidatingTest {
     "allow message actions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain ignore is { context Target is {???}  context Foo is {
-          |type ItHappened = event { abc: String described as "abc" } described as "?"
+          |type ItHappened = event { abc: String } with { described as "abc" } 
           |adaptor PaymentAdapter to context Target is {
           |  handler sendAMessage is {
           |    on event ItHappened {
           |      error "foo"
-          |    } described as "?"
-          |  } explained as "?"
-          |} explained as "?"
-          |} explained as "?"
-          |} explained as "?"
+          |      described as "?"
+          |    }
+          |    explained as "?" 
+          |  }
+          |  explained as "?"
+          |}
+          |explained as "?"
+          |}
+          |explained as "?"
+          |} 
           |""".stripMargin,
         td
       )
@@ -51,35 +56,42 @@ class AdaptorTest extends ValidatingTest {
       }
     }
 
-    "allow wrapper adaptations" in { (td: TestData) =>
+     "allow wrapper adaptations" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain ignore is {
           | context Target is {???}
           | context Foo is {
-          |  type ItWillHappen = command { abc: String described as "abc" } described as "?"
-          |  command  LetsDoIt is { bcd: String described as "abc" } described as "?"
+          |  type ItWillHappen = command { abc: String } with { described as "abc" }
+          |  command  LetsDoIt is { bcd: String with { described as "abc" } } with { described as "?" }
+          |  
           |  entity MyEntity is {
-          |    inlet commands is command LetsDoIt
+          |    sink phum is { inlet commands is command LetsDoIt }
           |  }
           |  connector only is {
-          |    from outlet Foo.PaymentAdapter.forMyEntity
-          |    to inlet Foo.MyEntity.commands
+          |    from outlet Foo.PaymentAdapter.foo.forMyEntity
+          |    to inlet Foo.MyEntity.phum.commands
           |  }
           |  adaptor PaymentAdapter to context Target is {
-          |    outlet forMyEntity is command LetsDoIt
+          |    source foo is { outlet forMyEntity is command LetsDoIt }
           |    handler sendAMessage is {
           |      on command ItWillHappen  {
           |        send command Foo.LetsDoIt to outlet forMyEntity
-          |      } described as "?"
-          |    } explained as "?"
-          |  } explained as "?"
-          | } explained as "?"
-          |} explained as "?"
+          |        described as "?"
+          |      }
+          |      explained as "?" 
+          |    }
+          |    explained as "?" 
+          |  }
+          |  explained as "?" 
+          | }
+          | explained as "?" 
+          |} 
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input) { (_, _, messages) =>
-        succeed
+      parseAndValidateDomain(input) { (domain, _, messages) =>
+        domain.isEmpty must be(false)
+        domain.contexts(1).adaptors.head.id.value must be("PaymentAdapter")
       }
     }
   }

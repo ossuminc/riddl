@@ -175,6 +175,8 @@ object Keywords {
 
   def items[u: P]: P[Unit] = keyword(Keyword.items)
 
+  def link[u: P]: P[Unit] = keyword(Keyword.link)
+
   def many[u: P]: P[Unit] = keyword(Keyword.many)
 
   def mapping[u: P]: P[Unit] = keyword(Keyword.mapping)
@@ -382,6 +384,7 @@ object Keyword {
   final val input = "input"
   final val invariant = "invariant"
   final val items = "items"
+  final val link = "link"
   final val many = "many"
   final val mapping = "mapping"
   final val merge = "merge"

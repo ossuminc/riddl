@@ -105,7 +105,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case i: Inlet =>
         associateUsage(i, resolveATypeRef(i.type_, parents))
       case o: Outlet =>
-        associateUsage(o, resolveATypeRef(o.type_, parents))
+        val resolution = resolveATypeRef(o.type_, parents)
+        associateUsage(o, resolution)
       case c: Connector =>
         associateUsage(c, resolveARef[Outlet](c.from, parents))
         associateUsage(c, resolveARef[Inlet](c.to, parents))
@@ -628,8 +629,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             case include: Include[?] =>
               candidatesFromContents(include.contents)
             case function: Function =>
-              function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++ 
-                function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++ 
+              function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
+                function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
                 function.contents.definitions
             case vital: VitalDefinition[?] =>
               vital.contents.flatMap {

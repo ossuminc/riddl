@@ -28,8 +28,7 @@ private[parsing] trait ProjectorParser {
 
   private def projectorDefinitions[u: P]: P[Seq[ProjectorContents]] = {
     P(
-      updates | typeDef | term | projectorInclude | handler(StatementsSet.ProjectorStatements) |
-        function | inlet | outlet | invariant | constant | authorRef | comment | option
+      processorDefinitionContents(StatementsSet.ProjectorStatements) | updates | projectorInclude
     ).asInstanceOf[P[ProjectorContents]]./.rep(1)
   }
 

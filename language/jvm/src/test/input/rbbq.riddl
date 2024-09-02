@@ -151,7 +151,7 @@ domain ReactiveBBQ is {
      handler ofInputs is {}
     }
   }
-   explained as {
+  explained as {
     |# brief
     | Reactive BBQ Domain Definition
     |#details

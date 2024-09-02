@@ -16,8 +16,9 @@ class RegressionTests extends ValidatingTest {
   "Regressions" should {
     "allow descriptions as a single string" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain foo is { ??? }
-          |explained as { "foo" }
+        """domain foo is {
+          |  explained as { "foo" }
+          |}  
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
@@ -27,9 +28,10 @@ class RegressionTests extends ValidatingTest {
     }
     "allow descriptions as a doc block" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain foo is { ??? }
-          |explained as {
-          |  |ladeedah
+        """domain foo is {
+          |  explained as {
+          |    |ladeedah
+          |  }
           |}
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {

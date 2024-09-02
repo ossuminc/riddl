@@ -100,8 +100,7 @@ class ContextValidationTest extends ValidatingTest {
 
     }
     "allow terms" in { (td: TestData) =>
-      val input = """term bar is briefly "imaginary line in court room"
-                    |""".stripMargin
+      val input = """term bar is "imaginary line in court room" """
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         val errors = msgs.justErrors
         // info(errors.format)
@@ -109,7 +108,7 @@ class ContextValidationTest extends ValidatingTest {
         val expected = Term(
           (2, 2, rpi),
           Identifier((2, 7, rpi), "bar"),
-          Seq(LiteralString((2, 22, rpi), "imaginary line in court room"))
+          Seq(LiteralString((2, 14, rpi), "imaginary line in court room"))
         )
         context.terms.size must be(1)
         context.terms.head must be(expected)

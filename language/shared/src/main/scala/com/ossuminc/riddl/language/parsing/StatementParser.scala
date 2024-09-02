@@ -64,7 +64,7 @@ private[parsing] trait StatementParser {
         Keywords.else_ ~ pseudoCodeBlock(set) ~ Keywords.end_
       ).?
     )./.map { case (loc, cond, thens, maybeElses) =>
-      val elses = maybeElses.getOrElse(Seq.empty[Statement])
+      val elses = maybeElses.getOrElse(Seq.empty[Statements])
       IfThenElseStatement(loc, cond, thens, elses)
     }
   }
@@ -180,9 +180,10 @@ private[parsing] trait StatementParser {
 
   def pseudoCodeBlock[u: P](set: StatementsSet): P[Seq[Statements]] = {
     P(
-      open.? ~/ (
-        undefined(Seq.empty[Statements]) | statement(set).rep(0)
-      ) ~ close.?./
+      undefined(Seq.empty[Statements]) |
+        (open ~ undefined(Seq.empty[Statements]) ~ close) |
+        (statement(set) | descriptive)./.rep(1) |
+        (open ~ (statement(set) | descriptive)./.rep(1) ~ close)
     )
   }
 }

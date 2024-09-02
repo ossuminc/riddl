@@ -6,7 +6,6 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.prettify.PrettifyPass
 import java.nio.file.Path
 
 class PrettifyCommandTest extends RunCommandSpecBase {
@@ -24,11 +23,10 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     "load prettify options" in {
       val cmd = new PrettifyCommand
       val conf = Path.of("prettify/src/test/input/prettify.conf")
-      val expected = PrettifyPass.Options(
+      val expected = PrettifyCommand.Options(
         inputFile = Some(Path.of("nada.riddl")),
         outputDir = Some(Path.of("prettify/target/prettify/")),
-        projectName = Some("Nada"),
-        singleFile = true
+        projectName = Some("Nada")
       )
       cmd.loadOptionsFrom(conf) match {
         case Left(errors) => fail(errors.format)

@@ -7,8 +7,7 @@ import fastparse.MultiLineWhitespace.*
 trait VitalDefinitionParser extends TypeParser with ReferenceParser with CommonParser {
 
   def vitalDefinitionContents[u: P]: P[OccursInVitalDefinition] =
-    P(typeDef | comment | term | authorRef | briefDescription | description)
-      .asInstanceOf[P[OccursInVitalDefinition]]
+    P(typeDef | authorRef | descriptive).asInstanceOf[P[OccursInVitalDefinition]]
   end vitalDefinitionContents
 
 }

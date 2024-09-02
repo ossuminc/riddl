@@ -14,10 +14,6 @@ passes/jvm/src/test/input/check/everything/everything.riddl(8:20):
  Inlet 'Commands' overloads Outlet 'Commands' at passes/jvm/src/test/input/check/everything/everything.riddl(7:24):
      sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
                     ^
-passes/jvm/src/test/input/check/everything/everything.riddl(6:3):
- Context 'APlant' should have a description:
-   context APlant is {
-   ^
 passes/jvm/src/test/input/check/everything/everything.riddl(17:5):
  Type 'num' should start with a capital letter:
      type num is Number             // Define num as a Number
@@ -62,9 +58,17 @@ passes/jvm/src/test/input/check/everything/everything.riddl(40:5):
  Vital definitions should have an author reference:
      entity Something is {
      ^
-passes/jvm/src/test/input/check/everything/everything.riddl(64:7):
+passes/jvm/src/test/input/check/everything/everything.riddl(64:26):
  Inlet 'SOT_In' is not connected:
-       inlet SOT_In is SomeOtherThing.ItHappened
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+                          ^
+passes/jvm/src/test/input/check/everything/everything.riddl(64:7):
+ Sink 'trashBin' should have a description:
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(64:7):
+ Vital definitions should have an author reference:
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
        ^
 passes/jvm/src/test/input/check/everything/everything.riddl(49:7):
  Vital definitions should have an author reference:
@@ -194,3 +198,11 @@ passes/jvm/src/test/input/check/everything/everything.riddl(66:7):
  State 'otherThingState' should have a description:
        state otherThingState of type Everything.StateType
        ^
+passes/jvm/src/test/input/check/everything/everything.riddl(7:5):
+ Source 'Source' should have a description:
+     source Source is { outlet Commands is DoAThing } described by "Data Source"
+     ^
+passes/jvm/src/test/input/check/everything/everything.riddl(8:5):
+ Sink 'Sink' should have a description:
+     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
+     ^

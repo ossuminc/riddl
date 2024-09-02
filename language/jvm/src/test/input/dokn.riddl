@@ -23,16 +23,23 @@ domain dokn is {
     type NoteList is reference to entity dokn.Note.Note
 
     context Company is {
+        flow events is {
+          inlet CompanyEvents_in is event dokn.Company.Company.CompanyEvent
+          outlet CompanyEvents_out is event dokn.Company.Company.CompanyEvent
+        }
         connector CompanyEvents is {
           from outlet CompanyEvents_out to inlet CompanyEvents_in
         }
-        outlet CompanyEvents_out is event dokn.Company.Company.CompanyEvent
-        inlet CompanyEvents_in is event dokn.Company.Company.CompanyEvent
 
         entity Company is {
             option event-sourced option available
 
-            type AddCompany is command { mailingAddress: Address, primaryContactName: String, primaryContactPhone: MobileNumber, primaryContactEmail: EmailAddress }
+            type AddCompany is command { 
+              mailingAddress: Address,
+              primaryContactName: String,
+              primaryContactPhone: MobileNumber,
+              primaryContactEmail: EmailAddress
+            }
             event CompanyAdded is { when: TimeStamp }
             type CompanyEvent is one of { event CompanyAdded }
 
@@ -53,8 +60,10 @@ domain dokn is {
     }
 
     context Driver is {
-        inlet Driver_in is type DriverCommands
-        outlet Driver_out is type DriverEvents
+        flow DriverMessages is {
+          inlet Driver_in is type DriverCommands
+          outlet Driver_out is type DriverEvents
+        }
 
         entity Driver is {
             option event-sourced option available
@@ -182,8 +191,7 @@ domain dokn is {
             }
         }
     }
-
-} explained as {
+  explained as {
     |The dokn domain is the starting point for a simple application which allows
     |delivery drivers to capture notes about delivery locations to create
     |efficiency for future deliveries. The main Entities within this domain are:
@@ -192,4 +200,5 @@ domain dokn is {
     |*Location - A specific geographic location to which a driver delivers to.
     |*Note - Drivers capture notes about delivering to a specific location.
     |i.e. Accepts deliveries at loading dock C. Ask for Mike (555-123-4567)
+  }
 }

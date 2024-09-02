@@ -165,9 +165,12 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
     }
   }
 
+  def descriptive[u:P]: P[Descriptives] =
+    P(briefDescription | description | comment | term).asInstanceOf[P[Descriptives]]
+    
   def withDescriptives[u: P]: P[Contents[Descriptives]] = {
     P(
-      Keywords.with_ ~ open ~ (briefDescription | description | comment | term).rep(1) ~ close
+      Keywords.with_ ~ open ~ descriptive.rep(1) ~ close
     ).?./.map {
       case Some(list: Contents[Descriptives]) =>
         list

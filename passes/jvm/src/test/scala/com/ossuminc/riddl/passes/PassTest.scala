@@ -1,17 +1,14 @@
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.utils.{TestingBasis, TestingBasisWithTestData}
+import com.ossuminc.riddl.utils.TestingBasisWithTestData
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.Accumulator
-import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Usages}
-import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsOutput}
+import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.validate.ValidationOutput
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 import scala.collection.mutable
 import java.nio.file.Path
@@ -20,14 +17,14 @@ import java.nio.file.Path
 class PassTest extends TestingBasisWithTestData {
 
   "PassOutput" must {
-    "have an empty value" in { td =>
+    "have an empty value" in { _ =>
       val mt = PassOutput.empty
       mt.messages.isEmpty mustBe true
     }
   }
 
   "PassesOutput" must {
-    "yield values with no input" in { td =>
+    "yield values with no input" in { _ =>
       val po = PassesOutput()
       po.messages mustBe empty
       po.symbols mustBe SymbolsOutput()
@@ -73,10 +70,10 @@ class PassTest extends TestingBasisWithTestData {
   }
 
   "Pass" must {
-    "validate requires method" in { td =>
+    "validate requires method" in { _ =>
       val input = PassInput(Root.empty)
       val output = PassesOutput()
-      val tp = TestPass(input, output)
+      TestPass(input, output)
       val thrown = intercept[IllegalArgumentException] {
         TestPass2(input, output)
       }
@@ -91,7 +88,6 @@ class PassTest extends TestingBasisWithTestData {
           val input = PassInput(root, CommonOptions.empty)
           val result = Pass.runThesePasses(input, Pass.standardPasses)
           if result.messages.hasErrors then fail(result.messages.justErrors.format)
-          val outputs = PassesOutput()
           val vo = Pass.runValidation(input, result.outputs)
           vo.messages.justErrors mustBe empty
     }
@@ -140,18 +136,18 @@ class PassTest extends TestingBasisWithTestData {
           val input = PassInput(result.root)
           val outputs = PassesOutput()
           val hp = TestHierarchyPass(input, outputs)
-          val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
+          Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens must be(closes)
           opens must be(55)
-          values must be(29)
-          leaves must be(23)
+          values must be(37)
+          leaves must be(20)
     }
     "traverses partial trees" in { td =>
       val input = RiddlParserInput(
         """domain foo is { context bar is {
           | /* comment */
-          | term baz is briefly "a character in a play"
+          | term baz is "a character in a play"
           |}}
           |""".stripMargin, td
       )
@@ -161,7 +157,7 @@ class PassTest extends TestingBasisWithTestData {
           val input = PassInput(result.root)
           val outputs = PassesOutput()
           val hp = TestHierarchyPass(input, outputs)
-          val out: PassOutput = Pass.runPass[PassOutput](input, outputs, hp)
+          Pass.runPass[PassOutput](input, outputs, hp)
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens must be(closes)
           opens must be(3)

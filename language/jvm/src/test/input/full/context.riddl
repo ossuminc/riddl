@@ -4,7 +4,7 @@ context other  is {
 context context is {
   by author Reid
   adaptor adaptor from context other is { ??? }
-  term term is briefly "not interesting"
+  term term is "not interesting"
   function function is { ??? }
   event event is { at: TimeStamp }
   handler handler is {

@@ -102,7 +102,7 @@ trait DefinitionValidation extends BasicValidation {
 
   def checkDescriptions(definition: Definition, contents: Contents[ContentValues]): Unit =
     definition match
-      case wd: WithDescriptions =>
+      case wd: WithDescriptives =>
         val descriptions = wd.descriptions
         if descriptions.isEmpty then
           check(
@@ -143,7 +143,6 @@ trait DefinitionValidation extends BasicValidation {
       end match
     val descriptions: Contents[Description] = 
       value match
-        case wd: WithDescriptions => wd.descriptions
         case wd: WithDescriptives => wd.descriptions
         case _ => Contents.empty 
       end match

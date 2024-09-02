@@ -69,8 +69,8 @@ class DomainValidatorTest extends ValidatingTest {
               None,
               Seq(
                 BlockDescription(
-                  (6, 18, rpi),
-                  Seq(LiteralString((6, 18, rpi), "identifying"))
+                  (6, 12, rpi),
+                  Seq(LiteralString((6, 25, rpi), "identifying"))
                 )
               )
             )

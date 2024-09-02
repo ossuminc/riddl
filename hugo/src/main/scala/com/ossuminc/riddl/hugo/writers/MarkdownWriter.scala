@@ -6,7 +6,6 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
@@ -121,36 +120,33 @@ trait MarkdownWriter
   def emitTerms(terms: Seq[Term]): Unit = {
     list(
       "Terms",
-      terms.map(t => (t.id.format, t.brief.map(_.brief.s).getOrElse("{no brief}"), t.description))
+      terms.map(t => (t.id.format, t.briefString, t.descriptions.headOption.getOrElse("No description")))
     )
   }
 
   protected def emitFields(fields: Seq[Field]): Unit = {
     list(fields.map { field =>
-      (field.id.format, field.typeEx.format, field.brief, field.description)
+      (field.id.format, field.typeEx.format, field.briefString, field.descriptionString)
     })
   }
 
   private def toBriefString(definition: Definition): String =
     definition match
-      case wab: WithABrief if wab.brief.nonEmpty  => wab.brief.map(b => b.brief.s).get
-      case wbs: WithBriefs if wbs.briefs.nonEmpty => wbs.briefs.map(_.brief.s).mkString(" ")
+      case wab: WithDescriptives if wab.briefs.nonEmpty  => wab.briefString
       case _                                      => "Brief description missing."
     end match
   end toBriefString
 
   private def emitBriefParagraph(definition: Definition): Unit =
     definition match
-      case wab: WithABrief if wab.brief.nonEmpty  => wab.brief.foreach(b => p(italic(b.brief.s)))
-      case wbs: WithBriefs if wbs.briefs.nonEmpty => wbs.briefs.map(_.brief).foreach(b => p(italic(b.s)))
+      case wab: WithDescriptives if wab.briefs.nonEmpty  => wab.briefs.foreach(b => p(italic(b.brief.s)))
       case _                                      => p("Brief description missing.")
     end match
   end emitBriefParagraph
 
   private def emitDescriptionParagraphs(definition: Definition): Unit =
     definition match
-      case wad: WithADescription => wad.description.foreach(d => p(d.lines.mkString("\n")))
-      case wds: WithDescriptions => wds.descriptions.foreach(d => p(d.lines.mkString("\n")))
+      case wad: WithDescriptives => wad.descriptions.foreach(d => p(d.lines.mkString("\n")))
       case _                     => ()
     end match
   end emitDescriptionParagraphs
@@ -284,8 +280,7 @@ trait MarkdownWriter
   ): this.type = {
     emitVitalDefTable(definition, parents)
     definition match
-      case wad: WithADescription => emitDescriptions(wad.description.toSeq, level)
-      case wds: WithDescriptions => emitDescriptions(wds.descriptions, level)
+      case wad: WithDescriptives => emitDescriptions(wad.descriptions, level)
       case _                     => this
   }
 
@@ -382,7 +377,6 @@ trait MarkdownWriter
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Parents): this.type = {
     val data = agg.contents.map {
       case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
-      case _                 => ("", "")
     }
     list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
@@ -423,12 +417,7 @@ trait MarkdownWriter
         p(s"To:\n: $to")
       case en: Enumeration =>
         heading("Enumeration Of", headLevel)
-        val data = en.enumerators.map { (e: Enumerator) =>
-          val docBlock = e.brief.map(_.brief.s).toSeq ++
-            e.description.map(_.lines.map(_.s)).toSeq.flatten
-          (e.id.format, docBlock)
-        }
-        list(data)
+        list(en.enumerators.map(_.id.format))
       case Pattern(_, strs) =>
         heading("Pattern Of", headLevel)
         list(strs.map("`" + _.s + "`"))
@@ -513,7 +502,7 @@ trait MarkdownWriter
       invariants.foreach { invariant =>
         h3(invariant.id.format)
         list(invariant.condition.map(_.format).toSeq)
-        emitDescriptions(invariant.description.toSeq, level = 4)
+        emitDescriptions(invariant.descriptions, level = 4)
       }
     }
     this

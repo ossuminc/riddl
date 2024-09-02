@@ -148,14 +148,15 @@ domain ReactiveBBQ is {
      handler ofInputs is {}
     }
   }
-} explained as {
-  |# brief
-  | Reactive BBQ Domain Definition
-  |#details
-  |This domain definition is designed to be instructive in the RIDDL language.
-  |It uses the case study from the Lightbend Reactive Architecture course as
-  |the basis for defining the domain. The course uses a set of interviews with
-  |Reactive BBQ employees to define the requirements. This domain specification
-  |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+   explained as {
+    |# brief
+    | Reactive BBQ Domain Definition
+    |#details
+    |This domain definition is designed to be instructive in the RIDDL language.
+    |It uses the case study from the Lightbend Reactive Architecture course as
+    |the basis for defining the domain. The course uses a set of interviews with
+    |Reactive BBQ employees to define the requirements. This domain specification
+    |is a possible result of analyzing that domain: the Reactive BBQ restaurant.
+  }
 }
 // #end-of-domain

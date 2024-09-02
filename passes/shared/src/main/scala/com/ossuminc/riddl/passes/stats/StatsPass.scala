@@ -161,20 +161,17 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
             descriptionLines = {
               var lines: Int = 0
               definition match
-                case wb: WithBriefs => lines = lines + { if wb.briefs.nonEmpty then wb.briefs.size else 0 }
-                case wd: WithDescriptives => lines = lines + { if wd.briefs.nonEmpty then wd.briefs.size else 0 }
-                case _ => ()
-              end match   
-              definition match
-                case wd: WithDescriptives => lines = lines + wd.descriptions.map(_.lines.size).sum
-                case wd: WithDescriptions => lines = lines + wd.descriptions.map(_.lines.size).sum
+                case wb: WithDescriptives =>
+                  lines = lines + { wb.briefs.size }
+                  lines = lines + { wb.descriptions.foldLeft(0) { (sum, next) =>
+                    next match
+                      case BlockDescription(_, lines) => sum + lines.size 
+                      case _: URLDescription => sum + 1
+                      case _: Description => sum 
+                    end match
+                  }}
                 case _ => ()
               end match
-              definition.contents.filter[Description].foreach {
-                case bd: BlockDescription => lines += bd.lines.size
-                case _: URLDescription => lines += 1
-                case _ => ()
-              }
               lines
             },
             numSpecifications = specs,
@@ -345,7 +342,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     value match
       case _: WithTypes => result += 1
       case _ => ()
-    end match  
+    end match
     value match
       case _: WithAuthors => result += 1
       case _ => ()
@@ -356,13 +353,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     end match
     value match
       case _: WithDescriptives => result += 1
-      case _: WithDescriptions => result += 1
       case _ => ()
     end match
-    value match
-      case _: WithBriefs => result += 1
-      case _ => ()
-    end match  
     result
   end definitionCount
 

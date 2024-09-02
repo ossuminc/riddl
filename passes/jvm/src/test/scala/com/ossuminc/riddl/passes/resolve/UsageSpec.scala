@@ -92,12 +92,16 @@ class UsageSpec extends ParsingTest {
           |      state AState of fooBar.fields
           |      handler fooBarHandlerForAState is {
           |        on command ACommand {
-          |          ???
-          |        } described as "inconsequential"
-          |      } described as "inconsequential"
-          |    } described as "unused"
-          |  } described as "inconsequential"
-          |} described as "inconsequential"
+          |          described as "inconsequential"
+          |        }
+          |        described as "inconsequential" 
+          |      }
+          |      described as "unused" 
+          |    }
+          |    described as "inconsequential" 
+          |  }
+          |  described as "inconsequential" 
+          |} 
           |""".stripMargin,
         td
       )
@@ -118,7 +122,8 @@ class UsageSpec extends ParsingTest {
       val input = RiddlParserInput(
         """domain foo {
           |  type Bar = Number described as "consequential"
-          |} described as "inconsequential"
+          |  described as "inconsequential"
+          |} 
           |""".stripMargin,
         td
       )

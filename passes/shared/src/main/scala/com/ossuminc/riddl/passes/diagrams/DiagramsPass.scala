@@ -13,7 +13,7 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
 
-import scala.collection.mutable
+import scala.collection.{mutable,immutable}
 import scala.scalajs.js.annotation.*
 
 /** The information needed to generate a Data Flow Diagram. DFDs are generated for each
@@ -108,7 +108,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _ => ()
   }
 
-  private def makeRelationships(context: Context, root: Root): Seq[ContextRelationship] = {
+  private def makeRelationships(context: Context, root: Root): immutable.Seq[ContextRelationship] = {
     val domains = AST.getAllDomains(root)
     val applications = domains.flatMap(AST.getApplications)
     val allProcessors = findProcessors(context) ++ applications
@@ -120,7 +120,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     }
   }
 
-  private def findProcessors(processor: Processor[?]): Seq[Processor[?]] = {
+  private def findProcessors(processor: Processor[?]): immutable.Seq[Processor[?]] = {
     val containedProcessors = processor match {
       case a: Adaptor     => a.contents.processors
       case a: Application => a.contents.processors
@@ -318,6 +318,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
           case _: InteractionContainer | _: Interaction | _: Comment => Seq.empty
           case _: BriefDescription => Seq.empty
           case _: Description => Seq.empty
+          case _: Term => Seq.empty
         }
         .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq

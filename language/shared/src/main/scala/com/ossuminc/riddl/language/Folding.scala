@@ -75,7 +75,10 @@ object Folding {
     parents: ParentStack
   )(f: (S, CT | Container[CT], Parents) => S ): S = {
     val initial = f(zeroValue, top, parents.toParents)
-    if !top.isAnonymous then parents.push(top.asInstanceOf[Parent])
+    top match
+      case p: Parent =>  parents.push(p)
+      case _ => ()
+    end match  
     try {
       top.contents.foldLeft(initial) { (next, value) =>
         value match {
@@ -84,7 +87,10 @@ object Folding {
         }
       }
     } finally {
-      if !top.isAnonymous then parents.pop()
+      top match
+        case p: Parent => parents.pop()
+        case _ => ()
+      end match
     }
   }
 }

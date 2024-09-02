@@ -111,7 +111,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(term.id.format)
     add(" is ")
     add(term.definition)
-    emitDescriptives(term.descriptives)
+    emitDescriptives(term.contents)
   end emitTerm
 
   def emitString(s: String_): this.type = {
@@ -129,7 +129,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(" is ")
     add(constant.value.format)
     nl
-    emitDescriptives(constant.descriptives)  
+    emitDescriptives(constant.contents)  
   end emitConstant
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
@@ -155,7 +155,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     this
       .add(s"${field.id.value}: ")
       .emitTypeExpression(field.typeEx)
-      .emitDescriptives(field.descriptives)
+      .emitDescriptives(field.contents)
     this
   end emitField
 

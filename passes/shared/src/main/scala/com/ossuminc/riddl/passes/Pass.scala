@@ -258,7 +258,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
       case branch: BranchDefinition[?] =>
         process(branch, parents)
         parents.push(branch)
-        branch.contents.foreach { value => traverse(value, parents) }
+        branch.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
         parents.pop()
       case value: RiddlValue =>
         // NOTE: everything else is just a non-definition non-container
@@ -495,7 +495,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Root                  => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | 
+          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
          _: Definition => () // not  containers
     end match
   end closeContainer
@@ -521,21 +521,21 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
 
   protected final def processValue(value: RiddlValue, parents: Parents): Unit =
     value match
-      case comment: Comment         => 
+      case comment: Comment         =>
         visitor.doComment(comment)
-      case authorRef: AuthorRef     => 
+      case authorRef: AuthorRef     =>
         visitor.doAuthorRef(authorRef)
-      case brief: BriefDescription  => 
+      case brief: BriefDescription  =>
         visitor.doBriefDescription(brief)
-      case description: Description => 
+      case description: Description =>
         visitor.doDescription(description)
-      case statement: Statement     => 
+      case statement: Statement     =>
         visitor.doStatement(statement)
-      case interaction: Interaction => 
+      case interaction: Interaction =>
         visitor.doInteraction(interaction)
-      case optionValue: OptionValue => 
+      case optionValue: OptionValue =>
         visitor.doOptionValue(optionValue)
-      case enumerator: Enumerator   => 
+      case enumerator: Enumerator   =>
         visitor.doEnumerator(enumerator)
       case _                        => ()
     end match

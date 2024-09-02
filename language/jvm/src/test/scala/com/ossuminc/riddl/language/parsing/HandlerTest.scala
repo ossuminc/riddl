@@ -113,11 +113,13 @@ class HandlerTest extends ParsingTest {
           |  state DistributionState of ArbitraryState
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
-          |      "if  ==(field ContainerNestedInContainer.id, parentContainer) then"
+          |      if  "==(field ContainerNestedInContainer.id, parentContainer)" then
           |        set field DistributionItem.lastKnownWOrkCenter to "field ContainerNestedInContainer.workCenter"
-          |      "end"
-          |       
-          |    } with {explained as { "Helps update this item's location" }}
+          |      else
+          |        "nothing required"
+          |      end
+          |      explained as { "Helps update this item's location" }   
+          |    }
           |  }
           |}
           |""".stripMargin,
@@ -144,7 +146,8 @@ class HandlerTest extends ParsingTest {
           |      "if ==(field ContainerNestedInContainer.id,parentContainer) then"
           |        set field DistributionItem.workCenter to "lastKnownWorkCenter"
           |      "end"
-          |    } with { explained as { "Helps update this item's location" } }
+          |      explained as { "Helps update this item's location" } 
+          |    }
           |    on other is { ??? }
           |  }
           |  handler FromDistributionItem  is {
