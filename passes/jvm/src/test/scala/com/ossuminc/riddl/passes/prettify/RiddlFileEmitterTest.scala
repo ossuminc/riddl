@@ -1,8 +1,9 @@
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.passes.prettify.RiddlFileEmitter
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 

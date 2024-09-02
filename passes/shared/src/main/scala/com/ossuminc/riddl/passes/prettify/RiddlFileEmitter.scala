@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
@@ -69,16 +69,16 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     }
     this
   }
-  
+
   def emitBriefDescription(brief: BriefDescription): this.type =
     addLine(brief.format)
   end emitBriefDescription
-  
+
   def emitBriefs(briefs: Seq[BriefDescription]): this.type = {
     briefs.foreach { brief => emitBriefDescription(brief) }
     this
   }
-  
+
   def emitDescription(description: Description): this.type =
     description match
       case bd: BlockDescription =>
@@ -98,9 +98,9 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     end match
     this
   end emitDescription
-   
+
   def emitDescriptions(descriptions: Seq[Description]): this.type =
-    descriptions.foreach { (desc: Description) => 
+    descriptions.foreach { (desc: Description) =>
       emitDescription(desc)
     }
     this
@@ -122,14 +122,14 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case (None, None)       => this.add(s"String")
     }
   }
-  
+
   def emitConstant(constant: Constant): this.type =
     addIndent("constant ")
     add(constant.id.format)
     add(" is ")
     add(constant.value.format)
     nl
-    emitDescriptives(constant.contents)  
+    emitDescriptives(constant.contents)
   end emitConstant
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {

@@ -353,26 +353,29 @@ case class ValidationPass(
 
       (maybeOutlet, maybeInlet) match
         case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
-          resolvePath[Type](outlet.type_.pathId, parents) match
-            case None =>
-              messages.addError(outlet.loc, s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}")
-            case outletType@ Some(_: Type) =>
-              resolvePath[Type](inlet.type_.pathId, parents) match
-                case None =>
-                  messages.addError(inlet.loc, s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}")
-                case inletType@ Some(_: Type) =>
-                  if !areSameType(inletType, outletType) then
-                    messages.addError(
-                      inlet.loc,
-                      s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
-                        s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} " +
-                        s"which are not the same types"
-                    )
-                  end if
-              end match
-          end match
-        case _ =>
-         // one of the two didn't resolve, already handled above.
+          val outletParents: Parents = this.symbols.parentsOf(outlet) 
+          val outType = resolvePath[Type](outlet.type_.pathId, outletParents)
+          val inletParents: Parents = this.symbols.parentsOf(inlet)
+          val inType = resolvePath[Type](inlet.type_.pathId, inletParents)
+          (outType, inType) match
+            case (Some(outletType), Some(inletType)) =>
+              if !areSameType(Some(inletType), Some(outletType)) then
+                messages.addError(
+                  inlet.loc,
+                  s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
+                    s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} " +
+                    s"which are not the same types"
+                )
+              end if
+            case _ => 
+              if outType.isEmpty then
+                messages.addError(outlet.loc, s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}")
+              end if
+              if inType.isEmpty then
+                messages.addError(inlet.loc, s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}")
+              end if
+          end match  
+        case _ => // one of the two didn't resolve, already handled above.
       end match
     end if
   end validateConnector

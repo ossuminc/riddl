@@ -370,35 +370,35 @@ object AST:
     private val attachments: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
 
     /** Put an arbitrary named value in this AST node.
-     *
-     * @param name
-     * The name by which the arbitrary value can be retrieved
-     * @param value
-     * A value of Any type
-     * @tparam T
-     * The actual type of the value which must also be used upon retrieval
-     */
+      *
+      * @param name
+      *   The name by which the arbitrary value can be retrieved
+      * @param value
+      *   A value of Any type
+      * @tparam T
+      *   The actual type of the value which must also be used upon retrieval
+      */
     def put[T <: Any](name: String, value: T): Unit = attachments.put(name, value)
 
     /** Get an arbitrary named value from this AST Node
-     *
-     * @param name
-     * The name of the atribrary value to be retrieved
-     * @tparam T
-     * The type of the value to be retrieved to whic the value will be cast. A failure may occur if the wrong T value
-     * is used
-     * @return
-     * The T value requests, optionally. None will be returned if the value is not in the attachments map
-     */
+      *
+      * @param name
+      *   The name of the atribrary value to be retrieved
+      * @tparam T
+      *   The type of the value to be retrieved to whic the value will be cast. A failure may occur if the wrong T value
+      *   is used
+      * @return
+      *   The T value requests, optionally. None will be returned if the value is not in the attachments map
+      */
     def get[T <: Any](name: String): Option[T] = attachments.get(name).map(_.asInstanceOf[T])
 
     /** Determine if an arbitrary named value is associated with this AST Node
-     *
-     * @param name
-     * The name of the atribrary value to be retrieved
-     * @return
-     * True if the value exists, false otherwise
-     */
+      *
+      * @param name
+      *   The name of the atribrary value to be retrieved
+      * @return
+      *   True if the value exists, false otherwise
+      */
     def has(name: String): Boolean = attachments.isDefinedAt(name)
   end WithAttachments
 
@@ -2801,10 +2801,10 @@ object AST:
     *   One of the RepositorySchemaKinds for a general sense of the repository intention
     * @param data
     *   A list of the named primary data nodes (tables, vectors, vertices)
-    * @param connectors
+    * @param links
     *   A list of named relations between primary data nodes
     * @param indices
-    *   A list of fields in the ((data)) or ((connectors) that are considered indexed for faster retrieval
+    *   A list of fields in the ((data)) or ((links) that are considered indexed for faster retrieval
     */
   @JSExportTopLevel("Schema")
   case class Schema(
@@ -3004,17 +3004,15 @@ object AST:
     *   The origin Outlet of the connector
     * @param to
     *   THe destination Inlet of the connector
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the connector
+    * @param contents
+    *   The descriptives for this Connector
     */
   @JSExportTopLevel("Connector")
   case class Connector(
     loc: At,
     id: Identifier,
-    from: OutletRef = OutletRef.empty,
-    to: InletRef = InletRef.empty,
+    from: OutletRef,
+    to: InletRef,
     options: Seq[OptionValue] = Seq.empty[OptionValue],
     contents: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition {
@@ -3727,7 +3725,8 @@ object AST:
     putOut: TypeRef | ConstantRef | LiteralString,
     contents: Contents[OccursInOutput] = Seq.empty[OccursInOutput]
   ) extends BranchDefinition[OccursInOutput]
-      with WithOutputs with WithDescriptives {
+      with WithOutputs
+      with WithDescriptives {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 
@@ -3766,7 +3765,8 @@ object AST:
     takeIn: TypeRef,
     contents: Contents[OccursInInput] = Seq.empty[OccursInInput]
   ) extends BranchDefinition[OccursInInput]
-      with WithInputs with WithDescriptives {
+      with WithInputs
+      with WithDescriptives {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 

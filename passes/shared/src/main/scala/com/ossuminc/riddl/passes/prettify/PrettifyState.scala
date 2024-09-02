@@ -4,11 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.utils.URL
 import scala.collection.mutable
+import scala.scalajs.js.annotation.{JSExportTopLevel, JSExport}
 
+
+@JSExportTopLevel("PrettifyState")
 case class PrettifyState(flatten: Boolean = false, topFile: String = "nada", outDir: String = "nada"):
 
   def filesAsString: String = {
@@ -33,8 +36,8 @@ case class PrettifyState(flatten: Boolean = false, topFile: String = "nada", out
   def toDestination(url: URL): URL = {
     URL(url.scheme, url.authority, outDir, url.path)
   }
-  def numFiles: Int = files.length 
-  
+  def numFiles: Int = files.length
+
   private val files: mutable.ListBuffer[RiddlFileEmitter] = mutable.ListBuffer.empty[RiddlFileEmitter]
 
   private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack

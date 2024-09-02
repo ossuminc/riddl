@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.language.{CommonOptions, RiddlFilesTestBase}
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
+import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
 import org.apache.commons.io.FileUtils
 import org.scalatest.{Assertion, TestData}

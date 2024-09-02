@@ -1,6 +1,5 @@
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
-import com.ossuminc.riddl.command.{PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
@@ -8,24 +7,28 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.utils.URL
 
+import scala.scalajs.js.annotation.{JSExportTopLevel,JSExport}
+
+@JSExportTopLevel("PrettifyPass$")
 object PrettifyPass extends PassInfo[PrettifyPass.Options]:
   val name: String = "prettify"
   def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator =
     (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, options)
   end creator
-  
+
   case class Options(flatten: Boolean = false) extends PassOptions
 end PrettifyPass
 
+@JSExportTopLevel("PrettifyOutput")
 case class PrettifyOutput(
   root: Root = Root.empty,
   messages: Messages = empty,
-  state: PrettifyState
+  state: PrettifyState = PrettifyState()
 ) extends PassOutput
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
+@JSExportTopLevel("PrettifyPass")
 class PrettifyPass(
   input: PassInput,
   outputs: PassesOutput,
