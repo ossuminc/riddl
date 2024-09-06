@@ -222,7 +222,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Right(root) =>
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
-            fail(errors.format)
+            fail(errors.justErrors.format)
           case Right(pr) =>
             validation(root, pr)
         }

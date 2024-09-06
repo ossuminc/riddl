@@ -63,7 +63,7 @@ case class GlossaryPass(
     val brief: Option[String] =
       d match
         case dwb: WithDescriptives => 
-          val content = dwb.briefs.map(_.brief.s).mkString("<br/>")
+          val content = dwb.briefString
           if content.isEmpty then None else Some(content)
         case _ => None
     val entry = GlossaryEntry(

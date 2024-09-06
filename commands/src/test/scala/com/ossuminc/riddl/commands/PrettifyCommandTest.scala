@@ -22,10 +22,10 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     }
     "load prettify options" in {
       val cmd = new PrettifyCommand
-      val conf = Path.of("prettify/src/test/input/prettify.conf")
+      val conf = Path.of("commands/src/test/input/prettify.conf")
       val expected = PrettifyCommand.Options(
         inputFile = Some(Path.of("nada.riddl")),
-        outputDir = Some(Path.of("prettify/target/prettify/")),
+        outputDir = Some(Path.of("commands/target/prettify/")),
         projectName = Some("Nada")
       )
       cmd.loadOptionsFrom(conf) match {

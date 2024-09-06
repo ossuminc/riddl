@@ -132,15 +132,15 @@ trait MarkdownWriter
 
   private def toBriefString(definition: Definition): String =
     definition match
-      case wab: WithDescriptives if wab.briefs.nonEmpty  => wab.briefString
-      case _                                      => "Brief description missing."
+      case wab: WithDescriptives => wab.briefString
+      case _                     => "Brief description missing."
     end match
   end toBriefString
 
   private def emitBriefParagraph(definition: Definition): Unit =
     definition match
-      case wab: WithDescriptives if wab.briefs.nonEmpty  => wab.briefs.foreach(b => p(italic(b.brief.s)))
-      case _                                      => p("Brief description missing.")
+      case wab: WithDescriptives => p(italic(wab.briefString))
+      case _                     => p("Brief description missing.")
     end match
   end emitBriefParagraph
 
@@ -558,7 +558,6 @@ trait MarkdownWriter
     if processor.functions.nonEmpty then emitFunctions(processor.functions, parents)
     if processor.invariants.nonEmpty then emitInvariants(processor.invariants)
     if processor.handlers.nonEmpty then emitHandlers(processor.handlers, parents)
-    if processor.inlets.nonEmpty then emitInlets(processor.inlets, parents)
-    if processor.outlets.nonEmpty then emitOutlets(processor.outlets, parents)
+    if processor.streamlets.nonEmpty then processor.streamlets.foreach(emitStreamlet(_, parents))
   }
 }

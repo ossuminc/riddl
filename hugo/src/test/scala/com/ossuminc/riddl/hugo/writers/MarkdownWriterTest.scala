@@ -27,11 +27,11 @@ class MarkdownWriterTest extends HugoTestBase {
       val input = RiddlParserInput(
         """domain TestDomain {
           |  author is { name="Reid Spencer" email="reid@ossuminc.com" }
-          |  type MyString is String described as "Just a renamed string"
-          |} brief "Just For Testing" described as {
+          |  type MyString is String with { described as "Just a renamed string" }
+          |} with { brief "Just For Testing" described as {
           ||A test domain for ensuring that documentation for domains is
           ||generated sufficiently.
-          |}
+          |} }
           |""".stripMargin,td)
       parseTopLevelDomains(input) match {
         case Left(errors) =>
@@ -96,7 +96,7 @@ class MarkdownWriterTest extends HugoTestBase {
               |#### Type 'MyString'
               || Item | Value |
               || :---: | :---  |
-              || _Briefly_ | Brief description missing. |
+              || _Briefly_ | No brief description. |
               || _Definition Path_ | TestDomain.Root.MyString |
               || _View Source Link_ | [empty(3:3)]() |
               || _Used By_ | None |
@@ -161,10 +161,10 @@ class MarkdownWriterTest extends HugoTestBase {
       val input: String =
         """domain substitutions {
           |  context referenced is { ??? }
-          |} described as {
+          |} with { description  {
           | | This substitutions domain contains context substitutions.referenced
           | | which maps to https://www.merriam-webster.com/
-          |}
+          |} }
           |""".stripMargin
       val (passesResult: PassesResult, root: Root, mdw: MarkdownWriter) = makeMDWFor(input)
       val domain = root.domains.head

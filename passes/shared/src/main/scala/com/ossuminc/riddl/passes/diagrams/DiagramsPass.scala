@@ -152,7 +152,9 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case e: Entity      => makeHandlerRelationships(context, e.handlers)
       case _: Projector   => Seq.empty[ContextRelationship]
       case _: Repository  => Seq.empty[ContextRelationship]
-      case _: Streamlet   => Seq.empty[ContextRelationship]
+      case s: Streamlet   => 
+        makeInletRelationships(context, s.inlets, s)
+        makeOutletRelationships(context, s.outlets, s)
     }
     val result = rel1 ++ rel2 ++ rel3 ++ rel4 ++ rel5 ++ rel6
     result.distinct
@@ -183,8 +185,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Parent): Seq[ContextRelationship] = {
     for {
       i <- inlets
-      r = i.type_
-      t <- this.refMap.definitionOf[Type](r, parent)
+      t = i.type_
+      t <- this.refMap.definitionOf[Type](t, parent)
       relationship <- inferRelationship(context, t)
     } yield {
       relationship
@@ -278,7 +280,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
             case a: Adaptor =>
               refMap.definitionOf[Context](a.context, a) match {
                 case Some(foreignContext) =>
-                  if foreignContext != context then Some(foreignContext -> s"adaptation ${a.direction.format}")
+                  if foreignContext != context then Some(foreignContext -> s"Adaptation ${a.direction.format}")
                   else None
                 case None => None
               }
@@ -287,6 +289,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
             case f: Field        => Some(foreignContext -> s"Sets ${f.identify} in")
             case i: Inlet        => Some(foreignContext -> s"Sends to ${i.identify} in")
             case o: Outlet       => Some(foreignContext -> s"Takes from ${o.identify} in")
+            case s: Streamlet    => Some(foreignContext -> s"Interacts with ${s.identify} in")
             case p: Processor[?] => Some(foreignContext -> s"Tells to ${p.identify} in")
             case _               => None
           }
