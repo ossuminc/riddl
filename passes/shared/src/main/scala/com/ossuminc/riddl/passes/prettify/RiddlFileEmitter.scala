@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.utils.FileBuilder
 
-/** Unit Tests For RiddlFileEmitter */
+/** Generates RIDDL in textual format based on the AST */
 case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   def add(strings: Seq[LiteralString]): this.type = {
@@ -222,7 +222,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   }
 
   private def emitMessageType(mt: AggregateUseCaseTypeExpression): this.type = {
-    this.add(mt.usecase.useCase.toLowerCase).add(" ").emitFields(mt.fields)
+    this.add(" ").emitFields(mt.fields)
   }
 
   private def emitMessageRef(mr: MessageRef): this.type = {
@@ -242,16 +242,14 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case graph: Graph                    => emitGraph(graph)
       case table: Table                    => emitTable(table)
       case replica: Replica                => emitReplica(replica)
-      case RangeType(_, min, max)          => this.add(s"range($min,$max) ")
-      case Decimal(_, whl, frac)           => this.add(s"Decimal($whl,$frac)")
-      case EntityReferenceTypeExpression(_, er) =>
-        this
-          .add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
+      case RangeType(_, min, max)          => add(s"range($min,$max) ")
+      case Decimal(_, whl, frac)           => add(s"Decimal($whl,$frac)")
+      case EntityReferenceTypeExpression(_, er) => add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
       case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
-      case Optional(_, typex)   => this.emitTypeExpression(typex).add("?")
-      case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
-      case OneOrMore(_, typex)  => this.emitTypeExpression(typex).add("+")
+      case Optional(_, typex)   => emitTypeExpression(typex).add("?")
+      case ZeroOrMore(_, typex) => emitTypeExpression(typex).add("*")
+      case OneOrMore(_, typex)  => emitTypeExpression(typex).add("+")
       case SpecificRange(_, typex, n, x) =>
         emitTypeExpression(typex).add("{")
         add(n.toString).add(",")

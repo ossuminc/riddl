@@ -17,15 +17,15 @@ class FoldingTest extends ParsingTest {
     """domain one is {
       |  context one is {
       |    connector a is from outlet foo to inlet bar
-      |    term whomprat is { "a 2m long rat on Tatooine" }
       |    flow b is {
       |      inlet b_in is String
       |      outlet b_out is Number
       |    }
+      |  } with {
+      |    term whomprat is { "a 2m long rat on Tatooine" }
       |  }
       |  // context one is { ??? }
       |  context two is {
-      |    term ForcePush is { "an ability of the Jedi" }
       |    function foo is {
       |       requires { a: Integer, b: String }
       |       returns { ??? }
@@ -45,6 +45,8 @@ class FoldingTest extends ParsingTest {
       |      invariant one is ???
       |    }
       |    adaptor one to context over.consumption is { ??? }
+      |  } with {
+      |    term ForcePush is { "an ability of the Jedi" }
       |  }
       |  type AString = String
       |}
@@ -57,13 +59,11 @@ class FoldingTest extends ParsingTest {
     List("Root", "Domain 'one'"),
     List("Root", "Domain 'one'", "Context 'one'"),
     List("Root", "Domain 'one'", "Context 'one'", "Connector 'a'"),
-    List("Root", "Domain 'one'", "Context 'one'", "Term 'whomprat'"),
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'"),
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Inlet 'b_in'"),
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Outlet 'b_out'"),
-    List("Root", "Domain 'one'", "LineComment(empty(10:3),context one is { ??? })"),
+    List("Root", "Domain 'one'", "LineComment(empty(11:3),context one is { ??? })"),
     List("Root", "Domain 'one'", "Context 'two'"),
-    List("Root", "Domain 'one'", "Context 'two'", "Term 'ForcePush'"),
     List("Root", "Domain 'one'", "Context 'two'", "Function 'foo'"),
     List("Root", "Domain 'one'", "Context 'two'", "Type 'oneState'"),
     List("Root", "Domain 'one'", "Context 'two'", "Entity 'one'"),
@@ -97,7 +97,7 @@ class FoldingTest extends ParsingTest {
                 case rv: RiddlValue => track :+ (previous :+ rv.toString)
               }
           }
-          val expectedCount = 25
+          val expectedCount = 23
           result.length must be(expectedCount)
           result mustBe expectedResult
       end match

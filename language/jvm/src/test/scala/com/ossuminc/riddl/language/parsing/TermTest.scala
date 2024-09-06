@@ -13,15 +13,17 @@ import org.scalatest.TestData
 class TermTest extends ParsingTest {
 
   "Term" should {
-    "do something" in { (td:TestData) =>
+    "be accepted in domain" in { (td:TestData) =>
       val input = RiddlParserInput(
         """domain foo {
-          |  term one is { "uno" }
           |  context bar is {
-          |    term two is { "dos" }
           |    entity foo is { ??? }
           |  }
+          |} with {
+          |  term one is "uno"
+          |  term two is "dos" 
           |}""".stripMargin,td)
+      
       parseTopLevelDomain(input, identity) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -41,10 +43,10 @@ class TermTest extends ParsingTest {
             Seq(LiteralString(4 -> 30, "dos"))
           )
           val result: Finder[RiddlValue]#DefWithParents[WithIdentifier]  =  finder.findEmpty
-          result.size mustBe 3
+          result.size mustBe 1
           result.head match {
             case (entity: WithIdentifier,_) =>
-              entity.id.value mustBe "one"
+              entity.id.value mustBe "foo"
           }
       }
     }

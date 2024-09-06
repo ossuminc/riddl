@@ -6,9 +6,9 @@ domain Everything is {
   context APlant is {
     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
-    connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands with {
-      explained as "A Channel"
-    }
+    connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands with { explained as "A Channel"}
+  } with {
+    explained as "A Plant"
   }
 
   type StateType is { someField1: SomeType }

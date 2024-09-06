@@ -38,4 +38,6 @@ domain ignore1 is {
   } with {
     described as "just for testing a saga"
   }
+} with {
+  described by "ignore me"
 }
