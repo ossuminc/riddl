@@ -684,7 +684,7 @@ object AST:
     lazy val cases: Contents[UseCase] = contents.filter[UseCase]
   end WithUseCases
 
-  /** Base trait to use in any [[Definition] that can define [[ShownBy]]s */
+  /** Base trait to use in any [[Definition]] that can define [[ShownBy]]s */
   sealed trait WithShownBy extends Container[ContentValues]:
 
     /** A lazily constructed [[Seq]] of [[ShownBy]] filtered from the contents */
@@ -3607,6 +3607,12 @@ object AST:
     override def isEmpty: Boolean = loc.isEmpty && user.isEmpty && capability.isEmpty && benefit.isEmpty
   }
 
+  /** An element of a Use Case that links it to an external resource
+   * @param loc
+   *   The location at which the ShownBy occurs
+   * @param urls
+   *   The list of URLs by which the Use Case is shown
+   */
   @JSExportTopLevel("ShownBy")
   case class ShownBy(
     loc: At = At.empty,
