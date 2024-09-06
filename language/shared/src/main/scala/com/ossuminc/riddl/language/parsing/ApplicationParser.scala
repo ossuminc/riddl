@@ -23,7 +23,7 @@ private[parsing] trait ApplicationParser {
 
   private def groupDefinitions[u: P]: P[Seq[OccursInGroup]] = {
     P(
-      group | containedGroup | shownBy | output | appInput | comment | description | briefDescription
+      group | containedGroup | shownBy | output | appInput | comment
     ).asInstanceOf[P[OccursInGroup]].rep(1)
   }
 
@@ -31,9 +31,9 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
-        close
-    ).map { case (loc, alias, id, contents) =>
-      Group(loc, alias, id, contents)
+        close ~ withDescriptives
+    ).map { case (loc, alias, id, contents, descriptives) =>
+      Group(loc, alias, id, contents, descriptives)
     }
   }
 
@@ -44,14 +44,10 @@ private[parsing] trait ApplicationParser {
       )
       .!
   }
-  
 
   private def outputDefinitions[u: P]: P[Seq[OccursInOutput]] = {
     P(
-      is ~ open ~
-        (undefined(Seq.empty[OccursInOutput]) |
-          (comment | briefDescription | description | term | output ).rep(1)) ~
-        close
+      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (output | typeRef).rep(1)) ~ close
     ).?.map {
       case Some(definitions: Seq[OccursInOutput]) => definitions
       case None                                  => Seq.empty[OccursInOutput]
@@ -61,15 +57,15 @@ private[parsing] trait ApplicationParser {
   private def output[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/
-        (literalString | constantRef | typeRef) ~/ outputDefinitions
-    ).map { case (loc, nounAlias, id, verbAlias, putOut, contents) =>
+        (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withDescriptives
+    ).map { case (loc, nounAlias, id, verbAlias, putOut, contents, descriptives) =>
       putOut match {
         case t: TypeRef =>
-          Output(loc, nounAlias, id, verbAlias, t, contents)
+          Output(loc, nounAlias, id, verbAlias, t, contents, descriptives)
         case c: ConstantRef =>
-          Output(loc, nounAlias, id, verbAlias, c, contents)
+          Output(loc, nounAlias, id, verbAlias, c, contents, descriptives)
         case l: LiteralString =>
-          Output(loc, nounAlias, id, verbAlias, l, contents)
+          Output(loc, nounAlias, id, verbAlias, l, contents, descriptives)
         case x: RiddlValue =>
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
@@ -107,9 +103,9 @@ private[parsing] trait ApplicationParser {
 
   private def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions
-    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents) =>
-      Input(loc, inputAlias, id, acquisitionAlias, putIn, contents)
+      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withDescriptives
+    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives) =>
+      Input(loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives)
     }
   }
 
@@ -136,10 +132,10 @@ private[parsing] trait ApplicationParser {
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close
-    )./ map { case (loc, id, contents) =>
+      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ withDescriptives
+    )./ map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Application(loc, id, contents)
+      Application(loc, id, contents, descriptives)
     }
   }
 }

@@ -34,7 +34,7 @@ domain dokn is {
         entity Company is {
             option event-sourced option available
 
-            type AddCompany is command { 
+            type AddCompany is command {
               mailingAddress: Address,
               primaryContactName: String,
               primaryContactPhone: MobileNumber,
@@ -191,6 +191,7 @@ domain dokn is {
             }
         }
     }
+} with {
   explained as {
     |The dokn domain is the starting point for a simple application which allows
     |delivery drivers to capture notes about delivery locations to create

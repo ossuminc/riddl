@@ -182,8 +182,8 @@ private[parsing] trait StatementParser {
     P(
       undefined(Seq.empty[Statements]) |
         (open ~ undefined(Seq.empty[Statements]) ~ close) |
-        (statement(set) | descriptive)./.rep(1) |
-        (open ~ (statement(set) | descriptive)./.rep(1) ~ close)
+        (statement(set) | comment)./.rep(1) |
+        (open ~ (statement(set) | comment)./.rep(1) ~ close)
     )
   }
 }

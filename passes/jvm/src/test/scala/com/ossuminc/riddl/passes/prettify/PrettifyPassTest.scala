@@ -65,32 +65,32 @@ class PrettifyPassTest extends RiddlFilesTestBase {
   }
 
   "PrettifyPass" should {
-    "check domains" in { (td: TestData) =>
+    "check domains" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/domains")
     }
-    "check enumerations" in { (td: TestData) =>
+    "check enumerations" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/enumerations")
     }
-    "check mappings" in { (td: TestData) =>
+    "check mappings" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/mappings")
     }
-    "check ranges" in { (td: TestData) =>
+    "check ranges" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/ranges")
     }
-    "check everything.riddl" in { (td: TestData) =>
+    "check everything.riddl" in { (_: TestData) =>
       processAFile("language/jvm/src/test/input/everything.riddl")
     }
-    "check petstore.riddl" in { (td: TestData) =>
+    "check petstore.riddl" in { (_: TestData) =>
       processAFile("language/jvm/src/test/input/petstore.riddl")
     }
-    "check rbbq.riddl" in { (td: TestData) =>
+    "check rbbq.riddl" in { (_: TestData) =>
       processAFile("language/jvm/src/test/input/rbbq.riddl")
       println("done")
     }
   }
 
   "PrettifyOutput" must {
-    "construct" in { td =>
+    "construct" in { _ =>
       val ps = PrettifyState(flatten=true)
       ps.numFiles must be(1)
       val po = PrettifyOutput(Root.empty, Messages.empty, ps)

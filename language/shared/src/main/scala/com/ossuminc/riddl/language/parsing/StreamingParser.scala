@@ -104,11 +104,11 @@ private[parsing] trait StreamingParser {
     P(
       location ~ keyword ~ identifier ~ is ~ open ~
         streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close
-    )./.map { case (loc, id, contents) =>
+        close ~ withDescriptives
+    )./.map { case (loc, id, contents, descriptives) =>
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
-      Streamlet(loc, id, shape, contents)
+      Streamlet(loc, id, shape, contents, descriptives)
     }
   }
 

@@ -47,10 +47,10 @@ private[parsing] trait SagaParser {
 
   def saga[u: P]: P[Saga] = {
     P(
-      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close
-    ).map { case (location, identifier, (input, output, contents)) =>
+      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ withDescriptives
+    ).map { case (location, identifier, (input, output, contents), descriptives) =>
       checkForDuplicateIncludes(contents)
-      Saga(location, identifier, input, output, contents)
+      Saga(location, identifier, input, output, contents, descriptives)
     }
   }
 }

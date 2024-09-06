@@ -162,7 +162,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
               var lines: Int = 0
               definition match
                 case wb: WithDescriptives =>
-                  lines = lines + { wb.briefs.size }
+                  lines = lines + { if wb.brief.nonEmpty then 1 else 0 }
                   lines = lines + { wb.descriptions.foldLeft(0) { (sum, next) =>
                     next match
                       case BlockDescription(_, lines) => sum + lines.size 
@@ -363,8 +363,6 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     if p.handlers.nonEmpty then result += 1
     if p.functions.nonEmpty then result += 1
     if p.constants.nonEmpty then result += 1
-    if p.inlets.nonEmpty then result += 1
-    if p.outlets.nonEmpty then result += 1
     result
 
   private def completedCount(v: RiddlValue): Int = {

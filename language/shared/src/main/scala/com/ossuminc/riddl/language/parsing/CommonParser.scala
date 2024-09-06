@@ -18,7 +18,11 @@ import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.Future
 
 /** Common Parsing Rules */
-private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers with ParsingContext {
+private[parsing] trait CommonParser
+    extends ReferenceParser
+    with Readability
+    with NoWhiteSpaceParsers
+    with ParsingContext {
 
   def open[u: P]: P[Unit] = {
     P(Punctuation.curlyOpen)
@@ -70,7 +74,7 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
   def briefDescription[u: P]: P[BriefDescription] = {
-    P(location ~ Keywords.briefly ~ literalString).map { case (loc, brief: LiteralString) =>
+    P(location ~ Keywords.briefly ~ byAs.? ~ literalString).map { case (loc, brief: LiteralString) =>
       BriefDescription(loc, brief)
     }
   }
@@ -84,10 +88,11 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
   }
 
   def description[u: P](implicit ctx: P[?]): P[Description] =
-    P(location ~ Keywords.described ~ (
+    P(
+      location ~ Keywords.described ~ (
         (byAs ~/ docBlock) |
-        (at ~/ httpUrl) |
-        (in ~/ Keywords.file ~ literalString)
+          (at ~/ httpUrl) |
+          (in ~/ Keywords.file ~ literalString)
       )
     ).map {
       case (loc, strings: Seq[LiteralString]) =>
@@ -159,18 +164,19 @@ private[parsing] trait CommonParser extends Readability with NoWhiteSpaceParsers
   def term[u: P]: P[Term] = {
     P(
       location ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withDescriptives
-    )./.map {
-      case (loc, id, definition, descriptives) =>
-        Term(loc, id, definition, descriptives)
+    )./.map { case (loc, id, definition, descriptives) =>
+      Term(loc, id, definition, descriptives)
     }
   }
 
-  def descriptive[u:P]: P[Descriptives] =
-    P(briefDescription | description | comment | term).asInstanceOf[P[Descriptives]]
-    
+  def descriptive[u: P]: P[Descriptives] =
+    P(briefDescription | description | term | authorRef).asInstanceOf[P[Descriptives]]
+
   def withDescriptives[u: P]: P[Contents[Descriptives]] = {
     P(
-      Keywords.with_ ~ open ~ descriptive.rep(1) ~ close
+      (Keywords.with_ ~ open ~
+        (undefined[u, Contents[Descriptives]](Contents.empty) | descriptive.rep(1)) ~
+        close)
     ).?./.map {
       case Some(list: Contents[Descriptives]) =>
         list

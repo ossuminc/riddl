@@ -8,8 +8,7 @@ context full is {
   type stamp is TimeStamp        // Define stamp as a TimeStamp
   type url is URL                // Define url as a Uniform Resource Locator
 
-  type PeachType is { a: Integer with { // can you put a comment here?
-  } }
+  type PeachType is { a: Integer with { ??? } }
   type enum is any of { Apple Pear Peach(23)   Persimmon(24) }
 
   type alt is one of { enum or stamp or url } with {
@@ -34,16 +33,18 @@ context full is {
       of a as type agg
       link relationship as field agg.time to field agg.ident
       index on field agg.id
-      with { /* This is a comment */ }
+    with { briefly as "This is how to store data" }
 
-    described as "This is a simple repository"
-    term foo is "an arbitrary name as a contraction for fubar which is grotesque connotations"
     handler Putter is {
       on command ACommand {
         put "something" to type agg
       }
     }
+  } with {
+    briefly as "This is a simple repository"
+    term foo is "an arbitrary name as a contraction for fubar which has grotesque connotations"
   }
+
 
   projector ProjectIt is {
     updates repository StoreIt
@@ -94,8 +95,10 @@ context full is {
       requires { n: Nothing }
       returns  { b: Boolean }
         "aribtrary statement"
+    } with {
+      briefly as "Something is nothing interesting"
     }
-  } briefly "Something is nothing interesting"
+  }
 
   entity SomeOtherThing is {
     type ItHappened is event { aField: String }

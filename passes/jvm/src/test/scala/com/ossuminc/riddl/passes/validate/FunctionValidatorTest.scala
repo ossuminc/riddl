@@ -13,16 +13,17 @@ import org.scalatest.TestData
 class FunctionValidatorTest extends ValidatingTest {
 
   "FunctionValidator" should {
-    "accept function but warn about descriptions" in { (td: TestData) =>
-      parseAndValidateInContext[Entity]("""
-                                          |entity user is {
-                                          |  function foo is {
-                                          |    requires {b: Boolean }
-                                          |    returns {r: Integer }
-                                          |    ???
-                                          |  }
-                                          |}
-                                          |""".stripMargin) { (e, _, msgs) =>
+    "accept function but warn about descriptions" in { (_: TestData) =>
+      parseAndValidateInContext[Entity](
+      """
+         |entity user is {
+         |  function foo is {
+         |    requires {b: Boolean }
+         |    returns {r: Integer }
+         |    ???
+         |  }
+         |}
+         |""".stripMargin) { (e, _, msgs) =>
         e.functions must matchPattern {
           case Seq(
                 AST.Function(
@@ -31,6 +32,7 @@ class FunctionValidatorTest extends ValidatingTest {
                   Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _)))),
                   Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _)))),
                   _,
+                  _
                 )
               ) =>
         }
@@ -55,16 +57,17 @@ class FunctionValidatorTest extends ValidatingTest {
 
     }
     "validate function empty statements" in { (td: TestData) =>
-      val input = """
-                    |  function AnAspect is {
-                    |    "if and(everybody hates me, I'm depressed) then"
-                    |      "I go fishing"
-                    |      "I'll just eat worms"
-                    |    "else"
-                    |      "I'm happy"
-                    |    "end"
-                    |  } described as "foo"
-                    |""".stripMargin
+      val input =
+      """
+        |  function AnAspect is {
+        |    "if and(everybody hates me, I'm depressed) then"
+        |      "I go fishing"
+        |      "I'll just eat worms"
+        |    "else"
+        |      "I'm happy"
+        |    "end"
+        |  } with { described as "foo" }
+        |""".stripMargin
 
       parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
         function.id.value mustBe "AnAspect"

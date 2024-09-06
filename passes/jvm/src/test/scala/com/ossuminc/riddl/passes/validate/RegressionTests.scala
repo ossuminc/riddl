@@ -16,8 +16,8 @@ class RegressionTests extends ValidatingTest {
   "Regressions" should {
     "allow descriptions as a single string" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain foo is {
-          |  explained as { "foo" }
+        """domain foo is { ??? } with {
+          |  described as { "foo" }
           |}  
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {
@@ -28,11 +28,13 @@ class RegressionTests extends ValidatingTest {
     }
     "allow descriptions as a doc block" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain foo is {
-          |  explained as {
-          |    |ladeedah
-          |  }
-          |}
+        """domain foo is { ??? }
+          |  with { 
+          |    described as {
+          |      |ladeedah
+          |    }
+          |  }  
+          |
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
@@ -46,7 +48,8 @@ class RegressionTests extends ValidatingTest {
         """domain foo is {
           |type DeliveryInstruction is any of {
           |  FrontDoor(20), SideDoor(21), Garage(23), FrontDesk(24), DeliverToPostOffice(25)
-          |} explained as {
+          |} with {
+          |  described as {
           |    |20 Front door
           |    |21 Side door
           |    |23 Garage
@@ -57,9 +60,9 @@ class RegressionTests extends ValidatingTest {
           |    |23 Garage
           |    |24 Réception ou surveillant
           |    |25 Livrer au bureau de poste
+          |  }  
           |}
-          |}
-          |""".stripMargin,td)
+          |}""".stripMargin,td)
       parseDomainDefinition[Type](input, _.types.last) match {
         case Left(errors) => fail(errors.format)
         case Right(_)     =>

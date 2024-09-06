@@ -32,7 +32,7 @@ private[parsing] trait DomainParser {
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
     P(
       vitalDefinitionContents |
-        author | context | domain | user | application | epic | saga | importDef | domainInclude
+        author | context | domain | user | application | epic | saga | importDef | domainInclude | comment
     ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 
@@ -42,10 +42,10 @@ private[parsing] trait DomainParser {
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close
-    )./.map { case (loc, id, contents) =>
+      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~ withDescriptives
+    )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Domain(loc, id, contents)
+      Domain(loc, id, contents, descriptives)
     }
   }
 }

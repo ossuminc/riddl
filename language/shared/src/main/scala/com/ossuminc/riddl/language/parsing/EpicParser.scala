@@ -118,23 +118,23 @@ private[parsing] trait EpicParser {
     }
   }
 
-  private def interaction[u: P]: P[Interaction | Descriptives] = {
+  private def interaction[u: P]: P[Interaction | Comment] = {
     P(
-      parallelInteractions | optionalInteractions | sequentialInteractions | stepInteractions | descriptive
+      parallelInteractions | optionalInteractions | sequentialInteractions | stepInteractions | comment
     )
   }
 
   private def interactions[u: P]: P[Seq[InteractionContainerContents]] = {
-    interaction.rep(1)
+    P( interaction.rep(1) )
   }
 
   private def useCase[u: P]: P[UseCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~ userStory ~
         (undefined(Seq.empty[TwoReferenceInteraction]) | interactions) ~
-        close
-    ).map { case (loc, id, userStory, contents) =>
-      UseCase(loc, id, userStory, contents)
+        close ~ withDescriptives
+    ).map { case (loc, id, userStory, contents, descriptives) =>
+      UseCase(loc, id, userStory, contents, descriptives)
     }
   }
 
@@ -169,10 +169,10 @@ private[parsing] trait EpicParser {
 
   def epic[u: P]: P[Epic] = {
     P(
-      location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close
-    )./.map { case (loc, id, (userStory, contents)) =>
+      location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ withDescriptives
+    )./.map { case (loc, id, (userStory, contents), descriptives) =>
       checkForDuplicateIncludes(contents)
-      Epic(loc, id, userStory, contents)
+      Epic(loc, id, userStory, contents, descriptives)
     }
   }
 }

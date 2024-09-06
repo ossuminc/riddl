@@ -101,7 +101,8 @@ object Keywords {
 
   def direct[u: P]: P[Unit] = keyword(Keyword.direct)
 
-  def described[u: P]: P[Unit] = keywords(StringIn(Keyword.described, Keyword.explained))
+  def described[u: P]: P[Unit] = keywords(
+    StringIn(Keyword.described, Keyword.explained, Keyword.description, Keyword.explanation))
 
   def details[u: P]: P[Unit] = keyword(Keyword.details)
 
@@ -146,6 +147,8 @@ object Keywords {
   def form[u: P]: P[Unit] = keyword(Keyword.form)
 
   def from[u: P]: P[Unit] = keyword(Keyword.from)
+  
+  def fully[u:P]: P[Unit] = keyword(Keyword.fully)
 
   def function[u: P]: P[Unit] = keyword(Keyword.function)
 
@@ -346,6 +349,7 @@ object Keyword {
   final val context = "context"
   final val create = "create"
   final val described = "described"
+  final val description = "description"
   final val details = "details"
   final val direct = "direct"
   final val presents = "presents"
@@ -360,6 +364,7 @@ object Keyword {
   final val event = "event"
   final val example = "example"
   final val execute = "execute"
+  final val explanation = "explanation"
   final val explained = "explained"
   final val field = "field"
   final val fields = "fields"
@@ -370,6 +375,7 @@ object Keyword {
   final val foreach = "foreach"
   final val form = "form"
   final val from = "from"
+  final val fully = "fully"
   final val function = "function"
   final val graph = "graph"
   final val group = "group"

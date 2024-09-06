@@ -19,12 +19,12 @@ class EpicTest extends ValidatingTest {
       val rpi = RiddlParserInput(
         """domain foo is {
           |  user Author is "human writer"
-          |epic WritingABook is {
-          |  user foo.Author wants to "edit on the screen" so that "he can revise content more easily"
-          |  shown by { http://example.com:80/path/to/WritingABook }
-          |  case perfection is { user foo.Author wants "to open a document" so that "it can be edited" ???  }
-          |} described as "A simple authoring story"
-          |} described as "a parsing convenience"
+          |  epic WritingABook is {
+          |    user foo.Author wants to "edit on the screen" so that "he can revise content more easily"
+          |    shown by { http://example.com:80/path/to/WritingABook }
+          |    case perfection is { user foo.Author wants "to open a document" so that "it can be edited" ???  }
+          |  } with { described as "A simple authoring story" }
+          |} with { described as "a parsing convenience" }
           |""".stripMargin,td
       )
       parseAndValidateDomain(rpi) { case (domain: Domain, rpi: RiddlParserInput, messages: Messages.Messages) =>
@@ -36,10 +36,10 @@ class EpicTest extends ValidatingTest {
         val us = epic.userStory
         us mustNot be(empty)
         us.user.pathId.value mustBe Seq("foo", "Author")
-        us.capability mustBe LiteralString((4, 28, rpi), "edit on the screen")
-        us.benefit mustBe LiteralString((4, 57, rpi), "he can revise content more easily")
+        us.capability mustBe LiteralString((4, 30, rpi), "edit on the screen")
+        us.benefit mustBe LiteralString((4, 59, rpi), "he can revise content more easily")
         epic.shownBy mustNot be(empty)
-        epic.shownBy.head must be(ShownBy((5,3,rpi),List(URL("http://example.com:80/path/to/WritingABook"))))
+        epic.shownBy.head must be(ShownBy((5,5,rpi),List(URL("http://example.com:80/path/to/WritingABook"))))
         epic.cases mustNot be(empty)
         val uc = epic.cases.head
         uc.id.value mustBe "perfection"
@@ -59,16 +59,17 @@ class EpicTest extends ValidatingTest {
           |    createdAt: TimeStamp
           |  }
           |
-          |  entity Organization is { ??? } described as "nada"
+          |  entity Organization is { ??? } with { description as "nada" }
           |
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
-          |   term xyz is "y"
-          |   described as "nada"
+          |   
+          |  } with { 
+          |    explanation as "nada"
+          |    term xyz is "y"
           |  }
-          |  described as "nada"
-          |} 
+          |} with { explained as "nada" } 
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -89,8 +90,6 @@ class EpicTest extends ValidatingTest {
           |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  by author ImprovingApp.reid
-          |  term 'conduct business' is "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    user ImprovingApp.Owner wants "to incorporate an organization" so that "it can be used"
@@ -100,11 +99,15 @@ class EpicTest extends ValidatingTest {
           |      step show output ImprovingApp.Improving_app.OrganizationPage.show
           |        to user ImprovingApp.Owner with { briefly "organization added" }
           |    }
-          |  }
-          |  briefly "A story about establishing an organization in Improving.app"
-          |  described as "TBD"
-          |}
-          |briefly "A placeholder" described by "Not important"
+          |  } with {
+          |    briefly "A use case about establishing an organization in Improving.app"
+          |    described as "TBD"
+          |  }  
+          |} with {
+          |  briefly "A placeholder" described by "Not important"
+          |  by author ImprovingApp.reid
+          |  term 'conduct business' is "Any legal business activity supported by the terms of use."
+          |}  
           |} 
           |""".stripMargin,td
       )
@@ -131,16 +134,16 @@ class EpicTest extends ValidatingTest {
           |    createdAt: TimeStamp
           |  }
           |
-          |  entity Organization is { ??? } described as "nada"
+          |  entity Organization is { ??? } with { described as "nada" }
           |
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
+          |  } with { 
           |   term xyz "y"
           |   described as "nada"
           |  }
-          |  described as "nada" 
-          |} 
+          |} with { described as "nada" }  
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -159,10 +162,6 @@ class EpicTest extends ValidatingTest {
           |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  term 'conduct business' is "Any legal business activity supported by the terms of use."
-          |
-          | by author reid
-          |
           |  case primary is {
           |    user ImprovingApp.Owner wants "to establish an organization" so that
           |      "they can conduct business as that organization"
@@ -173,11 +172,13 @@ class EpicTest extends ValidatingTest {
           |        to user ImprovingApp.Owner with { briefly "organization added" }
           |     }
           |  }
+          |} with {
+          |  term 'conduct business' is "Any legal business activity supported by the terms of use."
           |  briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
+          | by author reid
           |}
-          |briefly "A placeholder" described by "Not important" 
-          |} 
+          |} with { briefly "A placeholder" described by "Not important" } 
           |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = true) {
@@ -206,16 +207,18 @@ class EpicTest extends ValidatingTest {
           |    createdAt: TimeStamp
           |  }
           |
-          |  entity Organization is { ??? } described as "nada"
+          |  entity Organization is { ??? } with { described as "nada" }
           |
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
+          |  } with {
           |   term xyz "y"
           |   described as "nada"
-          |  }
-          |  described as "nada" 
-          |} 
+          |  }  
+          |} with {
+          |  described as "nada"
+          |}  
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -229,7 +232,6 @@ class EpicTest extends ValidatingTest {
           |epic EstablishOrganization is {
           |  user ImprovingApp.Owner wants "to establish an organization" so that
           |  "they can conduct business as that organization"
-          |  term 'conduct business' "Any legal business activity supported by the terms of use."
           |
           |  case primary is {
           |    user Owner wants "to do it" so that "it is done"
@@ -240,11 +242,12 @@ class EpicTest extends ValidatingTest {
           |    step show output ImprovingApp.Improving_app.OrganizationPage.show
           |      to user ImprovingApp.Owner with { briefly "organization added" }
           |  }
+          |} with {
           |  briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
-          |}
-          |briefly "A placeholder" described by "Not important"
-          |}
+          |  term 'conduct business' "Any legal business activity supported by the terms of use."
+          |}  
+          |} with { briefly "A placeholder" described by "Not important" }
           |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = true) {

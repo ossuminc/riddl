@@ -4,10 +4,10 @@ import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-trait VitalDefinitionParser extends TypeParser with ReferenceParser with CommonParser {
+trait VitalDefinitionParser extends TypeParser with CommonParser {
 
   def vitalDefinitionContents[u: P]: P[OccursInVitalDefinition] =
-    P(typeDef | authorRef | descriptive).asInstanceOf[P[OccursInVitalDefinition]]
+    P(typeDef | comment).asInstanceOf[P[OccursInVitalDefinition]]
   end vitalDefinitionContents
 
 }

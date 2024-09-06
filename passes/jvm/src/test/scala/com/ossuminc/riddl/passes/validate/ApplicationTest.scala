@@ -22,14 +22,17 @@ class ApplicationTest extends ValidatingTest {
           |    result Title { content: String }
           |    command Name { content: String }
           |    group Together is {
-          |      output One presents result Title { described as "Show a blank page with title" }
-          |      input Two acquires command Name described as "yield  a Name"
-          |      described as "Show a title, collect a Name"  
-          |    }
-          |    described as "A very simple app just for testing" 
-          |  }
-          |  described as "Just a parsing convenience" 
-          |} 
+          |      output One presents result Title with { described by "Show a blank page with title" }
+          |      input Two acquires command Name with { briefly "yield  a Name" }
+          |    } with {
+          |     description as "Show a title, collect a Name"
+          |    }  
+          |  } with {
+          |    description as "A very simple app just for testing"
+          |  }  
+          |} with {
+          |  described by "Just a parsing convenience"
+          |}
           |""".stripMargin,td
       )
       parseAndValidateDomain(rpi) {
@@ -43,7 +46,7 @@ class ApplicationTest extends ValidatingTest {
           val group = domain.applications.head.groups.head
           val outputs: Seq[Output] = group.contents.filter[Output]
           outputs must not be(empty)
-          outputs.head.briefs must be(empty)
+          outputs.head.brief must be(empty)
           outputs.head.descriptions must not be(empty)
           messages.isOnlyIgnorable mustBe true
       }

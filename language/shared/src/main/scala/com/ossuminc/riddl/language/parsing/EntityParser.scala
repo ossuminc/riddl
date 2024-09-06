@@ -40,10 +40,10 @@ private[parsing] trait EntityParser  {
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close
-    )./map { case (loc, id, contents) =>
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withDescriptives
+    )./map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Entity(loc, id, contents)
+      Entity(loc, id, contents, descriptives)
     }
   }
 }

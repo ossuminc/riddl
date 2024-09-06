@@ -39,7 +39,7 @@ class CommonParserTest extends ParsingTest {
     "descriptions can be URLs" in { (td: TestData) =>
       import com.ossuminc.riddl.utils.URL
       val input = RiddlParserInput(
-        """domain foo is { described at https://www.wordnik.com/words/phi }""".stripMargin,
+        """domain foo is { ??? } with { described at https://www.wordnik.com/words/phi }""".stripMargin,
         URL.empty,
         td
       )
@@ -49,9 +49,10 @@ class CommonParserTest extends ParsingTest {
           val expected = Domain(
             (1, 1),
             Identifier((1, 8), "foo"),
-            contents = Seq(
+            contents = Contents.empty,
+            descriptives = Seq(
               URLDescription(
-                (1, 17),
+                (1, 30),
                 URL("https://www.wordnik.com/words/phi")
               )
             )
@@ -84,20 +85,15 @@ class CommonParserTest extends ParsingTest {
     }
     "literal strings can successfully escape a quote" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain foo is { explained as "this is an \"explanation\"" } """,
+        """domain foo is { ??? } with { briefly as "this is an \"explanation\"" } """,
         td
       )
       parseDefinition[Domain](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((domain, _)) =>
-          domain.descriptions match {
-            case Seq(BlockDescription(_, lines)) =>
-              lines.size mustBe 1
-              lines.head.s mustBe "this is an \\\"explanation\\\""
-            case x: Any => fail(s"Expected a one line Description but got: $x")
-          }
+        case Right((domain: Domain, _)) =>
+          domain.briefString must be("this is an \\\"explanation\\\"")
       }
     }
     "OWASP email address works" in { (td: TestData) =>

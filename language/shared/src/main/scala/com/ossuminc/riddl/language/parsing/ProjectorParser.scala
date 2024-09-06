@@ -49,10 +49,10 @@ private[parsing] trait ProjectorParser {
     */
   def projector[u: P]: P[Projector] = {
     P(
-      location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close
-    )./.map { case (loc, id, contents) =>
+      location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ withDescriptives
+    )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Projector(loc, id, contents)
+      Projector(loc, id, contents, descriptives)
     }
   }
 }

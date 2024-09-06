@@ -46,7 +46,7 @@ class DomainValidatorTest extends ValidatingTest {
                 |    organization: "Ossum Inc."
                 |    title: "President"
                 |  } with { described as "identifying" }
-                |domain foo is {
+                |domain foo is { ??? } with {
                 |  by author Reid
                 |  described as "example"
                 |}
@@ -56,8 +56,8 @@ class DomainValidatorTest extends ValidatingTest {
         case Right(result) =>
           val domain: Domain = result.root.domains.head
           val author: Author = result.root.authors.head
-          domain mustNot be(empty)
-          domain.contents mustNot be(empty)
+          domain must be(empty)
+          domain.contents must be(empty)
           val expectedAuthor =
             Author(
               (1, 1, rpi),

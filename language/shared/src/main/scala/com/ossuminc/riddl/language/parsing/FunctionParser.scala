@@ -34,7 +34,8 @@ private[parsing] trait FunctionParser {
     )
   }
 
-  type BodyType = (Option[Aggregation], Option[Aggregation], Seq[FunctionContents])
+  private type BodyType = (Option[Aggregation], Option[Aggregation], Seq[FunctionContents])
+  
   private def functionBody[u: P]: P[BodyType] =
     P(input.? ~ output.? ~ functionDefinitions)
 
@@ -50,10 +51,10 @@ private[parsing] trait FunctionParser {
     */
   def function[u: P]: P[Function] = {
     P(
-      location ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~ close
-    )./.map { case (loc, id, (ins, outs, contents)) =>
+      location ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~ close ~ withDescriptives
+    )./.map { case (loc, id, (ins, outs, contents), descriptives) =>
       checkForDuplicateIncludes(contents)
-      Function(loc, id, ins, outs, contents)
+      Function(loc, id, ins, outs, contents, descriptives)
     }
   }
 }

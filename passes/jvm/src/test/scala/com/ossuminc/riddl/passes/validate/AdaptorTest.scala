@@ -32,22 +32,25 @@ class AdaptorTest extends ValidatingTest {
 
     "allow message actions" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """domain ignore is { context Target is {???}  context Foo is {
-          |type ItHappened = event { abc: String } with { described as "abc" } 
-          |adaptor PaymentAdapter to context Target is {
-          |  handler sendAMessage is {
-          |    on event ItHappened {
-          |      error "foo"
-          |      described as "?"
+        """domain ignore is {
+          |  context Target is {???}  
+          |  context Foo is {
+          |    type ItHappened = event { abc: String } with { described as "abc" } 
+          |    adaptor PaymentAdapter to context Target is {
+          |      handler sendAMessage is {
+          |        on event ItHappened {
+          |          error "foo"
+          |        } with { described as "?" }
+          |      } with { explained as "?" }
+          |    } with {
+          |      explained as "?"
           |    }
-          |    explained as "?" 
+          |  } with {  
+          |    explained as "?"
           |  }
+          |} with {  
           |  explained as "?"
           |}
-          |explained as "?"
-          |}
-          |explained as "?"
-          |} 
           |""".stripMargin,
         td
       )
@@ -76,16 +79,13 @@ class AdaptorTest extends ValidatingTest {
           |    handler sendAMessage is {
           |      on command ItWillHappen  {
           |        send command Foo.LetsDoIt to outlet forMyEntity
-          |        described as "?"
-          |      }
-          |      explained as "?" 
-          |    }
-          |    explained as "?" 
-          |  }
+          |      } with { described as "?" }
+          |    } with { explained as "?" }
+          |  } with { explained as "?" }
+          | } with {  
           |  explained as "?" 
           | }
-          | explained as "?" 
-          |} 
+          |} with { explained as "?" } 
           |""".stripMargin,
         td
       )

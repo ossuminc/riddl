@@ -152,7 +152,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     end match
   end process
 
-  private def resolveAuthorRefs(definition: Parent & WithAuthorRefs, parents: Parents): Unit =
+  private def resolveAuthorRefs(definition: Parent & WithDescriptives, parents: Parents): Unit =
     definition.authorRefs.foreach { item => associateUsage(definition, resolveARef[Author](item, parents)) }
   end resolveAuthorRefs
 

@@ -761,7 +761,7 @@ case class ValidationPass(
                 )
               }
           }
-        case _: BriefDescription | _:Description | _: Term | _: Comment  => ()
+        case _: BriefDescription | _:Description | _: Term | _: Comment | _: AuthorRef => ()
       }
     }
     if uc.nonEmpty then {
@@ -784,7 +784,7 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isInstanceOf[ApplicationRelated] =>
             d match {
-              case output @ Output(loc, _, _, _, putOut, _) =>
+              case output @ Output(loc, _, _, _, putOut, _, _) =>
                 putOut match {
                   case typRef: TypeRef =>
                     checkTypeRef(typRef, parents) match {
@@ -819,7 +819,7 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isVital =>
             o match {
-              case input @ Input(_, _, _, _, putIn, _) =>
+              case input @ Input(_, _, _, _, putIn, _, _) =>
                 checkTypeRef(putIn, parents) match {
                   case Some(Type(_, _, typEx, _)) if typEx.isContainer =>
                     typEx match {

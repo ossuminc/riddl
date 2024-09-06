@@ -143,8 +143,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     val rel1 = makeTypeRelationships(context, processor.types, processor)
     val rel2 = makeFunctionRelationships(context, processor.functions)
     val rel3 = makeHandlerRelationships(context, processor.handlers)
-    val rel4 = makeInletRelationships(context, processor.inlets, processor)
-    val rel5 = makeOutletRelationships(context, processor.outlets, processor)
+    val rel4 = makeInletRelationships(context, processor.streamlets.flatMap(_.inlets), processor)
+    val rel5 = makeOutletRelationships(context, processor.streamlets.flatMap(_.outlets), processor)
     val rel6 = processor match {
       case a: Adaptor     => inferRelationship(context, a)
       case _: Application => Seq.empty[ContextRelationship]
@@ -315,10 +315,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
               tri.from.pathId.format -> fromDef,
               tri.to.pathId.format -> toDef
             )
-          case _: InteractionContainer | _: Interaction | _: Comment => Seq.empty
-          case _: BriefDescription => Seq.empty
-          case _: Description => Seq.empty
-          case _: Term => Seq.empty
+          case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description
+            | _: BriefDescription | _: AuthorRef => Seq.empty
         }
         .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq

@@ -22,7 +22,7 @@ private[parsing] trait ContextParser {
   private def contextDefinition[u: P]: P[ContextContents] = {
     P(
       processorDefinitionContents(StatementsSet.ContextStatements) |
-        entity | adaptor | saga | streamlet | projector | repository | connector | contextInclude
+        entity | adaptor | saga | streamlet | projector | repository | connector | contextInclude | comment
     ).asInstanceOf[P[ContextContents]]
   }
 
@@ -38,10 +38,10 @@ private[parsing] trait ContextParser {
 
   def context[u: P]: P[Context] = {
     P(
-      location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close
-    )./.map { case (loc, id, contents) =>
+      location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close ~ withDescriptives
+    )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Context(loc, id, contents)
+      Context(loc, id, contents, descriptives)
     }
   }
 }

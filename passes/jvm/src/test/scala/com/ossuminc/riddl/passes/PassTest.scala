@@ -140,15 +140,16 @@ class PassTest extends TestingBasisWithTestData {
           val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
           opens must be(closes)
           opens must be(55)
-          values must be(37)
-          leaves must be(20)
+          values must be(26)
+          leaves must be(19)
     }
     "traverses partial trees" in { td =>
       val input = RiddlParserInput(
-        """domain foo is { context bar is {
-          | /* comment */
-          | term baz is "a character in a play"
-          |}}
+        """domain foo is { 
+          |  context bar is {
+          |   /* comment */
+          |  } with { term baz is "a character in a play" }
+          |}  
           |""".stripMargin, td
       )
       Riddl.parseAndValidate(input) match
@@ -162,7 +163,7 @@ class PassTest extends TestingBasisWithTestData {
           opens must be(closes)
           opens must be(3)
           values must be(1)
-          leaves must be(1)
+          leaves must be(0)
 
     }
   }

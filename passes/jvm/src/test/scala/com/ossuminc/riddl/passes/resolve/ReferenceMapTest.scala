@@ -35,7 +35,7 @@ class ReferenceMapTest extends ValidatingTest {
 
     "have definitionOf(pathId:String) work" in { _ =>
       refMap.definitionOf[Author]("Reid") match {
-        case None => fail("Expected to find 'Reid'")
+        case None => fail("Expected to find Author 'Reid'")
         case Some(author: Author) => author.name.s mustBe("Reid")
         case x => fail(s"Unexpected result: ${x.toString}")
       }

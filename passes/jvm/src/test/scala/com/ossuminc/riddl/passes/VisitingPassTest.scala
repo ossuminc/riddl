@@ -34,8 +34,8 @@ class VisitingPassTest extends ParsingTest {
           //      |closes=${visitor.closes}
           //      |""".stripMargin)
           visitor.depth must be(0)
-          visitor.leaves must be(20)
-          visitor.values must be(36)
+          visitor.leaves must be(19)
+          visitor.values must be(25)
           visitor.opens must be(visitor.closes)
       end match
     }

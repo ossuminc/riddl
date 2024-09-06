@@ -20,9 +20,11 @@ class ParsingTestTest extends ParsingTest {
       parseDefinition[Connector](rpi) match {
         case Right((pipe, _)) =>
           val expected = Connector(
-            (1, 1, rpi), Identifier((1, 11, rpi), "foo"),
-            OutletRef((1,23,rpi), PathIdentifier((1,30,rpi), List("Foo", "Outlet"))),
-            InletRef((1,44,rpi), PathIdentifier((1,50,rpi), List("Foo", "Inlet"))))
+            (1, 1, rpi),
+            Identifier((1, 11, rpi), "foo"),
+            OutletRef((1, 23, rpi), PathIdentifier((1, 30, rpi), List("Foo", "Outlet"))),
+            InletRef((1, 44, rpi), PathIdentifier((1, 50, rpi), List("Foo", "Inlet")))
+          )
           pipe mustBe expected
         case Left(errors) => fail(errors.format)
       }
@@ -61,7 +63,9 @@ class ParsingTestTest extends ParsingTest {
           |    user foo wants "to do a thing" so that "he gets bar"
           |    ???
           |  }
-          |}""".stripMargin, td)
+          |}""".stripMargin,
+        td
+      )
       parseTopLevelDomain[Epic](input, _.domains.head.epics.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -157,7 +161,10 @@ class ParsingTestTest extends ParsingTest {
       }
     }
     "parseDefinition[Domain,Term]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo { term X is { \"foo\" } with { briefly \"X\" } }", td)
+      val input = RiddlParserInput(
+        "domain foo { ??? }  with { term X is \"foo\" with { briefly as \"X\" } }",
+        td
+      )
       parseDefinition[Domain, Term](input, _.terms.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value must be("X")
@@ -171,10 +178,16 @@ class ParsingTestTest extends ParsingTest {
       }
     }
     "parseInContext[Term]" in { (td: TestData) =>
-      val input = RiddlParserInput("term X is { \"foo\" } with { briefly \"X\" }", td)
-      parseInContext[Term](input, _.terms.head) match {
-        case Left(messages)        => fail(messages.format)
-        case Right((typ: Term, _)) => typ.id.value must be("X")
+      val input = RiddlParserInput(
+        "context foo { ??? } with { term X is \"foo\" with { briefly as \"X\" } }",
+        td
+      )
+      parseContextDefinition(input, identity) match {
+        case Left(messages) => fail(messages.format)
+        case Right((ctxt: Context, _)) =>
+          ctxt.terms.headOption match
+            case Some(term: Term) => term.id.value must be("X")
+            case None             => fail("No terms found")
       }
     }
   }

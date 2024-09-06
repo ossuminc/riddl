@@ -14,25 +14,25 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
 
   private def onOtherClause[u: P](set: StatementsSet): P[OnOtherClause] = {
     P(
-      location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set)
-    )./map { case (loc, statements) =>
-      OnOtherClause(loc, statements)
+      location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
+    )./map { case (loc, statements, descriptives) =>
+      OnOtherClause(loc, statements, descriptives)
     }
   }
 
   private def onInitClause[u: P](set: StatementsSet): P[OnInitializationClause] = {
     P(
-      location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set)
-    ).map { case (loc, statements) =>
-      OnInitializationClause(loc, statements)
+      location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
+    ).map { case (loc, statements, descriptives) =>
+      OnInitializationClause(loc, statements, descriptives)
     }
   }
 
   private def onTermClause[u: P](set: StatementsSet): P[OnTerminationClause] = {
     P(
-      location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set)
-    ).map { case (loc, statements) =>
-      OnTerminationClause(loc, statements)
+      location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
+    ).map { case (loc, statements, descriptives) =>
+      OnTerminationClause(loc, statements, descriptives)
     }
   }
 
@@ -46,9 +46,9 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
 
   private def onMessageClause[u: P](set: StatementsSet): P[OnMessageClause] = {
     location ~ Keywords.on ~ messageRef ~
-      (from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set)
-  }.map { case (loc, msgRef, msgOrigins, statements) =>
-    OnMessageClause(loc, msgRef, msgOrigins, statements)
+      (from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
+  }.map { case (loc, msgRef, msgOrigins, statements, descriptives) =>
+    OnMessageClause(loc, msgRef, msgOrigins, statements, descriptives)
   }
 
   private def onClauses[u: P](set: StatementsSet): P[OnClause] = {
@@ -56,7 +56,7 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
   }
 
   private def handlerContents[u:P](set: StatementsSet): P[Seq[HandlerContents]] = {
-    (onClauses(set) | comment | briefDescription | description)./.rep(0).asInstanceOf[P[Seq[HandlerContents]]]
+    (onClauses(set) | comment)./.rep(0).asInstanceOf[P[Seq[HandlerContents]]]
   }
 
   private def handlerBody[u: P](set: StatementsSet): P[Seq[HandlerContents]] = {
@@ -65,9 +65,9 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
 
   def handler[u: P](set: StatementsSet): P[Handler] = {
     P(
-      Keywords.handler ~/ location ~ identifier ~ is ~ open ~ handlerBody(set) ~ close
-    )./.map { case (loc, id, clauses) =>
-      Handler(loc, id, clauses)
+      Keywords.handler ~/ location ~ identifier ~ is ~ open ~ handlerBody(set) ~ close ~ withDescriptives
+    )./.map { case (loc, id, clauses, descriptives) =>
+      Handler(loc, id, clauses, descriptives)
     }
   }
 

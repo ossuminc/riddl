@@ -44,14 +44,29 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   }
 
   def closeDef(
-    definition: Definition,
-    withBrace: Boolean = true
+    definition: Definition
   ): this.type = {
-    if withBrace then
-      if definition.nonEmpty then decr.addLine("}")
+    if definition.nonEmpty then decr.addLine("}")
+    definition match
+      case wd: WithDescriptives => emitDescriptives(wd.descriptions).nl
+      case _                    => this.nl
+    end match
+  }
+
+  def emitDescriptives(descriptives: Contents[Descriptives]): this.type =
+    if descriptives.nonEmpty then
+      add(" with {").nl.incr
+      descriptives.foreach {
+        case c: Comment          => emitComment(c)
+        case b: BriefDescription => emitBriefDescription(b)
+        case d: Description      => emitDescription(d)
+        case t: Term             => emitTerm(t)
+        case a: AuthorRef        => emitAuthorRef(a)
+      }
+      decr.add("}")
     end if
     this
-  }
+  end emitDescriptives
 
   def emitComment(comment: Comment): this.type =
     comment match
@@ -60,24 +75,9 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     end match
   end emitComment
 
-  def emitDescriptives(descriptives: Contents[Descriptives]): this.type = {
-    descriptives.foreach {
-      case c: Comment => emitComment(c)
-      case b: BriefDescription => emitBriefDescription(b)
-      case d: Description => emitDescription(d)
-      case t: Term => emitTerm(t)
-    }
-    this
-  }
-
   def emitBriefDescription(brief: BriefDescription): this.type =
     addLine(brief.format)
   end emitBriefDescription
-
-  def emitBriefs(briefs: Seq[BriefDescription]): this.type = {
-    briefs.foreach { brief => emitBriefDescription(brief) }
-    this
-  }
 
   def emitDescription(description: Description): this.type =
     description match
@@ -90,7 +90,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case URLDescription(_, url) =>
         addIndent("described ")
         url.scheme match
-          case "file" => add("in file ")
+          case "file"           => add("in file ")
           case "http" | "https" => add("at ")
         end match
         add(url.toExternalForm).nl
@@ -99,20 +99,18 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     this
   end emitDescription
 
-  def emitDescriptions(descriptions: Seq[Description]): this.type =
-    descriptions.foreach { (desc: Description) =>
-      emitDescription(desc)
-    }
-    this
-  end emitDescriptions
-
   def emitTerm(term: Term): this.type =
     addIndent("term ")
     add(term.id.format)
     add(" is ")
     add(term.definition)
-    emitDescriptives(term.contents)
+    emitDescriptives(term.descriptives)
+    nl
   end emitTerm
+
+  def emitAuthorRef(authorRef: AuthorRef): this.type =
+    addIndent("by ").add(authorRef.format).nl
+  end emitAuthorRef
 
   def emitString(s: String_): this.type = {
     (s.min, s.max) match {
@@ -128,8 +126,8 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(constant.id.format)
     add(" is ")
     add(constant.value.format)
+    emitDescriptives(constant.descriptives)
     nl
-    emitDescriptives(constant.contents)
   end emitConstant
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
@@ -152,10 +150,9 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   }
 
   private def emitField(field: Field): this.type =
-    this
-      .add(s"${field.id.value}: ")
-      .emitTypeExpression(field.typeEx)
-      .emitDescriptives(field.contents)
+    add(s"${field.id.value}: ")
+    emitTypeExpression(field.typeEx)
+    emitDescriptives(field.descriptives)
     this
   end emitField
 
@@ -165,7 +162,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case Some(field) if of.size == 1 =>
         add(s"{ ")
           .emitField(field)
-          .add(" } ")
+          .addLine("}")
       case Some(_) =>
         this.add("{").nl.incr
         of.foldLeft(this) { case (s, f) =>
@@ -236,19 +233,17 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     typEx match {
       case string: String_                 => emitString(string)
       case AliasedTypeExpression(_, _, id) => this.add(id.format)
-      case URI(_, scheme) =>
-        this
-          .add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
-      case enumeration: Enumeration => emitEnumeration(enumeration)
-      case alternation: Alternation => emitAlternation(alternation)
-      case mapping: Mapping         => emitMapping(mapping)
-      case sequence: Sequence       => emitSequence(sequence)
-      case set: Set                 => emitSet(set)
-      case graph: Graph             => emitGraph(graph)
-      case table: Table             => emitTable(table)
-      case replica: Replica         => emitReplica(replica)
-      case RangeType(_, min, max)   => this.add(s"range($min,$max) ")
-      case Decimal(_, whl, frac)    => this.add(s"Decimal($whl,$frac)")
+      case URI(_, scheme)                  => add(s"URL${scheme.fold("")(s => "\"" + s.s + "\"")}")
+      case enumeration: Enumeration        => emitEnumeration(enumeration)
+      case alternation: Alternation        => emitAlternation(alternation)
+      case mapping: Mapping                => emitMapping(mapping)
+      case sequence: Sequence              => emitSequence(sequence)
+      case set: Set                        => emitSet(set)
+      case graph: Graph                    => emitGraph(graph)
+      case table: Table                    => emitTable(table)
+      case replica: Replica                => emitReplica(replica)
+      case RangeType(_, min, max)          => this.add(s"range($min,$max) ")
+      case Decimal(_, whl, frac)           => this.add(s"Decimal($whl,$frac)")
       case EntityReferenceTypeExpression(_, er) =>
         this
           .add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
@@ -258,13 +253,9 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case ZeroOrMore(_, typex) => this.emitTypeExpression(typex).add("*")
       case OneOrMore(_, typex)  => this.emitTypeExpression(typex).add("+")
       case SpecificRange(_, typex, n, x) =>
-        this
-          .emitTypeExpression(typex)
-          .add("{")
-          .add(n.toString)
-          .add(",")
-          .add(x.toString)
-          .add("}")
+        emitTypeExpression(typex).add("{")
+        add(n.toString).add(",")
+        add(x.toString).add("}")
       case ate: AggregateTypeExpression =>
         ate match {
           case aggr: Aggregation                  => emitAggregation(aggr)
@@ -275,18 +266,39 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   }
 
   def emitType(t: Type): this.type = {
+    add(s"${spc}type ${t.id.value} is ")
+    emitTypeExpression(t.typEx)
+    if t.descriptives.nonEmpty then add(" with {").nl.incr.emitDescriptives(t.descriptives).decr.addLine("}")
+    end if
     this
-      .add(s"${spc}type ${t.id.value} is ")
-      .emitTypeExpression(t.typEx)
-      .emitDescriptives(t.descriptives)
-      .nl
   }
+
+  def emitStatement(statement: Statements): Unit =
+    statement match
+      case IfThenElseStatement(_, cond, thens, elses) =>
+        addIndent(s"if ${cond.format} then").nl.incr
+        if (thens.isEmpty) then addLine("???") else thens.foreach(emitStatement)
+        decr.addLine("else").incr
+        if elses.isEmpty then addLine("???") else elses.foreach(emitStatement)
+        decr.addLine("end")
+      case ForEachStatement(_, ref, statements) =>
+        addIndent(s"foreach ${ref.format} do").incr
+        statements.foreach(emitStatement)
+        decr.addLine("end")
+      case SendStatement(_, msg, portlet) =>
+        addLine(s"send ${msg.format} to ${portlet.format}")
+      case TellStatement(_, msg, to) =>
+        addLine(s"tell ${msg.format} to ${to.format}")
+      case statement: Statement => addLine(statement.format)
+      case comment: Comment     => emitComment(comment)
+    end match
+  end emitStatement
 
   def emitCodeBlock(statements: Seq[Statements]): this.type = {
     if statements.isEmpty then add(" { ??? }").nl
     else
       add(" {").incr.nl
-      statements.map(_.format + new_line).foreach(addIndent)
+      statements.foreach(emitStatement)
       decr.addIndent("}").nl
     this
   }

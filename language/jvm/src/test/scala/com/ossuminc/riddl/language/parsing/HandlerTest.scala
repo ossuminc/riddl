@@ -118,7 +118,8 @@ class HandlerTest extends ParsingTest {
           |      else
           |        "nothing required"
           |      end
-          |      explained as { "Helps update this item's location" }   
+          |    } with {  
+          |      described as "Helps update this item's location"   
           |    }
           |  }
           |}
@@ -146,7 +147,8 @@ class HandlerTest extends ParsingTest {
           |      "if ==(field ContainerNestedInContainer.id,parentContainer) then"
           |        set field DistributionItem.workCenter to "lastKnownWorkCenter"
           |      "end"
-          |      explained as { "Helps update this item's location" } 
+          |    } with {  
+          |      described as "Helps update this item's location" 
           |    }
           |    on other is { ??? }
           |  }

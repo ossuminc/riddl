@@ -128,7 +128,8 @@ class ASTTest extends TestingBasis {
   val application: Application = Application(
     At.empty,
     Identifier(At.empty, "application"),
-    contents = Seq(authorRef)
+    contents = Contents.empty,
+    descriptives = Seq(authorRef)
   )
   val author: Author = Author(
     At.empty,
@@ -174,9 +175,7 @@ class ASTTest extends TestingBasis {
     WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
   )
   val function: Function =
-    Function(At.empty, Identifier(At(), "Lambda"), None, None,
-      (statements ++ brief.toSeq ++ description.toSeq).asInstanceOf[Seq[FunctionContents]]
-    )
+    Function(At.empty, Identifier(At(), "Lambda"), None, None, statements, brief.toSeq ++ description.toSeq)
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Seq[OnClause] = Seq(
     OnInitializationClause(At.empty, statements),
@@ -218,7 +217,7 @@ class ASTTest extends TestingBasis {
     "have a test" in {
       application.loc mustBe At.empty
       application.id.value mustBe "application"
-      application.contents.filter[AuthorRef] mustBe Seq(authorRef)
+      application.authorRefs mustBe Seq(authorRef)
     }
   }
   "Author" should {
@@ -318,10 +317,10 @@ class ASTTest extends TestingBasis {
     "be structurally correct" in {
       function.id.value mustBe "Lambda"
       function.statements mustBe statements
-      function.input mustBe empty
-      function.output mustBe empty
-      function.briefs mustBe briefs
-      function.descriptions mustBe descriptions
+      function.input must be(empty)
+      function.output must be(empty)
+      function.brief must be(brief)
+      function.descriptions must be (descriptions)
     }
   }
 
@@ -356,11 +355,13 @@ class ASTTest extends TestingBasis {
   "Projector" should { "have a test" in { pending } }
   "Repository" should { "have a test" in { pending } }
 
-  "RootContainer" should {
-    "be at location 0,0" in { Root(Nil).loc mustBe At.empty }
-    "have no description" in { Root(Nil).descriptions mustBe empty }
-    "have no brief" in { Root(Nil).briefs mustBe empty }
-    "have no id" in { Root(Nil).identify mustBe "Root" }
+  "Root(Nil)" should {
+    "be at location 0,0" in { Root(Nil).loc must be( At.empty ) }
+    "have 'Root' id" in { Root(Nil).identify must be("Root") }
+    "have no modules" in { Root(Nil).modules must be(empty) }
+    "have no domains" in { Root(Nil).domains must be(empty) }
+    "have no comments" in { Root(Nil).comments must be(empty) }
+    "have no authors" in { Root(Nil).authors must be(empty) }
     "identify as root container" in {
       Root(Nil).isRootContainer mustBe true
     }
