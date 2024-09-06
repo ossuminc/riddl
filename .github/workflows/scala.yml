@@ -40,6 +40,12 @@ jobs:
       run: |
         sbt -v clean Test/compile test
 
+    - name: Test sbt-riddl plugin
+      env:
+        RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
+      run: |
+        sbt -v publishLocal riddlc/stage sbt-riddl/scripted
+
     - name: Coverage For JVM projects only
       run: |
         sbt -v clean coverage \
@@ -57,12 +63,6 @@ jobs:
           - **/target/scala-3.4.2/scoverage-report/scoverage.xml
           - target/scala-3.4.2/scoverage-report/scoverage.xml
           - sbt-riddl/target/scala-2.12/scoverage-report/scoverage.xml
-
-    - name: Test sbt-riddl plugin
-      env:
-        RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
-      run: |
-        sbt -v clean compile publishLocal riddlc/stage sbt-riddl/scripted
 
     - name: Cleanup Before Caching
       shell: bash
