@@ -1,9 +1,12 @@
 domain foo is {
-  term Fum is "Phi-Pho" with { described by "A Fum Description" }
   author Nada is {
     name: "Anil Nada"
     email: "anil.nada@nowhere.org"
-  } with { described as "Nothing" }
+  } with {
+    described as "Nothing"
+    term Fum is "Phi-Pho" with { described by "A Fum Description" }
+  }
+} with {
   brief "this is the brief description"
   described as "this is the detailed description"
 }

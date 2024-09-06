@@ -4,9 +4,11 @@ domain Everything is {
   type DoAThing is command { thingField: Integer }
 
   context APlant is {
-    source Source is { outlet Commands is DoAThing } described by "Data Source"
-    sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-    connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands explained as "A Channel"
+    source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+    sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+    connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands with {
+      explained as "A Channel"
+    }
   }
 
   type StateType is { someField1: SomeType }

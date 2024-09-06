@@ -4,12 +4,10 @@ domain ignore1 is {
     type UndoSomething = command { ??? }
     function AnotherThing {
       requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
-      explained as "A simple function for another"
-    }
+    } with { explained as "A simple function for another" }
     function UndoAnotherThing {
       requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
-       explained as "A reversion function for undoing AnotherThing"
-    }
+    } with { explained as "A reversion function for undoing AnotherThing" }
 
     entity blah is {
       sink trashCan is { inlet in is command Something }
@@ -34,8 +32,10 @@ domain ignore1 is {
       } with {
         described as "Second saga step"
       }
+    } with {
+      described as "ignore"
     }
-    described as "ignore"
+  } with {
+    described as "just for testing a saga"
   }
-  described as "just for testing a saga"
 }
