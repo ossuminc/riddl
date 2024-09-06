@@ -65,7 +65,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap) {
     val typ: Seq[String] = s"$name {" +: fields.map { f =>
       val typeName = makeTypeName(f.typeEx, parent)
       val fieldName = f.id.format.replace(" ", "-")
-      val comment = "\"" + f.briefs.map(_.brief.s) + "\""
+      val comment = "\"" + f.briefString + "\""
       s"  $typeName $fieldName $comment"
     } :+ "}"
 
