@@ -90,7 +90,7 @@ private[parsing] trait CommonParser
   def description[u: P](implicit ctx: P[?]): P[Description] =
     P(
       location ~ Keywords.described ~ (
-        (byAs.? ~/ docBlock) |
+        (byAs ~/ docBlock) |
           (at ~/ httpUrl) |
           (in ~/ Keywords.file ~ literalString)
       )

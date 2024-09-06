@@ -161,7 +161,7 @@ class MarkdownWriterTest extends HugoTestBase {
       val input: String =
         """domain substitutions {
           |  context referenced is { ??? }
-          |} with { description  {
+          |} with { description as {
           | | This substitutions domain contains context substitutions.referenced
           | | which maps to https://www.merriam-webster.com/
           |} }
