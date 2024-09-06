@@ -108,13 +108,5 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.clear()
       rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42)).toString mustBe "Integer{24,42}"
     }
-
-    // FIXME: Test this file writing with the prettify command
-    // "emit to a file" in {
-    //   rfe.clear()
-    //   val path = rfe.emit()
-    //   Files.exists(path)
-    //   Files.size(path) == 0
-    // }
   }
 }

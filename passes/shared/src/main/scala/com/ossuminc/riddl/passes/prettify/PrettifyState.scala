@@ -10,13 +10,12 @@ import com.ossuminc.riddl.utils.URL
 import scala.collection.mutable
 import scala.scalajs.js.annotation.{JSExportTopLevel, JSExport}
 
-
 @JSExportTopLevel("PrettifyState")
 case class PrettifyState(flatten: Boolean = false, topFile: String = "nada", outDir: String = "nada"):
 
   def filesAsString: String = {
     closeStack()
-    files.map(fe => fe.toString).mkString
+    files.map(fe => fe.toString).mkString("\n")
   }
 
   def pushFile(file: RiddlFileEmitter): Unit = {
@@ -37,6 +36,10 @@ case class PrettifyState(flatten: Boolean = false, topFile: String = "nada", out
     URL(url.scheme, url.authority, outDir, url.path)
   }
   def numFiles: Int = files.length
+
+  def withFiles(f: RiddlFileEmitter => Unit): Unit =
+    closeStack()
+    files.foreach(f)
 
   private val files: mutable.ListBuffer[RiddlFileEmitter] = mutable.ListBuffer.empty[RiddlFileEmitter]
 

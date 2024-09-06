@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import java.nio.file.Path
+import java.nio.file.{Path,Files}
 
 class PrettifyCommandTest extends RunCommandSpecBase {
 
@@ -14,11 +14,13 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     "parse a simple command" in {
       val options = Seq(
         "prettify",
+        "-s", "true",
         "language/jvm/src/test/input/everything.riddl",
         "-o",
-        "prettify/target/test/"
+        "commands/target/test/"
       )
       runWith(options)
+      Files.exists(Path.of("commands/target/test/prettify-output.riddl")) must be(true)
     }
     "load prettify options" in {
       val cmd = new PrettifyCommand
