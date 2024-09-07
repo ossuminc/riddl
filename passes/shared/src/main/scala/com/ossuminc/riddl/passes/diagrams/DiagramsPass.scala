@@ -13,7 +13,7 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
 
-import scala.collection.mutable
+import scala.collection.{mutable,immutable}
 import scala.scalajs.js.annotation.*
 
 /** The information needed to generate a Data Flow Diagram. DFDs are generated for each
@@ -108,7 +108,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case _ => ()
   }
 
-  private def makeRelationships(context: Context, root: Root): Seq[ContextRelationship] = {
+  private def makeRelationships(context: Context, root: Root): immutable.Seq[ContextRelationship] = {
     val domains = AST.getAllDomains(root)
     val applications = domains.flatMap(AST.getApplications)
     val allProcessors = findProcessors(context) ++ applications
@@ -120,7 +120,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     }
   }
 
-  private def findProcessors(processor: Processor[?]): Seq[Processor[?]] = {
+  private def findProcessors(processor: Processor[?]): immutable.Seq[Processor[?]] = {
     val containedProcessors = processor match {
       case a: Adaptor     => a.contents.processors
       case a: Application => a.contents.processors
@@ -143,8 +143,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
     val rel1 = makeTypeRelationships(context, processor.types, processor)
     val rel2 = makeFunctionRelationships(context, processor.functions)
     val rel3 = makeHandlerRelationships(context, processor.handlers)
-    val rel4 = makeInletRelationships(context, processor.inlets, processor)
-    val rel5 = makeOutletRelationships(context, processor.outlets, processor)
+    val rel4 = makeInletRelationships(context, processor.streamlets.flatMap(_.inlets), processor)
+    val rel5 = makeOutletRelationships(context, processor.streamlets.flatMap(_.outlets), processor)
     val rel6 = processor match {
       case a: Adaptor     => inferRelationship(context, a)
       case _: Application => Seq.empty[ContextRelationship]
@@ -152,7 +152,9 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case e: Entity      => makeHandlerRelationships(context, e.handlers)
       case _: Projector   => Seq.empty[ContextRelationship]
       case _: Repository  => Seq.empty[ContextRelationship]
-      case _: Streamlet   => Seq.empty[ContextRelationship]
+      case s: Streamlet   => 
+        makeInletRelationships(context, s.inlets, s)
+        makeOutletRelationships(context, s.outlets, s)
     }
     val result = rel1 ++ rel2 ++ rel3 ++ rel4 ++ rel5 ++ rel6
     result.distinct
@@ -183,8 +185,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
   private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Parent): Seq[ContextRelationship] = {
     for {
       i <- inlets
-      r = i.type_
-      t <- this.refMap.definitionOf[Type](r, parent)
+      t = i.type_
+      t <- this.refMap.definitionOf[Type](t, parent)
       relationship <- inferRelationship(context, t)
     } yield {
       relationship
@@ -278,7 +280,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
             case a: Adaptor =>
               refMap.definitionOf[Context](a.context, a) match {
                 case Some(foreignContext) =>
-                  if foreignContext != context then Some(foreignContext -> s"adaptation ${a.direction.format}")
+                  if foreignContext != context then Some(foreignContext -> s"Adaptation ${a.direction.format}")
                   else None
                 case None => None
               }
@@ -287,6 +289,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
             case f: Field        => Some(foreignContext -> s"Sets ${f.identify} in")
             case i: Inlet        => Some(foreignContext -> s"Sends to ${i.identify} in")
             case o: Outlet       => Some(foreignContext -> s"Takes from ${o.identify} in")
+            case s: Streamlet    => Some(foreignContext -> s"Interacts with ${s.identify} in")
             case p: Processor[?] => Some(foreignContext -> s"Tells to ${p.identify} in")
             case _               => None
           }
@@ -315,9 +318,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
               tri.from.pathId.format -> fromDef,
               tri.to.pathId.format -> toDef
             )
-          case _: InteractionContainer | _: Interaction | _: Comment => Seq.empty
-          case brief: BriefDescription => Seq.empty
-          case description: Description => Seq.empty
+          case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description
+            | _: BriefDescription | _: AuthorRef => Seq.empty
         }
         .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq

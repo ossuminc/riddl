@@ -12,7 +12,7 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 private[parsing] trait RepositoryParser {
-  this: ProcessorParser & StreamingParser =>
+  this: ProcessorParser & StreamingParser & Readability =>
 
   private def repositoryInclude[u: P]: P[Include[RepositoryContents]] = {
     include[u, RepositoryContents](repositoryDefinitions(_))
@@ -45,29 +45,31 @@ private[parsing] trait RepositoryParser {
       }
     )
   }
-
+  
+  private def data[u:P]: P[(Identifier,TypeRef)] = {
+    P( of ~ identifier ~ as ~ typeRef )./
+  }
+  
+  private def link[u:P]: P[(Identifier, FieldRef, FieldRef)] =
+    P (Keywords.link ~ identifier ~ as ~ fieldRef ~ to ~ fieldRef )./
+    
+  private def index[u:P]: P[FieldRef] =
+    P(Keywords.index ~ on ~ fieldRef)./
+  
   private def schema[u: P]: P[Schema] = {
     P(
       location ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
-        (of ~ identifier ~ as ~ typeRef).rep(1) ~
-        (with_ ~ identifier ~ as ~ (typeRef ~ to ~ typeRef)).rep(0) ~
-        (Keywords.index ~ on ~ fieldRef).rep(0)
-    ).map { case (at, id, kind, records, relations, indices) =>
-      Schema(
-        at,
-        id,
-        kind,
-        Map.from[Identifier, TypeRef](records),
-        Map.from[Identifier, (TypeRef, TypeRef)](relations),
-        indices
-      )
+        data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withDescriptives
+    )./.map { case (at, id, kind, data, links, indices, descriptives) =>
+      val dataMap = Map.from[Identifier,TypeRef](data)
+      val linkMap = Map.from[Identifier,(FieldRef,FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
+      Schema(at, id, kind, dataMap, linkMap, indices, descriptives)
     }
   }
 
   private def repositoryDefinitions[u: P]: P[Seq[RepositoryContents]] = {
     P(
-      typeDef | schema | handler(StatementsSet.RepositoryStatements) | option |
-        function | term | repositoryInclude | inlet | outlet | constant | authorRef | comment
+      processorDefinitionContents(StatementsSet.RepositoryStatements) | schema | repositoryInclude
     ).asInstanceOf[P[RepositoryContents]]./.rep(0)
   }
 
@@ -79,10 +81,10 @@ private[parsing] trait RepositoryParser {
 
   def repository[u: P]: P[Repository] = {
     P(
-      location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, contents, brief, description) =>
+      location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ withDescriptives
+    ).map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Repository(loc, id, foldDescriptions(contents, brief, description))
+      Repository(loc, id, contents, descriptives)
     }
   }
 

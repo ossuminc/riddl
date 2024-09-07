@@ -29,14 +29,14 @@ class RepositoryWriterTest extends WriterTest {
                          |title: "Repo"
                          |weight: 10
                          |draft: "false"
-                         |description: "Repo has no brief description"
+                         |description: "No brief description."
                          |geekdocAnchor: true
                          |geekdocToC: 4
                          |geekdocCollapseSection: true
                          |---
                          || Item | Value |
                          || :---: | :---  |
-                         || _Briefly_ | Brief description missing. |
+                         || _Briefly_ | No brief description. |
                          || _Authors_ |  |
                          || _Definition Path_ | Root.Repository.One.Repo |
                          || _View Source Link_ | [hugo/src/test/input/repository.riddl(3:5)]() |

@@ -4,9 +4,11 @@ domain Everything is {
   type DoAThing is command { thingField: Integer }
 
   context APlant is {
-    source Source is { outlet Commands is DoAThing } described by "Data Source"
-    sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
-    connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands explained as "A Channel"
+    source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+    sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+    connector AChannel from outlet APlant.Source.Commands to inlet APlant.Sink.Commands with { explained as "A Channel"}
+  } with {
+    explained as "A Plant"
   }
 
   type StateType is { someField1: SomeType }
@@ -55,13 +57,13 @@ domain Everything is {
       handler foo is {
         on command ACommand {
           send event full.SomeOtherThing.ItHappened to
-            inlet SomeOtherThing.SOT_In
+            inlet SomeOtherThing.trashBin.SOT_In
         }
       }
     }
 
     entity SomeOtherThing is {
-      inlet SOT_In is SomeOtherThing.ItHappened
+      sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
       type ItHappened is event { when: String }
       state otherThingState of type Everything.StateType
       handler fee is {

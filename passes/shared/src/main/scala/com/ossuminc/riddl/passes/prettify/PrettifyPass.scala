@@ -1,6 +1,5 @@
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
-import com.ossuminc.riddl.command.{PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
@@ -9,34 +8,27 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
 
-import java.nio.file.Path
+import scala.scalajs.js.annotation.{JSExportTopLevel,JSExport}
 
+@JSExportTopLevel("PrettifyPass$")
 object PrettifyPass extends PassInfo[PrettifyPass.Options]:
   val name: String = "prettify"
   def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator =
     (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, options)
   end creator
 
-  /** Options for the PrettifyPass and PrettifyCommand */
-  case class Options(
-    inputFile: Option[Path] = None,
-    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
-    projectName: Option[String] = None,
-    singleFile: Boolean = true
-  ) extends TranslationCommand.Options
-      with PassOptions
-      with PassCommandOptions:
-    def command: String = name
-  end Options
+  case class Options(flatten: Boolean = false) extends PassOptions
 end PrettifyPass
 
+@JSExportTopLevel("PrettifyOutput")
 case class PrettifyOutput(
   root: Root = Root.empty,
   messages: Messages = empty,
-  state: PrettifyState
+  state: PrettifyState = PrettifyState()
 ) extends PassOutput
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
+@JSExportTopLevel("PrettifyPass")
 class PrettifyPass(
   input: PassInput,
   outputs: PassesOutput,

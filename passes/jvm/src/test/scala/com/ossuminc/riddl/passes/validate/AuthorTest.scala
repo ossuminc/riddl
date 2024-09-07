@@ -39,7 +39,7 @@ class AuthorTest extends ValidatingTest {
       }
     }
     "author must be defined" in { (td: TestData) =>
-      val input = RiddlParserInput(s"""domain foo is { by author Bar }""", td)
+      val input = RiddlParserInput(s"""domain foo is { ??? } with { by author Bar }""", td)
       parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) { case (_, _, msgs) =>
         val errs = msgs.justErrors
         errs mustNot be(empty)
@@ -60,7 +60,7 @@ class AuthorTest extends ValidatingTest {
           |    email: "reid@ossum.biz"
           |  }
           |domain Foo is {
-          |  application Bar  is { by author Reid }
+          |  application Bar  is { ??? } with { by author Reid }
           |}
           |""".stripMargin,
         td
@@ -78,7 +78,7 @@ class AuthorTest extends ValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  context Bar  is { by author Reid }
+          |  context Bar is { ??? } with { by author Reid }
           |}
           |""".stripMargin,
         td
@@ -110,7 +110,7 @@ class AuthorTest extends ValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  domain Bar  is { by author Foo.Reid }
+          |  domain Bar is { ??? } with { by author Foo.Reid }
           |}
           |""".stripMargin,
         td
@@ -126,9 +126,10 @@ class AuthorTest extends ValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  context Bar  is {
+          |  context Bar  is { 
+          |    entity Bar is { ??? } with { by author Reid  }
+          |  } with {
           |    by author Reid
-          |    entity Bar is { by author Reid  }
           |  }
           |}
           |""".stripMargin,
@@ -147,7 +148,7 @@ class AuthorTest extends ValidatingTest {
         |    email: "reid@ossum.biz"
         |  }
         |  context Bar {
-        |    function FooBar is {
+        |    function FooBar is { ??? } with {
         |      by author Reid
         |    }
         |  }
@@ -168,7 +169,7 @@ class AuthorTest extends ValidatingTest {
           |    email: "reid@ossum.biz"
           |  }
           |  context Bar is {
-          |    repository FooBar  is { by author Reid }
+          |    repository FooBar  is { ??? } with { by author Reid }
           |  }
           |}
           |""".stripMargin,
@@ -187,8 +188,10 @@ class AuthorTest extends ValidatingTest {
           |  }
           |  user U is "foo"
           |  epic Bar is {
-          |   user U wants to "hum" so that "haw"
-          |   by author Reid  
+          |    user U wants to "hum" so that "haw"
+          |    ???
+          |  } with {
+          |    by author Reid  
           |  }
           |}
           |""".stripMargin,

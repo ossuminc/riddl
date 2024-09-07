@@ -4,13 +4,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.language.{CommonOptions, RiddlFilesTestBase}
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
+import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
 import org.apache.commons.io.FileUtils
 import org.scalatest.{Assertion, TestData}
@@ -27,7 +28,7 @@ class PrettifyPassTest extends RiddlFilesTestBase {
   def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
-        val options = PrettifyPass.Options(inputFile = Some(Path.of("aFile")))
+        val options = PrettifyPass.Options(flatten=true)
         PrettifyPass(input, outputs, options)
       }
     )
@@ -52,51 +53,46 @@ class PrettifyPassTest extends RiddlFilesTestBase {
     val input1 = RiddlParserInput.fromCwdPath(file.toPath)
     val output1 = runPrettify(input1, "first")
     FileUtils.writeStringToFile(new File("target/prettify-1.txt"), output1, Charset.forName("UTF-8"))
-    val input2 = RiddlParserInput(output1,"checkAFile")
+    val input2 = RiddlParserInput(output1,"firstGeneration")
     val output2 = runPrettify(input2, "second")
     FileUtils.writeStringToFile(new File("target/prettify-2.txt"), output2, Charset.forName("UTF-8"))
-    val input3 = RiddlParserInput(output2,"checkAFile")
+    val input3 = RiddlParserInput(output2,"secondGeneration")
     val output3 = runPrettify(input3, "third")
     FileUtils.writeStringToFile(new File("target/prettify-3.txt"), output3, Charset.forName("UTF-8"))
-    output1 mustEqual output3
+    output1 mustEqual output2
+    output2 mustEqual output3
+    output3 mustEqual output1
   }
 
   "PrettifyPass" should {
-    "check domains" in { (td: TestData) =>
+    "check domains" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/domains")
     }
-    "check enumerations" in { (td: TestData) =>
+    "check enumerations" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/enumerations")
     }
-    "check mappings" in { (td: TestData) =>
+    "check mappings" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/mappings")
     }
-    "check ranges" in { (td: TestData) =>
+    "check ranges" in { (_: TestData) =>
       processADirectory("passes/jvm/src/test/input/ranges")
     }
-    "check everything.riddl" in { (td: TestData) =>
+    "check everything.riddl" in { (_: TestData) =>
       processAFile("language/jvm/src/test/input/everything.riddl")
     }
-    "check petstore.riddl" in { (td: TestData) =>
+    "check petstore.riddl" in { (_: TestData) =>
       processAFile("language/jvm/src/test/input/petstore.riddl")
     }
-    "check rbbq.riddl" in { (td: TestData) =>
-      pending
+    "check rbbq.riddl" in { (_: TestData) =>
       processAFile("language/jvm/src/test/input/rbbq.riddl")
       println("done")
     }
   }
 
   "PrettifyOutput" must {
-    "construct" in { td =>
-      intercept[IllegalArgumentException] {
-        PrettifyOutput(Root.empty, Messages.empty, PrettifyState())
-      }
-      val options = PrettifyPass.Options(Some(Path.of("foo")), Some(Path.of("destination")))
-      options.singleFile must be(true)
-      val ps = PrettifyState(options)
-      ps.files.size must be(1)
-      ps.dirs must be(empty)
+    "construct" in { _ =>
+      val ps = PrettifyState(flatten=true)
+      ps.numFiles must be(1)
       val po = PrettifyOutput(Root.empty, Messages.empty, ps)
       po.messages must be(empty)
     }

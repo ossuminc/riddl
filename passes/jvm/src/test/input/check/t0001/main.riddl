@@ -1,3 +1,5 @@
 domain foo is {
   ???
-} described as ""
+} with {
+  described as ""
+}

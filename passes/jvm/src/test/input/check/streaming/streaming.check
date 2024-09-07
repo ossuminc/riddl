@@ -1,4 +1,4 @@
-passes/jvm/src/test/input/check/streaming/streaming.riddl(13:3):
+passes/jvm/src/test/input/check/streaming/streaming.riddl(17:3):
  Vital definitions should have an author reference:
    sink AttenuateSensor is {
    ^
@@ -14,7 +14,7 @@ passes/jvm/src/test/input/check/streaming/streaming.riddl(4:3):
  Vital definitions should have an author reference:
    source GetWeatherForecast is {
    ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(8:3):
+passes/jvm/src/test/input/check/streaming/streaming.riddl(10:3):
  Vital definitions should have an author reference:
    flow GetCurrentTemperature is {
    ^

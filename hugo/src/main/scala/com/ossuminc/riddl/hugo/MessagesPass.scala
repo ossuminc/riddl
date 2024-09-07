@@ -71,7 +71,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
                 s"[${definition.id.value}](${generator.makeDocLink(definition, pars)})"
               }
               .mkString(" <br> ")
-            val description: String = t.brief.map(_.brief.s).getOrElse("No description provided.")
+            val description: String = t.descriptives.filter[BriefDescription].map(_.brief.s).mkString("\n")
             val mi = MessageInfo(t.kind, t.id.value, link, userLinks, description)
             Seq(mi)
           case _ =>

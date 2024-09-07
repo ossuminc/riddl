@@ -1,6 +1,6 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.utils.URL 
+import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -138,7 +138,9 @@ class ReportedIssuesTest extends ValidatingTest {
       val warning_text = "Vital definitions should have an author reference"
       doOne("588.riddl", defaultOptions.copy(showWarnings = true)) {
         case Left(messages: Messages) =>
-          val warnings: Messages = messages.justWarnings
+          val errors = messages.justErrors
+          if errors.nonEmpty then fail(errors.format)
+          val warnings= messages.justWarnings
           warnings.size must be > 1
           warnings.find(_.message.contains(warning_text)) match {
             case Some(msg) => fail(s"Message with '$warning_text' found")

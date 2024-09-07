@@ -6,36 +6,46 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
-import com.ossuminc.riddl.passes.{PassInput, PassesCreator, PassesOutput}
-import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.prettify.{PrettifyPass, PrettifyState, *}
-import com.ossuminc.riddl.command.TranslationCommand
-import com.ossuminc.riddl.command.CommandOptions
+import com.ossuminc.riddl.passes.{PassInput, PassOptions, PassesCreator, PassesOutput, PassesResult}
+import com.ossuminc.riddl.utils.{ExceptionUtils, Logger}
+import com.ossuminc.riddl.command.{CommandOptions, PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
 
-import java.nio.file.Path
+import java.nio.charset.Charset
+import java.nio.file.{Files, Path, StandardOpenOption}
 
 object PrettifyCommand {
   val cmdName = "prettify"
+
+  case class Options(
+    inputFile: Option[Path] = None,
+    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
+    projectName: Option[String] = None,
+    singleFile: Boolean = true
+  ) extends TranslationCommand.Options
+      with PassOptions
+      with PassCommandOptions:
+    def command: String = cmdName
 }
 
 /** A command to Prettify RIDDL Source */
-class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyCommand.cmdName) {
+class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](PrettifyCommand.cmdName) {
 
-  import PrettifyPass.Options
+  import PrettifyCommand.Options
 
-  def overrideOptions(options: PrettifyPass.Options, newOutputDir: Path): PrettifyPass.Options = {
+  def overrideOptions(options: PrettifyCommand.Options, newOutputDir: Path): PrettifyCommand.Options = {
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  override def getOptionsParser: (OParser[Unit, PrettifyPass.Options], PrettifyPass.Options) = {
-    val builder = OParser.builder[PrettifyPass.Options]
+  override def getOptionsParser: (OParser[Unit, PrettifyCommand.Options], PrettifyCommand.Options) = {
+    val builder = OParser.builder[PrettifyCommand.Options]
     import builder.*
     cmd(PrettifyCommand.cmdName)
       .children(
@@ -53,10 +63,10 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
       )
       .text("""Parse and validate the input-file and then reformat it to a
              |standard layout written to the output-dir.  """.stripMargin) ->
-      PrettifyPass.Options()
+      PrettifyCommand.Options()
   }
 
-  override def getConfigReader: ConfigReader[PrettifyPass.Options] = { (cur: ConfigCursor) =>
+  override def getConfigReader: ConfigReader[PrettifyCommand.Options] = { (cur: ConfigCursor) =>
     for
       topCur <- cur.asObjectCursor
       cmdCur <- topCur.atKey(PrettifyCommand.cmdName)
@@ -69,7 +79,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
       projectName <- optional(content, "project-name", "No Project Name Specified") { cur => cur.asString }
       singleFileRes <- objCur.atKey("single-file")
       singleFile <- singleFileRes.asBoolean
-    yield PrettifyPass.Options(
+    yield PrettifyCommand.Options(
       Option(Path.of(inputPath)),
       Option(Path.of(outputPath)),
       Option(projectName),
@@ -78,14 +88,73 @@ class PrettifyCommand extends TranslationCommand[PrettifyPass.Options](PrettifyC
   }
 
   override def getPasses(
-                          log: Logger,
-                          commonOptions: CommonOptions,
-                          options: PrettifyPass.Options
+    log: Logger,
+    commonOptions: CommonOptions,
+    options: PrettifyCommand.Options
   ): PassesCreator = {
     standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
-        PrettifyPass(input, outputs, options)
+        PrettifyPass(input, outputs, PrettifyPass.Options(flatten = options.singleFile))
       }
     )
   }
+
+  override def run(
+    originalOptions: PrettifyCommand.Options,
+    commonOptions: CommonOptions,
+    log: Logger,
+    outputDirOverride: Option[Path]
+  ): Either[Messages, PassesResult] =
+    super.run(originalOptions, commonOptions, log, outputDirOverride) match
+      case Left(messages) => Left(messages)
+      case result @ Right(passesResult: PassesResult) =>
+        passesResult.outputOf[PrettifyOutput](PrettifyPass.name) match
+          case Some(output: PrettifyOutput) =>
+            writeOutput(output, originalOptions, outputDirOverride)
+            result
+          case None =>
+            // shouldn't happen
+            Left(List(Messages.error("No output from Prettify Pass", At.empty)))
+        end match
+    end match
+  end run
+
+  private def writeOutput(
+    output: PrettifyOutput,
+    originalOptions: Options,
+    dirOverrides: Option[Path]
+  ): Unit =
+    try {
+      val dir = originalOptions.outputDir
+        .getOrElse(dirOverrides
+          .getOrElse(Path.of(Option(System.getProperty("user.dir")).getOrElse("."))))
+      Files.createDirectories(dir)
+      if output.state.flatten then
+        val path = dir.resolve("prettify-output.riddl")
+        Files.writeString(
+          path,
+          output.state.filesAsString,
+          Charset.forName("UTF-8"),
+          StandardOpenOption.CREATE,
+          StandardOpenOption.WRITE
+        )
+      else
+        val base = dirOverrides.getOrElse(Path.of("."))
+        output.state.withFiles { (file: RiddlFileEmitter) =>
+          val content = file.toString
+          val path = base.resolve(file.url.path)
+          Files.writeString(path, content,
+            Charset.forName("UTF-8"),
+            StandardOpenOption.CREATE_NEW,
+            StandardOpenOption.WRITE
+          )
+        }
+      end if
+    } catch {
+      case e: java.io.IOException =>
+        println(s"Exception while writing: ${e.getClass.getName}: ${e.getMessage}")
+        val stackTrace = ExceptionUtils.getRootCauseStackTrace(e).mkString("\n")
+        println(stackTrace)
+    }
+  end writeOutput
 }

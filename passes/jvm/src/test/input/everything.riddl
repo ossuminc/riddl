@@ -8,7 +8,8 @@ domain Everything is {
     sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
     connector AChannel is {
       from outlet APlant.Source.Commands to inlet APlant.Sink.Commands
-    } explained as "A Channel"
+      explained as "A Channel"
+    }
   }
 
   user Author is "human" briefly "An exemplar"
@@ -16,7 +17,8 @@ domain Everything is {
   epic WritingABook is {
     user Everything.Author wants to "edit on the screen" so that "he can revise content more easily"
     case primary is { ??? }
-  } described as "A simple authoring story"
+    described as "A simple authoring story"
+  }
 
   context full is {
 

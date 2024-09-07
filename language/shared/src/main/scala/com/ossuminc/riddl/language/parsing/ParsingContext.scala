@@ -89,7 +89,7 @@ trait ParsingContext extends ParsingErrors {
         val contents = doParse[CT](loc, rpi, newURL, rule)
         Include(loc, newURL, contents)
       }
-      Await.result(future, 10)
+      Await.result(future, 300)
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception, loc, s"while including '$path'")

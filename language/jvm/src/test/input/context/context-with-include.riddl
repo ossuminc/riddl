@@ -1,5 +1,5 @@
 domain dominus is {
     context withRiddl is {
-      include "term-in-context"
+      include "comment-in-context"
     }
 }

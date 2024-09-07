@@ -118,7 +118,6 @@ class ParserTest extends ParsingTest {
           |  }
           |  context two is {
           |    function foo is { ??? }
-          |    term expialidocious is described by { ??? }
           |    entity one is { ??? }
           |    entity two is {
           |      type twoState is { foo: Integer }
@@ -128,6 +127,8 @@ class ParserTest extends ParsingTest {
           |      invariant one is "???"
           |    }
           |    adaptor one from context over.consumption is { ??? }
+          |  } with {
+          |   term expialidocious is "supercalifragilistic" with { ??? }
           |  }
           |}
           |""".stripMargin,
@@ -247,9 +248,7 @@ class ParserTest extends ParsingTest {
           content mustBe Invariant(
             (1, 11, rpi),
             Identifier((1, 11, rpi), "large"),
-            Option(LiteralString((1, 20, rpi), "x is greater or equal to 10")),
-            None,
-            None
+            Option(LiteralString((1, 20, rpi), "x is greater or equal to 10"))
           )
       }
     }
@@ -334,9 +333,9 @@ class ParserTest extends ParsingTest {
             case Function(
                   _,
                   Identifier(_, "foo"),
-                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _, _)))),
-                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _, _)))),
-                  _
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _)))),
+                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _)))),
+                  _, _
                 ) =>
           }
       }

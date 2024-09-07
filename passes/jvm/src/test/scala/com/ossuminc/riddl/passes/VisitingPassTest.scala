@@ -2,8 +2,7 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput}
-import org.scalatest.{Assertion, TestData}
+import com.ossuminc.riddl.language.parsing.ParsingTest
 import scala.collection.mutable
 
 import java.nio.file.Path
@@ -13,7 +12,7 @@ case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
 class VisitingPassTest extends ParsingTest {
 
   "VisitingPass" must {
-    "descend cleanly" in { td =>
+    "descend cleanly" in { _ =>
       val path: Path = Path.of("language/jvm/src/test/input/everything.riddl")
       parsePath(path) match
         case Left(msgs)  => fail(msgs.justErrors.format)
@@ -26,7 +25,7 @@ class VisitingPassTest extends ParsingTest {
             def name: String = "VisitingPassTest"
             override def result(root: Root): PassOutput = TestPassOutput(root, List.empty)
           }
-          val result = Pass.runPass[TestPassOutput](input, outputs, pass)
+          Pass.runPass[TestPassOutput](input, outputs, pass)
           // info(visitor.kindMap.toSeq.sortBy(_._1).map(_.toString).mkString("\n"))
           // info(s"""depth=${visitor.depth}
           //      |leaves=${visitor.leaves}
@@ -35,8 +34,8 @@ class VisitingPassTest extends ParsingTest {
           //      |closes=${visitor.closes}
           //      |""".stripMargin)
           visitor.depth must be(0)
-          visitor.leaves must be(23)
-          visitor.values must be(28)
+          visitor.leaves must be(19)
+          visitor.values must be(25)
           visitor.opens must be(visitor.closes)
       end match
     }
@@ -124,10 +123,10 @@ class TestVisitor extends PassVisitor:
   def doUser(user: User): Unit = leaf(user)
   def doSchema(schema: Schema): Unit = leaf(schema)
   def doState(state: State): Unit = leaf(state)
-  def doEnumerator(enumerator: Enumerator): Unit = leaf(enumerator)
   def doContainedGroup(containedGroup: ContainedGroup): Unit = leaf(containedGroup)
 
   // Non Definition values
+  def doEnumerator(enumerator: Enumerator): Unit = value(enumerator)
   def doComment(comment: Comment): Unit = value(comment)
   def doAuthorRef(reference: AuthorRef): Unit = value(reference)
   def doBriefDescription(brief: BriefDescription): Unit = value(brief)

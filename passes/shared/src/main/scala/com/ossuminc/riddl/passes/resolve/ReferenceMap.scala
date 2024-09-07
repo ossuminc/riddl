@@ -28,7 +28,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
   private val map: mutable.HashMap[Key, Definition] = mutable.HashMap.empty
 
   override def toString: String = {
-    StringHelpers.toPrettyString(this)
+    StringHelpers.toPrettyString(this) ++ StringHelpers.toPrettyString(map)
   }
 
   def size: Int = map.size

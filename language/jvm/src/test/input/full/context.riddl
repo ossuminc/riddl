@@ -1,10 +1,10 @@
 context other  is {
- by author Reid
+  ???
+} with {
+  by author Reid
 }
 context context is {
-  by author Reid
   adaptor adaptor from context other is { ??? }
-  term term is briefly "not interesting"
   function function is { ??? }
   event event is { at: TimeStamp }
   handler handler is {
@@ -32,4 +32,7 @@ context context is {
      "b_r.1"
    }
  }
+} with {
+  by author Reid
+  term term is "not interesting"
 }

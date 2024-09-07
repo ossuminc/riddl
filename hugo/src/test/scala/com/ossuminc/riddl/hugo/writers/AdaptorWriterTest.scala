@@ -35,7 +35,7 @@ class AdaptorWriterTest extends WriterTest {
               |title: "FromTwo"
               |weight: 10
               |draft: "false"
-              |description: "FromTwo has no brief description"
+              |description: "No brief description."
               |geekdocAnchor: true
               |geekdocToC: 4
               |geekdocCollapseSection: true
@@ -44,7 +44,7 @@ class AdaptorWriterTest extends WriterTest {
               |## *Adaptor 'FromTwo'*
               || Item | Value |
               || :---: | :---  |
-              || _Briefly_ | Brief description missing. |
+              || _Briefly_ | No brief description. |
               || _Authors_ |  |
               || _Definition Path_ | Root.Adaptors.One.FromTwo |
               || _View Source Link_ | [hugo/src/test/input/adaptors.riddl(4:5)]() |
@@ -63,11 +63,13 @@ class AdaptorWriterTest extends WriterTest {
               |### _Handler 'Adaptation'_
               || Item | Value |
               || :---: | :---  |
-              || _Briefly_ | Brief description missing. |
+              || _Briefly_ | No brief description. |
               || _Definition Path_ | FromTwo.Root.Adaptors.One.Adaptation |
               || _View Source Link_ | [hugo/src/test/input/adaptors.riddl(6:15)]() |
               || _Used By_ | None |
               || _Uses_ | None |
+              |
+              |## *Description*
               |
               |####  On event Adaptors.Two.DidIt
               |```

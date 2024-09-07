@@ -68,7 +68,7 @@ abstract class ValidatingTest extends ParsingTest {
     shouldFailOnErrors: Boolean = true
   )(validator: (D, RiddlParserInput, Messages) => Assertion): Seq[Assertion] = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
-    val rpi = RiddlParserInput(parseString,"test")
+    val rpi = RiddlParserInput(parseString, "test")
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
@@ -95,7 +95,7 @@ abstract class ValidatingTest extends ParsingTest {
     validator: (Context, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
-    val rpi = RiddlParserInput(parseString,"test")
+    val rpi = RiddlParserInput(parseString, "test")
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
@@ -115,12 +115,13 @@ abstract class ValidatingTest extends ParsingTest {
     shouldFailOnErrors: Boolean = true
   )(validator: (Domain, RiddlParserInput, Messages) => Assertion): Assertion = {
     parseDefinition[Domain](input) match {
-      case Left(errors) =>
-        if shouldFailOnErrors then {
+      case Left(messages) =>
+        val errors = messages.justErrors
+        if shouldFailOnErrors && errors.nonEmpty then {
           fail(errors.format)
         } else {
           val loc: At = (1, 1, input)
-          validator(Domain(loc, Identifier(loc, "stand-in")), input, errors)
+          validator(Domain(loc, Identifier(loc, "stand-in")), input, messages)
         }
       case Right((model: Domain, rpi)) =>
         val root = Root(Seq(model))
@@ -141,11 +142,21 @@ abstract class ValidatingTest extends ParsingTest {
   )(
     validation: (Root, Messages) => Assertion
   ): Assertion = {
-    val rpi = RiddlParserInput(input,"test")
+    val rpi = RiddlParserInput(input, origin)
+    parseAndValidateInput(rpi, options, shouldFailOnErrors)(validation)
+  }
+
+  def parseAndValidateInput(
+    rpi: RiddlParserInput,
+    options: CommonOptions = CommonOptions(),
+    shouldFailOnErrors: Boolean = true
+  )(
+    validation: (Root, Messages) => Assertion
+  ): Assertion = {
     TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
         val msgs = errors.format
-        fail(s"In $origin:\n$msgs")
+        fail(s"In ${rpi.origin}:\n$msgs")
       case Right(root) =>
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
@@ -211,7 +222,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Right(root) =>
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
-            fail(errors.format)
+            fail(errors.justErrors.format)
           case Right(pr) =>
             validation(root, pr)
         }
@@ -271,7 +282,7 @@ abstract class ValidatingTest extends ParsingTest {
     val directory = "passes/jvm/src/test/input/"
     val rpi = RiddlParserInput.fromCwdPath(Path.of(directory + fileName))
     simpleParseAndValidate(rpi, options) match {
-      case Left(errors:Messages ) =>
+      case Left(errors: Messages) =>
         val msgs = errors.format
         fail(s"In $label:\n$msgs")
       case Right(result) =>

@@ -30,10 +30,10 @@ class HandlerValidatorTest extends ValidatingTest {
           |    on event EntityEvent {
           |      set field HamburgerState.field2 to "678"
           |    }
-          |  } described as "Irrelevant"
-          |} described as "Irrelevant"
-          |} described as "Irrelevant"
-          |} described as "Irrelevant"
+          |  } with { briefly as "Irrelevant" }
+          |} with { briefly as "Irrelevant" }
+          |} with { briefly as "Irrelevant" }
+          |} with { briefly as "Irrelevant" }
           |""".stripMargin,
         td
       )
@@ -62,7 +62,7 @@ class HandlerValidatorTest extends ValidatingTest {
         """
           |domain entityTest is {
           | context EntityContext is {
-          |  term Incoming is briefly "This is a term definition to generate an error"
+          |  event HandleMe is { field0: String }
           |  entity Hamburger is {
           |   type StateFields is { field1: Number }
           |   state HamburgerState of Hamburger.StateFields
@@ -72,7 +72,9 @@ class HandlerValidatorTest extends ValidatingTest {
           |    }
           |   }
           |  }
-          | }
+          | } with {
+          |  term Incoming is "This is a term definition to generate an error"
+          | } 
           |}
           |""".stripMargin,
         td
@@ -82,8 +84,9 @@ class HandlerValidatorTest extends ValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'EntityContext.Incoming' resolved to Term 'Incoming' at empty(4:3), " +
-              "in OnMessageClause 'event EntityContext.Incoming', but a Type was expected"
+            "Path 'EntityContext.Incoming' was not resolved, in Context 'EntityContext'\n" +
+              "because the name 'Incoming' was not found in Context 'EntityContext'\n" +
+              "and it should refer to a Type"
           )
           msgs.justErrors.size must be(1)
       }
@@ -119,12 +122,12 @@ class HandlerValidatorTest extends ValidatingTest {
           |  context ignore is {
           |    command C is { field: Integer }
           |    command D is { field: Integer }
-          |    outlet results is Integer
+          |    source foo is { outlet results is Integer }
           |    entity example is {
           |      handler default is {
           |        on command C { ??? }
           |        on command D {
-          |          send result Foo to outlet results
+          |          send result Foo to outlet foo.results
           |        }
           |      }
           |    }
