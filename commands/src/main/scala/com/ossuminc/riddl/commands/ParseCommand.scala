@@ -32,7 +32,7 @@ class ParseCommand extends InputFileCommand(ParseCommand.cmdName) {
                     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.fromCwdPath(inputFile)
+      val rpi = RiddlParserInput.fromPath(inputFile)
       TopLevelParser.parseInput(rpi, commonOptions)
         .map(_ => PassesResult()).map(_ => PassesResult())
     }
