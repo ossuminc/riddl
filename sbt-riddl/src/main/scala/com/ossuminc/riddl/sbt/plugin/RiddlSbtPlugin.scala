@@ -80,13 +80,6 @@ object RiddlSbtPlugin extends AutoPlugin {
   override def projectSettings: Seq[Setting[_]] = Seq(
     // Global / excludeLintKeys ++= Seq(riddlcConf, riddlcOptions),
     scalaVersion := V.scala,
-    libraryDependencies ++= Seq(
-      "com.ossuminc" %% "riddl-commands" % V.riddl,
-      "com.ossuminc" %% "riddl-commands" % V.riddl % Test,
-      "org.scalactic" %% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test,
-      "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
-    ),
     Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.ScalaLibrary,
     riddlcPath := None,
     riddlcOptions := Seq("--show-times"),

@@ -34,7 +34,7 @@ class ApplicationParsingTest extends ParsingTest {
         """
           |domain foo {
           |application foo2 {
-          |  command GoHome {???} brief "Directive to focus on going to the home page"
+          |  command GoHome {???} with { briefly as "Directive to focus on going to the home page" }
           |  handler foo3 is {
           |    on command GoHome {
           |      focus on group g2

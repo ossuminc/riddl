@@ -57,13 +57,13 @@ case class UseCaseDiagram(sds: UseCaseDiagramSupport, ucdd: UseCaseDiagramData) 
     }
   }
 
-  private def generateInteractions(interactions: Seq[Interaction | Comment]): Unit = {
+  private def generateInteractions(interactions: Contents[InteractionContainerContents]): Unit = {
     interactions.foreach {
       case gi: GenericInteraction     => genericInteraction(gi)
       case si: SequentialInteractions => sequentialInteractions(si)
       case pi: ParallelInteractions   => parallelInteractions(pi)
       case oi: OptionalInteractions   => optionalInteractions(oi)
-      case _: Comment                 => ()
+      case _: Comment | _: BriefDescription | _: Description | _: Term => ()
     }
   }
 

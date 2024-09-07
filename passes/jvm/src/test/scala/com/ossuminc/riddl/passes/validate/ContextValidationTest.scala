@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 
 import java.nio.file.Path
-import org.scalatest.TestData 
+import org.scalatest.TestData
 
 class ContextValidationTest extends ValidatingTest {
 
@@ -99,22 +99,6 @@ class ContextValidationTest extends ValidatingTest {
       }
 
     }
-    "allow terms" in { (td: TestData) =>
-      val input = """term bar is briefly "imaginary line in court room"
-                    |""".stripMargin
-      parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
-        val errors = msgs.justErrors
-        // info(errors.format)
-        errors must be(empty)
-        val expected = Term(
-          (2, 2, rpi),
-          Identifier((2, 7, rpi), "bar"),
-          Some(BriefDescription((2,14,rpi),LiteralString((2, 22, rpi), "imaginary line in court room")))
-        )
-        context.terms.size mustBe 1
-        context.terms.head mustBe expected
-      }
-    }
     "allow processors" in { (td: TestData) =>
       val input = """source foo is { ??? }
                     |""".stripMargin
@@ -156,9 +140,7 @@ class ContextValidationTest extends ValidatingTest {
                   (3, 17, rpi),
                   RecordCase,
                   List()
-                ),
-                None,
-                None
+                )
               ),
               Handler(
                 (4, 11, rpi),
@@ -184,10 +166,10 @@ class ContextValidationTest extends ValidatingTest {
           val c = d.contexts.head
           c.includes mustNot be(empty)
           val inc = c.includes.head
-          inc.contents.head match {
-            case t: Term => t.format.contains("foo")
-            case _       => fail("test case should have term 'foo'")
-          }
+          inc.contents.filter[Comment].headOption match
+            case Some(c: Comment) => c.format.contains("foo")
+            case None             => fail("test case should have term 'foo'")
+          end match
       }
     }
   }

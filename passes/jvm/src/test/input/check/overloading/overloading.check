@@ -2,19 +2,18 @@ passes/jvm/src/test/input/check/overloading/overloading.riddl(1:8):
  Models without any streaming data will exhibit minimal effect:
  domain ignore = {
         ^
-
-passes/jvm/src/test/input/check/overloading/overloading.riddl(4:25):
- Enumerator 'Keyboard' overloads Type 'Keyboard' at passes/jvm/src/test/input/check/overloading/overloading.riddl(3:1):
- type Device is any of { Keyboard, Mouse, Monitor}
-                         ^
-passes/jvm/src/test/input/check/overloading/overloading.riddl(3:1):
+passes/jvm/src/test/input/check/overloading/overloading.riddl(4:27):
+ Enumerator 'Keyboard' overloads Type 'Keyboard' at passes/jvm/src/test/input/check/overloading/overloading.riddl(3:3):
+   type Device is any of { Keyboard, Mouse, Monitor}
+                           ^
+passes/jvm/src/test/input/check/overloading/overloading.riddl(3:3):
  Type 'Keyboard' is unused:
- type Keyboard is {locale: Locale}
- ^
-passes/jvm/src/test/input/check/overloading/overloading.riddl(4:1):
+   type Keyboard is {locale: Locale}
+   ^
+passes/jvm/src/test/input/check/overloading/overloading.riddl(4:3):
  Type 'Device' is unused:
- type Device is any of { Keyboard, Mouse, Monitor}
- ^
+   type Device is any of { Keyboard, Mouse, Monitor}
+   ^
 passes/jvm/src/test/input/check/overloading/overloading.riddl(1:1):
  Vital definitions should have an author reference:
  domain ignore = {

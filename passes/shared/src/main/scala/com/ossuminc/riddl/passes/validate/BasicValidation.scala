@@ -109,7 +109,7 @@ trait BasicValidation {
     } else {
       checkRefAndExamine[Type](ref, parents) { (definition: Definition) =>
         definition match {
-          case Type(_, _, typ, _, _) =>
+          case Type(_, _, typ, _) =>
             typ match {
               case AggregateUseCaseTypeExpression(_, mk, _) =>
                 check(

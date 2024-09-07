@@ -86,18 +86,18 @@ class UsageSpec extends ParsingTest {
       val input = RiddlParserInput(
         """domain foo {
           |  context Bar is {
-          |    command ACommand is { ??? } described as "AC"
+          |    command ACommand is { ??? } with { described as "AC" }
           |    entity fooBar is {
           |      record fields is { field: Number }
           |      state AState of fooBar.fields
           |      handler fooBarHandlerForAState is {
           |        on command ACommand {
           |          ???
-          |        } described as "inconsequential"
-          |      } described as "inconsequential"
-          |    } described as "unused"
-          |  } described as "inconsequential"
-          |} described as "inconsequential"
+          |        } with { described as "inconsequential" }
+          |      } with { described as "inconsequential"  }
+          |    } with { described as "unused" }
+          |  } with { described as "inconsequential" }
+          |} with { described as "inconsequential" }
           |""".stripMargin,
         td
       )
@@ -117,8 +117,9 @@ class UsageSpec extends ParsingTest {
     "unused types generate a warning" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {
-          |  type Bar = Number described as "consequential"
-          |} described as "inconsequential"
+          |  type Bar = Number with { described as "consequential" }
+          |  
+          |} with { described as "inconsequential"}
           |""".stripMargin,
         td
       )

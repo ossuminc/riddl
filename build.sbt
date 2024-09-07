@@ -1,11 +1,8 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
-import com.typesafe.tools.mima.plugin.MimaPlugin.autoImport.mimaPreviousArtifacts
 import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
-
-import scala.collection.immutable.Set
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
@@ -29,7 +26,6 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     diagrams,
     diagramsJS,
     command,
-    prettify,
     hugo,
     commands,
     riddlc,
@@ -42,7 +38,6 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .configure(With.typical)
   .configure(With.build_info)
   .settings(
-    scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -148,22 +143,6 @@ lazy val command = Module("command", "riddl-command")
 
 def testDep(project: Project): ClasspathDependency = project % "compile->compile;compile->test;test->test"
 
-val Prettify = config("prettify")
-lazy val prettify = Module("prettify", "riddl-prettify")
-  .configure(With.typical)
-  .configure(With.coverage(65))
-  .configure(With.MiMa("0.50.0"))
-  .configure(With.publishing)
-  .settings(
-    coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
-    description := "Implementation for the RIDDL prettify command, a code reformatter",
-    libraryDependencies ++= Dep.testing ++ Seq(
-      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-    )
-  )
-  .dependsOn(utils, language, pDep(passes), command)
-
 val Hugo = config("hugo")
 lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.typical)
@@ -172,14 +151,13 @@ lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.MiMa("0.50.0"))
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
-    scalaVersion := "3.4.2",
     scalacOptions += "-explain-cyclic",
-    description := "Implementation for the RIDDL prettify command, a code reformatter",
+    description := "Implementation for the RIDDL hugo command, a website generator",
     libraryDependencies ++= Dep.testing ++ Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
     )
   )
-  .dependsOn(utils, pDep(language), pDep(passes), diagrams, pDep(command), prettify)
+  .dependsOn(utils, pDep(language), pDep(passes), diagrams, pDep(command))
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
@@ -200,7 +178,6 @@ lazy val commands: Project = Module("commands", "riddl-commands")
     pDep(language),
     pDep(passes),
     command,
-    prettify,
     hugo
   )
 
@@ -214,7 +191,6 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
     utils,
     language,
     testDep(passes),
-    prettify,
     testDep(commands)
   )
   .settings(
@@ -239,7 +215,6 @@ lazy val docProjects = List(
   (passes, Passes),
   (diagrams, Diagrams),
   (command, Command),
-  (prettify, Prettify),
   (hugo, Hugo),
   (commands, Commands),
   (riddlc, Riddlc)
@@ -256,17 +231,16 @@ lazy val docsite = DocSite(
   dirName = "doc",
   apiOutput = file("src") / "main" / "hugo" / "static" / "apidoc",
   baseURL = Some("https://riddl.tech/apidoc"),
-  inclusions = Seq(utils, language, passes, diagrams, command, prettify, hugo, commands),
+  inclusions = Seq(utils, language, passes, diagrams, command, hugo, commands),
   logoPath = Some("doc/src/main/hugo/static/images/RIDDL-Logo-128x128.png")
 )
   .settings(
     name := "riddl-doc",
-    scalaVersion := "3.4.2",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
   )
   .configure(With.noMiMa)
-  .dependsOn(utils, language, passes, diagrams, command, prettify, hugo, commands)
+  .dependsOn(utils, language, passes, diagrams, command, hugo, commands)
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info, With.scala2, With.noMiMa, With.publishing)

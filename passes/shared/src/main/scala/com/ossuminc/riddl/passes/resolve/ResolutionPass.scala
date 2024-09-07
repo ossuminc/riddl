@@ -105,7 +105,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       case i: Inlet =>
         associateUsage(i, resolveATypeRef(i.type_, parents))
       case o: Outlet =>
-        associateUsage(o, resolveATypeRef(o.type_, parents))
+        val resolution = resolveATypeRef(o.type_, parents)
+        associateUsage(o, resolution)
       case c: Connector =>
         associateUsage(c, resolveARef[Outlet](c.from, parents))
         associateUsage(c, resolveARef[Inlet](c.to, parents))
@@ -151,7 +152,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     end match
   end process
 
-  private def resolveAuthorRefs(definition: Parent & WithAuthorRefs, parents: Parents): Unit =
+  private def resolveAuthorRefs(definition: Parent & WithDescriptives, parents: Parents): Unit =
     definition.authorRefs.foreach { item => associateUsage(definition, resolveARef[Author](item, parents)) }
   end resolveAuthorRefs
 
@@ -265,7 +266,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   ): Unit = {
     for interaction <- interactions do {
       interaction match {
-        case ArbitraryInteraction(_, from, _, to, _, _) =>
+        case ArbitraryInteraction(_, from, _, to, _) =>
           associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))
         case fi: FocusOnGroupInteraction =>
@@ -284,7 +285,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           associateUsage[Definition](useCase, resolveARef[Input](pi.to, parentsAsSeq))
         case si: SelfInteraction =>
           associateUsage[Definition](useCase, resolveARef[Definition](si.from, parentsAsSeq))
-        case SendMessageInteraction(_, from, message, to, _, _) =>
+        case SendMessageInteraction(_, from, message, to, _) =>
           associateUsage[Definition](useCase, resolveARef[Definition](from, parentsAsSeq))
           associateUsage[Definition](useCase, resolveAMessageRef(message, parentsAsSeq))
           associateUsage[Definition](useCase, resolveARef[Definition](to, parentsAsSeq))
@@ -628,8 +629,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             case include: Include[?] =>
               candidatesFromContents(include.contents)
             case function: Function =>
-              function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++ 
-                function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++ 
+              function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
+                function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
                 function.contents.definitions
             case vital: VitalDefinition[?] =>
               vital.contents.flatMap {

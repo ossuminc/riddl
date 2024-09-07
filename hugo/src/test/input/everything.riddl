@@ -4,25 +4,28 @@ domain Everything is {
   command DoAThing is { thingField: Integer }
 
   context APlant is {
-    source Source is { outlet Commands is DoAThing } described by "Data Source"
-    sink Sink is { inlet Commands is DoAThing } explained as "Data Sink"
+    source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+    sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
     connector AChannel is {
       from outlet APlant.Source.Commands to inlet APlant.Sink.Commands
-    } explained as "A Channel"
-  }
+    } with { explained as "A Channel" }
+  } with { explained as "A Plant" }
 
-  user Author is "human" briefly "An exemplar"
+  user Author is "human" with { briefly "An exemplar" }
 
   epic WritingABook is {
     user Everything.Author wants "to edit on the screen" so that "he can revise content more easily"
     case primary is { user Everything.Author wants "to do something" so that "it is done" ??? }
-  } described as "A simple authoring story"
+  } with {
+    described as "A simple authoring story"
+  }
 
   context full is {
 
-    inlet input is type DoAThing
+    sink Sink is { inlet input is type DoAThing }
+
     connector foo is {
-       from outlet Everything.APlant.Source.Commands to inlet full.input
+       from outlet Everything.APlant.Source.Commands to inlet full.Sink.input
     }
 
     type str is String             // Define str as a String
@@ -63,7 +66,7 @@ domain Everything is {
       handler foo is {
         on command ACommand {
           "if and(Something arrives, misc()) then"
-            send event Inebriated to inlet Everything.full.input
+            send event Inebriated to inlet Everything.full.Sink.input
           "end"
         }
       }

@@ -59,13 +59,11 @@ case class GeekDocWriter(
   }
 
   def containerHead(cont: Parent): Unit = {
-    val brief = 
+    val brief: String = 
       cont match
         case p: Parent if p.contents.filter[BriefDescription].nonEmpty => 
           p.contents.filter[BriefDescription].foldLeft("")((x,y) => x + y.brief.s)
-        case d: Definition if d.hasBriefDescription => 
-          d.asInstanceOf[Definition & WithABrief].brief.map(_.brief.s)
-            .getOrElse(cont.id.format + " has no brief description")
+        case d: WithDescriptives => d.briefString 
         case _ => cont.id.format + " has no brief description"
       end match
     fileHead(
@@ -83,10 +81,7 @@ case class GeekDocWriter(
     fileHead(
       s"${definition.id.format}: ${definition.getClass.getSimpleName}",
       weight,
-      Option(
-        definition.brief
-          .fold(definition.id.format + " has no brief description.")(_.brief.s)
-      )
+      Option(definition.briefString)
     )
   }
 

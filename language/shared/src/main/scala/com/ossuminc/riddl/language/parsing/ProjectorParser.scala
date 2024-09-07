@@ -28,8 +28,7 @@ private[parsing] trait ProjectorParser {
 
   private def projectorDefinitions[u: P]: P[Seq[ProjectorContents]] = {
     P(
-      updates | typeDef | term | projectorInclude | handler(StatementsSet.ProjectorStatements) |
-        function | inlet | outlet | invariant | constant | authorRef | comment | option
+      processorDefinitionContents(StatementsSet.ProjectorStatements) | updates | projectorInclude
     ).asInstanceOf[P[ProjectorContents]]./.rep(1)
   }
 
@@ -50,10 +49,10 @@ private[parsing] trait ProjectorParser {
     */
   def projector[u: P]: P[Projector] = {
     P(
-      location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, contents, brief, description) =>
+      location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ withDescriptives
+    )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Projector(loc, id, foldDescriptions(contents, brief, description))
+      Projector(loc, id, contents, descriptives)
     }
   }
 }

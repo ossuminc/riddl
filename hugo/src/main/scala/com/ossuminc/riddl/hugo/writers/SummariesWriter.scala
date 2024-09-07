@@ -96,10 +96,10 @@ trait SummariesWriter { this: MarkdownWriter =>
       list(
         Seq(
           s"Is a: ${user.is_a.format}",
-          s"Brief: ${user.brief.map(_.format)}"
+          s"Brief: ${user.briefString}"
         )
       )
-      user.description.foreach(d => p(d.lines.map(_.format).mkString("\n")))
+      user.descriptionString
   }
   
   def emitAuthors(weight: Int, authors: Seq[Author]): Unit = {
@@ -114,10 +114,10 @@ trait SummariesWriter { this: MarkdownWriter =>
           s"Organization: ${author.organization.format}",
           s"URL: ${author.url.map(_.toString)}",
           s"Email: ${author.email.format}",
-          s"Brief: ${author.brief.map(_.format)}"
+          s"Brief: ${author.briefString}"
         )
       )
-      author.description.foreach(d => p(d.lines.map(_.format).mkString("\n")))
+      author.descriptionString
   }
 
   def emitMessageSummary(domain: Domain, messages: Seq[MessageInfo], kind: String): Unit = {

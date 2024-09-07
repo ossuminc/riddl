@@ -1,15 +1,18 @@
 author Reid is { name: "Reid Spencer" email: "reid@ossuminc.com" }
 domain test588 {
-  by author Reid
   context TestGateway is {
     option gateway
-    by author Reid
-
     include "588included"
 
-  } briefly "A gateway for testing Improving.app instances" explained as {
-  | The messages sent to this service will create various entities. This is
-  | typically done by the runScenario command which allows a testing scenario
-  | to be set up abstractly.
+  } with {
+    by author Reid
+    briefly "A gateway for testing Improving.app instances"
+    explained as {
+      | The messages sent to this service will create various entities. This is
+      | typically done by the runScenario command which allows a testing scenario
+      | to be set up abstractly.
+    }
   }
+} with {
+  by author Reid
 }

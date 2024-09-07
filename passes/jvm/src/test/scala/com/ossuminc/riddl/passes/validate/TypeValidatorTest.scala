@@ -57,12 +57,13 @@ class TypeValidatorTest extends ValidatingTest {
     "allow ??? in aggregate bodies without warning" in { (td:TestData) =>
       val input = RiddlParserInput(
         """domain foo {
-          |type Empty is { ??? } explained as "empty"
-          |} explained as "nothing"
+          |  type Empty is { ??? } with { described as "empty" }
+          |} with { explained as "nothing" }
           |""".stripMargin,td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         msgs mustNot be(empty)
+        info(msgs.format)
         msgs.size mustBe (3)
         msgs.filter(_.kind == Messages.UsageWarning).last.format must include("is unused")
       }

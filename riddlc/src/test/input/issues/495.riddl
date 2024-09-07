@@ -4,7 +4,7 @@ domain ignore {
     record AggregatedAOV { value: Integer }
     type OrderTable is table of AOVData of [4,4]
     page AOVDashboardPage {
-      output AOVGraph shows graph AOVData briefly "As a line graph"
+      output AOVGraph shows graph AOVData with { briefly "As a line graph" }
       output AOVSummary shows record AggregatedAOV
       output OrderDetails shows table OrderTable
     }

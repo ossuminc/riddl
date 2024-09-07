@@ -1,7 +1,9 @@
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
+import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.passes.prettify.RiddlFileEmitter
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -11,7 +13,7 @@ import java.nio.file.{Files, Path}
 /** Tests For RiddlFileEmitter */
 class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 
-  private val path: Path = Path.of("prettify/target/test/rfe.out")
+  private val path: URL = URL.fromCwdPath("prettify/target/test/rfe.out")
   val rfe = RiddlFileEmitter(path)
 
   "RiddlFileEmitter" should {
@@ -78,7 +80,7 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
     "emits descriptions" in {
       rfe.clear()
       val desc = BlockDescription(At.empty, Seq(LiteralString(At.empty, "foo")))
-      rfe.emitDescription(Some(desc))
+      rfe.emitDescription(desc)
       rfe.toString mustBe "described as {\n  |foo\n}\n"
     }
 
@@ -105,13 +107,6 @@ class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
       rfe.emitTypeExpression(Abstract(At.empty)).toString mustBe "Abstract"
       rfe.clear()
       rfe.emitTypeExpression(SpecificRange(At.empty, Integer(At.empty), 24, 42)).toString mustBe "Integer{24,42}"
-    }
-
-    "emit to a file" in {
-      rfe.clear()
-      val path = rfe.emit()
-      Files.exists(path)
-      Files.size(path) == 0
     }
   }
 }

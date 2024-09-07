@@ -15,8 +15,7 @@ import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.utils.SeqHelpers.*
 
 import scala.collection.mutable
-import scala.util.control.NonFatal
-import scala.jdk.CollectionConverters.*
+import scala.collection.immutable.Seq
 
 object ValidationPass extends PassInfo[PassOptions] {
   val name: String = "Validation"
@@ -142,20 +141,20 @@ case class ValidationPass(
         validateOutput(out, parentsAsSeq)
       case cg: ContainedGroup =>
         validateContainedGroup(cg, parentsAsSeq)
-      case root: Root => 
+      case root: Root =>
         checkContents(root, parentsAsSeq)
-      case _: Definition => () // abstract type  
+      case _: Definition => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
   }
-  private def validateOnClause(onClause: OnClause, parents: Parents): Unit =
+  private def validateOnClause(onClause: OnClause): Unit =
     if onClause.statements.isEmpty then messages.add(missing(s"${onClause.identify} should have statements"))
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
     checkDefinition(parents, omc)
-    validateOnClause(omc, parents)
+    validateOnClause(omc)
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
@@ -200,23 +199,23 @@ case class ValidationPass(
         checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
       case ReturnStatement(loc, value) =>
         checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
-      case SendStatement(loc, msg, portlet) =>
+      case SendStatement(_, msg, portlet) =>
         checkRef[Type](msg, parents)
         checkRef[Portlet](portlet, parents)
-      case ReplyStatement(loc, message) =>
+      case ReplyStatement(_, message) =>
         checkRef[Type](message, parents)
-      case MorphStatement(loc, entity, state, value) =>
+      case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
         checkRef[State](state, parents)
         checkRef[Type](value, parents)
-      case BecomeStatement(loc, entityRef, handlerRef) =>
+      case BecomeStatement(_, entityRef, handlerRef) =>
         checkRef[Entity](entityRef, parents).foreach { entity =>
           checkCrossContextReference(entityRef.pathId, entity, onClause)
         }
         checkRef[Handler](handlerRef, parents).foreach { handler =>
           checkCrossContextReference(handlerRef.pathId, handler, onClause)
         }
-      case TellStatement(loc, msg, processorRef) =>
+      case TellStatement(_, msg, processorRef) =>
         val maybeProc = checkRef[Processor[?]](processorRef, parents)
         maybeProc.foreach { entity =>
           checkCrossContextReference(processorRef.pathId, entity, onClause)
@@ -225,7 +224,7 @@ case class ValidationPass(
         maybeType.foreach { typ =>
           checkCrossContextReference(msg.pathId, typ, onClause)
         }
-      case CallStatement(loc, funcRef) =>
+      case CallStatement(_, funcRef) =>
         checkRef[Function](funcRef, parents).foreach { function =>
           checkCrossContextReference(funcRef.pathId, function, onClause)
         }
@@ -346,28 +345,40 @@ case class ValidationPass(
   private def validateConnector(
     connector: Connector,
     parents: Parents
-  ): Unit = {
+  ): Unit =
     if connector.nonEmpty then
       addConnector(connector)
       val maybeOutlet = checkRef[Outlet](connector.from, parents)
       val maybeInlet = checkRef[Inlet](connector.to, parents)
 
-      (maybeOutlet, maybeInlet) match {
+      (maybeOutlet, maybeInlet) match
         case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
-          val outletType = resolvePath[Type](outlet.type_.pathId, parents)
-          val inletType = resolvePath[Type](inlet.type_.pathId, parents)
-          if !areSameType(inletType, outletType) then {
-            messages.addError(
-              inlet.loc,
-              s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
-                s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} " +
-                s"which are not the same types"
-            )
-          }
-        case _ =>
-        // one of the two didn't resolve, already handled above.
-      }
-  }
+          val outletParents: Parents = this.symbols.parentsOf(outlet) 
+          val outType = resolvePath[Type](outlet.type_.pathId, outletParents)
+          val inletParents: Parents = this.symbols.parentsOf(inlet)
+          val inType = resolvePath[Type](inlet.type_.pathId, inletParents)
+          (outType, inType) match
+            case (Some(outletType), Some(inletType)) =>
+              if !areSameType(Some(inletType), Some(outletType)) then
+                messages.addError(
+                  inlet.loc,
+                  s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
+                    s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} " +
+                    s"which are not the same types"
+                )
+              end if
+            case _ => 
+              if outType.isEmpty then
+                messages.addError(outlet.loc, s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}")
+              end if
+              if inType.isEmpty then
+                messages.addError(inlet.loc, s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}")
+              end if
+          end match  
+        case _ => // one of the two didn't resolve, already handled above.
+      end match
+    end if
+  end validateConnector
 
   private def validateAuthorInfo(
     ai: Author,
@@ -750,9 +761,7 @@ case class ValidationPass(
                 )
               }
           }
-        case bd: BriefDescription => ()
-        case bd: Description => ()
-        case _: Comment => ()
+        case _: BriefDescription | _:Description | _: Term | _: Comment | _: AuthorRef => ()
       }
     }
     if uc.nonEmpty then {
@@ -775,11 +784,11 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isInstanceOf[ApplicationRelated] =>
             d match {
-              case output @ Output(loc, _, id, _, putOut, _) =>
+              case output @ Output(loc, _, _, _, putOut, _, _) =>
                 putOut match {
                   case typRef: TypeRef =>
                     checkTypeRef(typRef, parents) match {
-                      case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
+                      case Some(Type(_, _, typEx, _)) if typEx.isContainer =>
                         typEx match {
                           case ate: AggregateUseCaseTypeExpression
                               if ate.usecase == EventCase || ate.usecase == ResultCase =>
@@ -810,9 +819,9 @@ case class ValidationPass(
         destination match {
           case Some(d) if d.isVital =>
             o match {
-              case input @ Input(loc, _, id, _, putIn, _) =>
+              case input @ Input(_, _, _, _, putIn, _, _) =>
                 checkTypeRef(putIn, parents) match {
-                  case Some(Type(_, _, typEx, _, _)) if typEx.isContainer =>
+                  case Some(Type(_, _, typEx, _)) if typEx.isContainer =>
                     typEx match {
                       case ate: AggregateUseCaseTypeExpression
                           if ate.usecase == CommandCase || ate.usecase == QueryCase =>
@@ -844,29 +853,29 @@ case class ValidationPass(
     val useCase = parents.head
     checkDescription(interaction)
     interaction match {
-      case SelfInteraction(_, from, _, _, _) =>
+      case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)
-      case DirectUserToURLInteraction(_, user: UserRef, _, _, _) =>
+      case DirectUserToURLInteraction(_, user: UserRef, _, _) =>
         checkRef[User](user, parents)
-      case FocusOnGroupInteraction(_, user: UserRef, group: GroupRef, _, _) =>
+      case FocusOnGroupInteraction(_, user: UserRef, group: GroupRef, _) =>
         checkRef[Group](group, parents)
         checkRef[User](user, parents)
-      case SelectInputInteraction(_, user: UserRef, inputRef: InputRef, _, _) =>
+      case SelectInputInteraction(_, user: UserRef, inputRef: InputRef, _) =>
         checkRef[User](user, parents)
         checkRef[Input](inputRef, parents)
-      case TakeInputInteraction(_, user: UserRef, inputRef: InputRef, _, _) =>
+      case TakeInputInteraction(_, user: UserRef, inputRef: InputRef, _) =>
         checkRef[User](user, parents)
         checkRef[Input](inputRef, parents)
-      case ArbitraryInteraction(_, from, _, to, _, _) =>
+      case ArbitraryInteraction(_, from, _, to, _) =>
         checkRef[Definition](from, parents)
         checkRef[Definition](to, parents)
         val origin = resolution.refMap.definitionOf[Definition](from.pathId, parents.head)
         val destination = resolution.refMap.definitionOf[Definition](to.pathId, parents.head)
         validateArbitraryInteraction(origin, destination, parents)
-      case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _, _) =>
+      case ShowOutputInteraction(_, from: OutputRef, _, to: UserRef, _) =>
         checkRef[Output](from, parents)
         checkRef[User](to, parents)
-      case SendMessageInteraction(_, from, msg, to, _, _) =>
+      case SendMessageInteraction(_, from, msg, to, _) =>
         checkMessageRef(msg, parents, Seq(msg.messageKind))
         checkRef[Definition](from, parents)
         checkRef[Processor[?]](to, parents)

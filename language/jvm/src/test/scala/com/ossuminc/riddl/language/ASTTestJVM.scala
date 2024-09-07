@@ -36,7 +36,7 @@ class ASTTestJVM extends TestingBasis {
     ud.loc.isEmpty mustBe true
     ud.url.toExternalForm must be(url_text)
     ud.format must be(url.toExternalForm)
-    val lines: Seq[String] = ud.lines.map(_.s)
+    val lines: scala.collection.Seq[String] = ud.lines.map(_.s)
     val head = lines.head
     head must include("sbt-ossuminc")
   }

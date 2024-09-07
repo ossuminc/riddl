@@ -28,7 +28,7 @@ class ASTTest extends TestingBasis {
       container.put[ULID]("ulid", ulid)
     }
   }
-  
+
   "Descriptions" should {
     "have empty Description.empty" in {
       Description.empty.format mustBe ""
@@ -128,7 +128,8 @@ class ASTTest extends TestingBasis {
   val application: Application = Application(
     At.empty,
     Identifier(At.empty, "application"),
-    contents = Seq(authorRef)
+    contents = Contents.empty,
+    descriptives = Seq(authorRef)
   )
   val author: Author = Author(
     At.empty,
@@ -174,19 +175,16 @@ class ASTTest extends TestingBasis {
     WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
   )
   val function: Function =
-    Function(At.empty, Identifier(At(), "Lambda"), None, None,
-      (statements ++ brief.toSeq ++ description.toSeq).asInstanceOf[Seq[FunctionContents]]
-    )
+    Function(At.empty, Identifier(At(), "Lambda"), None, None, statements, brief.toSeq ++ description.toSeq)
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Seq[OnClause] = Seq(
-    OnInitializationClause(At.empty, foldDescriptions(statements, brief, description)),
-    OnMessageClause(At.empty, messageRef, None, foldDescriptions(statements, brief, description)),
-    OnOtherClause(At.empty, foldDescriptions(statements, brief, description)),
-    OnTerminationClause(At.empty, foldDescriptions(statements, brief, description))
+    OnInitializationClause(At.empty, statements),
+    OnMessageClause(At.empty, messageRef, None, statements),
+    OnOtherClause(At.empty, statements),
+    OnTerminationClause(At.empty, statements)
   )
-  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), foldDescriptions(onClauses, brief, description))
-  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"),
-    foldDescriptions[Handler](Seq(handler), brief, description))
+  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), onClauses)
+  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Seq(handler))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
   val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
@@ -196,7 +194,7 @@ class ASTTest extends TestingBasis {
     LiteralString(At.empty, "do something"), LiteralString(At.empty, "he can reap obvious benefits"))
   val storyCase: UseCase = UseCase(At.empty, Identifier(At.empty, "story-case"), userStory)
   val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"), userStory)
-  val term: Term = Term(At.empty, Identifier(At.empty, "term"))
+  val term: Term = Term(At.empty, Identifier(At.empty, "term"), Seq(LiteralString(At.empty, "definition")))
 
   "User" should {
     "have a test" in {
@@ -219,7 +217,7 @@ class ASTTest extends TestingBasis {
     "have a test" in {
       application.loc mustBe At.empty
       application.id.value mustBe "application"
-      application.contents.filter[AuthorRef] mustBe Seq(authorRef)
+      application.authorRefs mustBe Seq(authorRef)
     }
   }
   "Author" should {
@@ -291,7 +289,7 @@ class ASTTest extends TestingBasis {
         )
 
         val invariants = Seq(
-          Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(), "true")), None)
+          Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(), "true")))
         )
         val types = Seq(
           Type(At(), Identifier(At(), "mytype"), Bool(At())),
@@ -319,10 +317,10 @@ class ASTTest extends TestingBasis {
     "be structurally correct" in {
       function.id.value mustBe "Lambda"
       function.statements mustBe statements
-      function.input mustBe empty
-      function.output mustBe empty
-      function.briefs mustBe briefs
-      function.descriptions mustBe descriptions
+      function.input must be(empty)
+      function.output must be(empty)
+      function.brief must be(brief)
+      function.descriptions must be (descriptions)
     }
   }
 
@@ -357,11 +355,13 @@ class ASTTest extends TestingBasis {
   "Projector" should { "have a test" in { pending } }
   "Repository" should { "have a test" in { pending } }
 
-  "RootContainer" should {
-    "be at location 0,0" in { Root(Nil).loc mustBe At.empty }
-    "have no description" in { Root(Nil).descriptions mustBe empty }
-    "have no brief" in { Root(Nil).briefs mustBe empty }
-    "have no id" in { Root(Nil).identify mustBe "Root" }
+  "Root(Nil)" should {
+    "be at location 0,0" in { Root(Nil).loc must be( At.empty ) }
+    "have 'Root' id" in { Root(Nil).identify must be("Root") }
+    "have no modules" in { Root(Nil).modules must be(empty) }
+    "have no domains" in { Root(Nil).domains must be(empty) }
+    "have no comments" in { Root(Nil).comments must be(empty) }
+    "have no authors" in { Root(Nil).authors must be(empty) }
     "identify as root container" in {
       Root(Nil).isRootContainer mustBe true
     }
@@ -376,7 +376,7 @@ class ASTTest extends TestingBasis {
 
   "Term" should {
     "format correctly" in {
-      term.format mustBe s"${Keyword.term} ${term.id.format} is None"
+      term.format mustBe s"${Keyword.term} ${term.id.format}"
     }
   }
 }

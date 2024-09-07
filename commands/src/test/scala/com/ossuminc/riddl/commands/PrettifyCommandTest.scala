@@ -6,8 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.prettify.PrettifyPass
-import java.nio.file.Path
+import java.nio.file.{Path,Files}
 
 class PrettifyCommandTest extends RunCommandSpecBase {
 
@@ -15,20 +14,21 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     "parse a simple command" in {
       val options = Seq(
         "prettify",
+        "-s", "true",
         "language/jvm/src/test/input/everything.riddl",
         "-o",
-        "prettify/target/test/"
+        "commands/target/test/"
       )
       runWith(options)
+      Files.exists(Path.of("commands/target/test/prettify-output.riddl")) must be(true)
     }
     "load prettify options" in {
       val cmd = new PrettifyCommand
-      val conf = Path.of("prettify/src/test/input/prettify.conf")
-      val expected = PrettifyPass.Options(
+      val conf = Path.of("commands/src/test/input/prettify.conf")
+      val expected = PrettifyCommand.Options(
         inputFile = Some(Path.of("nada.riddl")),
-        outputDir = Some(Path.of("prettify/target/prettify/")),
-        projectName = Some("Nada"),
-        singleFile = true
+        outputDir = Some(Path.of("commands/target/prettify/")),
+        projectName = Some("Nada")
       )
       cmd.loadOptionsFrom(conf) match {
         case Left(errors) => fail(errors.format)

@@ -258,7 +258,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
       case branch: BranchDefinition[?] =>
         process(branch, parents)
         parents.push(branch)
-        branch.contents.foreach { value => traverse(value, parents) }
+        branch.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
         parents.pop()
       case value: RiddlValue =>
         // NOTE: everything else is just a non-definition non-container
@@ -272,6 +272,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
 /** A Pass base class that allows the processing to be done based on containers, and calling these methods:
   *   - openContainer at the start of container's processing
   *   - processLeaf for any leaf nodes within the container
+ *    - processValue for any non-definitions within the container
   *   - closeContainer after all the container's contents have been processed
   *
   * This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all their
@@ -341,27 +342,22 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
     */
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case leaf: LeafDefinition =>
-        processLeaf(leaf, parents.toParents)
-      case container: BranchDefinition[?] =>
-        val def_parents = parents.toParents
-        openContainer(container, def_parents)
-        if container.contents.nonEmpty then
-          parents.push(container)
-          container.contents.foreach {
-            case leaf: LeafDefinition   => processLeaf(leaf, parents.toParents)
-            case definition: Definition => traverse(definition, parents)
-            case include: Include[?]    => traverse(include, parents)
-            case value: RiddlValue      => processValue(value, parents.toParents)
-          }
-          parents.pop()
-        end if
-        closeContainer(container, def_parents)
-      case include: Include[?] =>
+      case include: Include[?] => // treat includes specially
         openInclude(include, parents.toParents)
         include.contents.foreach { item => traverse(item, parents) }
         closeInclude(include, parents.toParents)
-      case value: RiddlValue =>
+      case container: Parent => // must be a container so descend
+        val def_parents = parents.toParents // save this for the closeContainer below
+        openContainer(container, def_parents)
+        if container.contents.nonEmpty then // just optimize out the push/pop for empty contents, which is frequent
+          parents.push(container)
+          container.contents.foreach( item => traverse(item, parents)) // recurse!
+          parents.pop()
+        end if
+        closeContainer(container, def_parents)
+      case leaf: LeafDefinition  => // no further descent
+        processLeaf(leaf, parents.toParents)
+      case value: RiddlValue => // no further descent
         processValue(value, parents.toParents)
     }
   }
@@ -499,7 +495,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Root                  => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | 
+          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
          _: Definition => () // not  containers
     end match
   end closeContainer
@@ -508,7 +504,6 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
     definition match
       case field: Field                   => visitor.doField(field)
       case method: Method                 => visitor.doMethod(method)
-      case enumerator: Enumerator         => visitor.doEnumerator(enumerator)
       case term: Term                     => visitor.doTerm(term)
       case author: Author                 => visitor.doAuthor(author)
       case constant: Constant             => visitor.doConstant(constant)
@@ -526,20 +521,22 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
 
   protected final def processValue(value: RiddlValue, parents: Parents): Unit =
     value match
-      case comment: Comment         => 
+      case comment: Comment         =>
         visitor.doComment(comment)
-      case authorRef: AuthorRef     => 
+      case authorRef: AuthorRef     =>
         visitor.doAuthorRef(authorRef)
-      case brief: BriefDescription  => 
+      case brief: BriefDescription  =>
         visitor.doBriefDescription(brief)
-      case description: Description => 
+      case description: Description =>
         visitor.doDescription(description)
-      case statement: Statement     => 
+      case statement: Statement     =>
         visitor.doStatement(statement)
-      case interaction: Interaction => 
+      case interaction: Interaction =>
         visitor.doInteraction(interaction)
-      case optionValue: OptionValue => 
+      case optionValue: OptionValue =>
         visitor.doOptionValue(optionValue)
+      case enumerator: Enumerator   =>
+        visitor.doEnumerator(enumerator)
       case _                        => ()
     end match
   end processValue

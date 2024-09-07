@@ -45,18 +45,19 @@ class DomainValidatorTest extends ValidatingTest {
                 |    email: "reid@ossuminc.com"
                 |    organization: "Ossum Inc."
                 |    title: "President"
-                |  } described as "identifying"
-                |domain foo is {
+                |  } with { described as "identifying" }
+                |domain foo is { ??? } with {
                 |  by author Reid
-                |} described as "example"
+                |  described as "example"
+                |}
                 |""".stripMargin,td)
       Riddl.parseAndValidate(rpi) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
           val domain: Domain = result.root.domains.head
           val author: Author = result.root.authors.head
-          domain mustNot be(empty)
-          domain.contents mustNot be(empty)
+          domain must be(empty)
+          domain.contents must be(empty)
           val expectedAuthor =
             Author(
               (1, 1, rpi),
@@ -66,11 +67,10 @@ class DomainValidatorTest extends ValidatingTest {
               Some(LiteralString((4, 19, rpi), "Ossum Inc.")),
               Some(LiteralString((5, 12, rpi), "President")),
               None,
-              None,
-              Some(
+              Seq(
                 BlockDescription(
-                  (6, 18, rpi),
-                  Seq(LiteralString((6, 18, rpi), "identifying"))
+                  (6, 12, rpi),
+                  Seq(LiteralString((6, 25, rpi), "identifying"))
                 )
               )
             )

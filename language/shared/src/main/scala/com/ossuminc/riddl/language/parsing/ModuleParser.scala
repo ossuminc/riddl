@@ -27,10 +27,10 @@ private[parsing] trait ModuleParser {
 
   def module[u: P]: P[Module] = {
     P(
-      location ~ Keywords.module ~/ identifier ~ is ~ open ~ moduleContents ~ close
-    )./.map { case (loc, id, contents) =>
+      location ~ Keywords.module ~/ identifier ~ is ~ open ~ moduleContents ~ close ~ withDescriptives
+    )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Module(loc, id, contents)
+      Module(loc, id, contents, descriptives)
     }
   }
 }

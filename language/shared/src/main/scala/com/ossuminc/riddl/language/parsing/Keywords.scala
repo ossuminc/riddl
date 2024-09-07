@@ -101,7 +101,8 @@ object Keywords {
 
   def direct[u: P]: P[Unit] = keyword(Keyword.direct)
 
-  def described[u: P]: P[Unit] = keywords(StringIn(Keyword.described, Keyword.explained))
+  def described[u: P]: P[Unit] = keywords(
+    StringIn(Keyword.described, Keyword.explained, Keyword.description, Keyword.explanation))
 
   def details[u: P]: P[Unit] = keyword(Keyword.details)
 
@@ -146,6 +147,8 @@ object Keywords {
   def form[u: P]: P[Unit] = keyword(Keyword.form)
 
   def from[u: P]: P[Unit] = keyword(Keyword.from)
+  
+  def fully[u:P]: P[Unit] = keyword(Keyword.fully)
 
   def function[u: P]: P[Unit] = keyword(Keyword.function)
 
@@ -175,6 +178,8 @@ object Keywords {
 
   def items[u: P]: P[Unit] = keyword(Keyword.items)
 
+  def link[u: P]: P[Unit] = keyword(Keyword.link)
+
   def many[u: P]: P[Unit] = keyword(Keyword.many)
 
   def mapping[u: P]: P[Unit] = keyword(Keyword.mapping)
@@ -182,8 +187,8 @@ object Keywords {
   def merge[u: P]: P[Unit] = keyword(Keyword.merge)
 
   def message[u: P]: P[Unit] = keyword(Keyword.message)
-  
-  def module[u:P]: P[Unit] = keyword(Keyword.module)
+
+  def module[u: P]: P[Unit] = keyword(Keyword.module)
 
   def morph[u: P]: P[Unit] = keyword(Keyword.morph)
 
@@ -314,6 +319,8 @@ object Keywords {
   def when[u: P]: P[Unit] = keyword(Keyword.when)
 
   def where[u: P]: P[Unit] = keyword(Keyword.where)
+
+  def with_[u: P]: P[Unit] = keyword(Keyword.with_)
 }
 
 object Keyword {
@@ -342,6 +349,7 @@ object Keyword {
   final val context = "context"
   final val create = "create"
   final val described = "described"
+  final val description = "description"
   final val details = "details"
   final val direct = "direct"
   final val presents = "presents"
@@ -356,6 +364,7 @@ object Keyword {
   final val event = "event"
   final val example = "example"
   final val execute = "execute"
+  final val explanation = "explanation"
   final val explained = "explained"
   final val field = "field"
   final val fields = "fields"
@@ -366,6 +375,7 @@ object Keyword {
   final val foreach = "foreach"
   final val form = "form"
   final val from = "from"
+  final val fully = "fully"
   final val function = "function"
   final val graph = "graph"
   final val group = "group"
@@ -380,6 +390,7 @@ object Keyword {
   final val input = "input"
   final val invariant = "invariant"
   final val items = "items"
+  final val link = "link"
   final val many = "many"
   final val mapping = "mapping"
   final val merge = "merge"
@@ -447,4 +458,5 @@ object Keyword {
   final val void = "void"
   final val when = "when"
   final val where = "where"
+  final val with_ = "with"
 }

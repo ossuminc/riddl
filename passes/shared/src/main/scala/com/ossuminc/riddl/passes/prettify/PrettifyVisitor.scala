@@ -3,17 +3,16 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package com.ossuminc.riddl.prettify
+package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.PassVisitor
 
-import java.nio.file.Path
 import scala.annotation.unused
 
 class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
-  val state: PrettifyState = PrettifyState(options)
+  val state: PrettifyState = PrettifyState(options.flatten)
 
   def result: PrettifyState = state
 
@@ -21,8 +20,16 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   inline private def close(definition: Definition): Unit = state.withCurrent(_.closeDef(definition))
 
-  def openType(typ: Type, parents: Parents): Unit = state.current.emitType(typ)
-  def closeType(typ: Type, parents: Parents): Unit = () // handled by open
+  def openType(typ: Type, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      rfe.openDef(typ, withBrace=false)
+      rfe.emitTypeExpression(typ.typEx)
+    }
+  def closeType(typ: Type, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      rfe.emitDescriptives(typ.descriptives)
+      rfe.nl
+    }
 
   def openDomain(domain: Domain, parents: Parents): Unit = open(domain)
   def closeDomain(domain: Domain, parents: Parents): Unit = close(domain)
@@ -89,13 +96,33 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end closeFunction
 
   def openSaga(saga: Saga, parents: Parents): Unit = open(saga)
+  def closeSaga(saga: Saga, parents: Parents): Unit = close(saga)
+
   def openStreamlet(streamlet: Streamlet, parents: Parents): Unit = open(streamlet)
+  def closeStreamlet(streamlet: Streamlet, parents: Parents): Unit = close(streamlet)
+
   def openRepository(repository: Repository, parents: Parents): Unit = open(repository)
+  def closeRepository(repository: Repository, parents: Parents): Unit = close(repository)
+
   def openProjector(projector: Projector, parents: Parents): Unit = open(projector)
+  def closeProjector(projector: Projector, parents: Parents): Unit = close(projector)
+
   def openHandler(handler: Handler, parents: Parents): Unit = open(handler)
+
+  def closeHandler(handler: Handler, parents: Parents): Unit = close(handler)
+
   def openOnClause(onClause: OnClause, parents: Parents): Unit = open(onClause)
+
+  def closeOnClause(onClause: OnClause, parents: Parents): Unit = close(onClause)
+
   def openApplication(application: Application, parents: Parents): Unit = open(application)
+
+  def closeApplication(application: Application, parents: Parents): Unit = close(application)
+
   def openGroup(group: Group, parents: Parents): Unit = open(group)
+
+  def closeGroup(group: Group, parents: Parents): Unit = close(group)
+  
   def openOutput(output: Output, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe
@@ -109,6 +136,14 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       if output.isEmpty then rfe.nl else rfe.add(" {").nl.incr
     }
   end openOutput
+
+  def closeOutput(output: Output, parents: Parents): Unit =
+    if output.nonEmpty then
+      state.withCurrent { rfe =>
+        rfe.decr.addLine("}")
+      }
+    end if
+  end closeOutput
 
   def openInput(input: Input, parents: Parents): Unit =
     state.withCurrent { rfe =>
@@ -124,25 +159,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       if input.isEmpty then rfe.nl else rfe.add(" {").nl.incr
     }
   end openInput
-
-  // Close for each type of container definition
-
-  def closeSaga(saga: Saga, parents: Parents): Unit = close(saga)
-  def closeStreamlet(streamlet: Streamlet, parents: Parents): Unit = close(streamlet)
-  def closeRepository(repository: Repository, parents: Parents): Unit = close(repository)
-  def closeProjector(projector: Projector, parents: Parents): Unit = close(projector)
-  def closeHandler(handler: Handler, parents: Parents): Unit = close(handler)
-  def closeOnClause(onClause: OnClause, parents: Parents): Unit = close(onClause)
-  def closeApplication(application: Application, parents: Parents): Unit = close(application)
-  def closeGroup(group: Group, parents: Parents): Unit = close(group)
-  def closeOutput(output: Output, parents: Parents): Unit =
-    if output.nonEmpty then
-      state.withCurrent { rfe =>
-        rfe.decr.addLine("}")
-      }
-    end if
-  end closeOutput
-
+  
   def closeInput(input: Input, parents: Parents): Unit =
     if input.nonEmpty then
       state.withCurrent { rfe =>
@@ -151,18 +168,21 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     end if
   end closeInput
 
+  // Close for each type of container definition
+
+
   // LeafDefinitions
   def doField(field: Field): Unit = ()
   def doMethod(method: Method): Unit = ()
 
   def doTerm(term: Term): Unit =
-    state.withCurrent { rfe =>
+    state.withCurrent { (rfe: RiddlFileEmitter) =>
       rfe
         .addIndent("term ")
         .add(term.id.format)
         .add(" is ")
-        .emitBrief(term.brief)
-        .emitDescription(term.description)
+        .add(term.definition)
+        .emitDescriptives(term.descriptives)
     }
   end doTerm
 
@@ -180,16 +200,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doAuthor
 
   def doConstant(constant: Constant): Unit =
-    state.withCurrent { rfe =>
-      rfe
-        .addIndent("constant ")
-        .add(constant.id.format)
-        .add(" is ")
-        .add(constant.value.format)
-        .emitBrief(constant.brief)
-        .emitDescription(constant.description)
-        .nl
-    }
+    state.withCurrent { rfe => rfe.emitConstant(constant) }
   end doConstant
 
   def doInvariant(invariant: Invariant): Unit =
@@ -199,9 +210,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(invariant.id.format)
         .add(" is ")
         .add(invariant.condition.format)
-        .add(" ")
-        .emitBrief(invariant.brief)
-        .emitDescription(invariant.description)
+        .emitDescriptives(invariant.descriptives)
         .nl
     }
   end doInvariant
@@ -218,11 +227,19 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doSagaStep
 
   def doInlet(inlet: Inlet): Unit =
-    state.withCurrent { rfe => rfe.addLine(inlet.format) }
+    state.withCurrent { rfe =>
+      rfe.addIndent(inlet.format)
+      rfe.emitDescriptives(inlet.descriptives)
+      rfe.nl
+    }
   end doInlet
 
   def doOutlet(outlet: Outlet): Unit =
-    state.withCurrent { rfe => rfe.addLine(outlet.format) }
+    state.withCurrent { rfe =>
+      rfe.addLine(outlet.format)
+      rfe.emitDescriptives(outlet.descriptives)
+      rfe.nl
+    }
   end doOutlet
 
   def doConnector(connector: Connector): Unit =
@@ -234,9 +251,8 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
           val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
           from + to
         }
+        .emitDescriptives(connector.descriptives)
         .nl
-        .emitBrief(connector.brief)
-        .emitDescription(connector.description)
     }
   end doConnector
 
@@ -244,8 +260,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"user ${user.id.value} is \"${user.is_a.s}\"")
-        .emitBrief(user.brief)
-        .emitDescription(user.description)
+        .emitDescriptives(user.descriptives)
         .nl
     }
   end doUser
@@ -261,8 +276,8 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       schema.data.toSeq.sortBy(_._1.value).foreach { (id: Identifier, typeRef: TypeRef) =>
         rfe.addIndent("of ").add(id.format).add(" as ").add(typeRef.format).nl
       }
-      schema.connectors.toSeq.sortBy(_._1.value).foreach { (id: Identifier, tr: (TypeRef, TypeRef)) =>
-        rfe.addIndent("with ").add(id.format).add(" as ").add(tr._1.format).add(" to ").add(tr._2.format).nl
+      schema.links.toSeq.sortBy(_._1.value).foreach { (id: Identifier, tr: (FieldRef, FieldRef)) =>
+        rfe.addIndent("link ").add(id.format).add(" as ").add(tr._1.format).add(" to ").add(tr._2.format).nl
       }
       schema.indices.foreach { fieldRef =>
         rfe.addIndent("index on ").add(fieldRef.format).nl
@@ -276,15 +291,14 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   end doState
 
-  def doEnumerator(enumerator: Enumerator): Unit = ()
+  def doEnumerator(enumerator: Enumerator): Unit = () // Note: Handled by RiddlFileEmitter.emitEnumeration
 
   def doContainedGroup(containedGroup: ContainedGroup): Unit =
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"${keyword(containedGroup)} ${containedGroup.id.format} as ")
         .add(containedGroup.group.format)
-        .emitBrief(containedGroup.brief)
-        .emitDescription(containedGroup.description)
+        .emitDescriptives(containedGroup.descriptives)
     }
   end doContainedGroup
 
@@ -295,54 +309,36 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def doAuthorRef(authorRef: AuthorRef): Unit =
     state.withCurrent { rfe =>
-      rfe.addIndent("by ").add(authorRef.format).nl
+      rfe.emitAuthorRef(authorRef)
     }
   end doAuthorRef
 
-  def doBriefDescription(brief: BriefDescription): Unit =
-    state.withCurrent { rfe =>
-      rfe.emitBrief(Some(brief))
-    }
+  def doBriefDescription(brief: BriefDescription): Unit = ()
+    // state.withCurrent { rfe =>
+    //   rfe.emitBriefDescription(brief)
+    // }
   end doBriefDescription
 
-  def doDescription(description: Description): Unit =
-    state.withCurrent { rfe =>
-      rfe.emitDescription(Some(description))
-    }
+  def doDescription(description: Description): Unit = ()
+    // state.withCurrent { rfe =>
+    //   rfe.emitDescription(description)
+    // }
   end doDescription
 
   def doStatement(statement: Statements): Unit =
-    state.withCurrent { rfe =>
-      statement match
-        case IfThenElseStatement(_, cond, thens, elses) =>
-          rfe.addIndent(s"if ${cond.format} then").nl.incr
-          thens.foreach(doStatement)
-          rfe.decr.addLine("else").incr
-          elses.foreach(doStatement)
-          rfe.decr.addLine("end")
-        case ForEachStatement(_, ref, statements) =>
-          rfe.addIndent(s"foreach ${ref.format} do").incr
-          statements.foreach(doStatement)
-          rfe.decr.addLine("end")
-        case SendStatement(_, msg, portlet) =>
-          rfe.addLine(s"send ${msg.format} to ${portlet.format}")
-        case TellStatement(_, msg, to) =>
-          rfe.addLine(s"tell ${msg.format} to ${to.format}")
-        case statement: Statement => rfe.addLine(statement.format)
-        case comment: Comment     => rfe.addLine(comment.format)
-      end match
-    }
+    state.withCurrent { rfe => rfe.emitStatement(statement) }
   end doStatement
 
   def doInteraction(interaction: Interaction): Unit =
     state.withCurrent { rfe =>
       interaction match
-        case _: SequentialInteractions     => () // TODO: implement
-        case _: ParallelInteractions       => () // TODO: implement
-        case _: OptionalInteractions       => () // TODO: implement
+        case _: SequentialInteractions  => () // TODO: implement
+        case _: ParallelInteractions    => () // TODO: implement
+        case _: OptionalInteractions    => () // TODO: implement
         case _: TwoReferenceInteraction => () // TODO: implement
-        case _: GenericInteraction         => () // TODO: implement
+        case _: GenericInteraction      => () // TODO: implement
       end match
+      rfe.emitDescriptives(interaction.descriptives)
     }
   end doInteraction
 
@@ -353,36 +349,30 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doOptionValue
 
   def openInclude(include: Include[?], parents: Parents): Unit =
-    if !state.options.singleFile then
-      include.origin.toExternalForm match
-        case path: String if path.startsWith("http") =>
-          val url = java.net.URI.create(path).toURL
-          state.current.add(s"include \"$path\"")
-          val outPath = state.outPathFor(url)
-          state.pushFile(RiddlFileEmitter(outPath))
-        case str: String =>
-          val path = Path.of(str)
-          val relativePath = state.relativeToInPath(path)
-          state.current.add(s"include \"$relativePath\"")
-          val outPath = state.outPathFor(path)
-          state.pushFile(RiddlFileEmitter(outPath))
-      end match
-    end if
+    state.withCurrent { (rfe: RiddlFileEmitter) =>
+      if !state.flatten then
+        val url = include.origin
+        rfe.addLine(s"include \"${url.toExternalForm}")
+        val outputURL = state.toDestination(url)
+        val newRFE = RiddlFileEmitter(outputURL)
+        state.pushFile(newRFE)
+      end if
+    }
   end openInclude
 
   def closeInclude(@unused include: Include[?], parents: Parents): Unit =
-    if !state.options.singleFile then state.popFile()
+    if !state.flatten then state.popFile()
     end if
   end closeInclude
 end PrettifyVisitor
 
 /** A function to translate between a definition and the keyword that introduces them.
- *
- * @param definition
- *   The definition to look up
- * @return
- *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
- */
+  *
+  * @param definition
+  *   The definition to look up
+  * @return
+  *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
+  */
 def keyword(definition: Definition): String =
   definition match
     case _: Adaptor     => Keyword.adaptor
@@ -429,4 +419,3 @@ def keyword(definition: Definition): String =
     case _: Definition     => "unknown"
   end match
 end keyword
-

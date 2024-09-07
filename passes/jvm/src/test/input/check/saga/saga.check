@@ -10,10 +10,6 @@ passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
  Vital definitions should have an author reference:
      function AnotherThing {
      ^
-passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
- Vital definitions should have an author reference:
-     function UndoAnotherThing {
-     ^
 passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
  Entity 'blah' must define at least one state:
      entity blah is {
@@ -27,25 +23,30 @@ passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
      entity blah is {
      ^
 passes/jvm/src/test/input/check/saga/saga.riddl(15:5):
- Saga 'name' should have a description:
-     saga name is {
-     ^
-passes/jvm/src/test/input/check/saga/saga.riddl(15:5):
  Vital definitions should have an author reference:
      saga name is {
      ^
-passes/jvm/src/test/input/check/saga/saga.riddl(13:13):
+passes/jvm/src/test/input/check/saga/saga.riddl(13:32):
  Inlet identifier 'in' is too short. The minimum length is 3:
-       inlet in is command Something
-             ^
+       sink trashCan is { inlet in is command Something }
+                                ^
+passes/jvm/src/test/input/check/saga/saga.riddl(13:7):
+ Sink 'trashCan' should have a description:
+       sink trashCan is { inlet in is command Something }
+       ^
+passes/jvm/src/test/input/check/saga/saga.riddl(13:7):
+ Vital definitions should have an author reference:
+       sink trashCan is { inlet in is command Something }
+       ^
+
 passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
  Entity 'blah' is unused:
      entity blah is {
      ^
-passes/jvm/src/test/input/check/saga/saga.riddl(13:7):
+passes/jvm/src/test/input/check/saga/saga.riddl(13:26):
  Inlet 'in' is not connected:
-       inlet in is command Something
-       ^
+       sink trashCan is { inlet in is command Something }
+                          ^
 passes/jvm/src/test/input/check/saga/saga.riddl(4:5):
  Command 'UndoSomething' is unused:
      type UndoSomething = command { ??? }
@@ -64,5 +65,9 @@ passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
      ^
 passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
  Function 'UndoAnotherThing' in Context 'ignore2' should have content:
+     function UndoAnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
+ Vital definitions should have an author reference:
      function UndoAnotherThing {
      ^

@@ -62,9 +62,8 @@ case class GlossaryPass(
     val parents = generator.makeStringParents(stack)
     val brief: Option[String] =
       d match
-        case wab: WithABrief => wab.brief.map(_.brief.s)
-        case dwb: WithBriefs => 
-          val content = dwb.briefs.map(_.brief.s).mkString("<br/>")
+        case dwb: WithDescriptives => 
+          val content = dwb.briefString
           if content.isEmpty then None else Some(content)
         case _ => None
     val entry = GlossaryEntry(

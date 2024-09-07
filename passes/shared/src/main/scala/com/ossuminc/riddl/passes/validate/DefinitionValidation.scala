@@ -102,7 +102,7 @@ trait DefinitionValidation extends BasicValidation {
 
   def checkDescriptions(definition: Definition, contents: Contents[ContentValues]): Unit =
     definition match
-      case wd: WithDescriptions => 
+      case wd: WithDescriptives =>
         val descriptions = wd.descriptions
         if descriptions.isEmpty then
           check(
@@ -130,23 +130,31 @@ trait DefinitionValidation extends BasicValidation {
             case _ => ()
           }
         end if
-      case _ => ()  
+      case _ => ()
   end checkDescriptions
 
-  def checkDescription[TD <: WithADescription](
-    value: TD
+  def checkDescription(
+    value: RiddlValue
   ): Unit = {
-    val id = if value.isIdentified then value.asInstanceOf[Definition].identify else value.format
-    val description: Option[Description] = value.description
-    if description.isEmpty then {
+    val id: String = 
+      value match
+        case wi: WithIdentifier => wi.identify
+        case _ => value.format
+      end match
+    val descriptions: Contents[Description] = 
+      value match
+        case wd: WithDescriptives => wd.descriptions
+        case _ => Contents.empty 
+      end match
+    if descriptions.isEmpty then {
       check(
         predicate = false,
         s"$id should have a description",
         MissingWarning,
         value.loc
       )
-    } else if description.nonEmpty then
-      description.fold(this) { (desc: Description) =>
+    } else if descriptions.nonEmpty then
+      descriptions.foreach { (desc: Description) =>
         check(
           desc.nonEmpty,
           s"For $id, description at ${desc.loc} is declared but empty",

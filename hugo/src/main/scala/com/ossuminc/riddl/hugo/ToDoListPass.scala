@@ -40,7 +40,11 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
       case d: Definition if d.isEmpty =>
         val pars = parents.toParents
         val item = d.identify
-        val authors = AST.findAuthors(d, pars)
+        val authors =
+          d match
+            case wd: WithDescriptives => AST.findAuthors(wd, pars)
+            case _ => Seq.empty[AuthorRef]
+          end match
         val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)
         val prnts = generator.makeStringParents(pars)
         val path = (prnts :+ d.id.value).mkString(".")

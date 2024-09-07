@@ -16,9 +16,9 @@ private[parsing] trait EntityParser  {
 
   private def state[u: P]: P[State] = {
     P(
-      location ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ briefly ~ maybeDescription
-    )./.map { case (loc, id, typRef, brief, description) =>
-      State(loc, id, typRef, brief, description)
+      location ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ withDescriptives
+    )./.map { case (loc, id, typRef, descriptives) =>
+      State(loc, id, typRef, descriptives)
     }
   }
 
@@ -40,10 +40,10 @@ private[parsing] trait EntityParser  {
 
   def entity[u: P]: P[Entity] = {
     P(
-      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ briefly ~ maybeDescription
-    ).map { case (loc, id, contents, brief, description) =>
+      location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withDescriptives
+    )./map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Entity(loc, id, foldDescriptions[EntityContents](contents, brief, description))
+      Entity(loc, id, contents, descriptives)
     }
   }
 }
