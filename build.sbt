@@ -1,8 +1,10 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
+import sbt.Append.{appendSeqImplicit, appendSet}
 import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
+import sbttastymima.TastyMiMaPlugin.autoImport.*
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass)
@@ -15,7 +17,7 @@ def cpDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;t
 def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
 
 lazy val riddl: Project = Root("riddl", startYr = startYear)
-  .configure(With.noPublishing, With.git, With.dynver)
+  .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
   .aggregate(
     utils,
     utilsJS,
@@ -45,10 +47,20 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   )
   .jvmConfigure(With.coverage(70))
   .jvmConfigure(With.publishing)
-  .jvmConfigure(With.MiMa("0.50.0"))
+  .jvmConfigure(With.MiMa("0.52.1", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
+    tastyMiMaConfig ~= { prevConfig =>
+      import java.util.Arrays.asList
+      import tastymima.intf._
+      prevConfig.withMoreProblemFilters(asList(
+      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.version"),
+      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"),
+      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"),
+      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot")
+      ))
+    }
   )
   .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
@@ -75,8 +87,15 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
-  .jvmConfigure(With.MiMa("0.50.0"))
+  .jvmConfigure(With.MiMa("0.52.1"))
   .jvmSettings(
+    tastyMiMaConfig ~= { prevConfig =>
+      import java.util.Arrays.asList
+      import tastymima.intf._
+      prevConfig.withMoreProblemFilters(asList(
+        ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc")
+      ))
+    },
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
     libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.8.0",
@@ -100,7 +119,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
     description := "AST Pass infrastructure and essential passes"
   )
   .jvmConfigure(With.coverage(30))
-  .jvmConfigure(With.MiMa("0.50.0"))
+  .jvmConfigure(With.MiMa("0.52.1"))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon"
   )
@@ -117,7 +136,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.50.0"))
+  .jvmConfigure(With.MiMa("0.52.1"))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
@@ -128,7 +147,7 @@ val diagramsJS = diagrams_cp.js
 
 val Command = config("command")
 lazy val command = Module("command", "riddl-command")
-  .configure(With.typical, With.coverage(30), With.MiMa("0.50.0"))
+  .configure(With.typical, With.coverage(30), With.MiMa("0.52.1"))
   .configure(With.publishing)
   .settings(
     coverageExcludedPackages := "<empty>;$anon",
@@ -148,7 +167,7 @@ lazy val hugo = Module("hugo", "riddl-hugo")
   .configure(With.typical)
   .configure(With.coverage(65))
   .configure(With.publishing)
-  .configure(With.MiMa("0.50.0"))
+  .configure(With.MiMa("0.52.1"))
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
     scalacOptions += "-explain-cyclic",
@@ -163,7 +182,7 @@ val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
   .configure(With.typical)
   .configure(With.coverage(50))
-  .configure(With.MiMa("0.50.0"))
+  .configure(With.MiMa("0.52.1"))
   .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
@@ -186,7 +205,7 @@ lazy val riddlc: Project = Program("riddlc", "riddlc")
   .configure(With.typical)
   .configure(With.coverage(50.0))
   .configure(With.publishing)
-  .configure(With.MiMa("0.50.0"))
+  .configure(With.noMiMa)
   .dependsOn(
     utils,
     language,
