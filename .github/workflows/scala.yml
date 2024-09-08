@@ -38,7 +38,7 @@ jobs:
       env:
         RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
       run: |
-        sbt -v clean Test/compile test
+        sbt -v clean Test/compile mimaReportBinaryIssues tastyMiMaReportIssues test
 
     - name: Test sbt-riddl plugin
       env:
