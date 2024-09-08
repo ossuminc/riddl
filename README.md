@@ -24,7 +24,8 @@
 ## Handy Links
 * Full Documentation: https://riddl.tech
 * Coveralls Code Coverage Report: https://coveralls.io/github/ossuminc/riddl?branch=main
-* 
+* SonarCloud Reports: https://sonarcloud.io/project/overview?id=ossuminc_riddl
+
 ## Introduction
 RIDDL, the Reactive Interface to Domain Definition Language, is a specification
 lanugage and tooling to help capture requirements and specify designs for the
