@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{Logger, StringHelpers}
-import com.ossuminc.riddl.command.{CommandPlugin,CommandOptions,CommonOptionsHelper}
+import com.ossuminc.riddl.commands.Commands
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -18,6 +18,8 @@ import scopt.OParser
 
 import java.io.File
 import java.nio.file.Path
+import com.ossuminc.riddl.command.{Command,CommandOptions,CommonOptionsHelper}
+
 
 /** Unit Tests For FromCommand */
 object FromCommand {
@@ -30,9 +32,9 @@ object FromCommand {
   }
 }
 
-class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName) {
+class FromCommand extends Command[FromCommand.Options](FromCommand.cmdName) {
   import FromCommand.Options
-  override def getOptions: (OParser[Unit, Options], Options) = {
+  override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
     cmd(FromCommand.cmdName).children(
       arg[File]("config-file").action { (file, opt) =>
@@ -61,36 +63,39 @@ class FromCommand extends CommandPlugin[FromCommand.Options](FromCommand.cmdName
   }
 
   override def run(
-    options: FromCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: FromCommand.Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    val loadedCO =
-      CommonOptionsHelper.loadCommonOptions(options.inputFile.fold(Path.of(""))(identity)) match {
+    val loadedCO = 
+      CommonOptionsHelper.loadCommonOptions(options.inputFile.fold(Path.of(""))(identity)) match
         case Right(newCO: CommonOptions) =>
-          if commonOptions.verbose then {
+          if commonOptions.verbose then
             println(
               s"Read new common options from ${options.inputFile.get} as:\n" +
                 StringHelpers.toPrettyString(newCO)
             )
-          }
           newCO
         case Left(messages) =>
-          if commonOptions.debug then {
+          if commonOptions.debug then
             println(
               s"Failed to read common options from ${options.inputFile.get} because:\n" ++
                 messages.format
             )
-          }
           commonOptions
-      }
-    val result = CommandPlugin.runFromConfig(
+      end match
+      //     configFile: Option[Path],
+      //    targetCommand: String,
+      //    commonOptions: CommonOptions,
+      //    log: Logger,
+      //    commandName: String
+    val result = Commands.runFromConfig(
       options.inputFile,
       options.targetCommand,
       loadedCO,
       log,
-      pluginName
+      "from"
     )
     result
   }

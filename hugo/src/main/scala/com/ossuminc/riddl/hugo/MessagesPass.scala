@@ -30,6 +30,7 @@ case class MessageInfo(
 )
 
 case class MessageOutput(
+  root: Root, 
   messages: Messages.Messages,
   collected: Seq[MessageInfo]
 ) extends CollectingPassOutput[MessageInfo]
@@ -57,12 +58,12 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
   def name: String = MessagesPass.name
 
-  protected def collect(definition: RiddlValue, parents: mutable.Stack[Definition]): Seq[MessageInfo] = {
+  protected def collect(definition: RiddlValue, parents: ParentStack): Seq[MessageInfo] = {
     definition match {
       case t: Type =>
-        val result = t.typ match {
+        val result = t.typEx match {
           case _: AggregateUseCaseTypeExpression =>
-            val pars = generator.makeStringParents(parents.toSeq)
+            val pars = generator.makeStringParents(parents.toParents)
             val link = generator.makeDocLink(t, pars)
             val users = usages.getUsers(t)
             val userLinks = users
@@ -70,7 +71,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
                 s"[${definition.id.value}](${generator.makeDocLink(definition, pars)})"
               }
               .mkString(" <br> ")
-            val description: String = t.brief.map(_.s).getOrElse("No description provided.")
+            val description: String = t.descriptives.filter[BriefDescription].map(_.brief.s).mkString("\n")
             val mi = MessageInfo(t.kind, t.id.value, link, userLinks, description)
             Seq(mi)
           case _ =>
@@ -82,11 +83,9 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
     }
   }
 
-  def postProcess(root: Root): Unit = ()
-
-  override def result: MessageOutput = {
+  override def result(root: Root): MessageOutput = {
     val sortedList = collectedValues.sortBy(_.message).toSeq
-    MessageOutput(messages.toMessages, sortedList)
+    MessageOutput(root, messages.toMessages, sortedList)
   }
 }
 

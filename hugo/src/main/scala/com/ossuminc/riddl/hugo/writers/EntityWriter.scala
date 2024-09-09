@@ -1,8 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid.EntityRelationshipDiagram
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
+import com.ossuminc.riddl.diagrams.mermaid.EntityRelationshipDiagram
 
 import scala.annotation.unused
 
@@ -14,7 +13,7 @@ trait EntityWriter { this: MarkdownWriter =>
   ): Unit = {
     h2(state.identify)
     emitDefDoc(state, parents)
-    val maybeType = generator.refMap.definitionOf[Type](state.typ.pathId, state)
+    val maybeType = generator.refMap.definitionOf[Type](state.typ.pathId, parents.head)
     val fields = maybeType match {
       case Some(typ: AggregateTypeExpression) => typ.fields
       case Some(_)                            => Seq.empty[Field]
@@ -23,7 +22,6 @@ trait EntityWriter { this: MarkdownWriter =>
     emitERD(state.id.format, fields, parents)
     h3("Fields")
     emitFields(fields)
-    for h <- state.handlers do emitHandler(h, state +: parents,4)
   }
 
   def emitHandler(handler: Handler, parents: Parents, level: Int = 3): Unit = {
@@ -36,18 +34,18 @@ trait EntityWriter { this: MarkdownWriter =>
         case otc: OnTerminationClause => heading("Terminate", level + 1)
         case ooc: OnOtherClause => heading("Other", level + 1)
       }
-      codeBlock(clause.statements)
+      codeBlock(clause.contents.filter[Statement])
     }
   }
 
   private def emitERD(
     name: String,
     fields: Seq[Field],
-    parents: Seq[Definition],
+    parents: Parents,
   ): Unit = {
     h3("Entity Relationships")
     val erd = EntityRelationshipDiagram(generator.refMap)
-    val lines = erd.generate(name, fields, parents)
+    val lines = erd.generate(name, fields, parents.head)
     emitMermaidDiagram(lines)
   }
 
@@ -61,7 +59,7 @@ trait EntityWriter { this: MarkdownWriter =>
       emitFiniteStateMachine(entity)
     }
     emitInvariants(entity.invariants)
-    emitTypes(entity, entity +: parents)
+    emitTypes(entity.types, entity +: parents)
     for state <- entity.states do emitState(state, entity +: parents)
     for handler <- entity.handlers do emitHandler(handler, entity +: parents)
     for function <- entity.functions do emitFunction(function, entity +: parents)

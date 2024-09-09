@@ -6,18 +6,14 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.{CommandOptions, CommandPlugin}
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.testkit.RunCommandOnExamplesTest
-import com.ossuminc.riddl.hugo.HugoPass
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}
 import scala.annotation.unused
 
 /** Unit Tests To Run Riddlc On Examples */
-class RunHugoOnExamplesTest
-    extends RunCommandOnExamplesTest[HugoPass.Options, HugoCommand]("hugo", shouldDelete = false) {
+class RunHugoOnExamplesTest extends RunCommandOnExamplesTest {
 
   val validTestNames = Seq("ReactiveBBQ", "dokn", "ReactiveSummit")
 
@@ -25,11 +21,11 @@ class RunHugoOnExamplesTest
 
   "Run Hugo On Examples" should {
     "correctly process ReactiveBBQ" in {
-      runTest("ReactiveBBQ")
+      runTest("ReactiveBBQ", "hugo")
 
     }
     "correctly process dokn" in {
-      runTest("dokn")
+      runTest("dokn", "hugo")
     }
   }
 

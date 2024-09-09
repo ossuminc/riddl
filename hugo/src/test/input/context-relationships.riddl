@@ -2,17 +2,17 @@ domain foo {
   context A {
     option css("fill:white,stroke:#333,stroke-width:3px,color:blue") option faicon("fa-house")
     type AEvents is one of { A.AEvent1, C.CEvent }
-    inlet aInlet is A.AEvents
+    sink Sink { inlet aInlet is A.AEvents }
     command ACommand { ??? }
     event AEvent1 { ??? }
 
     entity AEntity {
       record AData is { a01: Integer, a02: String }
-      state AState of record AData is { ??? }
+      state AState of record AData
       handler AHandler is {
         on command ACommand {
           set field B.BEntity.BData.b01 to "initial value"
-          send event A.AEvent1 to inlet B.bInlet
+          send event A.AEvent1 to inlet B.Flow.bInlet
           tell command C.CCommand to entity C.CEntity
         }
       }
@@ -29,8 +29,10 @@ domain foo {
     option css("fill:white,stroke:#333,stroke-width:3px,color:green")
     option faicon("fa-house")
     command BCommand { ??? }
-    inlet bInlet is A.AEvents
-    outlet bOutlet is A.AEvents
+    flow Flow is {
+      inlet bInlet is A.AEvents
+      outlet bOutlet is A.AEvents
+    }
     entity BEntity {
       record BData is { b01: Integer, b02: String }
       state BState of record BData
@@ -51,7 +53,7 @@ domain foo {
       state BState of record BData
       handler CHandler is {
         on command CCommand {
-          send event C.CEvent to inlet A.aInlet
+          send event C.CEvent to inlet A.Sink.aInlet
         }
       }
     }

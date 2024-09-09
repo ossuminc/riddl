@@ -1,8 +1,7 @@
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid
-import com.ossuminc.riddl.hugo.mermaid.ContextMapDiagram
-import com.ossuminc.riddl.language.AST.{Context, Definition, OccursInContext}
+import com.ossuminc.riddl.diagrams.mermaid.ContextMapDiagram
+import com.ossuminc.riddl.language.AST.{Context, ContextContents, Definition, Parents}
 
 trait ContextWriter { this: MarkdownWriter =>
 
@@ -14,9 +13,9 @@ trait ContextWriter { this: MarkdownWriter =>
     end if
   }
 
-  def emitContext(context: Context, parents: Seq[Definition]): Unit = {
+  def emitContext(context: Context, parents: Parents): Unit = {
     containerHead(context)
-    val maybeDiagram = generator.diagrams.contextDiagrams.get(context).map(data => mermaid.ContextMapDiagram(context, data))
+    val maybeDiagram = generator.diagrams.contextDiagrams.get(context).map(data => ContextMapDiagram(context, data))
     emitVitalDefinitionDetails(context, parents)
     emitContextMap(context, maybeDiagram)
     emitOptions(context.options)
@@ -25,7 +24,7 @@ trait ContextWriter { this: MarkdownWriter =>
     definitionToc("Sagas", context.sagas)
     definitionToc("Streamlets", context.streamlets)
     list("Connectors", context.connectors)
-    emitProcessorDetails[OccursInContext](context, parents)
+    emitProcessorDetails[ContextContents](context, parents)
     // TODO: generate a diagram for the processors and pipes
   }
 

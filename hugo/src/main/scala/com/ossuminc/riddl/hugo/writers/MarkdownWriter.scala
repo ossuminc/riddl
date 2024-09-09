@@ -6,12 +6,10 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid.*
-import com.ossuminc.riddl.hugo.mermaid
+import com.ossuminc.riddl.diagrams.mermaid
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.parsing.Keywords.{domain, *}
 import com.ossuminc.riddl.utils.TextFileWriter
@@ -33,21 +31,20 @@ trait MarkdownWriter
     with RepositoryWriter
     with SagaWriter
     with StreamletWriter
+    with ModuleWriter
     with SummariesWriter {
 
   def generator: ThemeGenerator
 
-  private case class Level(name: String, href: String, children: Seq[Level]) {
-    override def toString: String = {
+  private case class Level(name: String, href: String, children: Seq[Level]):
+    override def toString: String =
       s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
-    }
-  }
 
-  def makeRootIndex(root: Root, indent: Int = 0): Unit = {
+  def makeRootIndex(root: Root, indent: Int = 0): Unit =
     for { topLevelDomain <- root.domains.sortBy(_.id.value) } do makeDomainIndex(topLevelDomain, indent)
-  }
+  end makeRootIndex
 
-  private def makeDomainIndex(domain: Domain, indent: Int = 0): Unit = {
+  private def makeDomainIndex(domain: Domain, indent: Int = 0): Unit =
     val link = generator.makeDocLink(domain)
     val spaces = " ".repeat(indent)
     p(s"$spaces* [${domain.identify}]($link)")
@@ -57,7 +54,7 @@ trait MarkdownWriter
       val spaces = " ".repeat(indent + 2)
       p(s"$spaces* [${application.identify}]($link)")
     }
-    for { epic <- AST.getEpics(domain).sortBy(_.id.value)} do {
+    for { epic <- AST.getEpics(domain).sortBy(_.id.value) } do {
       val link = generator.makeDocLink(epic)
       val spaces = " ".repeat(indent + 2)
       p(s"$spaces* [${epic.identify}]($link)")
@@ -72,37 +69,36 @@ trait MarkdownWriter
         p(s"$spaces* [${entity.identify}]($link)")
       }
     }
-  }
+  end makeDomainIndex
 
-  private def makeData(container: Definition, parents: Seq[String]): Level = {
+  private def makeData(container: Parent, parents: Seq[String]): Level =
     Level(
       container.identify,
       generator.makeDocLink(container, parents),
       children = {
         val newParents = container.id.value +: parents
-        container.definitions
+        container.contents.parents
           .filter(d => d.nonEmpty && !d.isInstanceOf[OnMessageClause])
           .map(makeData(_, newParents))
       }
     )
-  }
+  end makeData
 
   def emitC4ContainerDiagram(
     definition: Context,
-    parents: Seq[Definition]
+    parents: Parents
   ): Unit = {
     val name = definition.identify
-    val brief: Definition => String = { (defn: Definition) =>
-      defn.brief.fold(s"$name is not described.")(_.s)
-    }
+    val brief = { (defn: Definition) => toBriefString(defn) }
 
-    val heading = s"""C4Context
-                     |  title C4 Containment Diagram for [$name]
-                     |""".stripMargin.split('\n').toSeq
+    val heading =
+      s"""C4Context
+         |  title C4 Containment Diagram for [$name]
+         |""".stripMargin.split('\n').toSeq
 
     val containers = parents.filter(_.isContainer).reverse
     val systemBoundaries = containers.zipWithIndex
-    val openedBoundaries = systemBoundaries.map { case (dom, n) =>
+    val openedBoundaries = systemBoundaries.map { case (dom: Definition, n) =>
       val nm = dom.id.format
       val keyword = if n == 0 then "Enterprise_Boundary" else "System_Boundary"
       " ".repeat((n + 1) * 2) + s"$keyword($nm,$nm,\"${brief(dom)}\") {"
@@ -124,23 +120,44 @@ trait MarkdownWriter
   def emitTerms(terms: Seq[Term]): Unit = {
     list(
       "Terms",
-      terms.map(t => (t.id.format, t.brief.map(_.s).getOrElse("{no brief}"), t.description))
+      terms.map(t => (t.id.format, t.briefString, t.descriptions.headOption.getOrElse("No description")))
     )
   }
 
   protected def emitFields(fields: Seq[Field]): Unit = {
     list(fields.map { field =>
-      (field.id.format, field.typeEx.format, field.brief, field.description)
+      (field.id.format, field.typeEx.format, field.briefString, field.descriptionString)
     })
   }
+
+  private def toBriefString(definition: Definition): String =
+    definition match
+      case wab: WithDescriptives => wab.briefString
+      case _                     => "Brief description missing."
+    end match
+  end toBriefString
+
+  private def emitBriefParagraph(definition: Definition): Unit =
+    definition match
+      case wab: WithDescriptives => p(italic(wab.briefString))
+      case _                     => p("Brief description missing.")
+    end match
+  end emitBriefParagraph
+
+  private def emitDescriptionParagraphs(definition: Definition): Unit =
+    definition match
+      case wad: WithDescriptives => wad.descriptions.foreach(d => p(d.lines.mkString("\n")))
+      case _                     => ()
+    end match
+  end emitDescriptionParagraphs
 
   protected def emitVitalDefTable(
     definition: Definition,
     parents: Parents
   ): Unit = {
     emitTableHead(Seq("Item" -> 'C', "Value" -> 'L'))
-    val brief: String =
-      definition.brief.map(_.s).getOrElse("Brief description missing.").trim
+
+    val brief: String = toBriefString(definition).trim
     emitTableRow(italic("Briefly"), brief)
     if definition.isVital then {
       val parent = definition.asInstanceOf[VitalDefinition[?]]
@@ -160,7 +177,7 @@ trait MarkdownWriter
     }
     emitTableRow(italic("Used By"), users)
     val uses = generator.usage.getUses(definition) match {
-      case uses: Seq[NamedValue] if uses.nonEmpty => uses.map(_.identify).mkString(", ")
+      case uses: Seq[Definition] if uses.nonEmpty => uses.map(_.identify).mkString(", ")
       case _                                      => "None"
     }
     emitTableRow(italic("Uses"), uses)
@@ -208,13 +225,14 @@ trait MarkdownWriter
 
   private val keywords: String = definition_keywords.mkString("(", "|", ")")
   private val pathIdRegex = s" ($keywords) (\\w+(\\.\\w+)*)".r
+
   private def substituteIn(lineToReplace: String): String = {
     val matches = pathIdRegex.findAllMatchIn(lineToReplace).toSeq.reverse
     matches.foldLeft(lineToReplace) { case (line, rMatch) =>
       val kind = rMatch.group(1)
       val pathId = rMatch.group(3)
 
-      def doSub(line: String, definition: NamedValue, isAmbiguous: Boolean = false): String = {
+      def doSub(line: String, definition: Definition, isAmbiguous: Boolean = false): String = {
         val docLink = generator.makeDocLink(definition)
         val substitution =
           if isAmbiguous then s"($kind $pathId (ambiguous))[$docLink]"
@@ -234,21 +252,18 @@ trait MarkdownWriter
     }
   }
 
-  def emitDescription(d: Option[Description], level: Int = 2): this.type = {
-    d match {
-      case None => this
-      case Some(desc) =>
-        heading("Description", level)
-        val substitutedDescription: Seq[String] = for {
-          line <- desc.lines.map(_.s)
-          newLine = substituteIn(line)
-        } yield {
-          newLine
-        }
-        substitutedDescription.foreach(p)
-        this
+  def emitDescriptions(descriptions: Seq[Description], level: Int = 2): this.type =
+    heading("Description", level)
+    val substitutedDescription: Seq[String] = for {
+      desc <- descriptions
+      line <- desc.lines.map(_.s)
+      newLine = substituteIn(line)
+    } yield {
+      newLine
     }
-  }
+    substitutedDescription.foreach(p)
+    this
+  end emitDescriptions
 
   protected def emitOptions[OT <: OptionValue](
     options: Seq[OT],
@@ -264,20 +279,22 @@ trait MarkdownWriter
     level: Int = 2
   ): this.type = {
     emitVitalDefTable(definition, parents)
-    emitDescription(definition.description, level)
+    definition match
+      case wad: WithDescriptives => emitDescriptions(wad.descriptions, level)
+      case _                     => this
   }
 
   protected def emitShortDefDoc(
     definition: Definition
   ): this.type = {
-    definition.brief.foreach(b => p(italic(b.s)))
-    definition.description.foreach(d => p(d.lines.mkString("\n")))
+    emitBriefParagraph(definition)
+    emitDescriptionParagraphs(definition)
     this
   }
 
-  protected def makePathIdRef(
+  private def makePathIdRef(
     pid: PathIdentifier,
-    parents: Seq[Definition]
+    parents: Parents
   ): String = {
     parents.headOption match
       case None => ""
@@ -297,20 +314,20 @@ trait MarkdownWriter
 
   private def makeTypeName(
     pid: PathIdentifier,
-    parents: Seq[Definition]
+    parents: Parents
   ): String = {
     parents.headOption match
       case None => s"unresolved path: ${pid.format}"
       case Some(parent) =>
         generator.refMap.definitionOf[Definition](pid, parent) match {
-          case None                   => s"unresolved path: ${pid.format}"
-          case Some(defn: Definition) => defn.id.format
+          case None                         => s"unresolved path: ${pid.format}"
+          case Some(definition: Definition) => definition.id.format
         }
   }
 
   protected def makeTypeName(
     typeEx: TypeExpression,
-    parents: Seq[Definition]
+    parents: Parents
   ): String = {
     val name = typeEx match {
       case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parents)
@@ -329,7 +346,7 @@ trait MarkdownWriter
 
   private def resolveTypeExpression(
     typeEx: TypeExpression,
-    parents: Seq[Definition]
+    parents: Parents
   ): String = {
     typeEx match {
       case a: AliasedTypeExpression =>
@@ -357,10 +374,9 @@ trait MarkdownWriter
     }
   }
 
-  private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Seq[Definition]): this.type = {
+  private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Parents): this.type = {
     val data = agg.contents.map {
       case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
-      case _                 => ("", "")
     }
     list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
@@ -368,7 +384,7 @@ trait MarkdownWriter
 
   private def emitTypeExpression(
     typeEx: TypeExpression,
-    parents: Seq[Definition],
+    parents: Parents,
     headLevel: Int = 2
   ): Unit = {
     typeEx match {
@@ -391,7 +407,7 @@ trait MarkdownWriter
         heading("Aggregation Of", headLevel)
         emitAggregateMembers(agg, parents)
       case mt: AggregateUseCaseTypeExpression =>
-        heading(s"${mt.usecase.format} Of", headLevel)
+        heading(s"${mt.usecase} Of", headLevel)
         emitAggregateMembers(mt, parents)
       case map: Mapping =>
         heading("Mapping Of", headLevel)
@@ -401,12 +417,7 @@ trait MarkdownWriter
         p(s"To:\n: $to")
       case en: Enumeration =>
         heading("Enumeration Of", headLevel)
-        val data = en.enumerators.map { (e: Enumerator) =>
-          val docBlock = e.brief.map(_.s).toSeq ++
-            e.description.map(_.lines.map(_.s)).toSeq.flatten
-          (e.id.format, docBlock)
-        }
-        list(data)
+        list(en.enumerators.map(_.id.format))
       case Pattern(_, strs) =>
         heading("Pattern Of", headLevel)
         list(strs.map("`" + _.s + "`"))
@@ -419,20 +430,20 @@ trait MarkdownWriter
   private def emitType(typ: Type, parents: Parents): Unit = {
     h4(typ.identify)
     emitDefDoc(typ, parents)
-    emitTypeExpression(typ.typ, typ +: parents)
+    emitTypeExpression(typ.typEx, typ +: parents)
   }
 
-  protected def emitTypes(definition: Definition & WithTypes, parents: Parents, level: Int = 2): Unit = {
-    val groups = definition.types
+  protected def emitTypes(types: Contents[Type], parents: Parents, level: Int = 2): Unit = {
+    val groups = types
       .groupBy { typ =>
-        typ.typ match {
-          case mt: AggregateUseCaseTypeExpression          => mt.usecase.format
-          case AliasedTypeExpression(loc, keyword, pathId) => "Alias "
-          case EntityReferenceTypeExpression(loc, entity)  => "Reference "
-          case numericType: NumericType                    => "Numeric "
-          case PredefinedType(str)                         => "Predefined "
-          case _                                           => "Structural"
-        }
+        typ.typEx match
+          case mt: AggregateUseCaseTypeExpression  => mt.usecase.toString + " "
+          case AliasedTypeExpression(_, _, _)      => "Alias "
+          case EntityReferenceTypeExpression(_, _) => "Reference "
+          case _: NumericType                      => "Numeric "
+          case PredefinedType(_)                   => "Predefined "
+          case _                                   => "Structural"
+        end match
       }
       .toSeq
       .sortBy(_._2.size)
@@ -445,10 +456,10 @@ trait MarkdownWriter
     }
   }
 
-  private def emitConstants(withConstants: Definition & WithConstants, parents: Parents): Unit = {
+  private def emitConstants(constants: Contents[Constant], parents: Parents): Unit = {
     h2("Constants")
-    for { c <- withConstants.constants } do
-      emitDefDoc(c, withConstants +: parents)
+    for { c <- constants } do
+      emitDefDoc(c, parents)
       p(s"* type:  ${c.typeEx.format}")
       p(s"* value: ${c.value.format}")
   }
@@ -478,33 +489,32 @@ trait MarkdownWriter
     this
   }
 
-  private def emitFunctions(withFunc: Definition & WithFunctions, stack: Parents): Unit = {
+  private def emitFunctions(functions: Contents[Function], parents: Parents): Unit = {
     h2("Functions")
-    for { f <- withFunc.functions } do {
-      val parents = withFunc
-      emitFunction(f, withFunc +: stack)
+    for { f <- functions } do {
+      emitFunction(f, parents)
     }
   }
 
-  protected def emitInvariants(invariants: Seq[Invariant]): this.type = {
+  protected def emitInvariants(invariants: Contents[Invariant]): this.type = {
     if invariants.nonEmpty then {
       h2("Invariants")
       invariants.foreach { invariant =>
         h3(invariant.id.format)
         list(invariant.condition.map(_.format).toSeq)
-        emitDescription(invariant.description, level = 4)
+        emitDescriptions(invariant.descriptions, level = 4)
       }
     }
     this
   }
 
   private def emitHandlers(
-    withHandlers: Definition & WithHandlers,
+    handlers: Contents[Handler],
     parents: Parents
   ): Unit = {
     h3("Handlers")
-    for { h <- withHandlers.handlers } do {
-      emitHandler(h, withHandlers +: parents)
+    for { h <- handlers } do {
+      emitHandler(h, parents)
     }
   }
 
@@ -514,10 +524,10 @@ trait MarkdownWriter
     p(s"Receives type $typeRef")
   }
 
-  protected def emitInlets(withInlets: Definition & WithInlets, parents: Parents): Unit = {
+  protected def emitInlets(inlets: Contents[Inlet], parents: Parents): Unit = {
     h2("Inlets")
-    for { i <- withInlets.inlets } do {
-      emitInlet(i, withInlets +: parents)
+    for { i <- inlets } do {
+      emitInlet(i, parents)
     }
   }
 
@@ -527,10 +537,10 @@ trait MarkdownWriter
     p(s"Transmits type $typeRef")
   }
 
-  protected def emitOutlets(withOutlets: Definition & WithOutlets, parents: Parents): Unit = {
+  protected def emitOutlets(outlets: Contents[Outlet], parents: Parents): Unit = {
     h2("Outlets")
-    for { o <- withOutlets.outlets } do {
-      emitOutlet(o, withOutlets +: parents)
+    for { o <- outlets } do {
+      emitOutlet(o, parents)
     }
   }
 
@@ -540,14 +550,14 @@ trait MarkdownWriter
     emitOptions(vd.options)
     emitTerms(vd.terms)
   }
-  protected def emitProcessorDetails[CT <: RiddlValue](processor: Processor[CT], stack: Parents): Unit = {
-    if processor.types.nonEmpty then emitTypes(processor, stack)
-    if processor.constants.nonEmpty then emitConstants(processor, stack)
-    if processor.functions.nonEmpty then emitFunctions(processor, stack)
-    if processor.invariants.nonEmpty then emitInvariants(processor.invariants)
-    if processor.handlers.nonEmpty then emitHandlers(processor, stack)
-    if processor.inlets.nonEmpty then emitInlets(processor, stack)
-    if processor.outlets.nonEmpty then emitOutlets(processor, stack)
-  }
 
+  protected def emitProcessorDetails[CT <: RiddlValue](processor: Processor[CT], stack: Parents): Unit = {
+    val parents: Parents = processor +: stack
+    if processor.types.nonEmpty then emitTypes(processor.types, parents)
+    if processor.constants.nonEmpty then emitConstants(processor.constants, parents)
+    if processor.functions.nonEmpty then emitFunctions(processor.functions, parents)
+    if processor.invariants.nonEmpty then emitInvariants(processor.invariants)
+    if processor.handlers.nonEmpty then emitHandlers(processor.handlers, parents)
+    if processor.streamlets.nonEmpty then processor.streamlets.foreach(emitStreamlet(_, parents))
+  }
 }

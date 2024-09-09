@@ -22,4 +22,6 @@ target
 /doc/src/main/hugo/resources/_gen/**
 *.lock
 /hugo-input/
-/scoverage-report/**
+/scoverage-report/
+/package-lock.json
+/node_modules

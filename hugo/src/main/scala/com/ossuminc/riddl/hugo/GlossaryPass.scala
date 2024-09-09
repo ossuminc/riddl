@@ -24,6 +24,7 @@ case class GlossaryEntry(
 )
 
 case class GlossaryOutput(
+  root: Root,
   messages: Messages.Messages,
   entries: Seq[GlossaryEntry]
 ) extends CollectingPassOutput[GlossaryEntry]
@@ -39,15 +40,15 @@ case class GlossaryPass(
   // Members declared in com.ossuminc.riddl.passes.CollectingPass
   protected def collect(
     definition: RiddlValue,
-    parents: mutable.Stack[Definition]
+    parents: ParentStack
   ): Seq[GlossaryEntry] = {
     definition match {
       case ad: Definition if ad.isAnonymous => Seq.empty[GlossaryEntry]
       // Implicit definitions don't have a name so there's no word to define in the glossary
       case d: Definition =>
-        // everything else does
-        val stack = parents.toSeq
-        Seq(makeGlossaryEntry(d, stack))
+        // everything else does have a name
+        val parentsSeq = parents.toParents
+        Seq(makeGlossaryEntry(d, parentsSeq))
       case _: RiddlValue =>
         // None of these kinds of definitions contribute to the glossary
         Seq.empty[GlossaryEntry]
@@ -56,13 +57,19 @@ case class GlossaryPass(
 
   private def makeGlossaryEntry(
     d: Definition,
-    stack: Symbols.Parents
+    stack: Parents
   ): GlossaryEntry = {
     val parents = generator.makeStringParents(stack)
+    val brief: Option[String] =
+      d match
+        case dwb: WithDescriptives => 
+          val content = dwb.briefString
+          if content.isEmpty then None else Some(content)
+        case _ => None
     val entry = GlossaryEntry(
       d.id.value,
       d.kind,
-      d.brief.map(_.s).getOrElse("-- undefined --"),
+      brief.getOrElse("-- undefined --"),
       parents :+ d.id.value,
       generator.makeDocLink(d, parents),
       generator.makeSourceLink(d)
@@ -70,13 +77,13 @@ case class GlossaryPass(
     entry
   }
 
-  def result: GlossaryOutput = {
-    GlossaryOutput(messages.toMessages, collectedValues.toSeq)
+  def result(root: Root): GlossaryOutput = {
+    GlossaryOutput(root, messages.toMessages, collectedValues.toSeq)
   }
 
   // Members declared in com.ossuminc.riddl.passes.Pass
   def name: String = GlossaryPass.name
-  def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ()
+  override def postProcess(root: Root): Unit = ()
 }
 
 object GlossaryPass {

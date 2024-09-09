@@ -1,12 +1,12 @@
 package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.language.AST.{Definition, Domain, Identifier, NamedValue, PathIdentifier, Root}
+import com.ossuminc.riddl.language.AST.{Definition, Domain, Identifier, PathIdentifier, Root}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.testkit.RunPassTestBase
-import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult}
-import com.ossuminc.riddl.analyses.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.hugo.mermaid.UseCaseDiagramSupport
+import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult, RunPassTestBase}
+import com.ossuminc.riddl.diagrams.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
+import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
+import org.scalatest.TestData
 
 import java.nio.file.Path
 import java.net.URI
@@ -16,7 +16,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
 
   case class TestUCDSupport(passesResult: PassesResult) extends UseCaseDiagramSupport {
     private val symTab = passesResult.symbols
-    def makeDocLink(namedValue: NamedValue): String = {
+    def makeDocLink(namedValue: Definition): String = {
       val parents = symTab.parentsOf(namedValue)
       val uri = new URI(
         "http", "example.com", parents.map(_.id.value).mkString("//", "/", "/") + s"${namedValue.id.value}", null, null
@@ -26,8 +26,9 @@ class UseCaseDiagramTest extends RunPassTestBase {
   }
 
   "UseCaseDiagram" should {
-    "generate a simple diagram correctly" in {
-      val input = RiddlParserInput(Path.of("hugo/src/test/input/epic.riddl"))
+    "generate a simple diagram correctly" in { (td:TestData) =>
+      val path  = Path.of("hugo/src/test/input/epic.riddl")
+      val input = RiddlParserInput.fromCwdPath(path)
       val result = runPassesWith(input, DiagramsPass.creator())
       val maybeDPO = result.outputOf[DiagramsPassOutput](DiagramsPass.name)
       maybeDPO match
@@ -36,7 +37,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
             case Some((uc, useCaseDiagramData)) =>
               val useCaseDiagram = UseCaseDiagram(TestUCDSupport(result), useCaseDiagramData)
               val lines = useCaseDiagram.generate
-              info(lines.mkString("\n"))
+              // info(lines.mkString("\n"))
               lines mustNot be(empty)
               succeed
             case None => fail("No use cases or epic")
@@ -47,7 +48,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
   }
 
   "UseCaseDiagramSupport" should {
-    "getDefinitionFor should work" in {
+    "getDefinitionFor should work" in {(td:TestData) =>
       val outputs: PassesOutput = PassesOutput()
       val pid =PathIdentifier(At(),Seq("foo"))
       val item = Domain(At(), Identifier(At(), "foo"))
@@ -55,7 +56,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
       outputs.refMap.add[Domain](pid, parent, item)
       val passesResult = PassesResult(PassInput.empty, outputs )
       case class TestUseCaseDiagramSupport(passesResult: PassesResult) extends UseCaseDiagramSupport {
-        def makeDocLink(definition: NamedValue): String = ???
+        def makeDocLink(definition: Definition): String = ???
       }
       val tucds = TestUseCaseDiagramSupport(passesResult)
       tucds.getDefinitionFor[Domain](pid, parent) match {

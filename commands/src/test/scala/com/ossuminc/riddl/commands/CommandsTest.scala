@@ -6,17 +6,11 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.{CommandPlugin,CommandOptions}
-import com.ossuminc.riddl.command.CommandTestBase
-
 class CommandsTest extends CommandTestBase("commands/src/test/input/") {
 
-  val inputFile = "testkit/src/test/input/rbbq.riddl"
-  val hugoConfig = "testkit/src/test/input/hugo.conf"
-  val validateConfig = "testkit/src/test/input/validate.conf"
-  val outputDir: String => String =
-    (name: String) => s"riddlc/target/test/$name"
-
+  val inputFile = "language/jvm/src/test/input/rbbq.riddl"
+  val hugoConfig = "commands/src/test/input/hugo.conf"
+  val validateConfig = "commands/src/test/input/validate.conf"
 
   "Commands" should {
     "handle dump" in {
@@ -28,6 +22,7 @@ class CommandsTest extends CommandTestBase("commands/src/test/input/") {
       val args = common ++ Seq("from", validateConfig, "validate")
       runCommand(args)
     }
+    
     "handle from with wrong file as input" in {
       val args = Array(
         "--verbose",
@@ -37,7 +32,7 @@ class CommandsTest extends CommandTestBase("commands/src/test/input/") {
         "not-an-existing-file", // wrong file!
         "validate"
       )
-      val rc = CommandPlugin.runMain(args)
+      val rc = Commands.runMain(args)
       rc must not(be(0))
     }
 
@@ -50,7 +45,7 @@ class CommandsTest extends CommandTestBase("commands/src/test/input/") {
         "command/src/test/input/repeat-options.conf",
         "flumox" // unknown command
       )
-      val rc = CommandPlugin.runMain(args)
+      val rc = Commands.runMain(args)
       rc must not(be(0))
     }
 

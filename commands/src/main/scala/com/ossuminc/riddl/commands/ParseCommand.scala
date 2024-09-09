@@ -9,11 +9,12 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.TopLevelParser
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.command.InputFileCommandPlugin
 
 import java.nio.file.Path
+import com.ossuminc.riddl.command.{Command, CommandOptions}
 
 object ParseCommand {
   val cmdName = "parse"
@@ -21,17 +22,18 @@ object ParseCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
-  import InputFileCommandPlugin.Options
+class ParseCommand extends InputFileCommand(ParseCommand.cmdName) {
+  import InputFileCommand.Options
 
   override def run(
-    options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
-    outputDirOverride: Option[Path]
+                    options: Options,
+                    commonOptions: CommonOptions,
+                    log: Logger,
+                    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      TopLevelParser.parsePath(inputFile, commonOptions)
+      val rpi = RiddlParserInput.fromPath(inputFile)
+      TopLevelParser.parseInput(rpi, commonOptions)
         .map(_ => PassesResult()).map(_ => PassesResult())
     }
   }
@@ -44,10 +46,4 @@ class ParseCommand extends InputFileCommandPlugin(ParseCommand.cmdName) {
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }
-
-  override def replaceInputFile(
-    opts: Options,
-    inputFile: Path
-  ): Options = { opts.copy(inputFile = Some(inputFile)) }
-
 }

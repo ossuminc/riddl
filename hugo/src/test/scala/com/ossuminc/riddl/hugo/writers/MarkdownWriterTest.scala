@@ -6,32 +6,33 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.hugo.mermaid.DomainMapDiagram
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.hugo.{GlossaryEntry, HugoTestBase}
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.diagrams.mermaid.DomainMapDiagram
 
 import java.io.{PrintWriter, StringWriter}
 import java.nio.file.Path
+import org.scalatest.TestData 
 
 class MarkdownWriterTest extends HugoTestBase {
 
   "MarkdownWriterTest" must {
-    "emit a domain" in {
+    "emit a domain" in { (td:TestData) =>
       val paths =
         Seq[String]("hugo", "target", "test-output", "container.md")
       val output = Path.of(paths.head, paths.tail*)
-      val input =
+      val input = RiddlParserInput(
         """domain TestDomain {
           |  author is { name="Reid Spencer" email="reid@ossuminc.com" }
-          |  type MyString is String described as "Just a renamed string"
-          |} brief "Just For Testing" described as {
+          |  type MyString is String with { described as "Just a renamed string" }
+          |} with { brief "Just For Testing" described as {
           ||A test domain for ensuring that documentation for domains is
           ||generated sufficiently.
-          |}
-          |""".stripMargin
+          |} }
+          |""".stripMargin,td)
       parseTopLevelDomains(input) match {
         case Left(errors) =>
           fail("Parse Failed:\n" + errors.map(_.format).mkString("\n"))
@@ -42,7 +43,7 @@ class MarkdownWriterTest extends HugoTestBase {
           val diagram = DomainMapDiagram(domain)
           mkd.emitDomain(domain, Seq(root))
           val emitted = mkd.toString
-          info(emitted)
+          // info(emitted)
           val expected =
             """---
               |title: "TestDomain"
@@ -95,7 +96,7 @@ class MarkdownWriterTest extends HugoTestBase {
               |#### Type 'MyString'
               || Item | Value |
               || :---: | :---  |
-              || _Briefly_ | Brief description missing. |
+              || _Briefly_ | No brief description. |
               || _Definition Path_ | TestDomain.Root.MyString |
               || _View Source Link_ | [empty(3:3)]() |
               || _Used By_ | None |
@@ -114,7 +115,7 @@ class MarkdownWriterTest extends HugoTestBase {
           emitted mustBe expected
       }
     }
-    "emit a glossary" in {
+    "emit a glossary" in { (td:TestData) =>
       val term1 = GlossaryEntry(
         "one",
         "Term",
@@ -156,19 +157,19 @@ class MarkdownWriterTest extends HugoTestBase {
           |""".stripMargin
       output mustBe expected
     }
-    "substitute PathId references" in {
+    "substitute PathId references" in { (td:TestData) =>
       val input: String =
         """domain substitutions {
           |  context referenced is { ??? }
-          |} described as {
+          |} with { description as {
           | | This substitutions domain contains context substitutions.referenced
           | | which maps to https://www.merriam-webster.com/
-          |}
+          |} }
           |""".stripMargin
       val (passesResult: PassesResult, root: Root, mdw: MarkdownWriter) = makeMDWFor(input)
       val domain = root.domains.head
       val context = domain.contexts.head
-      mdw.emitDescription(domain.description, 0)
+      mdw.emitDescriptions(domain.descriptions, 0)
       println(mdw.toLines.mkString("\n"))
       succeed
     }

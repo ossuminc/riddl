@@ -10,20 +10,19 @@ import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.translate.TranslatingState
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.Pass.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
-import com.ossuminc.riddl.passes.symbols.{SymbolsPass, Symbols}
+import com.ossuminc.riddl.passes.symbols.{Symbols, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.passes.translate.TranslatingOptions
-import com.ossuminc.riddl.command.PassCommandOptions
-import com.ossuminc.riddl.analyses.{StatsPass, DiagramsPass}
-import com.ossuminc.riddl.hugo.mermaid.*
-import com.ossuminc.riddl.hugo.mermaid.RootOverviewDiagram
+import com.ossuminc.riddl.passes.translate.{TranslatingOptions, TranslatingState}
+import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.hugo.utils.TreeCopyFileVisitor
 import com.ossuminc.riddl.hugo.themes.{ThemeGenerator, ThemeWriter}
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
+import com.ossuminc.riddl.command.{PassCommand, PassCommandOptions}
+import com.ossuminc.riddl.passes.diagrams.DiagramsPass
+import com.ossuminc.riddl.passes.stats.StatsPass
 
 import java.io.File
 import java.net.URL
@@ -108,7 +107,7 @@ object HugoPass extends PassInfo[HugoPass.Options] {
     )
   }
 
-  private val geekDoc_version = "v0.44.1"
+  private val geekDoc_version = "v0.47.0"
   private val geekDoc_file = "hugo-geekdoc.tar.gz"
   val geekDoc_url: URL = java.net.URI
     .create(
@@ -118,6 +117,7 @@ object HugoPass extends PassInfo[HugoPass.Options] {
 }
 
 case class HugoOutput(
+  root: Root = Root.empty,
   messages: Messages = Messages.empty
 ) extends PassOutput
 
@@ -166,7 +166,7 @@ case class HugoPass(
     mdw
   }
 
-  override def process(value: AST.RiddlValue, parents: Symbols.ParentStack): Unit = {
+  override def process(value: AST.RiddlValue, parents: ParentStack): Unit = {
     val stack = parents.toSeq
     value match {
       // We only process containers here since they start their own
@@ -190,6 +190,7 @@ case class HugoPass(
           case r: Repository => mkd.emitRepository(r, stack)
           case s: Saga       => mkd.emitSaga(s, stack)
           case s: Streamlet  => mkd.emitStreamlet(s, stack)
+          case m: Module     => mkd.emitModule(m, stack)
         }
 
       case u: UseCase   => setUpContainer(u, stack).emitUseCase(u, stack)
@@ -197,9 +198,10 @@ case class HugoPass(
 
       // ignore the non-processors
       case _: Function | _: Handler | _: State | _: OnOtherClause | _: OnInitializationClause | _: OnMessageClause |
-           _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
-           _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root |
-           _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type =>
+          _: OnTerminationClause | _: Author | _: Enumerator | _: Field | _: Method | _: Term | _: Constant |
+          _: Invariant | _: Inlet | _: Outlet | _: SagaStep | _: User | _: Interaction | _: Root | _: BriefDescription |
+          _: Include[Definition] @unchecked | _: Output | _: Input | _: Group | _: ContainedGroup | _: Type |
+          _: Definition | _: Statement =>
         ()
       // All of these are handled above in their containers content output
       case _: AST.NonDefinitionValues => ()
@@ -212,7 +214,7 @@ case class HugoPass(
     close(root)
   }
 
-  override def result: HugoOutput = HugoOutput(messages.toMessages)
+  override def result(root: Root): HugoOutput = HugoOutput(root, messages.toMessages)
 
   private def deleteAll(directory: File): Boolean = {
     if !directory.isDirectory then false
@@ -357,7 +359,7 @@ case class HugoPass(
 
   private def setUpContainer(
     c: Definition,
-    stack: Seq[Definition]
+    stack: Parents
   ): MarkdownWriter = {
     addDir(c.id.format)
     val pars = generator.makeStringParents(stack)
@@ -366,7 +368,7 @@ case class HugoPass(
 
   private def setUpLeaf(
     d: Definition,
-    stack: Seq[Definition]
+    stack: Parents
   ): MarkdownWriter = {
     val pars = generator.makeStringParents(stack)
     makeWriter(pars, d.id.format + ".md")

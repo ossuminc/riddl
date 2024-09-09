@@ -1,7 +1,6 @@
 package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.symbols.Symbols.Parents
 
 trait StreamletWriter { this: MarkdownWriter =>
 
@@ -15,10 +14,11 @@ trait StreamletWriter { this: MarkdownWriter =>
   }
 
   def emitStreamlet(streamlet: Streamlet, parents: Parents): Unit = {
-    leafHead(streamlet, weight = 30)
+    containerHead(streamlet)
     emitProcessorDetails(streamlet, parents)
-    emitInlets(streamlet, streamlet +: parents)
-    emitOutlets(streamlet, streamlet +: parents)
+    emitInlets(streamlet.inlets, streamlet +: parents)
+    emitOutlets(streamlet.outlets, streamlet +: parents)
     // TODO: emit a diagram of the streamlet's data flow
   }
+
 }

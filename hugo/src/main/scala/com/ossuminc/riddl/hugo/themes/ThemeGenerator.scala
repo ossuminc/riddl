@@ -5,9 +5,10 @@ import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.*
 import com.ossuminc.riddl.passes.symbols.*
-import com.ossuminc.riddl.analyses.*
 import com.ossuminc.riddl.hugo.HugoPass
-import com.ossuminc.riddl.hugo.mermaid.UseCaseDiagramSupport
+import com.ossuminc.riddl.diagrams.mermaid.*
+import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
+
 import java.nio.file.Path
 
 trait ThemeGenerator extends UseCaseDiagramSupport {
@@ -29,15 +30,15 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
     outputs.outputOf[DiagramsPassOutput](DiagramsPass.name).getOrElse(DiagramsPassOutput())
   lazy val passesResult: PassesResult = PassesResult(input, outputs)
 
-  def makeDocLink(definition: NamedValue, parents: Seq[String]): String
+  def makeDocLink(definition: Definition, parents: Seq[String]): String
 
-  def makeDocAndParentsLinks(definition: NamedValue): String
-  
+  def makeDocAndParentsLinks(definition: Definition): String
+
   def makeSourceLink(definition: Definition): String
 
   def makeTomlFile(options: HugoPass.Options, author: Option[Author]): String
 
-  protected def makeParents(parents: Symbols.Parents): Seq[Definition] = {
+  protected def makeParents(parents: Parents): Seq[Definition] = {
     // The stack goes from most nested to highest. We don't want to change the
     // stack (its mutable) so we copy it to a Seq first, then reverse it, then
     // drop all the root containers (file includes) to finally end up at a domin
@@ -45,11 +46,11 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
     parents.reverse.dropWhile(_.isRootContainer)
   }
 
-  def makeStringParents(parents: Symbols.Parents): Seq[String] = {
+  def makeStringParents(parents: Parents): Seq[String] = {
     makeParents(parents).map(_.id.format)
   }
 
-  def makeDocLink(definition: NamedValue): String = {
+  def makeDocLink(definition: Definition): String = {
     val parents = makeStringParents(outputs.symbols.parentsOf(definition))
     makeDocLink(definition, parents)
   }
@@ -57,7 +58,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
   /** Generate a string that is the file path portion of a url including the line number.
     */
   def makeFilePath(definition: Definition): Option[String] = {
-    definition.loc.source.path.map(_.toString)
+    Some(definition.loc.source.root.toExternalForm)
   }
 
   def makeFullName(definition: Definition): String = {
@@ -65,7 +66,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
     defs.map(_.id.format).mkString(".")
   }
 
-  def makeBreadCrumbs(parents: Symbols.Parents): String = {
+  def makeBreadCrumbs(parents: Parents): String = {
     parents
       .map { defn =>
         val link = makeDocLink(defn, parents.map(_.id.value))

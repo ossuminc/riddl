@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package com.ossuminc.riddl.command
 
 import com.ossuminc.riddl.language.AST.*
@@ -29,7 +28,7 @@ object TranslationCommand {
   * directory of files.
   *
   * @param name
-  *   The name of the command to pass to [[CommandPlugin]]
+  *   The name of the command to pass to [[Command]]
   * @tparam OPT
   *   The option type for the command
   */

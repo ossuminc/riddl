@@ -1,10 +1,9 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandTestBase
 
 class HugoCommandTest extends CommandTestBase  {
 
-  val inputFile = "hugo/src/test/input/rbbq.riddl"
+  val inputFile = "passes/jvm/src/test/input/rbbq.riddl"
   val hugoConfig = "hugo/src/test/input/hugo.conf"
   val validateConfig = "hugo/src/test/input/validate.conf"
   val outputDir: String => String = (name: String) => s"hugo/target/test/$name"
