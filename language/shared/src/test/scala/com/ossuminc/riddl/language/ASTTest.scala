@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.RelationshipCardinality.OneToOne
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.utils.TestingBasis
@@ -190,11 +191,23 @@ class ASTTest extends TestingBasis {
   val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
   val stateRef: StateRef = StateRef(At.empty, PathIdentifier(At(), Seq("state")))
   val user: User = User(At.empty, Identifier(At.empty, "john"), LiteralString(At.empty, "GenericUser"))
-  val userStory: UserStory = UserStory(At.empty, UserRef(At.empty, PathIdentifier(At.empty, Seq("user"))),
-    LiteralString(At.empty, "do something"), LiteralString(At.empty, "he can reap obvious benefits"))
+  val userStory: UserStory = UserStory(
+    At.empty,
+    UserRef(At.empty, PathIdentifier(At.empty, Seq("user"))),
+    LiteralString(At.empty, "do something"),
+    LiteralString(At.empty, "he can reap obvious benefits")
+  )
   val storyCase: UseCase = UseCase(At.empty, Identifier(At.empty, "story-case"), userStory)
   val epic: Epic = Epic(At.empty, Identifier(At.empty, "epic"), userStory)
   val term: Term = Term(At.empty, Identifier(At.empty, "term"), Seq(LiteralString(At.empty, "definition")))
+
+  val relationship: Relationship = Relationship(
+    At.empty,
+    Identifier(At.empty, "moreMiniMes"),
+    withProcessor = entityRef,
+    cardinality = RelationshipCardinality.OneToMany,
+    Some(LiteralString(At(), "more Mini-Mes"))
+  )
 
   "User" should {
     "have a test" in {
@@ -203,7 +216,7 @@ class ASTTest extends TestingBasis {
   }
   val domain: AST.Domain =
     Domain(At(), Identifier(At(), "test"), contents = Seq(author))
-  val context: AST.Context = Context(At(), Identifier(At(), "test"))
+  val context: AST.Context = Context(At(), Identifier(At(), "test"), Seq(relationship))
 
   "Adaptor" should {
     "pass simple tests" in {
@@ -237,11 +250,16 @@ class ASTTest extends TestingBasis {
   }
 
   "Context" should {
-    "correctly identify emptiness" in { context.contents mustBe empty }
+    "correctly identify emptiness" in {
+      Context(At(), Identifier(At(), "empty")).contents must be(empty)
+    }
     "correctly identify non-emptiness" in {
       val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
       Context(At(), Identifier(At(), "test"), contents = types).contents mustBe
         types
+    }
+    "have a relationship" in {
+      context.contents.filter[Relationship] must be(Seq(relationship))
     }
   }
   "WithTypes" must {
@@ -320,7 +338,7 @@ class ASTTest extends TestingBasis {
       function.input must be(empty)
       function.output must be(empty)
       function.brief must be(brief)
-      function.descriptions must be (descriptions)
+      function.descriptions must be(descriptions)
     }
   }
 
@@ -356,7 +374,7 @@ class ASTTest extends TestingBasis {
   "Repository" should { "have a test" in { pending } }
 
   "Root(Nil)" should {
-    "be at location 0,0" in { Root(Nil).loc must be( At.empty ) }
+    "be at location 0,0" in { Root(Nil).loc must be(At.empty) }
     "have 'Root' id" in { Root(Nil).identify must be("Root") }
     "have no modules" in { Root(Nil).modules must be(empty) }
     "have no domains" in { Root(Nil).domains must be(empty) }

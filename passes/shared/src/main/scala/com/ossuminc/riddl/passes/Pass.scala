@@ -423,6 +423,7 @@ trait PassVisitor:
   def doUser(user: User): Unit
   def doSchema(schema: Schema): Unit
   def doState(state: State): Unit
+  def doRelationship(relationship: Relationship): Unit
   def doEnumerator(enumerator: Enumerator): Unit
   def doContainedGroup(containedGroup: ContainedGroup): Unit
 
@@ -515,6 +516,7 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case user: User                     => visitor.doUser(user)
       case schema: Schema                 => visitor.doSchema(schema)
       case state: State                   => visitor.doState(state)
+      case relationship: Relationship     => visitor.doRelationship(relationship)
       case containedGroup: ContainedGroup => visitor.doContainedGroup(containedGroup)
     end match
   end processLeaf

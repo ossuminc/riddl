@@ -177,6 +177,8 @@ object Keywords {
   def invariant[u: P]: P[Unit] = keyword(Keyword.invariant)
 
   def items[u: P]: P[Unit] = keyword(Keyword.items)
+  
+  def label[u:P]: P[Unit] = keyword(Keyword.label)
 
   def link[u: P]: P[Unit] = keyword(Keyword.link)
 
@@ -235,6 +237,8 @@ object Keywords {
   def range[u: P]: P[Unit] = keyword(Keyword.range)
 
   def reference[u: P]: P[Unit] = keyword(Keyword.reference)
+
+  def relationship[u: P]: P[Unit] = keyword(Keyword.relationship)
 
   def replica[u: P]: P[Unit] = keyword(Keyword.replica)
 
@@ -390,6 +394,7 @@ object Keyword {
   final val input = "input"
   final val invariant = "invariant"
   final val items = "items"
+  final val label = "label"
   final val link = "link"
   final val many = "many"
   final val mapping = "mapping"
@@ -415,6 +420,7 @@ object Keyword {
   final val query = "query"
   final val range = "range"
   final val reference = "reference"
+  final val relationship = "relationship"
   final val remove = "remove"
   final val replica = "replica"
   final val reply = "reply"

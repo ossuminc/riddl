@@ -5,7 +5,7 @@ import com.ossuminc.riddl.language.At
 
 import org.scalatest.TestData
 
-class ProjectionsTest extends ParsingTest {
+class ProjectorTest extends ParsingTest {
 
   "Projector" should {
     "use a Repository" in { (td:TestData) => 
@@ -56,64 +56,32 @@ class ProjectionsTest extends ParsingTest {
           fail("Should have failed")
       }
     }
-  }
-
-  "Repository" should {
-    "have a schema" in { (td:TestData) =>
+    "can have a relationship with a repository" in {  (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
           |  context ignore {
           |    repository storage is {
-          |      record Person is { name: String }
-          |      schema structure is flat
-          |        of person as record Person
-          |        index on field Person.name
+          |       ???
+          |    }
+          |    projector transform is {
+          |       updates repository storage
+          |       relationship updates to repository storage as 1:1 with {
+          |         brief "Just to show that this projector updates the repository"
+          |       }  
           |    }
           |  }
           |}
-          |""".stripMargin,td
-      )
-      parseTopLevelDomain[Repository](rpi, _.domains.head.contexts.head.repositories.head) match
+          |""".stripMargin, td)
+      parseTopLevelDomain[Projector](rpi, _.domains.head.contexts.head.projectors.head) match
         case Left(messages) =>
-          if messages.justErrors.nonEmpty then fail(messages.format)
-          succeed
-        case Right(repo: Repository, input) =>
-          val schemas = repo.contents.filter[Schema]
-          schemas mustNot be(empty)
-          val schema = schemas.head
-          schema mustBe Schema(At(5,7,input),Identifier(At(5,14,input),"structure"),
-            RepositorySchemaKind.Flat,
-            Map(Identifier(At(6,12,input),"person") -> TypeRef(At(6,22,input),"record",PathIdentifier(At(6,29,input), Seq("Person")))),
-            Map.empty,
-            Seq(FieldRef(At(7,18,input),PathIdentifier(At(7,24,input), Seq("Person","name"))))
-          )
-    }
-    "handles data statements" in { (td:TestData) =>
-      val rpi = RiddlParserInput(
-        """domain ignore {
-          |  context ignore {
-          |   repository store_it is {
-          |     command PutIt { field: Integer }
-          |     record Foo { data: String }
-          |     handler X is {
-          |       on command PutIt {
-          |         put "thing" to record Foo
-          |         read "what" from record Foo 
-          |       }
-          |     }
-          |   }
-          |""".stripMargin,td
-      )
-      parseTopLevelDomain[Repository](rpi, _.domains.head.contexts.head.repositories.head) match {
-        case Left(messages) =>
-          val errors = messages.justErrors
-          if errors.nonEmpty then 
-            succeed
-          else  
-            fail(errors.format)
-        case Right(_, _) =>
-          succeed
-      }
+          val errors = messages.justErrors 
+          if errors.nonEmpty then fail(errors.format) else succeed
+        case Right(proj: Projector, input) =>
+          val rels = proj.contents.filter[Relationship]
+          rels mustNot be(empty)
+          val rel: Relationship = rels.head
+          rel.format must be("relationship updates to repository storage")
     }
   }
+
 }
