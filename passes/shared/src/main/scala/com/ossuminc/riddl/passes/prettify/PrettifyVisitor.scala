@@ -291,6 +291,18 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   end doState
 
+  def doRelationship(rel: com.ossuminc.riddl.language.AST.Relationship): Unit =
+    state.withCurrent { rfe => 
+      rfe.addIndent(
+        s"${keyword(rel)} ${rel.id.format} to ${rel.withProcessor.format} as ${rel.cardinality.proportion}"
+      )
+      if rel.label.nonEmpty then
+        rfe.add(s" label as ${rel.label.format}")
+      end if
+      rfe.nl
+    }
+  end doRelationship  
+
   def doEnumerator(enumerator: Enumerator): Unit = () // Note: Handled by RiddlFileEmitter.emitEnumeration
 
   def doContainedGroup(containedGroup: ContainedGroup): Unit =
@@ -416,6 +428,7 @@ def keyword(definition: Definition): String =
     case _: OnClause       => Keyword.on
     case _: Projector      => Keyword.projector
     case _: Repository     => Keyword.repository
+    case _: Relationship   => Keyword.relationship
     case _: Definition     => "unknown"
   end match
 end keyword

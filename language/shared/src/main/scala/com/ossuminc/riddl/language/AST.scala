@@ -1121,8 +1121,11 @@ object AST:
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////// RELATIONSHIP
 
-  enum RelationshipCardinality:
-    case OneToOne, OneToMany, ManyToOne, ManyToMany
+  enum RelationshipCardinality(val proportion: String) :
+    case OneToOne extends RelationshipCardinality("1:1")
+    case OneToMany extends RelationshipCardinality("1:N")
+    case ManyToOne extends RelationshipCardinality("N:1")
+    case ManyToMany extends RelationshipCardinality("N:N")
 
   /** A relationship between the Processor containing this value and another Processors
     *
