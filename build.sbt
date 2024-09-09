@@ -54,12 +54,20 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
       import tastymima.intf._
-      prevConfig.withMoreProblemFilters(asList(
-      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.version"),
-      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"),
-      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"),
-      ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot")
-      ))
+      prevConfig.withMoreProblemFilters(
+        asList(
+          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.version"),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"
+          ),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"
+          ),
+          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot")
+        )
+      )
     }
   )
   .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
@@ -73,12 +81,15 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
     )
   )
+  .nativeConfigure(With.native(debug = true, verbose = true, gc = "none"))
+  .nativeConfigure(With.noMiMa)
 
-lazy val utils = utils_cp.jvm
-lazy val utilsJS = utils_cp.js
+lazy val utils: Project = utils_cp.jvm
+lazy val utilsJS: Project = utils_cp.js
+lazy val utilsNat: Project = utils_cp.native
 
 val Language = config("language")
-lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
+lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp))
   .configure(With.typical)
   .settings(
@@ -92,9 +103,11 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
       import tastymima.intf._
-      prevConfig.withMoreProblemFilters(asList(
-        ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc")
-      ))
+      prevConfig.withMoreProblemFilters(
+        asList(
+          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc")
+        )
+      )
     },
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
@@ -107,8 +120,16 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.8.0"
   )
+  .nativeConfigure(With.native(debug = true, verbose = false, gc = "none", noLTO = true))
+  .nativeConfigure(With.noMiMa)
+  .nativeSettings(
+    libraryDependencies += "com.lihaoyi" %%% "fastparse" % "3.1.1",
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.8.0"
+  )
+
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
+lazy val languageNat = language_cp.native
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
