@@ -106,14 +106,14 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     },
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
-    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.8.0",
+    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.9.0",
     libraryDependencies += Dep.commons_io % Test
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
-    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.8.0"
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.0"
   )
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
@@ -138,7 +138,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.passes.PassVisitor.doRelationship"),
+          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.passes.PassVisitor.doRelationship")
         )
       )
     }
