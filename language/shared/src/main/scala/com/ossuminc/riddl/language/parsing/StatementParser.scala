@@ -60,7 +60,7 @@ private[parsing] trait StatementParser {
 
   private def ifThenElseStatement[u: P](set: StatementsSet): P[IfThenElseStatement] = {
     P(
-      location ~ Keywords.if_ ~/ literalString ~ Keywords.then_ ~/ pseudoCodeBlock(set) ~ (
+      location ~ Keywords.`if` ~/ literalString ~ Keywords.`then` ~/ pseudoCodeBlock(set) ~ (
         Keywords.else_ ~ pseudoCodeBlock(set) ~ Keywords.end_
       ).?
     )./.map { case (loc, cond, thens, maybeElses) =>
@@ -93,7 +93,7 @@ private[parsing] trait StatementParser {
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      location ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ with_ ~ messageRef
+      location ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ messageRef
     )./.map { tpl => MorphStatement.apply.tupled(tpl) }
   }
 
@@ -105,19 +105,19 @@ private[parsing] trait StatementParser {
 
   private def focusStatement[u: P]: P[FocusStatement] = {
     P(
-      location ~ Keywords.focus ~/ on ~ groupRef
+      location ~ Keywords.focus ~/ Keywords.on ~ groupRef
     )./.map { tpl => FocusStatement.apply.tupled(tpl) }
   }
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
     P(
-      location ~ Keywords.reply ~/ with_.?./ ~ messageRef
+      location ~ Keywords.reply ~/ `with`.?./ ~ messageRef
     )./.map { tpl => ReplyStatement.apply.tupled(tpl) }
   }
 
   private def returnStatement[u: P]: P[ReturnStatement] = {
     P(
-      location ~ Keywords.return_ ~ literalString
+      location ~ Keywords.`return` ~ literalString
     )./.map(t => ReturnStatement.apply.tupled(t))
   }
 

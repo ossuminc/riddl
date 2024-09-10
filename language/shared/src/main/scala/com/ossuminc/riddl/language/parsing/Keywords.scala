@@ -140,15 +140,11 @@ object Keywords {
 
   def focus[u: P]: P[Unit] = keyword(Keyword.focus)
 
-  def for_[u: P]: P[Unit] = keyword(Keyword.for_)
+  def `for`[u: P]: P[Unit] = keyword(Keyword.for_)
 
   def foreach[u: P]: P[Unit] = keyword(Keyword.foreach)
 
-  def form[u: P]: P[Unit] = keyword(Keyword.form)
-
   def from[u: P]: P[Unit] = keyword(Keyword.from)
-  
-  def fully[u:P]: P[Unit] = keyword(Keyword.fully)
 
   def function[u: P]: P[Unit] = keyword(Keyword.function)
 
@@ -158,7 +154,7 @@ object Keywords {
 
   def handler[u: P]: P[Unit] = keyword(Keyword.handler)
 
-  def if_[u: P]: P[Unit] = keyword(Keyword.if_)
+  def `if`[u: P]: P[Unit] = keyword(Keyword.if_)
 
   def import_[u: P]: P[Unit] = keyword(Keyword.import_)
 
@@ -177,7 +173,7 @@ object Keywords {
   def invariant[u: P]: P[Unit] = keyword(Keyword.invariant)
 
   def items[u: P]: P[Unit] = keyword(Keyword.items)
-  
+
   def label[u:P]: P[Unit] = keyword(Keyword.label)
 
   def link[u: P]: P[Unit] = keyword(Keyword.link)
@@ -256,7 +252,7 @@ object Keywords {
 
   def results[u: P]: P[Unit] = keyword(Keyword.results)
 
-  def return_[u: P]: P[Unit] = keyword(Keyword.return_)
+  def `return`[u: P]: P[Unit] = keyword(Keyword.return_)
 
   def returns[u: P]: P[Unit] = keyword(Keyword.returns)
 
@@ -304,11 +300,11 @@ object Keywords {
 
   def term[u: P]: P[Unit] = keyword(Keyword.term)
 
-  def then_[u: P]: P[Unit] = keyword(Keyword.then_)
+  def `then`[u: P]: P[Unit] = keyword(Keyword.then_)
 
   def title[u: P]: P[Unit] = keyword(Keyword.title)
 
-  def type_[u: P]: P[Unit] = keyword(Keyword.type_)
+  def `type`[u: P]: P[Unit] = keyword(Keyword.type_)
 
   def url[u: P]: P[Unit] = keyword(Keyword.url)
 
@@ -324,7 +320,7 @@ object Keywords {
 
   def where[u: P]: P[Unit] = keyword(Keyword.where)
 
-  def with_[u: P]: P[Unit] = keyword(Keyword.with_)
+  def `with`[u: P]: P[Unit] = keyword(Keyword.with_)
 }
 
 object Keyword {
