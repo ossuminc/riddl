@@ -725,8 +725,8 @@ object AST:
   type OccursInVitalDefinition = Type | Comment
 
   /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition |
-    Constant | Invariant | Function | OptionValue | Handler | Streamlet | Connector
+  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue | Handler |
+    Streamlet | Connector | Relationship
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
@@ -985,11 +985,11 @@ object AST:
   case class Root(
     contents: Contents[RootContents] = Contents.empty
   ) extends BranchDefinition[RootContents]
-    with WithModules
-    with WithDomains
-    with WithAuthors
-    with WithComments
-    with WithIncludes[RootContents]:
+      with WithModules
+      with WithDomains
+      with WithAuthors
+      with WithComments
+      with WithIncludes[RootContents]:
 
     override def isRootContainer: Boolean = true
 
@@ -1019,11 +1019,9 @@ object AST:
     contents: Contents[ModuleContents] = Contents.empty,
     descriptives: Contents[Descriptives] = Contents.empty
   ) extends VitalDefinition[ModuleContents]
-    with WithModules
-    with WithDomains
-    with WithAuthors
-
-  :
+      with WithModules
+      with WithDomains
+      with WithAuthors:
     def format: String = s"${Keyword.module} ${id.format}"
   end Module
 
@@ -1121,6 +1119,38 @@ object AST:
     override def format: String = Keyword.author + " " + pathId.format
   end AuthorRef
 
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////// RELATIONSHIP
+
+  enum RelationshipCardinality(val proportion: String) :
+    case OneToOne extends RelationshipCardinality("1:1")
+    case OneToMany extends RelationshipCardinality("1:N")
+    case ManyToOne extends RelationshipCardinality("N:1")
+    case ManyToMany extends RelationshipCardinality("N:N")
+
+  /** A relationship between the Processor containing this value and another Processors
+    *
+    * @param loc
+    *   The location in the source where this relationship occurs
+    * @param id
+    *   The identifier of this relationship which uniquely defines it within the containing processor.
+    * @param processorRef
+    *   The referenced processor towards which this relationship is formed
+    * @param cardinality
+    *   The cardinality of the relationship between processors
+    * @param label
+    *   The label for this relationship as if drawn on a line connecting processors. This is optional and if not set,
+    *   the [[id]] of the relationship is used instead
+    */
+  case class Relationship(
+    loc: At,
+    id: Identifier,
+    withProcessor: ProcessorRef[?],
+    cardinality: RelationshipCardinality,
+    label: Option[LiteralString] = None,
+    descriptives: Contents[Descriptives] = Contents.empty
+  ) extends LeafDefinition {
+    def format: String = Keyword.relationship + " " + id.format + " to " + withProcessor.format
+  }
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
   /** Base trait of an expression that defines a type
@@ -3608,11 +3638,11 @@ object AST:
   }
 
   /** An element of a Use Case that links it to an external resource
-   * @param loc
-   *   The location at which the ShownBy occurs
-   * @param urls
-   *   The list of URLs by which the Use Case is shown
-   */
+    * @param loc
+    *   The location at which the ShownBy occurs
+    * @param urls
+    *   The list of URLs by which the Use Case is shown
+    */
   @JSExportTopLevel("ShownBy")
   case class ShownBy(
     loc: At = At.empty,
@@ -3901,10 +3931,8 @@ object AST:
     parents: Seq[Container[RiddlValue]]
   ): Seq[AuthorRef] =
     val result = definition.authorRefs
-    if result.isEmpty then
-        parents.filter[WithDescriptives].flatMap(_.authorRefs)
-    else
-      result
+    if result.isEmpty then parents.filter[WithDescriptives].flatMap(_.authorRefs)
+    else result
     end if
   end findAuthors
 

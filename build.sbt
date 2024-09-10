@@ -1,5 +1,6 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
+import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import sbt.Append.{appendSeqImplicit, appendSet}
 import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
@@ -57,14 +58,10 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       prevConfig.withMoreProblemFilters(
         asList(
           ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.version"),
-          ProblemMatcher.make(
-            ProblemKind.IncompatibleTypeChange,
-            "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"
-          ),
-          ProblemMatcher.make(
-            ProblemKind.IncompatibleTypeChange,
-            "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"
-          ),
+          ProblemMatcher
+            .make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"),
+          ProblemMatcher
+            .make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"),
           ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot")
         )
       )
@@ -81,12 +78,9 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
     )
   )
-  .nativeConfigure(With.native(debug = true, verbose = true, gc = "none"))
-  .nativeConfigure(With.noMiMa)
 
-lazy val utils: Project = utils_cp.jvm
-lazy val utilsJS: Project = utils_cp.js
-lazy val utilsNat: Project = utils_cp.native
+lazy val utils = utils_cp.jvm
+lazy val utilsJS = utils_cp.js
 
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS, Native)
@@ -105,20 +99,21 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc")
+          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc"),
+          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.language.AST.OccursInProcessor")
         )
       )
     },
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
-    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.8.0",
+    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.9.0",
     libraryDependencies += Dep.commons_io % Test
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
-    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.8.0"
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.0"
   )
   .nativeConfigure(With.native(debug = true, verbose = false, gc = "none", noLTO = true))
   .nativeConfigure(With.noMiMa)
@@ -142,7 +137,19 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .jvmConfigure(With.coverage(30))
   .jvmConfigure(With.MiMa("0.52.1"))
   .jvmSettings(
-    coverageExcludedPackages := "<empty>;$anon"
+    coverageExcludedPackages := "<empty>;$anon",
+    mimaBinaryIssueFilters ++= Seq(
+      ProblemFilters.exclude[ReversedMissingMethodProblem]("com.ossuminc.riddl.passes.PassVisitor.doRelationship")
+    ),
+    tastyMiMaConfig ~= { prevConfig =>
+      import java.util.Arrays.asList
+      import tastymima.intf._
+      prevConfig.withMoreProblemFilters(
+        asList(
+          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.passes.PassVisitor.doRelationship")
+        )
+      )
+    }
   )
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)

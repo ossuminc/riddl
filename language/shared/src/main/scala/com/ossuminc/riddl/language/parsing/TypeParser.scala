@@ -562,7 +562,7 @@ private[parsing] trait TypeParser {
 
   private def defOfType[u: P]: P[Type] = {
     P(
-      location ~ Keywords.type_ ~/ identifier ~ is ~ typeExpression ~ withDescriptives
+      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ withDescriptives
     )./.map { case (loc, id, typ, descriptives) =>
       Type(loc, id, typ, descriptives)
     }

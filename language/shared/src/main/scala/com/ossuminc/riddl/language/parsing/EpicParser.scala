@@ -41,7 +41,7 @@ private[parsing] trait EpicParser {
 
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
-      location ~ Keywords.for_ ~ anyInteractionRef ~ is ~ literalString ~/ withDescriptives
+      location ~ Keywords.`for` ~ anyInteractionRef ~ is ~ literalString ~/ withDescriptives
     )./.map { case (loc, fromTo, proc, withs) =>
       SelfInteraction(loc, fromTo, proc, withs)
     }
@@ -49,7 +49,7 @@ private[parsing] trait EpicParser {
 
   private def focusOnGroupStep[u: P]: P[FocusOnGroupInteraction] = {
     P(
-      location ~ Keywords.focus ~ userRef ~ on ~ groupRef ~/ withDescriptives
+      location ~ Keywords.focus ~ userRef ~ Keywords.on ~ groupRef ~/ withDescriptives
     )./.map { case (loc, userRef, groupRef, withs) =>
       FocusOnGroupInteraction(loc, userRef, groupRef, withs)
     }

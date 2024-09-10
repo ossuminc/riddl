@@ -174,7 +174,7 @@ private[parsing] trait CommonParser
 
   def withDescriptives[u: P]: P[Contents[Descriptives]] = {
     P(
-      (Keywords.with_ ~ open ~
+      (Keywords.`with` ~ open ~
         (undefined[u, Contents[Descriptives]](Contents.empty) | descriptive.rep(1)) ~
         close)
     ).?./.map {

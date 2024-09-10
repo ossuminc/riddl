@@ -22,6 +22,8 @@ domain Everything is {
 
   context full is {
 
+    relationship using to context APlant as 1:1 label as "uses"
+    
     adaptor foo from context APlant is { ??? }
 
     inlet input is type DoAThing

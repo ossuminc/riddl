@@ -54,7 +54,7 @@ private[parsing] trait RepositoryParser {
     P (Keywords.link ~ identifier ~ as ~ fieldRef ~ to ~ fieldRef )./
     
   private def index[u:P]: P[FieldRef] =
-    P(Keywords.index ~ on ~ fieldRef)./
+    P(Keywords.index ~ Keywords.on ~ fieldRef)./
   
   private def schema[u: P]: P[Schema] = {
     P(

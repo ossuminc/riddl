@@ -2,16 +2,13 @@ package com.ossuminc.riddl.language.parsing
 
 object Punctuation {
   final val asterisk = "*"
-  final val at = "@"
+  final val atSign = "@"
   final val comma = ","
   final val colon = ":"
   final val curlyOpen = "{"
   final val curlyClose = "}"
   final val dot = "."
   final val equalsSign = "="
-  final val ellipsis = "..."
-  final val ellipsisQuestion = "...?"
-  final val exclamation = "!"
   final val plus = "+"
   final val question = "?"
   final val quote = "\""

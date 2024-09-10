@@ -123,6 +123,7 @@ class TestVisitor extends PassVisitor:
   def doUser(user: User): Unit = leaf(user)
   def doSchema(schema: Schema): Unit = leaf(schema)
   def doState(state: State): Unit = leaf(state)
+  def doRelationship(relationship: Relationship): Unit = leaf(relationship)
   def doContainedGroup(containedGroup: ContainedGroup): Unit = leaf(containedGroup)
 
   // Non Definition values
