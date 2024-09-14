@@ -84,6 +84,11 @@ trait ParsingTest extends TestingBasisWithTestData {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract).map(x => (x, input))
   }
+  
+  def parseNebula(input: RiddlParserInput): Either[Messages, Nebula] = {
+    val tp = TestParser(input)
+    tp.parseNebula
+  }
 
   def parseDomainDefinition[TO <: RiddlValue](
     input: RiddlParserInput,

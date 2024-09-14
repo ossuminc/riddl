@@ -13,7 +13,7 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait ApplicationParser {
   this: ProcessorParser & StreamingParser & CommonParser =>
 
-  private def containedGroup[u: P]: P[ContainedGroup] = {
+  def containedGroup[u: P]: P[ContainedGroup] = {
     P(
       location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withDescriptives
     ).map { case (loc, id, group, descriptives) =>
@@ -27,7 +27,7 @@ private[parsing] trait ApplicationParser {
     ).asInstanceOf[P[OccursInGroup]].rep(1)
   }
 
-  private def group[u: P]: P[Group] = {
+  def group[u: P]: P[Group] = {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
@@ -54,7 +54,7 @@ private[parsing] trait ApplicationParser {
     }
   }
 
-  private def output[u: P]: P[Output] = {
+  def output[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/
         (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withDescriptives
@@ -101,7 +101,7 @@ private[parsing] trait ApplicationParser {
     ).!
   }
 
-  private def appInput[u: P]: P[Input] = {
+  def appInput[u: P]: P[Input] = {
     P(
       location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withDescriptives
     ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives) =>

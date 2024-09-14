@@ -17,7 +17,7 @@ import scala.concurrent.{Await, Future}
 private[parsing] trait DomainParser {
   this: VitalDefinitionParser & ApplicationParser & ContextParser & EpicParser & SagaParser & StreamingParser =>
 
-  private def user[u: P]: P[User] = {
+  def user[u: P]: P[User] = {
     P(
       location ~ Keywords.user ~ identifier ~/ is ~ literalString ~/ withDescriptives
     )./.map { case (loc, id, is_a, descriptives) =>

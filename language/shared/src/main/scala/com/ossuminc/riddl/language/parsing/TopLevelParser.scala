@@ -25,7 +25,6 @@ import scala.scalajs.js.annotation._
   */
 @JSExportTopLevel("TopLevelParser")
 class TopLevelParser(
-  val input: RiddlParserInput,
   val commonOptions: CommonOptions = CommonOptions.empty
 ) extends ProcessorParser
     with DomainParser
@@ -35,37 +34,37 @@ class TopLevelParser(
     with EntityParser
     with EpicParser
     with ModuleParser
+    with NebulaParser
     with ProjectorParser
     with RepositoryParser
+    with RootParser
     with SagaParser
     with StreamingParser
     with StatementParser
     with ParsingContext {
-
-  import scala.concurrent.Future
-
-  private def rootInclude[u: P]: P[Include[RootContents]] = {
-    include[u, RootContents](rootContents(_))
-  }
-
-  private def rootContent[u: P]: P[RootContents] = {
-    P(moduleContent | module | rootInclude[u]).asInstanceOf[P[RootContents]]
-  }
   
-  private def rootContents[u:P]: P[Seq[RootContents]] =
-    P(rootContent).rep(1)
-
-  def root[u: P]: P[Root] = {
-    P(Start ~ rootContents ~ End).map { (content: Seq[RootContents]) => Root(content) }
-  }
-
   @JSExport
-  def parseRoot(withVerboseFailures: Boolean = false): Either[Messages, Root] = {
+  def parseRoot(input: RiddlParserInput, withVerboseFailures: Boolean = false): Either[Messages, Root] = {
     parseRule[Root](input, root(_), withVerboseFailures) {
       (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
         result match {
           case l: Left[Messages, Root] => l
-          case r @ Right(root) =>
+          case r@Right(root) =>
+            if root.contents.isEmpty then
+              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
+            end if
+            r
+        }
+    }
+  }
+
+  @JSExport
+  def parseNebula(input: RiddlParserInput, withVerboseFailures: Boolean = false): Either[Messages, Root] = {
+    parseRule[Root](input, nebula(_), withVerboseFailures) {
+      (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
+        result match {
+          case l: Left[Messages, Root] => l
+          case r@Right(root) =>
             if root.contents.isEmpty then
               error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
             end if
@@ -125,8 +124,8 @@ object TopLevelParser {
   ): Either[Messages, Root] = {
     Timer.time(s"parse ${input.origin}", commonOptions.showTimes) {
       implicit val _: ExecutionContext = ExecutionContext.Implicits.global
-      val tlp = new TopLevelParser(input, commonOptions)
-      tlp.parseRoot(withVerboseFailures)
+      val tlp = new TopLevelParser(commonOptions)
+      tlp.parseRoot(input, withVerboseFailures)
     }
   }
 
@@ -139,4 +138,18 @@ object TopLevelParser {
     val rpi = RiddlParserInput(input, "")
     parseInput(rpi)
   }
+
+  @JSExport
+  def parseNebulaFromInput(
+    input: RiddlParserInput,
+    commonOptions: CommonOptions = CommonOptions.empty,
+    withVerboseFailures: Boolean = false
+  ): Either[Messages, Root] = {
+    Timer.time(s"parse nebula from ${input.origin}", commonOptions.showTimes) {
+      implicit val _: ExecutionContext = ExecutionContext.Implicits.global
+      val tlp = new TopLevelParser(commonOptions)
+      tlp.parseNebula(input, withVerboseFailures)
+    }
+  }
+
 }

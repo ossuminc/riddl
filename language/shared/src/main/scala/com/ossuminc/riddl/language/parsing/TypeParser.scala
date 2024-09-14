@@ -313,7 +313,7 @@ private[parsing] trait TypeParser {
     P(Punctuation.roundOpen ~ integer ~ Punctuation.roundClose./).?
   }
 
-  private def enumerator[u: P]: P[Enumerator] = {
+  def enumerator[u: P]: P[Enumerator] = {
     P(location ~ identifier ~ enumValue).map { tpl =>
       Enumerator.apply.tupled(tpl)
     }

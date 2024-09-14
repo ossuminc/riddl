@@ -15,7 +15,7 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait SagaParser {
   this: ProcessorParser & FunctionParser & StreamingParser & StatementParser =>
 
-  private def sagaStep[u: P]: P[SagaStep] = {
+  def sagaStep[u: P]: P[SagaStep] = {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         Keywords.reverted ~ by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~ withDescriptives

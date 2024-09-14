@@ -45,24 +45,24 @@ private[parsing] trait RepositoryParser {
       }
     )
   }
-  
-  private def data[u:P]: P[(Identifier,TypeRef)] = {
-    P( of ~ identifier ~ as ~ typeRef )./
+
+  private def data[u: P]: P[(Identifier, TypeRef)] = {
+    P(of ~ identifier ~ as ~ typeRef)./
   }
-  
-  private def link[u:P]: P[(Identifier, FieldRef, FieldRef)] =
-    P (Keywords.link ~ identifier ~ as ~ fieldRef ~ to ~ fieldRef )./
-    
-  private def index[u:P]: P[FieldRef] =
+
+  private def link[u: P]: P[(Identifier, FieldRef, FieldRef)] =
+    P(Keywords.link ~ identifier ~ as ~ fieldRef ~ to ~ fieldRef)./
+
+  private def index[u: P]: P[FieldRef] =
     P(Keywords.index ~ Keywords.on ~ fieldRef)./
-  
-  private def schema[u: P]: P[Schema] = {
+
+  def schema[u: P]: P[Schema] = {
     P(
       location ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
         data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withDescriptives
     )./.map { case (at, id, kind, data, links, indices, descriptives) =>
-      val dataMap = Map.from[Identifier,TypeRef](data)
-      val linkMap = Map.from[Identifier,(FieldRef,FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
+      val dataMap = Map.from[Identifier, TypeRef](data)
+      val linkMap = Map.from[Identifier, (FieldRef, FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
       Schema(at, id, kind, dataMap, linkMap, indices, descriptives)
     }
   }

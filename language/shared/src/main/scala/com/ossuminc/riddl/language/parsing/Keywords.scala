@@ -191,6 +191,8 @@ object Keywords {
   def morph[u: P]: P[Unit] = keyword(Keyword.morph)
 
   def name[u: P]: P[Unit] = keyword(Keyword.name)
+  
+  def nebula[u:P]: P[Unit] = keyword(Keyword.nebula)
 
   def on[u: P]: P[Unit] = keyword(Keyword.on)
 
@@ -399,6 +401,7 @@ object Keyword {
   final val module = "module"
   final val morph = "morph"
   final val name = "name"
+  final val nebula = "nebula"
   final val on = "on"
   final val one = "one"
   final val organization = "organization"
