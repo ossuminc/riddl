@@ -224,7 +224,7 @@ class TypeExpressionTest extends TestingBasis {
 
   val enumeration: Enumeration = Enumeration(
     At.empty,
-    Seq(
+    Contents(
       Enumerator(At.empty, Identifier(At.empty, "one")),
       Enumerator(At.empty, Identifier(At.empty, "two")),
       Enumerator(At.empty, Identifier(At.empty, "three"))
@@ -233,7 +233,7 @@ class TypeExpressionTest extends TestingBasis {
 
   val aggregation: Aggregation = Aggregation(
     At.empty,
-    Seq(
+    Contents(
       Field(At.empty, Identifier(At.empty, "integer"), integer),
       Field(At.empty, Identifier(At.empty, "abstract"), abstract_),
       Field(At.empty, Identifier(At.empty, "bool"), bool),
@@ -266,7 +266,7 @@ class TypeExpressionTest extends TestingBasis {
 
   val alternation: Alternation = Alternation(
     At.empty,
-    Seq(
+    Contents(
       AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a", "b"))),
       AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("z", "y")))
     )
@@ -280,7 +280,7 @@ class TypeExpressionTest extends TestingBasis {
   )
 
   val message: AggregateUseCaseTypeExpression =
-    AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields)
+    AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields.toContents)
 
   val alias: AliasedTypeExpression =
     AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a", "b", "foo")))

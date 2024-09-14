@@ -48,8 +48,8 @@ private[parsing] trait CommonParser
             literalString ~ (Keywords.organization ~ is ~ literalString).? ~
             (Keywords.title ~ is ~ literalString).? ~
             (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ withDescriptives
-    ).map { case (loc, id, (name, email, org, title, url), withs) =>
-      Author(loc, id, name, email, org, title, url, withs)
+    ).map { case (loc, id, (name, email, org, title, url), descriptives) =>
+      Author(loc, id, name, email, org, title, url, descriptives.toContents)
     }
   end author
 
@@ -165,23 +165,21 @@ private[parsing] trait CommonParser
     P(
       location ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withDescriptives
     )./.map { case (loc, id, definition, descriptives) =>
-      Term(loc, id, definition, descriptives)
+      Term(loc, id, definition, descriptives.toContents)
     }
   }
 
   def descriptive[u: P]: P[Descriptives] =
     P(briefDescription | description | term | authorRef).asInstanceOf[P[Descriptives]]
 
-  def withDescriptives[u: P]: P[Contents[Descriptives]] = {
+  def withDescriptives[u: P]: P[Seq[Descriptives]] = {
     P(
-      (Keywords.`with` ~ open ~
-        (undefined[u, Contents[Descriptives]](Contents.empty) | descriptive.rep(1)) ~
-        close)
+      Keywords.`with` ~ open ~ (undefined(Seq.empty[Descriptives]) | descriptive.rep(1)) ~ close
     ).?./.map {
-      case Some(list: Contents[Descriptives]) =>
+      case Some(list: Seq[Descriptives]) =>
         list
       case None =>
-        Contents.empty
+        Seq.empty
     }
   }
 
@@ -223,8 +221,8 @@ private[parsing] trait CommonParser
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
       ) ~ withDescriptives
-    ).map { case (loc, id, condition, withs) =>
-      Invariant(loc, id, condition, withs)
+    ).map { case (loc, id, condition, descriptives) =>
+      Invariant(loc, id, condition, descriptives.toContents)
     }
   }
 

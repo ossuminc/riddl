@@ -295,28 +295,28 @@ class PathResolutionPassTest extends ResolvingTest {
       )
       parseAndResolve(input) { (_, _) => succeed }
     }
-    "resolve simple path through an include" in { td =>
+    "resolve simple path through an include" in { _ =>
       import com.ossuminc.riddl.utils.URL
       val eL = At.empty
       val root = Root(
-        contents = Seq(
+        contents = Contents(
           Domain(
             eL,
             Identifier(eL, "D"),
-            contents = Seq(
+            contents = Contents(
               Include(
                 eL,
                 URL.empty,
-                contents = Seq(
+                contents = Contents(
                   Context(
                     eL,
                     Identifier(eL, "C1"),
-                    contents = Seq(Type(eL, Identifier(eL, "C1_T"), Number(eL)))
+                    contents = Contents(Type(eL, Identifier(eL, "C1_T"), Number(eL)))
                   ),
                   Context(
                     eL,
                     Identifier(eL, "C2"),
-                    contents = Seq(
+                    contents = Contents(
                       Type(
                         eL,
                         Identifier(eL, "C2_T"),

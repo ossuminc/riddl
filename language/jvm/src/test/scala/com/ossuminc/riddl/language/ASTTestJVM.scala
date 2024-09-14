@@ -22,7 +22,7 @@ class ASTTestJVM extends TestingBasis {
   "Include" should {
     "identify as root container, etc" in {
       import com.ossuminc.riddl.utils.URL
-      val incl = Include(At.empty, URL.empty, Seq.empty)
+      val incl = Include(At.empty, URL.empty, Contents.empty)
       incl.isRootContainer mustBe true
       incl.loc mustBe At.empty
       incl.format mustBe "include \"\""

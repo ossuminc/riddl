@@ -41,7 +41,7 @@ private[parsing] trait ContextParser {
       location ~ Keywords.context ~/ identifier ~ is ~ open ~ contextBody ~ close ~ withDescriptives
     )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Context(loc, id, contents, descriptives)
+      Context(loc, id, contents.toContents, descriptives.toContents)
     }
   }
 }

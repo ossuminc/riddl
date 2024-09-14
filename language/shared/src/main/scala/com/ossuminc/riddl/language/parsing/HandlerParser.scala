@@ -16,7 +16,7 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
     P(
       location ~ Keywords.onOther ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
     )./map { case (loc, statements, descriptives) =>
-      OnOtherClause(loc, statements, descriptives)
+      OnOtherClause(loc, statements.toContents, descriptives.toContents)
     }
   }
 
@@ -24,7 +24,7 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
     P(
       location ~ Keywords.onInit ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
     ).map { case (loc, statements, descriptives) =>
-      OnInitializationClause(loc, statements, descriptives)
+      OnInitializationClause(loc, statements.toContents, descriptives.toContents)
     }
   }
 
@@ -32,7 +32,7 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
     P(
       location ~ Keywords.onTerm ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
     ).map { case (loc, statements, descriptives) =>
-      OnTerminationClause(loc, statements, descriptives)
+      OnTerminationClause(loc, statements.toContents, descriptives.toContents)
     }
   }
 
@@ -48,7 +48,7 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
     location ~ Keywords.on ~ messageRef ~
       (from ~ maybeName ~~ messageOrigins).? ~ is ~/ pseudoCodeBlock(set) ~ withDescriptives
   }.map { case (loc, msgRef, msgOrigins, statements, descriptives) =>
-    OnMessageClause(loc, msgRef, msgOrigins, statements, descriptives)
+    OnMessageClause(loc, msgRef, msgOrigins, statements.toContents, descriptives.toContents)
   }
 
   private def onClauses[u: P](set: StatementsSet): P[OnClause] = {
@@ -67,7 +67,7 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
     P(
       Keywords.handler ~/ location ~ identifier ~ is ~ open ~ handlerBody(set) ~ close ~ withDescriptives
     )./.map { case (loc, id, clauses, descriptives) =>
-      Handler(loc, id, clauses, descriptives)
+      Handler(loc, id, clauses.toContents, descriptives.toContents)
     }
   }
 

@@ -6,16 +6,15 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.AST.*
-import org.scalatest.TestData
+import org.scalatest.{Inside, TestData}
 
-class FunctionValidatorTest extends ValidatingTest {
+class FunctionValidatorTest extends ValidatingTest with Inside {
 
   "FunctionValidator" should {
     "accept function but warn about descriptions" in { (_: TestData) =>
-      parseAndValidateInContext[Entity](
-      """
+      parseAndValidateInContext[Entity]("""
          |entity user is {
          |  function foo is {
          |    requires {b: Boolean }
@@ -23,18 +22,18 @@ class FunctionValidatorTest extends ValidatingTest {
          |    ???
          |  }
          |}
-         |""".stripMargin) { (e, _, msgs) =>
-        e.functions must matchPattern {
-          case Seq(
-                AST.Function(
-                  _,
-                  Identifier(_, "foo"),
-                  Some(Aggregation(_, Seq(Field(_, _, AST.Bool(_), _)))),
-                  Some(Aggregation(_, Seq(Field(_, _, AST.Integer(_), _)))),
-                  _,
-                  _
+         |""".stripMargin) { (e, rpi, msgs) =>
+        inside(e.functions.head) { (f: Function) =>
+          f.input must be(
+            Some(
+              Aggregation(
+                At(5, 14, rpi),
+                Contents(
+                  Field(At(5, 15, rpi), Identifier(At(5, 15, rpi), "b"), AST.Bool(At(5, 18, rpi)), Contents.empty)
                 )
-              ) =>
+              )
+            )
+          )
         }
         assert(
           msgs.exists(_.message == "Function 'foo' should have a description")
@@ -58,7 +57,7 @@ class FunctionValidatorTest extends ValidatingTest {
     }
     "validate function empty statements" in { (td: TestData) =>
       val input =
-      """
+        """
         |  function AnAspect is {
         |    "if and(everybody hates me, I'm depressed) then"
         |      "I go fishing"

@@ -98,7 +98,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
         val domain = parents.top.asInstanceOf[Domain]
         val root = parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
         val relationships = makeRelationships(c,root)
-        contextDiagrams.put(c, ContextDiagramData(domain, aggregates, relationships))
+        contextDiagrams.put(c, ContextDiagramData(domain, aggregates.toSeq, relationships))
       case epic: Epic =>
         epic.cases.foreach { uc =>
           val data = captureUseCase(uc)
@@ -130,18 +130,18 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case r: Repository  => r.contents.processors
       case s: Streamlet   => s.contents.processors
     }
-    val includedProcessors = processor.includes.processors
+    val includedProcessors = processor.includes.toContents.processors
     val nestedProcessors = (containedProcessors ++ includedProcessors).flatMap(findProcessors)
 
-    includedProcessors ++ nestedProcessors :+ processor
+    includedProcessors.toSeq ++ nestedProcessors.toSeq :+ processor
   }
 
   private def makeProcessorRelationships(
     context: Context,
     processor: Processor[?]
   ): Seq[ContextRelationship] = {
-    val rel1 = makeTypeRelationships(context, processor.types, processor)
-    val rel2 = makeFunctionRelationships(context, processor.functions)
+    val rel1 = makeTypeRelationships(context, processor.types.toSeq, processor)
+    val rel2 = makeFunctionRelationships(context, processor.functions.toSeq)
     val rel3 = makeHandlerRelationships(context, processor.handlers)
     val rel4 = makeInletRelationships(context, processor.streamlets.flatMap(_.inlets), processor)
     val rel5 = makeOutletRelationships(context, processor.streamlets.flatMap(_.outlets), processor)
@@ -152,7 +152,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       case e: Entity      => makeHandlerRelationships(context, e.handlers)
       case _: Projector   => Seq.empty[ContextRelationship]
       case _: Repository  => Seq.empty[ContextRelationship]
-      case s: Streamlet   => 
+      case s: Streamlet   =>
         makeInletRelationships(context, s.inlets, s)
         makeOutletRelationships(context, s.outlets, s)
     }
@@ -198,7 +198,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, 
       h <- handlers
       oc: OnClause <- h.clauses if oc.isInstanceOf[OnMessageClause]
       omc: OnMessageClause = oc.asInstanceOf[OnMessageClause]
-      relationship <- makeStatementRelationships(context, omc, omc.contents)
+      relationship <- makeStatementRelationships(context, omc, omc.contents.toSeq)
     } yield {
       relationship
     }

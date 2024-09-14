@@ -18,7 +18,7 @@ private[parsing] trait EntityParser  {
     P(
       location ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ withDescriptives
     )./.map { case (loc, id, typRef, descriptives) =>
-      State(loc, id, typRef, descriptives)
+      State(loc, id, typRef, descriptives.toContents)
     }
   }
 
@@ -43,7 +43,7 @@ private[parsing] trait EntityParser  {
       location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withDescriptives
     )./map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Entity(loc, id, contents, descriptives)
+      Entity(loc, id, contents.toContents, descriptives.toContents)
     }
   }
 }

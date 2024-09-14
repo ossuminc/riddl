@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
 /** A Trait that defines typical Validation checkers for validating definitions */
-trait DefinitionValidation extends BasicValidation {
+trait DefinitionValidation extends BasicValidation:
 
   def symbols: SymbolsOutput
 
@@ -45,13 +45,13 @@ trait DefinitionValidation extends BasicValidation {
       Error,
       definition.loc
     )
-    .checkIdentifierLength(definition)
-    .check(
-      !definition.isVital || definition.hasAuthorRefs,
-      "Vital definitions should have an author reference",
-      MissingWarning,
-      definition.loc
-    )
+      .checkIdentifierLength(definition)
+      .check(
+        !definition.isVital || definition.hasAuthorRefs,
+        "Vital definitions should have an author reference",
+        MissingWarning,
+        definition.loc
+      )
     definition match
       case vd: VitalDefinition[?] =>
         vd.authorRefs.foreach { (authorRef: AuthorRef) =>
@@ -80,7 +80,8 @@ trait DefinitionValidation extends BasicValidation {
   }
 
   def checkContents(
-    container: Parent, parents: Parents
+    container: Parent,
+    parents: Parents
   ): Unit =
     val parent: Parent = parents.headOption.getOrElse(Root.empty)
     check(
@@ -99,68 +100,62 @@ trait DefinitionValidation extends BasicValidation {
     checkContents(container, parents)
     checkUniqueContent(container)
   }
+  def checkDescriptives(definition: Definition & WithDescriptives): Unit =
+    checkDescriptives(definition.identify, definition)
 
-  def checkDescriptions(definition: Definition, contents: Contents[ContentValues]): Unit =
-    definition match
-      case wd: WithDescriptives =>
-        val descriptions = wd.descriptions
-        if descriptions.isEmpty then
+  def checkDescriptives(identity: String, definition: WithDescriptives): Unit =
+    check(
+      definition.descriptives.nonEmpty,
+      s"Descriptives in $identity should  not be empty",
+      MissingWarning,
+      definition.loc
+    )
+    var hasAuthorRef = false
+    var hasDescription = false
+    for { descriptive <- definition.descriptives.toSeq } do {
+      descriptive match
+        case bd: BriefDescription =>
           check(
-            predicate = false,
-            s"${definition.identify} should have a description",
-            MissingWarning,
-            definition.loc
+            bd.brief.s.length < 80,
+            s"In $identity, brief description at ${bd.loc} is too long. Max is 80 chars",
+            Warning,
+            bd.loc
           )
-        else
-          descriptions.foreach {
-            case bd: BlockDescription =>
-              check(
-                bd.lines.nonEmpty && !bd.lines.forall(_.s.isEmpty),
-                s"For ${definition.identify}, description at ${bd.loc} is declared but empty",
-                MissingWarning,
-                bd.loc
-              )
-            case ud: URLDescription =>
-              check(
-                ud.url.isValid,
-                s"For ${definition.identify}, description at ${ud.loc} has an invalid URL: ${ud.url}",
-                Error,
-                ud.loc
-              )
-            case _ => ()
-          }
-        end if
-      case _ => ()
-  end checkDescriptions
+        case bd: BlockDescription =>
+          check(
+            bd.lines.nonEmpty && !bd.lines.forall(_.s.isEmpty),
+            s"For $identity, description at ${bd.loc} is declared but empty",
+            MissingWarning,
+            bd.loc
+          )
+          check(
+            bd.lines.nonEmpty,
+            s"For $identity, description is declared but empty",
+            MissingWarning,
+            bd.loc
+          )
 
-  def checkDescription(
-    value: RiddlValue
-  ): Unit = {
-    val id: String = 
-      value match
-        case wi: WithIdentifier => wi.identify
-        case _ => value.format
-      end match
-    val descriptions: Contents[Description] = 
-      value match
-        case wd: WithDescriptives => wd.descriptions
-        case _ => Contents.empty 
-      end match
-    if descriptions.isEmpty then {
-      check(
-        predicate = false,
-        s"$id should have a description",
-        MissingWarning,
-        value.loc
-      )
-    } else if descriptions.nonEmpty then
-      descriptions.foreach { (desc: Description) =>
-        check(
-          desc.nonEmpty,
-          s"For $id, description at ${desc.loc} is declared but empty",
-          MissingWarning,
-          desc.loc
-        )
-      }
-  }
-}
+          hasDescription = true
+        case ud: URLDescription =>
+          check(
+            ud.url.isValid,
+            s"For $identity, description at ${ud.loc} has an invalid URL: ${ud.url}",
+            Error,
+            ud.loc
+          )
+          hasDescription = true
+        case t: Term =>
+          check(
+            t.definition.length > 10,
+            s"${t.identify}'s definition is too short. It must be at least 10 characters'",
+            Warning,
+            t.loc
+          )
+        case _: AuthorRef   =>
+          hasAuthorRef = true
+        case _: Description => ()
+    }
+    check(hasDescription,s"$identity should have a description", MissingWarning, definition.loc)
+    check(hasAuthorRef,s"$identity should have an author reference", MissingWarning, definition.loc)
+  end checkDescriptives
+end DefinitionValidation

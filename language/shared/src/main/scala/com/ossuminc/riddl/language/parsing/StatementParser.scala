@@ -49,12 +49,12 @@ private[parsing] trait StatementParser {
       location ~ Keywords.foreach ~/ (fieldRef | inletRef | outletRef) ~ Keywords.do_ ~/
         pseudoCodeBlock(set) ~ Keywords.end_
     )./.map {
-      case (loc, ref: FieldRef, statements)  => ForEachStatement(loc, ref, statements)
-      case (loc, ref: InletRef, statements)  => ForEachStatement(loc, ref, statements)
-      case (loc, ref: OutletRef, statements) => ForEachStatement(loc, ref, statements)
+      case (loc, ref: FieldRef, statements)  => ForEachStatement(loc, ref, statements.toContents)
+      case (loc, ref: InletRef, statements)  => ForEachStatement(loc, ref, statements.toContents)
+      case (loc, ref: OutletRef, statements) => ForEachStatement(loc, ref, statements.toContents)
       case (loc, ref: Reference[?], statements) =>
         error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
-        ForEachStatement(loc, FieldRef(ref.loc, ref.pathId), statements)
+        ForEachStatement(loc, FieldRef(ref.loc, ref.pathId), statements.toContents)
     }
   }
 
@@ -65,7 +65,7 @@ private[parsing] trait StatementParser {
       ).?
     )./.map { case (loc, cond, thens, maybeElses) =>
       val elses = maybeElses.getOrElse(Seq.empty[Statements])
-      IfThenElseStatement(loc, cond, thens, elses)
+      IfThenElseStatement(loc, cond, thens.toContents, elses.toContents)
     }
   }
 

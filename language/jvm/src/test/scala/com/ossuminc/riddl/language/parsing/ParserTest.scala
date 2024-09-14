@@ -7,14 +7,14 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.{At,AST}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.TestData
 
 /** Unit Tests For Parsing */
-class ParserTest extends ParsingTest {
+class ParserTest extends ParsingTest with org.scalatest.Inside {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
@@ -86,7 +86,7 @@ class ParserTest extends ParsingTest {
             Domain(
               (1, 1, input),
               Identifier((1, 8, input), "foo"),
-              contents = Seq(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
+              contents = Contents(Domain((2, 1, input), Identifier((2, 8, input), "bar")))
             )
           )
       }
@@ -169,15 +169,15 @@ class ParserTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((content, rpi)) =>
-          content mustBe Context(
+          content must be( Context(
             (1, 1, rpi),
             Identifier((1, 9, rpi), "bar"),
-            Seq(
+            Contents(
               OptionValue((2, 10, rpi), "service", Seq.empty),
               OptionValue((3, 10, rpi), "wrapper", Seq.empty),
               OptionValue((4, 10, rpi), "gateway", Seq.empty)
             )
-          )
+          ))
       }
     }
     "allow type definitions in contexts" in {  (td: TestData) =>
@@ -195,7 +195,7 @@ class ParserTest extends ParsingTest {
             Identifier((2, 6, rpi), "Vikings"),
             Enumeration(
               (2, 16, rpi),
-              Seq(
+              Contents(
                 Enumerator(
                   (3, 3, rpi),
                   Identifier((3, 3, rpi), "Ragnar"),
@@ -271,7 +271,7 @@ class ParserTest extends ParsingTest {
           val expected = Entity(
             (1, 1, rpi),
             Identifier((1, 8, rpi), "Hamburger"),
-            Seq(
+            Contents(
               OptionValue((2, 10, rpi), "transient", Seq.empty),
               OptionValue((3, 10, rpi), "aggregate", Seq.empty),
               Type(
@@ -279,7 +279,7 @@ class ParserTest extends ParsingTest {
                 Identifier((4, 8, rpi), "Foo"),
                 Aggregation(
                   (4, 15, rpi),
-                  List(Field((4, 17, rpi), Identifier((4, 17, rpi), "x"), String_((4, 20, rpi))))
+                  Contents(Field((4, 17, rpi), Identifier((4, 17, rpi), "x"), String_((4, 20, rpi))))
                 )
               ),
               State(
@@ -308,13 +308,13 @@ class ParserTest extends ParsingTest {
               (1, 19, rpi),
               PathIdentifier((1, 27, rpi), Seq("foo", "bar"))
             ),
-            Seq.empty
+            Contents.empty
           )
       }
     }
 
     "allow functions" in { (td: TestData) =>
-      val input = RiddlParserInput(
+      val rpi = RiddlParserInput(
         """
           |function foo is {
           |  requires { b : Boolean}
@@ -324,19 +324,25 @@ class ParserTest extends ParsingTest {
           |""".stripMargin,
         td
       )
-      parseDefinition[Function](input) match {
+      parseDefinition[Function](rpi) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((function, _)) =>
-          function must matchPattern {
+          inside(function) {
             case Function(
                   _,
                   Identifier(_, "foo"),
-                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "b"), Bool(_), _)))),
-                  Some(Aggregation(_, Seq(Field(_, Identifier(_, "i"), Integer(_), _)))),
+                  Some(Aggregation(_, firstAggrContents)),
+                  Some(Aggregation(_, secondAggrContents)),
                   _, _
                 ) =>
+              firstAggrContents must be (
+                Contents(Field(At(3,14,rpi), Identifier(At(3,14,rpi), "b"), Bool(At(3,18,rpi)), Contents.empty))
+              )
+              secondAggrContents must be (
+                Contents(Field(At(4,13,rpi), Identifier(At(4,13,rpi), "i"), Integer(At(4,17,rpi)), Contents.empty))
+              )
           }
       }
     }

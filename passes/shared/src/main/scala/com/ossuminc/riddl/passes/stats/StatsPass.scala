@@ -340,15 +340,15 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
   private def definitionCount(value: RiddlValue): Int =
     var result = 0
     value match
-      case _: WithTypes => result += 1
+      case _: WithTypes[?] => result += 1
       case _ => ()
     end match
     value match
-      case _: WithAuthors => result += 1
+      case _: WithAuthors[?] => result += 1
       case _ => ()
     end match
     value match
-      case _: WithOptions => result += 1
+      case _: WithOptions[?] => result += 1
       case _ => ()
     end match
     value match

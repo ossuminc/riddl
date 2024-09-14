@@ -108,7 +108,7 @@ case class ValidationPass(
       case c: Connector =>
         validateConnector(c, parentsAsSeq)
       case a: Author =>
-        validateAuthorInfo(a, parentsAsSeq)
+        validateAuthor(a, parentsAsSeq)
       case s: SagaStep =>
         validateSagaStep(s, parentsAsSeq)
       case e: Entity =>
@@ -159,17 +159,13 @@ case class ValidationPass(
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
         case CommandCase =>
-          val sends: Seq[SendStatement] = omc.contents
-            .filter(_.isInstanceOf[SendStatement])
-            .map(_.asInstanceOf[SendStatement])
+          val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
           if sends.isEmpty || sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
             messages.add(
               missing("Processing for commands should result in sending an event", omc.loc)
             )
         case QueryCase =>
-          val sends: Seq[SendStatement] = omc.contents
-            .filter(_.isInstanceOf[SendStatement])
-            .map(_.asInstanceOf[SendStatement])
+          val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
           if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == ResultCase) then
             messages.add(
               missing("Processing for queries should result in sending a result", omc.loc)
@@ -239,11 +235,11 @@ case class ValidationPass(
             loc
           )
         }
-        checkNonEmpty(do_, "statement list", onClause, MissingWarning)
+        checkNonEmpty(do_.toSeq, "statement list", onClause, MissingWarning)
       case IfThenElseStatement(loc, cond, thens, elses) =>
         checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
-        checkNonEmpty(thens, "statements", onClause, loc, MissingWarning, required = true)
-        checkNonEmpty(elses, "statements", onClause, loc, MissingWarning, required = false)
+        checkNonEmpty(thens.toSeq, "statements", onClause, loc, MissingWarning, required = true)
+        checkNonEmpty(elses.toSeq, "statements", onClause, loc, MissingWarning, required = false)
       case ReadStatement(loc, keyword, what, from, where) =>
         checkNonEmpty(keyword, "read keyword", onClause, loc, Messages.Error, required = true)
         checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
@@ -263,7 +259,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, t)
-    checkDescription(t)
+    checkDescriptives(t)
   }
 
   private def validateEnumerator(
@@ -312,7 +308,7 @@ case class ValidationPass(
             m.id.loc
           )
         )
-    checkDescription(m)
+    checkDescriptives(m)
   }
 
   private def validateInvariant(
@@ -320,8 +316,8 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, i)
-    checkNonEmpty(i.condition.toList, "condition", i, Messages.MissingWarning)
-    checkDescription(i)
+    checkNonEmpty(i.condition.toList, "Condition", i, Messages.MissingWarning)
+    checkDescriptives(i)
   }
 
   private def validateInlet(
@@ -380,14 +376,14 @@ case class ValidationPass(
     end if
   end validateConnector
 
-  private def validateAuthorInfo(
+  private def validateAuthor(
     ai: Author,
     parents: Parents
   ): Unit = {
     checkDefinition(parents, ai)
     checkNonEmptyValue(ai.name, "name", ai, required = true)
     checkNonEmptyValue(ai.email, "email", ai, required = true)
-    checkDescription(ai)
+    checkDescriptives(ai)
   }
 
   private def validateType(
@@ -411,7 +407,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, c)
-    checkDescription(c)
+    checkDescriptives(c)
   }
 
   private def validateState(
@@ -419,7 +415,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, s)
-    checkDescription(s)
+    checkDescriptives(s)
     checkRefAndExamine[Type](s.typ, parents) { (typ: Type) =>
       typ.typEx match {
         case agg: AggregateTypeExpression =>
@@ -439,7 +435,7 @@ case class ValidationPass(
         s.loc
       )
     }
-    checkDescription(s)
+    checkDescriptives(s)
   }
 
   private def validateFunction(
@@ -447,7 +443,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, f)
-    checkDescriptions(f, f.contents)
+    checkDescriptives(f)
   }
 
   private def validateHandler(
@@ -502,7 +498,7 @@ case class ValidationPass(
         )
       )
     }
-    checkDescriptions(entity, entity.contents)
+    checkDescriptives(entity)
   }
 
   private def validateProjector(
@@ -528,7 +524,7 @@ case class ValidationPass(
       Messages.Error,
       projector.loc
     )
-    checkDescriptions(projector, projector.contents)
+    checkDescriptives(projector)
   }
 
   private def validateRepository(
@@ -536,7 +532,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, repository)
-    checkDescriptions(repository, repository.contents)
+    checkDescriptives(repository)
     checkNonEmpty(
       repository.contents.filter[Schema],
       "schema",
@@ -562,7 +558,7 @@ case class ValidationPass(
             messages.addError(adaptor.loc, message)
           }
         }
-        checkDescriptions(adaptor, adaptor.contents)
+        checkDescriptives(adaptor)
       case None | Some(_) =>
         messages.addError(adaptor.loc, "Adaptor not contained within Context")
     }
@@ -574,7 +570,7 @@ case class ValidationPass(
   ): Unit = {
     addStreamlet(streamlet)
     checkContainer(parents, streamlet)
-    checkDescriptions(streamlet, streamlet.contents)
+    checkDescriptives(streamlet)
   }
 
   private def validateDomain(
@@ -588,7 +584,7 @@ case class ValidationPass(
       StyleWarning,
       domain.loc
     )
-    checkDescriptions(domain, domain.contents)
+    checkDescriptives(domain)
   }
 
   private def validateSaga(
@@ -608,7 +604,7 @@ case class ValidationPass(
       Messages.Error,
       saga.loc
     )
-    checkDescriptions(saga, saga.contents)
+    checkDescriptives(saga)
   }
 
   private def validateSagaStep(
@@ -616,15 +612,15 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, s)
-    checkNonEmpty(s.doStatements, "Do Statements", s, MissingWarning)
-    checkNonEmpty(s.doStatements, "Revert Statements", s, MissingWarning)
+    checkNonEmpty(s.doStatements.toSeq, "Do Statements", s, MissingWarning)
+    checkNonEmpty(s.doStatements.toSeq, "Revert Statements", s, MissingWarning)
     check(
       s.doStatements.getClass == s.undoStatements.getClass,
       "The primary action and revert action must be the same shape",
       Messages.Error,
       s.loc
     )
-    checkDescription(s)
+    checkDescriptives(s)
   }
 
   private def validateContext(
@@ -632,7 +628,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, c)
-    checkDescriptions(c, c.contents)
+    checkDescriptives(c)
   }
 
   private def validateEpic(
@@ -643,7 +639,7 @@ case class ValidationPass(
     if epic.userStory.isEmpty then {
       messages.addMissing(epic.loc, s"${epic.identify} is missing a user story")
     }
-    checkDescriptions(epic, epic.contents)
+    checkDescriptives(epic)
   }
 
   private def validateApplication(
@@ -654,7 +650,7 @@ case class ValidationPass(
     if app.groups.isEmpty then {
       messages.addMissing(app.loc, s"${app.identify} should have a group")
     }
-    checkDescriptions(app, app.contents)
+    checkDescriptives(app)
   }
 
   private def validateGroup(
@@ -662,7 +658,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, grp)
-    checkDescriptions(grp, grp.contents)
+    checkDescriptives(grp)
   }
 
   private def validateInput(
@@ -672,7 +668,7 @@ case class ValidationPass(
     val parentsSeq = parents
     checkDefinition(parentsSeq, input)
     checkTypeRef(input.takeIn, parentsSeq)
-    checkDescriptions(input, input.contents)
+    checkDescriptives(input)
   }
 
   private def validateOutput(
@@ -685,7 +681,7 @@ case class ValidationPass(
       case const: ConstantRef => checkRef[Constant](const, parents)
       case str: LiteralString => checkNonEmpty(str.s, "string to put out", output, Messages.Error)
     }
-    checkDescriptions(output, output.contents)
+    checkDescriptives(output)
   }
 
   private def validateContainedGroup(
@@ -694,7 +690,7 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, containedGroup)
     checkRef[Group](containedGroup.group, parents)
-    checkDescription(containedGroup)
+    checkDescriptives(containedGroup)
   }
 
   private def validateUser(
@@ -708,7 +704,7 @@ case class ValidationPass(
         s"${user.identify} is missing its role kind ('is a')"
       )
     }
-    checkDescription(user)
+    checkDescriptives(user)
   }
 
   private def validateUseCase(
@@ -771,7 +767,7 @@ case class ValidationPass(
           s"${uc.identify} doesn't define any interactions"
         )
     }
-    checkDescriptions(uc, uc.contents)
+    checkDescriptives(uc)
   }
 
   private def validateArbitraryInteraction(
@@ -851,7 +847,7 @@ case class ValidationPass(
 
   private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
     val useCase = parents.head
-    checkDescription(interaction)
+    checkDescriptives(useCase.identify,interaction)
     interaction match {
       case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)

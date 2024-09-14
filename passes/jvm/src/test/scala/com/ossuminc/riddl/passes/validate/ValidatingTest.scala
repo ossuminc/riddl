@@ -73,7 +73,7 @@ abstract class ValidatingTest extends ParsingTest {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
         val clazz = classTag[D].runtimeClass
-        val root = Root(Seq(model))
+        val root = Root(Contents(model))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(messages) =>
             fail(messages.format)
@@ -82,7 +82,7 @@ abstract class ValidatingTest extends ParsingTest {
             model.contexts.head.contents.filter(_.getClass == clazz).map { (d: ContextContents) =>
               val reducedMessages = msgs.filterNot(_.loc.line == 1)
               validator(d.asInstanceOf[D], rpi, reducedMessages)
-            }
+            }.toSeq
         }
     }
   }
@@ -99,7 +99,7 @@ abstract class ValidatingTest extends ParsingTest {
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val root = Root(Seq(model))
+        val root = Root(Contents(model))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) => fail(errors.format)
           case Right(ao) =>
@@ -124,7 +124,7 @@ abstract class ValidatingTest extends ParsingTest {
           validator(Domain(loc, Identifier(loc, "stand-in")), input, messages)
         }
       case Right((model: Domain, rpi)) =>
-        val root = Root(Seq(model))
+        val root = Root(Contents(model))
         runStandardPasses(root, options, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
@@ -271,7 +271,7 @@ abstract class ValidatingTest extends ParsingTest {
     content: String
   ): Assertion = {
     val condition = msgs.filter(_.kind == expectedKind).exists(_.message.contains(content))
-    assert(condition, s"; expecting, but didn't find:\n$content'\nin:\n${msgs.format}")
+    assert(condition, s"; expecting, but didn't find:\n$content\nin:\n${msgs.format}")
   }
 
   def validateFile(
