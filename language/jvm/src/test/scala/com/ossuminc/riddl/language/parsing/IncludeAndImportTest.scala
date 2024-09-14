@@ -81,7 +81,7 @@ class IncludeAndImportTest extends ParsingTest {
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
         String_((1, 13, inc)),
-        Seq.empty
+        Contents.empty
       )
       actual mustBe expected
     }
@@ -98,7 +98,7 @@ class IncludeAndImportTest extends ParsingTest {
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
         String_((1, 12, inc)),
-        Seq.empty 
+        Contents.empty 
       )
       actual mustBe expected
     }

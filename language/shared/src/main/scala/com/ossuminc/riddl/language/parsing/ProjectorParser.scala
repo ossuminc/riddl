@@ -52,7 +52,7 @@ private[parsing] trait ProjectorParser {
       location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ withDescriptives
     )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Projector(loc, id, contents, descriptives)
+      Projector(loc, id, contents.toContents, descriptives.toContents)
     }
   }
 }

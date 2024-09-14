@@ -141,15 +141,15 @@ class StreamValidatorTest extends ValidatingTest {
 
     def root(streamlets: Seq[Streamlet]): Root = {
       Root(
-        Seq(
+        Contents(
           Domain(
             At(),
             Identifier(At(), "domain"),
-            Seq(
+            Contents(
               Context(
                 At(),
                 Identifier(At(), "context"),
-                Seq(
+                Contents(
                   Type(At(), Identifier(At(), "Int"), Integer(At()))
                 ) ++ streamlets
               )
@@ -164,7 +164,8 @@ class StreamValidatorTest extends ValidatingTest {
         Riddl.validate(
           root(
             Seq(
-              Streamlet(At(), Identifier(At(), "source"), Source(At()), Seq(inlet("in1", "int"), inlet("in2", "int")))
+              Streamlet(At(), Identifier(At(), "source"), Source(At()),
+                Contents(inlet("in1", "int"), inlet("in2", "int")))
             )
           )
         )
@@ -177,7 +178,7 @@ class StreamValidatorTest extends ValidatingTest {
                 At(),
                 Identifier(At(), "sink"),
                 Sink(At()),
-                Seq(
+                Contents(
                   inlet("in1", "int"),
                   outlet("out1", "int")
                 )
@@ -194,7 +195,7 @@ class StreamValidatorTest extends ValidatingTest {
                 At(),
                 Identifier(At(), "flow"),
                 Flow(At()),
-                Seq(
+                Contents(
                   outlet("out1", "int"),
                   outlet("out2", "int")
                 )
@@ -211,7 +212,7 @@ class StreamValidatorTest extends ValidatingTest {
                 At(),
                 Identifier(At(), "flow"),
                 Split(At()),
-                Seq(
+                Contents(
                   outlet("out1", "int"),
                   outlet("out2", "int")
                 )
@@ -228,7 +229,7 @@ class StreamValidatorTest extends ValidatingTest {
                 At(),
                 Identifier(At(), "flow"),
                 Merge(At()),
-                Seq(
+                Contents(
                   inlet("in1", "int"),
                   inlet("in2", "int")
                 )
@@ -245,7 +246,7 @@ class StreamValidatorTest extends ValidatingTest {
                 At(),
                 Identifier(At(), "flow"),
                 Router(At()),
-                Seq(
+                Contents(
                   outlet("out2", "int")
                 )
               )
@@ -261,7 +262,7 @@ class StreamValidatorTest extends ValidatingTest {
                 At(),
                 Identifier(At(), "flow"),
                 Void(At()),
-                Seq(
+                Contents(
                   inlet("in1", "int"),
                   outlet("out2", "int")
                 )

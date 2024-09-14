@@ -53,7 +53,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     end match
   }
 
-  def emitDescriptives(descriptives: Contents[Descriptives]): this.type =
+  def emitDescriptives(descriptives: Seq[Descriptives]): this.type =
     if descriptives.nonEmpty then
       add(" with {").nl.incr
       descriptives.foreach {
@@ -104,7 +104,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(term.id.format)
     add(" is ")
     add(term.definition)
-    emitDescriptives(term.descriptives)
+    emitDescriptives(term.descriptives.toSeq)
     nl
   end emitTerm
 
@@ -126,7 +126,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(constant.id.format)
     add(" is ")
     add(constant.value.format)
-    emitDescriptives(constant.descriptives)
+    emitDescriptives(constant.descriptives.toSeq)
     nl
   end emitConstant
 
@@ -143,7 +143,8 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   private def emitAlternation(alternation: Alternation): this.type = {
     add(s"one of {").nl.incr.addIndent("")
-    val paths: Seq[String] = alternation.of.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }
+    val paths: Seq[String] = 
+      alternation.of.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }.toSeq
     add(paths.mkString("", " or ", new_line))
     decr.addIndent("}")
     this
@@ -152,7 +153,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   private def emitField(field: Field): this.type =
     add(s"${field.id.value}: ")
     emitTypeExpression(field.typeEx)
-    emitDescriptives(field.descriptives)
+    emitDescriptives(field.descriptives.toSeq)
     this
   end emitField
 
@@ -266,7 +267,8 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitType(t: Type): this.type = {
     add(s"${spc}type ${t.id.value} is ")
     emitTypeExpression(t.typEx)
-    if t.descriptives.nonEmpty then add(" with {").nl.incr.emitDescriptives(t.descriptives).decr.addLine("}")
+    if t.descriptives.nonEmpty then 
+      add(" with {").nl.incr.emitDescriptives(t.descriptives.toSeq).decr.addLine("}")
     end if
     this
   }
@@ -307,7 +309,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     addIndent(option.format + new_line)
   end emitOption
 
-  def emitOptions(optionDef: WithOptions): this.type =
+  def emitOptions(optionDef: WithOptions[?]): this.type =
     if optionDef.options.nonEmpty then
       optionDef.options.map { option => option.format + new_line }.foreach(addIndent); this
     else this

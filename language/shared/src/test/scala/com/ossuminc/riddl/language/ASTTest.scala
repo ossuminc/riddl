@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{Contents, *}
 import com.ossuminc.riddl.language.AST.RelationshipCardinality.OneToOne
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{AST, At}
@@ -59,9 +59,9 @@ class ASTTest extends TestingBasis {
     }
     "support all type constructs" in {
       AliasedTypeExpression(0 -> 0, "record", PathIdentifier(0 -> 0, Seq("Foo"))).format mustBe "record Foo"
-      Enumeration((0, 0), Seq.empty[Enumerator]).format mustBe "{  }"
-      Alternation((0, 0), Seq.empty[AliasedTypeExpression]).format mustBe "one of {  }"
-      Aggregation((0, 0), Seq.empty[Field]).format mustBe "{  }"
+      Enumeration((0, 0), Contents.empty[Enumerator]).format mustBe "{  }"
+      Alternation((0, 0), Contents.empty[AliasedTypeExpression]).format mustBe "one of {  }"
+      Aggregation((0, 0), Contents.empty[AggregateContents]).format mustBe "{  }"
       Optional(
         (0, 0),
         AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("String")))
@@ -130,7 +130,7 @@ class ASTTest extends TestingBasis {
     At.empty,
     Identifier(At.empty, "application"),
     contents = Contents.empty,
-    descriptives = Seq(authorRef)
+    descriptives = Contents(authorRef)
   )
   val author: Author = Author(
     At.empty,
@@ -146,7 +146,7 @@ class ASTTest extends TestingBasis {
   val aggregate: AggregateUseCaseTypeExpression = AggregateUseCaseTypeExpression(
     At.empty,
     CommandCase,
-    Seq(Field(At(), Identifier(At(), "foo"), String_(At(), None, None)))
+    Contents(Field(At(), Identifier(At(), "foo"), String_(At(), None, None)))
   )
   val command: Type = Type(At.empty, Identifier(At(), "command"), aggregate)
   val type_ : Type = Type(
@@ -158,15 +158,15 @@ class ASTTest extends TestingBasis {
 
   val fieldRef: FieldRef = FieldRef(At(), PathIdentifier(At(), Seq("command", "foo")))
   val messageRef: CommandRef = CommandRef(At(), PathIdentifier(At(), Seq("command")))
-  val statements: Seq[Statement] = Seq(
+  val statements: Contents[Statements] = Contents(
     ArbitraryStatement(At.empty, LiteralString(At.empty, "arbitrary")),
     BecomeStatement(At.empty, entityRef, HandlerRef(At(), PathIdentifier(At(), Seq("Entity")))),
     CallStatement(At.empty, FunctionRef(At(), PathIdentifier(At(), Seq("Lambda")))),
     CodeStatement(At.empty, language = LiteralString(At.empty, "scala"), body = "def f[A](x: A): A"),
     ErrorStatement(At.empty, LiteralString(At.empty, "error message")),
     FocusStatement(At.empty, GroupRef(At.empty, "panel", PathIdentifier(At.empty, Seq("panel")))),
-    ForEachStatement(At.empty, fieldRef, Seq.empty),
-    IfThenElseStatement(At.empty, LiteralString.empty, Seq.empty, Seq.empty),
+    ForEachStatement(At.empty, fieldRef, Contents.empty),
+    IfThenElseStatement(At.empty, LiteralString.empty, Contents.empty, Contents.empty),
     MorphStatement(At.empty, entityRef, StateRef(At.empty, PathIdentifier(At(), Seq("state"))), messageRef),
     ReadStatement(At.empty, "read", LiteralString(At(), "something"), typeRef, LiteralString(At(), "foo")),
     ReplyStatement(At.empty, messageRef),
@@ -176,16 +176,18 @@ class ASTTest extends TestingBasis {
     WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
   )
   val function: Function =
-    Function(At.empty, Identifier(At(), "Lambda"), None, None, statements, brief.toSeq ++ description.toSeq)
+    Function(At.empty, Identifier(At(), "Lambda"), None, None, statements.asInstanceOf[Contents[FunctionContents]],
+      (brief.toSeq ++ description.toSeq).toContents.asInstanceOf[Contents[Descriptives]])
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
-  val onClauses: Seq[OnClause] = Seq(
+  val onClauses: Contents[OnClause] = Contents(
     OnInitializationClause(At.empty, statements),
     OnMessageClause(At.empty, messageRef, None, statements),
     OnOtherClause(At.empty, statements),
     OnTerminationClause(At.empty, statements)
   )
-  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"), onClauses)
-  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Seq(handler))
+  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"),
+    onClauses.asInstanceOf[Contents[HandlerContents]])
+  val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Contents(handler))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
   val state: State = State(At.empty, Identifier(At.empty, "state"), TypeRef())
@@ -215,8 +217,8 @@ class ASTTest extends TestingBasis {
     }
   }
   val domain: AST.Domain =
-    Domain(At(), Identifier(At(), "test"), contents = Seq(author))
-  val context: AST.Context = Context(At(), Identifier(At(), "test"), Seq(relationship))
+    Domain(At(), Identifier(At(), "test"), contents = Contents(author))
+  val context: AST.Context = Context(At(), Identifier(At(), "test"), Contents(relationship))
 
   "Adaptor" should {
     "pass simple tests" in {
@@ -244,7 +246,7 @@ class ASTTest extends TestingBasis {
   }
   "AST.findAuthors" should {
     "find authors" in {
-      val authors = AST.findAuthors(application, Seq(domain))
+      val authors = AST.findAuthors(application, domain.contents.asInstanceOf[Contents[RiddlValue]])
       authors mustBe Seq(authorRef)
     }
   }
@@ -254,9 +256,8 @@ class ASTTest extends TestingBasis {
       Context(At(), Identifier(At(), "empty")).contents must be(empty)
     }
     "correctly identify non-emptiness" in {
-      val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
-      Context(At(), Identifier(At(), "test"), contents = types).contents mustBe
-        types
+      val types = Contents(Type(At(), Identifier(At(), "A"), Bool(At()))).asInstanceOf[Contents[ContextContents]]
+      Context(At(), Identifier(At(), "test"), contents = types).contents must be(types)
     }
     "have a relationship" in {
       context.contents.filter[Relationship] must be(Seq(relationship))
@@ -278,7 +279,7 @@ class ASTTest extends TestingBasis {
       domain.contents mustNot be(empty)
     }
     "non-empty domain should have non-empty contents" in {
-      val types = List(Type(At(), Identifier(At(), "A"), Bool(At())))
+      val types = Contents(Type(At(), Identifier(At(), "A"), Bool(At()))).asInstanceOf[Contents[DomainContents]]
       Domain(At(), Identifier(At(), "test"), contents = types).contents mustBe
         types
     }
@@ -289,16 +290,16 @@ class ASTTest extends TestingBasis {
   "Entity" should {
     "contents" should {
       "contain all contents" in {
-        val states = Seq(
+        val states = Contents(
           State(
             At(),
             Identifier(At(), "bar"),
             TypeRef()
           )
         )
-        val handlers = Seq(Handler(At(), Identifier(At(), "con")))
+        val handlers = Contents(Handler(At(), Identifier(At(), "con")))
 
-        val functions = Seq(
+        val functions = Contents(
           Function(
             At(),
             Identifier(At(), "my_func"),
@@ -306,20 +307,20 @@ class ASTTest extends TestingBasis {
           )
         )
 
-        val invariants = Seq(
+        val invariants = Contents(
           Invariant(At(), Identifier(At(), "my_id"), Option(LiteralString(At(), "true")))
         )
-        val types = Seq(
+        val types = Contents(
           Type(At(), Identifier(At(), "mytype"), Bool(At())),
           Type(At(), Identifier(At(), "mytype2"), Bool(At()))
         )
-        val options = Seq(
+        val options = Contents(
           OptionValue(At(), "aggregate", Seq.empty),
           OptionValue(At(), "transient", Seq.empty),
           OptionValue(At(), "kind", Seq(LiteralString(At(), "concept")))
         )
-        val entityContents: Seq[EntityContents] =
-          (options ++ states ++ types ++ handlers ++ functions ++ invariants).asInstanceOf[Seq[EntityContents]]
+        val entityContents: Contents[EntityContents] =
+          (options ++ states ++ types ++ handlers ++ functions ++ invariants).asInstanceOf[Contents[EntityContents]]
         val entity = AST.Entity(
           loc = At(),
           id = Identifier(At(), "foo"),
@@ -343,7 +344,7 @@ class ASTTest extends TestingBasis {
   }
 
   "Group" should {
-    val group = Group(At(), "panel", Identifier(At(), "42"), Seq.empty)
+    val group = Group(At(), "panel", Identifier(At(), "42"), Contents.empty)
     "has an alias" in {
       group.alias must be("panel")
     }
@@ -374,14 +375,14 @@ class ASTTest extends TestingBasis {
   "Repository" should { "have a test" in { pending } }
 
   "Root(Nil)" should {
-    "be at location 0,0" in { Root(Nil).loc must be(At.empty) }
-    "have 'Root' id" in { Root(Nil).identify must be("Root") }
-    "have no modules" in { Root(Nil).modules must be(empty) }
-    "have no domains" in { Root(Nil).domains must be(empty) }
-    "have no comments" in { Root(Nil).comments must be(empty) }
-    "have no authors" in { Root(Nil).authors must be(empty) }
+    "be at location 0,0" in { Root(Contents.empty).loc must be(At.empty) }
+    "have 'Root' id" in { Root(Contents.empty).identify must be("Root") }
+    "have no modules" in { Root(Contents.empty).modules must be(empty) }
+    "have no domains" in { Root(Contents.empty).domains must be(empty) }
+    "have no comments" in { Root(Contents.empty).comments must be(empty) }
+    "have no authors" in { Root(Contents.empty).authors must be(empty) }
     "identify as root container" in {
-      Root(Nil).isRootContainer mustBe true
+      Root(Contents.empty).isRootContainer mustBe true
     }
   }
 

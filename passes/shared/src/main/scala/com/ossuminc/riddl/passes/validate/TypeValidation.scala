@@ -56,7 +56,7 @@ trait TypeValidation extends DefinitionValidation {
     typeDef: Definition,
     parents: Parents 
   ): this.type = {
-    checkSequence(alternation.of) { (typex: TypeExpression) =>
+    checkSequence(alternation.of.toSeq) { (typex: TypeExpression) =>
       checkTypeExpression(typex, typeDef, parents)
     }
     this
@@ -86,7 +86,7 @@ trait TypeValidation extends DefinitionValidation {
           StyleWarning,
           field.loc
         )
-        .checkDescription(field)
+        .checkDescriptives(field)
     }
     this
   }
@@ -105,7 +105,7 @@ trait TypeValidation extends DefinitionValidation {
           field.loc
         )
         .checkTypeExpression(field.typeEx, typeDef, parents)
-        .checkDescription(field)
+        .checkDescriptives(field)
     }
     this
   }
@@ -180,7 +180,7 @@ trait TypeValidation extends DefinitionValidation {
       case replica: Replica            => checkReplica(replica, defn, parents)
       case rt: RangeType               => checkRangeType(rt)
       case p: Pattern                  => checkPattern(p)
-      case Enumeration(_, enumerators) => checkEnumeration(enumerators)
+      case Enumeration(_, enumerators) => checkEnumeration(enumerators.toSeq)
       case Optional(_, tye)            => checkTypeExpression(tye, defn, parents)
       case OneOrMore(_, tye)           => checkTypeExpression(tye, defn, parents)
       case ZeroOrMore(_, tye)          => checkTypeExpression(tye, defn, parents)

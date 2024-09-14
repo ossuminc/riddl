@@ -122,7 +122,7 @@ class RegressionTests extends ValidatingTest {
             Identifier((4, 8, rpi), "Thing"),
             Aggregation(
               (4, 17, rpi),
-              List(
+              Contents(
                 Field(
                   (5, 5, rpi),
                   Identifier((5, 5, rpi), "locationId"),

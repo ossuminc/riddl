@@ -50,14 +50,14 @@ class CommonParserTest extends ParsingTest {
             (1, 1),
             Identifier((1, 8), "foo"),
             contents = Contents.empty,
-            descriptives = Seq(
+            descriptives = Contents(
               URLDescription(
                 (1, 30),
                 URL("https://www.wordnik.com/words/phi")
               )
             )
           )
-          domain.toString mustBe expected.toString
+          domain.toString must be(expected.toString)
       }
     }
 

@@ -27,7 +27,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   def closeType(typ: Type, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      rfe.emitDescriptives(typ.descriptives)
+      rfe.emitDescriptives(typ.descriptives.toSeq)
       rfe.nl
     }
 
@@ -182,7 +182,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(term.id.format)
         .add(" is ")
         .add(term.definition)
-        .emitDescriptives(term.descriptives)
+        .emitDescriptives(term.descriptives.toSeq)
     }
   end doTerm
 
@@ -210,7 +210,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(invariant.id.format)
         .add(" is ")
         .add(invariant.condition.format)
-        .emitDescriptives(invariant.descriptives)
+        .emitDescriptives(invariant.descriptives.toSeq)
         .nl
     }
   end doInvariant
@@ -219,9 +219,9 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     state.withCurrent { rfe =>
       rfe
         .openDef(sagaStep)
-        .emitCodeBlock(sagaStep.doStatements)
+        .emitCodeBlock(sagaStep.doStatements.toSeq)
         .add("reverted by")
-        .emitCodeBlock(sagaStep.undoStatements)
+        .emitCodeBlock(sagaStep.undoStatements.toSeq)
         .closeDef(sagaStep)
     }
   end doSagaStep
@@ -229,7 +229,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def doInlet(inlet: Inlet): Unit =
     state.withCurrent { rfe =>
       rfe.addIndent(inlet.format)
-      rfe.emitDescriptives(inlet.descriptives)
+      rfe.emitDescriptives(inlet.descriptives.toSeq)
       rfe.nl
     }
   end doInlet
@@ -237,7 +237,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def doOutlet(outlet: Outlet): Unit =
     state.withCurrent { rfe =>
       rfe.addLine(outlet.format)
-      rfe.emitDescriptives(outlet.descriptives)
+      rfe.emitDescriptives(outlet.descriptives.toSeq)
       rfe.nl
     }
   end doOutlet
@@ -251,7 +251,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
           val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
           from + to
         }
-        .emitDescriptives(connector.descriptives)
+        .emitDescriptives(connector.descriptives.toSeq)
         .nl
     }
   end doConnector
@@ -260,7 +260,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"user ${user.id.value} is \"${user.is_a.s}\"")
-        .emitDescriptives(user.descriptives)
+        .emitDescriptives(user.descriptives.toSeq)
         .nl
     }
   end doUser
@@ -310,7 +310,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       rfe
         .addIndent(s"${keyword(containedGroup)} ${containedGroup.id.format} as ")
         .add(containedGroup.group.format)
-        .emitDescriptives(containedGroup.descriptives)
+        .emitDescriptives(containedGroup.descriptives.toSeq)
     }
   end doContainedGroup
 
@@ -350,7 +350,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         case _: TwoReferenceInteraction => () // TODO: implement
         case _: GenericInteraction      => () // TODO: implement
       end match
-      rfe.emitDescriptives(interaction.descriptives)
+      rfe.emitDescriptives(interaction.descriptives.toSeq)
     }
   end doInteraction
 

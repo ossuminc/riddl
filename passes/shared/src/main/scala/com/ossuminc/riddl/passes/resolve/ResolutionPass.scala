@@ -617,7 +617,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
               // need to push that message's path on the name stack
               candidatesFromPathIdentifier[Type](omc.msg.pathId, defStack)
             case field: Field =>
-              candidatesFromTypeExpression(field.typeEx, defStack).definitions
+              candidatesFromTypeExpression(field.typeEx, defStack)
             case constant: Constant =>
               candidatesFromTypeExpression(constant.typeEx, defStack)
             case typ: Type =>
@@ -627,13 +627,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
             case outlet: Outlet =>
               candidatesFromPathIdentifier[Type](outlet.type_.pathId, defStack)
             case include: Include[?] =>
-              candidatesFromContents(include.contents)
+              candidatesFromContents(include.contents.definitions.toContents).asInstanceOf[Definitions]
             case function: Function =>
               function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
                 function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
                 function.contents.definitions
             case vital: VitalDefinition[?] =>
-              vital.contents.flatMap {
+              vital.contents.toSeq.flatMap {
                 case include: Include[ContentValues] @unchecked => include.contents.definitions
                 case value: Definition                          => Seq(value)
                 case _                                          => Seq.empty[Definition]
@@ -814,7 +814,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     pid: PathIdentifier,
     list: List[SymTabItem],
     context: Option[String] = None
-  ): Contents[WithIdentifier] = {
+  ): Seq[WithIdentifier] = {
     // Extract all the definitions that were found
     val definitions = list.map(_._1)
     val allDifferent = definitions.map(_.kind).distinct.sizeIs ==
@@ -837,7 +837,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         val message = s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity" +
           context.map(_ + "\n").getOrElse("")
         messages.addError(pid.loc, message)
-        Seq.empty[Definition]
+        Seq.empty[WithIdentifier]
     }
   }
 
@@ -855,7 +855,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     // Recursively resolve this PathIdentifier
     val resolution: Resolution[T] = resolveAPathId[T](pid, defStack.toParentsSeq)
     resolution match
-      case None                                             => Contents.empty
+      case None                                             => Seq.empty[Definition]
       case Some((definition: Definition, parents: Parents)) =>
         // if we found the definition
         // Replace the parent stack with the resolved one
@@ -883,7 +883,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
       // are what we are looking for
       case Enumeration(_, enumerators) =>
         // if we're at an enumeration type then the numerators are candidates
-        enumerators
+        enumerators.toSeq
       case a: AggregateUseCaseTypeExpression =>
         // Any kind of Aggregate's fields are candidates for resolution
         a.fields
@@ -910,7 +910,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
           // NOTE: We need to recursively descend that stack.  An include in a nested definitional level
           // NOTE: will not be picked up by contents.includes because it would be inside another definition.
           // NOTE: So we take the WithIdentifiers from the contents as well as from the includes
-          val nested = candidatesFromContents(contents.includes)
+          val nested = candidatesFromContents(contents.includes.toContents)
           val current = contents.definitions
           current ++ nested
         case definition: Definition =>
@@ -924,11 +924,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
   private def candidatesFromStateTypeRef(typeRef: TypeRef, parents: Parents): Contents[Definition] = {
     val resolution: Resolution[Type] = resolveATypeRef(typeRef, parents)
     resolution match {
-      case None => Seq.empty // not found
+      case None => Contents.empty[Definition] // not found
       case Some((typ: Type, _: Parents)) =>
         typ.typEx match {
-          case agg: AggregateTypeExpression => agg.fields
-          case _                            => Seq.empty
+          case agg: AggregateTypeExpression => agg.fields.toContents
+          case _                            => Contents.empty[Definition]
         }
     }
   }

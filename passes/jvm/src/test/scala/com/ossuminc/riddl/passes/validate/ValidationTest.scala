@@ -42,8 +42,8 @@ class ValidationTest extends ParsingTest {
     "parentOf" should {
       "find the parent of an existent child" in { (td:TestData) =>
         val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
-        val domain = Domain(At(), Identifier(At(), "foo"), Seq(aType))
-        val root = Root(Seq(domain))
+        val domain = Domain(At(), Identifier(At(), "foo"), Contents(aType))
+        val root = Root(Contents(domain))
         val outputs = PassesOutput()
         val output = Pass.runSymbols(PassInput(root), outputs)
         output.parentOf(aType) mustBe Some(domain)
@@ -51,7 +51,7 @@ class ValidationTest extends ParsingTest {
       "not find the parent of a non-existent child" in { (td:TestData) =>
         val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
         val domain = Domain(At(), Identifier(At(), "foo"))
-        val root = Root(Seq(domain))
+        val root = Root(Contents(domain))
         val outputs = PassesOutput()
         val output = Pass.runSymbols(PassInput(root), outputs)
         output.parentOf(aType) mustBe None

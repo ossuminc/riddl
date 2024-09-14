@@ -87,13 +87,13 @@ trait ParsingContext extends ParsingErrors {
       val future: Future[Include[CT]] = Loader(newURL).load.map { (data: String) =>
         val rpi = RiddlParserInput(data, newURL)
         val contents = doParse[CT](loc, rpi, newURL, rule)
-        Include(loc, newURL, contents)
+        Include(loc, newURL, contents.toContents)
       }
       Await.result(future, 300)
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception, loc, s"while including '$path'")
-        Include[CT](loc, newURL, Seq.empty[CT])
+        Include[CT](loc, newURL, Contents.empty[CT])
     }
   }
 
@@ -113,9 +113,9 @@ trait ParsingContext extends ParsingErrors {
     }
   }
 
-  def checkForDuplicateIncludes[CT <: RiddlValue](contents: Contents[CT]): Unit = {
+  def checkForDuplicateIncludes[CT <: RiddlValue](contents: Seq[CT]): Unit = {
     import com.ossuminc.riddl.language.Finder
-    val allIncludes = Finder(contents).findByType[Include[?]]
+    val allIncludes = Finder(contents.toContents).findByType[Include[?]]
     val distinctIncludes = allIncludes.distinctBy(_.origin)
     for {
       incl <- distinctIncludes

@@ -91,7 +91,7 @@ class FoldingTest extends ParsingTest {
               val previous: Seq[String] = stack.map {
                 case nv: WithIdentifier => nv.identify
                 case rv: RiddlValue => rv.toString
-              }.reverse.asInstanceOf[Seq[String]]
+              }.reverse.toSeq
               definition match {
                 case nv: WithIdentifier => track :+ (previous :+ nv.identify)
                 case rv: RiddlValue => track :+ (previous :+ rv.toString)

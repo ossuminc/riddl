@@ -315,7 +315,7 @@ class TypeParserTest extends ParsingTest {
         Identifier(1 -> 6, "enum"),
         Enumeration(
           1 -> 13,
-          List(
+          Contents(
             Enumerator(1 -> 22, Identifier(1 -> 22, "Apple"), None),
             Enumerator(1 -> 28, Identifier(1 -> 28, "Pear"), None),
             Enumerator(1 -> 33, Identifier(1 -> 33, "Peach"), None),
@@ -332,7 +332,7 @@ class TypeParserTest extends ParsingTest {
         Identifier(1 -> 6, "alt"),
         Alternation(
           1 -> 12,
-          List(
+          Contents(
             AliasedTypeExpression(
               1 -> 21,
               "type",
@@ -360,7 +360,7 @@ class TypeParserTest extends ParsingTest {
       )
       val expected = Alternation(
         (3, 12, rpi),
-        List(
+        Contents(
           AliasedTypeExpression(
             (3, 21, rpi),
             "type",
@@ -372,7 +372,7 @@ class TypeParserTest extends ParsingTest {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((Type(_, _, typeExp, _), _)) => typeExp mustBe expected
+        case Right((Type(_, _, typeExp, _), _)) => typeExp must be(expected)
       }
     }
     "allow aggregation" in { (td: TestData) =>
@@ -390,7 +390,7 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "agg"),
         Aggregation(
           (1, 12, rip),
-          Seq(
+          Contents(
             Field(
               (2, 3, rip),
               Identifier((2, 3, rip), "key"),
@@ -428,7 +428,7 @@ class TypeParserTest extends ParsingTest {
         Identifier((1, 6, rip), "agg"),
         Aggregation(
           (1, 12, rip),
-          Seq(
+          Contents(
             Field(
               (2, 3, rip),
               Identifier((2, 3, rip), "key"),
@@ -468,7 +468,7 @@ class TypeParserTest extends ParsingTest {
               case "query"   => QueryCase
               case "result"  => ResultCase
             },
-            Seq(
+            Contents(
               Field(
                 (2, 3, rip),
                 Identifier((2, 3, rip), "key"),
@@ -589,7 +589,7 @@ class TypeParserTest extends ParsingTest {
         AggregateUseCaseTypeExpression(
           (1, 16, rip),
           CommandCase,
-          Seq(
+          Contents(
             Field(
               (1, 18, rip),
               Identifier((1, 18, rip), "a"),
@@ -630,7 +630,7 @@ class TypeParserTest extends ParsingTest {
             Identifier((9, 8, rpi), "Complex"),
             Aggregation(
               (9, 19, rpi),
-              Seq(
+              Contents(
                 Field(
                   (10, 5, rpi),
                   Identifier((10, 5, rpi), "a"),

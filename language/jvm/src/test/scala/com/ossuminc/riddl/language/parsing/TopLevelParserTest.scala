@@ -27,7 +27,7 @@ class TopLevelParserTest extends ParsingTest {
     At(1, 1, rpi),
     Identifier(At(1, 8, rpi), "foo")
   )
-  val simpleDomainResults: AST.Root = Root(List(simpleDomain))
+  val simpleDomainResults: AST.Root = Root(Contents(simpleDomain))
 
   "parse" should {
     "parse RiddlParserInput" in { (td: TestData) =>
@@ -43,12 +43,12 @@ class TopLevelParserTest extends ParsingTest {
       try {
         val stringContents = source.mkString
         val result = TopLevelParser.parseInput(rpi)
-        val expected = Root(List(simpleDomain))
+        val expected = Root(Contents(simpleDomain))
         result mustBe Right(expected)
       } finally { source.close() }
     }
     "parse empty String" in { (td: TestData) =>
-      val expected = Root(List())
+      val expected = Root(Contents())
       val parser = StringParser("")
       parser.parseRoot() match {
         case Right(r: Root) =>

@@ -198,3 +198,79 @@ passes/jvm/src/test/input/check/everything/everything.riddl(68:7):
  State 'otherThingState' should have a description:
        state otherThingState of type Everything.StateType
        ^
+passes/jvm/src/test/input/check/everything/everything.riddl(16:3):
+ Context 'full' should have an author reference:
+   context full is {
+   ^
+passes/jvm/src/test/input/check/everything/everything.riddl(16:3):
+ Descriptives in Context 'full' should  not be empty:
+   context full is {
+   ^
+passes/jvm/src/test/input/check/everything/everything.riddl(1:1):
+ Descriptives in Domain 'Everything' should  not be empty:
+ domain Everything is {
+ ^
+passes/jvm/src/test/input/check/everything/everything.riddl(1:1):
+ Domain 'Everything' should have an author reference:
+ domain Everything is {
+ ^
+passes/jvm/src/test/input/check/everything/everything.riddl(42:5):
+ Descriptives in Entity 'Something' should  not be empty:
+     entity Something is {
+     ^
+passes/jvm/src/test/input/check/everything/everything.riddl(42:5):
+ Entity 'Something' should have an author reference:
+     entity Something is {
+     ^
+passes/jvm/src/test/input/check/everything/everything.riddl(49:7):
+ Descriptives in State 'someState' should  not be empty:
+       state someState of type Everything.StateType
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(49:7):
+ State 'someState' should have an author reference:
+       state someState of type Everything.StateType
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(51:7):
+ Descriptives in Function 'whenUnderTheInfluence' should  not be empty:
+       function whenUnderTheInfluence is {
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(51:7):
+ Function 'whenUnderTheInfluence' should have an author reference:
+       function whenUnderTheInfluence is {
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(65:5):
+ Descriptives in Entity 'SomeOtherThing' should  not be empty:
+     entity SomeOtherThing is {
+     ^
+passes/jvm/src/test/input/check/everything/everything.riddl(65:5):
+ Entity 'SomeOtherThing' should have an author reference:
+     entity SomeOtherThing is {
+     ^
+passes/jvm/src/test/input/check/everything/everything.riddl(66:7):
+ Descriptives in Sink 'trashBin' should  not be empty:
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(66:7):
+ Sink 'trashBin' should have an author reference:
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(68:7):
+ Descriptives in State 'otherThingState' should  not be empty:
+       state otherThingState of type Everything.StateType
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(68:7):
+ State 'otherThingState' should have an author reference:
+       state otherThingState of type Everything.StateType
+       ^
+passes/jvm/src/test/input/check/everything/everything.riddl(6:3):
+ Context 'APlant' should have an author reference:
+   context APlant is {
+   ^
+passes/jvm/src/test/input/check/everything/everything.riddl(7:5):
+ Source 'Source' should have an author reference:
+     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+     ^
+passes/jvm/src/test/input/check/everything/everything.riddl(8:5):
+ Sink 'Sink' should have an author reference:
+     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+     ^

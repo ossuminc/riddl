@@ -48,7 +48,7 @@ private[parsing] trait AdaptorParser {
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ withDescriptives
     )./map { case (loc, id, direction, cRef, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Adaptor(loc, id, direction, cRef, contents, descriptives)
+      Adaptor(loc, id, direction, cRef, contents.toContents, descriptives.toContents)
     }
   }
 }

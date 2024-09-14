@@ -30,7 +30,7 @@ private[parsing] trait ModuleParser {
       location ~ Keywords.module ~/ identifier ~ is ~ open ~ moduleContents ~ close ~ withDescriptives
     )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Module(loc, id, contents, descriptives)
+      Module(loc, id, contents.toContents, descriptives.toContents)
     }
   }
 }

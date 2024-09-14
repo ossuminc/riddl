@@ -56,7 +56,7 @@ class TopLevelParser(
     P(rootContent).rep(1)
 
   def root[u: P]: P[Root] = {
-    P(Start ~ rootContents ~ End).map { (content: Seq[RootContents]) => Root(content) }
+    P(Start ~ rootContents ~ End).map { (content: Seq[RootContents]) => Root(content.toContents) }
   }
 
   @JSExport

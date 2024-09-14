@@ -13,7 +13,7 @@ trait ApplicationWriter { this: MarkdownWriter =>
     emitDefDoc(application, parents)
     for group <- application.groups do {
       h2(group.identify)
-      list(group.contents.map(_.format))
+      list(group.contents.map(_.format).toSeq)
     }
     emitProcessorDetails(application, parents)
   }
