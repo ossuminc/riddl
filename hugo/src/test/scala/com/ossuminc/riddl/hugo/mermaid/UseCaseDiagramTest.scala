@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.language.AST.{Definition, Domain, Identifier, PathIdentifier, Root}
+import com.ossuminc.riddl.language.AST.{Contents, Definition, Domain, Identifier, PathIdentifier, Root}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, PassesResult, RunPassTestBase}
 import com.ossuminc.riddl.diagrams.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
@@ -52,7 +52,7 @@ class UseCaseDiagramTest extends RunPassTestBase {
       val outputs: PassesOutput = PassesOutput()
       val pid =PathIdentifier(At(),Seq("foo"))
       val item = Domain(At(), Identifier(At(), "foo"))
-      val parent = Root(Seq(item))
+      val parent = Root(Contents(item))
       outputs.refMap.add[Domain](pid, parent, item)
       val passesResult = PassesResult(PassInput.empty, outputs )
       case class TestUseCaseDiagramSupport(passesResult: PassesResult) extends UseCaseDiagramSupport {

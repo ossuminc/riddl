@@ -42,7 +42,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
         val item = d.identify
         val authors =
           d match
-            case wd: WithDescriptives => AST.findAuthors(wd, pars)
+            case wd: WithDescriptives => AST.findAuthors(wd, pars.toContents)
             case _ => Seq.empty[AuthorRef]
           end match
         val auths = if authors.isEmpty then Seq("Unspecified Author") else mkAuthor(authors, pars)

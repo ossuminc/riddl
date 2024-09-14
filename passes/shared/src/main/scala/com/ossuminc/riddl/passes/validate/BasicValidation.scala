@@ -22,8 +22,12 @@ trait BasicValidation {
   def resolution: ResolutionOutput
   protected def messages: Messages.Accumulator
 
-  def parentOf(definition: Definition): Definition = {
+  def parentOf(definition: Definition): Parent = {
     symbols.parentOf(definition).getOrElse(Root.empty)
+  }
+  
+  def parentsOf(definition: Definition): Parents = {
+    symbols.parentsOf(definition)
   }
 
   def lookup[T <: Definition: ClassTag](id: Seq[String]): List[T] = {

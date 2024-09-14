@@ -11,8 +11,9 @@ import com.ossuminc.riddl.language.AST.*
 import scala.reflect.{ClassTag, classTag}
 import scalajs.js.annotation._
 
-/** The context for finding things within a given [Ccontainer]] or [[com.ossuminc.riddl.language.AST.RiddlValue]] as found in the AST model. This
-  * provides the ability to find values in the model by traversing it and looking for the matching condition.
+/** The context for finding things within a given [[Container]] of [[com.ossuminc.riddl.language.AST.RiddlValue]] 
+  * as found in the AST model. This  provides the ability to find values in the model by traversing it and looking
+ * for the matching condition.
   * @param root
   *   The container of RiddlValues to traverse for the sought condition
   */
@@ -30,8 +31,8 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     *   A [[scala.Seq]] of the matching [[AST.RiddlValue]]
     */
   @JSExport
-  def find(select: RiddlValue => Boolean): Seq[RiddlValue] = {
-    Folding.foldEachDefinition(root, root, Seq.empty) { case (_, value, state) =>
+  def find(select: CV => Boolean): Seq[CV] = {
+    Folding.foldEachDefinition[Seq[CV],CV](root, Seq.empty[CV]) { case (state: Seq[CV], value: CV) =>
       if select(value) then state :+ value else state
     }
   }
@@ -61,13 +62,12 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     select: T => Boolean
   ): DefWithParents[T] = {
     import scala.collection.mutable
-    import scala.reflect.classTag
     val lookingFor = classTag[T].runtimeClass
-    Folding.foldLeftWithStack[Seq[(T, Parents)],RiddlValue](
+    Folding.foldLeftWithStack[Seq[(T, Parents)],CV](
       Seq.empty[(T, Parents)],
       root,
       ParentStack.empty
-    ) { case (state, definition: RiddlValue, parents) =>
+    ) { case (state, definition: CV, parents) =>
       if lookingFor.isAssignableFrom(definition.getClass) then
         val value: T = definition.asInstanceOf[T]
         if select(value) then
@@ -76,7 +76,7 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
           state
       else
         state
-    }.asInstanceOf[DefWithParents[T]]
+    }
   }
 
   /** Find definitions that are empty

@@ -17,7 +17,7 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withDescriptives
     ).map { case (loc, id, group, descriptives) =>
-      ContainedGroup(loc, id, group, descriptives)
+      ContainedGroup(loc, id, group, descriptives.toContents)
     }
   }
 
@@ -33,7 +33,7 @@ private[parsing] trait ApplicationParser {
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
         close ~ withDescriptives
     ).map { case (loc, alias, id, contents, descriptives) =>
-      Group(loc, alias, id, contents, descriptives)
+      Group(loc, alias, id, contents.toContents, descriptives.toContents)
     }
   }
 
@@ -61,16 +61,17 @@ private[parsing] trait ApplicationParser {
     ).map { case (loc, nounAlias, id, verbAlias, putOut, contents, descriptives) =>
       putOut match {
         case t: TypeRef =>
-          Output(loc, nounAlias, id, verbAlias, t, contents, descriptives)
+          Output(loc, nounAlias, id, verbAlias, t, contents.toContents, descriptives.toContents)
         case c: ConstantRef =>
-          Output(loc, nounAlias, id, verbAlias, c, contents, descriptives)
+          Output(loc, nounAlias, id, verbAlias, c, contents.toContents, descriptives.toContents)
         case l: LiteralString =>
-          Output(loc, nounAlias, id, verbAlias, l, contents, descriptives)
+          Output(loc, nounAlias, id, verbAlias, l, contents.toContents, descriptives.toContents)
         case x: RiddlValue =>
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
           error(s"Expected a type reference, constant reference, or literal string, not: $xval")
-          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"), contents)
+          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"), contents.toContents,
+            descriptives.toContents)
       }
     }
   }
@@ -105,7 +106,7 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withDescriptives
     ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives) =>
-      Input(loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives)
+      Input(loc, inputAlias, id, acquisitionAlias, putIn, contents.toContents, descriptives.toContents)
     }
   }
 
@@ -135,7 +136,7 @@ private[parsing] trait ApplicationParser {
       location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ withDescriptives
     )./ map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Application(loc, id, contents, descriptives)
+      Application(loc, id, contents.toContents, descriptives.toContents)
     }
   }
 }

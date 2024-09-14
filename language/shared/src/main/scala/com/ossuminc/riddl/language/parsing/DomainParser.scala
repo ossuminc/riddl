@@ -21,7 +21,7 @@ private[parsing] trait DomainParser {
     P(
       location ~ Keywords.user ~ identifier ~/ is ~ literalString ~/ withDescriptives
     )./.map { case (loc, id, is_a, descriptives) =>
-      User(loc, id, is_a, descriptives)
+      User(loc, id, is_a, descriptives.toContents)
     }
   }
 
@@ -45,7 +45,7 @@ private[parsing] trait DomainParser {
       location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~ withDescriptives
     )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
-      Domain(loc, id, contents, descriptives)
+      Domain(loc, id, contents.toContents, descriptives.toContents)
     }
   }
 }

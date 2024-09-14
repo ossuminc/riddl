@@ -33,7 +33,7 @@ trait ProcessorParser
       location ~ Keywords.relationship ~ identifier ~/ to ~ processorRef ~ as ~ relationshipCardinality ~
         (Keywords.label ~ as ~ literalString).? ~ withDescriptives
     ).map { case (loc, id, procRef, cardinality, label, descriptives) =>
-      Relationship(loc, id, procRef, cardinality, label, descriptives)
+      Relationship(loc, id, procRef, cardinality, label, descriptives.toContents)
     }
 
   def processorDefinitionContents[u: P](statementsSet: StatementsSet): P[OccursInProcessor] =

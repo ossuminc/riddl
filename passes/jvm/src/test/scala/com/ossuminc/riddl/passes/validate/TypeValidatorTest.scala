@@ -64,7 +64,7 @@ class TypeValidatorTest extends ValidatingTest {
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         msgs mustNot be(empty)
         info(msgs.format)
-        msgs.size mustBe (3)
+        msgs.size must be (4)
         msgs.filter(_.kind == Messages.UsageWarning).last.format must include("is unused")
       }
     }

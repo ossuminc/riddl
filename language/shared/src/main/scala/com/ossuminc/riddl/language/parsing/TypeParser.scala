@@ -327,7 +327,7 @@ private[parsing] trait TypeParser {
   def enumeration[u: P]: P[Enumeration] = {
     P(
       location ~ Keywords.any ~ of.? ~/ open ~/ enumerators ~ close
-    )./.map(enums => Enumeration.apply.tupled(enums))
+    )./.map { case (loc, enums) => Enumeration(loc, enums.toContents) }
   }
 
   private def alternation[u: P]: P[Alternation] = {
@@ -335,8 +335,8 @@ private[parsing] trait TypeParser {
       location ~ Keywords.one ~ of.? ~/ open ~
         (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
           aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close
-    )./.map { x =>
-      Alternation.apply.tupled(x)
+    )./.map { case (loc, contents) =>
+      Alternation(loc, contents.toContents)
     }
   }
 
@@ -364,7 +364,9 @@ private[parsing] trait TypeParser {
   def field[u: P]: P[Field] = {
     P(
       location ~ identifier ~ is ~ fieldTypeExpression ~ withDescriptives
-    ).map(tpl => Field.apply.tupled(tpl))
+    ).map { case(loc, id, typeEx, descriptives) =>
+      Field(loc, id, typeEx, descriptives.toContents)
+    }
   }
 
   def arguments[u: P]: P[Seq[MethodArgument]] = {
@@ -379,13 +381,13 @@ private[parsing] trait TypeParser {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
         is ~ fieldTypeExpression ~ withDescriptives
-    ).map { case (loc, id, args, typeExp, withs) =>
-      Method.apply(loc, id, typeExp, args, withs)
+    ).map { case (loc, id, args, typeExp, descriptives) =>
+      Method.apply(loc, id, typeExp, args, descriptives.toContents)
     }
   }
 
   private def aggregateContent[u: P]: P[AggregateContents] = {
-    P(field | method )./.asInstanceOf[P[AggregateContents]]
+    P(field | method)./.asInstanceOf[P[AggregateContents]]
   }
 
   private def aggregateDefinitions[u: P]: P[Seq[AggregateContents]] = {
@@ -396,7 +398,7 @@ private[parsing] trait TypeParser {
 
   def aggregation[u: P]: P[Aggregation] = {
     P(location ~ open ~ aggregateDefinitions ~ close).map { case (loc, contents) =>
-      Aggregation(loc, contents)
+      Aggregation(loc, contents.toContents)
     }
   }
 
@@ -537,7 +539,7 @@ private[parsing] trait TypeParser {
     P(
       location ~ Punctuation.roundOpen ~ field.rep(0, ",") ~ Punctuation.roundClose
     ).map { case (location, fields) =>
-      Aggregation(location, fields)
+      Aggregation(location, fields.toContents)
     }
   }
 
@@ -545,17 +547,17 @@ private[parsing] trait TypeParser {
     P(
       location ~ aggregateUseCase ~/ identifier ~
         (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withDescriptives
-    )./.map { case (loc, useCase, id, ateOrAgg, withs) =>
+    )./.map { case (loc, useCase, id, ateOrAgg, descriptives) =>
       ateOrAgg match {
         case agg: Aggregation =>
           val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents)
-          Type(loc, id, mt, withs)
+          Type(loc, id, mt, descriptives.toContents)
         case ate: AliasedTypeExpression =>
-          Type(loc, id, ate, withs)
+          Type(loc, id, ate, descriptives.toContents)
         case _ =>
           require(false, "Oops! Impossible case")
           // Type just to satisfy compiler because it doesn't know require(false...) will throw
-          Type(loc, id, Nothing(loc), withs)
+          Type(loc, id, Nothing(loc), descriptives.toContents)
       }
     }
   }
@@ -564,7 +566,7 @@ private[parsing] trait TypeParser {
     P(
       location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ withDescriptives
     )./.map { case (loc, id, typ, descriptives) =>
-      Type(loc, id, typ, descriptives)
+      Type(loc, id, typ, descriptives.toContents)
     }
   }
 
@@ -574,7 +576,8 @@ private[parsing] trait TypeParser {
     P(
       location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
         Punctuation.equalsSign ~ literalString ~ withDescriptives
-    ).map { tpl => Constant.apply.tupled(tpl) }
+    ).map { case (loc, id, typeEx, litStr, descriptives) =>
+      Constant(loc, id, typeEx, litStr, descriptives.toContents)
+    }
   }
-
 }

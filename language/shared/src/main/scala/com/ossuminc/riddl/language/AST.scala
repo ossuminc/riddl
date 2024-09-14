@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.AST.Contents.unapply
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
@@ -99,11 +100,20 @@ object AST:
   /** The kinds of things that are valid content, either immediate or future */
   type ContentValues = RiddlValue
 
-  /** A frequently use type alias for a Seq of [[RiddlValue]] */
-  type Contents[+CV <: ContentValues] = Seq[CV]
+  /** A frequently used type alias for a Seq of [[RiddlValue]] */
+  type Contents[CV <: ContentValues] = mutable.Seq[CV]
+
   object Contents:
-    def empty = Seq.empty
+    def empty[T <: ContentValues] = mutable.Seq.empty[T]
+    def apply[T <: ContentValues](items: T*) = mutable.Seq[T](items: _*)
+    def unapply[T <: ContentValues](contents: Contents[T]) = mutable.Seq.unapplySeq(contents)
   end Contents
+
+  extension [CV <: ContentValues](sequence: Seq[CV])
+    def toContents: Contents[CV] = Contents[CV](sequence: _*)
+    def find(name: String): Option[CV] =
+      sequence.find(d => d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name)
+
 
   /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
   extension [CV <: ContentValues](container: Contents[CV])
@@ -119,33 +129,35 @@ object AST:
       * @return
       *   The Seq of type `T` found in the [[Contents]]
       */
-    def filter[T <: RiddlValue: ClassTag]: Contents[T] =
+    def filter[T <: RiddlValue: ClassTag]: Seq[T] =
       val theClass = classTag[T].runtimeClass
-      container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T])
+      container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T]).toSeq
     end filter
 
     /** Returns the elements of the [[Contents]] that are [[VitalDefinition]]s */
-    def vitals: Contents[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
+    def vitals: Seq[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
 
     /** Returns the elememts of the [[Contents]] that are [[Processor]]s */
-    def processors: Contents[Processor[?]] = container.filter[Processor[?]]
+    def processors: Seq[Processor[?]] = container.filter[Processor[?]]
 
     /** Find the first element of the [[Contents]] that has the provided `name` */
     def find(name: String): Option[CV] =
       identified.find(d => d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name)
 
     /** Find the first element of the [[Contents]] that */
-    def identifiedValues: Contents[WithIdentifier] =
-      container.filter(d => d.isInstanceOf[WithIdentifier]).map(_.asInstanceOf[WithIdentifier])
+    def identifiedValues: Seq[WithIdentifier] =
+      container.filter(d => d.isInstanceOf[WithIdentifier]).map(_.asInstanceOf[WithIdentifier]).toSeq
 
     /** Returns the [[Include]] elements of [[Contents]] */
-    def includes: Contents[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
+    def includes: Seq[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
 
     /** find the elements of the [[Contents]] that are [[Definition]]s */
     def definitions: Definitions = container.filter[Definition].map(_.asInstanceOf[Definition])
 
     /** find the elemetns of the [[Contents]] that are [[Parent]]s */
-    def parents: Contents[Parent] = container.filter[Parent].asInstanceOf[Contents[Parent]]
+    def parents: Seq[Parent] = container.filter[Parent]
+
+    def toSeq: Seq[CV] = container.toSeq
   end extension
 
   /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
@@ -153,7 +165,7 @@ object AST:
     * @tparam CV
     *   The kind of contained value that is contained within.
     */
-  sealed trait Container[+CV <: ContentValues] extends RiddlValue:
+  sealed trait Container[CV <: ContentValues] extends RiddlValue:
     /** The definitional contents of this Container value. The [[contents]] are constrained by the type parameter CV so
       * subclasses must honor that constraint.
       */
@@ -166,7 +178,7 @@ object AST:
   end Container
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
-  case class SimpleContainer[+CV <: ContentValues](contents: Contents[CV]) extends Container[CV] with WithAttachments:
+  case class SimpleContainer[CV <: ContentValues](contents: Contents[CV]) extends Container[CV] with WithAttachments:
     def format: String = ""
     def loc: At = At.empty
   end SimpleContainer
@@ -431,57 +443,53 @@ object AST:
   sealed trait WithDescriptives extends RiddlValue:
     def descriptives: Contents[Descriptives]
 
-    def hasDescriptives: Boolean = descriptives.nonEmpty
-
     override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
 
+    /** AN optional [[BriefDescription]] */
     lazy val brief: Option[BriefDescription] = descriptives.filter[BriefDescription].headOption
-    lazy val descriptions: Contents[Description] = descriptives.filter[Description]
-    lazy val terms: Contents[Term] = descriptives.filter[Term]
-
-    /** A lazily constructed [[Seq]] of [[AuthorRef]] filtered from the descriptives */
-    lazy val authorRefs: Contents[AuthorRef] = descriptives.filter[AuthorRef]
 
     /** A reliable extractor of the brief description, dealing with the optionality and plurality of it */
     def briefString: String = brief.map(_.brief.s).getOrElse("No brief description.")
 
-    /** A reliable extractor of the ddescription, dealing with the optionality and plurality of it */
+    /** A lazily constructed [[mutable.Seq]] of [[Description]] */
+    lazy val descriptions: Seq[Description] = descriptives.filter[Description]
+
+    /** A reliable extractor of the description, dealing with the optionality and plurality of it */
     def descriptionString: String =
       if descriptions.isEmpty then "No descriptions."
       else descriptions.map(_.lines.map(_.s).mkString("\n")).mkString("\n")
     end descriptionString
 
+    /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
+    lazy val terms: Seq[Term] = descriptives.filter[Term]
+
+    /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
+    lazy val authorRefs: Seq[AuthorRef] = descriptives.filter[AuthorRef]
+
   end WithDescriptives
 
   /** A trait that includes the `comments` field to extract the comments from the contents */
-  sealed trait WithComments extends Container[ContentValues]:
+  sealed trait WithComments[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Comment]] filtered from the contents */
-    lazy val comments: Contents[Comment] = contents.filter[Comment]
+    lazy val comments: Seq[Comment] = contents.filter[Comment]
   end WithComments
 
   /** Added to definitions that support includes */
-  sealed trait WithIncludes[CT <: ContentValues] extends Container[CT]:
+  sealed trait WithIncludes[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Include]] filtered from the contents */
-    lazy val includes: Contents[Include[CT]] = contents.filter[Include[CT]]
+    lazy val includes: Seq[Include[CV]] = contents.filter[Include[CV]]
     final override def hasIncludes = true
   end WithIncludes
-
-  /** Added to definitions that support a list of term definitions */
-  sealed trait WithTerms extends Container[ContentValues]:
-
-    /** A lazily constructed [[Seq]] of [[Term]] filtered from the contents */
-    lazy val terms: Contents[Term] = contents.filter[Term]
-  end WithTerms
 
   /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
     * queried, and formatted.
     */
-  sealed trait WithOptions extends Container[ContentValues]:
+  sealed trait WithOptions[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[OptionValue]] filtered from the contents */
-    lazy val options: Contents[OptionValue] = contents.filter[OptionValue]
+    lazy val options: Seq[OptionValue] = contents.filter[OptionValue]
 
     /** True if this value contains an option with the given `name`. */
     def hasOption(name: String): Boolean = options.exists(_.name == name)
@@ -494,207 +502,207 @@ object AST:
   end WithOptions
 
   /** Base trait of any definition that is a container and contains types */
-  sealed trait WithTypes extends Container[ContentValues]:
+  sealed trait WithTypes[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Type]] filtered from the contents */
-    lazy val types: Contents[Type] = contents.filter[Type]
+    lazy val types: Seq[Type] = contents.filter[Type]
     override def hasTypes: Boolean = types.nonEmpty
   end WithTypes
 
   /** Base trait to use in any definition that can define a constant */
-  sealed trait WithConstants extends Container[ContentValues]:
+  sealed trait WithConstants[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Constant]] filtered from the contents */
-    lazy val constants: Contents[Constant] = contents.filter[Constant]
+    lazy val constants: Seq[Constant] = contents.filter[Constant]
   end WithConstants
 
   /** Base trait to use in any [[Definition]] that can define an invariant */
-  sealed trait WithInvariants extends Container[ContentValues]:
+  sealed trait WithInvariants[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Invariant]] filtered from the contents */
-    lazy val invariants: Contents[Invariant] = contents.filter[Invariant]
+    lazy val invariants: Seq[Invariant] = contents.filter[Invariant]
   end WithInvariants
 
   /** Base trait to use in any [[Definition]] that can define a [[Function]] */
-  sealed trait WithFunctions extends Container[ContentValues]:
+  sealed trait WithFunctions[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Function]] filtered from the contents */
-    lazy val functions: Contents[Function] = contents.filter[Function]
+    lazy val functions: Seq[Function] = contents.filter[Function].toSeq
   end WithFunctions
 
   /** Base trait to use in any [[Processor]] because they define [[Handler]]s */
-  sealed trait WithHandlers extends Container[ContentValues]:
+  sealed trait WithHandlers[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Handler]] filtered from the contents */
-    lazy val handlers: Contents[Handler] = contents.filter[Handler]
+    lazy val handlers: Seq[Handler] = contents.filter[Handler]
   end WithHandlers
 
   /** Base trait to use in any [[Definition]] that can define an [[Inlet]] */
-  sealed trait WithInlets extends Container[ContentValues]:
+  sealed trait WithInlets[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Inlet]] filtered from the contents */
-    lazy val inlets: Contents[Inlet] = contents.filter[Inlet]
+    lazy val inlets: Seq[Inlet] = contents.filter[Inlet]
   end WithInlets
 
   /** Base trait to use in any [[Definition]] that can define an [[Outlet]] */
-  sealed trait WithOutlets extends Container[ContentValues]:
+  sealed trait WithOutlets[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Outlet]] filtered from the contents */
-    lazy val outlets: Contents[Outlet] = contents.filter[Outlet]
+    lazy val outlets: Seq[Outlet] = contents.filter[Outlet]
   end WithOutlets
 
   /** Base trait to use in any [[Definition]] that can define a [[State]] */
-  sealed trait WithStates extends Container[ContentValues]:
+  sealed trait WithStates[CV <: ContentValues] extends Container[?]:
 
     /** A lazily constructed [[Seq]] of [[State]] filtered from the contents */
-    lazy val states: Contents[State] = contents.filter[State]
+    lazy val states: Seq[State] = contents.filter[State]
   end WithStates
 
   /** Base trait to use in any [[Definition]] that can define a [[Group]] */
-  sealed trait WithGroups extends Container[ContentValues]:
+  sealed trait WithGroups[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Group]] filtered from the contents */
-    lazy val groups: Contents[Group] = contents.filter[Group]
+    lazy val groups: Seq[Group] = contents.filter[Group]
   end WithGroups
 
   /** Base trait to use in any [[Definition]] that can define a [[Output]] */
-  sealed trait WithOutputs extends Container[ContentValues]:
+  sealed trait WithOutputs[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
-    lazy val outputs: Contents[Output] = contents.filter[Output]
+    lazy val outputs: Seq[Output] = contents.filter[Output]
   end WithOutputs
 
   /** Base trait to use in any [[Definition]] that can define a [[Output]] */
-  sealed trait WithInputs extends Container[ContentValues]:
+  sealed trait WithInputs[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
-    lazy val inputs: Contents[Input] = contents.filter[Input]
+    lazy val inputs: Seq[Input] = contents.filter[Input]
   end WithInputs
 
   /** Base trait to use to define the [[AST.Statement]]s that form the body of a [[Function]] or [[OnClause]] */
-  sealed trait WithStatements extends Container[ContentValues]:
+  sealed trait WithStatements[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Statement]] filtered from the contents */
-    lazy val statements: Contents[Statement] = contents.filter[Statement]
+    lazy val statements: Seq[Statement] = contents.filter[Statement]
   end WithStatements
 
   /** Base trait to use in a [[Domain]] to define the bounded [[Context]] it contains */
-  sealed trait WithContexts extends Container[ContentValues]:
+  sealed trait WithContexts[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Context]] filtered from the contents */
-    lazy val contexts: Contents[Context] = contents.filter[Context]
+    lazy val contexts: Seq[Context] = contents.filter[Context]
   end WithContexts
 
   /** Base trait to use in any [[Definition]] that can define [[Author]]s */
-  sealed trait WithAuthors extends Container[ContentValues]:
+  sealed trait WithAuthors[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Author]] filtered from the contents */
-    lazy val authors: Contents[Author] = contents.filter[Author]
+    lazy val authors: Seq[Author] = contents.filter[Author]
     override def hasAuthors: Boolean = authors.nonEmpty
   end WithAuthors
 
   /** Base trait to use in any [[Definition]] that can define [[User]]s */
-  sealed trait WithUsers extends Container[ContentValues]:
+  sealed trait WithUsers[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[User]] filtered from the contents */
-    def users: Contents[User] = contents.filter[User]
+    def users: Seq[User] = contents.filter[User]
   end WithUsers
 
   /** Base trait to use in any [[Definition]] that can define [[Epic]]s */
-  sealed trait WithEpics extends Container[ContentValues]:
+  sealed trait WithEpics[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Epic]] filtered from the contents */
-    lazy val epics: Contents[Epic] = contents.filter[Epic]
+    lazy val epics: Seq[Epic] = contents.filter[Epic]
   end WithEpics
 
   /** Base trait to use in any [[Definition]] that can define [[Application]]s */
-  sealed trait WithApplications extends Container[ContentValues]:
+  sealed trait WithApplications[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Application]] filtered from the contents */
-    lazy val applications: Contents[Application] = contents.filter[Application]
+    lazy val applications: Seq[Application] = contents.filter[Application]
   end WithApplications
 
   /** Base trait to use in any [[Definition]] that can define [[Domain]]s */
-  sealed trait WithDomains extends Container[ContentValues]:
+  sealed trait WithDomains[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Domain]] filtered from the contents */
-    lazy val domains: Contents[Domain] = contents.filter[Domain]
+    lazy val domains: Seq[Domain] = contents.filter[Domain]
   end WithDomains
 
   /** Base trait to use in any [[Definition]] that can define [[Projector]]s */
-  sealed trait WithProjectors extends Container[ContentValues]:
+  sealed trait WithProjectors[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Projector]] filtered from the contents */
-    lazy val projectors: Contents[Projector] = contents.filter[Projector]
+    lazy val projectors: Seq[Projector] = contents.filter[Projector]
   end WithProjectors
 
   /** Base trait to use in any [[Definition]] that can define [[Repository]]s */
-  sealed trait WithRepositories extends Container[ContentValues]:
+  sealed trait WithRepositories[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Repository]] filtered from the contents */
-    lazy val repositories: Contents[Repository] = contents.filter[Repository]
+    lazy val repositories: Seq[Repository] = contents.filter[Repository]
   end WithRepositories
 
   /** Base trait to use in any [[Definition]] that can define [[Entity]]s */
-  sealed trait WithEntities extends Container[ContentValues]:
+  sealed trait WithEntities[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Entity]] filtered from the contents */
-    lazy val entities: Contents[Entity] = contents.filter[Entity]
+    lazy val entities: Seq[Entity] = contents.filter[Entity]
   end WithEntities
 
   /** Base trait to use in any [[Definition]] that can define [[Streamlet]]s */
-  sealed trait WithStreamlets extends Container[ContentValues]:
+  sealed trait WithStreamlets[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Streamlet]] filtered from the contents */
-    lazy val streamlets: Contents[Streamlet] = contents.filter[Streamlet]
+    lazy val streamlets: Seq[Streamlet] = contents.filter[Streamlet]
   end WithStreamlets
 
   /** Base trait to use in any [[Definition]] that can define [[Connector]]s */
-  sealed trait WithConnectors extends Container[ContentValues]:
+  sealed trait WithConnectors[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Connector]] filtered from the contents */
-    lazy val connectors: Contents[Connector] = contents.filter[Connector]
+    lazy val connectors: Seq[Connector] = contents.filter[Connector]
   end WithConnectors
 
   /** Base trait to use in any [[Definition]] that can define [[Adaptor]]s */
-  sealed trait WithAdaptors extends Container[ContentValues]:
+  sealed trait WithAdaptors[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Adaptor]] filtered from the contents */
-    lazy val adaptors: Contents[Adaptor] = contents.filter[Adaptor]
+    lazy val adaptors: Seq[Adaptor] = contents.filter[Adaptor]
   end WithAdaptors
 
   /** Base trait to use in any [[Definition]] that can define [[Saga]]s */
-  sealed trait WithSagas extends Container[ContentValues]:
+  sealed trait WithSagas[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Saga]] filtered from the contents */
-    lazy val sagas: Contents[Saga] = contents.filter[Saga]
+    lazy val sagas: Seq[Saga] = contents.filter[Saga]
   end WithSagas
 
   /** Base trait to use in any [[Definition]] that can define [[SagaStep]]s */
-  sealed trait WithSagaSteps extends Container[ContentValues]:
+  sealed trait WithSagaSteps[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[SagaStep]] filtered from the contents */
-    lazy val sagaSteps: Contents[SagaStep] = contents.filter[SagaStep]
+    lazy val sagaSteps: Seq[SagaStep] = contents.filter[SagaStep]
   end WithSagaSteps
 
   /** Base trait to use in any [[Definition]] that can define [[UseCase]]s */
-  sealed trait WithUseCases extends Container[ContentValues]:
+  sealed trait WithUseCases[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[UseCase]] filtered from the contents */
-    lazy val cases: Contents[UseCase] = contents.filter[UseCase]
+    lazy val cases: Seq[UseCase] = contents.filter[UseCase]
   end WithUseCases
 
   /** Base trait to use in any [[Definition]] that can define [[ShownBy]]s */
-  sealed trait WithShownBy extends Container[ContentValues]:
+  sealed trait WithShownBy[CV <: ContentValues] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[ShownBy]] filtered from the contents */
-    lazy val shownBy: Contents[ShownBy] = contents.filter[ShownBy]
+    lazy val shownBy: Seq[ShownBy] = contents.filter[ShownBy]
   end WithShownBy
 
   /** Base trait to use anywhere that can contain [[Module]]s */
-  sealed trait WithModules extends Container[ContentValues]:
+  sealed trait WithModules[CV <: ContentValues] extends Container[CV]:
     /** A lazily constructed [[Contents]] of [[Module]] */
-    lazy val modules: Contents[Module] = contents.filter[Module]
+    lazy val modules: Seq[Module] = contents.filter[Module]
   end WithModules
 
   //////////////////////////////////////////////////////////////////////////////////////////////// ABSTRACT DEFINITIONS
@@ -855,7 +863,7 @@ object AST:
   end Definition
 
   /** The Base trait for a definition that contains some unrestricted kind of content, ContentValues */
-  sealed trait Parent extends Definition with Container[ContentValues]:
+  sealed trait Parent extends Definition with Container[?]:
     override def isParent: Boolean = true
 
     /** True iff there are contained definitions */
@@ -870,17 +878,17 @@ object AST:
   /** Base trait for all definitions that have a specific kind of contents */
   sealed trait BranchDefinition[CV <: ContentValues] extends Parent with Container[CV]
 
-  type Definitions = Contents[Definition] // TODO: Make this opaque some day
+  type Definitions = Seq[Definition] // TODO: Make this opaque some day
 
   object Definitions:
-    def empty: Definitions = Contents.empty
+    def empty: Definitions = Seq.empty[Definition]
   end Definitions
 
   /** A simple sequence of Parents from the closest all the way up to the Root */
-  type Parents = Contents[Parent] // TODO: Make this opaque some day
+  type Parents = Seq[Parent] // TODO: Make this opaque some day
 
   object Parents:
-    def empty: Parents = Contents.empty
+    def empty: Parents = Seq.empty[Parent]
   end Parents
 
   /** A mutable stack of Parent[?] for keeping track of the parent hierarchy */
@@ -889,7 +897,7 @@ object AST:
   /** Extension methods for the ParentStack type */
   extension (ps: ParentStack)
     /** Convert the mutable ParentStack into an immutable Parents Seq */
-    def toParents: Parents = ps.toSeq.asInstanceOf[Parents]
+    def toParents: Parents = ps.toSeq
   end extension
 
   /** A Companion to the ParentStack class */
@@ -924,11 +932,11 @@ object AST:
     */
   sealed trait VitalDefinition[CT <: ContentValues]
       extends BranchDefinition[CT]
-      with WithDescriptives
-      with WithTypes
+      with WithTypes[CT]
       with WithIncludes[CT]
-      with WithComments
-      with WithOptions:
+      with WithComments[CT]
+      with WithOptions[CT]
+      with WithDescriptives:
     final override def isVital: Boolean = true
   end VitalDefinition
 
@@ -940,11 +948,11 @@ object AST:
     */
   sealed trait Processor[CT <: ContentValues]
       extends VitalDefinition[CT]
-      with WithConstants
-      with WithInvariants
-      with WithFunctions
-      with WithHandlers
-      with WithStreamlets:
+      with WithConstants[CT]
+      with WithInvariants[CT]
+      with WithFunctions[CT]
+      with WithHandlers[CT]
+      with WithStreamlets[CT]:
     final override def isProcessor: Boolean = true
   end Processor
 
@@ -989,12 +997,12 @@ object AST:
     *   The sequence top level definitions contained by this root container
     */
   case class Root(
-    contents: Contents[RootContents] = Contents.empty
+    contents: Contents[RootContents] = Contents.empty[RootContents]
   ) extends BranchDefinition[RootContents]
-      with WithModules
-      with WithDomains
-      with WithAuthors
-      with WithComments
+      with WithModules[RootContents]
+      with WithDomains[RootContents]
+      with WithAuthors[RootContents]
+      with WithComments[RootContents]
       with WithIncludes[RootContents]:
 
     override def isRootContainer: Boolean = true
@@ -1013,7 +1021,7 @@ object AST:
   object Root:
 
     /** The value to use for an empty [[Root]] instance */
-    val empty: Root = apply(Seq.empty[RootContents])
+    val empty: Root = apply(mutable.Seq.empty[RootContents])
   end Root
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// NEBULA
 
@@ -1054,9 +1062,9 @@ object AST:
     contents: Contents[ModuleContents] = Contents.empty,
     descriptives: Contents[Descriptives] = Contents.empty
   ) extends VitalDefinition[ModuleContents]
-      with WithModules
-      with WithDomains
-      with WithAuthors:
+      with WithModules[ModuleContents]
+      with WithDomains[ModuleContents]
+      :
     def format: String = s"${Keyword.module} ${id.format}"
   end Module
 
@@ -1372,7 +1380,7 @@ object AST:
     *   The set of enumerators from which the value of this enumeration may be chosen.
     */
   @JSExportTopLevel("Enumeration")
-  case class Enumeration(loc: At, enumerators: Seq[Enumerator]) extends IntegerTypeExpression {
+  case class Enumeration(loc: At, enumerators: Contents[Enumerator]) extends IntegerTypeExpression {
     override def format: String = "{ " + enumerators
       .map(_.format)
       .mkString(",") + " }"
@@ -1388,7 +1396,7 @@ object AST:
     *   The set of type expressions from which the value for this alternation may be chosen
     */
   @JSExportTopLevel("Alternation")
-  case class Alternation(loc: At, of: Seq[AliasedTypeExpression]) extends TypeExpression {
+  case class Alternation(loc: At, of: Contents[AliasedTypeExpression]) extends TypeExpression {
     override def format: String =
       s"one of { ${of.map(_.format).mkString(", ")} }"
   }
@@ -1558,7 +1566,7 @@ object AST:
   sealed trait AggregateTypeExpression(contents: Contents[AggregateContents])
       extends Container[AggregateContents]
       with TypeExpression
-      with WithComments {
+      with WithComments[AggregateContents] {
 
     /** The list of aggregated [[Field]] */
     def fields: Seq[Field] = contents.filter[Field]
@@ -1570,7 +1578,7 @@ object AST:
       other match {
         case oate: AggregateTypeExpression =>
           val validity: Seq[Boolean] = for
-            ofield: AggregateValue <- oate.contents.filter[AggregateValue]
+            ofield: AggregateValue <- oate.contents.filter[AggregateValue].toSeq
             named <- contents.find(ofield.id.value)
             myField: Field = named.asInstanceOf[Field] if named.isInstanceOf[Field]
             myTypEx = myField.typeEx
@@ -1595,7 +1603,7 @@ object AST:
   @JSExportTopLevel("Aggregation")
   case class Aggregation(
     loc: At,
-    contents: Contents[AggregateContents] = Seq.empty
+    contents: Contents[AggregateContents] = Contents.empty[AggregateContents]
   ) extends AggregateTypeExpression(contents)
 
   @JSExportTopLevel("Aggregation$")
@@ -1620,7 +1628,7 @@ object AST:
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
-    contents: Contents[AggregateContents] = Seq.empty
+    contents: Contents[AggregateContents] = Contents.empty[AggregateContents]
   ) extends AggregateTypeExpression(contents) {
     override def format: String = {
       usecase.useCase.toLowerCase() + " " + super.format
@@ -2104,14 +2112,14 @@ object AST:
   ) extends BranchDefinition[TypeContents]
       with WithDescriptives:
     def contents: Contents[TypeContents] = {
-      val type_contents: Contents[Field | Method | Enumerator] =
+      val type_contents: Seq[TypeContents] =
         typEx match
           case a: Aggregation                    => a.fields ++ a.methods
           case a: AggregateUseCaseTypeExpression => a.fields ++ a.methods
-          case Enumeration(_, enumerators)       => enumerators
-          case _                                 => Seq.empty
+          case Enumeration(_, enumerators)       => enumerators.toSeq
+          case _                                 => Seq.empty[TypeContents]
         end match
-      type_contents
+      type_contents.toContents
     }
 
     final override def kind: String = {
@@ -2405,7 +2413,7 @@ object AST:
   case class ForEachStatement(
     loc: At,
     ref: FieldRef | OutletRef | InletRef,
-    do_ : Seq[Statements]
+    do_ : Contents[Statements]
   ) extends Statement {
     override def kind: String = "Foreach Statement"
     def format: String = s"foreach ${ref.format} do\n" +
@@ -2427,8 +2435,8 @@ object AST:
   case class IfThenElseStatement(
     loc: At,
     cond: LiteralString,
-    thens: Seq[Statements],
-    elses: Seq[Statements]
+    thens: Contents[Statements],
+    elses: Contents[Statements]
   ) extends Statement {
     override def kind: String = "IfThenElse Statement"
 
@@ -2550,6 +2558,8 @@ object AST:
     *   A reference to the bounded context from which messages are adapted
     * @param contents
     *   The definitional contents of this Adaptor
+    * @param descriptives
+   *   The descriptive values for this Adaptor
     */
   @JSExportTopLevel("Adaptor")
   case class Adaptor(
@@ -2557,10 +2567,10 @@ object AST:
     id: Identifier,
     direction: AdaptorDirection,
     context: ContextRef,
-    contents: Contents[AdaptorContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends Processor[AdaptorContents]
-      with WithOptions {
+      with WithOptions[AdaptorContents] {
     def format: String = Keyword.adaptor + " " + id.format
   }
 
@@ -2583,8 +2593,8 @@ object AST:
     *   An optional type expression that names and types the fields of the output of the function
     * @param contents
     *   The set of types, functions, statements, authors, includes and terms that define this FUnction
-    * @param statements
-    *   The set of statements that define the behavior of the function
+    * @param descriptives
+    *   The set of descriptive values for this function
     */
   @JSExportTopLevel("Function")
   case class Function(
@@ -2592,12 +2602,12 @@ object AST:
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Contents[FunctionContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[FunctionContents] = Contents.empty[FunctionContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends VitalDefinition[FunctionContents]
-      with WithTypes
-      with WithFunctions
-      with WithStatements {
+      with WithTypes[FunctionContents]
+      with WithFunctions[FunctionContents]
+      with WithStatements[FunctionContents] {
     override def format: String = Keyword.function + " " + id.format
     final override inline def kind: String = "Function"
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty && output.isEmpty
@@ -2624,10 +2634,8 @@ object AST:
     *   The name of the invariant
     * @param condition
     *   The string representation of the condition that ought to be true
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the invariant.
+    * @param descriptives
+    *   The list of descriptives for the invariant
     */
   @JSExportTopLevel("Invariant")
   case class Invariant(
@@ -2644,7 +2652,7 @@ object AST:
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends BranchDefinition[Statements] with WithStatements with WithDescriptives
+  sealed trait OnClause extends BranchDefinition[Statements] with WithStatements[Statements] with WithDescriptives
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
     * corresponds to the "other" case of an [[Handler]].
@@ -2721,8 +2729,8 @@ object AST:
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
-    contents: Contents[Statements] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[Statements] = Contents.empty[Statements],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"term")
 
@@ -2749,8 +2757,8 @@ object AST:
   case class Handler(
     loc: At,
     id: Identifier,
-    contents: Contents[HandlerContents] = Seq.empty[HandlerContents],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[HandlerContents] = Contents.empty[HandlerContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends BranchDefinition[HandlerContents]
       with WithDescriptives {
     override def isEmpty: Boolean = clauses.isEmpty
@@ -2826,11 +2834,11 @@ object AST:
   case class Entity(
     loc: At,
     id: Identifier,
-    contents: Contents[EntityContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[EntityContents] = Contents.empty[EntityContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends Processor[EntityContents]
-      with WithStates
-      with WithOptions:
+      with WithStates[EntityContents]
+      with WithOptions[EntityContents]:
     override def format: String = Keyword.entity + " " + id.format
   end Entity
 
@@ -2900,10 +2908,10 @@ object AST:
   case class Repository(
     loc: At,
     id: Identifier,
-    contents: Contents[RepositoryContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[RepositoryContents] = Contents.empty[RepositoryContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends Processor[RepositoryContents]
-      with WithOptions {
+      with WithOptions[RepositoryContents] {
     def format: String = Keyword.entity + " " + id.format
   }
 
@@ -2940,10 +2948,10 @@ object AST:
   case class Projector(
     loc: At,
     id: Identifier,
-    contents: Contents[ProjectorContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[ProjectorContents] = Contents.empty[ProjectorContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends Processor[ProjectorContents]
-      with WithOptions {
+      with WithOptions[ProjectorContents] {
     lazy val repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
     def format: String = Keyword.projector + " " + id.format
   }
@@ -2978,16 +2986,16 @@ object AST:
   case class Context(
     loc: At,
     id: Identifier,
-    contents: Contents[ContextContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[ContextContents] = Contents.empty[ContextContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends Processor[ContextContents]
-      with WithProjectors
-      with WithRepositories
-      with WithEntities
-      with WithStreamlets
-      with WithConnectors
-      with WithAdaptors
-      with WithSagas {
+      with WithProjectors[ContextContents]
+      with WithRepositories[ContextContents]
+      with WithEntities[ContextContents]
+      with WithStreamlets[ContextContents]
+      with WithConnectors[ContextContents]
+      with WithAdaptors[ContextContents]
+      with WithSagas[ContextContents] {
     def format: String = Keyword.context + " " + id.format
   }
 
@@ -3068,9 +3076,11 @@ object AST:
     * @param from
     *   The origin Outlet of the connector
     * @param to
-    *   THe destination Inlet of the connector
-    * @param contents
-    *   The descriptives for this Connector
+    *   The destination Inlet of the connector
+    * @param options
+    *   The options for this connector
+    * @param descriptives
+    *   The descriptives for this connector
     */
   @JSExportTopLevel("Connector")
   case class Connector(
@@ -3158,11 +3168,11 @@ object AST:
     loc: At,
     id: Identifier,
     shape: StreamletShape,
-    contents: Contents[StreamletContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[StreamletContents] = Contents.empty[StreamletContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends Processor[StreamletContents]
-      with WithInlets
-      with WithOutlets {
+      with WithInlets[StreamletContents]
+      with WithOutlets[StreamletContents] {
     final override def kind: String = shape.getClass.getSimpleName
     def format: String = shape.keyword + " " + id.format
 
@@ -3274,8 +3284,8 @@ object AST:
   case class SagaStep(
     loc: At,
     id: Identifier,
-    doStatements: Seq[Statements] = Seq.empty[Statements],
-    undoStatements: Seq[Statements] = Seq.empty[Statements],
+    doStatements: Contents[Statements] = Contents.empty[Statements],
+    undoStatements: Contents[Statements] = Contents.empty[Statements],
     descriptives: Contents[Descriptives] = Contents.empty
   ) extends LeafDefinition {
     def format: String = s"step ${id.format}"
@@ -3302,10 +3312,10 @@ object AST:
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Contents[SagaContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[SagaContents] = Contents.empty[SagaContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends VitalDefinition[SagaContents]
-      with WithSagaSteps {
+      with WithSagaSteps[SagaContents] {
     override def format: String = Keyword.saga + " " + id.format
     override def isEmpty: Boolean = super.isEmpty && input.isEmpty && output.isEmpty
 
@@ -3387,8 +3397,8 @@ object AST:
   @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Seq.empty[InteractionContainerContents],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends InteractionContainer {
     override def kind: String = "Sequential Interaction"
   }
@@ -3405,8 +3415,8 @@ object AST:
   @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Seq.empty[InteractionContainerContents],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends InteractionContainer {
     override def kind: String = "Optional Interaction"
   }
@@ -3640,8 +3650,8 @@ object AST:
     loc: At,
     id: Identifier,
     userStory: UserStory,
-    contents: Contents[UseCaseContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[UseCaseContents] = Contents.empty[UseCaseContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends BranchDefinition[UseCaseContents]
       with WithDescriptives {
     override def kind: String = "UseCase"
@@ -3704,11 +3714,11 @@ object AST:
     loc: At,
     id: Identifier,
     userStory: UserStory,
-    contents: Contents[EpicContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[EpicContents] = Contents.empty[EpicContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends VitalDefinition[EpicContents]
-      with WithUseCases
-      with WithShownBy {
+      with WithUseCases[EpicContents]
+      with WithShownBy[EpicContents] {
 
     override def isEmpty: Boolean = userStory.isEmpty && contents.isEmpty
 
@@ -3743,12 +3753,12 @@ object AST:
     loc: At,
     alias: String,
     id: Identifier,
-    contents: Contents[OccursInGroup] = Seq.empty[OccursInGroup],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[OccursInGroup] = Contents.empty[OccursInGroup],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends BranchDefinition[OccursInGroup]
-      with WithShownBy
-      with WithInputs
-      with WithOutputs
+      with WithShownBy[OccursInGroup]
+      with WithInputs[OccursInGroup]
+      with WithOutputs[OccursInGroup]
       with WithDescriptives {
     override def identify: String = s"$alias ${id.value}"
 
@@ -3807,10 +3817,10 @@ object AST:
     id: Identifier,
     verbAlias: String,
     putOut: TypeRef | ConstantRef | LiteralString,
-    contents: Contents[OccursInOutput] = Seq.empty[OccursInOutput],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[OccursInOutput] = Contents.empty[OccursInOutput],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends BranchDefinition[OccursInOutput]
-      with WithOutputs
+      with WithOutputs[OccursInOutput]
       with WithDescriptives {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
@@ -3848,10 +3858,10 @@ object AST:
     id: Identifier,
     verbAlias: String,
     takeIn: TypeRef,
-    contents: Contents[OccursInInput] = Seq.empty[OccursInInput],
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[OccursInInput] = Contents.empty[OccursInInput],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends BranchDefinition[OccursInInput]
-      with WithInputs
+      with WithInputs[OccursInInput]
       with WithDescriptives {
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
@@ -3887,10 +3897,10 @@ object AST:
   case class Application(
     loc: At,
     id: Identifier,
-    contents: Contents[ApplicationContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[ApplicationContents] = Contents.empty[ApplicationContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends Processor[ApplicationContents]
-      with WithGroups {
+      with WithGroups[ApplicationContents] {
     override def format: String = Keyword.application + " " + id.format
   }
 
@@ -3923,17 +3933,17 @@ object AST:
   case class Domain(
     loc: At,
     id: Identifier,
-    contents: Contents[DomainContents] = Seq.empty,
-    descriptives: Contents[Descriptives] = Contents.empty
+    contents: Contents[DomainContents] = Contents.empty[DomainContents],
+    descriptives: Contents[Descriptives] = Contents.empty[Descriptives]
   ) extends VitalDefinition[DomainContents]
-      with WithTypes
-      with WithAuthors
-      with WithContexts
-      with WithUsers
-      with WithApplications
-      with WithEpics
-      with WithSagas
-      with WithDomains {
+      with WithTypes[DomainContents]
+      with WithAuthors[DomainContents]
+      with WithContexts[DomainContents]
+      with WithUsers[DomainContents]
+      with WithApplications[DomainContents]
+      with WithEpics[DomainContents]
+      with WithSagas[DomainContents]
+      with WithDomains[DomainContents] {
     override def format: String = Keyword.domain + " " + id.format
   }
 
@@ -3963,7 +3973,7 @@ object AST:
   @JSExport
   def findAuthors(
     definition: WithDescriptives,
-    parents: Seq[Container[RiddlValue]]
+    parents: Contents[RiddlValue]
   ): Seq[AuthorRef] =
     val result = definition.authorRefs
     if result.isEmpty then parents.filter[WithDescriptives].flatMap(_.authorRefs)
@@ -3978,7 +3988,7 @@ object AST:
     *   A Seq of [[AST.Domain]]s as a [[AST.Contents]] extension
     */
   @JSExport
-  def getTopLevelDomains(root: Root): Contents[Domain] = {
+  def getTopLevelDomains(root: Root): Seq[Domain] = {
     root.domains ++ root.includes.flatMap(_.contents.filter[Domain])
   }
 
@@ -3989,11 +3999,11 @@ object AST:
     *   The subdomains of the provided domain as a [[AST.Contents]] extension
     */
   @JSExport
-  def getDomains(domain: Domain): Contents[Domain] = {
+  def getDomains(domain: Domain): Seq[Domain] = {
     domain.domains ++ domain.includes.flatMap(_.contents.filter[Domain])
   }
 
-  def getAllDomains(root: Root): Contents[Domain] = {
+  def getAllDomains(root: Root): Seq[Domain] = {
     for {
       domain <- getTopLevelDomains(root)
       domains <- getDomains(domain)
@@ -4007,7 +4017,7 @@ object AST:
     *   A Seq of Context expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getContexts(domain: Domain): Contents[Context] = {
+  def getContexts(domain: Domain): Seq[Context] = {
     domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
   }
 
@@ -4018,7 +4028,7 @@ object AST:
     *   A Seq of [[AST.Application]] expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getApplications(domain: Domain): Contents[Application] = {
+  def getApplications(domain: Domain): Seq[Application] = {
     domain.applications ++ domain.includes.flatMap(_.contents.filter[Application])
   }
 
@@ -4030,7 +4040,7 @@ object AST:
     *   A [[scala.Seq]] of [[AST.Epic]] expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getEpics(domain: Domain): Contents[Epic] = {
+  def getEpics(domain: Domain): Seq[Epic] = {
     domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
   }
 
@@ -4042,7 +4052,7 @@ object AST:
     *   A Seq of [[AST.Entity]] expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getEntities(context: Context): Contents[Entity] = {
+  def getEntities(context: Context): Seq[Entity] = {
     context.entities ++ context.includes.flatMap(_.contents.filter[Entity])
   }
 
@@ -4054,7 +4064,7 @@ object AST:
     *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getAuthors(domain: Domain): Contents[Author] = {
+  def getAuthors(domain: Domain): Seq[Author] = {
     val nested = domain.includes.flatMap(_.contents.filter[Author])
     domain.authors ++ domain.domains.flatMap(getAuthors) ++ nested
   }
@@ -4067,7 +4077,7 @@ object AST:
     *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getAuthors(root: Root): Contents[Author] = {
+  def getAuthors(root: Root): Seq[Author] = {
     root.domains.flatMap(getAuthors)
   }
 
@@ -4079,7 +4089,7 @@ object AST:
     *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getUsers(domain: Domain): Contents[User] = {
+  def getUsers(domain: Domain): Seq[User] = {
     val nested = domain.includes.flatMap(_.contents.filter[User])
     domain.users ++ domain.domains.flatMap(getUsers) ++ nested
   }
@@ -4091,7 +4101,7 @@ object AST:
     *   A Seq of [[AST.User]] expressed as a [[AST.Contents]] extension
     */
   @JSExport
-  def getUsers(root: Root): Contents[User] = {
+  def getUsers(root: Root): Seq[User] = {
     root.domains.flatMap(getUsers) ++ root.includes.flatMap(_.contents.filter[User])
   }
 

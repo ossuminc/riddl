@@ -32,7 +32,7 @@ class StreamingParserTest extends ParsingTest {
       (row + 1, col + 1, rpi),
       Identifier((row + 1, col + 8, rpi), "GetWeatherForecast"),
       Source((row + 1, col + 1, rpi)),
-      List(
+      Contents(
         Outlet(
           (row + 2, 3, rpi),
           Identifier((row + 2, 10, rpi), "Weather"),
@@ -42,7 +42,7 @@ class StreamingParserTest extends ParsingTest {
             PathIdentifier((row + 2, 29, rpi), List("Forecast"))
           )
         )
-      ),List(
+      ),Contents(
         BriefDescription((row + 4, 3, rpi), LiteralString((row + 4, 14, rpi), "foo")),
         BlockDescription(
           (row + 5, 3, rpi),
@@ -67,7 +67,7 @@ class StreamingParserTest extends ParsingTest {
       val expected = Context(
         (1, 1, rpi),
         Identifier((1, 9, rpi), "foo"),
-        contents = Seq(sourceExpected(rpi, 17))
+        contents = Contents(sourceExpected(rpi, 17))
       )
       checkDefinition[Context, Context](rpi, expected, identity)
     }
@@ -109,22 +109,22 @@ class StreamingParserTest extends ParsingTest {
       val expected = Context(
         loc = (3, 1, rpi),
         id = Identifier((3, 9, rpi), "SensorMaintenance"),
-        List(
+        Contents(
           Type(
             (4, 3, rpi),
             Identifier((4, 11, rpi), "Forecast"),
-            AggregateUseCaseTypeExpression((4, 23, rpi), CommandCase, List())
+            AggregateUseCaseTypeExpression((4, 23, rpi), CommandCase, Contents.empty)
           ),
           Type(
             (5, 3, rpi),
             Identifier((5, 11, rpi), "Temperature"),
-            AggregateUseCaseTypeExpression((5, 26, rpi), CommandCase, List())
+            AggregateUseCaseTypeExpression((5, 26, rpi), CommandCase, Contents.empty)
           ),
           Streamlet(
             (6, 3, rpi),
             Identifier((6, 10, rpi), "GetWeatherForecast"),
             Source((6, 3, rpi)),
-            List(
+            Contents(
               Outlet(
                 (7, 5, rpi),
                 Identifier((7, 12, rpi), "Weather"),
@@ -134,7 +134,7 @@ class StreamingParserTest extends ParsingTest {
                   PathIdentifier((7, 31, rpi), List("Forecast"))
                 )
               )
-            ), List(
+            ), Contents(
               BlockDescription(
                 (9, 5, rpi),
                 List(
@@ -150,7 +150,7 @@ class StreamingParserTest extends ParsingTest {
             (12, 3, rpi),
             Identifier((12, 8, rpi), "GetCurrentTemperature"),
             Flow((12, 3, rpi)),
-            List(
+            Contents(
               Inlet(
                 (13, 5, rpi),
                 Identifier((13, 11, rpi), "Weather"),
@@ -169,7 +169,7 @@ class StreamingParserTest extends ParsingTest {
                   PathIdentifier((14, 35, rpi), List("Temperature"))
                 )
               )
-            ), List(
+            ), Contents(
               BlockDescription(
                 (16, 5, rpi),
                 List(
@@ -185,7 +185,7 @@ class StreamingParserTest extends ParsingTest {
             (19, 3, rpi),
             Identifier((19, 8, rpi), "AttenuateSensor"),
             Sink((19, 3, rpi)),
-            List(
+            Contents(
               Inlet(
                 (20, 5, rpi),
                 Identifier((20, 11, rpi), "CurrentTemp"),
@@ -195,7 +195,7 @@ class StreamingParserTest extends ParsingTest {
                   PathIdentifier((20, 34, rpi), List("Temperature"))
                 )
               )
-            ), List(
+            ), Contents(
               BlockDescription(
                 (22, 5, rpi),
                 List(
@@ -207,7 +207,7 @@ class StreamingParserTest extends ParsingTest {
               )
             )
           )
-        ), List(
+        ), Contents(
           BlockDescription(
             (25, 3, rpi),
             List(

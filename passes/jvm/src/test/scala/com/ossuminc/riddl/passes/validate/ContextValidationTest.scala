@@ -61,7 +61,7 @@ class ContextValidationTest extends ValidatingTest {
           input = Some(
             Aggregation(
               (3, 12, rpi),
-              Seq(
+              Contents(
                 Field(
                   (3, 14, rpi),
                   Identifier((3, 14, rpi), "i"),
@@ -73,7 +73,7 @@ class ContextValidationTest extends ValidatingTest {
           output = Some(
             Aggregation(
               (4, 11, rpi),
-              Seq(
+              Contents(
                 Field(
                   (4, 13, rpi),
                   Identifier((4, 13, rpi), "o"),
@@ -132,20 +132,20 @@ class ContextValidationTest extends ValidatingTest {
           Projector(
             (2, 2, rpi),
             Identifier((2, 12, rpi), "foo"),
-            List(
+            Contents(
               Type(
                 (3, 3, rpi),
                 Identifier((3, 10, rpi), "one"),
                 AggregateUseCaseTypeExpression(
                   (3, 17, rpi),
                   RecordCase,
-                  List()
+                  Contents.empty
                 )
               ),
               Handler(
                 (4, 11, rpi),
                 Identifier((4, 11, rpi), "one"),
-                List()
+                Contents.empty
               )
             )
           )

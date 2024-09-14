@@ -24,7 +24,7 @@ class InvariantValidator extends ValidatingTest {
         assertValidationMessage(
           msgs,
           MissingWarning,
-          "condition in Invariant 'small' should not be empty"
+          "Condition in Invariant 'small' should not be empty"
         )
         assertValidationMessage(
           msgs,

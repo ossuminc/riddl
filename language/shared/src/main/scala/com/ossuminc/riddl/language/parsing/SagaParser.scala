@@ -19,7 +19,9 @@ private[parsing] trait SagaParser {
     P(
       location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
         Keywords.reverted ~ by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~ withDescriptives
-    )./.map(x => SagaStep.apply.tupled(x))
+    )./.map { case (loc, id, doStatements, undoStatements, descriptives) =>
+      SagaStep(loc, id, doStatements.toContents, undoStatements.toContents, descriptives.toContents)
+    }
   }
 
   private def sagaInclude[u: P]: P[Include[SagaContents]] = {
@@ -50,7 +52,7 @@ private[parsing] trait SagaParser {
       location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ withDescriptives
     ).map { case (location, identifier, (input, output, contents), descriptives) =>
       checkForDuplicateIncludes(contents)
-      Saga(location, identifier, input, output, contents, descriptives)
+      Saga(location, identifier, input, output, contents.toContents, descriptives.toContents)
     }
   }
 }
