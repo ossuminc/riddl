@@ -23,7 +23,7 @@ private[parsing] trait ApplicationParser {
 
   private def groupDefinitions[u: P]: P[Seq[OccursInGroup]] = {
     P(
-      group | containedGroup | shownBy | output | appInput | comment
+      group | containedGroup | shownBy | appOutput | appInput | comment
     ).asInstanceOf[P[OccursInGroup]].rep(1)
   }
 
@@ -47,14 +47,14 @@ private[parsing] trait ApplicationParser {
 
   private def outputDefinitions[u: P]: P[Seq[OccursInOutput]] = {
     P(
-      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (output | typeRef).rep(1)) ~ close
+      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (appOutput | typeRef).rep(1)) ~ close
     ).?.map {
       case Some(definitions: Seq[OccursInOutput]) => definitions
       case None                                  => Seq.empty[OccursInOutput]
     }
   }
 
-  def output[u: P]: P[Output] = {
+  def appOutput[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/
         (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withDescriptives

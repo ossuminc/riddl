@@ -18,11 +18,11 @@ private[parsing] trait FunctionParser {
     include[u, FunctionContents](functionDefinitions(_))
   }
 
-  def input[u: P]: P[Aggregation] = {
+  def funcInput[u: P]: P[Aggregation] = {
     P(Keywords.requires ~ Punctuation.colon.? ~ aggregation)./
   }
 
-  def output[u: P]: P[Aggregation] = {
+  def funcOutput[u: P]: P[Aggregation] = {
     P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)./
   }
 
@@ -37,7 +37,7 @@ private[parsing] trait FunctionParser {
   private type BodyType = (Option[Aggregation], Option[Aggregation], Seq[FunctionContents])
   
   private def functionBody[u: P]: P[BodyType] =
-    P(input.? ~ output.? ~ functionDefinitions)
+    P(funcInput.? ~ funcOutput.? ~ functionDefinitions)
 
   /** Parses function literals, i.e.
     *

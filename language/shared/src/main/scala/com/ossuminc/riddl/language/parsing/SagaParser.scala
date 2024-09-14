@@ -43,7 +43,7 @@ private[parsing] trait SagaParser {
   private def sagaBody[u: P]: P[SagaBodyType] = {
     P(
       undefined((None, None, Seq.empty[SagaContents])) |
-        (input.? ~ output.? ~ sagaDefinitions)
+        (funcInput.? ~ funcOutput.? ~ sagaDefinitions)
     )
   }
 

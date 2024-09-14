@@ -15,7 +15,7 @@ class NebulaTest extends ParsingTest {
       )
       parseNebula(input) match
         case Left(messages) => fail(messages.justErrors.format)
-        case Right(root) => succee
+        case Right(root) => succeed
     }
   }
 

@@ -33,6 +33,7 @@ class TopLevelParser(
     with ContextParser
     with EntityParser
     with EpicParser
+    with FunctionParser 
     with ModuleParser
     with NebulaParser
     with ProjectorParser
@@ -59,11 +60,11 @@ class TopLevelParser(
   }
 
   @JSExport
-  def parseNebula(input: RiddlParserInput, withVerboseFailures: Boolean = false): Either[Messages, Root] = {
-    parseRule[Root](input, nebula(_), withVerboseFailures) {
-      (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
+  def parseNebula(input: RiddlParserInput, withVerboseFailures: Boolean = false): Either[Messages, Nebula] = {
+    parseRule[Nebula](input, nebula(_), withVerboseFailures) {
+      (result: Either[Messages, Nebula], input: RiddlParserInput, index: Int) =>
         result match {
-          case l: Left[Messages, Root] => l
+          case left: Left[Messages, Root] => left
           case r@Right(root) =>
             if root.contents.isEmpty then
               error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
@@ -144,7 +145,7 @@ object TopLevelParser {
     input: RiddlParserInput,
     commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  ): Either[Messages, Root] = {
+  ): Either[Messages, Nebula] = {
     Timer.time(s"parse nebula from ${input.origin}", commonOptions.showTimes) {
       implicit val _: ExecutionContext = ExecutionContext.Implicits.global
       val tlp = new TopLevelParser(commonOptions)
