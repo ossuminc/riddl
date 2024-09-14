@@ -377,7 +377,7 @@ trait MarkdownWriter
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Parents): this.type = {
     val data = agg.contents.map {
       case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
-    }
+    }.toSeq 
     list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
   }
@@ -399,7 +399,7 @@ trait MarkdownWriter
         p(s"Entity ${makePathIdRef(uid.entityPath, parents)}")
       case alt: Alternation =>
         heading("Alternation Of", headLevel)
-        val data = alt.of.map { (te: AliasedTypeExpression) =>
+        val data = alt.of.toSeq.map { (te: AliasedTypeExpression) =>
           makePathIdRef(te.pathId, parents)
         }
         list(data)
@@ -417,7 +417,7 @@ trait MarkdownWriter
         p(s"To:\n: $to")
       case en: Enumeration =>
         heading("Enumeration Of", headLevel)
-        list(en.enumerators.map(_.id.format))
+        list(en.enumerators.toSeq.map(_.id.format))
       case Pattern(_, strs) =>
         heading("Pattern Of", headLevel)
         list(strs.map("`" + _.s + "`"))
@@ -433,7 +433,7 @@ trait MarkdownWriter
     emitTypeExpression(typ.typEx, typ +: parents)
   }
 
-  protected def emitTypes(types: Contents[Type], parents: Parents, level: Int = 2): Unit = {
+  protected def emitTypes(types: Seq[Type], parents: Parents, level: Int = 2): Unit = {
     val groups = types
       .groupBy { typ =>
         typ.typEx match
@@ -456,7 +456,7 @@ trait MarkdownWriter
     }
   }
 
-  private def emitConstants(constants: Contents[Constant], parents: Parents): Unit = {
+  private def emitConstants(constants: Seq[Constant], parents: Parents): Unit = {
     h2("Constants")
     for { c <- constants } do
       emitDefDoc(c, parents)
@@ -489,14 +489,14 @@ trait MarkdownWriter
     this
   }
 
-  private def emitFunctions(functions: Contents[Function], parents: Parents): Unit = {
+  private def emitFunctions(functions: Seq[Function], parents: Parents): Unit = {
     h2("Functions")
     for { f <- functions } do {
       emitFunction(f, parents)
     }
   }
 
-  protected def emitInvariants(invariants: Contents[Invariant]): this.type = {
+  protected def emitInvariants(invariants: Seq[Invariant]): this.type = {
     if invariants.nonEmpty then {
       h2("Invariants")
       invariants.foreach { invariant =>
@@ -509,7 +509,7 @@ trait MarkdownWriter
   }
 
   private def emitHandlers(
-    handlers: Contents[Handler],
+    handlers: Seq[Handler],
     parents: Parents
   ): Unit = {
     h3("Handlers")
@@ -524,7 +524,7 @@ trait MarkdownWriter
     p(s"Receives type $typeRef")
   }
 
-  protected def emitInlets(inlets: Contents[Inlet], parents: Parents): Unit = {
+  protected def emitInlets(inlets: Seq[Inlet], parents: Parents): Unit = {
     h2("Inlets")
     for { i <- inlets } do {
       emitInlet(i, parents)
@@ -537,7 +537,7 @@ trait MarkdownWriter
     p(s"Transmits type $typeRef")
   }
 
-  protected def emitOutlets(outlets: Contents[Outlet], parents: Parents): Unit = {
+  protected def emitOutlets(outlets: Seq[Outlet], parents: Parents): Unit = {
     h2("Outlets")
     for { o <- outlets } do {
       emitOutlet(o, parents)

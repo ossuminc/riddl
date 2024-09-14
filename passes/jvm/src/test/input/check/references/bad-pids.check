@@ -60,3 +60,35 @@ passes/jvm/src/test/input/check/references/bad-pids.riddl(11:7):
  State 'FooExample' should have a description:
        state FooExample of FooExampleState
        ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(11:7):
+ Descriptives in State 'FooExample' should  not be empty:
+       state FooExample of FooExampleState
+       ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(11:7):
+ State 'FooExample' should have an author reference:
+       state FooExample of FooExampleState
+       ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
+ Descriptives in Domain 'foo' should  not be empty:
+ domain foo {
+ ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(1:1):
+ Domain 'foo' should have an author reference:
+ domain foo {
+ ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(2:3):
+ Context 'ExampleContext' should have an author reference:
+   context ExampleContext is {
+   ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(2:3):
+ Descriptives in Context 'ExampleContext' should  not be empty:
+   context ExampleContext is {
+   ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
+ Descriptives in Entity 'FooEntity' should  not be empty:
+     entity FooEntity is {
+     ^
+passes/jvm/src/test/input/check/references/bad-pids.riddl(7:5):
+ Entity 'FooEntity' should have an author reference:
+     entity FooEntity is {
+     ^

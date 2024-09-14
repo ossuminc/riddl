@@ -71,3 +71,47 @@ passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
  Vital definitions should have an author reference:
      function UndoAnotherThing {
      ^
+passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
+ Descriptives in Entity 'blah' should  not be empty:
+     entity blah is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(12:5):
+ Entity 'blah' should have an author reference:
+     entity blah is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(13:7):
+ Descriptives in Sink 'trashCan' should  not be empty:
+       sink trashCan is { inlet in is command Something }
+       ^
+passes/jvm/src/test/input/check/saga/saga.riddl(13:7):
+ Sink 'trashCan' should have an author reference:
+       sink trashCan is { inlet in is command Something }
+       ^
+passes/jvm/src/test/input/check/saga/saga.riddl(15:5):
+ Saga 'name' should have an author reference:
+     saga name is {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(19:7):
+ SagaStep 'One' should have an author reference:
+       step One is {
+       ^
+passes/jvm/src/test/input/check/saga/saga.riddl(1:1):
+ Domain 'ignore1' should have an author reference:
+ domain ignore1 is {
+ ^
+passes/jvm/src/test/input/check/saga/saga.riddl(26:7):
+ SagaStep 'Two' should have an author reference:
+       step Two is {
+       ^
+passes/jvm/src/test/input/check/saga/saga.riddl(2:3):
+ Context 'ignore2' should have an author reference:
+   context ignore2 is {
+   ^
+passes/jvm/src/test/input/check/saga/saga.riddl(5:5):
+ Function 'AnotherThing' should have an author reference:
+     function AnotherThing {
+     ^
+passes/jvm/src/test/input/check/saga/saga.riddl(8:5):
+ Function 'UndoAnotherThing' should have an author reference:
+     function UndoAnotherThing {
+     ^

@@ -72,3 +72,43 @@ passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
  Entity 'Product' should have a description:
      entity Product is {???}
      ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(1:1):
+ Descriptives in Domain 'Inventory' should  not be empty:
+ domain Inventory is {
+ ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(1:1):
+ Domain 'Inventory' should have an author reference:
+ domain Inventory is {
+ ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(2:3):
+ Context 'ProductInventory' should have an author reference:
+   context ProductInventory is {
+   ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(2:3):
+ Descriptives in Context 'ProductInventory' should  not be empty:
+   context ProductInventory is {
+   ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(3:5):
+ Descriptives in Entity 'Product' should  not be empty:
+     entity Product is {???}
+     ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(3:5):
+ Entity 'Product' should have an author reference:
+     entity Product is {???}
+     ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(5:3):
+ Context 'Vendor' should have an author reference:
+   context Vendor is {
+   ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(5:3):
+ Descriptives in Context 'Vendor' should  not be empty:
+   context Vendor is {
+   ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
+ Descriptives in Entity 'Product' should  not be empty:
+     entity Product is {???}
+     ^
+passes/jvm/src/test/input/check/ambiguity/ambiguity.riddl(6:5):
+ Entity 'Product' should have an author reference:
+     entity Product is {???}
+     ^
