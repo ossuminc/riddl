@@ -45,18 +45,18 @@ private[parsing] trait RepositoryParser {
       }
     )
   }
-  
-  private def data[u:P]: P[(Identifier,TypeRef)] = {
-    P( of ~ identifier ~ as ~ typeRef )./
+
+  private def data[u: P]: P[(Identifier, TypeRef)] = {
+    P(of ~ identifier ~ as ~ typeRef)./
   }
-  
-  private def link[u:P]: P[(Identifier, FieldRef, FieldRef)] =
-    P (Keywords.link ~ identifier ~ as ~ fieldRef ~ to ~ fieldRef )./
-    
-  private def index[u:P]: P[FieldRef] =
+
+  private def link[u: P]: P[(Identifier, FieldRef, FieldRef)] =
+    P(Keywords.link ~ identifier ~ as ~ fieldRef ~ to ~ fieldRef)./
+
+  private def index[u: P]: P[FieldRef] =
     P(Keywords.index ~ Keywords.on ~ fieldRef)./
-  
-  private def schema[u: P]: P[Schema] = {
+
+  def schema[u: P]: P[Schema] = {
     P(
       location ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
         data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withDescriptives

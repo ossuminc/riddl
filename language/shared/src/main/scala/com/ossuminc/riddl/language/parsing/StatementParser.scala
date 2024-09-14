@@ -80,7 +80,8 @@ private[parsing] trait StatementParser {
   }
 
   enum StatementsSet:
-    case AdaptorStatements,
+    case AllStatements, 
+      AdaptorStatements,
       ApplicationStatements,
       ContextStatements,
       EntityStatements,

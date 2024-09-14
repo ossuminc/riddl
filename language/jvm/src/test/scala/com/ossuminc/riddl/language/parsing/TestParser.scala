@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.{AST, CommonOptions}
 import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, RiddlValue, Root}
 import com.ossuminc.riddl.language.Messages.*
 import fastparse.*
@@ -12,9 +12,9 @@ import scala.util.control.NonFatal
 import scala.concurrent.ExecutionContext
 
 case class TestParser(
-  override val input: RiddlParserInput,
+  input: RiddlParserInput,
   throwOnError: Boolean = false
-) extends TopLevelParser(input)
+) extends TopLevelParser(CommonOptions())
     with Matchers {
 
   def expect[CT <: RiddlValue](
@@ -70,17 +70,17 @@ case class TestParser(
   }
 
   def parseRoot: Either[Messages, Root] = {
-    parseRoot(withVerboseFailures = true)
+    parseRoot(input, withVerboseFailures = true)
   }
 
   def parseTopLevelDomains: Either[Messages, Root] = {
-    parseRoot(withVerboseFailures = true)
+    parseRoot(input, withVerboseFailures = true)
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](
     extract: Root => TO
   ): Either[Messages, TO] = {
-    parseRoot(withVerboseFailures = true).map { (root: Root) => extract(root) }
+    parseRoot(input, withVerboseFailures = true).map { (root: Root) => extract(root) }
   }
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](

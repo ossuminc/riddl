@@ -830,6 +830,12 @@ object AST:
   /** Type of definitions that occur in a block of [[Statement]] */
   type Statements = Statement | Comment
 
+  type NebulaContents = Adaptor | Application | Author | Connector | Constant | ContainedGroup | Context | Domain |
+    Entity | Enumerator | Epic | Field | Function | Group | Handler | Inlet | Input | Invariant | Method | Module |
+    OnClause | OnInitializationClause | OnTerminationClause | OnMessageClause | OnOtherClause | Outlet | Output |
+    Projector | Relationship | Repository | Root | Saga | SagaStep | Schema | State | Streamlet | Term | Type |
+    UseCase | User
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
   //////// The Abstract classes for defining Definitions by using the foregoing traits
 
@@ -1009,7 +1015,7 @@ object AST:
 
     override def identifyWithLoc: String = "Root"
 
-    def format: String = ""
+    def format: String = "Root"
   end Root
 
   object Root:
@@ -1017,6 +1023,35 @@ object AST:
     /** The value to use for an empty [[Root]] instance */
     val empty: Root = apply(mutable.Seq.empty[RootContents])
   end Root
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////// NEBULA
+
+  /** The nubula of arbitrary definitions. This allows any named definition in its contents without regard to
+   * intended structure of those things. This can be used as a general "scratchpad".
+   *
+   * @param contents
+   *   The nebula of unrelated single definitions
+   */
+  case class Nebula(
+   contents: Contents[NebulaContents] = Contents.empty
+ ) extends BranchDefinition[NebulaContents]:
+    override def isRootContainer: Boolean = false
+    def loc: At = At.empty
+
+    override def id: Identifier = Identifier(loc, "Nebula")
+
+    override def identify: String = "Nebula"
+
+    override def identifyWithLoc: String = "Nebula"
+
+    def format: String = "Nebula"
+  end Nebula
+
+  object Nebula:
+
+    /** The value to use for an empty [[Nebula]] instance */
+    val empty: Nebula = Nebula(Contents.empty[NebulaContents])
+  end Nebula
+
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// MODULE
 
@@ -1129,7 +1164,7 @@ object AST:
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////// RELATIONSHIP
 
-  enum RelationshipCardinality(val proportion: String) :
+  enum RelationshipCardinality(val proportion: String):
     case OneToOne extends RelationshipCardinality("1:1")
     case OneToMany extends RelationshipCardinality("1:N")
     case ManyToOne extends RelationshipCardinality("N:1")

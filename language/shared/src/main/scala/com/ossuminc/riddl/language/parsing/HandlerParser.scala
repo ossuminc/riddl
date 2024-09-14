@@ -51,12 +51,12 @@ private[parsing] trait HandlerParser extends CommonParser with ReferenceParser w
     OnMessageClause(loc, msgRef, msgOrigins, statements.toContents, descriptives.toContents)
   }
 
-  private def onClauses[u: P](set: StatementsSet): P[OnClause] = {
+  def onClause[u: P](set: StatementsSet): P[OnClause] = {
     P(onInitClause(set) | onOtherClause(set) | onTermClause(set) | onMessageClause(set) )
   }
 
   private def handlerContents[u:P](set: StatementsSet): P[Seq[HandlerContents]] = {
-    (onClauses(set) | comment)./.rep(0).asInstanceOf[P[Seq[HandlerContents]]]
+    (onClause(set) | comment)./.rep(0).asInstanceOf[P[Seq[HandlerContents]]]
   }
 
   private def handlerBody[u: P](set: StatementsSet): P[Seq[HandlerContents]] = {

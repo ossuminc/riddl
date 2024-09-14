@@ -27,7 +27,9 @@ trait ParsingTest extends TestingBasisWithTestData {
   protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
 
   case class StringParser(content: String, testCase: String = "unknown test case")
-      extends TopLevelParser(RiddlParserInput(content, testCase), testingOptions)
+      extends TopLevelParser(testingOptions):
+    val rpi = RiddlParserInput(content, testCase)
+  end StringParser
 
   def parsePath(
     path: Path,
@@ -83,6 +85,11 @@ trait ParsingTest extends TestingBasisWithTestData {
   ): Either[Messages, (TO, RiddlParserInput)] = {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract).map(x => (x, input))
+  }
+  
+  def parseNebula(input: RiddlParserInput): Either[Messages, Nebula] = {
+    val tp = TestParser(input)
+    tp.parseNebula(input)
   }
 
   def parseDomainDefinition[TO <: RiddlValue](

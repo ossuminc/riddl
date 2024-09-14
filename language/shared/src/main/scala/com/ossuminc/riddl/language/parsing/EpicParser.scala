@@ -125,10 +125,10 @@ private[parsing] trait EpicParser {
   }
 
   private def interactions[u: P]: P[Seq[InteractionContainerContents]] = {
-    P( interaction.rep(1) )
+    P(interaction.rep(1))
   }
 
-  private def useCase[u: P]: P[UseCase] = {
+  def useCase[u: P]: P[UseCase] = {
     P(
       location ~ Keywords.case_ ~/ identifier ~ is ~ open ~ userStory ~
         (undefined(Seq.empty[TwoReferenceInteraction]) | interactions) ~
@@ -152,7 +152,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicDefinitions[u: P]: P[Seq[EpicContents]] = {
-    P( vitalDefinitionContents | useCase  | shownBy | epicInclude  ).asInstanceOf[P[EpicContents]].rep(1)
+    P(vitalDefinitionContents | useCase | shownBy | epicInclude).asInstanceOf[P[EpicContents]].rep(1)
   }
 
   private type EpicBody = (

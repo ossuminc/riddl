@@ -11,10 +11,10 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 /** Parsing rules for entity definitions */
-private[parsing] trait EntityParser  {
+private[parsing] trait EntityParser {
   this: ProcessorParser & StreamingParser =>
 
-  private def state[u: P]: P[State] = {
+  def state[u: P]: P[State] = {
     P(
       location ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ withDescriptives
     )./.map { case (loc, id, typRef, descriptives) =>
@@ -41,7 +41,7 @@ private[parsing] trait EntityParser  {
   def entity[u: P]: P[Entity] = {
     P(
       location ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withDescriptives
-    )./map { case (loc, id, contents, descriptives) =>
+    )./ map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
       Entity(loc, id, contents.toContents, descriptives.toContents)
     }

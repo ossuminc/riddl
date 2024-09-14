@@ -13,7 +13,7 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait ApplicationParser {
   this: ProcessorParser & StreamingParser & CommonParser =>
 
-  private def containedGroup[u: P]: P[ContainedGroup] = {
+  def containedGroup[u: P]: P[ContainedGroup] = {
     P(
       location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withDescriptives
     ).map { case (loc, id, group, descriptives) =>
@@ -23,11 +23,11 @@ private[parsing] trait ApplicationParser {
 
   private def groupDefinitions[u: P]: P[Seq[OccursInGroup]] = {
     P(
-      group | containedGroup | shownBy | output | appInput | comment
+      group | containedGroup | shownBy | appOutput | appInput | comment
     ).asInstanceOf[P[OccursInGroup]].rep(1)
   }
 
-  private def group[u: P]: P[Group] = {
+  def group[u: P]: P[Group] = {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
@@ -47,14 +47,14 @@ private[parsing] trait ApplicationParser {
 
   private def outputDefinitions[u: P]: P[Seq[OccursInOutput]] = {
     P(
-      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (output | typeRef).rep(1)) ~ close
+      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (appOutput | typeRef).rep(1)) ~ close
     ).?.map {
       case Some(definitions: Seq[OccursInOutput]) => definitions
       case None                                  => Seq.empty[OccursInOutput]
     }
   }
 
-  private def output[u: P]: P[Output] = {
+  def appOutput[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/
         (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withDescriptives
@@ -102,7 +102,7 @@ private[parsing] trait ApplicationParser {
     ).!
   }
 
-  private def appInput[u: P]: P[Input] = {
+  def appInput[u: P]: P[Input] = {
     P(
       location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withDescriptives
     ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives) =>

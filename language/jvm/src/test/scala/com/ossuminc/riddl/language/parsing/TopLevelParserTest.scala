@@ -50,7 +50,7 @@ class TopLevelParserTest extends ParsingTest {
     "parse empty String" in { (td: TestData) =>
       val expected = Root(Contents())
       val parser = StringParser("")
-      parser.parseRoot() match {
+      parser.parseRoot(parser.rpi) match {
         case Right(r: Root) =>
           fail(s"Should have failed expecting an author or domain but got ${r.format}")
         case Left(messages: Messages) =>
