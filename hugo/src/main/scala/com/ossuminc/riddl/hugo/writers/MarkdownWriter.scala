@@ -132,21 +132,21 @@ trait MarkdownWriter
 
   private def toBriefString(definition: Definition): String =
     definition match
-      case wab: WithDescriptives => wab.briefString
+      case wab: WithMetaData => wab.briefString
       case _                     => "Brief description missing."
     end match
   end toBriefString
 
   private def emitBriefParagraph(definition: Definition): Unit =
     definition match
-      case wab: WithDescriptives => p(italic(wab.briefString))
+      case wab: WithMetaData => p(italic(wab.briefString))
       case _                     => p("Brief description missing.")
     end match
   end emitBriefParagraph
 
   private def emitDescriptionParagraphs(definition: Definition): Unit =
     definition match
-      case wad: WithDescriptives => wad.descriptions.foreach(d => p(d.lines.mkString("\n")))
+      case wad: WithMetaData => wad.descriptions.foreach(d => p(d.lines.mkString("\n")))
       case _                     => ()
     end match
   end emitDescriptionParagraphs
@@ -280,7 +280,7 @@ trait MarkdownWriter
   ): this.type = {
     emitVitalDefTable(definition, parents)
     definition match
-      case wad: WithDescriptives => emitDescriptions(wad.descriptions, level)
+      case wad: WithMetaData => emitDescriptions(wad.descriptions, level)
       case _                     => this
   }
 

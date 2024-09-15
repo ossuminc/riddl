@@ -48,12 +48,12 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   ): this.type = {
     if definition.nonEmpty then decr.addLine("}")
     definition match
-      case wd: WithDescriptives => emitDescriptives(wd.descriptions).nl
+      case wd: WithMetaData => emitDescriptives(wd.descriptions).nl
       case _                    => this.nl
     end match
   }
 
-  def emitDescriptives(descriptives: Seq[Descriptives]): this.type =
+  def emitDescriptives(descriptives: Seq[MetaData]): this.type =
     if descriptives.nonEmpty then
       add(" with {").nl.incr
       descriptives.foreach {
@@ -104,7 +104,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(term.id.format)
     add(" is ")
     add(term.definition)
-    emitDescriptives(term.descriptives.toSeq)
+    emitDescriptives(term.metadata.toSeq)
     nl
   end emitTerm
 
@@ -126,7 +126,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(constant.id.format)
     add(" is ")
     add(constant.value.format)
-    emitDescriptives(constant.descriptives.toSeq)
+    emitDescriptives(constant.metadata.toSeq)
     nl
   end emitConstant
 
@@ -153,7 +153,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   private def emitField(field: Field): this.type =
     add(s"${field.id.value}: ")
     emitTypeExpression(field.typeEx)
-    emitDescriptives(field.descriptives.toSeq)
+    emitDescriptives(field.metadata.toSeq)
     this
   end emitField
 
@@ -267,8 +267,8 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitType(t: Type): this.type = {
     add(s"${spc}type ${t.id.value} is ")
     emitTypeExpression(t.typEx)
-    if t.descriptives.nonEmpty then 
-      add(" with {").nl.incr.emitDescriptives(t.descriptives.toSeq).decr.addLine("}")
+    if t.metadata.nonEmpty then 
+      add(" with {").nl.incr.emitDescriptives(t.metadata.toSeq).decr.addLine("}")
     end if
     this
   }

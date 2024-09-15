@@ -62,7 +62,7 @@ case class GlossaryPass(
     val parents = generator.makeStringParents(stack)
     val brief: Option[String] =
       d match
-        case dwb: WithDescriptives => 
+        case dwb: WithMetaData => 
           val content = dwb.briefString
           if content.isEmpty then None else Some(content)
         case _ => None

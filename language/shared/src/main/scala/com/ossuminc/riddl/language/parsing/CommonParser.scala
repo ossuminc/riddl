@@ -169,14 +169,14 @@ private[parsing] trait CommonParser
     }
   }
 
-  def descriptive[u: P]: P[Descriptives] =
-    P(briefDescription | description | term | authorRef).asInstanceOf[P[Descriptives]]
+  def descriptive[u: P]: P[MetaData] =
+    P(briefDescription | description | term | authorRef).asInstanceOf[P[MetaData]]
 
-  def withDescriptives[u: P]: P[Seq[Descriptives]] = {
+  def withDescriptives[u: P]: P[Seq[MetaData]] = {
     P(
-      Keywords.`with` ~ open ~ (undefined(Seq.empty[Descriptives]) | descriptive.rep(1)) ~ close
+      Keywords.`with` ~ open ~ (undefined(Seq.empty[MetaData]) | descriptive.rep(1)) ~ close
     ).?./.map {
-      case Some(list: Seq[Descriptives]) =>
+      case Some(list: Seq[MetaData]) =>
         list
       case None =>
         Seq.empty
