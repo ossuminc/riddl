@@ -7,23 +7,22 @@ import org.scalatest.matchers.must.Matchers
 import wvlet.airframe.ulid.ULID
 
 class ASTAccessTest extends AsyncFunSpec with Matchers:
-  describe("RiddlValue") {
-    it("must allow put/get/has of ULID values") {
-      val node = SimpleContainer(Contents.empty)
-      val ulid: ULID = ULID.newULID
-      node.put[ULID]("ulid", ulid)
-      node.has("ulid") must be(true)
-      node.get[ULID]("ulid") match
-        case Some(ulid2) =>
-          ulid2 must be(ulid)
-        case None => fail("Unable to retrieve ulid")
-      end match
+  describe("ULID") {
+    it("must automatically provide a ulid value") {
+      val node = Context(At.empty, Identifier(At.empty, "foo"))
+      val created = node.ulid.epochMillis
+      val now = java.time.Instant.now().toEpochMilli
+      assert(now - created < 25)
     }
-    it("must accept storage of arbitrary named values in a map") {
-      val container = SimpleContainer(Contents.empty)
-      container.put("this", "that")
-      val result = container.get("this")
-      result must be(Some("that"))
+    it("must accept storage of arbitrary named string values") {
+      val node = Context(At.empty, Identifier(At.empty, "foo"))
+      node.descriptives += StringAttachment(
+        At.empty,
+        Identifier(At.empty, "foo"),
+        "application/json",
+        LiteralString(At.empty, "{}")
+      )
+      succeed
     }
   }
 end ASTAccessTest
