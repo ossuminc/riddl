@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.AST.{Comment, *}
 import com.ossuminc.riddl.language.At
 import fastparse.{P, *}
 import fastparse.MultiLineWhitespace.*
+import wvlet.airframe.ulid.ULID
 
 import java.net.URI
 import java.nio.file.Files
@@ -169,14 +170,46 @@ private[parsing] trait CommonParser
     }
   }
 
-  def descriptive[u: P]: P[MetaData] =
-    P(briefDescription | description | term | authorRef).asInstanceOf[P[MetaData]]
-
-  def withDescriptives[u: P]: P[Seq[MetaData]] = {
+  def mimeType[u: P]: P[String] = {
     P(
-      Keywords.`with` ~ open ~ (undefined(Seq.empty[MetaData]) | descriptive.rep(1)) ~ close
+      ("application" | "audio" | "example" | "font" |
+        "image" | "model" | "text" | "video") ~~ "/" ~~ CharIn("a-z\\-.+").rep(1)
+    ).!
+  }
+
+  def fileAttachment[u: P]: P[FileAttachment] = {
+    P(
+      location ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ in ~ Keywords.file ~ literalString
+    ).map { case (loc, id, mimeType, fileName) =>
+      FileAttachment(loc, id, mimeType, fileName)
+    }
+  }
+
+  def stringAttachment[u: P]: P[StringAttachment] =
+    P(
+      location ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ as ~ literalString
+    ).map { case (loc, id, mimeType, value) =>
+      StringAttachment(loc, id, mimeType, value)
+    }
+    
+  def ulidAttachment[u:P]: P[ULIDAttachment] =
+    P(
+      location ~ Keywords.attachment ~ "ULID" ~ is ~ literalString 
+    ).map { case (loc, ulidString) =>
+      val ulid = ULID.fromString(ulidString.s)
+      ULIDAttachment(loc, ulid)  
+    }
+  end ulidAttachment
+
+  def descriptive[u: P]: P[Descriptives] =
+    P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment)
+      .asInstanceOf[P[Descriptives]]
+
+  def withDescriptives[u: P]: P[Seq[Descriptives]] = {
+    P(
+      Keywords.`with` ~ open ~ (undefined(Seq.empty[Descriptives]) | descriptive.rep(1)) ~ close
     ).?./.map {
-      case Some(list: Seq[MetaData]) =>
+      case Some(list: Seq[Descriptives]) =>
         list
       case None =>
         Seq.empty
@@ -287,4 +320,5 @@ private[parsing] trait CommonParser
       ShownBy(loc, urls)
     }
   }
+
 }

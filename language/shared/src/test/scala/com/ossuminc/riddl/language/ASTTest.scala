@@ -16,20 +16,6 @@ import wvlet.airframe.ulid.ULID
 /** Unit Tests For Abstract Syntax Tree */
 class ASTTest extends TestingBasis {
 
-  "RiddlValue" should {
-    "accept storage of arbitrary named values in a map" in {
-      val container = SimpleContainer(Contents.empty)
-      container.put("this", "that")
-      val result = container.get("this")
-      result must be(Some("that"))
-    }
-    "associate ULID with a Node" in {
-      val container = SimpleContainer(Contents.empty)
-      val ulid: ULID = ULID.newULID
-      container.put[ULID]("ulid", ulid)
-    }
-  }
-
   "Descriptions" should {
     "have empty Description.empty" in {
       Description.empty.format mustBe ""
@@ -130,7 +116,7 @@ class ASTTest extends TestingBasis {
     At.empty,
     Identifier(At.empty, "application"),
     contents = Contents.empty,
-    metadata = Contents(authorRef)
+    descriptives = Contents(authorRef)
   )
   val author: Author = Author(
     At.empty,
@@ -176,8 +162,14 @@ class ASTTest extends TestingBasis {
     WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
   )
   val function: Function =
-    Function(At.empty, Identifier(At(), "Lambda"), None, None, statements.asInstanceOf[Contents[FunctionContents]],
-      (brief.toSeq ++ description.toSeq).toContents.asInstanceOf[Contents[MetaData]])
+    Function(
+      At.empty,
+      Identifier(At(), "Lambda"),
+      None,
+      None,
+      statements.asInstanceOf[Contents[FunctionContents]],
+      (brief.toSeq ++ description.toSeq).toContents.asInstanceOf[Contents[Descriptives]]
+    )
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Contents[OnClause] = Contents(
     OnInitializationClause(At.empty, statements),
@@ -185,8 +177,8 @@ class ASTTest extends TestingBasis {
     OnOtherClause(At.empty, statements),
     OnTerminationClause(At.empty, statements)
   )
-  val handler: Handler = Handler(At.empty, Identifier(At(), "handler"),
-    onClauses.asInstanceOf[Contents[HandlerContents]])
+  val handler: Handler =
+    Handler(At.empty, Identifier(At(), "handler"), onClauses.asInstanceOf[Contents[HandlerContents]])
   val entity: Entity = Entity(At.empty, Identifier(At.empty, "Entity"), Contents(handler))
   val handlerRef: HandlerRef = HandlerRef(At.empty, PathIdentifier(At(), Seq("handler")))
   val sagaStep: SagaStep = SagaStep(At.empty, Identifier(At.empty, "sagaStep"))
