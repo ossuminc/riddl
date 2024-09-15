@@ -59,7 +59,7 @@ private[parsing] trait RepositoryParser {
   def schema[u: P]: P[Schema] = {
     P(
       location ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
-        data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withDescriptives
+        data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withMetaData
     )./.map { case (at, id, kind, data, links, indices, descriptives) =>
       val dataMap = Map.from[Identifier,TypeRef](data)
       val linkMap = Map.from[Identifier,(FieldRef,FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
@@ -81,7 +81,7 @@ private[parsing] trait RepositoryParser {
 
   def repository[u: P]: P[Repository] = {
     P(
-      location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ withDescriptives
+      location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ withMetaData
     ).map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
       Repository(loc, id, contents.toContents, descriptives.toContents)

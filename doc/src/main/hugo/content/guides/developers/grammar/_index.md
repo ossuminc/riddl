@@ -18,7 +18,7 @@ all characters = ? any utf-8 character ? ;
 quoted string =  '"', { all characters - '"' }, '"';
 ```
 This form can be quite technical and is intended for those who are familiar with
-EBNF format and lexical parsing.  For a more descriptive introduction to the 
+EBNF format and lexical parsing.  For a more meta introduction to the 
 language, please refer to the [Guides]({{< relref "../../_index.md" >}}) 
 section.
 

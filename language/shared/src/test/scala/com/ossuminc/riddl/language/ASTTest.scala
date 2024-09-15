@@ -116,7 +116,7 @@ class ASTTest extends TestingBasis {
     At.empty,
     Identifier(At.empty, "application"),
     contents = Contents.empty,
-    descriptives = Contents(authorRef)
+    metadata = Contents(authorRef)
   )
   val author: Author = Author(
     At.empty,
@@ -168,7 +168,7 @@ class ASTTest extends TestingBasis {
       None,
       None,
       statements.asInstanceOf[Contents[FunctionContents]],
-      (brief.toSeq ++ description.toSeq).toContents.asInstanceOf[Contents[Descriptives]]
+      (brief.toSeq ++ description.toSeq).toContents.asInstanceOf[Contents[MetaData]]
     )
   val functionRef: FunctionRef = FunctionRef(At.empty, PathIdentifier(At.empty, Seq("Lambda")))
   val onClauses: Contents[OnClause] = Contents(

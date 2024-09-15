@@ -15,7 +15,7 @@ private[parsing] trait ApplicationParser {
 
   def containedGroup[u: P]: P[ContainedGroup] = {
     P(
-      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withDescriptives
+      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withMetaData
     ).map { case (loc, id, group, descriptives) =>
       ContainedGroup(loc, id, group, descriptives.toContents)
     }
@@ -31,7 +31,7 @@ private[parsing] trait ApplicationParser {
     P(
       location ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
-        close ~ withDescriptives
+        close ~ withMetaData
     ).map { case (loc, alias, id, contents, descriptives) =>
       Group(loc, alias, id, contents.toContents, descriptives.toContents)
     }
@@ -57,7 +57,7 @@ private[parsing] trait ApplicationParser {
   def appOutput[u: P]: P[Output] = {
     P(
       location ~ outputAliases ~/ identifier ~ presentationAliases ~/
-        (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withDescriptives
+        (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withMetaData
     ).map { case (loc, nounAlias, id, verbAlias, putOut, contents, descriptives) =>
       putOut match {
         case t: TypeRef =>
@@ -104,7 +104,7 @@ private[parsing] trait ApplicationParser {
 
   def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withDescriptives
+      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withMetaData
     ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives) =>
       Input(loc, inputAlias, id, acquisitionAlias, putIn, contents.toContents, descriptives.toContents)
     }
@@ -133,7 +133,7 @@ private[parsing] trait ApplicationParser {
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ withDescriptives
+      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ withMetaData
     )./ map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
       Application(loc, id, contents.toContents, descriptives.toContents)

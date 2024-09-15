@@ -12,8 +12,8 @@ class ASTTestJVM extends TestingBasis {
     "allow attachments to be added programatically" in {
       val container = Entity(At.empty, Identifier.empty)
       val a = StringAttachment(At.empty, Identifier(At.empty,"foo"), "application/json", LiteralString(At.empty,"{}"))
-      container.descriptives += a
-      container.descriptives.filter[StringAttachment] match
+      container.metadata += a
+      container.metadata.filter[StringAttachment] match
         case Seq(value) if value == a => succeed
         case _  => fail("No go")
     }

@@ -48,7 +48,7 @@ private[parsing] trait CommonParser
           (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
             literalString ~ (Keywords.organization ~ is ~ literalString).? ~
             (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ withDescriptives
+            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ withMetaData
     ).map { case (loc, id, (name, email, org, title, url), descriptives) =>
       Author(loc, id, name, email, org, title, url, descriptives.toContents)
     }
@@ -164,7 +164,7 @@ private[parsing] trait CommonParser
 
   def term[u: P]: P[Term] = {
     P(
-      location ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withDescriptives
+      location ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withMetaData
     )./.map { case (loc, id, definition, descriptives) =>
       Term(loc, id, definition, descriptives.toContents)
     }
@@ -201,15 +201,15 @@ private[parsing] trait CommonParser
     }
   end ulidAttachment
 
-  def descriptive[u: P]: P[Descriptives] =
+  def metaData[u: P]: P[MetaData] =
     P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment)
-      .asInstanceOf[P[Descriptives]]
+      .asInstanceOf[P[MetaData]]
 
-  def withDescriptives[u: P]: P[Seq[Descriptives]] = {
+  def withMetaData[u: P]: P[Seq[MetaData]] = {
     P(
-      Keywords.`with` ~ open ~ (undefined(Seq.empty[Descriptives]) | descriptive.rep(1)) ~ close
+      Keywords.`with` ~ open ~ (undefined(Seq.empty[MetaData]) | metaData.rep(1)) ~ close
     ).?./.map {
-      case Some(list: Seq[Descriptives]) =>
+      case Some(list: Seq[MetaData]) =>
         list
       case None =>
         Seq.empty
@@ -253,7 +253,7 @@ private[parsing] trait CommonParser
     P(
       Keywords.invariant ~/ location ~ identifier ~ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ withDescriptives
+      ) ~ withMetaData
     ).map { case (loc, id, condition, descriptives) =>
       Invariant(loc, id, condition, descriptives.toContents)
     }

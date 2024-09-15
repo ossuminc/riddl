@@ -363,7 +363,7 @@ private[parsing] trait TypeParser {
 
   def field[u: P]: P[Field] = {
     P(
-      location ~ identifier ~ is ~ fieldTypeExpression ~ withDescriptives
+      location ~ identifier ~ is ~ fieldTypeExpression ~ withMetaData
     ).map { case(loc, id, typeEx, descriptives) =>
       Field(loc, id, typeEx, descriptives.toContents)
     }
@@ -380,7 +380,7 @@ private[parsing] trait TypeParser {
   def method[u: P]: P[Method] = {
     P(
       location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
-        is ~ fieldTypeExpression ~ withDescriptives
+        is ~ fieldTypeExpression ~ withMetaData
     ).map { case (loc, id, args, typeExp, descriptives) =>
       Method.apply(loc, id, typeExp, args, descriptives.toContents)
     }
@@ -546,7 +546,7 @@ private[parsing] trait TypeParser {
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
       location ~ aggregateUseCase ~/ identifier ~
-        (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withDescriptives
+        (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withMetaData
     )./.map { case (loc, useCase, id, ateOrAgg, descriptives) =>
       ateOrAgg match {
         case agg: Aggregation =>
@@ -564,7 +564,7 @@ private[parsing] trait TypeParser {
 
   private def defOfType[u: P]: P[Type] = {
     P(
-      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ withDescriptives
+      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ withMetaData
     )./.map { case (loc, id, typ, descriptives) =>
       Type(loc, id, typ, descriptives.toContents)
     }
@@ -575,7 +575,7 @@ private[parsing] trait TypeParser {
   def constant[u: P]: P[Constant] = {
     P(
       location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ withDescriptives
+        Punctuation.equalsSign ~ literalString ~ withMetaData
     ).map { case (loc, id, typeEx, litStr, descriptives) =>
       Constant(loc, id, typeEx, litStr, descriptives.toContents)
     }

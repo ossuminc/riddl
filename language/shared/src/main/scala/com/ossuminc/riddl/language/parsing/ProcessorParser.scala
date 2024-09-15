@@ -31,7 +31,7 @@ trait ProcessorParser
   def relationship[u: P]: P[Relationship] =
     P(
       location ~ Keywords.relationship ~ identifier ~/ to ~ processorRef ~ as ~ relationshipCardinality ~
-        (Keywords.label ~ as ~ literalString).? ~ withDescriptives
+        (Keywords.label ~ as ~ literalString).? ~ withMetaData
     ).map { case (loc, id, procRef, cardinality, label, descriptives) =>
       Relationship(loc, id, procRef, cardinality, label, descriptives.toContents)
     }

@@ -27,7 +27,7 @@ private[parsing] trait ModuleParser {
 
   def module[u: P]: P[Module] = {
     P(
-      location ~ Keywords.module ~/ identifier ~ is ~ open ~ moduleContents ~ close ~ withDescriptives
+      location ~ Keywords.module ~/ identifier ~ is ~ open ~ moduleContents ~ close ~ withMetaData
     )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
       Module(loc, id, contents.toContents, descriptives.toContents)

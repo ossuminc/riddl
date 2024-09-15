@@ -244,10 +244,10 @@ object AST:
   /** A descriptive is something non-definitional that can be added to a definition. They occurs in the `with` section
     * of the definition
     */
-  trait Descriptive extends RiddlValue:
-    /** All Descriptives have a location provided by an [[At]] value. */
+  trait Meta extends RiddlValue:
+    /** All MetaData have a location provided by an [[At]] value. */
     def loc: At
-  end Descriptive
+  end Meta
 
   /** A single line description for any vital definition
     * @param brief
@@ -256,14 +256,14 @@ object AST:
   case class BriefDescription(
     loc: At,
     brief: LiteralString
-  ) extends Descriptive:
+  ) extends Meta:
     def format: String = s"briefly \"${brief.s}\""
   end BriefDescription
 
   /** The description of a definition. All definitions have a name and an optional description. This class provides the
     * description part.
     */
-  sealed trait Description extends Descriptive:
+  sealed trait Description extends Meta:
     /** The lines of the description abstractly defined to be provided by subclasses */
     def lines: Seq[LiteralString]
   end Description
@@ -314,7 +314,7 @@ object AST:
     id: Identifier,
     mimeType: String,
     inFile: LiteralString
-  ) extends Descriptive
+  ) extends Meta
       with WithIdentifier:
     def format: String = identify
   end FileAttachment
@@ -325,7 +325,7 @@ object AST:
     id: Identifier,
     mimeType: String,
     value: LiteralString
-  ) extends Descriptive
+  ) extends Meta
       with WithIdentifier:
     def format: String = identify
   end StringAttachment
@@ -333,7 +333,7 @@ object AST:
   case class ULIDAttachment(
     loc: At,
     ulid: ULID
-  ) extends Descriptive
+  ) extends Meta
       with WithIdentifier:
     override def id: Identifier = Identifier(At.empty, "ULID")
     def format: String = identify
@@ -464,11 +464,11 @@ object AST:
     def authorRefs: Seq[AuthorRef] = metadata.filter[AuthorRef]
 
     lazy val ulid: ULID =
-      descriptives.find("ULID") match
+      metadata.find("ULID") match
         case Some(ulid: ULIDAttachment) => ulid.ulid
         case _ =>
           val result = ULID.newULID
-          descriptives += ULIDAttachment(At.empty, result)
+          metadata += ULIDAttachment(At.empty, result)
           result
       end match
     end ulid
@@ -723,7 +723,7 @@ object AST:
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     TypeExpression | Comment | OptionValue | Reference[?] | StreamletShape | AdaptorDirection | UserStory |
     MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription |
-    FileAttachment | StringAttachment | ULIDAttachment | Descriptive
+    FileAttachment | StringAttachment | ULIDAttachment | Meta
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -735,8 +735,7 @@ object AST:
   type RootContents = ModuleContents | Module
 
   /** Things that can occur in the "With" section of a leaf definition */
-  type MetaData = BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment |
-    ULIDAttachment
+  type MetaData = BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment | ULIDAttachment
 
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition = Type | Comment
@@ -1065,10 +1064,10 @@ object AST:
 
   /** A Module represents a */
   case class Module(
-                     loc: At,
-                     id: Identifier,
-                     contents: Contents[ModuleContents] = Contents.empty,
-                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    contents: Contents[ModuleContents] = Contents.empty,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends VitalDefinition[ModuleContents]
       with WithModules[ModuleContents]
       with WithDomains[ModuleContents]:
@@ -1091,10 +1090,10 @@ object AST:
     *   A longer description of the user and its role
     */
   case class User(
-                   loc: At,
-                   id: Identifier,
-                   is_a: LiteralString,
-                   metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    is_a: LiteralString,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition:
     def format: String = s"${Keyword.user} ${id.format} is ${is_a.format}"
   end User
@@ -1112,10 +1111,10 @@ object AST:
     *   The longer definition of the term.
     */
   case class Term(
-                   loc: At,
-                   id: Identifier,
-                   definition: Seq[LiteralString],
-                   metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    definition: Seq[LiteralString],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition:
     def format: String = s"${Keyword.term} ${id.format}"
   end Term
@@ -1142,14 +1141,14 @@ object AST:
     *   An optional long description of the author
     */
   case class Author(
-                     loc: At,
-                     id: Identifier,
-                     name: LiteralString,
-                     email: LiteralString,
-                     organization: Option[LiteralString] = None,
-                     title: Option[LiteralString] = None,
-                     url: Option[com.ossuminc.riddl.utils.URL] = None,
-                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    name: LiteralString,
+    email: LiteralString,
+    organization: Option[LiteralString] = None,
+    title: Option[LiteralString] = None,
+    url: Option[com.ossuminc.riddl.utils.URL] = None,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition:
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
@@ -1192,12 +1191,12 @@ object AST:
     *   the [[id]] of the relationship is used instead
     */
   case class Relationship(
-                           loc: At,
-                           id: Identifier,
-                           withProcessor: ProcessorRef[?],
-                           cardinality: RelationshipCardinality,
-                           label: Option[LiteralString] = None,
-                           metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    withProcessor: ProcessorRef[?],
+    cardinality: RelationshipCardinality,
+    label: Option[LiteralString] = None,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition {
     def format: String = Keyword.relationship + " " + id.format + " to " + withProcessor.format
   }
@@ -1515,10 +1514,10 @@ object AST:
     */
   @JSExportTopLevel("Field")
   case class Field(
-                    loc: At,
-                    id: Identifier,
-                    typeEx: TypeExpression,
-                    metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    typeEx: TypeExpression,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends AggregateValue {
     override def format: String = s"${id.format}: ${typeEx.format}"
   }
@@ -1557,11 +1556,11 @@ object AST:
     */
   @JSExportTopLevel("Method")
   case class Method(
-                     loc: At,
-                     id: Identifier,
-                     typeEx: TypeExpression,
-                     args: Seq[MethodArgument] = Seq.empty[MethodArgument],
-                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    typeEx: TypeExpression,
+    args: Seq[MethodArgument] = Seq.empty[MethodArgument],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends AggregateValue {
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
   }
@@ -2112,10 +2111,10 @@ object AST:
     */
   @JSExportTopLevel("Type")
   case class Type(
-                   loc: At,
-                   id: Identifier,
-                   typEx: TypeExpression,
-                   metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    typEx: TypeExpression,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends BranchDefinition[TypeContents]
       with WithMetaData:
     def contents: Contents[TypeContents] = {
@@ -2185,11 +2184,11 @@ object AST:
     */
   @JSExportTopLevel("Constant")
   case class Constant(
-                       loc: At,
-                       id: Identifier,
-                       typeEx: TypeExpression,
-                       value: LiteralString,
-                       metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    typeEx: TypeExpression,
+    value: LiteralString,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition {
 
     /** Format the node to a string */
@@ -2570,12 +2569,12 @@ object AST:
     */
   @JSExportTopLevel("Adaptor")
   case class Adaptor(
-                      loc: At,
-                      id: Identifier,
-                      direction: AdaptorDirection,
-                      context: ContextRef,
-                      contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents],
-                      metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    direction: AdaptorDirection,
+    context: ContextRef,
+    contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[AdaptorContents]
       with WithOptions[AdaptorContents] {
     def format: String = Keyword.adaptor + " " + id.format
@@ -2605,12 +2604,12 @@ object AST:
     */
   @JSExportTopLevel("Function")
   case class Function(
-                       loc: At,
-                       id: Identifier,
-                       input: Option[Aggregation] = None,
-                       output: Option[Aggregation] = None,
-                       contents: Contents[FunctionContents] = Contents.empty[FunctionContents],
-                       metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    input: Option[Aggregation] = None,
+    output: Option[Aggregation] = None,
+    contents: Contents[FunctionContents] = Contents.empty[FunctionContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends VitalDefinition[FunctionContents]
       with WithTypes[FunctionContents]
       with WithFunctions[FunctionContents]
@@ -2642,14 +2641,14 @@ object AST:
     * @param condition
     *   The string representation of the condition that ought to be true
     * @param metadata
-    *   The list of descriptives for the invariant
+    *   The list of meta data for the invariant
     */
   @JSExportTopLevel("Invariant")
   case class Invariant(
-                        loc: At,
-                        id: Identifier,
-                        condition: Option[LiteralString] = Option.empty[LiteralString],
-                        metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    condition: Option[LiteralString] = Option.empty[LiteralString],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition {
     override def isEmpty: Boolean = condition.isEmpty
     def format: String = Keyword.invariant + " " + id.format + condition.map(_.format)
@@ -2671,9 +2670,9 @@ object AST:
     */
   @JSExportTopLevel("OnOtherClause")
   case class OnOtherClause(
-                            loc: At,
-                            contents: Contents[Statements] = Contents.empty,
-                            metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    contents: Contents[Statements] = Contents.empty,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"pther")
 
@@ -2691,9 +2690,9 @@ object AST:
     */
   @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
-                                     loc: At,
-                                     contents: Contents[Statements] = Contents.empty,
-                                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    contents: Contents[Statements] = Contents.empty,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"init")
 
@@ -2716,11 +2715,11 @@ object AST:
     */
   @JSExportTopLevel("OnMessageClause")
   case class OnMessageClause(
-                              loc: At,
-                              msg: MessageRef,
-                              from: Option[(Option[Identifier], Reference[Definition])],
-                              contents: Contents[Statements] = Contents.empty,
-                              metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    msg: MessageRef,
+    from: Option[(Option[Identifier], Reference[Definition])],
+    contents: Contents[Statements] = Contents.empty,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, msg.format)
     def format: String = ""
@@ -2735,9 +2734,9 @@ object AST:
     */
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
-                                  loc: At,
-                                  contents: Contents[Statements] = Contents.empty[Statements],
-                                  metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    contents: Contents[Statements] = Contents.empty[Statements],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"term")
 
@@ -2762,10 +2761,10 @@ object AST:
     */
   @JSExportTopLevel("Handler")
   case class Handler(
-                      loc: At,
-                      id: Identifier,
-                      contents: Contents[HandlerContents] = Contents.empty[HandlerContents],
-                      metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    contents: Contents[HandlerContents] = Contents.empty[HandlerContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends BranchDefinition[HandlerContents]
       with WithMetaData {
     override def isEmpty: Boolean = clauses.isEmpty
@@ -2806,10 +2805,10 @@ object AST:
     */
   @JSExportTopLevel("State")
   case class State(
-                    loc: At,
-                    id: Identifier,
-                    typ: TypeRef,
-                    metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    typ: TypeRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition:
     def format: String = Keyword.state + " " + id.format
   end State
@@ -2839,10 +2838,10 @@ object AST:
     */
   @JSExportTopLevel("Entity")
   case class Entity(
-                     loc: At,
-                     id: Identifier,
-                     contents: Contents[EntityContents] = Contents.empty[EntityContents],
-                     metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    contents: Contents[EntityContents] = Contents.empty[EntityContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[EntityContents]
       with WithStates[EntityContents]
       with WithOptions[EntityContents]:
@@ -2885,13 +2884,13 @@ object AST:
     */
   @JSExportTopLevel("Schema")
   case class Schema(
-                     loc: At,
-                     id: Identifier,
-                     schemaKind: RepositorySchemaKind = RepositorySchemaKind.Other,
-                     data: Map[Identifier, TypeRef] = Map.empty[Identifier, TypeRef],
-                     links: Map[Identifier, (FieldRef, FieldRef)] = Map.empty[Identifier, (FieldRef, FieldRef)],
-                     indices: Seq[FieldRef] = Seq.empty[FieldRef],
-                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    schemaKind: RepositorySchemaKind = RepositorySchemaKind.Other,
+    data: Map[Identifier, TypeRef] = Map.empty[Identifier, TypeRef],
+    links: Map[Identifier, (FieldRef, FieldRef)] = Map.empty[Identifier, (FieldRef, FieldRef)],
+    indices: Seq[FieldRef] = Seq.empty[FieldRef],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   end Schema
@@ -2913,10 +2912,10 @@ object AST:
     */
   @JSExportTopLevel("Repository")
   case class Repository(
-                         loc: At,
-                         id: Identifier,
-                         contents: Contents[RepositoryContents] = Contents.empty[RepositoryContents],
-                         metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    contents: Contents[RepositoryContents] = Contents.empty[RepositoryContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[RepositoryContents]
       with WithOptions[RepositoryContents] {
     def format: String = Keyword.entity + " " + id.format
@@ -2953,10 +2952,10 @@ object AST:
     */
   @JSExportTopLevel("Projector")
   case class Projector(
-                        loc: At,
-                        id: Identifier,
-                        contents: Contents[ProjectorContents] = Contents.empty[ProjectorContents],
-                        metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    contents: Contents[ProjectorContents] = Contents.empty[ProjectorContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[ProjectorContents]
       with WithOptions[ProjectorContents] {
     def repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
@@ -2991,10 +2990,10 @@ object AST:
     */
   @JSExportTopLevel("Context")
   case class Context(
-                      loc: At,
-                      id: Identifier,
-                      contents: Contents[ContextContents] = Contents.empty[ContextContents],
-                      metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    contents: Contents[ContextContents] = Contents.empty[ContextContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[ContextContents]
       with WithProjectors[ContextContents]
       with WithRepositories[ContextContents]
@@ -3043,10 +3042,10 @@ object AST:
     */
   @JSExportTopLevel("Inlet")
   case class Inlet(
-                    loc: At,
-                    id: Identifier,
-                    type_ : TypeRef,
-                    metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    type_ : TypeRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends Portlet {
     def format: String = s"inlet ${id.format} is ${type_.format}"
   }
@@ -3066,10 +3065,10 @@ object AST:
     */
   @JSExportTopLevel("Outlet")
   case class Outlet(
-                     loc: At,
-                     id: Identifier,
-                     type_ : TypeRef,
-                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    type_ : TypeRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends Portlet {
     def format: String = s"outlet ${id.format} is ${type_.format}"
   }
@@ -3087,16 +3086,16 @@ object AST:
     * @param options
     *   The options for this connector
     * @param metadata
-    *   The descriptives for this connector
+    *   The meta data for this connector
     */
   @JSExportTopLevel("Connector")
   case class Connector(
-                        loc: At,
-                        id: Identifier,
-                        from: OutletRef,
-                        to: InletRef,
-                        options: Seq[OptionValue] = Seq.empty[OptionValue],
-                        metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    from: OutletRef,
+    to: InletRef,
+    options: Seq[OptionValue] = Seq.empty[OptionValue],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition {
     def hasOption(name: String): Boolean = options.exists(_.name == name)
     override def format: String = Keyword.connector + " " + id.format
@@ -3172,11 +3171,11 @@ object AST:
     */
   @JSExportTopLevel("Streamlet")
   case class Streamlet(
-                        loc: At,
-                        id: Identifier,
-                        shape: StreamletShape,
-                        contents: Contents[StreamletContents] = Contents.empty[StreamletContents],
-                        metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    shape: StreamletShape,
+    contents: Contents[StreamletContents] = Contents.empty[StreamletContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[StreamletContents]
       with WithInlets[StreamletContents]
       with WithOutlets[StreamletContents] {
@@ -3289,11 +3288,11 @@ object AST:
     */
   @JSExportTopLevel("SagaStep")
   case class SagaStep(
-                       loc: At,
-                       id: Identifier,
-                       doStatements: Contents[Statements] = Contents.empty[Statements],
-                       undoStatements: Contents[Statements] = Contents.empty[Statements],
-                       metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    doStatements: Contents[Statements] = Contents.empty[Statements],
+    undoStatements: Contents[Statements] = Contents.empty[Statements],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition {
     def format: String = s"step ${id.format}"
   }
@@ -3315,12 +3314,12 @@ object AST:
     */
   @JSExportTopLevel("Saga")
   case class Saga(
-                   loc: At,
-                   id: Identifier,
-                   input: Option[Aggregation] = None,
-                   output: Option[Aggregation] = None,
-                   contents: Contents[SagaContents] = Contents.empty[SagaContents],
-                   metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    input: Option[Aggregation] = None,
+    output: Option[Aggregation] = None,
+    contents: Contents[SagaContents] = Contents.empty[SagaContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends VitalDefinition[SagaContents]
       with WithSagaSteps[SagaContents] {
     override def format: String = Keyword.saga + " " + id.format
@@ -3362,10 +3361,7 @@ object AST:
     def to: Reference[Definition]
   }
 
-  sealed trait InteractionContainer
-      extends Interaction
-      with Container[InteractionContainerContents]
-      with WithMetaData:
+  sealed trait InteractionContainer extends Interaction with Container[InteractionContainerContents] with WithMetaData:
 
     /** Format the node to a string */
     override def format: String = s"Interaction"
@@ -3382,9 +3378,9 @@ object AST:
     */
   @JSExportTopLevel("ParallelInteractions")
   case class ParallelInteractions(
-                                   loc: At,
-                                   contents: Contents[InteractionContainerContents] = Contents.empty,
-                                   metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    contents: Contents[InteractionContainerContents] = Contents.empty,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends InteractionContainer {
     override def kind: String = "Parallel Interaction"
   }
@@ -3403,9 +3399,9 @@ object AST:
     */
   @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
-                                     loc: At,
-                                     contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
-                                     metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends InteractionContainer {
     override def kind: String = "Sequential Interaction"
   }
@@ -3421,9 +3417,9 @@ object AST:
     */
   @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
-                                   loc: At,
-                                   contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
-                                   metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends InteractionContainer {
     override def kind: String = "Optional Interaction"
   }
@@ -3431,11 +3427,11 @@ object AST:
   /** An [[GenericInteraction]] that is vaguely written as a textual description */
   @JSExportTopLevel("VagueInteraction")
   case class VagueInteraction(
-                               loc: At,
-                               from: LiteralString,
-                               relationship: LiteralString,
-                               to: LiteralString,
-                               metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: LiteralString,
+    relationship: LiteralString,
+    to: LiteralString,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends GenericInteraction {
     override def kind: String = "Vague Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3458,11 +3454,11 @@ object AST:
     */
   @JSExportTopLevel("SendMessageInteraction")
   case class SendMessageInteraction(
-                                     loc: At,
-                                     from: Reference[Definition],
-                                     message: MessageRef,
-                                     to: ProcessorRef[?],
-                                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: Reference[Definition],
+    message: MessageRef,
+    to: ProcessorRef[?],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends GenericInteraction {
     def relationship: LiteralString = {
       LiteralString(message.loc, s"sends ${message.format} to")
@@ -3487,11 +3483,11 @@ object AST:
     */
   @JSExportTopLevel("ArbitraryInteraction")
   case class ArbitraryInteraction(
-                                   loc: At,
-                                   from: Reference[Definition],
-                                   relationship: LiteralString,
-                                   to: Reference[Definition],
-                                   metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: Reference[Definition],
+    relationship: LiteralString,
+    to: Reference[Definition],
+    metadata: Contents[MetaData] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Arbitrary Interaction"
 
@@ -3514,10 +3510,10 @@ object AST:
     */
   @JSExportTopLevel("SelfInteraction")
   case class SelfInteraction(
-                              loc: At,
-                              from: Reference[Definition],
-                              relationship: LiteralString,
-                              metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: Reference[Definition],
+    relationship: LiteralString,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Self Interaction"
     override def to: Reference[Definition] = from
@@ -3537,10 +3533,10 @@ object AST:
     */
   @JSExportTopLevel("FocusOnGroupInteraction")
   case class FocusOnGroupInteraction(
-                                      loc: At,
-                                      from: UserRef,
-                                      to: GroupRef,
-                                      metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: UserRef,
+    to: GroupRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Focus On Group"
     override def relationship: LiteralString =
@@ -3562,10 +3558,10 @@ object AST:
     */
   @JSExportTopLevel("DirectUserToURLInteraction")
   case class DirectUserToURLInteraction(
-                                         loc: At,
-                                         from: UserRef,
-                                         url: com.ossuminc.riddl.utils.URL,
-                                         metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: UserRef,
+    url: com.ossuminc.riddl.utils.URL,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends GenericInteraction {
     def relationship: LiteralString =
       LiteralString(loc + (6 + from.pathId.format.length), "directed to ")
@@ -3587,11 +3583,11 @@ object AST:
     */
   @JSExportTopLevel("ShowOutputInteraction")
   case class ShowOutputInteraction(
-                                    loc: At,
-                                    from: OutputRef,
-                                    relationship: LiteralString,
-                                    to: UserRef,
-                                    metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: OutputRef,
+    relationship: LiteralString,
+    to: UserRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Show Output Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3610,10 +3606,10 @@ object AST:
     */
   @JSExportTopLevel("SelectInputInteraction")
   case class SelectInputInteraction(
-                                     loc: At,
-                                     from: UserRef,
-                                     to: InputRef,
-                                     metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: UserRef,
+    to: InputRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Select Input Interaction"
     def format: String = s"${from.format} selects ${to.format}"
@@ -3633,10 +3629,10 @@ object AST:
     */
   @JSExportTopLevel("TakeInputInteraction")
   case class TakeInputInteraction(
-                                   loc: At,
-                                   from: UserRef,
-                                   to: InputRef,
-                                   metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    from: UserRef,
+    to: InputRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3654,11 +3650,11 @@ object AST:
     */
   @JSExportTopLevel("UseCase")
   case class UseCase(
-                      loc: At,
-                      id: Identifier,
-                      userStory: UserStory,
-                      contents: Contents[UseCaseContents] = Contents.empty[UseCaseContents],
-                      metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    userStory: UserStory,
+    contents: Contents[UseCaseContents] = Contents.empty[UseCaseContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends BranchDefinition[UseCaseContents]
       with WithMetaData {
     override def kind: String = "UseCase"
@@ -3718,11 +3714,11 @@ object AST:
     */
   @JSExportTopLevel("Epic")
   case class Epic(
-                   loc: At,
-                   id: Identifier,
-                   userStory: UserStory,
-                   contents: Contents[EpicContents] = Contents.empty[EpicContents],
-                   metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    userStory: UserStory,
+    contents: Contents[EpicContents] = Contents.empty[EpicContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends VitalDefinition[EpicContents]
       with WithUseCases[EpicContents]
       with WithShownBy[EpicContents] {
@@ -3757,11 +3753,11 @@ object AST:
     */
   @JSExportTopLevel("Group")
   case class Group(
-                    loc: At,
-                    alias: String,
-                    id: Identifier,
-                    contents: Contents[OccursInGroup] = Contents.empty[OccursInGroup],
-                    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    alias: String,
+    id: Identifier,
+    contents: Contents[OccursInGroup] = Contents.empty[OccursInGroup],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends BranchDefinition[OccursInGroup]
       with WithShownBy[OccursInGroup]
       with WithInputs[OccursInGroup]
@@ -3798,10 +3794,10 @@ object AST:
     */
   @JSExportTopLevel("ContainedGroup")
   case class ContainedGroup(
-                             loc: At,
-                             id: Identifier,
-                             group: GroupRef,
-                             metadata: Contents[MetaData] = Contents.empty
+    loc: At,
+    id: Identifier,
+    group: GroupRef,
+    metadata: Contents[MetaData] = Contents.empty
   ) extends LeafDefinition {
     def format: String = s"contains ${id.format} as ${group.format}"
   }
@@ -3819,13 +3815,13 @@ object AST:
     */
   @JSExportTopLevel("Output")
   case class Output(
-                     loc: At,
-                     nounAlias: String,
-                     id: Identifier,
-                     verbAlias: String,
-                     putOut: TypeRef | ConstantRef | LiteralString,
-                     contents: Contents[OccursInOutput] = Contents.empty[OccursInOutput],
-                     metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    nounAlias: String,
+    id: Identifier,
+    verbAlias: String,
+    putOut: TypeRef | ConstantRef | LiteralString,
+    contents: Contents[OccursInOutput] = Contents.empty[OccursInOutput],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends BranchDefinition[OccursInOutput]
       with WithOutputs[OccursInOutput]
       with WithMetaData {
@@ -3860,13 +3856,13 @@ object AST:
     */
   @JSExportTopLevel("Input")
   case class Input(
-                    loc: At,
-                    nounAlias: String,
-                    id: Identifier,
-                    verbAlias: String,
-                    takeIn: TypeRef,
-                    contents: Contents[OccursInInput] = Contents.empty[OccursInInput],
-                    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    nounAlias: String,
+    id: Identifier,
+    verbAlias: String,
+    takeIn: TypeRef,
+    contents: Contents[OccursInInput] = Contents.empty[OccursInInput],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends BranchDefinition[OccursInInput]
       with WithInputs[OccursInInput]
       with WithMetaData {
@@ -3902,10 +3898,10 @@ object AST:
     */
   @JSExportTopLevel("Application")
   case class Application(
-                          loc: At,
-                          id: Identifier,
-                          contents: Contents[ApplicationContents] = Contents.empty[ApplicationContents],
-                          metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    contents: Contents[ApplicationContents] = Contents.empty[ApplicationContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[ApplicationContents]
       with WithGroups[ApplicationContents] {
     override def format: String = Keyword.application + " " + id.format
@@ -3938,10 +3934,10 @@ object AST:
     */
   @JSExportTopLevel("Domain")
   case class Domain(
-                     loc: At,
-                     id: Identifier,
-                     contents: Contents[DomainContents] = Contents.empty[DomainContents],
-                     metadata: Contents[MetaData] = Contents.empty[MetaData]
+    loc: At,
+    id: Identifier,
+    contents: Contents[DomainContents] = Contents.empty[DomainContents],
+    metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends VitalDefinition[DomainContents]
       with WithTypes[DomainContents]
       with WithAuthors[DomainContents]
@@ -3979,8 +3975,8 @@ object AST:
     */
   @JSExport
   def findAuthors(
-                   definition: WithMetaData,
-                   parents: Contents[RiddlValue]
+    definition: WithMetaData,
+    parents: Contents[RiddlValue]
   ): Seq[AuthorRef] =
     val result = definition.authorRefs
     if result.isEmpty then parents.filter[WithMetaData].flatMap(_.authorRefs)

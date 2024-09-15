@@ -112,8 +112,8 @@ trait DefinitionValidation extends BasicValidation:
     )
     var hasAuthorRef = false
     var hasDescription = false
-    for { descriptive <- definition.metadata.toSeq} do {
-      descriptive match
+    for {meta <- definition.metadata.toSeq} do {
+      meta match
         case bd: BriefDescription =>
           check(
             bd.brief.s.length < 80,
