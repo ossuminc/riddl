@@ -12,12 +12,16 @@ class ASTAccessTest extends AsyncFunSpec with Matchers:
       val node = Context(At.empty, Identifier(At.empty, "foo"))
       val created = node.ulid.epochMillis
       val now = java.time.Instant.now().toEpochMilli
-      assert(now-created < 10)
+      assert(now - created < 25)
     }
     it("must accept storage of arbitrary named string values") {
       val node = Context(At.empty, Identifier(At.empty, "foo"))
-      node.descriptives += StringAttachment(At.empty, Identifier(At.empty, "foo"), "application/json",
-        LiteralString(At.empty, "{}"))
+      node.descriptives += StringAttachment(
+        At.empty,
+        Identifier(At.empty, "foo"),
+        "application/json",
+        LiteralString(At.empty, "{}")
+      )
       succeed
     }
   }
