@@ -9,14 +9,13 @@ import wvlet.airframe.ulid.ULID
 class ASTTestJVM extends TestingBasis {
 
   "RiddlValue" must {
-    "reject incorrectly typed values in attachments" in {
-      val container = SimpleContainer(Contents.empty)
-      container.put("this", "that")
-      intercept[ClassCastException] {
-        val result: Option[Double] = container.get[Double]("this")
-        val timesTwo = result.get * 2.0
-        println(timesTwo)
-      }
+    "allow attachments to be added programatically" in {
+      val container = Entity(At.empty, Identifier.empty)
+      val a = StringAttachment(At.empty, Identifier(At.empty,"foo"), "application/json", LiteralString(At.empty,"{}"))
+      container.descriptives += a
+      container.descriptives.filter[StringAttachment] match
+        case Seq(value) if value == a => succeed
+        case _  => fail("No go")
     }
   }
   "Include" should {

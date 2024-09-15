@@ -106,7 +106,8 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     },
     coverageExcludedPackages := "<empty>;$anon",
     libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
-    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % "24.9.0",
+    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % V.airframe_ulid,
+    libraryDependencies += "org.wvlet.airframe" %% "airframe-json" % V.airframe_json,
     libraryDependencies += Dep.commons_io % Test
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
