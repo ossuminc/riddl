@@ -64,6 +64,8 @@ object Keywords {
   def append[u: P]: P[Unit] = keyword(Keyword.append)
 
   def application[u: P]: P[Unit] = keyword(Keyword.application)
+  
+  def attachment[u:P]: P[Unit] = keyword(Keyword.attachment)
 
   def author[u: P]: P[Unit] = keyword(Keyword.author)
 
@@ -332,6 +334,7 @@ object Keyword {
   final val any = "any"
   final val append = "append"
   final val application = "application"
+  final val attachment = "attachment"
   final val author = "author"
   final val become = "become"
   final val benefit = "benefit"

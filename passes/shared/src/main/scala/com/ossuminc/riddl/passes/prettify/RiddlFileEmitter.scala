@@ -62,6 +62,9 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
         case d: Description      => emitDescription(d)
         case t: Term             => emitTerm(t)
         case a: AuthorRef        => emitAuthorRef(a)
+        case sa: StringAttachment => emitStringAttachment(sa)
+        case fa: FileAttachment => emitFileAttachment(fa)
+        case ua: ULIDAttachment => emitULIDAttachment(ua)
       }
       decr.add("}")
     end if
@@ -75,7 +78,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     end match
   end emitComment
 
-  def emitBriefDescription(brief: BriefDescription): this.type =
+  private def emitBriefDescription(brief: BriefDescription): this.type =
     addLine(brief.format)
   end emitBriefDescription
 
@@ -99,7 +102,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     this
   end emitDescription
 
-  def emitTerm(term: Term): this.type =
+  private def emitTerm(term: Term): this.type =
     addIndent("term ")
     add(term.id.format)
     add(" is ")
@@ -111,6 +114,16 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitAuthorRef(authorRef: AuthorRef): this.type =
     addIndent("by ").add(authorRef.format).nl
   end emitAuthorRef
+  
+  private def emitStringAttachment(a: StringAttachment): this.type =
+    addIndent(a.identify).add(s" is \"${a.mimeType}\" as \"${a.value}\"")
+  end emitStringAttachment
+  
+  private def emitFileAttachment(a: FileAttachment): this.type =
+    addIndent(a.identify).add(s" is \"${a.mimeType} in file \"${a.inFile}\"")
+  
+  private def emitULIDAttachment(ulid: ULIDAttachment): this.type =
+    addIndent(ulid.identify)
 
   def emitString(s: String_): this.type = {
     (s.min, s.max) match {

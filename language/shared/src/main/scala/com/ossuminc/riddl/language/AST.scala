@@ -11,13 +11,13 @@ import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
-import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.{tailrec, targetName, unused}
 import scala.io.{BufferedSource, Codec}
 import scala.scalajs.js.annotation.*
+import wvlet.airframe.ulid.ULID
 
 /** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax Tree. This raw AST
   * has no referential integrity, it just results from applying the parsing rules to the input. The RawAST models
@@ -26,7 +26,7 @@ import scala.scalajs.js.annotation.*
 @JSExportTopLevel("AST")
 object AST:
 
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES
+///////////////////////////////////////////////////////////////////////////////////////////////////////// RIDDL VALUES
 
   /** The root trait of all parsed values. If a parser returns something, its a [[RiddlValue]]. Every node in the AST is
     * a RiddlNode. Subclasses implement the definitions in various ways because this is the most abstract notion of what
@@ -101,19 +101,18 @@ object AST:
   type ContentValues = RiddlValue
 
   /** A frequently used type alias for a Seq of [[RiddlValue]] */
-  type Contents[CV <: ContentValues] = mutable.Seq[CV]
+  type Contents[CV <: ContentValues] = mutable.ArrayBuffer[CV]
 
   object Contents:
-    def empty[T <: ContentValues] = mutable.Seq.empty[T]
-    def apply[T <: ContentValues](items: T*) = mutable.Seq[T](items: _*)
-    def unapply[T <: ContentValues](contents: Contents[T]) = mutable.Seq.unapplySeq(contents)
+    def empty[T <: ContentValues] = mutable.ArrayBuffer.empty[T]
+    def apply[T <: ContentValues](items: T*) = mutable.ArrayBuffer[T](items: _*)
+    def unapply[T <: ContentValues](contents: Contents[T]) = mutable.ArrayBuffer.unapplySeq[T](contents)
   end Contents
 
   extension [CV <: ContentValues](sequence: Seq[CV])
     def toContents: Contents[CV] = Contents[CV](sequence: _*)
     def find(name: String): Option[CV] =
       sequence.find(d => d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name)
-
 
   /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
   extension [CV <: ContentValues](container: Contents[CV])
@@ -178,7 +177,7 @@ object AST:
   end Container
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
-  case class SimpleContainer[CV <: ContentValues](contents: Contents[CV]) extends Container[CV] with WithAttachments:
+  case class SimpleContainer[CV <: ContentValues](contents: Contents[CV]) extends Container[CV]:
     def format: String = ""
     def loc: At = At.empty
   end SimpleContainer
@@ -242,6 +241,14 @@ object AST:
     val empty: PathIdentifier = PathIdentifier(At.empty, Seq.empty[String])
   end PathIdentifier
 
+  /** A descriptive is something non-definitional that can be added to a definition. They occurs in the `with` section
+    * of the definition
+    */
+  trait Descriptive extends RiddlValue:
+    /** All Descriptives have a location provided by an [[At]] value. */
+    def loc: At
+  end Descriptive
+
   /** A single line description for any vital definition
     * @param brief
     *   The brief description
@@ -249,18 +256,14 @@ object AST:
   case class BriefDescription(
     loc: At,
     brief: LiteralString
-  ) extends RiddlValue:
+  ) extends Descriptive:
     def format: String = s"briefly \"${brief.s}\""
   end BriefDescription
 
   /** The description of a definition. All definitions have a name and an optional description. This class provides the
     * description part.
     */
-  sealed trait Description extends RiddlValue:
-
-    /** All kinds of [[Description]] have a location provided by an [[At]] value. */
-    def loc: At
-
+  sealed trait Description extends Descriptive:
     /** The lines of the description abstractly defined to be provided by subclasses */
     def lines: Seq[LiteralString]
   end Description
@@ -304,6 +307,37 @@ object AST:
     }
     override def format: String = url.toExternalForm
   end URLDescription
+
+  /** */
+  case class FileAttachment(
+    loc: At,
+    id: Identifier,
+    mimeType: String,
+    inFile: LiteralString
+  ) extends Descriptive
+      with WithIdentifier:
+    def format: String = identify
+  end FileAttachment
+
+  /** */
+  case class StringAttachment(
+    loc: At,
+    id: Identifier,
+    mimeType: String,
+    value: LiteralString
+  ) extends Descriptive
+      with WithIdentifier:
+    def format: String = identify
+  end StringAttachment
+
+  case class ULIDAttachment(
+    loc: At,
+    ulid: ULID
+  ) extends Descriptive
+      with WithIdentifier:
+    override def id: Identifier = Identifier(At.empty, "ULID")
+    def format: String = identify
+  end ULIDAttachment
 
   /** This trait represents the base trait of all comments recognized by the parser */
   sealed trait Comment extends RiddlValue:
@@ -377,43 +411,6 @@ object AST:
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// WITHS
   ////////////// Defines a bunch of traits that can be used to compose the definitions via trait inheritance
 
-  sealed trait WithAttachments:
-    /** Where attachments are stored */
-    private val attachments: mutable.Map[String, Any] = mutable.Map.empty[String, Any]
-
-    /** Put an arbitrary named value in this AST node.
-      *
-      * @param name
-      *   The name by which the arbitrary value can be retrieved
-      * @param value
-      *   A value of Any type
-      * @tparam T
-      *   The actual type of the value which must also be used upon retrieval
-      */
-    def put[T <: Any](name: String, value: T): Unit = attachments.put(name, value)
-
-    /** Get an arbitrary named value from this AST Node
-      *
-      * @param name
-      *   The name of the atribrary value to be retrieved
-      * @tparam T
-      *   The type of the value to be retrieved to whic the value will be cast. A failure may occur if the wrong T value
-      *   is used
-      * @return
-      *   The T value requests, optionally. None will be returned if the value is not in the attachments map
-      */
-    def get[T <: Any](name: String): Option[T] = attachments.get(name).map(_.asInstanceOf[T])
-
-    /** Determine if an arbitrary named value is associated with this AST Node
-      *
-      * @param name
-      *   The name of the atribrary value to be retrieved
-      * @return
-      *   True if the value exists, false otherwise
-      */
-    def has(name: String): Boolean = attachments.isDefinedAt(name)
-  end WithAttachments
-
   /** A trait that includes an `id` field and various methods to support it. This is used by [[Definition]] and any
     * other thing that needs to be identified by name.
     */
@@ -451,7 +448,7 @@ object AST:
     /** A reliable extractor of the brief description, dealing with the optionality and plurality of it */
     def briefString: String = brief.map(_.brief.s).getOrElse("No brief description.")
 
-    /** A lazily constructed [[mutable.Seq]] of [[Description]] */
+    /** A lazily constructed [[mutable.ArrayBuffer]] of [[Description]] */
     lazy val descriptions: Seq[Description] = descriptives.filter[Description]
 
     /** A reliable extractor of the description, dealing with the optionality and plurality of it */
@@ -465,6 +462,16 @@ object AST:
 
     /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
     lazy val authorRefs: Seq[AuthorRef] = descriptives.filter[AuthorRef]
+
+    lazy val ulid: ULID =
+      descriptives.find("ULID") match
+        case Some(ulid: ULIDAttachment) => ulid.ulid
+        case _ =>
+          val result = ULID.newULID
+          descriptives += ULIDAttachment(At.empty, result)
+          result
+      end match
+    end ulid
 
   end WithDescriptives
 
@@ -715,7 +722,8 @@ object AST:
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     TypeExpression | Comment | OptionValue | Reference[?] | StreamletShape | AdaptorDirection | UserStory |
-    MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription
+    MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription |
+    FileAttachment | StringAttachment | ULIDAttachment | Descriptive
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -727,7 +735,8 @@ object AST:
   type RootContents = ModuleContents | Module
 
   /** Things that can occur in the "With" section of a leaf definition */
-  type Descriptives = BriefDescription | Description | Term | AuthorRef
+  type Descriptives = BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment |
+    ULIDAttachment
 
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition = Type | Comment
@@ -845,7 +854,7 @@ object AST:
     * @see
     *   [[BranchDefinition]] and [[LeafDefinition]]
     */
-  sealed trait Definition extends WithIdentifier with WithAttachments:
+  sealed trait Definition extends WithIdentifier:
     /** Yes anything deriving from here is a definition */
     override def isDefinition: Boolean = true
     override def isParent: Boolean = false
@@ -1021,19 +1030,19 @@ object AST:
   object Root:
 
     /** The value to use for an empty [[Root]] instance */
-    val empty: Root = apply(mutable.Seq.empty[RootContents])
+    val empty: Root = apply(mutable.ArrayBuffer.empty[RootContents])
   end Root
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// NEBULA
 
-  /** The nubula of arbitrary definitions. This allows any named definition in its contents without regard to
-   * intended structure of those things. This can be used as a general "scratchpad".
-   *
-   * @param contents
-   *   The nebula of unrelated single definitions
-   */
+  /** The nubula of arbitrary definitions. This allows any named definition in its contents without regard to intended
+    * structure of those things. This can be used as a general "scratchpad".
+    *
+    * @param contents
+    *   The nebula of unrelated single definitions
+    */
   case class Nebula(
-   contents: Contents[NebulaContents] = Contents.empty
- ) extends BranchDefinition[NebulaContents]:
+    contents: Contents[NebulaContents] = Contents.empty
+  ) extends BranchDefinition[NebulaContents]:
     override def isRootContainer: Boolean = false
     def loc: At = At.empty
 
@@ -1052,7 +1061,6 @@ object AST:
     val empty: Nebula = Nebula(Contents.empty[NebulaContents])
   end Nebula
 
-
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// MODULE
 
   /** A Module represents a */
@@ -1063,8 +1071,7 @@ object AST:
     descriptives: Contents[Descriptives] = Contents.empty
   ) extends VitalDefinition[ModuleContents]
       with WithModules[ModuleContents]
-      with WithDomains[ModuleContents]
-      :
+      with WithDomains[ModuleContents]:
     def format: String = s"${Keyword.module} ${id.format}"
   end Module
 
@@ -2559,7 +2566,7 @@ object AST:
     * @param contents
     *   The definitional contents of this Adaptor
     * @param descriptives
-   *   The descriptive values for this Adaptor
+    *   The descriptive values for this Adaptor
     */
   @JSExportTopLevel("Adaptor")
   case class Adaptor(
