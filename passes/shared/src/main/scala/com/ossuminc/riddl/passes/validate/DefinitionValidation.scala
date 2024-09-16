@@ -100,20 +100,20 @@ trait DefinitionValidation extends BasicValidation:
     checkContents(container, parents)
     checkUniqueContent(container)
   }
-  def checkDescriptives(definition: Definition & WithDescriptives): Unit =
+  def checkDescriptives(definition: Definition & WithMetaData): Unit =
     checkDescriptives(definition.identify, definition)
 
-  def checkDescriptives(identity: String, definition: WithDescriptives): Unit =
+  def checkDescriptives(identity: String, definition: WithMetaData): Unit =
     check(
-      definition.descriptives.nonEmpty,
+      definition.metadata.nonEmpty,
       s"Descriptives in $identity should  not be empty",
       MissingWarning,
       definition.loc
     )
     var hasAuthorRef = false
     var hasDescription = false
-    for { descriptive <- definition.descriptives.toSeq } do {
-      descriptive match
+    for {meta <- definition.metadata.toSeq} do {
+      meta match
         case bd: BriefDescription =>
           check(
             bd.brief.s.length < 80,

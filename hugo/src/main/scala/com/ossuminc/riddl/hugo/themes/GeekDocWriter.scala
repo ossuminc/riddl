@@ -63,7 +63,7 @@ case class GeekDocWriter(
       cont match
         case p: Parent if p.contents.filter[BriefDescription].nonEmpty => 
           p.contents.filter[BriefDescription].foldLeft("")((x,y) => x + y.brief.s)
-        case d: WithDescriptives => d.briefString 
+        case d: WithMetaData => d.briefString 
         case _ => cont.id.format + " has no brief description"
       end match
     fileHead(

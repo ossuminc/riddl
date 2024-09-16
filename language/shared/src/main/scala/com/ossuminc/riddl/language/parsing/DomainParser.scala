@@ -19,7 +19,7 @@ private[parsing] trait DomainParser {
 
   def user[u: P]: P[User] = {
     P(
-      location ~ Keywords.user ~ identifier ~/ is ~ literalString ~/ withDescriptives
+      location ~ Keywords.user ~ identifier ~/ is ~ literalString ~/ withMetaData
     )./.map { case (loc, id, is_a, descriptives) =>
       User(loc, id, is_a, descriptives.toContents)
     }
@@ -42,7 +42,7 @@ private[parsing] trait DomainParser {
 
   def domain[u: P]: P[Domain] = {
     P(
-      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~ withDescriptives
+      location ~ Keywords.domain ~/ identifier ~/ is ~ open ~/ domainBody ~ close ~ withMetaData
     )./.map { case (loc, id, contents, descriptives) =>
       checkForDuplicateIncludes(contents)
       Domain(loc, id, contents.toContents, descriptives.toContents)

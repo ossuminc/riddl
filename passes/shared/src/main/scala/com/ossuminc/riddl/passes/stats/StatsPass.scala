@@ -161,7 +161,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
             descriptionLines = {
               var lines: Int = 0
               definition match
-                case wb: WithDescriptives =>
+                case wb: WithMetaData =>
                   lines = lines + { if wb.brief.nonEmpty then 1 else 0 }
                   lines = lines + { wb.descriptions.foldLeft(0) { (sum, next) =>
                     next match
@@ -352,7 +352,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
       case _ => ()
     end match
     value match
-      case _: WithDescriptives => result += 1
+      case _: WithMetaData => result += 1
       case _ => ()
     end match
     result

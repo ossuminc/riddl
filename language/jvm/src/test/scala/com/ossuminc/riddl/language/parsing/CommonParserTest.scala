@@ -50,7 +50,7 @@ class CommonParserTest extends ParsingTest {
             (1, 1),
             Identifier((1, 8), "foo"),
             contents = Contents.empty,
-            descriptives = Contents(
+            metadata = Contents(
               URLDescription(
                 (1, 30),
                 URL("https://www.wordnik.com/words/phi")

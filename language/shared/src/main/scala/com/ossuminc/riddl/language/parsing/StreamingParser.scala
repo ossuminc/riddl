@@ -17,7 +17,7 @@ private[parsing] trait StreamingParser {
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ withDescriptives
+      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ withMetaData
     )./.map { case (loc, id, typeRef, descriptives) =>
       Inlet(loc, id, typeRef, descriptives.toContents)
     }
@@ -25,7 +25,7 @@ private[parsing] trait StreamingParser {
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ withDescriptives
+      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ withMetaData
     )./.map { case (loc, id, typeRef, descriptives) =>
       Outlet(loc, id, typeRef, descriptives.toContents)
     }
@@ -40,7 +40,7 @@ private[parsing] trait StreamingParser {
 
   def connector[u: P]: P[Connector] = {
     P(
-      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~ withDescriptives
+      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~ withMetaData
     )./.map { case (loc, id, (out, in, opts), descriptives) =>
       Connector(loc, id, out, in, opts, descriptives.toContents)
     }
@@ -106,7 +106,7 @@ private[parsing] trait StreamingParser {
     P(
       location ~ keyword ~ identifier ~ is ~ open ~
         streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ withDescriptives
+        close ~ withMetaData
     )./.map { case (loc, id, contents, descriptives) =>
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
