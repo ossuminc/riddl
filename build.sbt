@@ -37,7 +37,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
   )
 
 lazy val Utils = config("utils")
-lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
+lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
   .configure(With.typical)
   .configure(With.build_info)
   .settings(
@@ -78,9 +78,13 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
       "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
     )
   )
-
+  .nativeConfigure(With.native(lto="none"))
+  .nativeSettings(
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+  )
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js
+lazy val utilsNative = utils_cp.native
 
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
