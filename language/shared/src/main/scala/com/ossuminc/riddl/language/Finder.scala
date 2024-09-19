@@ -11,9 +11,9 @@ import com.ossuminc.riddl.language.AST.*
 import scala.reflect.{ClassTag, classTag}
 import scalajs.js.annotation._
 
-/** The context for finding things within a given [[Container]] of [[com.ossuminc.riddl.language.AST.RiddlValue]] 
-  * as found in the AST model. This  provides the ability to find values in the model by traversing it and looking
- * for the matching condition.
+/** The context for finding things within a given [[Container]] of [[com.ossuminc.riddl.language.AST.RiddlValue]] as
+  * found in the AST model. This provides the ability to find values in the model by traversing it and looking for the
+  * matching condition.
   * @param root
   *   The container of RiddlValues to traverse for the sought condition
   */
@@ -32,7 +32,7 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     */
   @JSExport
   def find(select: CV => Boolean): Seq[CV] = {
-    Folding.foldEachDefinition[Seq[CV],CV](root, Seq.empty[CV]) { case (state: Seq[CV], value: CV) =>
+    Folding.foldEachDefinition[Seq[CV], CV](root, Seq.empty[CV]) { case (state: Seq[CV], value: CV) =>
       if select(value) then state :+ value else state
     }
   }
@@ -58,26 +58,54 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     *   [[scala.Seq]] of the parents of that value.
     */
   @JSExport
-  def findWithParents[T <: RiddlValue : ClassTag](
+  def findWithParents[T <: RiddlValue: ClassTag](
     select: T => Boolean
   ): DefWithParents[T] = {
     import scala.collection.mutable
     val lookingFor = classTag[T].runtimeClass
-    Folding.foldLeftWithStack[Seq[(T, Parents)],CV](
+    Folding.foldLeftWithStack[Seq[(T, Parents)], CV](
       Seq.empty[(T, Parents)],
       root,
       ParentStack.empty
     ) { case (state, definition: CV, parents) =>
       if lookingFor.isAssignableFrom(definition.getClass) then
         val value: T = definition.asInstanceOf[T]
-        if select(value) then
-          state :+ (value -> parents)
-        else
-          state
-      else
-        state
+        if select(value) then state :+ (value -> parents)
+        else state
+      else state
     }
   }
+
+  /** Run a transformation function on matching [[com.ossuminc.riddl.language.AST.RiddlValue]]. Selection is applied
+    * recursively through the `root` contents provided to the constructor. Only LeafDefinitions and BranchDefinitions
+    * are considered in the transformation.
+    *
+    * @param select
+    *   The function to select which values should be operated on. It should return true if the transformation function
+    *   should be executed on the element.
+    * @param transformF
+    *   The transformation function to convert one RiddlValue to another. If the returned value is not identical to the
+    *   passed value, it will replace the passed value in the parent contents.
+    */
+  @JSExport
+  def transform[TT <: ContentValues : ClassTag](select: TT => Boolean)(transformF: TT => TT): Unit =
+    val clazz = classTag[TT].runtimeClass
+    def transformContents(contents: Contents[TT]): Unit =
+      for { i <- contents.indices } do {
+        val item = contents(i)
+        if clazz.isAssignableFrom(item.getClass) then
+          if select(item) then
+            contents(i) = transformF(item)
+          end if
+        end if
+        if item.hasDefinitions then
+          val p = item.asInstanceOf[Parent]
+          transformContents(p.contents)
+        end if
+      }
+    end transformContents
+    transformContents(root.contents)
+  end transform
 
   /** Find definitions that are empty
     *
