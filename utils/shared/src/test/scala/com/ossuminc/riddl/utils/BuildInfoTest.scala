@@ -9,6 +9,7 @@ class BuildInfoTest extends TestingBasis {
 
   "BuildInfo" must {
     "have all the fields" in { (td: TestData) =>
+      println(td.name)
       RiddlBuildInfo.name must be("utils")
       RiddlBuildInfo.version must startWith regex """[0-9]+."""
       RiddlBuildInfo.scalaVersion must startWith("3")
@@ -36,10 +37,12 @@ class BuildInfoTest extends TestingBasis {
       RiddlBuildInfo.builtAtMillis must be < now
     }
     "has functioning toMap" in { (td: TestData) =>
+      println(td.name)
       val map = RiddlBuildInfo.toMap
       map.size must be(23)
     }
     "has functioning toJson" in { (td: TestData) =>
+      println(td.name)
       val json = RiddlBuildInfo.toJson
       json must not be (empty)
     }

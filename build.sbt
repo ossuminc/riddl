@@ -78,7 +78,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
     )
   )
-  .nativeConfigure(With.native(lto="none"))
+  .nativeConfigure(With.native(lto="none", targetTriple="arm64-apple-darwin23.6.0"))
   .nativeSettings(
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
