@@ -73,14 +73,18 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalactic" %%% "scalactic" % V.scalatest % "test",
-      "org.scalatest" %%% "scalatest" % V.scalatest % "test",
-      "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test,
+      "org.scalacheck" %%% "scalacheck" % V.scalacheck % Test
     )
   )
-  .nativeConfigure(With.native(lto="none", targetTriple="arm64-apple-darwin23.6.0"))
+  .nativeConfigure(With.native(lto = "none", targetTriple = "arm64-apple-darwin23.6.0"))
   .nativeSettings(
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
+    libraryDependencies ++= Seq(
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test,
+      "org.scalacheck" %%% "scalacheck" % V.scalacheck % Test
+    )
   )
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js

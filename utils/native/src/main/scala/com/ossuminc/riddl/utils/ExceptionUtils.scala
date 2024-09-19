@@ -1,11 +1,7 @@
 package com.ossuminc.riddl.utils
 
-import scala.scalajs.js.annotation.JSExportTopLevel
-
 object ExceptionUtils {
-  // NOTE: Using commons.lang3 library from Apache doesn't work in Javascript, hence this facade
-  def getRootCauseStackTrace(exception: Throwable): Array[String] = {
-    import org.apache.commons.lang3.exception.ExceptionUtils as L3EU
-    L3EU.getRootCauseStackTrace(exception)
-  }
+  // NOTE: Using commons.lang3 library from Apache doesn't work Natively, hence this facade
+  def getRootCauseStackTrace(exception: Throwable): Array[String] = Array.empty[String]
+
 }

@@ -1,5 +1,6 @@
 import sbt.*
 import sbt.librarymanagement.ModuleID
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
 
 /** V - Dependency Versions object */
 
