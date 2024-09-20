@@ -22,6 +22,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
   .aggregate(
     utils,
     utilsJS,
+    utilsNative,
     language,
     languageJS,
     passes,
@@ -72,19 +73,11 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
   .jsSettings(
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
-      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %%% "scalatest" % V.scalatest % Test,
       "org.scalacheck" %%% "scalacheck" % V.scalacheck % Test
     )
   )
   .nativeConfigure(With.native(lto = "none", targetTriple = "arm64-apple-darwin23.6.0"))
   .nativeSettings(
-    libraryDependencies ++= Seq(
-      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %%% "scalatest" % V.scalatest % Test,
-      "org.scalacheck" %%% "scalacheck" % V.scalacheck % Test
-    )
   )
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js
