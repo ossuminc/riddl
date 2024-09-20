@@ -60,9 +60,9 @@ jobs:
       with:
         name: code-coverage-report
         path: |
-          - **/jvm/target/scala-3.4.3/scoverage-report/scoverage.xml
-          - **/target/scala-3.4.3/scoverage-report/scoverage.xml
-          - target/scala-3.4.3/scoverage-report/scoverage.xml
+          - **/jvm/target/scala-3.5.1/scoverage-report/scoverage.xml
+          - **/target/scala-3.5.1/scoverage-report/scoverage.xml
+          - target/scala-3.5.1/scoverage-report/scoverage.xml
 
     - name: Cleanup Before Caching
       shell: bash
