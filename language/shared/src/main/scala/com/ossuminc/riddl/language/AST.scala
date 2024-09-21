@@ -354,7 +354,6 @@ object AST:
     */
   case class LineComment(loc: At, text: String = "") extends Comment:
     def format: String = "// " + text
-    override def toString: String = s"LineComment(\"$text\")"
   end LineComment
 
   /** The AST representation of a comment that can span across lines and is inline with the definitions.
