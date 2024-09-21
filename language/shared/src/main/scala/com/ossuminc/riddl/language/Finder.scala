@@ -76,35 +76,30 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     }
   }
 
-  /** Run a transformation function on matching [[com.ossuminc.riddl.language.AST.RiddlValue]]. Selection is applied
-    * recursively through the `root` contents provided to the constructor. Only LeafDefinitions and BranchDefinitions
-    * are considered in the transformation.
-    *
-    * @param select
-    *   The function to select which values should be operated on. It should return true if the transformation function
-    *   should be executed on the element.
-    * @param transformF
-    *   The transformation function to convert one RiddlValue to another. If the returned value is not identical to the
-    *   passed value, it will replace the passed value in the parent contents.
-    */
+  /** Run a transformation function on the [[Finder]] contents. They type parameter specifies what kind of thing
+   * should be found, the [[select]] argument provides further refinement of which things of that type should
+   * be selected. The transformation function does the transformation, probably by using the Scala `.copy` method.
+   *
+   * @tparam TT
+   *   The transform type. This narrows the search to just the contents that have the base type TT. 
+   * @param select
+   *   The function to select which values should be operated on. It should return true if the transformation function
+   *   should be executed on the element passed to it. 
+   * @param transformF
+   *   The transformation function to convert one value to another. The returned value will replace the passed value
+   *   in the [[Finder]]'s container.
+   */
   @JSExport
-  def transform[TT <: ContentValues : ClassTag](select: TT => Boolean)(transformF: TT => TT): Unit =
+  def transform[TT <: ContentValues : ClassTag](select: TT => Boolean)(transformF: CV => CV): Unit =
     val clazz = classTag[TT].runtimeClass
-    def transformContents(contents: Contents[TT]): Unit =
-      for { i <- contents.indices } do {
-        val item = contents(i)
-        if clazz.isAssignableFrom(item.getClass) then
-          if select(item) then
-            contents(i) = transformF(item)
-          end if
+    for { i <- root.contents.indices } do {
+      val item: CV = root.contents(i)
+      if clazz.isAssignableFrom(item.getClass) then
+        if select(item.asInstanceOf[TT]) then
+          root.contents(i) = transformF(item)
         end if
-        if item.hasDefinitions then
-          val p = item.asInstanceOf[Parent]
-          transformContents(p.contents)
-        end if
-      }
-    end transformContents
-    transformContents(root.contents)
+      end if
+    }
   end transform
 
   /** Find definitions that are empty

@@ -1,8 +1,11 @@
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput}
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.parsing.{NoJVMParsingTest, RiddlParserInput}
 
-class FinderTest extends ParsingTest {
+import org.scalatest.TestData
+
+class FinderTest extends NoJVMParsingTest {
 
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
@@ -46,22 +49,24 @@ class FinderTest extends ParsingTest {
   )
   
   "Finder" should {
-    "transform a tree" in {
+    "transform contents of a domain" in { (_: TestData) => 
       parseTopLevelDomains(input) match
-        case Left(messages) if messages.hasErrors => fail(messages.justErrors.format)
-        case Left(messages) => fail(messages.format)
+        case Left(messages) if messages.hasErrors => 
+          fail(messages.justErrors.format)
+        case Left(messages) => 
+          fail(messages.format)
         case Right(root) =>
-          val finder = Finder(root.contents)
-          finder.transform(_.isInstanceOf[AST.Type])( rv =>
-            val typ = rv.asInstanceOf[AST.Type]
+          val domain = root.domains.head
+          val finder = Finder(domain)
+          finder.transform[Type](t => t.isInstanceOf[Type])( rv =>
+            val typ = rv.asInstanceOf[Type]
             if typ.id.value == "AString" then
               typ.copy(id = Identifier(typ.id.loc, "Text"))
             else
               typ
           )
+          domain.types.find("Text") must not be(empty)
       end match
     }
   }
-
-
 }

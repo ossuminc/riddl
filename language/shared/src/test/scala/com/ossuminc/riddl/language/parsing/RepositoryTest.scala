@@ -4,7 +4,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import org.scalatest.TestData
 
-class RepositoryTest extends ParsingTest {
+class RepositoryTest extends NoJVMParsingTest {
 
   "Repository" should {
     "have a schema" in { (td:TestData) =>
