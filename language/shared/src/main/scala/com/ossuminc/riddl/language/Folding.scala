@@ -35,8 +35,8 @@ object Folding {
   @JSExport
   def foldEachDefinition[S, CV <: ContentValues](
     container: Container[CV],
-    empty: S 
-  )(foldIt: (S,CV) => S): S =
+    empty: S
+  )(foldIt: (S, CV) => S): S =
     container.contents.foldLeft(empty) { case (next, child) => foldIt(next, child) }
 
   /** A Typical foldLeft as with [[scala.collection.Seq]] but utilizing a stack of parents as well.
@@ -61,24 +61,26 @@ object Folding {
     zeroValue: S,
     top: Container[CT],
     parents: ParentStack
-  )(f: (S, CT | Container[CT], Parents) => S ): S = {
+  )(f: (S, CT | Container[CT], Parents) => S): S = {
     val initial = f(zeroValue, top, parents.toParents)
     top match
-      case p: Parent =>  parents.push(p)
-      case _ => ()
+      case p: Parent => parents.push(p)
+      case _         => ()
     end match
-    try {
-      top.contents.foldLeft(initial) { (next, value) =>
-        value match {
-          case c: Container[CT] @unchecked if c.nonEmpty => foldLeftWithStack(next, c, parents)(f)
-          case v: CT                             => f(next, v, parents.toParents)
+    val value =
+      try {
+        top.contents.foldLeft(initial) { (next, value) =>
+          value match {
+            case c: Container[CT] if c.nonEmpty => foldLeftWithStack(next, c, parents)(f)
+            case v: CT                          => f(next, v, parents.toParents)
+          }
         }
+      } finally {
+        top match
+          case p: Parent => parents.pop()
+          case _         => ()
+        end match
       }
-    } finally {
-      top match
-        case p: Parent => parents.pop()
-        case _ => ()
-      end match
-    }
+    value
   }
 }

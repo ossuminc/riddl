@@ -13,6 +13,7 @@ import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
 import com.ossuminc.riddl.passes.PassCreator
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
+import com.ossuminc.riddl.passes.stats.StatsPass
 
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
 import com.ossuminc.riddl.utils.ExceptionUtils
@@ -619,6 +620,12 @@ object Pass {
     * considered processable by other passes
     */
   val standardPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
+  
+  /** A PassesCreate of the passes that extract information but don't do much real work. These generate the symbol
+   * table, resolve path references, and calculate statistics. This allows basic information be refreshed without
+   * doing a full validation */
+  
+  val informationPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), StatsPass.creator())
 
   /** Run a set of passes against some input to obtain a result
     *
@@ -666,6 +673,20 @@ object Pass {
   ): PassesResult = {
     val input: PassInput = PassInput(model, options)
     runStandardPasses(input)
+  }
+
+  /** Run the information passes with the input provided */
+  def runInformationPasses(input: PassInput): PassesResult = {
+    runThesePasses(input, informationPasses, SysLogger())
+  }
+
+  /** Run the information passes on a Root and CommonOptions */
+  def runInformationPasses(
+    model: Root,
+    options: CommonOptions
+  ): PassesResult = {
+    val input: PassInput = PassInput(model, options)
+    runInformationPasses(input)
   }
 
   /** Run the Symbols Pass */

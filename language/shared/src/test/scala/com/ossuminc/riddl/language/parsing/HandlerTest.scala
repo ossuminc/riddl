@@ -7,12 +7,11 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{Context, Entity}
-import com.ossuminc.riddl.language.parsing.ParsingTest
-
+import com.ossuminc.riddl.language.parsing.NoJVMParsingTest
 import org.scalatest.TestData
 
 /** Unit Tests For Handler */
-class HandlerTest extends ParsingTest {
+class HandlerTest extends NoJVMParsingTest {
   "Handlers" should {
     "be allowed in contexts" in { (td: TestData) =>
       val input = RiddlParserInput(

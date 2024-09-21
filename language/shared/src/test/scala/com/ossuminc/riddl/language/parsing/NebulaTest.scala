@@ -2,7 +2,7 @@ package com.ossuminc.riddl.language.parsing
 
 import org.scalatest.TestData
 
-class NebulaTest extends ParsingTest {
+class NebulaTest extends NoJVMParsingTest {
 
   "Module" should {
     "be accepted at root scope" in { (td: TestData) =>
