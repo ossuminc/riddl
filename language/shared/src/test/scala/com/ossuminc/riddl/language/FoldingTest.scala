@@ -24,6 +24,7 @@ class FoldingTest extends NoJVMParsingTest {
       |  } with {
       |    term whomprat is { "a 2m long rat on Tatooine" }
       |  }
+      |  // foo
       |  context two is {
       |    function foo is {
       |       requires { a: Integer, b: String }
@@ -61,6 +62,7 @@ class FoldingTest extends NoJVMParsingTest {
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'"),
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Inlet 'b_in'"),
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Outlet 'b_out'"),
+    List("Root", "Domain 'one'", "// foo"), 
     List("Root", "Domain 'one'", "Context 'two'"),
     List("Root", "Domain 'one'", "Context 'two'", "Function 'foo'"),
     List("Root", "Domain 'one'", "Context 'two'", "Type 'oneState'"),
@@ -95,7 +97,7 @@ class FoldingTest extends NoJVMParsingTest {
                 case rv: RiddlValue => track :+ (previous :+ rv.format)
               }
           }
-          val expectedCount = 22
+          val expectedCount = 23
           result.length must be(expectedCount)
           result mustBe expectedResult
       end match
