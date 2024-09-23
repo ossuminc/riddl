@@ -1,15 +1,15 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.{AST, CommonOptions}
-import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, RiddlValue, Root}
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.{AST, CommonOptions}
 import fastparse.*
 import fastparse.Parsed.{Failure, Success}
 import org.scalatest.matchers.must.Matchers
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.{ClassTag, classTag}
 import scala.util.control.NonFatal
-import scala.concurrent.ExecutionContext
 
 case class TestParser(
   input: RiddlParserInput,

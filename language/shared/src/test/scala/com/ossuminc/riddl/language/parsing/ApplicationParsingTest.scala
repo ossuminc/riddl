@@ -4,7 +4,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import org.scalatest.TestData
 
-class ApplicationParsingTest extends ParsingTest {
+class ApplicationParsingTest extends NoJVMParsingTest {
 
   "Application Components" must {
     "support nested empty definitions that fail" in { (td: TestData) =>
