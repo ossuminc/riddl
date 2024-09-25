@@ -7,8 +7,9 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.passes.PassesResult
-import org.scalatest.Assertion
+import com.ossuminc.riddl.utils.{Logger, SysLogger}
 
+import org.scalatest.Assertion
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
 
@@ -41,7 +42,7 @@ class HugoPassTest extends RunCommandOnExamplesTest() {
     } else fail("wrong command!")
   }
 
-  def runHugo(outputDir: Path, tmpDir: Path): Assertion = {
+  def runHugo(outputDir: Path, tmpDir: Path, log: Logger = SysLogger()): Assertion = {
     import scala.sys.process.*
     val output = mutable.ArrayBuffer[String]()
     var hadErrorOutput: Boolean = output.nonEmpty
@@ -57,7 +58,7 @@ class HugoPassTest extends RunCommandOnExamplesTest() {
     require(Files.isDirectory(outputDir))
     val cwdFile = outputDir.toFile
     val command = "hugo --logLevel info --enableGitInfo=false"
-    println(s"Running hugo with cwd=$cwdFile, tmpDir=$tmpDir")
+    log.info(s"Running hugo with cwd=$cwdFile, tmpDir=$tmpDir")
     val proc = Process(command, cwd = Option(cwdFile))
     proc.!<(logger) match {
       case 0 =>
@@ -65,8 +66,8 @@ class HugoPassTest extends RunCommandOnExamplesTest() {
           fail("hugo wrote to stderr:\n  " + output.mkString("\n  "))
         } else { info("hugo issued warnings:\n  " + output.mkString("\n  ")) }
         succeed
-      case rc: Int if rc == 1 => 
-        println(s"hugo run failed with rc=$rc:\n  " ++ output.mkString("\n ", "\n  ", "\n"))
+      case rc: Int if rc == 1 =>
+        log.info(s"hugo run failed with rc=$rc:\n  " ++ output.mkString("\n ", "\n  ", "\n"))
         succeed
       case rc: Int =>
         fail(

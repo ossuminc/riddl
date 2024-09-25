@@ -57,15 +57,16 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String):
 
   def loadOptionsFrom(
     configFile: Path,
+    log: Logger,
     commonOptions: CommonOptions = CommonOptions()
   ): Either[Messages, OPT] = {
     if commonOptions.verbose then {
-      println(s"Reading command options from: $configFile")
+      log.info(s"Reading command options from: $configFile")
     }
     ConfigSource.file(configFile).load[OPT](getConfigReader) match {
       case Right(value) =>
         if commonOptions.verbose then {
-          println(s"Read command options from $configFile")
+          log.info(s"Read command options from $configFile")
         }
         if commonOptions.debug then {
           println(StringHelpers.toPrettyString(value, 1))
@@ -116,7 +117,7 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String):
     maybeOptions match
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
-        if commonOptions.verbose then { println(s"Running command: $command") }
+        if commonOptions.verbose then { log.info(s"Running command: $command") }
         val result = Timer.time(command, show = commonOptions.showTimes, log) {
           run(opts, commonOptions, log, outputDirOverride)
         }

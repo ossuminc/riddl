@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.utils.{PathUtils, Tar, Timer, Zip}
+import com.ossuminc.riddl.utils.{Logger, PathUtils, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -329,7 +329,9 @@ case class HugoPass(
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if commonOptions.verbose then { println(s"Generating output to: $outDir") }
+    if commonOptions.debug then {
+      println(s"Generating output to: $outDir")
+    }
     manuallyMakeNewHugoSite(outDir.toPath)
     loadThemes(options)
     loadStaticAssets(inputPath, options)

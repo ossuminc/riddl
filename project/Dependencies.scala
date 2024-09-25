@@ -6,7 +6,7 @@ import sbt.librarymanagement.ModuleID
 object V {
   val airframe_json = "24.9.0"
   val airframe_ulid = "24.9.0"
-  val commons_io = "2.16.1"
+  val commons_io = "2.17.0"
   val compress = "1.27.1"
   val config = "1.4.2"
   val fastparse = "3.1.1"

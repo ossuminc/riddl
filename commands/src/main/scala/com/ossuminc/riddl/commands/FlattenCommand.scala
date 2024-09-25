@@ -40,9 +40,10 @@ class FlattenCommand extends InputFileCommand(DumpCommand.cmdName) {
 
   override def loadOptionsFrom(
     configFile: Path,
+    log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
+    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }
