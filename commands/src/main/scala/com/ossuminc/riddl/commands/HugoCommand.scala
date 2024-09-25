@@ -231,9 +231,10 @@ class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
 
   override def loadOptionsFrom(
     configFile: Path,
+    log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, HugoPass.Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
+    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }
