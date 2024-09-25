@@ -1,6 +1,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command,CommandOptions}
+import com.ossuminc.riddl.utils.SysLogger
 
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
@@ -32,7 +33,7 @@ trait CommandTestBase(val inputDir: String = "command/src/test/input/") extends 
     expected: OPTS,
     file: Path = Path.of(confFile)
   )(checker: (opts: OPTS) => Assertion = { (opts: OPTS) => opts.check must be(empty) }): Assertion = {
-    cmd.loadOptionsFrom(file) match {
+    cmd.loadOptionsFrom(file, SysLogger()) match {
       case Left(errors) =>
         fail(errors.format)
       case Right(options: OPTS) =>
