@@ -1,4 +1,5 @@
 package com.ossuminc.riddl.testkit
 
-abstract class ValidatingTest extends com.ossuminc.riddl.passes.validate.NoJVMValidatingTest
+import com.ossuminc.riddl.passes.validate.NoJVMValidatingTest
 
+abstract class ValidatingTest extends NoJVMValidatingTest

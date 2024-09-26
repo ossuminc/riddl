@@ -1,6 +1,8 @@
 package com.ossuminc.riddl.testkit
 
+import com.ossuminc.riddl.passes
+
 class ResolvingTestTest extends ResolvingTest {
-  val delegate = new com.ossuminc.riddl.passes.resolve.PathResolutionPassTest
+  val delegate = passes.resolve.NoJVMPathResolutionPassTest()
   delegate.execute()
 }

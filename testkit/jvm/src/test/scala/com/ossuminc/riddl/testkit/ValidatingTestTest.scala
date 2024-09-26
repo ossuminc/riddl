@@ -1,8 +1,8 @@
 package com.ossuminc.riddl.testkit
 
-import com.ossuminc.riddl.passes.validate.ValidationTest
+import com.ossuminc.riddl.passes.validate
 
 class ValidatingTestTest extends ValidatingTest {
-  val delegate = new ValidationTest
+  val delegate = new validate.ValidationTest
   delegate.execute()
 }

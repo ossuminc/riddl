@@ -161,14 +161,16 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % V.scalatest,
       "org.scalatest" %% "scalatest" % V.scalatest,
-      "org.scalacheck" %% "scalacheck" % V.scalacheck
+      "org.scalactic" %% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %% "scalatest" % V.scalatest % Test,
     )
   )
   .jsSettings(
     libraryDependencies ++= Seq(
       "org.scalactic" %%% "scalactic" % V.scalatest,
       "org.scalatest" %%% "scalatest" % V.scalatest,
-      "org.scalacheck" %%% "scalacheck" % V.scalacheck
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test,
     )
   )
 val testkit = testkit_cp.jvm
