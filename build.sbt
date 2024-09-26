@@ -114,7 +114,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .jsConfigure(With.noMiMa)
   .jsSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
-    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.0"
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.2"
   )
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
