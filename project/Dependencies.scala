@@ -5,16 +5,16 @@ import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
 /** V - Dependency Versions object */
 
 object V {
-  val airframe_json = "24.9.0"
-  val airframe_ulid = "24.9.0"
-  val commons_io = "2.16.1"
+  val airframe_json = "24.9.2"
+  val airframe_ulid = "24.9.2"
+  val commons_io = "2.17.0"
   val compress = "1.27.1"
   val config = "1.4.2"
   val fastparse = "3.1.1"
   val jgit = "6.5.0"
   val lang3 = "3.17.0"
   val pureconfig = "0.17.7"
-  val scalacheck = "1.18.0"
+  val scalacheck = "1.18.1"
   val scalatest = "3.2.19"
   val scopt = "4.1.0"
   val slf4j = "2.0.4"

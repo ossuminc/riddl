@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.{Field, *}
 import org.scalatest.TestData
 
 /** Unit Tests For TypesParserTest */
-class TypeParserTest extends ParsingTest {
+class TypeParserTest extends NoJVMParsingTest {
 
   "PredefTypes" should {
     //  private def predefinedTypes[u: P]: P[TypeExpression] = {

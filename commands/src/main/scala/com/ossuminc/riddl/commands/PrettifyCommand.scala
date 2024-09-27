@@ -110,7 +110,7 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
       case result @ Right(passesResult: PassesResult) =>
         passesResult.outputOf[PrettifyOutput](PrettifyPass.name) match
           case Some(output: PrettifyOutput) =>
-            writeOutput(output, originalOptions, outputDirOverride)
+            writeOutput(output, originalOptions, outputDirOverride, log)
             result
           case None =>
             // shouldn't happen
@@ -122,7 +122,8 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
   private def writeOutput(
     output: PrettifyOutput,
     originalOptions: Options,
-    dirOverrides: Option[Path]
+    dirOverrides: Option[Path],
+    logger: Logger
   ): Unit =
     try {
       val dir = originalOptions.outputDir
@@ -152,9 +153,9 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
       end if
     } catch {
       case e: java.io.IOException =>
-        println(s"Exception while writing: ${e.getClass.getName}: ${e.getMessage}")
+        logger.info(s"Exception while writing: ${e.getClass.getName}: ${e.getMessage}")
         val stackTrace = ExceptionUtils.getRootCauseStackTrace(e).mkString("\n")
-        println(stackTrace)
+        logger.info(stackTrace)
     }
   end writeOutput
 }

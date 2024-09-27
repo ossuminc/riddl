@@ -1,6 +1,6 @@
 import scala.sys.process.Process
 
-lazy val scalacheck = "1.18.0" // NOTE: Synchronize with Dependencies.V.scalacheck
+lazy val scalacheck = "1.18.1" // NOTE: Synchronize with Dependencies.V.scalacheck
 lazy val scalatest = "3.2.19" // NOTE: Synchronize with Depenendencies.V.scalatest
 lazy val riddl = sys.props.get("plugin.version").getOrElse("0.51.0")
 

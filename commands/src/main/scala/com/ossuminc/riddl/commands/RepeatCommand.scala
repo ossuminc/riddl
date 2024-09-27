@@ -161,10 +161,10 @@ class RepeatCommand extends Command[RepeatCommand.Options](RepeatCommand.cmdName
     *   Either a set of Messages on error or a Unit on success
     */
   override def run(
-                    options: Options,
-                    commonOptions: CommonOptions,
-                    log: Logger,
-                    outputDirOverride: Option[Path]
+    options: Options,
+    commonOptions: CommonOptions,
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val maxCycles = options.maxCycles
     val refresh = options.refreshRate
@@ -177,19 +177,22 @@ class RepeatCommand extends Command[RepeatCommand.Options](RepeatCommand.cmdName
     var shouldContinue = true
     var i: Int = 0
     while i < maxCycles && shouldContinue && !userHasCancelled do {
-      val result = Commands.runFromConfig(
-        options.inputFile,
-        options.targetCommand,
-        commonOptions,
-        log, "repeat"
-      ).map { _ =>
+      val result = Commands
+        .runFromConfig(
+          options.inputFile,
+          options.targetCommand,
+          commonOptions,
+          log,
+          "repeat"
+        )
+        .map { _ =>
           if !userHasCancelled then {
             cancel.map(_.apply())
             shouldContinue = false
           } else {
             i += 1
             if commonOptions.verbose then {
-              println(s"Waiting for $refresh, cycle # $i of $maxCycles")
+              log.info(s"Waiting for $refresh, cycle # $i of $maxCycles")
             }
             Thread.sleep(sleepTime)
           }

@@ -8,16 +8,15 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import org.scalatest.fixture
+import org.scalatest.{TestData, fixture}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import org.scalatest.TestData
 
 /** Unit Tests For CommonParser */
-class CommonParserTest extends ParsingTest {
+class CommonParserTest extends NoJVMParsingTest {
 
   "NonWhiteSpaceParsers" should {
-    "handle a literalString" in {  (td: TestData) =>
+    "handle a literalString" in { (td: TestData) =>
       val content = "This is a literal string with"
       val text = s""""$content""""
       val input = RiddlParserInput(text, td)
@@ -29,19 +28,19 @@ class CommonParserTest extends ParsingTest {
   }
 
   "CommonParser" should {
-    "location should construct from pair" in { (td: TestData) =>
+    "allow location to construct from pair" in { (td: TestData) =>
       val loc = At((1, 1))
       loc.line mustBe 1
       val column = loc.col
       column mustBe 1
     }
 
-    "descriptions can be URLs" in { (td: TestData) =>
+    "allow descriptions to be URLs" in { (td: TestData) =>
       import com.ossuminc.riddl.utils.URL
       val input = RiddlParserInput(
         """domain foo is { ??? } with { described at https://www.wordnik.com/words/phi }""".stripMargin,
         URL.empty,
-        td
+        td.name
       )
       parseDomainDefinition(input, identity) match {
         case Left(errors) => fail(errors.format)
@@ -57,7 +56,8 @@ class CommonParserTest extends ParsingTest {
               )
             )
           )
-          domain.toString must be(expected.toString)
+          val result = domain must be(expected)
+          result
       }
     }
 

@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.{SysLogger, TestingBasis}
 import com.ossuminc.riddl.command.CommonOptionsHelper
 
 import java.nio.file.Path
@@ -28,9 +28,10 @@ class OptionsReadingTest extends TestingBasis {
           opts.showMissingWarnings mustBe false
         case Left(messages) => fail(messages.format)
       }
-      Commands.loadCommandNamed("repeat") match {
+      val logger = SysLogger()
+      Commands.loadCommandNamed("repeat", logger) match {
         case Right(cmd) =>
-          cmd.loadOptionsFrom(optionFile) match {
+          cmd.loadOptionsFrom(optionFile, logger) match {
             case Left(errors) => fail(errors.format)
             case Right(options) =>
               val opts = options.asInstanceOf[RepeatCommand.Options]

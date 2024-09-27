@@ -19,7 +19,7 @@ import pureconfig.{ConfigCursor, ConfigReader}
 import java.io.{File, PrintStream}
 import java.nio.charset.Charset
 import java.nio.file.Path
-import com.ossuminc.riddl.command.{PassCommand,PassCommandOptions}
+import com.ossuminc.riddl.command.{PassCommand, PassCommandOptions}
 import com.ossuminc.riddl.passes.stats.{KindStats, StatsOutput, StatsPass}
 
 object StatsCommand {
@@ -73,9 +73,10 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
 
   override def loadOptionsFrom(
     configFile: Path,
+    log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
+    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }
@@ -84,32 +85,25 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
     standardPasses :+ StatsPass.creator(options)
   }
 
-  def printStats(stats: StatsOutput): Unit = {
+  def logStats(stats: StatsOutput, log: Logger): Unit = {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
-    println(s)
+    log.info(s)
     for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)
     } do {
-      System.out.printf(
-        "%15s %5d %5d %8.2f %12.2f %12.2f %10.2f %11.2f\n",
-        key,
-        v.count,
-        v.numEmpty,
-        v.percent_of_all(totalStats.count),
-        v.percent_documented,
-        v.completeness,
-        v.complexity,
-        v.averageContainment
+      val p_of_all = v.percent_of_all(totalStats.count)
+      log.info(
+        f"$key%15s ${v.count}%5d ${v.numEmpty}%5d $p_of_all%8.2f ${v.percent_documented}12.2f ${v.completeness}%12.2f ${v.complexity}%10.2f ${v.averageContainment}%11.2f\n"
       )
     }
   }
   override def run(
-                    originalOptions: Options,
-                    commonOptions: CommonOptions,
-                    log: Logger,
-                    outputDirOverride: Option[Path]
+    originalOptions: Options,
+    commonOptions: CommonOptions,
+    log: Logger,
+    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val result = super.run(originalOptions, commonOptions, log, outputDirOverride)
     result match
@@ -117,8 +111,8 @@ class StatsCommand extends PassCommand[StatsCommand.Options]("stats") {
         Messages.logMessages(messages, log, commonOptions)
       case Right(passesResult) =>
         passesResult.outputOf[StatsOutput](StatsPass.name) match
-          case Some(stats) => printStats(stats)
-          case None => println("Statistics not available.")
+          case Some(stats) => logStats(stats, log)
+          case None        => log.warn("Statistics not available.")
     result
   }
 

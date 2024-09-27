@@ -25,10 +25,11 @@ object Commands:
    */
   def loadCommandNamed(
     name: String,
+    log: Logger,
     commonOptions: CommonOptions = CommonOptions()
   ): Either[Messages, Command[?]] =
     if commonOptions.verbose then
-      println(s"Loading command: $name")
+      log.info(s"Loading command: $name")
     end if
     name match
       case "about" => Right(AboutCommand())
@@ -81,11 +82,11 @@ object Commands:
   ): Either[Messages, PassesResult] =
     require(args.nonEmpty, "Empty argument list provided")
     val name = args.head
-    val result = loadCommandNamed(name, commonOptions)
+    val result = loadCommandNamed(name, log, commonOptions)
       .flatMap { cmd => cmd.run(args, commonOptions, log) }
     if commonOptions.verbose then
       val rc = if result.isRight then "yes" else "no"
-      println(s"Ran: ${args.mkString(" ")}: success=$rc")
+      log.info(s"Ran: ${args.mkString(" ")}: success=$rc")
     end if
     result
   end runCommandWithArgs
@@ -98,10 +99,10 @@ object Commands:
     outputDirOverride: Option[Path] = None
   ): Either[Messages, PassesResult] =
     if commonOptions.verbose then
-      println(s"About to run $name with options from $optionsPath")
+      log.info(s"About to run $name with options from $optionsPath")
     end if
-    loadCommandNamed(name, commonOptions).flatMap { cmd =>
-      cmd.loadOptionsFrom(optionsPath, commonOptions).flatMap { opts =>
+    loadCommandNamed(name, log, commonOptions).flatMap { cmd =>
+      cmd.loadOptionsFrom(optionsPath, log, commonOptions).flatMap { opts =>
         cmd.run(opts, commonOptions, log, outputDirOverride) match
           case Left(errors) =>
             if commonOptions.debug then {
@@ -117,6 +118,7 @@ object Commands:
 
   def loadCandidateCommands(
     configFile: Path,
+    log: Logger,
     commonOptions: CommonOptions = CommonOptions()
   ): Either[Messages, Seq[String]] =
     val names = ConfigSource
@@ -126,7 +128,7 @@ object Commands:
     names match
       case Right(value) =>
         if commonOptions.verbose then
-          println(s"Found candidate commands in $configFile: ${value.mkString(" ")}")
+          log.info(s"Found candidate commands in $configFile: ${value.mkString(" ")}")
         Right(value)
       case Left(fails) =>
         val message = s"Errors while reading $configFile:\n" + fails.prettyPrint(1)
@@ -169,7 +171,7 @@ object Commands:
     commandName: String
   ): Either[Messages, PassesResult] =
     val result = CommandOptions.withInputFile[PassesResult](configFile, commandName) { path =>
-      loadCandidateCommands(path, commonOptions).flatMap { names =>
+      loadCandidateCommands(path, log, commonOptions).flatMap { names =>
         if names.contains(targetCommand) then
           runCommandNamed(targetCommand, path, log, commonOptions) match
             case Left(errors) =>
@@ -196,7 +198,7 @@ object Commands:
     result match
       case Right(passesResult: PassesResult) =>
         if passesResult.commonOptions.quiet then
-          System.out.println(log.summary)
+          log.info(log.summary)
         else
           logMessages(passesResult.messages, log, passesResult.commonOptions)
         if passesResult.commonOptions.warningsAreFatal && passesResult.messages.hasWarnings then 1 else 0
@@ -261,10 +263,11 @@ object Commands:
   end runMain
 
   def parseCommandOptions(
-   args: Array[String]
+   args: Array[String],
+   log: Logger
   ): Either[Messages, CommandOptions] =
     require(args.nonEmpty)
-    val result = loadCommandNamed(args.head)
+    val result = loadCommandNamed(args.head, log)
     result match
       case Right(cmd) =>
         cmd.parseOptions(args) match {

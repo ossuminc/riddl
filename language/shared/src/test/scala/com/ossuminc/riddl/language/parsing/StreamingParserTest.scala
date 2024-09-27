@@ -6,14 +6,14 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.AST.*
 import org.scalatest.TestData
 
 /** Unit Tests For StreamingParser */
-class StreamingParserTest extends ParsingTest {
+class StreamingParserTest extends NoJVMParsingTest {
 
-  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 
   val sourceInput: String =
     """source GetWeatherForecast is {
