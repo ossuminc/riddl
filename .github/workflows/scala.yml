@@ -25,10 +25,10 @@ jobs:
         java-version: '21'
         distribution: 'adopt-hotspot'
 
-    - name: Setup LLVM
-      uses: cpp-actions/setup-llvm@v1
+    - name: Setup LLVM & Clang
+      uses: KyleMayes/install-llvm-action@v2
       with:
-        llvm-version: "18"
+        version: "10.0"
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
