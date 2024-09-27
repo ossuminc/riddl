@@ -3,12 +3,12 @@ package com.ossuminc.riddl.passes.resolve
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.{ParsingTest, RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.parsing.{NoJVMParsingTest, RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
 import org.scalatest.*
 
 /** A base class for test cases involved in resolving pathids */
-class ResolvingTest extends ParsingTest {
+class ResolvingTest extends NoJVMParsingTest {
 
   def resolve(
     root: Root,
