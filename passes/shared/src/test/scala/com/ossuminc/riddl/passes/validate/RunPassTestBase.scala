@@ -1,14 +1,14 @@
-package com.ossuminc.riddl.passes
+package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInfo, PassInput, PassesResult}
-import com.ossuminc.riddl.passes.validate.ValidatingTest
+import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.passes.validate.NoJVMValidatingTest
 import com.ossuminc.riddl.utils.SysLogger
 import org.scalatest.Suite
 
-class RunPassTestBase extends ValidatingTest {
+class RunPassTestBase extends NoJVMValidatingTest {
 
   def runPassesWith(
     input: RiddlParserInput,

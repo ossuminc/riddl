@@ -156,7 +156,8 @@ class ContextValidationTest extends ValidatingTest {
     "allow includes" in { (td: TestData) =>
       val name = "language/jvm/src/test/input/context/context-with-include.riddl"
       val path = Path.of(name)
-      parseRoot(path) match {
+      val rpi = RiddlParserInput.fromCwdPath(path)
+      parseTopLevelDomains(rpi) match {
         case Left(errors) => fail(errors.format)
         case Right(root) =>
           root mustNot be(empty)
