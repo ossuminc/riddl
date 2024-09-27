@@ -3,8 +3,8 @@ package com.ossuminc.riddl.hugo.mermaid
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.diagrams.mermaid.ContextMapDiagram
-import com.ossuminc.riddl.passes.RunPassTestBase
 import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
+import com.ossuminc.riddl.passes.validate.RunPassTestBase
 
 import org.scalatest.TestData
 import java.nio.file.Path

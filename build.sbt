@@ -26,6 +26,8 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
     languageJS,
     passes,
     passesJS,
+    testkit,
+    testkitJS,
     diagrams,
     diagramsJS,
     command,
@@ -148,6 +150,31 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .jsConfigure(With.noMiMa)
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
+
+lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
+  .configure(With.typical, With.publishing)
+  .settings(
+    description := "Testing kit for RIDDL language and passes"
+  )
+  .dependsOn(language_cp % "compile->test", passes_cp % "compile->test")
+  .jvmSettings(
+    libraryDependencies ++= Seq(
+      "org.scalactic" %% "scalactic" % V.scalatest,
+      "org.scalatest" %% "scalatest" % V.scalatest,
+      "org.scalactic" %% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %% "scalatest" % V.scalatest % Test,
+    )
+  )
+  .jsSettings(
+    libraryDependencies ++= Seq(
+      "org.scalactic" %%% "scalactic" % V.scalatest,
+      "org.scalatest" %%% "scalatest" % V.scalatest,
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test,
+    )
+  )
+val testkit = testkit_cp.jvm
+val testkitJS = testkit_cp.js
 
 val Diagrams = config("diagrams")
 lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
