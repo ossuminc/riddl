@@ -86,7 +86,7 @@ lazy val utilsJS = utils_cp.js
 lazy val utilsNative = utils_cp.native
 
 val Language = config("language")
-lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
+lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp))
   .configure(With.typical)
   .settings(
@@ -117,10 +117,17 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .jsConfigure(With.noMiMa)
   .jsSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
-    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.2"
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
+  )
+  .nativeConfigure(With.native())
+  .nativeConfigure(With.noMiMa)
+  .nativeSettings(
+    libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
+lazy val languageNative = language_cp.native.dependsOn(utilsNative)
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
