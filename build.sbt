@@ -170,7 +170,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
       "org.scalatest" %% "scalatest" % V.scalatest % Test
     )
   )
-  .jsConfigure(With.javascript)
+  .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.publishing)
   .jsSettings(
     name := "riddl-testkit"
