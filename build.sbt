@@ -71,16 +71,15 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   )
   .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
+  .jsConfigure(With.publishing)
   .jsSettings(
+    name := "riddl-utils",
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalactic" %%% "scalactic" % V.scalatest % "test",
-      "org.scalatest" %%% "scalatest" % V.scalatest % "test",
       "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
     )
   )
-
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js
 
@@ -113,8 +112,10 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += Dep.commons_io % Test
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
+  .jsConfigure(With.publishing)
   .jsConfigure(With.noMiMa)
   .jsSettings(
+    name := "riddl-language",
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.2"
   )
@@ -147,7 +148,11 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
     }
   )
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
+  .jsConfigure(With.publishing)
   .jsConfigure(With.noMiMa)
+  .jsSettings(
+    name := "riddl-passes"
+  )
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
@@ -162,16 +167,13 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
       "org.scalactic" %% "scalactic" % V.scalatest,
       "org.scalatest" %% "scalatest" % V.scalatest,
       "org.scalactic" %% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test,
+      "org.scalatest" %% "scalatest" % V.scalatest % Test
     )
   )
+  .jsConfigure(With.javascript)
+  .jsConfigure(With.publishing)
   .jsSettings(
-    libraryDependencies ++= Seq(
-      "org.scalactic" %%% "scalactic" % V.scalatest,
-      "org.scalatest" %%% "scalatest" % V.scalatest,
-      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %%% "scalatest" % V.scalatest % Test,
-    )
+    name := "riddl-testkit"
   )
 val testkit = testkit_cp.jvm
 val testkitJS = testkit_cp.js
