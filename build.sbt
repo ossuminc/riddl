@@ -192,6 +192,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
+  .jsSettings(name := "riddl-diagrams")
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
 
