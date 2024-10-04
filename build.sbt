@@ -73,7 +73,6 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   .jsConfigure(With.noMiMa)
   .jsConfigure(With.publishing)
   .jsSettings(
-    name := "riddl-utils",
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
@@ -115,7 +114,6 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .jsConfigure(With.publishing)
   .jsConfigure(With.noMiMa)
   .jsSettings(
-    name := "riddl-language",
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.2"
   )
@@ -150,9 +148,6 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
   .jsConfigure(With.publishing)
   .jsConfigure(With.noMiMa)
-  .jsSettings(
-    name := "riddl-passes"
-  )
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
@@ -172,9 +167,6 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.publishing)
-  .jsSettings(
-    name := "riddl-testkit"
-  )
 val testkit = testkit_cp.jvm
 val testkitJS = testkit_cp.js
 
@@ -192,7 +184,6 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .jsSettings(name := "riddl-diagrams")
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
 

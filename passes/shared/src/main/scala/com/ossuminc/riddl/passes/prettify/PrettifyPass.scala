@@ -8,7 +8,7 @@ import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
 
-import scala.scalajs.js.annotation.{JSExportTopLevel,JSExport}
+import scala.scalajs.js.annotation.JSExportTopLevel
 
 @JSExportTopLevel("PrettifyPass$")
 object PrettifyPass extends PassInfo[PrettifyPass.Options]:
