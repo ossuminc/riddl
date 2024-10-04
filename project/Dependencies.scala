@@ -4,8 +4,8 @@ import sbt.librarymanagement.ModuleID
 /** V - Dependency Versions object */
 
 object V {
-  val airframe_json = "24.9.2"
-  val airframe_ulid = "24.9.2"
+  val airframe_json = "24.9.3"
+  val airframe_ulid = "24.9.3"
   val commons_io = "2.17.0"
   val compress = "1.27.1"
   val config = "1.4.2"
