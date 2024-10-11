@@ -448,7 +448,7 @@ object AST:
     /** A reliable extractor of the brief description, dealing with the optionality and plurality of it */
     def briefString: String = brief.map(_.brief.s).getOrElse("No brief description.")
 
-    /** A lazily constructed [[mutable.Seq]] of [[Description]] */
+    /** A lazily constructed [[scala.Seq]] of [[Description]] */
     def descriptions: Seq[Description] = metadata.filter[Description]
 
     /** A reliable extractor of the description, dealing with the optionality and plurality of it */
