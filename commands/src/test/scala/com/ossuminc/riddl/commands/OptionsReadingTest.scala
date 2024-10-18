@@ -28,10 +28,9 @@ class OptionsReadingTest extends TestingBasis {
           opts.showMissingWarnings mustBe false
         case Left(messages) => fail(messages.format)
       }
-      val logger = SysLogger()
-      Commands.loadCommandNamed("repeat", logger) match {
+      Commands.loadCommandNamed("repeat") match {
         case Right(cmd) =>
-          cmd.loadOptionsFrom(optionFile, logger) match {
+          cmd.loadOptionsFrom(optionFile) match {
             case Left(errors) => fail(errors.format)
             case Right(options) =>
               val opts = options.asInstanceOf[RepeatCommand.Options]

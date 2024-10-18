@@ -6,12 +6,10 @@
 
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.language.{At, CommonOptions}
+import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.Messages.SevereError
 import com.ossuminc.riddl.language.Messages.errors
-import com.ossuminc.riddl.language.Messages.highestSeverity
 import com.ossuminc.riddl.language.Messages.severes
 import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.passes.PassesResult
@@ -23,15 +21,12 @@ import scopt.OParserBuilder
 import java.io.File
 import java.nio.file.Path
 import scala.annotation.unused
-import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.reflect.ClassTag
-import scala.reflect.classTag
-import scala.util.control.NonFatal
 
-  /** The service interface for Riddlc command plugins */
-trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String):
+/** The service interface for Riddlc command plugins */
+trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io: PlatformIOContext):
 
-  private val optionsClass : Class[?] = classTag[OPT].runtimeClass
+  // private val optionsClass : Class[?] = classTag[OPT].runtimeClass
 
   /** Provide an scopt OParser for the commands options type, OPT
     * @return
@@ -57,16 +52,15 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String):
 
   def loadOptionsFrom(
     configFile: Path,
-    log: Logger,
     commonOptions: CommonOptions = CommonOptions()
   ): Either[Messages, OPT] = {
     if commonOptions.verbose then {
-      log.info(s"Reading command options from: $configFile")
+      io.log.info(s"Reading command options from: $configFile")
     }
     ConfigSource.file(configFile).load[OPT](getConfigReader) match {
       case Right(value) =>
         if commonOptions.verbose then {
-          log.info(s"Read command options from $configFile")
+          io.log.info(s"Read command options from $configFile")
         }
         if commonOptions.debug then {
           println(StringHelpers.toPrettyString(value, 1))
@@ -88,16 +82,13 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String):
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-    * @param log
-    *   A logger for logging errors, warnings, and info
     * @return
     *   Either a set of Messages on error or a Unit on success
     */
   def run(
-   @unused options: OPT,
-   @unused commonOptions: CommonOptions,
-   @unused log: Logger,
-   @unused outputDirOverride: Option[Path]
+    @unused options: OPT,
+    @unused commonOptions: CommonOptions,
+    @unused outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] =
     Left(
       severes(
@@ -110,16 +101,15 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String):
   def run(
     args: Array[String],
     commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path] = None
   ): Either[Messages, PassesResult] =
     val maybeOptions: Option[OPT] = parseOptions(args)
     maybeOptions match
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
-        if commonOptions.verbose then { log.info(s"Running command: $command") }
-        val result = Timer.time(command, show = commonOptions.showTimes, log) {
-          run(opts, commonOptions, log, outputDirOverride)
+        if commonOptions.verbose then { io.log.info(s"Running command: $command") }
+        val result = Timer.time(command, show = commonOptions.showTimes) {
+          run(opts, commonOptions, outputDirOverride)
         }
         result
       case None => Left(errors(s"Failed to parse $pluginName options"))

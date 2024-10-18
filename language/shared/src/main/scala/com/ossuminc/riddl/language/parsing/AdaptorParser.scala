@@ -10,9 +10,10 @@ import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.utils.PlatformIOContext
 
 /** Parser rules for Adaptors */
-private[parsing] trait AdaptorParser {
+private[parsing] trait AdaptorParser(using io: PlatformIOContext) {
   this: ProcessorParser =>
 
   import scala.concurrent.Future

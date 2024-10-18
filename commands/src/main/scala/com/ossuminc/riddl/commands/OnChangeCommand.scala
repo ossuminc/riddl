@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.commands.Commands
@@ -47,7 +47,7 @@ object OnChangeCommand {
   }
 }
 
-class OnChangeCommand
+class OnChangeCommand(using io: PlatformIOContext)
     extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
 
@@ -169,10 +169,9 @@ class OnChangeCommand
 
   override def loadOptionsFrom(
     configFile: Path,
-    log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }
@@ -184,21 +183,19 @@ class OnChangeCommand
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-    * @param log
-    *   A logger for logging errors, warnings, and info
     * @return
     *   Either a set of Messages on error or a Unit on success
     */
   override def run(
     options: Options,
     commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     Left(errors("Not Implemented"))
   }
 
   private final val timeStampFileName: String = ".riddl-timestamp"
+  
   def getTimeStamp(dir: Path): FileTime = {
     val filePath = dir.resolve(timeStampFileName)
     if Files.notExists(filePath) then {

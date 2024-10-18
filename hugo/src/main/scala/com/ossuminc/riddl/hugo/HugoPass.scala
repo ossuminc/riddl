@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.utils.{Logger, PathUtils, Tar, Timer, Zip}
+import com.ossuminc.riddl.utils.{Logger, PathUtils, PlatformIOContext, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -31,8 +31,8 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo[HugoPass.Options] {
   val name: String = "hugo"
-  def creator(options: HugoPass.Options): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    HugoPass(in, out, options)
+  def creator(options: HugoPass.Options)(using PlatformIOContext): (PassInput, PassesOutput) => HugoPass = {
+    (in: PassInput, out: PassesOutput) => HugoPass(in, out, options)
   }
 
   /** Options for the HugoPass/Command */
@@ -76,27 +76,27 @@ object HugoPass extends PassInfo[HugoPass.Options] {
 
   def getPasses(
     options: HugoPass.Options
-  ): PassesCreator = {
-    val glossary: PassesCreator =
+  )(using PlatformIOContext): PassCreators = {
+    val glossary: PassCreators =
       if options.withGlossary then
         Seq({ (input: PassInput, outputs: PassesOutput) => GlossaryPass(input, outputs, options) })
       else Seq.empty
 
-    val messages: PassesCreator =
+    val messages: PassCreators =
       if options.withMessageSummary then
         Seq({ (input: PassInput, outputs: PassesOutput) => MessagesPass(input, outputs, options) })
       else Seq.empty
 
-    val stats: PassesCreator =
+    val stats: PassCreators =
       if options.withStatistics then Seq({ (input: PassInput, outputs: PassesOutput) => StatsPass(input, outputs) })
       else Seq.empty
 
-    val toDo: PassesCreator =
+    val toDo: PassCreators =
       if options.withTODOList then
         Seq({ (input: PassInput, outputs: PassesOutput) => ToDoListPass(input, outputs, options) })
       else Seq.empty
 
-    val diagrams: PassesCreator =
+    val diagrams: PassCreators =
       Seq({ (input: PassInput, outputs: PassesOutput) => DiagramsPass(input, outputs) })
 
     standardPasses ++ glossary ++ messages ++ stats ++ toDo ++ diagrams ++ Seq(
@@ -126,7 +126,7 @@ case class HugoPass(
   outputs: PassesOutput,
   options: HugoPass.Options,
   commonOptions: CommonOptions = CommonOptions()
-) extends Pass(input, outputs)
+)(using io: PlatformIOContext) extends Pass(input, outputs)
     with TranslatingState[MarkdownWriter]
     with Summarizer {
 
@@ -143,7 +143,7 @@ case class HugoPass(
   val root: Root = input.root
   val name: String = HugoPass.name
 
-  protected val generator = ThemeGenerator(options, input, outputs, messages)
+  protected val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
 
   options.inputFile match {
     case Some(inFile) =>

@@ -59,6 +59,7 @@ class SysLoggerTest extends AnyWordSpec with Matchers {
   }
 
   "SysLogger" should {
+    given PlatformIOContext = ScalaPlatformIOContext()
     "print error message" in {
       val expected = s"[error] asdf\n"
       val sl = SysLogger(false)

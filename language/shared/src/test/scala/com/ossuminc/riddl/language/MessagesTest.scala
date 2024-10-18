@@ -149,7 +149,7 @@ class MessagesTest extends TestingBasis {
     "log with retained order" in {
       val commonOptions = CommonOptions()
       val log: Logger = StringLogger()
-      Messages.logMessages(mix, log, commonOptions)
+      Messages.logMessages(mix, commonOptions)
       val content = log.toString
       val expected = """[34m[1m[info] empty(1:1)info[0m
                        |[32m[1m[style] empty(1:1)style[0m
@@ -163,8 +163,8 @@ class MessagesTest extends TestingBasis {
     }
     "log grouped by message kind" in {
       val commonOptions = CommonOptions(groupMessagesByKind = true)
-      val log: Logger = StringLogger()
-      Messages.logMessages(mix, log, commonOptions)
+      given log: Logger = StringLogger()
+      Messages.logMessages(mix, commonOptions)
       val content = log.toString
       val expected =
         """[41m[30m[1m[severe] Severe Message Count: 1[0m

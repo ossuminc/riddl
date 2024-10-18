@@ -3,7 +3,7 @@ package com.ossuminc.riddl.hugo
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.ossuminc.riddl.language.AST.Root
-import com.ossuminc.riddl.passes.{Pass, PassesCreator, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{Pass, PassCreators, PassInput, PassesOutput}
 import com.ossuminc.riddl.utils.TestingBasis
 
 class HugoPassTest extends TestingBasis {
@@ -41,7 +41,7 @@ class HugoPassTest extends TestingBasis {
       val hpo = HugoPass
         .Options()
         .copy(withGlossary = false, withTODOList = false, withGraphicalTOC = false, withMessageSummary = false)
-      val passes: PassesCreator = HugoPass.getPasses(hpo)
+      val passes: PassCreators = HugoPass.getPasses(hpo)
       passes.size mustBe(6)
     }
     "check its creation dependencies" in {

@@ -12,13 +12,15 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class TimerTest extends TestingBasis {
 
+  given PlatformIOContext = ScalaPlatformIOContext()
+  
   "timer" should {
     "measure the correct time" in { (td: TestData) =>
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
       val clock = new AdjustableClock(start)
 
       val logger = StringLogger()
-      val result = Timer.time("MyStage", show = true, logger) {
+      val result = Timer.time("MyStage", show = true) {
         clock.updateInstant(_.plusSeconds(2))
         123
       }

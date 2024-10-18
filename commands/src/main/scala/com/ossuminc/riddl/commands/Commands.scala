@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{Logger, StringLogger, SysLogger}
+import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, StringLogger, SysLogger}
 import com.ossuminc.riddl.language.{At, CommonOptions}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.PassesResult
@@ -9,6 +9,7 @@ import pureconfig.error.ConfigReaderFailures
 
 import java.nio.file.Path
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
+
 import scala.util.control.NonFatal
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
@@ -25,11 +26,10 @@ object Commands:
    */
   def loadCommandNamed(
     name: String,
-    log: Logger,
     commonOptions: CommonOptions = CommonOptions()
-  ): Either[Messages, Command[?]] =
+  )(using io: PlatformIOContext): Either[Messages, Command[?]] =
     if commonOptions.verbose then
-      log.info(s"Loading command: $name")
+      io.log.info(s"Loading command: $name")
     end if
     name match
       case "about" => Right(AboutCommand())
@@ -77,16 +77,15 @@ object Commands:
    */
   def runCommandWithArgs(
     args: Array[String],
-    log: Logger,
     commonOptions: CommonOptions
-  ): Either[Messages, PassesResult] =
+  )(using io: PlatformIOContext): Either[Messages, PassesResult] =
     require(args.nonEmpty, "Empty argument list provided")
     val name = args.head
-    val result = loadCommandNamed(name, log, commonOptions)
-      .flatMap { cmd => cmd.run(args, commonOptions, log) }
+    val result = loadCommandNamed(name, commonOptions)
+      .flatMap { cmd => cmd.run(args, commonOptions) }
     if commonOptions.verbose then
       val rc = if result.isRight then "yes" else "no"
-      log.info(s"Ran: ${args.mkString(" ")}: success=$rc")
+      io.log.info(s"Ran: ${args.mkString(" ")}: success=$rc")
     end if
     result
   end runCommandWithArgs
@@ -94,16 +93,15 @@ object Commands:
   def runCommandNamed(
     name: String,
     optionsPath: Path,
-    log: Logger,
     commonOptions: CommonOptions = CommonOptions(),
     outputDirOverride: Option[Path] = None
-  ): Either[Messages, PassesResult] =
+  )(using io: PlatformIOContext): Either[Messages, PassesResult] =
     if commonOptions.verbose then
-      log.info(s"About to run $name with options from $optionsPath")
+      io.log.info(s"About to run $name with options from $optionsPath")
     end if
-    loadCommandNamed(name, log, commonOptions).flatMap { cmd =>
-      cmd.loadOptionsFrom(optionsPath, log, commonOptions).flatMap { opts =>
-        cmd.run(opts, commonOptions, log, outputDirOverride) match
+    loadCommandNamed(name, commonOptions).flatMap { cmd =>
+      cmd.loadOptionsFrom(optionsPath, commonOptions).flatMap { opts =>
+        cmd.run(opts, commonOptions, outputDirOverride) match
           case Left(errors) =>
             if commonOptions.debug then {
               println(s"Errors after running '$name':")
@@ -118,9 +116,8 @@ object Commands:
 
   def loadCandidateCommands(
     configFile: Path,
-    log: Logger,
     commonOptions: CommonOptions = CommonOptions()
-  ): Either[Messages, Seq[String]] =
+  )(using io: PlatformIOContext): Either[Messages, Seq[String]] =
     val names = ConfigSource
       .file(configFile.toFile)
       .value()
@@ -128,7 +125,7 @@ object Commands:
     names match
       case Right(value) =>
         if commonOptions.verbose then
-          log.info(s"Found candidate commands in $configFile: ${value.mkString(" ")}")
+          io.log.info(s"Found candidate commands in $configFile: ${value.mkString(" ")}")
         Right(value)
       case Left(fails) =>
         val message = s"Errors while reading $configFile:\n" + fails.prettyPrint(1)
@@ -167,13 +164,12 @@ object Commands:
     configFile: Option[Path],
     targetCommand: String,
     commonOptions: CommonOptions,
-    log: Logger,
     commandName: String
-  ): Either[Messages, PassesResult] =
+  )(using io: PlatformIOContext): Either[Messages, PassesResult] =
     val result = CommandOptions.withInputFile[PassesResult](configFile, commandName) { path =>
-      loadCandidateCommands(path, log, commonOptions).flatMap { names =>
+      loadCandidateCommands(path, commonOptions).flatMap { names =>
         if names.contains(targetCommand) then
-          runCommandNamed(targetCommand, path, log, commonOptions) match
+          runCommandNamed(targetCommand, path, commonOptions) match
             case Left(errors) =>
               if commonOptions.debug then
                 println(s"Errors after running `$targetCommand`:")
@@ -186,26 +182,25 @@ object Commands:
         end if
       }
     }
-    handleCommandResult(result, commonOptions, log)
+    handleCommandResult(result, commonOptions)
     result
   end runFromConfig
 
   private def handleCommandResult(
     result: Either[Messages, PassesResult],
     commonOptions: CommonOptions,
-    log: Logger
-  ): Int =
+  )(using io: PlatformIOContext): Int =
     result match
       case Right(passesResult: PassesResult) =>
         if passesResult.commonOptions.quiet then
-          log.info(log.summary)
+          io.log.info(io.log.summary)
         else
-          logMessages(passesResult.messages, log, passesResult.commonOptions)
+          logMessages(passesResult.messages, passesResult.commonOptions)
         if passesResult.commonOptions.warningsAreFatal && passesResult.messages.hasWarnings then 1 else 0
       case Left(messages) =>
         if commonOptions.quiet then highestSeverity(messages) + 1
         else {
-          logMessages(messages, log, commonOptions) + 1
+          logMessages(messages, commonOptions) + 1
         }
     end match
   end handleCommandResult
@@ -213,21 +208,20 @@ object Commands:
   private def handleCommandRun(
     remaining: Array[String],
     commonOptions: CommonOptions,
-    log: Logger
-  ): Int =
+  )(using io: PlatformIOContext): Int =
     if remaining.isEmpty then
-      log.error("No command argument was provided")
+      io.log.error("No command argument was provided")
       1
     else
       if commonOptions.dryRun then
-        log.info(s"Would have executed: ${remaining.mkString(" ")}")
+        io.log.info(s"Would have executed: ${remaining.mkString(" ")}")
         0
       else
-        val result = runCommandWithArgs(remaining, log, commonOptions)
-        handleCommandResult(result, commonOptions, log)
+        val result = runCommandWithArgs(remaining, commonOptions)
+        handleCommandResult(result, commonOptions)
   end handleCommandRun
 
-  def runMainForTest(args: Array[String]): Either[Messages, PassesResult] =
+  def runMainForTest(args: Array[String])(using io: PlatformIOContext): Either[Messages, PassesResult] =
     try
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match
@@ -236,7 +230,7 @@ object Commands:
           if remaining.isEmpty then
             Left(List(error("No command argument was provided")))
           else
-            runCommandWithArgs(remaining, log, commonOptions)
+            runCommandWithArgs(remaining, commonOptions)
         case None =>
           Left(List(error("Option parsing failed, terminating.")))
       end match
@@ -245,29 +239,28 @@ object Commands:
         Left(List(severe("Exception Thrown:", exception, At.empty)))
   end runMainForTest
 
-  def runMain(args: Array[String], log: Logger = SysLogger()): Int =
+  def runMain(args: Array[String])(using io: PlatformIOContext): Int =
     try
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match
         case Some(commonOptions) =>
-          handleCommandRun(remaining, commonOptions, log)
+          handleCommandRun(remaining, commonOptions)
         case None =>
           // arguments are bad, error message will have been displayed
-          log.info("Option parsing failed, terminating.")
+          io.log.info("Option parsing failed, terminating.")
           1
       end match
     catch
       case NonFatal(exception) =>
-        log.severe("Exception Thrown:", exception)
+        io.log.severe("Exception Thrown:", exception)
         SevereError.severity + 1
   end runMain
 
   def parseCommandOptions(
    args: Array[String],
-   log: Logger
-  ): Either[Messages, CommandOptions] =
+  )(using io: PlatformIOContext): Either[Messages, CommandOptions] =
     require(args.nonEmpty)
-    val result = loadCommandNamed(args.head, log)
+    val result = loadCommandNamed(args.head)
     result match
       case Right(cmd) =>
         cmd.parseOptions(args) match {

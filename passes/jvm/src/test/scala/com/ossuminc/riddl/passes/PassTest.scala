@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.utils.TestingBasisWithTestData
+import com.ossuminc.riddl.utils.{PlatformIOContext, TestingBasisWithTestData}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Accumulator
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -48,7 +48,8 @@ class PassTest extends TestingBasisWithTestData {
   object TestPass extends PassInfo[PassOptions] {
     val name: String = "TestPass"
 
-    override def creator(options: PassOptions): PassCreator = (input, output) => new TestPass(input, output)
+    override def creator(options: PassOptions)(using PlatformIOContext): PassCreator = (input, output) =>
+      new TestPass(input, output)
   }
 
   class TestPass2(input: PassInput, output: PassesOutput) extends Pass(input, output) {
@@ -66,7 +67,8 @@ class PassTest extends TestingBasisWithTestData {
   object TestPass2 extends PassInfo[PassOptions] {
     val name: String = "TestPass2"
 
-    override def creator(options: PassOptions): PassCreator = (input, output) => new TestPass2(input, output)
+    override def creator(options: PassOptions)(using PlatformIOContext): PassCreator = (input, output) =>
+      new TestPass2(input, output)
   }
 
   "Pass" must {
@@ -150,7 +152,8 @@ class PassTest extends TestingBasisWithTestData {
           |   /* comment */
           |  } with { term baz is "a character in a play" }
           |}  
-          |""".stripMargin, td
+          |""".stripMargin,
+        td
       )
       Riddl.parseAndValidate(input) match
         case Left(messages) => fail(messages.justErrors.format)

@@ -9,7 +9,7 @@ import wvlet.airframe.ulid.ULID
 class ASTTestJVM extends TestingBasis {
 
   "RiddlValue" must {
-    "allow attachments to be added programatically" in {
+    "allow attachments to be added programmatically" in {
       val container = Entity(At.empty, Identifier.empty)
       val a = StringAttachment(At.empty, Identifier(At.empty,"foo"), "application/json", LiteralString(At.empty,"{}"))
       container.metadata += a

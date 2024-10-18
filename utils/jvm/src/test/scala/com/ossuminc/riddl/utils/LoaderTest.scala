@@ -13,7 +13,7 @@ class LoaderTest extends AnyWordSpec with Matchers {
       val url = URL(
         "https://raw.githubusercontent.com/ossuminc/riddl/main/language/jvm/src/test/input/domains/rbbq.riddl"
       )
-      val contentF = Loader(url).load
+      val contentF = ScalaPlatformIOContext().load(url)
       val content = Await.result(contentF, 5.seconds)
       // info(content)
     }

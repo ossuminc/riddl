@@ -12,6 +12,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
+import com.ossuminc.riddl.utils.PlatformIOContext
 import com.ossuminc.riddl.utils.SeqHelpers.*
 
 import scala.collection.mutable
@@ -19,8 +20,8 @@ import scala.collection.immutable.Seq
 
 object ValidationPass extends PassInfo[PassOptions] {
   val name: String = "Validation"
-  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    ValidationPass(in, out)
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = { 
+    (in: PassInput, out: PassesOutput) => ValidationPass(in, out)
   }
 }
 

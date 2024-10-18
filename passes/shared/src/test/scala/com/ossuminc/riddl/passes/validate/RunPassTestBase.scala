@@ -21,7 +21,7 @@ class RunPassTestBase extends NoJVMValidatingTest {
       case Right(root:Root) =>
         val passesToRun = Pass.standardPasses :+ passToRun
         val passInput = PassInput(root, commonOptions)
-        val result = Pass.runThesePasses(passInput, passesToRun, SysLogger())
+        val result = Pass.runThesePasses(passInput, passesToRun)
         if result.messages.hasErrors then fail(result.messages.justErrors.format)
         result
     }

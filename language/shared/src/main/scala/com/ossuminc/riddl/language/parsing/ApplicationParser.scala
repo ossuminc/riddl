@@ -7,10 +7,11 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.utils.PlatformIOContext
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-private[parsing] trait ApplicationParser {
+private[parsing] trait ApplicationParser(using io: PlatformIOContext) {
   this: ProcessorParser & StreamingParser & CommonParser =>
 
   def containedGroup[u: P]: P[ContainedGroup] = {

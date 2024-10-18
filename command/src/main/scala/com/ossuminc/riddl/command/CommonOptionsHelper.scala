@@ -9,7 +9,7 @@ import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
-import com.ossuminc.riddl.utils.{RiddlBuildInfo, SysLogger}
+import com.ossuminc.riddl.utils.{PlatformIOContext, RiddlBuildInfo, SysLogger}
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
 import pureconfig.error.ConfigReaderFailures
 import scopt.*
@@ -160,7 +160,7 @@ object CommonOptionsHelper {
 
   def parseCommonOptions(
     args: Array[String]
-  ): (Option[CommonOptions], Array[String]) = {
+  )(using io: PlatformIOContext): (Option[CommonOptions], Array[String]) = {
     val setup: OParserSetup = new DefaultOParserSetup {
       override def showUsageOnError: Option[Boolean] = Option(false)
 
@@ -169,14 +169,13 @@ object CommonOptionsHelper {
     }
 
     val dontTerminate: DefaultOEffectSetup = new DefaultOEffectSetup {
-      val log: SysLogger = SysLogger()
-      override def displayToOut(msg: String): Unit = { log.info(msg) }
+      override def displayToOut(msg: String): Unit = { io.log.info(msg) }
 
-      override def displayToErr(msg: String): Unit = { log.error(msg) }
+      override def displayToErr(msg: String): Unit = { io.log.error(msg) }
 
-      override def reportError(msg: String): Unit = { log.error(msg) }
+      override def reportError(msg: String): Unit = { io.log.error(msg) }
 
-      override def reportWarning(msg: String): Unit = { log.warn(msg) }
+      override def reportWarning(msg: String): Unit = { io.log.warn(msg) }
 
       // ignore terminate
       override def terminate(exitState: Either[String, Unit]): Unit = ()

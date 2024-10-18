@@ -82,7 +82,7 @@ trait RunCommandOnExamplesTest(
       name = config.getAbsolutePath.dropRight(suffix.length + 1)
     yield {
       if validateTestName(name) then {
-        Commands.loadCandidateCommands(config.toPath, SysLogger()) match {
+        Commands.loadCandidateCommands(config.toPath) match {
           case Right(commands) =>
             if commands.contains(commandName) then {
               Right(f(name, config.toPath))
@@ -116,7 +116,7 @@ trait RunCommandOnExamplesTest(
           case Some(folder) =>
             folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
               case Some(config) =>
-                Commands.loadCandidateCommands(config.toPath, SysLogger()).flatMap { commands =>
+                Commands.loadCandidateCommands(config.toPath).flatMap { commands =>
                   if commands.contains(commandName) then validate(folderName, config.toPath)
                   else Left(errors(s"Config file $commandName not found in $config"))
 
@@ -143,7 +143,6 @@ trait RunCommandOnExamplesTest(
       val result = Commands.runCommandNamed(
         commandName,
         path,
-        logger,
         commonOptions,
         outputDirOverride = Some(outputDir)
       )
@@ -175,7 +174,7 @@ trait RunCommandOnExamplesTest(
     val commandName = args.head 
     forAFolder(folderName, commandName) { case (name, _) =>
       val outputDir = outDir.resolve(name)
-      val result = Commands.runCommandWithArgs(args, logger, commonOptions)
+      val result = Commands.runCommandWithArgs(args, commonOptions)
       result match {
         case Right(passesResult) =>
           onSuccess(commandName, folderName, passesResult, outputDir)
@@ -194,7 +193,6 @@ trait RunCommandOnExamplesTest(
       val result = Commands.runCommandNamed(
         commandName,
         config,
-        logger,
         commonOptions,
         outputDirOverride = Some(outputDir)
       )

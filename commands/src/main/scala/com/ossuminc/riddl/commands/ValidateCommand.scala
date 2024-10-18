@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -16,13 +16,12 @@ import java.nio.file.Path
 import scala.annotation.unused
 
 /** Validate Command */
-class ValidateCommand extends InputFileCommand("validate") {
+class ValidateCommand(using io: PlatformIOContext) extends InputFileCommand("validate") {
   import InputFileCommand.Options
 
   override def run(
     options: Options,
     @unused commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
@@ -33,10 +32,9 @@ class ValidateCommand extends InputFileCommand("validate") {
 
   override def loadOptionsFrom(
     configFile: Path,
-    log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }

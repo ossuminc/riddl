@@ -7,11 +7,13 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext}
 
 /** RIDDL Main Program */
 object RIDDLC {
 
   final def main(args: Array[String]): Unit = {
+    given io: PlatformIOContext = ScalaPlatformIOContext()
     val resultCode = Commands.runMain(args)
     if resultCode != 0 then { System.exit(resultCode) }
   }

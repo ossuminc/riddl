@@ -10,11 +10,11 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassesCreator, PassesOutput, PassesResult}
+import com.ossuminc.riddl.passes.{Pass, PassInput, PassCreators, PassesOutput, PassesResult}
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.commands.Commands
@@ -29,8 +29,7 @@ import com.ossuminc.riddl.command.PassCommand
 import com.ossuminc.riddl.passes.diagrams.DiagramsPass
 import com.ossuminc.riddl.passes.stats.StatsPass
 
-
-class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
+class HugoCommand(using io: PlatformIOContext) extends PassCommand[HugoPass.Options]("hugo") {
 
   import HugoPass.Options
 
@@ -126,15 +125,14 @@ class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
       inputPath <- inputPathRes.asString
       outputPathRes <- objCur.atKey("output-dir")
       outputPath <- outputPathRes.asString
-      eraseOutput <- optional(objCur, "erase-output", false) { cc =>cc.asBoolean }
+      eraseOutput <- optional(objCur, "erase-output", false) { cc => cc.asBoolean }
       projectName <- optional(objCur, "project-name", "No Project Name") { cur => cur.asString }
       hugoThemeName <- optional(objCur, "hugo-theme-name", "GeekDoc") { cur => cur.asString }
       enterpriseName <- optional(objCur, "enterprise-name", "No Enterprise Name") { cur => cur.asString }
       siteTitle <- optional(objCur, "site-title", "No Site Title") { cur => cur.asString }
-      siteDescription <- optional(objCur, "site-description", "No Site Description") { cur => cur.asString}
+      siteDescription <- optional(objCur, "site-description", "No Site Description") { cur => cur.asString }
       siteLogoPath <- optional(objCur, "site-logo-path", "static/somewhere") { cc => cc.asString }
-      siteLogoURL <- optional(objCur, "site-logo-url", Option.empty[String]) { cc =>cc.asString.map(Option[String])
-      }
+      siteLogoURL <- optional(objCur, "site-logo-url", Option.empty[String]) { cc => cc.asString.map(Option[String]) }
       baseURL <- optional(objCur, "base-url", Option.empty[String]) { cc =>
         cc.asString.map(Option[String])
       }
@@ -216,11 +214,7 @@ class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  def getPasses(
-                 log: Logger,
-                 commonOptions: CommonOptions,
-                 options: Options
-  ): PassesCreator = {
+  def getPasses(commonOptions: CommonOptions, options: Options): PassCreators = {
     HugoPass.getPasses(options)
   }
 
@@ -231,10 +225,9 @@ class HugoCommand extends PassCommand[HugoPass.Options]("hugo") {
 
   override def loadOptionsFrom(
     configFile: Path,
-    log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, HugoPass.Options] = {
-    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }

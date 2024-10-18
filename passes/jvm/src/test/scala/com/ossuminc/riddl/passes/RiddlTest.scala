@@ -2,13 +2,11 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import com.ossuminc.riddl.utils.TestingBasis
 
-import java.io.File
 import java.nio.file.Path
 
-class RiddlTest extends AnyWordSpec with Matchers {
+class RiddlTest extends TestingBasis {
 
   val testPath = "language/jvm/src/test/input/everything.riddl"
 

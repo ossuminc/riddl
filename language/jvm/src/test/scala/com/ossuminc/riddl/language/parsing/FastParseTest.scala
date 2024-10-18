@@ -13,7 +13,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-class FastParseTest extends TestingBasisWithTestData with ParsingContext {
+class FastParseTest extends ParsingContext with TestingBasisWithTestData {
 
   def commonOptions: CommonOptions = CommonOptions()
 

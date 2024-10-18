@@ -170,12 +170,11 @@ class CommonOptionsTest extends TestingBasis {
 
     "empty args are eliminated" in {
       val opts = Array("--show-times", "parse",  "", "  ", "file.riddl")
-      val logger = SysLogger()
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options) =>
           options.showTimes must be(true)
-          Commands.parseCommandOptions(remaining, logger) match {
+          Commands.parseCommandOptions(remaining) match {
             case Right(options) => options.inputFile must be(Some(Path.of("file.riddl")))
             case Left(messages) => fail(messages.format)
           }
@@ -228,7 +227,7 @@ class CommonOptionsTest extends TestingBasis {
           options.pluginsDir must be(Some(Path.of(".")))
           options.maxIncludeWait must be(5.seconds)
           options.maxParallelParsing must be(12)
-          Commands.parseCommandOptions(remaining, logger) match {
+          Commands.parseCommandOptions(remaining) match {
             case Right(options) => options.inputFile must be( Some(Path.of("file.riddl")))
             case Left(messages) => fail(messages.format)
           }

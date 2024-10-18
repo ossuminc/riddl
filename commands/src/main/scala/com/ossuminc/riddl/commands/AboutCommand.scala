@@ -9,9 +9,8 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
-
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -24,7 +23,7 @@ object AboutCommand {
       extends CommandOptions
 }
 
-class AboutCommand extends Command[AboutCommand.Options]("about") {
+class AboutCommand(using io: PlatformIOContext) extends Command[AboutCommand.Options]("about") {
   import AboutCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -44,7 +43,6 @@ class AboutCommand extends Command[AboutCommand.Options]("about") {
   override def run(
     options: AboutCommand.Options,
     commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     if commonOptions.verbose || !commonOptions.quiet then {
@@ -53,7 +51,7 @@ class AboutCommand extends Command[AboutCommand.Options]("about") {
           "Extensive Documentation here: https://riddl.tech"
       }
       
-      log.info(about)
+      io.log.info(about)
     }
     Right(PassesResult())
   }

@@ -9,7 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, CommonOptions}
-import com.ossuminc.riddl.utils.{TestingBasisWithTestData, URL}
+import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext, AbstractTestingBasisWithTestData, URL}
 import fastparse.*
 
 import scala.annotation.unused
@@ -17,10 +17,12 @@ import scala.concurrent.duration.DurationInt
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-trait NoJVMParsingTest extends TestingBasisWithTestData {
+trait NoJVMParsingTest extends AbstractTestingBasisWithTestData {
 
   import com.ossuminc.riddl.language.AST.RiddlValue
   import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
+
+  given io: PlatformIOContext = ScalaPlatformIOContext()
 
   protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
 
@@ -52,7 +54,7 @@ trait NoJVMParsingTest extends TestingBasisWithTestData {
     val tp = TestParser(input)
     tp.parseTopLevelDomain[TO](extract).map(x => (x, input))
   }
-  
+
   def parseNebula(input: RiddlParserInput): Either[Messages, Nebula] = {
     val tp = TestParser(input)
     tp.parseNebula(input)
@@ -72,7 +74,7 @@ trait NoJVMParsingTest extends TestingBasisWithTestData {
   ): Unit = {
     cases foreach { case (statement, expected) =>
       val input = s"domain foo {\n$statement\n}"
-      val tp = TestParser(RiddlParserInput(input,"checkDomainDefinitions"))
+      val tp = TestParser(RiddlParserInput(input, "checkDomainDefinitions"))
       tp.parseDomainDefinition(extract) match {
         case Right(content) => content mustBe expected
         case Left(errors) =>

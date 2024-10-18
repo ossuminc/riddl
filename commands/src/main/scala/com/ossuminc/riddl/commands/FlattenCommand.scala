@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{Logger, StringHelpers}
+import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, StringHelpers}
 
 import java.nio.file.Path
 
@@ -20,13 +20,12 @@ object FlattenCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class FlattenCommand extends InputFileCommand(DumpCommand.cmdName) {
+class FlattenCommand(using io: PlatformIOContext) extends InputFileCommand(DumpCommand.cmdName) {
   import InputFileCommand.Options
 
   override def run(
     options: Options,
     commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
@@ -40,10 +39,9 @@ class FlattenCommand extends InputFileCommand(DumpCommand.cmdName) {
 
   override def loadOptionsFrom(
     configFile: Path,
-    log: Logger,
     commonOptions: CommonOptions
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
+    super.loadOptionsFrom(configFile, commonOptions).map { options =>
       resolveInputFileToConfigFile(options, commonOptions, configFile)
     }
   }

@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.translate
 
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInput, PassesCreator, PassesOutput, PassesResult, Riddl}
+import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInput, PassCreators, PassesOutput, PassesResult, Riddl}
 import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.utils.Logger
 

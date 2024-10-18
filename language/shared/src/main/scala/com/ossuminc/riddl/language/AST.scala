@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.Contents.unapply
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{URL, PlatformIOContext, Await}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
@@ -299,10 +299,9 @@ object AST:
     * @param url
     *   The URL for the file content that is the description.
     */
-  case class URLDescription(loc: At, url: URL) extends Description:
+  case class URLDescription(loc: At, url: URL)(using urlLoader: PlatformIOContext) extends Description:
     lazy val lines: Seq[LiteralString] = {
-      import com.ossuminc.riddl.utils.{Loader, Await}
-      val future = Loader(url).load.map(_.split("\n").toSeq.map(LiteralString(loc, _)))
+      val future = urlLoader.load(url).map(_.split("\n").toSeq.map(LiteralString(loc, _)))
       Await.result(future, 10)
     }
     override def format: String = url.toExternalForm

@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
+import com.ossuminc.riddl.utils.PlatformIOContext
 
 import scala.collection.mutable
 import scala.scalajs.js.annotation.*
@@ -18,8 +19,8 @@ import scala.scalajs.js.annotation.*
 @JSExportTopLevel("StatsPass$")
 object StatsPass extends PassInfo[PassOptions] {
   val name: String = "stats"
-  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    StatsPass(in, out)
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = { 
+    (in: PassInput, out: PassesOutput) => StatsPass(in, out)
   }
 }
 

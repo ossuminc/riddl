@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.{TestingBasis, URL, Loader}
+import com.ossuminc.riddl.utils.{TestingBasis, URL}
 
 import org.scalatest.Assertion
 import scala.io.Source
@@ -16,7 +16,7 @@ class RiddlParserInputTest extends TestingBasis {
   val src = s"https://raw.githubusercontent.com$fullPath"
 
   def getFromURI(url: URL): String = {
-    val contentF = Loader(url).load
+    val contentF = io.load(url)
     Await.result(contentF, 10.seconds)
   }
 

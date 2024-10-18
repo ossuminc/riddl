@@ -6,6 +6,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.PlatformIOContext
 
 import scala.collection.mutable
 
@@ -46,7 +47,7 @@ case class MessageOutput(
 // a set of tabs:
 //
 
-case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)
+case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)(using PlatformIOContext)
     extends CollectingPass[MessageInfo](input, outputs) {
 
   requires(SymbolsPass)
@@ -91,7 +92,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
 object MessagesPass extends PassInfo[HugoPass.Options] {
   val name: String = "Messages"
-  def creator(options: HugoPass.Options): PassCreator = {
+  def creator(options: HugoPass.Options)(using PlatformIOContext) = {
     (in: PassInput, out: PassesOutput) => MessagesPass(in, out, options)
   }
 }

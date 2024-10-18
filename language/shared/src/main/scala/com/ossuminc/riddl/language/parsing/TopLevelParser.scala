@@ -9,14 +9,14 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.Timer
+import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext, Timer}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.scalajs.js.annotation._
+import scala.scalajs.js.annotation.*
 
 /** The TopLevel (Root) parser. This class
   * @param input
@@ -26,14 +26,15 @@ import scala.scalajs.js.annotation._
 @JSExportTopLevel("TopLevelParser")
 class TopLevelParser(
   val commonOptions: CommonOptions = CommonOptions.empty
-) extends ProcessorParser
+)(using io: PlatformIOContext = ScalaPlatformIOContext())
+    extends ProcessorParser
     with DomainParser
     with AdaptorParser
     with ApplicationParser
     with ContextParser
     with EntityParser
     with EpicParser
-    with FunctionParser 
+    with FunctionParser
     with ModuleParser
     with NebulaParser
     with ProjectorParser
@@ -43,14 +44,14 @@ class TopLevelParser(
     with StreamingParser
     with StatementParser
     with ParsingContext {
-  
+
   @JSExport
   def parseRoot(input: RiddlParserInput, withVerboseFailures: Boolean = false): Either[Messages, Root] = {
     parseRule[Root](input, root(_), withVerboseFailures) {
       (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
         result match {
           case l: Left[Messages, Root] => l
-          case r@Right(root) =>
+          case r @ Right(root) =>
             if root.contents.isEmpty then
               error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
             end if
@@ -65,7 +66,7 @@ class TopLevelParser(
       (result: Either[Messages, Nebula], input: RiddlParserInput, index: Int) =>
         result match {
           case left: Left[Messages, Root] => left
-          case r@Right(root) =>
+          case r @ Right(root) =>
             if root.contents.isEmpty then
               error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
             end if
@@ -97,11 +98,11 @@ object TopLevelParser {
     url: URL,
     commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  )(implicit
+  )(using
+    io: PlatformIOContext = ScalaPlatformIOContext(),
     ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   ): Future[Either[Messages, Root]] = {
-    import com.ossuminc.riddl.utils.Loader
-    Loader(url).load.map { (data: String) =>
+    io.load(url).map { (data: String) =>
       val rpi = RiddlParserInput(data.mkString, url)
       parseInput(rpi, commonOptions, withVerboseFailures)
     }
@@ -122,7 +123,7 @@ object TopLevelParser {
     input: RiddlParserInput,
     commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  ): Either[Messages, Root] = {
+  )(using io: PlatformIOContext = ScalaPlatformIOContext()): Either[Messages, Root] = {
     Timer.time(s"parse ${input.origin}", commonOptions.showTimes) {
       implicit val _: ExecutionContext = ExecutionContext.Implicits.global
       val tlp = new TopLevelParser(commonOptions)
@@ -135,7 +136,7 @@ object TopLevelParser {
     input: String,
     commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  ): Either[Messages, Root] = {
+  )(using io: PlatformIOContext = ScalaPlatformIOContext()): Either[Messages, Root] = {
     val rpi = RiddlParserInput(input, "")
     parseInput(rpi)
   }
@@ -145,7 +146,7 @@ object TopLevelParser {
     input: RiddlParserInput,
     commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  ): Either[Messages, Nebula] = {
+  )(using io: PlatformIOContext = ScalaPlatformIOContext()): Either[Messages, Nebula] = {
     Timer.time(s"parse nebula from ${input.origin}", commonOptions.showTimes) {
       implicit val _: ExecutionContext = ExecutionContext.Implicits.global
       val tlp = new TopLevelParser(commonOptions)

@@ -11,14 +11,15 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, SymTab, SymTabItem}
+import com.ossuminc.riddl.utils.PlatformIOContext
 
 import scala.annotation.unused
 import scala.collection.mutable
 
 object SymbolsPass extends PassInfo[PassOptions] {
   val name: String = "Symbols"
-  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    SymbolsPass(in, out)
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = { 
+    (in: PassInput, out: PassesOutput) => SymbolsPass(in, out)
   }
 }
 

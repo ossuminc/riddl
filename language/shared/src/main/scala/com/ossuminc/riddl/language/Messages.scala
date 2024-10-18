@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{ExceptionUtils, Logger}
+import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformIOContext}
 
 import scala.collection.mutable
 import scala.io.AnsiColor.*
@@ -220,44 +220,57 @@ object Messages {
     List(Message(loc, message, Messages.SevereError))
   }
 
-  /** A frequently used shortcut for a [[scala.collection.immutable.List]] of [[Message]]. Note that this
-   * has an <code>extension</code> that extends the capability of the list.  */
+  /** A frequently used shortcut for a [[scala.collection.immutable.List]] of [[Message]]. Note that this has an
+    * <code>extension</code> that extends the capability of the list.
+    */
   type Messages = List[Message]
 
   /** Extensions to [[scala.collection.immutable.List]] of [[Messages]] */
   extension (msgs: Messages) {
+
     /** Format all the messages with a newline in between them. */
     @JSExport def format: String = {
       msgs.map(_.format).mkString(System.lineSeparator())
     }
-    /** Return true iff all the messages are only warnings  */
+
+    /** Return true iff all the messages are only warnings */
     @JSExport def isOnlyWarnings: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
+
     /** Return true iff all the messages are considered ignorable (all warnings) */
     @JSExport def isOnlyIgnorable: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind >= Warning)
     }
+
     /** Return true iff at least one of the messages is an [[Error]] */
     @JSExport def hasErrors: Boolean = {
       msgs.nonEmpty && msgs.exists(_.kind >= Error)
     }
+
     /** Return true iff at least one of the messages is of a [[Warning]] type. */
     @JSExport def hasWarnings: Boolean = {
       msgs.nonEmpty && msgs.exists(_.kind < Error)
     }
+
     /** Return a filtered list of just the [[Info]] messages. */
     @JSExport def justInfo: Messages = msgs.filter(_.isInfo)
+
     /** Return a filtered list of just the [[MissingWarning]] messages. */
     @JSExport def justMissing: Messages = msgs.filter(_.isMissing)
+
     /** Return a filtered list of just the [[StyleWarning]] messages. */
     @JSExport def justStyle: Messages = msgs.filter(_.isStyle)
+
     /** Return a filtered list of just the [[UsageWarning]] messages. */
     @JSExport def justUsage: Messages = msgs.filter(_.isUsage)
+
     /** Return a filtered list of just the [[Warning]] messages. */
     @JSExport def justWarnings: Messages = msgs.filter(m => m.kind < Error && m.kind > Info)
+
     /** Return a filtered list of just the [[Error]] messages. */
     @JSExport def justErrors: Messages = msgs.filter(_.kind >= Error)
+
     /** Return a filtered list of just the [[Info]] messages. */
     @JSExport def highestSeverity: Int = msgs.foldLeft(0) { case (n, m) => Math.max(m.kind.severity, n) }
   }
@@ -266,68 +279,66 @@ object Messages {
   @JSExport val empty: Messages = List.empty[Message]
 
   /** Format and log the <code>messages</code> to the <code>log</code> per the <code>options</code>
-   *
-   * @param messages
-   *   The list of messages to log
-   * @param log
-   *   The [[com.ossuminc.riddl.utils.Logger]] instance to which the messages are sent.
-   * @param options
-   *   The [[com.ossuminc.riddl.language.CommonOptions]] that can control how the logged messages appear.
-   * @return
-   */
+    *
+    * @param messages
+    *   The list of messages to log
+    * @param log
+    *   The [[com.ossuminc.riddl.utils.Logger]] instance to which the messages are sent.
+    * @param options
+    *   The [[com.ossuminc.riddl.language.CommonOptions]] that can control how the logged messages appear.
+    * @return
+    */
   @JSExport
   def logMessages(
     messages: Messages,
-    log: Logger,
     options: CommonOptions
-  ): Int = {
+  )(using io: PlatformIOContext): Int = {
     val list = if options.sortMessagesByLocation then messages.sorted else messages
-    if options.groupMessagesByKind then { logMessagesByGroup(list, options, log) }
-    else { logMessagesRetainingOrder(list, log) }
+    if options.groupMessagesByKind then { logMessagesByGroup(list, options) }
+    else { logMessagesRetainingOrder(list) }
     list.highestSeverity
   }
 
-  private def logMessage(message: Message, log: Logger): Unit = {
+  private def logMessage(message: Message)(using io: PlatformIOContext): Unit = {
     message.kind match {
-      case Info           => log.info(message.format)
-      case StyleWarning   => log.style(message.format)
-      case MissingWarning => log.missing(message.format)
-      case UsageWarning   => log.usage(message.format)
-      case Warning        => log.warn(message.format)
-      case Error          => log.error(message.format)
-      case SevereError    => log.severe(message.format)
+      case Info           => io.log.info(message.format)
+      case StyleWarning   => io.log.style(message.format)
+      case MissingWarning => io.log.missing(message.format)
+      case UsageWarning   => io.log.usage(message.format)
+      case Warning        => io.log.warn(message.format)
+      case Error          => io.log.error(message.format)
+      case SevereError    => io.log.severe(message.format)
     }
   }
 
-  private def logMessagesRetainingOrder(list: Messages, log: Logger): Unit = {
-    list.foreach { msg => logMessage(msg, log) }
+  private def logMessagesRetainingOrder(list: Messages)(using io: PlatformIOContext): Unit = {
+    list.foreach { msg => logMessage(msg) }
   }
 
   private def logMessagesByGroup(
     messages: Messages,
-    commonOptions: CommonOptions,
-    log: Logger
-  ): Unit = {
+    commonOptions: CommonOptions
+  )(using io: PlatformIOContext): Unit = {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])
       if messages.nonEmpty then {
         kind match {
           case UsageWarning =>
-            log.usage(s"""$kind Message Count: ${messages.length}""")
+            io.log.usage(s"""$kind Message Count: ${messages.length}""")
           case StyleWarning =>
-            log.style(s"""$kind Message Count: ${messages.length}""")
+            io.log.style(s"""$kind Message Count: ${messages.length}""")
           case MissingWarning =>
-            log.missing(s"""$kind Message Count: ${messages.length}""")
+            io.log.missing(s"""$kind Message Count: ${messages.length}""")
           case Warning => // everything else is a warning
-            log.warn(s"""$kind Message Count: ${messages.length}""")
+            io.log.warn(s"""$kind Message Count: ${messages.length}""")
           case Error =>
-            log.error(s"""$kind Message Count: ${messages.length}""")
+            io.log.error(s"""$kind Message Count: ${messages.length}""")
           case SevereError =>
-            log.severe(s"""$kind Message Count: ${messages.length}""")
+            io.log.severe(s"""$kind Message Count: ${messages.length}""")
           case Info =>
-            log.info(s"""$kind Message Count: ${messages.length}""")
+            io.log.info(s"""$kind Message Count: ${messages.length}""")
         }
-        messages.foreach { (msg: Message) => logMessage(msg, log) }
+        messages.foreach { (msg: Message) => logMessage(msg) }
       }
     }
     if messages.nonEmpty then {
@@ -363,14 +374,14 @@ object Messages {
     @inline def toMessages: Messages = msgs.toList
 
     /** Add an arbitrary [[Message]] to the accumulated [[Messages]]
-     *
-     * @param message
-     * The text of the message to add
-     * @param loc
-     * The location in the source related to the message.
-     * @return
-     * This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @JSExport
     def add(msg: Message): this.type = {
       msg.kind match {
@@ -390,144 +401,144 @@ object Messages {
     }
 
     /** Add a [[StyleWarning]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def style(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, StyleWarning))
     }
 
     /** Add an [[Info]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def info(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, Info))
     }
 
     /** Add a [[Warning]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     * The text of the message to add
-     * @param loc
-     * The location in the source related to the message.
-     * @return
-     * This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def warning(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, Warning))
     }
 
     /** Add an [[Error]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def error(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, Error))
     }
 
     /** Add a [[SevereError]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def severe(message: String, loc: At = At.empty): this.type = {
       add(Message(loc, message, SevereError))
     }
 
     /** Add a [[StyleWarning]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def addStyle(loc: At, msg: String): this.type = {
       add(Message(loc, msg, StyleWarning))
     }
 
     /** Add a [[UsageWarning]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def addUsage(loc: At, msg: String): this.type = {
       add(Message(loc, msg, UsageWarning))
     }
 
     /** Add a [[MissingWarning]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def addMissing(loc: At, msg: String): this.type = {
       add(Message(loc, msg, MissingWarning))
     }
 
     /** Add a [[Warning]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def addWarning(loc: At, msg: String): this.type = {
       add(Message(loc, msg, Warning))
     }
 
     /** Add an [[Error]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def addError(loc: At, msg: String): this.type = {
       add(Message(loc, msg, Error))
     }
 
     /** Add a [[SevereError]] message to the accumulated [[Messages]]
-     *
-     * @param message
-     *   The text of the message to add
-     * @param loc
-     *   The location in the source related to the message.
-     * @return
-     *   This type, so you can chain another call to this accumulator
-     */
+      *
+      * @param message
+      *   The text of the message to add
+      * @param loc
+      *   The location in the source related to the message.
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
     @inline def addSevere(loc: At, msg: String): this.type = {
       add(Message(loc, msg, SevereError))
     }

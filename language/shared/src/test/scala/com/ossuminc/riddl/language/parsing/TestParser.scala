@@ -3,6 +3,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, CommonOptions}
+import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext}
 import fastparse.*
 import fastparse.Parsed.{Failure, Success}
 import org.scalatest.matchers.must.Matchers
@@ -10,6 +11,8 @@ import org.scalatest.matchers.must.Matchers
 import scala.concurrent.ExecutionContext
 import scala.reflect.{ClassTag, classTag}
 import scala.util.control.NonFatal
+
+given io: PlatformIOContext = ScalaPlatformIOContext()
 
 case class TestParser(
   input: RiddlParserInput,

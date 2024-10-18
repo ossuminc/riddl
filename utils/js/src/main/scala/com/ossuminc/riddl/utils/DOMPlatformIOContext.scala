@@ -10,12 +10,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import org.scalajs.dom
 
+import scala.concurrent.Future
+
 /** This is the JVM version of the Loader utility. It is used to load file content in UTF-8 via a URL as a String and
   * returning the Future that will obtain it. Further processing can be chained onto the future. This handles the I/O
   * part of parsing in a platform specific way.
   */
-@JSExportTopLevel("Loader")
-case class Loader(url: URL) {
+@JSExportTopLevel("DOMPlatformIOContext")
+case class DOMPlatformIOContext() extends PlatformIOContext {
 
   import scala.concurrent.ExecutionContext.global
   import scala.concurrent.{ExecutionContext, Future}
@@ -26,7 +28,7 @@ case class Loader(url: URL) {
     s"Files cannot be loaded from Javascript: ${url.toString}"
   )
   @JSExport
-  def load: Future[String] = {
+  override def load(url: URL): Future[String] = {
     import org.scalajs.dom.RequestInit
     import org.scalajs.dom.HttpMethod
     if url.scheme == "file" then 
