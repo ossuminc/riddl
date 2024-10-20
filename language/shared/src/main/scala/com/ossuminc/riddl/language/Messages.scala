@@ -6,8 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, ExceptionUtils, Logger, PlatformIOContext}
 
 import scala.collection.mutable
 import scala.io.AnsiColor.*
@@ -285,7 +284,7 @@ object Messages {
     * @param log
     *   The [[com.ossuminc.riddl.utils.Logger]] instance to which the messages are sent.
     * @param options
-    *   The [[com.ossuminc.riddl.language.CommonOptions]] that can control how the logged messages appear.
+    *   The [[com.ossuminc.riddl.utils.CommonOptions]] that can control how the logged messages appear.
     * @return
     */
   @JSExport

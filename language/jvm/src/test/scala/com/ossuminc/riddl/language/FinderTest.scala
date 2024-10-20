@@ -1,12 +1,12 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.parsing.{NoJVMParsingTest, RiddlParserInput}
-
+import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput}
+import com.ossuminc.riddl.utils.{PlatformIOContext,JVMPlatformIOContext}
 import org.scalatest.TestData
 
-class FinderTest extends NoJVMParsingTest {
-
+class FinderTest extends AbstractParsingTest {
+  
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
       |  context one is {
@@ -47,25 +47,23 @@ class FinderTest extends NoJVMParsingTest {
       |""".stripMargin,
     "empty"
   )
-  
+
   "Finder" should {
-    "transform contents of a domain" in { (_: TestData) => 
+    "transform contents of a domain" in { (_: TestData) =>
       parseTopLevelDomains(input) match
-        case Left(messages) if messages.hasErrors => 
+        case Left(messages) if messages.hasErrors =>
           fail(messages.justErrors.format)
-        case Left(messages) => 
+        case Left(messages) =>
           fail(messages.format)
         case Right(root) =>
           val domain = root.domains.head
           val finder = Finder(domain)
-          finder.transform[Type](t => t.isInstanceOf[Type])( rv =>
+          finder.transform[Type](t => t.isInstanceOf[Type])(rv =>
             val typ = rv.asInstanceOf[Type]
-            if typ.id.value == "AString" then
-              typ.copy(id = Identifier(typ.id.loc, "Text"))
-            else
-              typ
+            if typ.id.value == "AString" then typ.copy(id = Identifier(typ.id.loc, "Text"))
+            else typ
           )
-          domain.types.find("Text") must not be(empty)
+          domain.types.find("Text") must not be (empty)
       end match
     }
   }

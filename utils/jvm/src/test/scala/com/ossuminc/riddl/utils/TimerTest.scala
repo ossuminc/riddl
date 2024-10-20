@@ -6,13 +6,14 @@
 
 package com.ossuminc.riddl.utils
 
-import java.time.Instant
 import org.scalatest.TestData
 import org.scalatest.wordspec.AnyWordSpec
 
-class TimerTest extends TestingBasis {
+import java.time.Instant
 
-  given PlatformIOContext = ScalaPlatformIOContext()
+class TimerTest extends JVMTestingBasis {
+
+  given PlatformIOContext = JVMPlatformIOContext()
   
   "timer" should {
     "measure the correct time" in { (td: TestData) =>

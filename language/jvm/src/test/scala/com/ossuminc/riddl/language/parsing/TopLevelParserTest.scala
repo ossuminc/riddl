@@ -9,14 +9,17 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.utils.{PlatformIOContext, JVMPlatformIOContext}
 
-import java.nio.file.Path 
+import java.nio.file.Path
 import scala.io.Source
 import org.scalatest.TestData
 
 class TopLevelParserTest extends ParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
+
+  given IO: PlatformIOContext = JVMPlatformIOContext()
 
   val origin = "simpleDomain.riddl"
 

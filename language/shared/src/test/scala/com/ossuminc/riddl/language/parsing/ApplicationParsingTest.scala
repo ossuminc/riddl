@@ -2,9 +2,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
-class ApplicationParsingTest extends NoJVMParsingTest {
+abstract class ApplicationParsingTest(using PlatformIOContext) extends AbstractParsingTest {
 
   "Application Components" must {
     "support nested empty definitions that fail" in { (td: TestData) =>

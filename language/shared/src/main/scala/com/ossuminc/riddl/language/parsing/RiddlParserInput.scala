@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{PlatformIOContext, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -65,64 +65,51 @@ object RiddlParserInput {
     * @return
     *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
     */
-  @JSExport
-  def fromURL(url: URL, purpose: String = "")(
-    using io: PlatformIOContext = ScalaPlatformIOContext()
-  ): Future[RiddlParserInput] = {
+  def fromURL(url: URL, purpose: String = "")(using io: PlatformIOContext): Future[RiddlParserInput] = {
     io.load(url).map(data => apply(data, url, purpose))
   }
 
-  private def fromPaths(basis: String, path: String, purpose: String = "")(
-    using io: PlatformIOContext = ScalaPlatformIOContext()
-  ): RiddlParserInput =
+  private def fromPaths(basis: String, path: String, purpose: String = "")(using PlatformIOContext): RiddlParserInput =
     val url = URL("file", "", basis.dropWhile(_ == '/'), path.dropWhile(_ == '/'))
     val future = fromURL(url, purpose)
     Await.result(future, 10.seconds)
 
   /** Set up a parser input for parsing directly from a file at a specific Path
     * @param basis
-    *   The path basis for subsequent include statements. Think of this as the root path
-    *   from which all includes will be derived
+    *   The path basis for subsequent include statements. Think of this as the root path from which all includes will be
+    *   derived
     *
     * @param path
     *   The java.nio.path.Path from which UTF-8 text will be read and parsed as the first file
     *
     * @param purpose
-    *. The description string of the purpose of the constructed URL
+    *   . The description string of the purpose of the constructed URL
     * @note
     *   JVM Only
     */
-  def fromPaths(basis: java.nio.file.Path, path: java.nio.file.Path, purpose: String)(using io: PlatformIOContext): RiddlParserInput =
+  def fromPaths(basis: java.nio.file.Path, path: java.nio.file.Path, purpose: String)(using
+    PlatformIOContext
+  ): RiddlParserInput =
     fromPaths(basis.toString, path.toString, purpose)
 
-  /** Set up a parser input for parsing directly from a local file based on the current
-   *  working directory
-   * @param path
-   *   The path that will be added to the current working directory
-   *
-   */
-  def fromCwdPath(path:Path, purpose: String ="")(
-    using io: PlatformIOContext = ScalaPlatformIOContext()
-  ): RiddlParserInput =
+  /** Set up a parser input for parsing directly from a local file based on the current working directory
+    * @param path
+    *   The path that will be added to the current working directory
+    */
+  def fromCwdPath(path: Path, purpose: String = "")(using PlatformIOContext): RiddlParserInput =
     val url = URL.fromCwdPath(path.toString)
     val future = fromURL(url, purpose)
     Await.result(future, 10.seconds)
 
-  def fromFullPath(path:Path, purpose: String = "")(
-    using io: PlatformIOContext  = ScalaPlatformIOContext()
-  ): RiddlParserInput =
+  def fromFullPath(path: Path, purpose: String = "")(using PlatformIOContext): RiddlParserInput =
     require(path.toString.startsWith("/"))
     val url = URL.fromFullPath(path.toString)
     val future = fromURL(url, purpose)
     Await.result(future, 10.seconds)
 
-  def fromPath(path:Path, purpose: String = "")(
-    using io: PlatformIOContext = ScalaPlatformIOContext()
-  ): RiddlParserInput =
-    if path.toString.startsWith("/") then
-      fromFullPath(path, purpose)
-    else
-      fromCwdPath(path, purpose)
+  def fromPath(path: Path, purpose: String = "")(using PlatformIOContext): RiddlParserInput =
+    if path.toString.startsWith("/") then fromFullPath(path, purpose)
+    else fromCwdPath(path, purpose)
 }
 
 /** This class provides the loaded data for fastparse to parse. It is the same as fastparse.IndexedParserInput but adds

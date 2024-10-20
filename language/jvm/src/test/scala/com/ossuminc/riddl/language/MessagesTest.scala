@@ -6,12 +6,12 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.Messages.*
+import Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
-import com.ossuminc.riddl.utils.{Logger, StringLogger, TestingBasis, URL}
+import com.ossuminc.riddl.utils.*
 
-class MessagesTest extends TestingBasis {
+class MessagesTest extends JVMTestingBasis {
 
   "MessageKinds" must {
     "have MissingWarning with correct queries" in {
@@ -148,9 +148,11 @@ class MessagesTest extends TestingBasis {
     }
     "log with retained order" in {
       val commonOptions = CommonOptions()
-      val log: Logger = StringLogger()
+      given io: PlatformIOContext = new JVMPlatformIOContext {
+        override val log: Logger = StringLogger()
+      }
       Messages.logMessages(mix, commonOptions)
-      val content = log.toString
+      val content = io.log.toString
       val expected = """[34m[1m[info] empty(1:1)info[0m
                        |[32m[1m[style] empty(1:1)style[0m
                        |[32m[1m[missing] empty(1:1)missing[0m
@@ -163,9 +165,11 @@ class MessagesTest extends TestingBasis {
     }
     "log grouped by message kind" in {
       val commonOptions = CommonOptions(groupMessagesByKind = true)
-      given log: Logger = StringLogger()
+      given io: PlatformIOContext = new JVMPlatformIOContext {
+        override val log: Logger = StringLogger()
+      }
       Messages.logMessages(mix, commonOptions)
-      val content = log.toString
+      val content = io.log.toString
       val expected =
         """[41m[30m[1m[severe] Severe Message Count: 1[0m
           |[41m[30m[1m[severe] empty(1:1)severe[0m

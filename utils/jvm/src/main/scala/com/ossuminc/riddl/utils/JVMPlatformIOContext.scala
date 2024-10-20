@@ -9,22 +9,20 @@ package com.ossuminc.riddl.utils
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, StandardOpenOption}
 import scala.scalajs.js.annotation.JSExportTopLevel
-import scala.util.Using
 
 /** This is the JVM version of the Loader utility. It is used to load file content in UTF-8 via a URL as a String and
   * returning the Future that will obtain it. Further processing can be chained onto the future. This handles the I/O
   * part of parsing in a platform specific way.
   */
-@JSExportTopLevel("ScalaPlatformIOContext")
-case class ScalaPlatformIOContext() extends PlatformIOContext {
+@JSExportTopLevel("JVMPlatformIOContext")
+class JVMPlatformIOContext(overrideOptions: CommonOptions = CommonOptions()) extends PlatformIOContext {
 
-  import scala.concurrent.ExecutionContext.Implicits.global
   import scala.concurrent.{ExecutionContext, Future}
   import scala.io.Source
   import scala.scalajs.js.annotation.JSExport
 
   given PlatformIOContext = this
-  
+
   @JSExport
   override def load(url: URL): Future[String] = {
     require(url.isValid, "Cannot load from an invalid URL")
@@ -47,6 +45,7 @@ case class ScalaPlatformIOContext() extends PlatformIOContext {
           Source.fromURL(jurl)(Codec.UTF8)
       }
     }
+    implicit val ec: ExecutionContext = this.ec
     Future {
       try {
         source.getLines().mkString("\n")
@@ -73,13 +72,17 @@ case class ScalaPlatformIOContext() extends PlatformIOContext {
       StandardOpenOption.TRUNCATE_EXISTING
     )
 
-  override def stderr(message: String): Unit =
+  override def stdout(message: String): Unit =
     System.err.print(message)
 
-  override def stdout(message: String): Unit =
-    System.out.print(message)
+  override def stdoutln(message: String): Unit =
+    System.out.println(message)
 
   override def log: Logger = SysLogger()
 
   override def newline: String = "\n"
+
+  override def options: CommonOptions = overrideOptions
+
+  override def ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 }

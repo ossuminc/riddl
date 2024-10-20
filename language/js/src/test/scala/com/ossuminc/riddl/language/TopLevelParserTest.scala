@@ -2,7 +2,7 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.utils.{URL,DOMPlatformIOContext}
+import com.ossuminc.riddl.utils.{URL,PlatformIOContext,DOMPlatformIOContext}
 import org.scalatest.funspec.AsyncFunSpec
 import org.scalatest.matchers.must.Matchers
 
@@ -13,7 +13,7 @@ class TopLevelParserTest extends AsyncFunSpec with Matchers:
     scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
   describe("TopLevelParser") {
     it("do some parsing") {
-      val io = DOMPlatformIOContext()
+      given io: PlatformIOContext = DOMPlatformIOContext()
       val url = URL("https://raw.githubusercontent.com/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl")
       val future = io.load(url)
       future.map { data =>

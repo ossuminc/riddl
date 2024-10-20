@@ -2,9 +2,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
-class ProjectorTest extends NoJVMParsingTest {
+abstract class ProjectorTest(using PlatformIOContext) extends AbstractParsingTest {
 
   "Projector" should {
     "use a Repository" in { (td:TestData) => 

@@ -1,6 +1,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PlatformIOContext}
 
 import java.nio.file.Path
 import org.apache.commons.io.FileUtils
@@ -15,6 +16,8 @@ class SnippetsFileTest extends ParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
+  given PlatformIOContext = JVMPlatformIOContext()
+  
   val topDir: Path = Path.of(s"language/jvm/src/test/input/snippets")
   val paths: Iterable[Path] =
     FileUtils.listFiles(topDir.toFile, Array("riddl"), true).asScala.map(_.toPath)

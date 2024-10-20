@@ -8,10 +8,11 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
 /** Unit Tests For StreamingParser */
-class StreamingParserTest extends NoJVMParsingTest {
+abstract class StreamingParserTest(using PlatformIOContext) extends AbstractParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 
@@ -42,7 +43,8 @@ class StreamingParserTest extends NoJVMParsingTest {
             PathIdentifier((row + 2, 29, rpi), List("Forecast"))
           )
         )
-      ),Contents(
+      ),
+      Contents(
         BriefDescription((row + 4, 3, rpi), LiteralString((row + 4, 14, rpi), "foo")),
         BlockDescription(
           (row + 5, 3, rpi),
@@ -134,7 +136,8 @@ class StreamingParserTest extends NoJVMParsingTest {
                   PathIdentifier((7, 31, rpi), List("Forecast"))
                 )
               )
-            ), Contents(
+            ),
+            Contents(
               BlockDescription(
                 (9, 5, rpi),
                 List(
@@ -169,7 +172,8 @@ class StreamingParserTest extends NoJVMParsingTest {
                   PathIdentifier((14, 35, rpi), List("Temperature"))
                 )
               )
-            ), Contents(
+            ),
+            Contents(
               BlockDescription(
                 (16, 5, rpi),
                 List(
@@ -195,7 +199,8 @@ class StreamingParserTest extends NoJVMParsingTest {
                   PathIdentifier((20, 34, rpi), List("Temperature"))
                 )
               )
-            ), Contents(
+            ),
+            Contents(
               BlockDescription(
                 (22, 5, rpi),
                 List(
@@ -207,7 +212,8 @@ class StreamingParserTest extends NoJVMParsingTest {
               )
             )
           )
-        ), Contents(
+        ),
+        Contents(
           BlockDescription(
             (25, 3, rpi),
             List(

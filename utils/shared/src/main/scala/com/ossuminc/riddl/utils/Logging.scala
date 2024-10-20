@@ -109,7 +109,7 @@ trait Logger {
 case class SysLogger(override val withHighlighting: Boolean = true)(using io: PlatformIOContext) extends Logger {
   override def write(level: Logging.Lvl, s: String): Unit = {
     super.count(level)
-    io.stdout(highlight(level, s + io.newline) )
+    io.stdoutln(highlight(level, s))
   }
 }
 

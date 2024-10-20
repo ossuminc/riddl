@@ -8,10 +8,11 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Folding
-import com.ossuminc.riddl.language.parsing.{NoJVMParsingTest, RiddlParserInput}
+import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput}
+import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PlatformIOContext}
 import org.scalatest.TestData
 
-class FoldingTest extends NoJVMParsingTest {
+class FoldingTest extends AbstractParsingTest {
 
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
@@ -62,7 +63,7 @@ class FoldingTest extends NoJVMParsingTest {
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'"),
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Inlet 'b_in'"),
     List("Root", "Domain 'one'", "Context 'one'", "Flow 'b'", "Outlet 'b_out'"),
-    List("Root", "Domain 'one'", "// foo"), 
+    List("Root", "Domain 'one'", "// foo"),
     List("Root", "Domain 'one'", "Context 'two'"),
     List("Root", "Domain 'one'", "Context 'two'", "Function 'foo'"),
     List("Root", "Domain 'one'", "Context 'two'", "Type 'oneState'"),
@@ -86,16 +87,18 @@ class FoldingTest extends NoJVMParsingTest {
         case Left(errors) => fail(errors.format)
         case Right(content) =>
           val empty = Seq.empty[Seq[String]]
-          val result = Folding.foldLeftWithStack(empty, content, ParentStack.empty) {
-            case (track, definition, stack) =>
-              val previous: Seq[String] = stack.map {
+          val result = Folding.foldLeftWithStack(empty, content, ParentStack.empty) { case (track, definition, stack) =>
+            val previous: Seq[String] = stack
+              .map {
                 case nv: WithIdentifier => nv.identify
-                case rv: RiddlValue => rv.format
-              }.reverse.toSeq
-              definition match {
-                case nv: WithIdentifier => track :+ (previous :+ nv.identify)
-                case rv: RiddlValue => track :+ (previous :+ rv.format)
+                case rv: RiddlValue     => rv.format
               }
+              .reverse
+              .toSeq
+            definition match {
+              case nv: WithIdentifier => track :+ (previous :+ nv.identify)
+              case rv: RiddlValue     => track :+ (previous :+ rv.format)
+            }
           }
           val expectedCount = 23
           result.length must be(expectedCount)

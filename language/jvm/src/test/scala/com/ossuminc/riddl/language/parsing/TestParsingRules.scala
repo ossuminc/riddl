@@ -2,7 +2,6 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.LiteralString
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.TestingBasisWithTestData
 import fastparse.Parsed.{Extra, Failure, Success}
 import org.scalatest.TestData
 
@@ -13,7 +12,6 @@ class TestParsingRules extends FastParseTest with NoWhiteSpaceParsers {
       val input = RiddlParserInput("This is some text to parse", td)
       val result = testRule[String](input, toEndOfLine)
       result must be(input.data)
-      }
     }
     "recognize until" in { (td: TestData) =>
       val input = RiddlParserInput("foobarAB ", td)
@@ -26,16 +24,17 @@ class TestParsingRules extends FastParseTest with NoWhiteSpaceParsers {
       result must be("foobar")
     }
     "recognize markDownLink" in { (td: TestData) =>
-     val input = RiddlParserInput("| LiteralString", td)
+      val input = RiddlParserInput("| LiteralString", td)
       val result = testRule[LiteralString](input, markdownLine)
-      result.loc must be(At((1,1)))
+      result.loc must be(At((1, 1)))
       result.s must be(" LiteralString")
     }
 
     "recognize literalString" in { (td: TestData) =>
       val input = RiddlParserInput("\"String\\f\\n\\a\\e\\r\\t\\x0706\\u43FF\"", td)
       val result = testRule[LiteralString](input, literalString)
-      result.loc must be(At((1,1)))
+      result.loc must be(At((1, 1)))
       result.s must be("String\\f\\n\\a\\e\\r\\t\\x0706\\u43FF")
     }
+  }
 }

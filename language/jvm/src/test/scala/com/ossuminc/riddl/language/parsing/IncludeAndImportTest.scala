@@ -7,16 +7,17 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PlatformIOContext, URL}
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-
 import org.scalatest.TestData
 
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
+
+  given PlatformIOContext = JVMPlatformIOContext()
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
   "Include" should {
@@ -98,7 +99,7 @@ class IncludeAndImportTest extends ParsingTest {
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
         String_((1, 12, inc)),
-        Contents.empty 
+        Contents.empty
       )
       actual mustBe expected
     }
@@ -109,7 +110,7 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "warn about duplicate includes" in { (td: TestData) =>
       val path = java.nio.file.Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl")
-      val input = RiddlParserInput.fromCwdPath(path,td)
+      val input = RiddlParserInput.fromCwdPath(path, td)
       TopLevelParser.parseInput(input) match {
         case Right(_) =>
           fail("Should have failed with warnings")

@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.{TestingBasis, URL}
+import com.ossuminc.riddl.utils.{JVMTestingBasis, URL}
 
 import org.scalatest.Assertion
 import scala.io.Source
@@ -8,7 +8,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class RiddlParserInputTest extends TestingBasis {
+class RiddlParserInputTest extends JVMTestingBasis {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 

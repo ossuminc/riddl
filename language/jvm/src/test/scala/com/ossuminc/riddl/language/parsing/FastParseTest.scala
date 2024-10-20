@@ -2,10 +2,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{At, CommonOptions}
-import com.ossuminc.riddl.utils.{TestingBasis, TestingBasisWithTestData}
+import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, CommonOptions, JVMPlatformIOContext, PlatformIOContext}
 import fastparse.Parsed.{Failure, Success}
-import fastparse.{P, *}
+import fastparse.*
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -13,9 +13,9 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-class FastParseTest extends ParsingContext with TestingBasisWithTestData {
+class FastParseTest extends ParsingContext with AbstractTestingBasisWithTestData {
 
-  def commonOptions: CommonOptions = CommonOptions()
+  given io: PlatformIOContext = JVMPlatformIOContext()
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 

@@ -10,11 +10,11 @@ import com.ossuminc.riddl.language.AST.{Contents, *}
 import com.ossuminc.riddl.language.AST.RelationshipCardinality.OneToOne
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.AbstractTestingBasis
 import wvlet.airframe.ulid.ULID
 
 /** Unit Tests For Abstract Syntax Tree */
-class ASTTest extends TestingBasis {
+class ASTTest extends AbstractTestingBasis {
 
   "Descriptions" should {
     "have empty Description.empty" in {
@@ -22,12 +22,6 @@ class ASTTest extends TestingBasis {
     }
     "have empty BlockDescription().format" in {
       BlockDescription().format mustBe ""
-    }
-    "have useful FileDescription" in {
-      import com.ossuminc.riddl.utils.URL
-      val fd = URLDescription(At(), URL("file:///."))
-      fd.format must include("/")
-      fd.format must include(".")
     }
   }
 

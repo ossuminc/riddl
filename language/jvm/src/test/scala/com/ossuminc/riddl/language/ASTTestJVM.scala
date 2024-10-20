@@ -3,10 +3,10 @@ package com.ossuminc.riddl.language
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.JVMTestingBasis
 import wvlet.airframe.ulid.ULID
 
-class ASTTestJVM extends TestingBasis {
+class ASTTestJVM extends JVMTestingBasis {
 
   "RiddlValue" must {
     "allow attachments to be added programmatically" in {
@@ -38,5 +38,11 @@ class ASTTestJVM extends TestingBasis {
     val lines: scala.collection.Seq[String] = ud.lines.map(_.s)
     val head = lines.head
     head must include("sbt-ossuminc")
+  }
+  "have useful FileDescription" in {
+    import com.ossuminc.riddl.utils.URL
+    val fd = URLDescription(At(), URL("file:///."))
+    fd.format must include("/")
+    fd.format must include(".")
   }
 }

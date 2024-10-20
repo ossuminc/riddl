@@ -2,10 +2,11 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalacheck.Arbitrary
 import org.scalatest.{Assertion, TestData}
 
-class StatementsTest extends NoJVMParsingTest{
+abstract class StatementsTest(using PlatformIOContext) extends AbstractParsingTest{
 
   def checkStatement(s: Statement): Assertion = {
     s.loc must be(empty)

@@ -8,8 +8,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{AST, CommonOptions}
-import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext, AbstractTestingBasisWithTestData, URL}
+import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.AST.RiddlValue
+import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
+import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, CommonOptions, PlatformIOContext}
 import fastparse.*
 
 import scala.annotation.unused
@@ -17,17 +19,9 @@ import scala.concurrent.duration.DurationInt
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-trait NoJVMParsingTest extends AbstractTestingBasisWithTestData {
+trait AbstractParsingTest(using PlatformIOContext) extends AbstractTestingBasisWithTestData {
 
-  import com.ossuminc.riddl.language.AST.RiddlValue
-  import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
-
-  given io: PlatformIOContext = ScalaPlatformIOContext()
-
-  protected val testingOptions: CommonOptions = CommonOptions.empty.copy(maxIncludeWait = 10.seconds)
-
-  case class StringParser(content: String, testCase: String = "unknown test case")
-      extends TopLevelParser(testingOptions):
+  case class StringParser(content: String, testCase: String = "unknown test case") extends TopLevelParser():
     val rpi = RiddlParserInput(content, testCase)
   end StringParser
 

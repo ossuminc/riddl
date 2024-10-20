@@ -7,10 +7,11 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{Field, *}
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
 /** Unit Tests For TypesParserTest */
-class TypeParserTest extends NoJVMParsingTest {
+abstract class TypeParserTest(using PlatformIOContext) extends AbstractParsingTest {
 
   "PredefTypes" should {
     //  private def predefinedTypes[u: P]: P[TypeExpression] = {

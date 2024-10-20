@@ -8,12 +8,13 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.{TestData, fixture}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /** Unit Tests For CommonParser */
-class CommonParserTest extends NoJVMParsingTest {
+abstract class CommonParserTest(using PlatformIOContext) extends AbstractParsingTest {
 
   "NonWhiteSpaceParsers" should {
     "handle a literalString" in { (td: TestData) =>

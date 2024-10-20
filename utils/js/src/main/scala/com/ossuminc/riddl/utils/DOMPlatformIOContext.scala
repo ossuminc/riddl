@@ -7,33 +7,33 @@
 package com.ossuminc.riddl.utils
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
+import scala.scalajs.js.annotation.JSExportTopLevel
 import org.scalajs.dom
-
-import scala.concurrent.Future
 
 /** This is the JVM version of the Loader utility. It is used to load file content in UTF-8 via a URL as a String and
   * returning the Future that will obtain it. Further processing can be chained onto the future. This handles the I/O
   * part of parsing in a platform specific way.
   */
 @JSExportTopLevel("DOMPlatformIOContext")
-case class DOMPlatformIOContext() extends PlatformIOContext {
+case class DOMPlatformIOContext(overrideOptions: CommonOptions = CommonOptions.empty) extends PlatformIOContext {
 
-  import scala.concurrent.ExecutionContext.global
   import scala.concurrent.{ExecutionContext, Future}
   import scala.scalajs.js.annotation.JSExport
   import scalajs.js
 
-  case class FileNotFoundException(url:URL) extends Exception(
-    s"Files cannot be loaded from Javascript: ${url.toString}"
-  )
+  given io: PlatformIOContext = this
+
+  case class FileNotFoundException(url: URL)
+      extends Exception(
+        s"Files cannot be loaded from Javascript: ${url.toString}"
+      )
+
   @JSExport
   override def load(url: URL): Future[String] = {
     import org.scalajs.dom.RequestInit
     import org.scalajs.dom.HttpMethod
-    if url.scheme == "file" then 
-      throw new FileNotFoundException(url)
-    else  
+    if url.scheme == "file" then throw FileNotFoundException(url)
+    else
       val requestInit = new RequestInit { method = HttpMethod.GET }
       dom.fetch(url.toExternalForm, requestInit).toFuture.flatMap { response =>
         if response.status != 200 then {
@@ -43,4 +43,30 @@ case class DOMPlatformIOContext() extends PlatformIOContext {
         }
       }
   }
+
+  override def dump(url: URL, content: String): Future[Unit] = ???
+
+  override def read(url: URL): String = {
+    val fr = new dom.FileReader()
+    val file: dom.File = ???
+    fr.readAsText(file, "utf8")
+    "Not Implemented Well: TBD "
+  }
+
+  override def write(file: URL, content: String): Unit = {
+    ???
+  }
+
+  override def stdout(message: String): Unit = dom.console.info(message)
+
+  override def stdoutln(message: String): Unit = dom.console.info(message + newline)
+
+  override def log: Logger = SysLogger()
+
+  override def newline: String = "\n"
+
+  override def options: CommonOptions = overrideOptions
+
+  override def ec: ExecutionContext = scala.concurrent.ExecutionContext.global
+
 }

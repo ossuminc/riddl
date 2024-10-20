@@ -2,9 +2,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
-class RepositoryTest extends NoJVMParsingTest {
+abstract class RepositoryTest(using PlatformIOContext) extends AbstractParsingTest {
 
   "Repository" should {
     "have a schema" in { (td:TestData) =>

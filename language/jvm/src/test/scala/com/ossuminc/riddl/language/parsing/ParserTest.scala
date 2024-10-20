@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At,AST}
+import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PlatformIOContext}
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,6 +19,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
+  given PlatformIOContext = JVMPlatformIOContext()
+  
   "ParserContext" must {
     "throw on underflow" in { (td: TestData) =>
       val riddlParserInput = RiddlParserInput("", td)

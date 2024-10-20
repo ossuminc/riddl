@@ -1,8 +1,9 @@
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
-class ModuleTest extends NoJVMParsingTest {
+abstract class ModuleTest(using PlatformIOContext) extends AbstractParsingTest {
 
   "Module" should {
     "be accepted at root scope" in { (td: TestData) => 

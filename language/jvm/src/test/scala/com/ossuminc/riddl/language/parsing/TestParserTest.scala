@@ -1,13 +1,16 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST,At}
-import com.ossuminc.riddl.language.Messages.* 
+import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.utils.{PlatformIOContext, JVMPlatformIOContext}
 
 import java.nio.file.Path
 import org.scalatest.TestData
 
 class TestParserTest extends ParsingTest {
+
+  given PlatformIOContext = JVMPlatformIOContext()
 
   "TestParser" should {
     val path = Path.of("language/jvm/src/test/input/everything.riddl")

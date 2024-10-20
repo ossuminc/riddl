@@ -9,8 +9,8 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
-import com.ossuminc.riddl.language.{AST, CommonOptions}
-import com.ossuminc.riddl.utils.{TestingBasisWithTestData, URL}
+import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.utils.{URL,CommonOptions}
 import fastparse.*
 
 import java.nio.file.{Files, Path}
@@ -20,7 +20,7 @@ import scala.concurrent.duration.DurationInt
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-trait ParsingTest extends NoJVMParsingTest {
+trait ParsingTest extends AbstractParsingTest {
 
   def parsePath(
     path: Path,
@@ -29,7 +29,7 @@ trait ParsingTest extends NoJVMParsingTest {
     if Files.exists(path) then
       if Files.isReadable(path) then {
         val input = RiddlParserInput.fromCwdPath(path)
-        TopLevelParser.parseInput(input, commonOptions)
+        TopLevelParser.parseInput(input)
       } else {
         val message: Message = error(s"Input file `${path.toString} is not readable.")
         Left(List(message))

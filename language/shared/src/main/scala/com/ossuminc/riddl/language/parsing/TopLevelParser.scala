@@ -7,9 +7,9 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext, Timer}
+import com.ossuminc.riddl.utils.{PlatformIOContext, Timer, CommonOptions}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -19,14 +19,11 @@ import scala.concurrent.Future
 import scala.scalajs.js.annotation.*
 
 /** The TopLevel (Root) parser. This class
-  * @param input
   * @param commonOptions
-  * @param ec
+  *   Common options to use during the parsing
   */
 @JSExportTopLevel("TopLevelParser")
-class TopLevelParser(
-  val commonOptions: CommonOptions = CommonOptions.empty
-)(using io: PlatformIOContext = ScalaPlatformIOContext())
+class TopLevelParser(using io: PlatformIOContext)
     extends ProcessorParser
     with DomainParser
     with AdaptorParser
@@ -93,18 +90,13 @@ object TopLevelParser {
     *   Control whether parse failures are diagnosed verbosely or not. Typically only useful to maintainers of RIDDL, or
     *   test cases
     */
-  @JSExport
   def parseURL(
     url: URL,
-    commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  )(using
-    io: PlatformIOContext = ScalaPlatformIOContext(),
-    ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  ): Future[Either[Messages, Root]] = {
+  )(using io: PlatformIOContext): Future[Either[Messages, Root]] = {
     io.load(url).map { (data: String) =>
       val rpi = RiddlParserInput(data.mkString, url)
-      parseInput(rpi, commonOptions, withVerboseFailures)
+      parseInput(rpi, withVerboseFailures)
     }
   }
 
@@ -118,40 +110,33 @@ object TopLevelParser {
     *   For the utility of RIDDL implementers.
     * @return
     */
-  @JSExport
   def parseInput(
     input: RiddlParserInput,
-    commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformIOContext = ScalaPlatformIOContext()): Either[Messages, Root] = {
-    Timer.time(s"parse ${input.origin}", commonOptions.showTimes) {
-      implicit val _: ExecutionContext = ExecutionContext.Implicits.global
-      val tlp = new TopLevelParser(commonOptions)
+  )(using io: PlatformIOContext): Either[Messages, Root] = {
+    Timer.time(s"parse ${input.origin}", io.options.showTimes) {
+      implicit val _: ExecutionContext = io.ec
+      val tlp = new TopLevelParser()
       tlp.parseRoot(input, withVerboseFailures)
     }
   }
 
-  @JSExport
   def parseString(
     input: String,
-    commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformIOContext = ScalaPlatformIOContext()): Either[Messages, Root] = {
+  )(using PlatformIOContext): Either[Messages, Root] = {
     val rpi = RiddlParserInput(input, "")
     parseInput(rpi)
   }
 
-  @JSExport
   def parseNebulaFromInput(
     input: RiddlParserInput,
-    commonOptions: CommonOptions = CommonOptions.empty,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformIOContext = ScalaPlatformIOContext()): Either[Messages, Nebula] = {
-    Timer.time(s"parse nebula from ${input.origin}", commonOptions.showTimes) {
-      implicit val _: ExecutionContext = ExecutionContext.Implicits.global
-      val tlp = new TopLevelParser(commonOptions)
+  )(using io: PlatformIOContext): Either[Messages, Nebula] = {
+    Timer.time(s"parse nebula from ${input.origin}", io.options.showTimes) {
+      implicit val _: ExecutionContext = io.ec
+      val tlp = new TopLevelParser()
       tlp.parseNebula(input, withVerboseFailures)
     }
   }
-
 }

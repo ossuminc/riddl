@@ -8,6 +8,8 @@ import scala.io.AnsiColor.*
 /** Unit Tests For SysLogger */
 class SysLoggerTest extends AnyWordSpec with Matchers {
 
+  given PlatformIOContext = JVMPlatformIOContext()
+
   /** Executes a function while capturing system's stderr, return the result of the function and the captured output.
     * Switches stderr back once code block finishes or throws exception e.g.
     * {{{
@@ -59,7 +61,6 @@ class SysLoggerTest extends AnyWordSpec with Matchers {
   }
 
   "SysLogger" should {
-    given PlatformIOContext = ScalaPlatformIOContext()
     "print error message" in {
       val expected = s"[error] asdf\n"
       val sl = SysLogger(false)
