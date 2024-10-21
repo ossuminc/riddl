@@ -66,7 +66,7 @@ object CommonOptionsHelper {
         .optional()
         .action((_, c) => c.copy(quiet = true))
         .text("Do not print out any output, just do the requested command"),
-      opt[Unit]('a', "noANSIMessages")
+      opt[Unit]('a', "no-ansi-messages")
         .optional()
         .action((_, c) => c.copy(noANSIMessages = true))
         .text("Do not print messages with ANSI formatting"),
