@@ -147,11 +147,10 @@ class MessagesTest extends JVMTestingBasis {
       mix.justInfo mustBe Seq(i)
     }
     "log with retained order" in {
-      val commonOptions = CommonOptions()
       given io: PlatformIOContext = new JVMPlatformIOContext {
         override val log: Logger = StringLogger()
       }
-      Messages.logMessages(mix, commonOptions)
+      Messages.logMessages(mix)
       val content = io.log.toString
       val expected = """[34m[1m[info] empty(1:1)info[0m
                        |[32m[1m[style] empty(1:1)style[0m
@@ -164,11 +163,11 @@ class MessagesTest extends JVMTestingBasis {
       content mustBe expected
     }
     "log grouped by message kind" in {
-      val commonOptions = CommonOptions(groupMessagesByKind = true)
       given io: PlatformIOContext = new JVMPlatformIOContext {
         override val log: Logger = StringLogger()
       }
-      Messages.logMessages(mix, commonOptions)
+      io.setOptions(CommonOptions(groupMessagesByKind = true))
+      Messages.logMessages(mix)
       val content = io.log.toString
       val expected =
         """[41m[30m[1m[severe] Severe Message Count: 1[0m

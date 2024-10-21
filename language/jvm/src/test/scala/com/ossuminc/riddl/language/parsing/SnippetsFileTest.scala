@@ -1,7 +1,8 @@
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PlatformIOContext}
+import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PathUtils, PlatformIOContext}
 
 import java.nio.file.Path
 import org.apache.commons.io.FileUtils
@@ -11,13 +12,14 @@ import scala.jdk.CollectionConverters.*
 import scala.io.AnsiColor.*
 import org.scalatest.TestData
 
+import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.duration.DurationInt
+
 /** Parsing tests that try a variety of code snippets that should parse */
 class SnippetsFileTest extends ParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
-  given PlatformIOContext = JVMPlatformIOContext()
-  
   val topDir: Path = Path.of(s"language/jvm/src/test/input/snippets")
   val paths: Iterable[Path] =
     FileUtils.listFiles(topDir.toFile, Array("riddl"), true).asScala.map(_.toPath)
@@ -28,13 +30,18 @@ class SnippetsFileTest extends ParsingTest {
       var failures = 0
 
       for { file <- paths} do
-        val input = RiddlParserInput.fromCwdPath(file,td)
-        parseTopLevelDomains(input) match
-          case Left(msgs: Messages) =>
-            info(s"$RED${msgs.justErrors.format}$RESET")
-            failures += 1
-          case Right(_) =>
-            info(s"${GREEN}Passed: $file$RESET")
+        val url = PathUtils.urlFromCwdPath(file)
+        implicit val ec: ExecutionContext = pc.ec
+        val future = RiddlParserInput.fromURL(url, td).map { rpi =>
+          parseTopLevelDomains(rpi) match
+            case Left(msgs: Messages) =>
+              info(s"$RED${msgs.justErrors.format}$RESET")
+              failures += 1
+            case Right(_) =>
+              info(s"${GREEN}Passed: $file$RESET")
+          end match
+        }
+        Await.result(future, 10.seconds)
       if failures > 0 then fail(s"$failures failures")
       else succeed
     }

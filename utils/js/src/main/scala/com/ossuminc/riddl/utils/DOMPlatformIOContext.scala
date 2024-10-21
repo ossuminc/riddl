@@ -15,7 +15,7 @@ import org.scalajs.dom
   * part of parsing in a platform specific way.
   */
 @JSExportTopLevel("DOMPlatformIOContext")
-case class DOMPlatformIOContext(overrideOptions: CommonOptions = CommonOptions.empty) extends PlatformIOContext {
+case class DOMPlatformIOContext() extends PlatformIOContext {
 
   import scala.concurrent.{ExecutionContext, Future}
   import scala.scalajs.js.annotation.JSExport
@@ -64,8 +64,6 @@ case class DOMPlatformIOContext(overrideOptions: CommonOptions = CommonOptions.e
   override def log: Logger = SysLogger()
 
   override def newline: String = "\n"
-
-  override def options: CommonOptions = overrideOptions
 
   override def ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 

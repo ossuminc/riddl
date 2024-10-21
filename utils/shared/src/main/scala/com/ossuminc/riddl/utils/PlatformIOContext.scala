@@ -9,14 +9,22 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 trait PlatformIOContext {
 
+  given pc: PlatformIOContext = this
+  
   /** The Logger instance to use on this platform. */
-  def log: Logger
+  protected var logger: Logger = SysLogger()
+  def log: Logger = logger
+  def setLog(newLogger: Logger): Unit = logger = newLogger
 
   /** The default CommonOptions to use on this platform. */
-  def options: CommonOptions
+  protected var options_ : CommonOptions = CommonOptions()
+  def options: CommonOptions = options_
+  def setOptions(commonOptions: CommonOptions): Unit = options_ = commonOptions
 
   /** The ExecutionContext that will be used for Futures and Promises */
   def ec: ExecutionContext
+  
+  type Path
 
   /** Load the content of a text file asynchronously and return it as a string. THe content, typically a RIDDL or
     * Markdown file, is expected to be encoded in UTF-8

@@ -1,5 +1,6 @@
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.At

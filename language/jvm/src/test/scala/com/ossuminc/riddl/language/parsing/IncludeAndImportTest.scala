@@ -6,18 +6,17 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PathUtils, PlatformIOContext, URL}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
-import org.scalatest.TestData
+import org.scalatest.{Assertion, TestData}
 
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
-
-  given PlatformIOContext = JVMPlatformIOContext()
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
   "Include" should {
@@ -110,19 +109,21 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "warn about duplicate includes" in { (td: TestData) =>
       val path = java.nio.file.Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl")
-      val input = RiddlParserInput.fromCwdPath(path, td)
-      TopLevelParser.parseInput(input) match {
-        case Right(_) =>
-          fail("Should have failed with warnings")
-        case Left(messages) =>
-          val errors = messages.justErrors
-          if errors.nonEmpty then fail(errors.format)
-          val warnings = messages.justWarnings
-          warnings.size mustBe 1
-          warnings.head.message must include("Duplicate include origin detected in")
-          succeed
+      val url = PathUtils.urlFromCwdPath(path)
+      val future: Future[Assertion] = RiddlParserInput.fromURL(url, td).map { rpi =>
+        TopLevelParser.parseInput(rpi) match {
+          case Right(_) =>
+            fail("Should have failed with warnings")
+          case Left(messages) =>
+            val errors = messages.justErrors
+            if errors.nonEmpty then fail(errors.format)
+            val warnings = messages.justWarnings
+            warnings.size mustBe 1
+            warnings.head.message must include("Duplicate include origin detected in")
+            succeed
+        }
       }
-
+      Await.result(future, 10.seconds)
     }
   }
 

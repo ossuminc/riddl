@@ -6,25 +6,29 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.{PlatformIOContext, JVMPlatformIOContext}
+import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PathUtils, PlatformIOContext}
 
 import java.nio.file.Path
 import scala.io.Source
 import org.scalatest.TestData
 
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+
 class TopLevelParserTest extends ParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
-  given IO: PlatformIOContext = JVMPlatformIOContext()
-
   val origin = "simpleDomain.riddl"
 
   val simpleDomainFile = Path.of(s"language/jvm/src/test/input/domains/$origin")
-  val rpi: RiddlParserInput = RiddlParserInput.fromCwdPath(simpleDomainFile)
+  val url = PathUtils.urlFromCwdPath(simpleDomainFile)
+  val rpi: RiddlParserInput =
+    Await.result(RiddlParserInput.fromURL(url), 10.seconds)
 
   val simpleDomain: AST.Domain = Domain(
     At(1, 1, rpi),
@@ -34,12 +38,10 @@ class TopLevelParserTest extends ParsingTest {
 
   "parse" should {
     "parse RiddlParserInput" in { (td: TestData) =>
-      val input = RiddlParserInput.fromCwdPath(simpleDomainFile)
-      TopLevelParser.parseInput(input) mustBe Right(simpleDomainResults)
+      TopLevelParser.parseInput(rpi) mustBe Right(simpleDomainResults)
     }
     "parse File" in { (td: TestData) =>
-      val input = RiddlParserInput.fromCwdPath(simpleDomainFile)
-      TopLevelParser.parseInput(input) mustBe Right(simpleDomainResults)
+      TopLevelParser.parseInput(rpi) mustBe Right(simpleDomainResults)
     }
     "parse String" in { (td: TestData) =>
       val source = Source.fromFile(simpleDomainFile.toFile)

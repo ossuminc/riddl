@@ -289,11 +289,10 @@ object Messages {
     */
   @JSExport
   def logMessages(
-    messages: Messages,
-    options: CommonOptions
+    messages: Messages
   )(using io: PlatformIOContext): Int = {
-    val list = if options.sortMessagesByLocation then messages.sorted else messages
-    if options.groupMessagesByKind then { logMessagesByGroup(list, options) }
+    val list = if io.options.sortMessagesByLocation then messages.sorted else messages
+    if io.options.groupMessagesByKind then { logMessagesByGroup(list) }
     else { logMessagesRetainingOrder(list) }
     list.highestSeverity
   }
@@ -315,8 +314,7 @@ object Messages {
   }
 
   private def logMessagesByGroup(
-    messages: Messages,
-    commonOptions: CommonOptions
+    messages: Messages
   )(using io: PlatformIOContext): Unit = {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])
@@ -345,14 +343,14 @@ object Messages {
       logMsgs(SevereError, groups.get(SevereError))
       logMsgs(Error, groups.get(Error))
 
-      if commonOptions.showWarnings then {
-        if commonOptions.showUsageWarnings then {
+      if io.options.showWarnings then {
+        if io.options.showUsageWarnings then {
           logMsgs(UsageWarning, groups.get(UsageWarning))
         }
-        if commonOptions.showMissingWarnings then {
+        if io.options.showMissingWarnings then {
           logMsgs(MissingWarning, groups.get(MissingWarning))
         }
-        if commonOptions.showStyleWarnings then {
+        if io.options.showStyleWarnings then {
           logMsgs(StyleWarning, groups.get(StyleWarning))
         }
       }

@@ -6,15 +6,17 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.utils.{URL,CommonOptions}
+import com.ossuminc.riddl.utils.{CommonOptions, PathUtils, URL}
 import fastparse.*
 
 import java.nio.file.{Files, Path}
 import scala.annotation.unused
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.reflect.*
@@ -23,13 +25,13 @@ import scala.reflect.*
 trait ParsingTest extends AbstractParsingTest {
 
   def parsePath(
-    path: Path,
-    commonOptions: CommonOptions = CommonOptions.empty
+    path: Path
   ): Either[Messages, Root] = {
     if Files.exists(path) then
       if Files.isReadable(path) then {
-        val input = RiddlParserInput.fromCwdPath(path)
-        TopLevelParser.parseInput(input)
+        val url = PathUtils.urlFromCwdPath(path, "")
+        val future = RiddlParserInput.fromURL(url, "").map { rpi => TopLevelParser.parseInput(rpi) }
+        Await.result(future, 10.seconds)
       } else {
         val message: Message = error(s"Input file `${path.toString} is not readable.")
         Left(List(message))
@@ -43,15 +45,15 @@ trait ParsingTest extends AbstractParsingTest {
   }
 
   def parseFile(
-    file: java.io.File,
-    commonOptions: CommonOptions = CommonOptions.empty
+    file: java.io.File
   ): Either[Messages, Root] = {
-    parsePath(file.toPath, commonOptions)
+    parsePath(file.toPath)
   }
 
   def parseRoot(path: java.nio.file.Path): Either[Messages, Root] = {
-    val rpi = RiddlParserInput.fromCwdPath(path)
-    parseTopLevelDomains(rpi)
+    val url = PathUtils.urlFromCwdPath(path)
+    val future = RiddlParserInput.fromURL(url).map { rpi => parseTopLevelDomains(rpi) }
+    Await.result(future, 10.seconds)
   }
 
   val defaultInputDir = "language/jvm/src/test/input"
@@ -62,12 +64,15 @@ trait ParsingTest extends AbstractParsingTest {
     directory: String = defaultInputDir
   ): (Root, RiddlParserInput) = {
     val path = java.nio.file.Path.of(directory, fileName)
-    val rpi = fromCwdPath(path)
-    TopLevelParser.parseInput(rpi) match {
-      case Left(errors) =>
-        fail(errors.format)
-      case Right(root) => root -> rpi
+    val rul = PathUtils.urlFromCwdPath(path)
+    val future = RiddlParserInput.fromURL(rul).map { rpi =>
+      TopLevelParser.parseInput(rpi) match {
+        case Left(errors) =>
+          fail(errors.format)
+        case Right(root) => root -> rpi
+      }
     }
+    Await.result(future, 10.seconds)
   }
 
 }

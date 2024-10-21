@@ -1,6 +1,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.{JVMTestingBasis, URL}
+import com.ossuminc.riddl.language.pc
 
 import org.scalatest.Assertion
 import scala.io.Source

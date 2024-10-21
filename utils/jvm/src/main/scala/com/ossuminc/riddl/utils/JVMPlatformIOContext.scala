@@ -15,13 +15,17 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * part of parsing in a platform specific way.
   */
 @JSExportTopLevel("JVMPlatformIOContext")
-class JVMPlatformIOContext(overrideOptions: CommonOptions = CommonOptions()) extends PlatformIOContext {
+class JVMPlatformIOContext extends PlatformIOContext {
 
   import scala.concurrent.{ExecutionContext, Future}
   import scala.io.Source
   import scala.scalajs.js.annotation.JSExport
 
   given PlatformIOContext = this
+
+  type Path = java.nio.file.Path
+  
+  this.setLog(SysLogger())
 
   @JSExport
   override def load(url: URL): Future[String] = {
@@ -55,6 +59,8 @@ class JVMPlatformIOContext(overrideOptions: CommonOptions = CommonOptions()) ext
     }
   }
 
+  override def dump(url: URL, content: String): Future[Unit] = ???
+
   override def read(file: URL): String =
     val source = Source.fromFile(file.toString)
     try {
@@ -78,11 +84,7 @@ class JVMPlatformIOContext(overrideOptions: CommonOptions = CommonOptions()) ext
   override def stdoutln(message: String): Unit =
     System.out.println(message)
 
-  override def log: Logger = SysLogger()
-
   override def newline: String = "\n"
-
-  override def options: CommonOptions = overrideOptions
 
   override def ec: ExecutionContext = scala.concurrent.ExecutionContext.global
 }

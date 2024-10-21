@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term, WithIdentifier}
 import com.ossuminc.riddl.language.{At, Finder}
 import org.scalatest.TestData
