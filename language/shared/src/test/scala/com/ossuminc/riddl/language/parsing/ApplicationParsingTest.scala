@@ -18,7 +18,7 @@ abstract class ApplicationParsingTest(using PlatformIOContext) extends AbstractP
           |    group g3 is { ??? }
           |    input i1 acquires String is { ??? }
           |    output o1 displays String is { ??? }
-          |  }
+          |  } 
           |}
           |}""".stripMargin,
         td

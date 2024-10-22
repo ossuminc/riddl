@@ -11,7 +11,7 @@ import com.ossuminc.riddl.utils.PlatformIOContext
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-private[parsing] trait ApplicationParser(using io: PlatformIOContext) {
+private[parsing] trait ApplicationParser(using PlatformIOContext) {
   this: ProcessorParser & StreamingParser & CommonParser =>
 
   def containedGroup[u: P]: P[ContainedGroup] = {
@@ -51,7 +51,7 @@ private[parsing] trait ApplicationParser(using io: PlatformIOContext) {
       is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (appOutput | typeRef).rep(1)) ~ close
     ).?.map {
       case Some(definitions: Seq[OccursInOutput]) => definitions
-      case None                                  => Seq.empty[OccursInOutput]
+      case None                                   => Seq.empty[OccursInOutput]
     }
   }
 
@@ -71,8 +71,15 @@ private[parsing] trait ApplicationParser(using io: PlatformIOContext) {
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
           error(s"Expected a type reference, constant reference, or literal string, not: $xval")
-          Output(loc, nounAlias, id, verbAlias, LiteralString(loc, s"INVALID: `$xval``"), contents.toContents,
-            descriptives.toContents)
+          Output(
+            loc,
+            nounAlias,
+            id,
+            verbAlias,
+            LiteralString(loc, s"INVALID: `$xval``"),
+            contents.toContents,
+            descriptives.toContents
+          )
       }
     }
   }
