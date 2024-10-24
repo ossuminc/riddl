@@ -3,12 +3,13 @@ package com.ossuminc.riddl.passes.resolve
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.{Assertion, TestData}
 
 /** Unit Tests For the ResolutionPass */
-class NoJVMPathResolutionPassTest extends ResolvingTest {
+class SharedPathResolutionPassTest(using pc: PlatformIOContext) extends SharedResolvingTest {
 
   "PathResolutionPass" must {
     "resolve a full path" in { (td: TestData) =>
@@ -337,7 +338,7 @@ class NoJVMPathResolutionPassTest extends ResolvingTest {
       domain.contexts.forall(_.kind == "Include")
       domain.includes.size mustBe 1
       domain.includes.head.contents.filter[Context].length mustBe 2
-      val (in, outs) = resolve(root, CommonOptions())
+      val (in, outs) = resolve(root)
       val messages = outs.getAllMessages
       val errors = messages.justErrors
       if errors.nonEmpty then fail(errors.format) else succeed
@@ -402,8 +403,7 @@ class NoJVMPathResolutionPassTest extends ResolvingTest {
         if errors.nonEmpty then
           info(errors.format)
           fail("Should have succeeded")
-        else
-          succeed
+        else succeed
       }
     }
     "resolve a path identifier" in { (td: TestData) =>

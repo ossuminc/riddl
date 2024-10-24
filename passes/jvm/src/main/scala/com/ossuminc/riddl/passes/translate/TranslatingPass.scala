@@ -9,8 +9,7 @@ package com.ossuminc.riddl.passes.translate
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{Pass, PassCreator, PassInput, PassCreators, PassesOutput, PassesResult, Riddl}
-import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.{PlatformIOContext, CommonOptions, Logger}
 
 import java.nio.file.Path
 
@@ -21,4 +20,5 @@ import java.nio.file.Path
   * @param outputs
   *   The prior outputs from preceding passes
   */
-abstract class TranslatingPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs)
+abstract class TranslatingPass(input: PassInput, outputs: PassesOutput)(using PlatformIOContext)
+    extends Pass(input, outputs)

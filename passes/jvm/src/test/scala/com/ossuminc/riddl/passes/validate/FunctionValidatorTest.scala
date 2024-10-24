@@ -8,9 +8,10 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.passes.{pc, ec}
 import org.scalatest.{Inside, TestData}
 
-class FunctionValidatorTest extends ValidatingTest with Inside {
+class FunctionValidatorTest extends AbstractValidatingTest with Inside {
 
   "FunctionValidator" should {
     "accept function but warn about descriptions" in { (_: TestData) =>

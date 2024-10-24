@@ -8,11 +8,11 @@ package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.{Entity, *}
 import com.ossuminc.riddl.language.parsing.Keyword
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
 
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
@@ -26,8 +26,8 @@ case class ResolutionOutput(
 
 object ResolutionPass extends PassInfo[PassOptions] {
   val name: String = "Resolution"
-  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = { 
-    (in: PassInput, out: PassesOutput) =>ResolutionPass(in, out)
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = {
+    (in: PassInput, out: PassesOutput) => ResolutionPass(in, out)
   }
 }
 
@@ -56,13 +56,14 @@ object ResolutionPass extends PassInfo[PassOptions] {
   *   THe outputs from preceding passes, which should only be the [[com.ossuminc.riddl.passes.symbols.SymbolsPass]]
   *   output.
   */
-case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) with UsageResolution {
+case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: PlatformIOContext)
+    extends Pass(input, outputs)
+    with UsageResolution {
 
   override def name: String = ResolutionPass.name
 
   requires(SymbolsPass)
 
-  val commonOptions: CommonOptions = input.commonOptions
   val refMap: ReferenceMap = ReferenceMap(messages)
   val kindMap: KindMap = KindMap()
   val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
@@ -120,7 +121,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         resolveAuthorRefs(s, parents)
       case p: Projector =>
         resolveAuthorRefs(p, parents)
-        p.repositories.foreach{ ref => associateUsage(p, resolveARef[Repository](ref, parents)) }
+        p.repositories.foreach { ref => associateUsage(p, resolveARef[Repository](ref, parents)) }
       case r: Repository =>
         resolveAuthorRefs(r, parents)
       case s: Saga =>
@@ -521,7 +522,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     val t = definition.asInstanceOf[T]
     refMap.add[T](pathId, pidDirectParent, t)
     associateUsage(pidDirectParent, t)
-    if commonOptions.debug then
+    if io.options.debug then
       messages.add(
         Messages.info(
           s"Path Identifier ${pathId.format} in ${pidDirectParent.identify} resolved to ${definition.identify}",
@@ -529,7 +530,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         )
       )
     end if
-    if commonOptions.debug then println(s"Resolved: ${pathId.format} ==> ${t.identify}")
+    if io.options.debug then println(s"Resolved: ${pathId.format} ==> ${t.identify}")
     t
   end resolved
 
@@ -542,7 +543,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
     val message = s"Path '${pathId.format}' resolved to ${foundDef.identifyWithLoc}," +
       s" in ${container.identify}, but ${article(referTo)} was expected"
     messages.addError(pathId.loc, message)
-    if commonOptions.debug then
+    if io.options.debug then
       println(s"WrongType: ${pathId.format} ==> ${foundDef.identifyWithLoc} not ${article(referTo)}")
     end if
 
@@ -571,7 +572,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput) extends Pass(
         else ""
       }
     )
-    if commonOptions.debug then println(s"Unresolved: ${pathId.format} ==> ???")
+    if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
   end notResolved
 
   private def checkMatch[T <: Definition: ClassTag](

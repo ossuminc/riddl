@@ -3,10 +3,11 @@ package com.ossuminc.riddl.hugo
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.{pc}
 import com.ossuminc.riddl.passes.{Pass, PassCreators, PassInput, PassesOutput}
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.AbstractTestingBasis
 
-class HugoPassTest extends TestingBasis {
+class HugoPassTest extends AbstractTestingBasis {
 
   "HugoOutput" must {
     "construct empty" in {

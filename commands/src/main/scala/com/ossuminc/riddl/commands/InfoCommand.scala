@@ -6,11 +6,12 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, RiddlBuildInfo}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, Logger, RiddlBuildInfo}
 import com.ossuminc.riddl.command.{Command, CommandOptions}
+import com.ossuminc.riddl.commands.{pc, ec}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -43,7 +44,6 @@ class InfoCommand(using io: PlatformIOContext) extends Command[InfoCommand.Optio
 
   override def run(
     options: InfoCommand.Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     io.log.info("About riddlc:")

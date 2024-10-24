@@ -6,8 +6,8 @@
 package com.ossuminc.riddl.passes.stats
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.{AST, Messages}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
@@ -19,7 +19,7 @@ import scala.scalajs.js.annotation.*
 @JSExportTopLevel("StatsPass$")
 object StatsPass extends PassInfo[PassOptions] {
   val name: String = "stats"
-  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = { 
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = {
     (in: PassInput, out: PassesOutput) => StatsPass(in, out)
   }
 }
@@ -87,19 +87,20 @@ class KindStats(
 @JSExportTopLevel("StatsOutput")
 case class StatsOutput(
   root: Root = Root.empty,
-  messages: Messages = Messages.empty,
+  messages: Messages.Messages = Messages.empty,
   maximum_depth: Int = 0,
   categories: Map[String, KindStats] = Map.empty
 ) extends CollectingPassOutput[DefinitionStats]
 
 /** Pass that generates statistics about a RIDDL Model
- * @param input
- *   The input to the pass
- * @param outputs
- *   The outputs from the passes
- */
+  * @param input
+  *   The input to the pass
+  * @param outputs
+  *   The outputs from the passes
+  */
 @JSExportTopLevel("StatsPass")
-case class StatsPass(input: PassInput, outputs: PassesOutput) extends CollectingPass[DefinitionStats](input, outputs) {
+case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOContext)
+    extends CollectingPass[DefinitionStats](input, outputs) {
 
   @JSExport
   def name: String = StatsPass.name
@@ -164,13 +165,15 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
               definition match
                 case wb: WithMetaData =>
                   lines = lines + { if wb.brief.nonEmpty then 1 else 0 }
-                  lines = lines + { wb.descriptions.foldLeft(0) { (sum, next) =>
-                    next match
-                      case BlockDescription(_, lines) => sum + lines.size 
-                      case _: URLDescription => sum + 1
-                      case _: Description => sum 
-                    end match
-                  }}
+                  lines = lines + {
+                    wb.descriptions.foldLeft(0) { (sum, next) =>
+                      next match
+                        case BlockDescription(_, lines) => sum + lines.size
+                        case _: URLDescription          => sum + 1
+                        case _: Description             => sum
+                      end match
+                    }
+                  }
                 case _ => ()
               end match
               lines
@@ -342,19 +345,19 @@ case class StatsPass(input: PassInput, outputs: PassesOutput) extends Collecting
     var result = 0
     value match
       case _: WithTypes[?] => result += 1
-      case _ => ()
+      case _               => ()
     end match
     value match
       case _: WithAuthors[?] => result += 1
-      case _ => ()
+      case _                 => ()
     end match
     value match
       case _: WithOptions[?] => result += 1
-      case _ => ()
+      case _                 => ()
     end match
     value match
       case _: WithMetaData => result += 1
-      case _ => ()
+      case _               => ()
     end match
     result
   end definitionCount

@@ -5,7 +5,6 @@
  */
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
@@ -52,7 +51,6 @@ class ASimpleTestCommand(using io: PlatformIOContext) extends Command[ASimpleTes
 
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     io.log.info(s"arg1: '${options.arg1}''")

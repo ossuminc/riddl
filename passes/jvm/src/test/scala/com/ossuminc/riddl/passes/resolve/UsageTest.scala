@@ -6,20 +6,21 @@
 
 package com.ossuminc.riddl.passes.resolve
 
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, JVMPlatformIOContext}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
+import com.ossuminc.riddl.passes.{pc,ec} 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.TestData
 
-class UsageSpec extends ParsingTest {
+class UsageTest extends ParsingTest {
 
   "Usage" should {
     "correctly associated definitions" in { (td: TestData) =>
-      import com.ossuminc.riddl.language.Messages.Messages
       val input = RiddlParserInput(
         """
           |domain D is {
@@ -44,7 +45,7 @@ class UsageSpec extends ParsingTest {
           |""".stripMargin,
         td
       )
-      Riddl.parseAndValidate(input, CommonOptions()) match {
+      Riddl.parseAndValidate(input) match {
         case Left(messages: Messages) => fail(messages.format)
         case Right(result: PassesResult) =>
           val usage = result.usage
@@ -102,7 +103,7 @@ class UsageSpec extends ParsingTest {
         td
       )
       Riddl.parseAndValidate(input, shouldFailOnError = false) match {
-        case Left(messages) =>
+        case Left(messages: Messages) =>
           fail(messages.format)
         case Right(result) =>
           info(result.messages.format)
@@ -118,13 +119,13 @@ class UsageSpec extends ParsingTest {
       val input = RiddlParserInput(
         """domain foo {
           |  type Bar = Number with { described as "consequential" }
-          |  
+          |
           |} with { described as "inconsequential"}
           |""".stripMargin,
         td
       )
       val options = CommonOptions(showStyleWarnings = false, showMissingWarnings = false)
-      Riddl.parseAndValidate(input, options, shouldFailOnError = false) match {
+      Riddl.parseAndValidate(input, shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
         case Right(result) =>
           result.messages.isOnlyIgnorable mustBe true

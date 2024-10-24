@@ -1,7 +1,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.utils.{PlatformIOContext, ScalaPlatformIOContext, SysLogger}
+import com.ossuminc.riddl.utils.{PlatformIOContext, JVMPlatformIOContext, SysLogger}
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -18,7 +18,7 @@ trait CommandTestBase(val inputDir: String = "command/src/test/input/") extends 
   val suppressStyle = "--suppress-style-warnings"
   val common: Seq[String] = Seq(quiet, suppressMissing, suppressStyle)
 
-  given io: PlatformIOContext = ScalaPlatformIOContext()
+  given io: PlatformIOContext = JVMPlatformIOContext()
 
   def runCommand(
     args: Seq[String] = Seq.empty[String]

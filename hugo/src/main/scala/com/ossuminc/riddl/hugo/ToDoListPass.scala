@@ -6,7 +6,7 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
-import com.ossuminc.riddl.language.{AST, Messages}
+import com.ossuminc.riddl.language.{Messages, AST}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
 import com.ossuminc.riddl.utils.PlatformIOContext
@@ -26,7 +26,11 @@ case class ToDoListOutput(
   collected: Seq[ToDoItem] = Seq.empty
 ) extends CollectingPassOutput[ToDoItem]
 
-case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)
+case class ToDoListPass(
+  input: PassInput,
+  outputs: PassesOutput,
+  options: HugoPass.Options
+)(using PlatformIOContext)
     extends CollectingPass[ToDoItem](input, outputs) {
 
   private val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)

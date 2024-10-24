@@ -41,7 +41,5 @@ class RunHugoOnExamplesTest extends RunCommandOnExamplesTest {
     val toml = tempDir.resolve("config.toml")
     Files.isReadable(toml) mustBe true
     Files.isRegularFile(toml) mustBe true
-    passesResult.commonOptions mustBe commonOptions
-    succeed
   }
 }

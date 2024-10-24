@@ -54,7 +54,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkAlternation(
     alternation: Alternation,
     typeDef: Definition,
-    parents: Parents 
+    parents: Parents
   ): this.type = {
     checkSequence(alternation.of.toSeq) { (typex: TypeExpression) =>
       checkTypeExpression(typex, typeDef, parents)
@@ -94,7 +94,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkAggregateUseCase(
     mt: AggregateUseCaseTypeExpression,
     typeDef: Definition,
-    parents: Parents 
+    parents: Parents
   ): this.type = {
     checkSequence(mt.fields) { (field: Field) =>
       checkIdentifierLength(field)

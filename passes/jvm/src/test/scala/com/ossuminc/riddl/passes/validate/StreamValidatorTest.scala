@@ -1,13 +1,15 @@
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
+import com.ossuminc.riddl.passes.pc
+import com.ossuminc.riddl.utils.CommonOptions
 import org.scalatest.TestData
 
 /** Test cases for the StreamValidator */
-class StreamValidatorTest extends ValidatingTest {
+class StreamValidatorTest extends AbstractValidatingTest {
 
   "StreamValidator" must {
     "error on connector type mismatch" in { (td:TestData) =>
@@ -23,7 +25,8 @@ class StreamValidatorTest extends ValidatingTest {
         |  connector c1 is { from outlet a.foo.out to inlet a.foo.in }
         | }
         |} """.stripMargin,td)
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
+      pc.setOptions(CommonOptions.noMinorWarnings)
+      parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (domain, _, messages) =>
           domain.isEmpty must be(false)
           messages.isEmpty must be(false)

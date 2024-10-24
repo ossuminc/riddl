@@ -6,14 +6,16 @@
 
 package com.ossuminc.riddl.commands
 
+import com.ossuminc.riddl.commands.{pc,ec}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, StringHelpers}
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PlatformIOContext, StringHelpers, URL}
 import com.ossuminc.riddl.command.Command
 
 import java.nio.file.Path
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 object DumpCommand {
   final val cmdName = "dump"
@@ -26,25 +28,26 @@ class DumpCommand(using io: PlatformIOContext) extends InputFileCommand(DumpComm
 
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.fromCwdPath(inputFile)
-      Riddl.parseAndValidate(rpi, commonOptions).map { result =>
-        io.log.info(s"AST of $inputFile is:")
-        io.log.info(StringHelpers.toPrettyString(result, 1, None))
-        result
+      val url = URL.fromFullPath(inputFile.toAbsolutePath.toString)
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        Riddl.parseAndValidate(rpi).map { result =>
+          io.log.info(s"AST of $inputFile is:")
+          io.log.info(StringHelpers.toPrettyString(result, 1, None))
+          result
+        }
       }
+      Await.result(future, 10.seconds)
     }
   }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 }

@@ -6,8 +6,9 @@
 
 package com.ossuminc.riddl.passes.resolve
 
+import com.ossuminc.riddl.utils.{PlatformIOContext, CommonOptions}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -24,9 +25,7 @@ trait UsageBase {
 /** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call associateUsage. After
   * parsing ends, call checkUnused. Collects entities, types and functions too
   */
-trait UsageResolution extends UsageBase {
-
-  def commonOptions: CommonOptions
+trait UsageResolution(using io: PlatformIOContext) extends UsageBase {
 
   protected def messages: Messages.Accumulator
 
@@ -54,25 +53,23 @@ trait UsageResolution extends UsageBase {
   def associateUsage[T <: Definition: ClassTag](user: Definition, resolution: Resolution[T]): Resolution[T] =
     resolution match
       case None => None
-      case resolution @ Some((use: Definition, _)) => 
+      case resolution @ Some((use: Definition, _)) =>
         associateUsage(user, use)
-        resolution 
+        resolution
     end match
   end associateUsage
-    
+
   def associateUsage(user: Definition, use: Definition): this.type =
     val used = uses.getOrElse(user, Seq.empty[Definition])
-    if !used.contains(use) then
-      uses.update(user, used :+ use)
+    if !used.contains(use) then uses.update(user, used :+ use)
 
     val usages = usedBy.getOrElse(use, Seq.empty[Definition])
-    if !usages.contains(user) then
-      usedBy.update(use, usages :+ user)
+    if !usages.contains(user) then usedBy.update(use, usages :+ user)
     this
   end associateUsage
 
   def checkUnused(): this.type = {
-    if commonOptions.showUsageWarnings then {
+    if io.options.showUsageWarnings then {
       def hasUsages(definition: Definition): Boolean = {
         val result = usedBy.get(definition) match {
           case None        => false

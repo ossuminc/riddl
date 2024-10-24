@@ -1,24 +1,26 @@
 package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.parsing.{NoJVMParsingTest, RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
 import org.scalatest.*
 
 /** A base class for test cases involved in resolving pathids */
-class ResolvingTest extends NoJVMParsingTest {
+class SharedResolvingTest(using pc: PlatformIOContext) extends AbstractParsingTest {
 
   def resolve(
-    root: Root,
-    commonOptions: CommonOptions = CommonOptions(
-      showMissingWarnings = false,
-      showUsageWarnings = false,
-      showStyleWarnings = false
-    )
+    root: Root
   ): (PassInput, PassesOutput) = {
-    val input = PassInput(root, commonOptions)
+    pc.setOptions(
+      CommonOptions(
+        showMissingWarnings = false,
+        showUsageWarnings = false,
+        showStyleWarnings = false
+      )
+    )
+    val input = PassInput(root)
     val outputs = PassesOutput()
     Pass.runSymbols(input, outputs)
     Pass.runResolution(input, outputs)

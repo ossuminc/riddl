@@ -10,9 +10,10 @@ import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.passes.{pc, ec}
 import org.scalatest.TestData
 
-class EpicTest extends ValidatingTest {
+class EpicTest extends AbstractValidatingTest {
 
   "Epic" should {
     "parse and validate a case-less example " in { (td: TestData) =>
@@ -64,12 +65,12 @@ class EpicTest extends ValidatingTest {
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
-          |   
-          |  } with { 
+          |
+          |  } with {
           |    explanation as "nada"
           |    term xyz is "y"
           |  }
-          |} with { explained as "nada" } 
+          |} with { explained as "nada" }
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -81,7 +82,7 @@ class EpicTest extends ValidatingTest {
           |author reid is {
           |  name: "Reid Spencer"
           |  email: "reid.spencer@ossum.biz"
-          |} with {  
+          |} with {
           |  briefly "nada" described as "nada"
           |}
           |
@@ -102,13 +103,13 @@ class EpicTest extends ValidatingTest {
           |  } with {
           |    briefly "A use case about establishing an organization in Improving.app"
           |    described as "TBD"
-          |  }  
+          |  }
           |} with {
           |  briefly "A placeholder" described by "Not important"
           |  by author ImprovingApp.reid
           |  term 'conduct business' is "Any legal business activity supported by the terms of use."
-          |}  
-          |} 
+          |}
+          |}
           |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = false) {
@@ -139,11 +140,11 @@ class EpicTest extends ValidatingTest {
           |  projector OrganizationViews is {
           |   record SimpleView { a: Integer}
           |   handler Simple { ??? }
-          |  } with { 
+          |  } with {
           |   term xyz "y"
           |   described as "nada"
           |  }
-          |} with { described as "nada" }  
+          |} with { described as "nada" }
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -178,7 +179,7 @@ class EpicTest extends ValidatingTest {
           |  described as "TBD"
           | by author reid
           |}
-          |} with { briefly "A placeholder" described by "Not important" } 
+          |} with { briefly "A placeholder" described by "Not important" }
           |""".stripMargin,td
       )
       parseAndValidateDomain(rpi, shouldFailOnErrors = true) {
@@ -215,10 +216,10 @@ class EpicTest extends ValidatingTest {
           |  } with {
           |   term xyz "y"
           |   described as "nada"
-          |  }  
+          |  }
           |} with {
           |  described as "nada"
-          |}  
+          |}
           |
           |application Improving_app is {
           |  group OrganizationPage is {
@@ -246,7 +247,7 @@ class EpicTest extends ValidatingTest {
           |  briefly "A story about establishing an organization in Improving.app"
           |  described as "TBD"
           |  term 'conduct business' "Any legal business activity supported by the terms of use."
-          |}  
+          |}
           |} with { briefly "A placeholder" described by "Not important" }
           |""".stripMargin,td
       )

@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.utils.{Logger, PathUtils, PlatformIOContext, Tar, Timer, Zip}
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformIOContext, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -124,9 +124,8 @@ case class HugoOutput(
 case class HugoPass(
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoPass.Options,
-  commonOptions: CommonOptions = CommonOptions()
-)(using io: PlatformIOContext) extends Pass(input, outputs)
+  options: HugoPass.Options
+)(using pc: PlatformIOContext) extends Pass(input, outputs)
     with TranslatingState[MarkdownWriter]
     with Summarizer {
 
@@ -161,7 +160,7 @@ case class HugoPass(
       next.resolve(par)
     }
     val path = parDir.resolve(fileName)
-    val mdw: MarkdownWriter = ThemeWriter(path, input, outputs, options, commonOptions)
+    val mdw: MarkdownWriter = ThemeWriter(path, input, outputs, options)
     addFile(mdw)
     mdw
   }
@@ -329,7 +328,7 @@ case class HugoPass(
       parent.isDirectory,
       "Parent of output directory is not a directory!"
     )
-    if commonOptions.debug then {
+    if pc.options.debug then {
       println(s"Generating output to: $outDir")
     }
     manuallyMakeNewHugoSite(outDir.toPath)
@@ -344,7 +343,7 @@ case class HugoPass(
 
   private def close(root: Root): Unit = {
     Timer.time(s"Writing ${this.files.size} Files") {
-      writeFiles(commonOptions.verbose || commonOptions.debug)
+      writeFiles(pc.options.verbose || pc.options.debug)
     }
   }
 

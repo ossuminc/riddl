@@ -6,36 +6,38 @@
 
 package com.ossuminc.riddl.passes.validate
 
+import com.ossuminc.riddl.utils.{PlatformIOContext, CommonOptions, URL}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{NoJVMParsingTest, RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.language.{At, CommonOptions}
+import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
-import org.scalatest.Assertion
 
+import java.nio.file.Path
+import org.scalatest.Assertion
 import scala.reflect.*
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 /** Convenience functions for tests that do validation */
-abstract class NoJVMValidatingTest extends NoJVMParsingTest {
+abstract class AbstractValidatingTest(using PlatformIOContext) extends AbstractParsingTest {
 
   protected def runStandardPasses(
     model: Root,
-    options: CommonOptions,
     shouldFailOnErrors: Boolean = false
   ): Either[Messages, PassesResult] = {
-    val result = Pass.runStandardPasses(model, options)
+    val result = Pass.runStandardPasses(model)
     if shouldFailOnErrors && result.messages.hasErrors then Left(result.messages)
     else Right(result)
   }
 
   def simpleParseAndValidate(
-    input: RiddlParserInput,
-    options: CommonOptions = CommonOptions()
+    input: RiddlParserInput
   ): Either[Messages, PassesResult] = {
     TopLevelParser.parseInput(input) match {
       case Left(messages) => Left(messages)
       case Right(model) =>
-        runStandardPasses(model, options) match {
+        runStandardPasses(model) match {
           case Left(messages)              => Left(messages)
           case Right(result: PassesResult) => Right(result)
         }
@@ -43,8 +45,7 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
   }
 
   def parseAndValidateAggregate(
-    input: RiddlParserInput,
-    options: CommonOptions = CommonOptions()
+    input: RiddlParserInput
   )(
     onSuccess: PassesResult => Assertion
   ): Assertion = {
@@ -52,7 +53,7 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
       case Left(errors) =>
         fail(errors.map(_.format).mkString("\n"))
       case Right(model) =>
-        runStandardPasses(model, options) match {
+        runStandardPasses(model) match {
           case Left(messages) =>
             fail(messages.format)
           case Right(result: PassesResult) =>
@@ -63,7 +64,6 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
 
   def parseAndValidateInContext[D <: OccursInContext: ClassTag](
     input: String,
-    options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(validator: (D, RiddlParserInput, Messages) => Assertion): Seq[Assertion] = {
     val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
@@ -73,7 +73,7 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
       case Right((model: Domain, _)) =>
         val clazz = classTag[D].runtimeClass
         val root = Root(Contents(model))
-        runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, shouldFailOnErrors) match {
           case Left(messages) =>
             fail(messages.format)
           case Right(result) =>
@@ -91,7 +91,6 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
 
   def parseAndValidateContext(
     input: String,
-    options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
     validator: (Context, RiddlParserInput, Messages) => Assertion
@@ -102,7 +101,7 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
         val root = Root(Contents(model))
-        runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, shouldFailOnErrors) match {
           case Left(errors) => fail(errors.format)
           case Right(ao) =>
             val reducedMessages = ao.messages.filterNot(_.loc.line == 1)
@@ -113,7 +112,6 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
 
   def parseAndValidateDomain(
     input: RiddlParserInput,
-    options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(validator: (Domain, RiddlParserInput, Messages) => Assertion): Assertion = {
     parseDefinition[Domain](input) match {
@@ -127,7 +125,7 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
         }
       case Right((model: Domain, rpi)) =>
         val root = Root(Contents(model))
-        runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)
           case Right(ao) =>
@@ -139,18 +137,16 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
   def parseAndValidate(
     input: String,
     origin: String,
-    options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
     validation: (Root, Messages) => Assertion
   ): Assertion = {
     val rpi = RiddlParserInput(input, origin)
-    parseAndValidateInput(rpi, options, shouldFailOnErrors)(validation)
+    parseAndValidateInput(rpi, shouldFailOnErrors)(validation)
   }
 
   def parseAndValidateInput(
     rpi: RiddlParserInput,
-    options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
     validation: (Root, Messages) => Assertion
@@ -160,7 +156,7 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
         val msgs = errors.format
         fail(s"In ${rpi.origin}:\n$msgs")
       case Right(root) =>
-        runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, shouldFailOnErrors) match {
           case Left(errors) =>
             if shouldFailOnErrors then fail(errors.format)
             else validation(root, errors)
@@ -172,7 +168,6 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
 
   def parseValidateAndThen[T](
     rpi: RiddlParserInput,
-    options: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
     andThen: (PassesResult, Root, RiddlParserInput, Messages) => T
@@ -181,7 +176,7 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
       case Left(messages) =>
         fail(messages.justErrors.format)
       case Right(root) =>
-        runStandardPasses(root, options, shouldFailOnErrors) match {
+        runStandardPasses(root, shouldFailOnErrors) match {
           case Left(messages) =>
             fail(messages.justErrors.format)
           case Right(passesResult: PassesResult) =>
@@ -192,12 +187,11 @@ abstract class NoJVMValidatingTest extends NoJVMParsingTest {
 
   def parseAndThenValidate(
     rpi: RiddlParserInput,
-    commonOptions: CommonOptions = CommonOptions(),
     shouldFailOnErrors: Boolean = true
   )(
     validation: (PassesResult, Root, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    parseValidateAndThen[Assertion](rpi, commonOptions, shouldFailOnErrors) {
+    parseValidateAndThen[Assertion](rpi, shouldFailOnErrors) {
       (passesResult: PassesResult, root: Root, rpi: RiddlParserInput, messages: Messages) =>
         validation(passesResult, root, rpi, messages)
     }

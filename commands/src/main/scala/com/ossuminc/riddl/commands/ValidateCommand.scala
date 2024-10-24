@@ -6,14 +6,16 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{Logger, PlatformIOContext, URL}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
+import com.ossuminc.riddl.commands.{pc, ec}
 
 import java.nio.file.Path
 import scala.annotation.unused
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.Await
 
 /** Validate Command */
 class ValidateCommand(using io: PlatformIOContext) extends InputFileCommand("validate") {
@@ -21,21 +23,22 @@ class ValidateCommand(using io: PlatformIOContext) extends InputFileCommand("val
 
   override def run(
     options: Options,
-    @unused commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.fromPath(inputFile)
-      Riddl.parseAndValidate(rpi, commonOptions)
+      val url = URL.fromCwdPath(inputFile.toString)
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        Riddl.parseAndValidate(rpi)
+      }
+      Await.result(future, 10.seconds)
     }
   }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 }

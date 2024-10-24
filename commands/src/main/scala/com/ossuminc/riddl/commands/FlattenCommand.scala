@@ -6,13 +6,15 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.commands.{pc,ec}
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PlatformIOContext, StringHelpers, URL}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, StringHelpers}
 
 import java.nio.file.Path
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 object FlattenCommand {
   final val cmdName = "flatten"
@@ -25,24 +27,25 @@ class FlattenCommand(using io: PlatformIOContext) extends InputFileCommand(DumpC
 
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.fromCwdPath(inputFile)
-      Riddl.parseAndValidate(rpi, commonOptions).map { result =>
-        // TODO: output the model to System.out without spacing and with a line break only after every Definition
-        result
+      val url = URL.fromCwdPath(inputFile.toString)
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        Riddl.parseAndValidate(rpi).map { result =>
+          // TODO: output the model to System.out without spacing and with a line break only after every Definition
+          result
+        }
       }
+      Await.result(future, 10.seconds)
     }
   }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 }

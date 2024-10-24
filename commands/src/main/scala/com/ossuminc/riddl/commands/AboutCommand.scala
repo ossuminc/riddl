@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.commands.{pc, ec}
+import com.ossuminc.riddl.utils.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
@@ -17,7 +18,7 @@ import scopt.OParser
 
 import java.nio.file.Path
 
-/** Implementation of the  */
+/** Implementation of the */
 object AboutCommand {
   case class Options(command: String = "about", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
@@ -42,15 +43,14 @@ class AboutCommand(using io: PlatformIOContext) extends Command[AboutCommand.Opt
 
   override def run(
     options: AboutCommand.Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if commonOptions.verbose || !commonOptions.quiet then {
+    if io.options.verbose || !io.options.quiet then {
       val about: String = {
         CommonOptionsHelper.blurb ++ System.lineSeparator() ++
           "Extensive Documentation here: https://riddl.tech"
       }
-      
+
       io.log.info(about)
     }
     Right(PassesResult())

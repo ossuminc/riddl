@@ -10,10 +10,11 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.passes.{pc, ec}
 import org.scalatest.TestData
 
 /** Unit Tests For TypeValidationTest */
-class TypeValidatorTest extends ValidatingTest {
+class TypeValidatorTest extends AbstractValidatingTest {
 
   "TypeValidator" should {
     "ensure type names start with capital letter" in { (td:TestData) =>

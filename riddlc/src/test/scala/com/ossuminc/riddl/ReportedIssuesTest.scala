@@ -1,17 +1,20 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.utils.URL
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.utils.{CommonOptions, PathUtils, URL}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.commands.Commands
-import org.scalatest.{TestData,Assertion}
+import com.ossuminc.riddl.commands.{pc,ec}
+import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
+import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.Path
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.Await 
 
-class ReportedIssuesTest extends ValidatingTest {
+class ReportedIssuesTest extends JVMAbstractValidatingTest {
 
   val dir = "riddlc/src/test/input/issues"
 
@@ -33,10 +36,14 @@ class ReportedIssuesTest extends ValidatingTest {
   def doOne(fileName: String, options: CommonOptions = defaultOptions)(
     checkResult: Either[Messages.Messages, PassesResult] => Assertion
   ): Assertion = {
+    pc.setOptions(options)
     val path = Path.of(dir).resolve(fileName)
-    val rpi = RiddlParserInput.fromCwdPath(path)
-    val either = Riddl.parseAndValidate(rpi, options)
-    checkResult(either)
+    val url = PathUtils.urlFromPath(path)
+    val future = RiddlParserInput.fromURL(url).map { rpi =>
+      val either = Riddl.parseAndValidate(rpi)
+      checkResult(either)
+    }
+    Await.result(future, 10.seconds)
   }
 
   def checkOne(fileName: String): Assertion = {

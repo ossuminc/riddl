@@ -1,3 +1,5 @@
 package com.ossuminc.riddl.testkit
 
-abstract class RunPassTest extends com.ossuminc.riddl.passes.validate.RunPassTestBase
+import com.ossuminc.riddl.utils.PlatformIOContext
+
+abstract class RunPassTest(using PlatformIOContext) extends com.ossuminc.riddl.passes.AbstractRunPassTest

@@ -6,10 +6,11 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, RiddlBuildInfo}
+import com.ossuminc.riddl.commands.{pc, ec}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -42,10 +43,9 @@ class VersionCommand(using io: PlatformIOContext) extends Command[VersionCommand
 
   override def run(
     options: VersionCommand.Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if commonOptions.verbose || !commonOptions.quiet then {
+    if io.options.verbose || !io.options.quiet then {
       io.log.info(RiddlBuildInfo.version)
     }
     Right(PassesResult())

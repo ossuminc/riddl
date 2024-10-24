@@ -6,13 +6,14 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
-import com.ossuminc.riddl.passes.{PassInput, PassOptions, PassCreators, PassesOutput, PassesResult}
-import com.ossuminc.riddl.utils.{ExceptionUtils, PlatformIOContext, Logger}
+import com.ossuminc.riddl.passes.{PassCreators, PassInput, PassOptions, PassesOutput, PassesResult}
+import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformIOContext}
 import com.ossuminc.riddl.command.{CommandOptions, PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.command.CommandOptions.optional
+import com.ossuminc.riddl.commands.{pc, ec}
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -89,7 +90,6 @@ class PrettifyCommand(using io: PlatformIOContext)
   }
 
   override def getPasses(
-    commonOptions: CommonOptions,
     options: PrettifyCommand.Options
   ): PassCreators = {
     standardPasses ++ Seq(
@@ -101,10 +101,9 @@ class PrettifyCommand(using io: PlatformIOContext)
 
   override def run(
     originalOptions: PrettifyCommand.Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[List[Messages.Message], PassesResult] =
-    super.run(originalOptions, commonOptions, outputDirOverride) match
+    super.run(originalOptions, outputDirOverride) match
       case Left(messages) => Left(messages)
       case result @ Right(passesResult: PassesResult) =>
         passesResult.outputOf[PrettifyOutput](PrettifyPass.name) match

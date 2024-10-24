@@ -1,24 +1,31 @@
 package com.ossuminc.riddl.passes.resolve
 
+import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformIOContext, PathUtils, PlatformIOContext}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{pc, ec}
 
 import java.nio.file.Path
 import org.scalatest.{Assertion, TestData}
 
-/** Unit Tests For the ResolutionPass */
-class PathResolutionPassTest extends ResolvingTest {
+import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.duration.DurationInt
 
-  "PathResolutionPass" must {
-    "resolve rbbq.riddl" in { (td: TestData) =>
-      val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"), td)
-      parseAndResolve(input) { (_, _) => succeed }
+/** Unit Tests For the ResolutionPass */
+class PathResolutionTest extends SharedResolvingTest {
+
+  "PathResolution" must {
+    "resolve language / rbbq.riddl" in { (td: TestData) =>
+      val url = PathUtils.urlFromCwdPath(Path.of("passes/jvm/src/test/input/domains/rbbq.riddl"))
+      val future = RiddlParserInput.fromURL(url, td).map { input =>
+        parseAndResolve(input) { (_, _) => succeed }
+      }
+      Await.result(future, 10.seconds)
     }
-    "resolves everything in rbbq.riddl" in { (td: TestData) =>
-      val input = RiddlParserInput.fromCwdPath(Path.of("passes/jvm/src/test/input/rbbq.riddl"))
+    "resolves everything in passes rbbq.riddl" in { (td: TestData) =>
       def onSuccess(in: PassInput, out: PassesOutput): Assertion =
         val refMap = out.resolution.refMap
         refMap.definitionOf[Entity]("ReactiveBBQ.Customer.Customer") must not be (empty)
@@ -44,11 +51,14 @@ class PathResolutionPassTest extends ResolvingTest {
 
       def onFailure(messages: Messages): Assertion = fail(messages.justErrors.format)
 
-      parseAndResolve(input)(onSuccess)(onFailure)
+      val url = PathUtils.urlFromCwdPath(Path.of("passes/jvm/src/test/input/rbbq.riddl"))
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        parseAndResolve(rpi)(onSuccess)(onFailure)
+      }
+      Await.result(future, 10.seconds)
     }
-    "resolves everything in dokn.riddl" in { (td: TestData) =>
-      val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/dokn.riddl"))
 
+    "resolves everything in dokn.riddl" in { (td: TestData) =>
       def onSuccess(in: PassInput, out: PassesOutput): Assertion =
         val refMap = out.resolution.refMap
         refMap.definitionOf[Entity]("dokn.Company.Company") must not be (empty)
@@ -87,7 +97,11 @@ class PathResolutionPassTest extends ResolvingTest {
 
       def onFailure(messages: Messages): Assertion = fail(messages.justErrors.format)
 
-      parseAndResolve(input)(onSuccess)(onFailure)
+      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/dokn.riddl"))
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        parseAndResolve(rpi)(onSuccess)(onFailure)
+      }
+      Await.result(future, 10.seconds)
     }
   }
 }

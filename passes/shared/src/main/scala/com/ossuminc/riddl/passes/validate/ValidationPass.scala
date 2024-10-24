@@ -7,8 +7,8 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -20,7 +20,7 @@ import scala.collection.immutable.Seq
 
 object ValidationPass extends PassInfo[PassOptions] {
   val name: String = "Validation"
-  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = { 
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = {
     (in: PassInput, out: PassesOutput) => ValidationPass(in, out)
   }
 }
@@ -34,7 +34,8 @@ object ValidationPass extends PassInfo[PassOptions] {
 case class ValidationPass(
   input: PassInput,
   outputs: PassesOutput
-) extends Pass(input, outputs)
+)(using PlatformIOContext)
+    extends Pass(input, outputs)
     with StreamingValidation {
 
   requires(SymbolsPass)
@@ -57,7 +58,7 @@ case class ValidationPass(
       inlets.toSeq,
       outlets.toSeq,
       connectors.toSeq,
-      streamlets.toSeq,
+      streamlets.toSeq
     )
   }
 
@@ -144,7 +145,7 @@ case class ValidationPass(
         validateContainedGroup(cg, parentsAsSeq)
       case root: Root =>
         checkContents(root, parentsAsSeq)
-      case _: Definition => () // abstract type
+      case _: Definition          => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
     }
@@ -350,7 +351,7 @@ case class ValidationPass(
 
       (maybeOutlet, maybeInlet) match
         case (Some(outlet: Outlet), Some(inlet: Inlet)) =>
-          val outletParents: Parents = this.symbols.parentsOf(outlet) 
+          val outletParents: Parents = this.symbols.parentsOf(outlet)
           val outType = resolvePath[Type](outlet.type_.pathId, outletParents)
           val inletParents: Parents = this.symbols.parentsOf(inlet)
           val inType = resolvePath[Type](inlet.type_.pathId, inletParents)
@@ -364,14 +365,17 @@ case class ValidationPass(
                     s"which are not the same types"
                 )
               end if
-            case _ => 
+            case _ =>
               if outType.isEmpty then
-                messages.addError(outlet.loc, s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}")
+                messages.addError(
+                  outlet.loc,
+                  s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}"
+                )
               end if
               if inType.isEmpty then
                 messages.addError(inlet.loc, s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}")
               end if
-          end match  
+          end match
         case _ => // one of the two didn't resolve, already handled above.
       end match
     end if
@@ -758,7 +762,7 @@ case class ValidationPass(
                 )
               }
           }
-        case _: BriefDescription | _:Description | _: Term | _: Comment | _: AuthorRef => ()
+        case _: BriefDescription | _: Description | _: Term | _: Comment | _: AuthorRef => ()
       }
     }
     if uc.nonEmpty then {
@@ -848,7 +852,7 @@ case class ValidationPass(
 
   private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
     val useCase = parents.head
-    checkDescriptives(useCase.identify,interaction)
+    checkDescriptives(useCase.identify, interaction)
     interaction match {
       case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)

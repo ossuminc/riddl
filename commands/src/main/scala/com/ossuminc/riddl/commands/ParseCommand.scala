@@ -7,14 +7,16 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.commands.{pc, ec}
+import com.ossuminc.riddl.utils.{Logger, PlatformIOContext, URL}
+import com.ossuminc.riddl.command.{Command, CommandOptions}
 
 import java.nio.file.Path
-import com.ossuminc.riddl.command.{Command, CommandOptions}
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 object ParseCommand {
   val cmdName = "parse"
@@ -27,24 +29,25 @@ class ParseCommand(using io: PlatformIOContext) extends InputFileCommand(ParseCo
 
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.fromPath(inputFile)
-      TopLevelParser
-        .parseInput(rpi, commonOptions)
-        .map(_ => PassesResult())
-        .map(_ => PassesResult())
+      val url = URL.fromCwdPath(inputFile.toString)
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        TopLevelParser
+          .parseInput(rpi)
+          .map(_ => PassesResult())
+          .map(_ => PassesResult())
+      }
+      Await.result(future, 10.seconds)
     }
   }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 }

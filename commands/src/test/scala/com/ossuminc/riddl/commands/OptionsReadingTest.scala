@@ -6,13 +6,13 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{SysLogger, TestingBasis}
+import com.ossuminc.riddl.utils.{SysLogger, AbstractTestingBasis}
 import com.ossuminc.riddl.command.CommonOptionsHelper
 
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
-class OptionsReadingTest extends TestingBasis {
+class OptionsReadingTest extends AbstractTestingBasis {
 
   "RiddlOptions Reading" must {
     "load repeat options from a file" in {

@@ -155,7 +155,7 @@ trait DefinitionValidation extends BasicValidation:
           hasAuthorRef = true
         case _: StringAttachment => ()
         case _: FileAttachment => ()
-        case _: ULIDAttachment => () 
+        case _: ULIDAttachment => ()
         case _: Description => ()
     }
     check(hasDescription,s"$identity should have a description", MissingWarning, definition.loc)

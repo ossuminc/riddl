@@ -1,3 +1,5 @@
 package com.ossuminc.riddl.testkit
 
-abstract class ParsingTest extends com.ossuminc.riddl.language.parsing.NoJVMParsingTest
+import com.ossuminc.riddl.utils.PlatformIOContext
+
+abstract class ParsingTest(using PlatformIOContext) extends com.ossuminc.riddl.language.parsing.AbstractParsingTest

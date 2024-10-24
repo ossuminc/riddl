@@ -7,13 +7,13 @@ package com.ossuminc.riddl.commands
 
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.AbstractTestingBasis
 import pureconfig.*
 import scopt.*
 
 import java.nio.file.Path
 
-class CommandTest extends TestingBasis {
+class CommandTest extends AbstractTestingBasis {
 //PluginSpecBase(
 //      svcClassPath = Path.of("com/ossuminc/riddl/command/CommandPlugin.class"),
 //      implClassPath = Path

@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.diagrams
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST, Messages}
+import com.ossuminc.riddl.language.{Messages, AST}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
@@ -98,7 +98,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOCont
         val aggregates = c.entities.filter(_.hasOption("aggregate"))
         val domain = parents.top.asInstanceOf[Domain]
         val root = parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
-        val relationships = makeRelationships(c,root)
+        val relationships = makeRelationships(c, root)
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates.toSeq, relationships))
       case epic: Epic =>
         epic.cases.foreach { uc =>
@@ -153,7 +153,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOCont
       case e: Entity      => makeHandlerRelationships(context, e.handlers)
       case _: Projector   => Seq.empty[ContextRelationship]
       case _: Repository  => Seq.empty[ContextRelationship]
-      case s: Streamlet   =>
+      case s: Streamlet =>
         makeInletRelationships(context, s.inlets, s)
         makeOutletRelationships(context, s.outlets, s)
     }
@@ -172,7 +172,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOCont
     }
   }
 
-  private def makeOutletRelationships(context: Context, outlets: Seq[Outlet], parent: Parent): Seq[ContextRelationship] = {
+  private def makeOutletRelationships(
+    context: Context,
+    outlets: Seq[Outlet],
+    parent: Parent
+  ): Seq[ContextRelationship] = {
     for {
       o <- outlets
       r = o.type_
@@ -319,8 +323,9 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOCont
               tri.from.pathId.format -> fromDef,
               tri.to.pathId.format -> toDef
             )
-          case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description
-            | _: BriefDescription | _: AuthorRef => Seq.empty
+          case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description | _: BriefDescription |
+              _: AuthorRef =>
+            Seq.empty
         }
         .filterNot(_.isEmpty) // ignore None values generated when ref not found
         .flatten // get rid of seq of seq
@@ -348,7 +353,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOCont
 @JSExportTopLevel("DiagramsPass$")
 object DiagramsPass extends PassInfo[PassOptions] {
   val name: String = "Diagrams"
-  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    DiagramsPass(in, out)
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = {
+    (in: PassInput, out: PassesOutput) =>
+      DiagramsPass(in, out)
   }
 }

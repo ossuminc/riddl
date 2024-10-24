@@ -1,12 +1,14 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Domain
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.passes.pc
+import com.ossuminc.riddl.utils.CommonOptions 
 import org.scalatest.TestData
 
 /** Unit Tests For Repository */
-class RepositoryTest extends ValidatingTest {
+class RepositoryTest extends AbstractValidatingTest {
 
   "RepositoryTest" should {
     "handle a basic definition" in { (td: TestData) =>
@@ -31,7 +33,8 @@ class RepositoryTest extends ValidatingTest {
           |}
           |""".stripMargin,td)
       val options = CommonOptions.noWarnings.copy(showMissingWarnings=false)
-      parseAndValidateDomain(input, options)  {
+      pc.setOptions(options)
+      parseAndValidateDomain(input)  {
         case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.contexts.headOption match {

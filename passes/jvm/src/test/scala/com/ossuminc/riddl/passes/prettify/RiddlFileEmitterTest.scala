@@ -11,7 +11,7 @@ import java.nio.file.{Files, Path}
 
 
 /** Tests For RiddlFileEmitter */
-class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
+abstract class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
 
   private val path: URL = URL.fromCwdPath("prettify/target/test/rfe.out")
   val rfe = RiddlFileEmitter(path)

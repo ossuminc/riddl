@@ -6,11 +6,13 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.utils.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, StringHelpers}
 import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.commands.{pc,ec}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -64,26 +66,26 @@ class FromCommand(using io: PlatformIOContext) extends Command[FromCommand.Optio
 
   override def run(
     options: FromCommand.Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val loadedCO =
       CommonOptionsHelper.loadCommonOptions(options.inputFile.fold(Path.of(""))(identity)) match
         case Right(newCO: CommonOptions) =>
-          if commonOptions.verbose then
+          if io.options.verbose then
             io.log.info(
               s"Read new common options from ${options.inputFile.get} as:\n" +
                 StringHelpers.toPrettyString(newCO)
             )
           newCO
         case Left(messages) =>
-          if commonOptions.debug then
-            io.stderr(
+          if io.options.debug then
+            io.stdout(
               s"Failed to read common options from ${options.inputFile.get} because:\n" ++
                 messages.format
             )
-          commonOptions
+          CommonOptions.empty
       end match
+    io.setOptions(loadedCO)
       //     configFile: Option[Path],
       //    targetCommand: String,
       //    commonOptions: CommonOptions,
@@ -92,7 +94,6 @@ class FromCommand(using io: PlatformIOContext) extends Command[FromCommand.Optio
     val result = Commands.runFromConfig(
       options.inputFile,
       options.targetCommand,
-      loadedCO,
       "from"
     )
     result
@@ -104,11 +105,10 @@ class FromCommand(using io: PlatformIOContext) extends Command[FromCommand.Optio
   ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 }

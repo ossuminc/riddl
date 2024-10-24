@@ -6,8 +6,7 @@
 
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.utils.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.language.Messages.severes
@@ -51,18 +50,17 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
   def getConfigReader: ConfigReader[OPT]
 
   def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions = CommonOptions()
+    configFile: Path
   ): Either[Messages, OPT] = {
-    if commonOptions.verbose then {
+    if io.options.verbose then {
       io.log.info(s"Reading command options from: $configFile")
     }
     ConfigSource.file(configFile).load[OPT](getConfigReader) match {
       case Right(value) =>
-        if commonOptions.verbose then {
+        if io.options.verbose then {
           io.log.info(s"Read command options from $configFile")
         }
-        if commonOptions.debug then {
+        if io.options.debug then {
           println(StringHelpers.toPrettyString(value, 1))
         }
         Right(value)
@@ -80,14 +78,11 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
     *
     * @param options
     *   The command specific options
-    * @param commonOptions
-    *   The options common to all commands
     * @return
     *   Either a set of Messages on error or a Unit on success
     */
   def run(
     @unused options: OPT,
-    @unused commonOptions: CommonOptions,
     @unused outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] =
     Left(
@@ -100,16 +95,15 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
 
   def run(
     args: Array[String],
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path] = None
   ): Either[Messages, PassesResult] =
     val maybeOptions: Option[OPT] = parseOptions(args)
     maybeOptions match
       case Some(opts: OPT) =>
         val command = args.mkString(" ")
-        if commonOptions.verbose then { io.log.info(s"Running command: $command") }
-        val result = Timer.time(command, show = commonOptions.showTimes) {
-          run(opts, commonOptions, outputDirOverride)
+        if io.options.verbose then { io.log.info(s"Running command: $command") }
+        val result = Timer.time(command, show = io.options.showTimes) {
+          run(opts, outputDirOverride)
         }
         result
       case None => Left(errors(s"Failed to parse $pluginName options"))
@@ -139,7 +133,6 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
 
   def resolveInputFileToConfigFile(
     options: OPT,
-    commonOptions: CommonOptions,
     configFile: Path
   ): OPT =
     options.inputFile match
@@ -149,7 +142,7 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
           case None       => Path.of(".")
         val input = parent.resolve(inFile)
         val result = replaceInputFile(options, input)
-        if commonOptions.debug then
+        if io.options.debug then
           val pretty = StringHelpers.toPrettyString(
             result,
             1,

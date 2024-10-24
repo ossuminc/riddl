@@ -7,22 +7,24 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Root
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.Riddl
+import com.ossuminc.riddl.passes.{pc,ec,Riddl}
+import com.ossuminc.riddl.utils.PathUtils
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
 import scala.jdk.StreamConverters.StreamHasToScala
 import scala.runtime.stdLibPatches.Predef.assert
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 /** CheckMessage This test suite runs through the files in input/check directory and validates them each as their own
   * test case. Each .riddl file can have a .check file that lists the expected messages. If there is no .check file the
   * .riddl file is expected to validate completely with no messages.
   */
-class CheckMessagesTest extends ValidatingTest {
+class CheckMessagesTest extends AbstractValidatingTest {
 
   val checkPathStr = "passes/jvm/src/test/input/check"
   val checkPath: Path = Path.of(checkPathStr)
@@ -31,18 +33,20 @@ class CheckMessagesTest extends ValidatingTest {
   }
 
   def validatePath(
-    path: Path,
-    options: CommonOptions = CommonOptions(noANSIMessages = true)
+    path: Path
   )(
     validation: (Root, Messages) => Assertion
   ): Assertion = {
-    val input = RiddlParserInput.fromCwdPath(path)
-    Riddl.parseAndValidate(input, options, shouldFailOnError = false) match {
-      case Left(errors) =>
-        fail(s"In ${path.toString}:\n${errors.format}")
-      case Right(result) =>
-        validation(result.root, result.messages)
+    val url = PathUtils.urlFromCwdPath(path)
+    val future = RiddlParserInput.fromURL(url).map { rpi =>
+      Riddl.parseAndValidate(rpi, shouldFailOnError = false) match {
+        case Left(errors) =>
+          fail(s"In ${path.toString}:\n${errors.format}")
+        case Right(result) =>
+          validation(result.root, result.messages)
+      }
     }
+    Await.result(future, 10.seconds)
   }
 
   def runForFile(path: Path, readMessages: Set[String]): Unit = {

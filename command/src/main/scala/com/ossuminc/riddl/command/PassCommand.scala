@@ -5,14 +5,17 @@
  */
 package com.ossuminc.riddl.command
 
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.TopLevelParser
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassCreators, PassesResult}
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformIOContext, URL}
+import com.ossuminc.riddl.passes.{Pass, PassCreators, PassInput, PassesResult}
 
 import java.nio.file.Path
 import scala.reflect.ClassTag
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 
 trait PassCommandOptions extends CommandOptions {
   def outputDir: Option[Path]
@@ -34,7 +37,8 @@ trait PassCommandOptions extends CommandOptions {
   * @tparam OPT
   *   The option type for the command
   */
-abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(using io: PlatformIOContext) extends Command[OPT](name) {
+abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(using pc: PlatformIOContext)
+    extends Command[OPT](name) {
 
   /** Get the passes to run given basic input for pass creation
     *
@@ -48,7 +52,6 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(us
     *   A [[com.ossuminc.riddl.passes.PassCreator]] function that creates the pass
     */
   def getPasses(
-    commonOptions: CommonOptions,
     options: OPT
   ): PassCreators
 
@@ -56,26 +59,28 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(us
   def overrideOptions(options: OPT, newOutputDir: Path): OPT
 
   private final def doRun(
-    options: OPT,
-    commonOptions: CommonOptions,
+    options: OPT
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputPath: Path) =>
-      import com.ossuminc.riddl.language.parsing.RiddlParserInput
-      val rpi = RiddlParserInput.fromPath(inputPath)
-      TopLevelParser.parseInput(rpi, commonOptions) match {
-        case Left(errors) =>
-          Left[Messages, PassesResult](errors)
-        case Right(root) =>
-          val input: PassInput = PassInput(root, commonOptions)
-          val passes = getPasses(commonOptions, options)
-          val result = Pass.runThesePasses(input, passes)
-          if result.messages.hasErrors then Left(result.messages)
-          else
-            if commonOptions.debug then
-              println(s"Errors after running ${this.name}:")
-              println(result.messages.format)
-            Right(result)
+      val url = PathUtils.urlFromPath(inputPath)
+      implicit val ec: ExecutionContext = pc.ec
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        TopLevelParser.parseInput(rpi) match {
+          case Left(errors) =>
+            Left[Messages, PassesResult](errors)
+          case Right(root) =>
+            val input: PassInput = PassInput(root)
+            val passes = getPasses(options)
+            val result = Pass.runThesePasses(input, passes)
+            if result.messages.hasErrors then Left(result.messages)
+            else
+              if pc.options.debug then
+                println(s"Errors after running ${this.name}:")
+                println(result.messages.format)
+              Right(result)
+        }
       }
+      Await.result(future, 20.seconds)
     }
   }
 
@@ -94,7 +99,6 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(us
     */
   override def run(
     originalOptions: OPT,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val options = if outputDirOverride.nonEmpty then
@@ -107,7 +111,7 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(us
     if messages.nonEmpty then {
       Left[Messages, PassesResult](messages) // no point even parsing if there are option errors
     } else {
-      doRun(options, commonOptions)
+      doRun(options)
     }
   }
 }

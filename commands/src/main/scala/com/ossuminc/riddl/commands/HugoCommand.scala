@@ -6,18 +6,22 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassCreators, PassesOutput, PassesResult}
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PlatformIOContext}
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.commands.{pc, ec}
+import com.ossuminc.riddl.command.PassCommand
+import com.ossuminc.riddl.passes.diagrams.DiagramsPass
+import com.ossuminc.riddl.passes.stats.StatsPass
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -25,9 +29,8 @@ import scopt.OParser
 import java.net.URL
 import java.nio.file.Path
 import scala.annotation.unused
-import com.ossuminc.riddl.command.PassCommand
-import com.ossuminc.riddl.passes.diagrams.DiagramsPass
-import com.ossuminc.riddl.passes.stats.StatsPass
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.Await
 
 class HugoCommand(using io: PlatformIOContext) extends PassCommand[HugoPass.Options]("hugo") {
 
@@ -214,7 +217,7 @@ class HugoCommand(using io: PlatformIOContext) extends PassCommand[HugoPass.Opti
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  def getPasses(commonOptions: CommonOptions, options: Options): PassCreators = {
+  def getPasses(options: Options): PassCreators = {
     HugoPass.getPasses(options)
   }
 
@@ -224,11 +227,10 @@ class HugoCommand(using io: PlatformIOContext) extends PassCommand[HugoPass.Opti
   ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, HugoPass.Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 

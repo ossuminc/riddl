@@ -6,12 +6,12 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.*
+import com.ossuminc.riddl.commands.{pc, ec}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{Logger, PlatformIOContext}
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
 
@@ -71,15 +71,14 @@ class StatsCommand(using io: PlatformIOContext) extends PassCommand[StatsCommand
   def overrideOptions(options: Options, newOutputDir: Path): Options = { options }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 
-  override def getPasses(commonOptions: CommonOptions, options: Options): PassCreators = {
+  override def getPasses(options: Options): PassCreators = {
     standardPasses :+ StatsPass.creator(options)
   }
 
@@ -99,13 +98,12 @@ class StatsCommand(using io: PlatformIOContext) extends PassCommand[StatsCommand
   }
   override def run(
     originalOptions: Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    val result = super.run(originalOptions, commonOptions, outputDirOverride)
+    val result = super.run(originalOptions, outputDirOverride)
     result match
       case Left(messages) =>
-        Messages.logMessages(messages, commonOptions)
+        Messages.logMessages(messages)
       case Right(passesResult) =>
         passesResult.outputOf[StatsOutput](StatsPass.name) match
           case Some(stats) => logStats(stats)

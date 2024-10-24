@@ -156,7 +156,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
   .settings(
     description := "Testing kit for RIDDL language and passes"
   )
-  .dependsOn(language_cp % "compile->test", passes_cp % "compile->test")
+  .dependsOn(language_cp % "compile->test;test->test", passes_cp % "compile->test;test->test")
   .jvmSettings(
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % V.scalatest,

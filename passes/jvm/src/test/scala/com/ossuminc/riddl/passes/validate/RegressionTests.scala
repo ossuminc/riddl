@@ -9,16 +9,17 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.passes.{pc, ec}
 import org.scalatest.TestData
 
 /** Unit Tests For RegressionTests */
-class RegressionTests extends ValidatingTest {
+class RegressionTests extends AbstractValidatingTest {
   "Regressions" should {
     "allow descriptions as a single string" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is { ??? } with {
           |  described as { "foo" }
-          |}  
+          |}
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
@@ -29,11 +30,11 @@ class RegressionTests extends ValidatingTest {
     "allow descriptions as a doc block" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is { ??? }
-          |  with { 
+          |  with {
           |    described as {
           |      |ladeedah
           |    }
-          |  }  
+          |  }
           |
           |""".stripMargin,td)
       parseDefinition[Domain](input) match {
@@ -60,7 +61,7 @@ class RegressionTests extends ValidatingTest {
           |    |23 Garage
           |    |24 Réception ou surveillant
           |    |25 Livrer au bureau de poste
-          |  }  
+          |  }
           |}
           |}""".stripMargin,td)
       parseDomainDefinition[Type](input, _.types.last) match {

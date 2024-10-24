@@ -7,8 +7,7 @@
 package com.ossuminc.riddl.commands
 
 /** Unit Tests For RunCommandOnExamplesTest */
-import com.ossuminc.riddl.utils.{Logger, PathUtils, SysLogger, TestingBasis, Zip}
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.language.Messages.{Messages, errors, warnings}
 import com.ossuminc.riddl.passes.PassesResult
 import org.apache.commons.io.FileUtils
@@ -31,7 +30,8 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   */
 trait RunCommandOnExamplesTest(
   shouldDelete: Boolean = true
-) extends TestingBasis
+)(using io: PlatformIOContext)
+    extends AbstractTestingBasis
     with BeforeAndAfterAll {
 
   val examplesRepo: String =
@@ -41,16 +41,6 @@ trait RunCommandOnExamplesTest(
   val examplesPath: Path = Path.of(s"riddl-examples-main/src/riddl")
   val srcDir: Path = tmpDir.resolve(examplesPath)
   val outDir: Path = tmpDir.resolve("out")
-
-  val commonOptions: CommonOptions = CommonOptions(
-    showTimes = true,
-    showWarnings = false,
-    showMissingWarnings = false,
-    showStyleWarnings = false,
-    verbose = true
-  )
-
-  val logger: Logger = SysLogger()
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -143,7 +133,6 @@ trait RunCommandOnExamplesTest(
       val result = Commands.runCommandNamed(
         commandName,
         path,
-        commonOptions,
         outputDirOverride = Some(outputDir)
       )
       result match {
@@ -167,14 +156,12 @@ trait RunCommandOnExamplesTest(
 
   def runTestWithArgs(
     folderName: String,
-    args: Array[String],
-    logger: Logger,
-    commonOptions: CommonOptions 
- ): Unit = {
-    val commandName = args.head 
+    args: Array[String]
+  ): Unit = {
+    val commandName = args.head
     forAFolder(folderName, commandName) { case (name, _) =>
       val outputDir = outDir.resolve(name)
-      val result = Commands.runCommandWithArgs(args, commonOptions)
+      val result = Commands.runCommandWithArgs(args)
       result match {
         case Right(passesResult) =>
           onSuccess(commandName, folderName, passesResult, outputDir)
@@ -184,7 +171,7 @@ trait RunCommandOnExamplesTest(
       result
     }
   }
-  
+
   /** Call this from your test suite subclass to run all the examples found.
     */
   def runTest(folderName: String, commandName: String): Unit = {
@@ -193,7 +180,6 @@ trait RunCommandOnExamplesTest(
       val result = Commands.runCommandNamed(
         commandName,
         config,
-        commonOptions,
         outputDirOverride = Some(outputDir)
       )
       result match {

@@ -6,14 +6,16 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, Logger}
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.commands.{pc, ec}
+import com.ossuminc.riddl.command.{Command, CommandOptions}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -28,8 +30,6 @@ import java.time.Instant
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-import com.ossuminc.riddl.command.{Command, CommandOptions}
-
 
 object OnChangeCommand {
   final val cmdName: String = "onchange"
@@ -47,8 +47,7 @@ object OnChangeCommand {
   }
 }
 
-class OnChangeCommand(using io: PlatformIOContext)
-    extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
+class OnChangeCommand(using io: PlatformIOContext) extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
 
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
@@ -168,11 +167,10 @@ class OnChangeCommand(using io: PlatformIOContext)
   ): Options = { opts.copy(configFile = inputFile) }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 
@@ -188,14 +186,13 @@ class OnChangeCommand(using io: PlatformIOContext)
     */
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     Left(errors("Not Implemented"))
   }
 
   private final val timeStampFileName: String = ".riddl-timestamp"
-  
+
   def getTimeStamp(dir: Path): FileTime = {
     val filePath = dir.resolve(timeStampFileName)
     if Files.notExists(filePath) then {

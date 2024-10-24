@@ -1,10 +1,12 @@
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.Pass
+import com.ossuminc.riddl.passes.{pc,ec}
+import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
+
 import org.scalatest.TestData
 
-class ToDoPassListTest extends ValidatingTest {
+class ToDoPassListTest extends JVMAbstractValidatingTest {
 
   val dir = "hugo/src/test/input/"
 

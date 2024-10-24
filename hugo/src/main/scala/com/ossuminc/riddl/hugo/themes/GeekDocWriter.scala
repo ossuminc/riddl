@@ -3,8 +3,9 @@ package com.ossuminc.riddl.hugo.themes
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
 
 import java.nio.file.Path
 import java.net.URL
@@ -18,9 +19,8 @@ case class GeekDocWriter(
   filePath: Path,
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoPass.Options,
-  commonOptions: CommonOptions
-) extends MarkdownWriter {
+  options: HugoPass.Options
+)(using pc: PlatformIOContext) extends MarkdownWriter {
 
   val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
 
@@ -59,11 +59,11 @@ case class GeekDocWriter(
   }
 
   def containerHead(cont: Parent): Unit = {
-    val brief: String = 
+    val brief: String =
       cont match
-        case p: Parent if p.contents.filter[BriefDescription].nonEmpty => 
+        case p: Parent if p.contents.filter[BriefDescription].nonEmpty =>
           p.contents.filter[BriefDescription].foldLeft("")((x,y) => x + y.brief.s)
-        case d: WithMetaData => d.briefString 
+        case d: WithMetaData => d.briefString
         case _ => cont.id.format + " has no brief description"
       end match
     fileHead(
@@ -95,7 +95,7 @@ case class GeekDocWriter(
     p("{{< mermaid class=\"text-center\">}}")
     lines.foreach(p)
     p("{{< /mermaid >}}")
-    if commonOptions.debug then {
+    if pc.options.debug then {
       p("```")
       lines.foreach(p)
       p("```")

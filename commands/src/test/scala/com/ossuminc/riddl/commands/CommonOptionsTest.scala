@@ -5,16 +5,15 @@
  */
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
-import com.ossuminc.riddl.utils.{SysLogger, TestingBasis}
+import com.ossuminc.riddl.utils.{CommonOptions, SysLogger, AbstractTestingBasis}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
-class CommonOptionsTest extends TestingBasis {
+class CommonOptionsTest extends AbstractTestingBasis {
   "CommonOptions" should {
     "handle --suppress-warnings options" in {
       val args = Array("--suppress-warnings")
@@ -156,7 +155,6 @@ class CommonOptionsTest extends TestingBasis {
       }
     }
 
-
     "options at top level do not override in common object" in {
       val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
@@ -169,7 +167,7 @@ class CommonOptionsTest extends TestingBasis {
     }
 
     "empty args are eliminated" in {
-      val opts = Array("--show-times", "parse",  "", "  ", "file.riddl")
+      val opts = Array("--show-times", "parse", "", "  ", "file.riddl")
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options) =>
@@ -195,14 +193,13 @@ class CommonOptionsTest extends TestingBasis {
           opts.showMissingWarnings mustBe false
           opts.showStyleWarnings mustBe false
           opts.showUsageWarnings mustBe true
-          opts.showInfoMessages mustBe  false
+          opts.showInfoMessages mustBe false
           opts.debug mustBe true
-          opts.pluginsDir must be ( Some(Path.of(".")) )
-          opts.sortMessagesByLocation must be ( true )
-          opts.groupMessagesByKind must be ( true)
-          opts.noANSIMessages must be ( true )
-          opts.maxParallelParsing must be (12)
-          opts.maxIncludeWait must be ( 1.minute )
+          opts.sortMessagesByLocation must be(true)
+          opts.groupMessagesByKind must be(true)
+          opts.noANSIMessages must be(true)
+          opts.maxParallelParsing must be(12)
+          opts.maxIncludeWait must be(1.minute)
           opts.warningsAreFatal must be(true)
         case Left(messages) =>
           fail(messages.format)
@@ -214,21 +211,23 @@ class CommonOptionsTest extends TestingBasis {
         "--suppress-usage-warnings",
         "--suppress-info-messages",
         "--hide-info-messages",
-        "--plugins-dir:.",
         "--max-include-wait:5",
         "--max-parallel-parsing:12",
-        "parse", "", "  ", "file.riddl")
+        "parse",
+        "",
+        "  ",
+        "file.riddl"
+      )
       val logger = SysLogger()
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options: CommonOptions) =>
           options.showUsageWarnings must be(false)
           options.showInfoMessages must be(false)
-          options.pluginsDir must be(Some(Path.of(".")))
           options.maxIncludeWait must be(5.seconds)
           options.maxParallelParsing must be(12)
           Commands.parseCommandOptions(remaining) match {
-            case Right(options) => options.inputFile must be( Some(Path.of("file.riddl")))
+            case Right(options) => options.inputFile must be(Some(Path.of("file.riddl")))
             case Left(messages) => fail(messages.format)
           }
         case x => fail(s"Failed to parse options: $x")

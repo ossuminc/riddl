@@ -9,11 +9,13 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{NoJVMParsingTest, RiddlParserInput, StringParserInput}
+import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, StringParserInput}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
+import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
-class ValidationTest extends NoJVMParsingTest {
+class SharedValidationTest(using PlatformIOContext) extends AbstractParsingTest {
+  
   "ValidationMessage#format" should {
     "produce a correct string" in { (td:TestData) =>
       val at = At(1, 2, RiddlParserInput("abcdefg",td))
@@ -69,7 +71,7 @@ class ValidationTest extends NoJVMParsingTest {
           |    by author Reid
           |    term term is "Terminal"
           |  }
-          |  
+          |
           |  context other  is {
           |    ???
           |  } with {
@@ -125,7 +127,7 @@ class ValidationTest extends NoJVMParsingTest {
       }
     }
     "handle includes" in { (_:TestData) =>
-      
+
       sharedRoot.domains.headOption match {
         case Some(domain) =>
           domain.contents mustNot be(empty)

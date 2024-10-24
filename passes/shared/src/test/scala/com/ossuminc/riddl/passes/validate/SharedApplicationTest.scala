@@ -3,7 +3,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
@@ -11,7 +10,7 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import org.scalatest.TestData
 
-class ApplicationTest extends ValidatingTest {
+trait SharedApplicationTest extends AbstractValidatingTest {
 
   "Application" should {
     "parse a simple case " in { (td: TestData) =>
@@ -26,14 +25,15 @@ class ApplicationTest extends ValidatingTest {
           |      input Two acquires command Name with { briefly "yield  a Name" }
           |    } with {
           |     description as "Show a title, collect a Name"
-          |    }  
+          |    }
           |  } with {
           |    description as "A very simple app just for testing"
-          |  }  
+          |  }
           |} with {
           |  described by "Just a parsing convenience"
           |}
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(rpi) {
         case (
@@ -45,9 +45,9 @@ class ApplicationTest extends ValidatingTest {
           domain.applications.head.types.size mustBe (2)
           val group = domain.applications.head.groups.head
           val outputs: Seq[Output] = group.contents.filter[Output]
-          outputs must not be(empty)
+          outputs must not be (empty)
           outputs.head.brief must be(empty)
-          outputs.head.descriptions must not be(empty)
+          outputs.head.descriptions must not be (empty)
           messages.isOnlyIgnorable mustBe true
       }
     }

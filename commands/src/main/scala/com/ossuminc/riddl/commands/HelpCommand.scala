@@ -7,10 +7,9 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, Logger}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -65,10 +64,9 @@ class HelpCommand(using io: PlatformIOContext) extends Command[HelpCommand.Optio
 
   override def run(
     options: HelpCommand.Options,
-    commonOptions: CommonOptions,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if commonOptions.verbose || !commonOptions.quiet then {
+    if io.options.verbose || !io.options.quiet then {
       val usage: String = {
         val common = OParser.usage(CommonOptionsHelper.commonOptionsParser, OneColumn)
         val commands = OParser.usage(HelpCommand.commandOptionsParser, OneColumn)

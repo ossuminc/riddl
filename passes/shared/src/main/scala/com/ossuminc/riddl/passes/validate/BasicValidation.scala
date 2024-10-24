@@ -8,7 +8,8 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{AST, At, Messages}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 
@@ -25,7 +26,7 @@ trait BasicValidation {
   def parentOf(definition: Definition): Parent = {
     symbols.parentOf(definition).getOrElse(Root.empty)
   }
-  
+
   def parentsOf(definition: Definition): Parents = {
     symbols.parentsOf(definition)
   }
@@ -38,10 +39,10 @@ trait BasicValidation {
     pid: PathIdentifier,
     parents: Parents
   ): Option[Definition] = {
-    if pid.value.length == 1 then 
+    if pid.value.length == 1 then
       // Let's try the symbol table
       symbols.lookup[Definition](pid.value.reverse).headOption
-    else   
+    else
       parents.headOption.flatMap { (head: Parent) =>
         resolution.refMap.definitionOf[Definition](pid, head)
       }

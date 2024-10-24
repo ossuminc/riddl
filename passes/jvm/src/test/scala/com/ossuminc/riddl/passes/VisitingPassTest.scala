@@ -1,5 +1,6 @@
 package com.ossuminc.riddl.passes
 
+import com.ossuminc.riddl.utils.{PlatformIOContext, JVMPlatformIOContext}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.ParsingTest
@@ -10,7 +11,8 @@ import java.nio.file.Path
 case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
 
 class VisitingPassTest extends ParsingTest {
-
+  given PlatformIOContext = JVMPlatformIOContext()
+  
   "VisitingPass" must {
     "descend cleanly" in { _ =>
       val path: Path = Path.of("language/jvm/src/test/input/everything.riddl")
