@@ -9,12 +9,11 @@ import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.validate.ValidationOutput
 import com.ossuminc.riddl.passes.* 
 import com.ossuminc.riddl.utils.{PathUtils, PlatformIOContext,AbstractTestingBasisWithTestData}
-import com.ossuminc.riddl.utils.{pc,ec}
+import com.ossuminc.riddl.utils.{pc,ec, Await}
 
 import scala.collection.mutable
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 /** Test case for Pass and its related classes */

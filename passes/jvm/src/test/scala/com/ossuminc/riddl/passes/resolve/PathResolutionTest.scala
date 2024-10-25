@@ -6,12 +6,12 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformIOContext, PathUtils, PlatformIOContext}
-import com.ossuminc.riddl.utils.{ec, pc}
+import com.ossuminc.riddl.utils.{ec, pc, Await}
 
 import java.nio.file.Path
 import org.scalatest.{Assertion, TestData}
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 /** Unit Tests For the ResolutionPass */

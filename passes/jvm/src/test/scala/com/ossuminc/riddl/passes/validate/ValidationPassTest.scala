@@ -4,12 +4,11 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
 import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.utils.{CommonOptions, PathUtils}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils}
 
 import java.nio.file.Path
 import org.scalatest.TestData
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.Await
 
 /** Unit Tests For ValidationPass */
 class ValidationPassTest extends AbstractValidatingTest {

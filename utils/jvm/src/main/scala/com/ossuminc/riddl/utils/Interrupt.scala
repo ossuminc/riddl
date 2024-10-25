@@ -8,7 +8,6 @@ package com.ossuminc.riddl.utils
 
 import java.util.concurrent.CancellationException
 import scala.concurrent.*
-import scala.concurrent.ExecutionContext.Implicits.global
 
 final class Interrupt extends (() => Boolean) {
 

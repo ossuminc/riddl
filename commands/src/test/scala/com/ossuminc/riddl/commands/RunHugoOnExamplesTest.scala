@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}

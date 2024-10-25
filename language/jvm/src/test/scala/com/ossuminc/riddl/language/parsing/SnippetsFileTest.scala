@@ -1,8 +1,8 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.pc
+import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{Await, JVMPlatformIOContext, PathUtils, PlatformIOContext}
 
 import java.nio.file.Path
 import org.apache.commons.io.FileUtils
@@ -12,7 +12,7 @@ import scala.jdk.CollectionConverters.*
 import scala.io.AnsiColor.*
 import org.scalatest.TestData
 
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{ExecutionContext}
 import scala.concurrent.duration.DurationInt
 
 /** Parsing tests that try a variety of code snippets that should parse */

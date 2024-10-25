@@ -6,18 +6,16 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.utils.{CommonOptions, PathUtils, URL}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils, URL}
+import com.ossuminc.riddl.utils.{pc,ec}
 import fastparse.*
 
 import java.nio.file.{Files, Path}
 import scala.annotation.unused
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.reflect.*
 

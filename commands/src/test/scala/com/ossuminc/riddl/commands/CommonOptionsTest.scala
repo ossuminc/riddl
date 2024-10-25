@@ -7,6 +7,7 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
 import com.ossuminc.riddl.utils.{CommonOptions, SysLogger, AbstractTestingBasis}
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -218,7 +219,6 @@ class CommonOptionsTest extends AbstractTestingBasis {
         "  ",
         "file.riddl"
       )
-      val logger = SysLogger()
       val (comm, remaining) = CommonOptionsHelper.parseCommonOptions(opts)
       comm match {
         case Some(options: CommonOptions) =>

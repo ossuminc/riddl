@@ -9,7 +9,7 @@ import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.{Assertion, TestData}
 
 /** Unit Tests For the ResolutionPass */
-class SharedPathResolutionPassTest(using pc: PlatformIOContext) extends SharedResolvingTest {
+abstract class SharedPathResolutionPassTest(using pc: PlatformIOContext) extends SharedResolvingTest {
 
   "PathResolutionPass" must {
     "resolve a full path" in { (td: TestData) =>

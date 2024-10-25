@@ -5,11 +5,11 @@ import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.passes.stats.{DefinitionStats, KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult}
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
-import com.ossuminc.riddl.utils.{pc, ec, CommonOptions, PathUtils}
+import com.ossuminc.riddl.utils.{pc, ec, Await, CommonOptions, PathUtils}
 
 import org.scalatest.*
 import java.nio.file.Path
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class StatsPassTest extends AbstractValidatingTest {

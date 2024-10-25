@@ -6,12 +6,12 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.{pc, ec}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.utils.{Logger, PlatformIOContext}
+import com.ossuminc.riddl.utils.{pc, ec}
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
 

@@ -1,11 +1,11 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{Logger, CommonOptions, PlatformIOContext, StringLogger, SysLogger}
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
-import com.ossuminc.riddl.commands.{pc, ec}
+import com.ossuminc.riddl.utils.{Logger, CommonOptions, PlatformIOContext, StringLogger, SysLogger}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import pureconfig.error.ConfigReaderFailures
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
@@ -17,59 +17,56 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 object Commands:
 
   /** Convert a string and some [[com.ossuminc.riddl.language.CommonOptions]] into either a
-   * [[com.ossuminc.riddl.command.Command]] or some [[Messages.Messages]]
-   * Note that the [[com.ossuminc.riddl.command.CommandOptions]] will be passed to the command when you run it.
- *
-   * @param name
-   *   THe name of the command to be converted
-   * @return
-   */
+    * [[com.ossuminc.riddl.command.Command]] or some [[Messages.Messages]] Note that the
+    * [[com.ossuminc.riddl.command.CommandOptions]] will be passed to the command when you run it.
+    *
+    * @param name
+    *   THe name of the command to be converted
+    * @return
+    */
   def loadCommandNamed(
-    name: String,
+    name: String
   )(using io: PlatformIOContext): Either[Messages, Command[?]] =
-    if io.options.verbose then
-      io.log.info(s"Loading command: $name")
+    if io.options.verbose then io.log.info(s"Loading command: $name")
     end if
     name match
-      case "about" => Right(AboutCommand())
-      case "dump" => Right(DumpCommand())
-      case "flatten" => Right(FlattenCommand())
-      case "from" => Right(FromCommand())
-      case "help" => Right(HelpCommand())
-      case "hugo" => Right(HugoCommand())
-      case "info" => Right(InfoCommand())
+      case "about"    => Right(AboutCommand())
+      case "dump"     => Right(DumpCommand())
+      case "flatten"  => Right(FlattenCommand())
+      case "from"     => Right(FromCommand())
+      case "help"     => Right(HelpCommand())
+      case "hugo"     => Right(HugoCommand())
+      case "info"     => Right(InfoCommand())
       case "onchange" => Right(OnChangeCommand())
-      case "parse" => Right(ParseCommand())
+      case "parse"    => Right(ParseCommand())
       case "prettify" => Right(PrettifyCommand())
-      case "repeat" => Right(RepeatCommand())
-      case "stats" => Right(StatsCommand())
+      case "repeat"   => Right(RepeatCommand())
+      case "stats"    => Right(StatsCommand())
       case "validate" => Right(ValidateCommand())
-      case "version" => Right(VersionCommand())
-      case _ => Left(errors(s"No command found for '$name'"))
+      case "version"  => Right(VersionCommand())
+      case _          => Left(errors(s"No command found for '$name'"))
     end match
   end loadCommandNamed
 
-  /** Probably the easiest way to run a command if you're familiar with the command line options and
-   * still get the [[Messages.Messages]] or
-   * [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
-   *
-   * @param args
-   *   An [[Array[String]] of arguments, one argument per array element. This should follow the same
-   *   pattern as by the `riddlc` command line options (run `riddlc help` to discover that syntax).
-   *   Unlike `riddlc`, the first argument must be the name of the command to run. The common options
-   *   cannot occur ahead of it and are provided by the `commonOptions` argument to this function.
-   * @param log
-   *   An instance of one of the [[com.ossuminc.riddl.utils.Logger]] subclasses. This is where all the output from
-   *   the command will flow, should it succeed. The volume of output can be affected by many of the
-   *   [[com.ossuminc.riddl.language.CommonOptions]]
-   * @return
-   *   One of two things:
-   *   - [[scala.util.Left]] of [[Messages.Messages]] if the command fails and the contained
-   *     [[Messages.Messages]], a [[scala.collection.immutable.List]] of
-   *     [[Messages.Message]], that explain why it failed
-   *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
-   *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
-   */
+  /** Probably the easiest way to run a command if you're familiar with the command line options and still get the
+    * [[Messages.Messages]] or [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
+    *
+    * @param args
+    *   An [[Array[String]] of arguments, one argument per array element. This should follow the same pattern as by the
+    *   `riddlc` command line options (run `riddlc help` to discover that syntax). Unlike `riddlc`, the first argument
+    *   must be the name of the command to run. The common options cannot occur ahead of it and are provided by the
+    *   `commonOptions` argument to this function.
+    * @param log
+    *   An instance of one of the [[com.ossuminc.riddl.utils.Logger]] subclasses. This is where all the output from the
+    *   command will flow, should it succeed. The volume of output can be affected by many of the
+    *   [[com.ossuminc.riddl.language.CommonOptions]]
+    * @return
+    *   One of two things:
+    *   - [[scala.util.Left]] of [[Messages.Messages]] if the command fails and the contained [[Messages.Messages]], a
+    *     [[scala.collection.immutable.List]] of [[Messages.Message]], that explain why it failed
+    *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
+    *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
+    */
   def runCommandWithArgs(
     args: Array[String]
   )(using io: PlatformIOContext): Either[Messages, PassesResult] =
@@ -89,8 +86,7 @@ object Commands:
     optionsPath: Path,
     outputDirOverride: Option[Path] = None
   )(using io: PlatformIOContext): Either[Messages, PassesResult] =
-    if io.options.verbose then
-      io.log.info(s"About to run $name with options from $optionsPath")
+    if io.options.verbose then io.log.info(s"About to run $name with options from $optionsPath")
     end if
     loadCommandNamed(name).flatMap { cmd =>
       cmd.loadOptionsFrom(optionsPath).flatMap { opts =>
@@ -116,8 +112,7 @@ object Commands:
       .map(_.keySet().asScala.toSeq)
     names match
       case Right(value) =>
-        if io.options.verbose then
-          io.log.info(s"Found candidate commands in $configFile: ${value.mkString(" ")}")
+        if io.options.verbose then io.log.info(s"Found candidate commands in $configFile: ${value.mkString(" ")}")
         Right(value)
       case Left(fails) =>
         val message = s"Errors while reading $configFile:\n" + fails.prettyPrint(1)
@@ -125,26 +120,26 @@ object Commands:
     end match
   end loadCandidateCommands
 
-  /** An easy way to run the `from` command which loads commands and their options from a `.config` file and uses
-   * them as defaults. The [[com.ossuminc.riddl.language.CommonOptions]] specification in the `.config` file can be
-   * overridden with the `commonOptions` argument.
-   *
-   * @param configFile
-   *   An optional [[java.nio.file.Path]] for the config file. Relative or full paths are fine.
-   * @param targetCommand
-   *   The command to run. This must match a config setting in the `configFile` that provides the arguments for
-   *   that command.
- * @param log
-   *   Where to send the commands output. See [[com.ossuminc.riddl.utils.Logger]] and its subclasses for options.
-   * @param commandName
-   *   The name of the command that is invoking this method, if it matters
-   * @return
-   *   One of two things:
-   *   - [[scala.util.Left]] of [[Messages.Messages]], which is a list of
-   *     [[Messages.Message]], that explain why it failed.
-   *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
-   *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
-   */
+  /** An easy way to run the `from` command which loads commands and their options from a `.config` file and uses them
+    * as defaults. The [[com.ossuminc.riddl.language.CommonOptions]] specification in the `.config` file can be
+    * overridden with the `commonOptions` argument.
+    *
+    * @param configFile
+    *   An optional [[java.nio.file.Path]] for the config file. Relative or full paths are fine.
+    * @param targetCommand
+    *   The command to run. This must match a config setting in the `configFile` that provides the arguments for that
+    *   command.
+    * @param log
+    *   Where to send the commands output. See [[com.ossuminc.riddl.utils.Logger]] and its subclasses for options.
+    * @param commandName
+    *   The name of the command that is invoking this method, if it matters
+    * @return
+    *   One of two things:
+    *   - [[scala.util.Left]] of [[Messages.Messages]], which is a list of [[Messages.Message]], that explain why it
+    *     failed.
+    *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
+    *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
+    */
   def runFromConfig(
     configFile: Option[Path],
     targetCommand: String,
@@ -161,8 +156,7 @@ object Commands:
               Left(errors)
             case result: Right[Messages, PassesResult] => result
           end match
-        else
-          Left[Messages, PassesResult](errors(s"Command '$targetCommand' is not defined in $path"))
+        else Left[Messages, PassesResult](errors(s"Command '$targetCommand' is not defined in $path"))
         end if
       }
     }
@@ -175,10 +169,8 @@ object Commands:
   )(using io: PlatformIOContext): Int =
     result match
       case Right(passesResult: PassesResult) =>
-        if io.options.quiet then
-          io.log.info(io.log.summary)
-        else
-          logMessages(passesResult.messages)
+        if io.options.quiet then io.log.info(io.log.summary)
+        else logMessages(passesResult.messages)
         if io.options.warningsAreFatal && passesResult.messages.hasWarnings then 1 else 0
       case Left(messages) =>
         if io.options.quiet then highestSeverity(messages) + 1
@@ -194,13 +186,12 @@ object Commands:
     if remaining.isEmpty then
       io.log.error("No command argument was provided")
       1
+    else if io.options.dryRun then
+      io.log.info(s"Would have executed: ${remaining.mkString(" ")}")
+      0
     else
-      if io.options.dryRun then
-        io.log.info(s"Would have executed: ${remaining.mkString(" ")}")
-        0
-      else
-        val result = runCommandWithArgs(remaining)
-        handleCommandResult(result)
+      val result = runCommandWithArgs(remaining)
+      handleCommandResult(result)
   end handleCommandRun
 
   def runMainForTest(args: Array[String])(using io: PlatformIOContext): Either[Messages, PassesResult] =
@@ -210,10 +201,8 @@ object Commands:
         case Some(commonOptions) =>
           io.setOptions(commonOptions)
           val log: Logger = if io.options.quiet then StringLogger() else SysLogger()
-          if remaining.isEmpty then
-            Left(List(error("No command argument was provided")))
-          else
-            runCommandWithArgs(remaining)
+          if remaining.isEmpty then Left(List(error("No command argument was provided")))
+          else runCommandWithArgs(remaining)
         case None =>
           Left(List(error("Option parsing failed, terminating.")))
       end match
@@ -241,7 +230,7 @@ object Commands:
   end runMain
 
   def parseCommandOptions(
-   args: Array[String],
+    args: Array[String]
   )(using io: PlatformIOContext): Either[Messages, CommandOptions] =
     require(args.nonEmpty)
     val result = loadCommandNamed(args.head)
@@ -249,27 +238,27 @@ object Commands:
       case Right(cmd) =>
         cmd.parseOptions(args) match {
           case Some(options) => Right(options)
-          case None => Left(errors("RiddlOption parsing failed"))
+          case None          => Left(errors("RiddlOption parsing failed"))
         }
       case Left(messages) => Left(messages)
     end match
   end parseCommandOptions
 
   /** A helper function for reading optional items from a config file.
-   *
-   * @param objCur
-   * The ConfigObjectCursor to start with
-   * @param key
-   * The name of the optional config item
-   * @param default
-   * The default value of the config item
-   * @param mapIt
-   * The function to map ConfigCursor to ConfigReader.Result[T]
-   * @tparam T
-   * The Scala type of the config item's value
-   * @return
-   * The reader for this optional configuration item.
-   */
+    *
+    * @param objCur
+    *   The ConfigObjectCursor to start with
+    * @param key
+    *   The name of the optional config item
+    * @param default
+    *   The default value of the config item
+    * @param mapIt
+    *   The function to map ConfigCursor to ConfigReader.Result[T]
+    * @tparam T
+    *   The Scala type of the config item's value
+    * @return
+    *   The reader for this optional configuration item.
+    */
   def optional[T](
     objCur: ConfigObjectCursor,
     key: String,
@@ -277,8 +266,7 @@ object Commands:
   )(mapIt: ConfigCursor => ConfigReader.Result[T]): ConfigReader.Result[T] =
     objCur.atKeyOrUndefined(key) match
       case stCur if stCur.isUndefined => Right[ConfigReaderFailures, T](default)
-      case stCur => mapIt(stCur)
+      case stCur                      => mapIt(stCur)
     end match
   end optional
 end Commands
-

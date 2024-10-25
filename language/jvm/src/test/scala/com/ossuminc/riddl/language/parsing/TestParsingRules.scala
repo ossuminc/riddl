@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.pc
+import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.language.AST.LiteralString
 import com.ossuminc.riddl.language.At
 import fastparse.Parsed.{Extra, Failure, Success}

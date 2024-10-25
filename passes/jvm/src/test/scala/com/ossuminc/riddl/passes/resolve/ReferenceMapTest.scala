@@ -5,13 +5,13 @@ import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec, Await}
 import com.ossuminc.riddl.utils.PathUtils
 
 import java.nio.file.Path
 import org.scalatest.TestData
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 class ReferenceMapTest extends AbstractValidatingTest {

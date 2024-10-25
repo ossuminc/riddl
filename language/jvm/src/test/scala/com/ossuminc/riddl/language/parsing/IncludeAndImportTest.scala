@@ -6,12 +6,11 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PathUtils, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Await, JVMPlatformIOContext, PathUtils, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{pc, ec}
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import org.scalatest.{Assertion, TestData}
 

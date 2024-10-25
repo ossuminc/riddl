@@ -3,10 +3,10 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, JVMPlatformIOContext, PathUtils, PlatformIOContext}
-import com.ossuminc.riddl.utils.{pc,ec}
+import com.ossuminc.riddl.utils.{pc, ec, Await}
 
 import java.nio.file.Path
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 class RiddlTest extends AbstractTestingBasis {
@@ -41,7 +41,7 @@ class RiddlTest extends AbstractTestingBasis {
           case Right(root) =>
             Riddl.validate(root) match
               case Left(messages) => fail(messages.justErrors.format)
-              case Right(result) => succeed
+              case Right(result)  => succeed
         end match
       }
       Await.result(future, 10.seconds)
@@ -52,7 +52,7 @@ class RiddlTest extends AbstractTestingBasis {
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         Riddl.parseAndValidate(rpi) match
           case Left(messages) => fail(messages.justErrors.format)
-          case Right(result) => succeed
+          case Right(result)  => succeed
         end match
       }
       Await.result(future, 10.seconds)

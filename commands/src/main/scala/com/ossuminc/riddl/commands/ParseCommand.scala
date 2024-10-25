@@ -10,12 +10,11 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.commands.{pc, ec}
-import com.ossuminc.riddl.utils.{Logger, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{Await,Logger, PlatformIOContext, URL}
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 
 import java.nio.file.Path
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 object ParseCommand {

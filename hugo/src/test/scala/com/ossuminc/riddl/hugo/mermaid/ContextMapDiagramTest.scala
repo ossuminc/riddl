@@ -4,12 +4,11 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.diagrams.mermaid.ContextMapDiagram
 import com.ossuminc.riddl.passes.AbstractRunPassTest
 import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{Await, URL}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import org.scalatest.TestData
 import java.nio.file.Path
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class ContextMapDiagramTest extends AbstractRunPassTest {

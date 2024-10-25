@@ -3,12 +3,12 @@ package com.ossuminc.riddl.hugo.writers
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{Riddl,PassesResult}
-import com.ossuminc.riddl.utils.{URL, CommonOptions}
+import com.ossuminc.riddl.utils.{Await, URL, CommonOptions}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
 import org.scalatest.Assertion
-import scala.concurrent.{Await,Future}
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 class AdaptorWriterTest extends WriterTest {

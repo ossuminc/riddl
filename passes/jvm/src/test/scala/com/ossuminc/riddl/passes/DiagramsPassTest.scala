@@ -5,9 +5,8 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.diagrams.*
 import com.ossuminc.riddl.utils.{PlatformIOContext, URL}
-import com.ossuminc.riddl.utils.{ec, pc}
+import com.ossuminc.riddl.utils.{ec, pc, Await}
 
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import org.scalatest.TestData
 

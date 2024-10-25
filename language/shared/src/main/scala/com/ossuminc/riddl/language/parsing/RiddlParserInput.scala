@@ -7,12 +7,12 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Await, PlatformIOContext, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
 import scala.collection.Searching
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}

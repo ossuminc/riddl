@@ -5,11 +5,10 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.diagrams.mermaid.DataFlowDiagram
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
-import com.ossuminc.riddl.utils.{pc, ec, URL}
+import com.ossuminc.riddl.utils.{pc, ec, URL, Await}
 
 import java.nio.file.Path
 import org.scalatest.TestData
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class DataFlowDiagramTest extends JVMAbstractValidatingTest {

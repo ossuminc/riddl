@@ -6,15 +6,15 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.{BlockDescription, Identifier, LiteralString, Term, WithIdentifier}
 import com.ossuminc.riddl.language.{At, Finder}
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
 class TermTest extends ParsingTest {
 
   "Term" should {
-    "be accepted in domain" in { (td:TestData) =>
+    "be accepted in domain" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {
           |  context bar is {
@@ -22,9 +22,11 @@ class TermTest extends ParsingTest {
           |  }
           |} with {
           |  term one is "uno"
-          |  term two is "dos" 
-          |}""".stripMargin,td)
-      
+          |  term two is "dos"
+          |}""".stripMargin,
+        td
+      )
+
       parseTopLevelDomain(input, identity) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -43,10 +45,10 @@ class TermTest extends ParsingTest {
             Identifier(At(), "two"),
             Seq(LiteralString(4 -> 30, "dos"))
           )
-          val result: Finder[RiddlValue]#DefWithParents[WithIdentifier]  =  finder.findEmpty
+          val result: Finder[RiddlValue]#DefWithParents[WithIdentifier] = finder.findEmpty
           result.size mustBe 1
           result.head match {
-            case (entity: WithIdentifier,_) =>
+            case (entity: WithIdentifier, _) =>
               entity.id.value mustBe "foo"
           }
       }

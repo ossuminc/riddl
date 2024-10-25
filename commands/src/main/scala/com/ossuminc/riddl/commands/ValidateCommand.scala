@@ -10,12 +10,11 @@ import com.ossuminc.riddl.utils.{Logger, PlatformIOContext, URL}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.commands.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec, Await}
 
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.Await
 
 /** Validate Command */
 class ValidateCommand(using io: PlatformIOContext) extends InputFileCommand("validate") {

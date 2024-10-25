@@ -3,17 +3,16 @@ package com.ossuminc.riddl.hugo.mermaid
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.AST.{Contents, Definition, Domain, Identifier, PathIdentifier, Root}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{pc,ec}
 import com.ossuminc.riddl.passes.{AbstractRunPassTest, PassInput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.diagrams.mermaid.{UseCaseDiagram, UseCaseDiagramSupport}
 import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{Await, URL}
+import com.ossuminc.riddl.utils.{pc,ec}
 import org.scalatest.TestData
 
 import java.nio.file.Path
 import java.net.URI
 import scala.reflect.ClassTag
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class UseCaseDiagramTest extends AbstractRunPassTest {

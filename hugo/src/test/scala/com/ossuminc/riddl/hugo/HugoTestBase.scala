@@ -2,13 +2,14 @@ package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.hugo.themes.GeekDocWriter
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
-import com.ossuminc.riddl.language.{Messages,pc,ec}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, StringParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
 import com.ossuminc.riddl.utils.CommonOptions
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
 import org.scalatest.Assertion

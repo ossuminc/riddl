@@ -1,9 +1,9 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.language.AST.Root
-import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.utils.AbstractTestingBasis
+import com.ossuminc.riddl.utils.{pc, ec}
 
 class HugoPassTest extends AbstractTestingBasis {
 

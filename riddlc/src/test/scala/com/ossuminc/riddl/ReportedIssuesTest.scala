@@ -6,13 +6,12 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
 import com.ossuminc.riddl.commands.Commands
-import com.ossuminc.riddl.utils.{CommonOptions, PathUtils, URL}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils, URL}
 import com.ossuminc.riddl.utils.{pc,ec}
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.Await 
 
 class ReportedIssuesTest extends JVMAbstractValidatingTest {
 

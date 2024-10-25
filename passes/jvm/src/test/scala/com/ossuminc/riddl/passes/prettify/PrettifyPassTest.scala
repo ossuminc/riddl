@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec, Await}
 
 import org.apache.commons.io.FileUtils
 import org.scalatest.{Assertion, TestData}
@@ -21,7 +21,6 @@ import org.scalatest.{Assertion, TestData}
 import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Path
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 /** Test The PrettifyPass's ability to generate consistent output */

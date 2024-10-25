@@ -9,12 +9,12 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformIOContext, URL, Await}
 import com.ossuminc.riddl.passes.{Pass, PassCreators, PassInput, PassesResult}
 
 import java.nio.file.Path
 import scala.reflect.ClassTag
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 
 trait PassCommandOptions extends CommandOptions {

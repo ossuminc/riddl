@@ -9,12 +9,12 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, Logger}
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.commands.Commands
-import com.ossuminc.riddl.commands.{pc, ec}
 import com.ossuminc.riddl.command.{Command, CommandOptions}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader

@@ -6,17 +6,15 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{Await, JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
 import scala.io.Source
 import org.scalatest.TestData
-
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class TopLevelParserTest extends ParsingTest {

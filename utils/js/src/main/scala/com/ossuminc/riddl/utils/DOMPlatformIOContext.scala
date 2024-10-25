@@ -6,7 +6,6 @@
 
 package com.ossuminc.riddl.utils
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js.annotation.JSExportTopLevel
 import org.scalajs.dom
 

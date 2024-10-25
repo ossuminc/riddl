@@ -6,15 +6,14 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.{pc,ec}
+import com.ossuminc.riddl.command.Command
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{CommonOptions, Logger, PlatformIOContext, StringHelpers, URL}
-import com.ossuminc.riddl.command.Command
+import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformIOContext, StringHelpers, URL}
+import com.ossuminc.riddl.utils.{pc,ec}
 
 import java.nio.file.Path
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 object DumpCommand {

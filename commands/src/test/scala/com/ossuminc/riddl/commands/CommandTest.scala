@@ -8,6 +8,7 @@ package com.ossuminc.riddl.commands
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
 import com.ossuminc.riddl.utils.AbstractTestingBasis
+import com.ossuminc.riddl.utils.{pc, ec}
 import pureconfig.*
 import scopt.*
 

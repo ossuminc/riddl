@@ -4,9 +4,10 @@ import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.GeekDocWriter
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{pc,ec}
 import com.ossuminc.riddl.passes.{Pass, PassesResult, Riddl}
 import com.ossuminc.riddl.utils.AbstractTestingBasis
+import com.ossuminc.riddl.utils.{pc, ec}
+
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec

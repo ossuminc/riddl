@@ -10,14 +10,13 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
-import com.ossuminc.riddl.utils.{pc,ec,PathUtils}
+import com.ossuminc.riddl.utils.{pc, ec, Await, PathUtils}
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
 import scala.jdk.StreamConverters.StreamHasToScala
 import scala.runtime.stdLibPatches.Predef.assert
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 /** CheckMessage This test suite runs through the files in input/check directory and validates them each as their own
@@ -120,13 +119,13 @@ class CheckMessagesTest extends AbstractValidatingTest {
 
   "Check Messages" should {
     "check ambiguity" in { (td: TestData) => checkADirectory("ambiguity", td) }
-    "check domain" in { (td: TestData) => checkADirectory("domain",td) }
-    "check everything" in { (td: TestData) => checkADirectory("everything",td) }
-    "check fd-success" in { (td: TestData) => checkADirectory("fd-success",td) }
-    "check overloading" in { (td: TestData) => checkADirectory("overloading",td) }
-    "check references" in { (td: TestData) => checkADirectory("references",td) }
-    "check saga" in { (td: TestData) => checkADirectory("saga",td) }
-    "check streaming" in { (td: TestData) => checkADirectory("streaming",td) }
-    "check t0001" in { (td: TestData) => checkADirectory("t0001",td) }
+    "check domain" in { (td: TestData) => checkADirectory("domain", td) }
+    "check everything" in { (td: TestData) => checkADirectory("everything", td) }
+    "check fd-success" in { (td: TestData) => checkADirectory("fd-success", td) }
+    "check overloading" in { (td: TestData) => checkADirectory("overloading", td) }
+    "check references" in { (td: TestData) => checkADirectory("references", td) }
+    "check saga" in { (td: TestData) => checkADirectory("saga", td) }
+    "check streaming" in { (td: TestData) => checkADirectory("streaming", td) }
+    "check t0001" in { (td: TestData) => checkADirectory("t0001", td) }
   }
 }

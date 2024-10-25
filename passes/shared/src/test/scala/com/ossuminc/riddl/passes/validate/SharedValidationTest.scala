@@ -14,7 +14,7 @@ import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
 import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
-class SharedValidationTest(using PlatformIOContext) extends AbstractParsingTest {
+abstract class SharedValidationTest(using PlatformIOContext) extends AbstractParsingTest {
 
   "ValidationMessage#format" should {
     "produce a correct string" in { (td:TestData) =>

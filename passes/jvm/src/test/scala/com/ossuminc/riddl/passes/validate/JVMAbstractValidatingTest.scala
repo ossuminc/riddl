@@ -6,12 +6,11 @@ import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInpu
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
 import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.utils.{PlatformIOContext, CommonOptions, URL, PathUtils}
+import com.ossuminc.riddl.utils.{Await, PlatformIOContext, CommonOptions, URL, PathUtils}
 
 import org.scalatest.Assertion
 
 import java.nio.file.Path
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class JVMAbstractValidatingTest extends AbstractValidatingTest {

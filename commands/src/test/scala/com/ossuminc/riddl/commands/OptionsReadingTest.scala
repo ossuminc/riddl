@@ -6,8 +6,9 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{SysLogger, AbstractTestingBasis}
 import com.ossuminc.riddl.command.CommonOptionsHelper
+import com.ossuminc.riddl.utils.{SysLogger, AbstractTestingBasis}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt

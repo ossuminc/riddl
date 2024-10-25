@@ -13,8 +13,9 @@ import com.ossuminc.riddl.passes.{PassCreators, PassInput, PassOptions, PassesOu
 import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformIOContext}
 import com.ossuminc.riddl.command.{CommandOptions, PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.commands.{pc, ec}
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
+import com.ossuminc.riddl.utils.{pc, ec}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser

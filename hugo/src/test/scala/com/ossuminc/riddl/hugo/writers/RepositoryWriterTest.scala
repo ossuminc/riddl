@@ -2,13 +2,13 @@ package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{ec, pc}
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{CommonOptions, URL}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, URL}
+import com.ossuminc.riddl.utils.{ec, pc}
+
 import org.scalatest.Assertion
 
 import java.nio.file.Path
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class RepositoryWriterTest extends WriterTest {

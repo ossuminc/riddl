@@ -1,8 +1,7 @@
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.pc
-import com.ossuminc.riddl.utils.StringLogger
-import com.ossuminc.riddl.utils.CommonOptions
+import com.ossuminc.riddl.utils.{StringLogger,CommonOptions}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 class RunCommandsOnExamplesTest extends RunCommandOnExamplesTest(shouldDelete = false) {
 
