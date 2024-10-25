@@ -9,4 +9,8 @@ object Await {
   def result[T](awaitable: Awaitable[T], secondsToWait: Int): T = {
     scala.concurrent.Await.result[T](awaitable, FiniteDuration(secondsToWait, SECONDS))
   }
+
+  def result[T](awaitable: Awaitable[T], duration: FiniteDuration): T = {
+    scala.concurrent.Await.result[T](awaitable, duration)
+  }
 }

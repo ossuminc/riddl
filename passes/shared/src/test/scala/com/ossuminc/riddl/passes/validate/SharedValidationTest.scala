@@ -15,7 +15,7 @@ import com.ossuminc.riddl.utils.PlatformIOContext
 import org.scalatest.TestData
 
 class SharedValidationTest(using PlatformIOContext) extends AbstractParsingTest {
-  
+
   "ValidationMessage#format" should {
     "produce a correct string" in { (td:TestData) =>
       val at = At(1, 2, RiddlParserInput("abcdefg",td))

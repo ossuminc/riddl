@@ -1,14 +1,15 @@
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, CommonOptions, JVMPlatformIOContext, PathUtils, PlatformIOContext}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Accumulator
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.passes.{pc,ec}
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.validate.ValidationOutput
+import com.ossuminc.riddl.passes.* 
+import com.ossuminc.riddl.utils.{PathUtils, PlatformIOContext,AbstractTestingBasisWithTestData}
+import com.ossuminc.riddl.utils.{pc,ec}
 
 import scala.collection.mutable
 import java.nio.file.Path
@@ -16,10 +17,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-
 /** Test case for Pass and its related classes */
 class PassTest extends AbstractTestingBasisWithTestData {
-  
+
   "PassOutput" must {
     "have an empty value" in { _ =>
       val mt = PassOutput.empty
@@ -46,7 +46,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
 
     protected def process(definition: RiddlValue, parents: ParentStack): Unit = ???
 
-    def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root: Root): PassOutput = ???
   }
 
   object TestPass extends PassInfo[PassOptions] {
@@ -65,7 +65,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
 
     protected def process(definition: RiddlValue, parents: ParentStack): Unit = {}
 
-    def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root: Root): PassOutput = ???
   }
 
   object TestPass2 extends PassInfo[PassOptions] {
@@ -144,7 +144,6 @@ class PassTest extends AbstractTestingBasisWithTestData {
   "HierarchyPass" must {
     "traverses all kinds of nodes" in { td =>
       val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
-      implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromURL(url, td).map { rpi =>
         Riddl.parseAndValidate(rpi) match
           case Left(messages) => fail(messages.justErrors.format)

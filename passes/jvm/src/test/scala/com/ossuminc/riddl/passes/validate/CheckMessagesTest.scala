@@ -9,8 +9,8 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.{pc,ec,Riddl}
-import com.ossuminc.riddl.utils.PathUtils
+import com.ossuminc.riddl.passes.Riddl
+import com.ossuminc.riddl.utils.{pc,ec,PathUtils}
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.{Files, Path}

@@ -10,7 +10,7 @@ import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
 class EpicTest extends AbstractValidatingTest {

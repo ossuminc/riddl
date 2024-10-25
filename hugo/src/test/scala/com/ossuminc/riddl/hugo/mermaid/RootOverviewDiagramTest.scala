@@ -1,13 +1,13 @@
 package com.ossuminc.riddl.hugo.mermaid
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{ec, pc}
 import com.ossuminc.riddl.diagrams.mermaid.RootOverviewDiagram
 import com.ossuminc.riddl.passes.AbstractRunPassTest
 import com.ossuminc.riddl.passes.diagrams.DiagramsPass
 import com.ossuminc.riddl.utils.URL
-import org.scalatest.TestData
+import com.ossuminc.riddl.utils.{ec, pc}
 
+import org.scalatest.TestData
 import java.nio.file.Path
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt

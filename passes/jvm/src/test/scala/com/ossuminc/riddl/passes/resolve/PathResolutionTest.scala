@@ -1,12 +1,12 @@
 package com.ossuminc.riddl.passes.resolve
 
-import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformIOContext, PathUtils, PlatformIOContext}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{ec, pc}
 
 import java.nio.file.Path
 import org.scalatest.{Assertion, TestData}
@@ -19,7 +19,7 @@ class PathResolutionTest extends SharedResolvingTest {
 
   "PathResolution" must {
     "resolve language / rbbq.riddl" in { (td: TestData) =>
-      val url = PathUtils.urlFromCwdPath(Path.of("passes/jvm/src/test/input/domains/rbbq.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
       val future = RiddlParserInput.fromURL(url, td).map { input =>
         parseAndResolve(input) { (_, _) => succeed }
       }

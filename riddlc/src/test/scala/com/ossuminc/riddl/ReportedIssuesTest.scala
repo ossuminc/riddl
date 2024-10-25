@@ -1,13 +1,13 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.utils.{CommonOptions, PathUtils, URL}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.commands.Commands
-import com.ossuminc.riddl.commands.{pc,ec}
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
+import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.utils.{CommonOptions, PathUtils, URL}
+import com.ossuminc.riddl.utils.{pc,ec}
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.Path

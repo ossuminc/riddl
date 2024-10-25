@@ -3,13 +3,14 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{pc,ec}
 
 import java.nio.file.Path
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.DurationInt
 
 class RiddlTest extends AbstractTestingBasis {
-  
+
   val testPath = "language/jvm/src/test/input/everything.riddl"
   val url = PathUtils.urlFromCwdPath(Path.of(testPath))
 
@@ -41,7 +42,7 @@ class RiddlTest extends AbstractTestingBasis {
             Riddl.validate(root) match
               case Left(messages) => fail(messages.justErrors.format)
               case Right(result) => succeed
-        end match      
+        end match
       }
       Await.result(future, 10.seconds)
     }
@@ -52,7 +53,7 @@ class RiddlTest extends AbstractTestingBasis {
         Riddl.parseAndValidate(rpi) match
           case Left(messages) => fail(messages.justErrors.format)
           case Right(result) => succeed
-        end match  
+        end match
       }
       Await.result(future, 10.seconds)
     }
@@ -61,7 +62,7 @@ class RiddlTest extends AbstractTestingBasis {
       Riddl.parseAndValidatePath(testPath) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(result)  => succeed
-      end match  
+      end match
     }
   }
 }

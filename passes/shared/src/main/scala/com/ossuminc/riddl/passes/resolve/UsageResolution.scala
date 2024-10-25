@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.resolve
 
-import com.ossuminc.riddl.utils.{PlatformIOContext, CommonOptions}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 

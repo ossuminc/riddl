@@ -4,8 +4,9 @@ import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
-import com.ossuminc.riddl.passes.pc
+import com.ossuminc.riddl.utils.pc
 import com.ossuminc.riddl.utils.CommonOptions
+
 import org.scalatest.TestData
 
 /** Test cases for the StreamValidator */

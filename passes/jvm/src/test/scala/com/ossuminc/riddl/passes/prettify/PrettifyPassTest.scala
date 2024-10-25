@@ -13,7 +13,7 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, PrettifyState}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput, Riddl}
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import org.apache.commons.io.FileUtils
 import org.scalatest.{Assertion, TestData}

@@ -39,7 +39,8 @@ class PrettifyPass(
   input: PassInput,
   outputs: PassesOutput,
   options: PrettifyPass.Options
-)(using PlatformIOContext) extends VisitingPass[PrettifyVisitor](input, outputs, new PrettifyVisitor(options)):
+)(using PlatformIOContext)
+    extends VisitingPass[PrettifyVisitor](input, outputs, new PrettifyVisitor(options)):
   def name: String = PrettifyPass.name
 
   requires(SymbolsPass)

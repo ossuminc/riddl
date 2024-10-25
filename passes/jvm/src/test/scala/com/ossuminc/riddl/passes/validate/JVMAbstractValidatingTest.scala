@@ -1,12 +1,12 @@
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.utils.{PlatformIOContext, CommonOptions, URL, PathUtils}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{PlatformIOContext, CommonOptions, URL, PathUtils}
 
 import org.scalatest.Assertion
 

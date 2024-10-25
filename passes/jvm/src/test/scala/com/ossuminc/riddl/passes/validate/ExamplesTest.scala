@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.passes.pc
+import com.ossuminc.riddl.utils.pc
 import com.ossuminc.riddl.utils.CommonOptions
 
 import org.scalatest.{Assertion, TestData}

@@ -11,9 +11,8 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass
 import com.ossuminc.riddl.passes.Riddl
-import com.ossuminc.riddl.passes.pc
+import com.ossuminc.riddl.utils.pc
 import com.ossuminc.riddl.utils.CommonOptions
-
 import org.scalatest.TestData
 
 /** Unit Tests For ValidatorTest */

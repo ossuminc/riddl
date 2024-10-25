@@ -6,8 +6,9 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.passes.{AbstractRunPassTest, pc}
+import com.ossuminc.riddl.passes.AbstractRunPassTest
 import com.ossuminc.riddl.language.AST.Adaptor
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
 /** Unit Tests For AdaptorTest */

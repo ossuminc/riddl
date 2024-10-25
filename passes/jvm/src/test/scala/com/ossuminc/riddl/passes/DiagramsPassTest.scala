@@ -3,12 +3,12 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.passes.diagrams.*
 import com.ossuminc.riddl.utils.{PlatformIOContext, URL}
-import com.ossuminc.riddl.passes.{pc,ec}
-import com.ossuminc.riddl.passes.diagrams.* 
+import com.ossuminc.riddl.utils.{ec, pc}
+
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-
 import org.scalatest.TestData
 
 class DiagramsPassTest extends SharedDiagramsPassTest {

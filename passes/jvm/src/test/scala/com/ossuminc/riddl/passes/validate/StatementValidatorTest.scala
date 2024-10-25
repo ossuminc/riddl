@@ -4,8 +4,9 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.{Messages, StyleWarning}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.utils.CommonOptions
+
 import org.scalatest.TestData
 
 class StatementValidatorTest extends AbstractValidatingTest {

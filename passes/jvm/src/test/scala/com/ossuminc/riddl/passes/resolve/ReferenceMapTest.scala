@@ -1,16 +1,17 @@
 package com.ossuminc.riddl.passes.resolve
 
-import com.ossuminc.riddl.utils.PathUtils
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.passes.{pc, ec}
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
+import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.PathUtils
 
 import java.nio.file.Path
 import org.scalatest.TestData
-import scala.concurrent.{Await,Future}
+
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 class ReferenceMapTest extends AbstractValidatingTest {
@@ -31,7 +32,7 @@ class ReferenceMapTest extends AbstractValidatingTest {
 
     "convert to a pretty string" in { _ =>
       info("pretty: " + refMap.toString)
-      refMap.toString must not be (empty)
+      refMap.toString must not be empty
     }
     "have correct size" in { _ =>
       info("size: " + refMap.size.toString)
@@ -41,7 +42,7 @@ class ReferenceMapTest extends AbstractValidatingTest {
     "have definitionOf(pathId:String) work" in { _ =>
       refMap.definitionOf[Author]("Reid") match {
         case None                 => fail("Expected to find Author 'Reid'")
-        case Some(author: Author) => author.name.s mustBe ("Reid")
+        case Some(author: Author) => author.name.s mustBe "Reid"
         case x                    => fail(s"Unexpected result: ${x.toString}")
       }
     }
@@ -51,7 +52,7 @@ class ReferenceMapTest extends AbstractValidatingTest {
       val parent: Parent = Domain(At(), Identifier(At(), "domain"))
       val pid = PathIdentifier(At(), Seq("wrong-name"))
       refMap.add[Context](pid, parent, context)
-      refMap.definitionOf[Context](pid, parent) must not be (empty)
+      refMap.definitionOf[Context](pid, parent) must not be empty
     }
 
     "have definitionOf(pid: PathIdentifier, parent: Parent) work" in { _ =>

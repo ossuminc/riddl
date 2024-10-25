@@ -1,13 +1,13 @@
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.utils.{CommonOptions, PathUtils}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.passes.stats.{DefinitionStats, KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult}
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
-import org.scalatest.*
+import com.ossuminc.riddl.utils.{pc, ec, CommonOptions, PathUtils}
 
+import org.scalatest.*
 import java.nio.file.Path
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.DurationInt
@@ -43,7 +43,6 @@ class StatsPassTest extends AbstractValidatingTest {
   "StatsPass" must {
     "generate statistics" in { (td: TestData) =>
       val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
-      implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromURL(url, td).map { rpi =>
         parseValidateAndThen(rpi) {
           (pr: PassesResult, root: AST.Root, rpi: RiddlParserInput, messages: Messages.Messages) =>

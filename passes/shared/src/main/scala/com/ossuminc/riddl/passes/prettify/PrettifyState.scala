@@ -7,8 +7,9 @@
 package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.utils.URL
+
 import scala.collection.mutable
-import scala.scalajs.js.annotation.{JSExportTopLevel, JSExport}
+import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
 @JSExportTopLevel("PrettifyState")
 case class PrettifyState(flatten: Boolean = false, topFile: String = "nada", outDir: String = "nada"):

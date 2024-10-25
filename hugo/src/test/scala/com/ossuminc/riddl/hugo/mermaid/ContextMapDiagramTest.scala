@@ -1,11 +1,11 @@
 package com.ossuminc.riddl.hugo.mermaid
 
-import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{pc, ec}
 import com.ossuminc.riddl.diagrams.mermaid.ContextMapDiagram
 import com.ossuminc.riddl.passes.AbstractRunPassTest
 import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
+import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import org.scalatest.TestData
 import java.nio.file.Path

@@ -9,11 +9,12 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.{pc,ec}
+import com.ossuminc.riddl.utils.{ec, pc}
 import com.ossuminc.riddl.utils.PathUtils
 
 import java.nio.file.Path
 import org.scalatest.TestData
+
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 

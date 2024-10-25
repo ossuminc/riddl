@@ -122,7 +122,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def openGroup(group: Group, parents: Parents): Unit = open(group)
 
   def closeGroup(group: Group, parents: Parents): Unit = close(group)
-  
+
   def openOutput(output: Output, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe
@@ -159,7 +159,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       if input.isEmpty then rfe.nl else rfe.add(" {").nl.incr
     }
   end openInput
-  
+
   def closeInput(input: Input, parents: Parents): Unit =
     if input.nonEmpty then
       state.withCurrent { rfe =>
@@ -292,7 +292,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doState
 
   def doRelationship(rel: com.ossuminc.riddl.language.AST.Relationship): Unit =
-    state.withCurrent { rfe => 
+    state.withCurrent { rfe =>
       rfe.addIndent(
         s"${keyword(rel)} ${rel.id.format} to ${rel.withProcessor.format} as ${rel.cardinality.proportion}"
       )
@@ -301,7 +301,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       end if
       rfe.nl
     }
-  end doRelationship  
+  end doRelationship
 
   def doEnumerator(enumerator: Enumerator): Unit = () // Note: Handled by RiddlFileEmitter.emitEnumeration
 

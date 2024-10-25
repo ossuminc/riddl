@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
+import com.ossuminc.riddl.utils.{pc, ec}
 
 /** A Trait that defines typical Validation checkers for validating definitions */
 trait DefinitionValidation extends BasicValidation:

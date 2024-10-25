@@ -6,13 +6,13 @@
 
 package com.ossuminc.riddl.passes.resolve
 
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, JVMPlatformIOContext}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.passes.{pc,ec} 
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, JVMPlatformIOContext}
+import com.ossuminc.riddl.utils.{ec, pc}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.TestData
@@ -130,7 +130,7 @@ class UsageTest extends ParsingTest {
         case Right(result) =>
           result.messages.isOnlyIgnorable mustBe true
           val warnings = result.messages.justWarnings
-          warnings.size mustBe 2
+          warnings.size mustBe 4
           val warnMessage = warnings.last.format
           warnMessage must include("Type 'Bar' is unused")
       }

@@ -1,16 +1,16 @@
 package com.ossuminc.riddl.hugo.mermaid
 
+import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{AST,pc,ec}
-import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.diagrams.mermaid.DataFlowDiagram
+import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{pc, ec, URL}
 
 import java.nio.file.Path
 import org.scalatest.TestData
 import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt 
+import scala.concurrent.duration.DurationInt
 
 class DataFlowDiagramTest extends JVMAbstractValidatingTest {
   "DataFlowDiagram" should {
@@ -20,7 +20,6 @@ class DataFlowDiagramTest extends JVMAbstractValidatingTest {
         simpleParseAndValidate(rpi) match {
           case Left(messages) => fail(messages.justErrors.format)
           case Right(passesResult: PassesResult) =>
-
             val dfd = DataFlowDiagram(passesResult)
             val domains = AST.getTopLevelDomains(passesResult.root)
             val contexts = AST.getContexts(domains.head)

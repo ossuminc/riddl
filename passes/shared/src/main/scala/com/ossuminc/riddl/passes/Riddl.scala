@@ -6,11 +6,13 @@
 
 package com.ossuminc.riddl.passes
 
+import com.ossuminc.riddl
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.utils.*
+import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.PassCreators
+import com.ossuminc.riddl.utils.{PlatformIOContext,URL,Await}
 
 import java.nio.file.Path
 

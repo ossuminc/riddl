@@ -9,11 +9,12 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
+import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.utils.PlatformIOContext
 import com.ossuminc.riddl.utils.SeqHelpers.*
+import com.ossuminc.riddl.utils.*
 
 import scala.collection.mutable
 import scala.collection.immutable.Seq
@@ -162,7 +163,7 @@ case class ValidationPass(
       omc.msg.messageKind match {
         case CommandCase =>
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
-          if sends.isEmpty || sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
+          if sends.isEmpty || !sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
             messages.add(
               missing("Processing for commands should result in sending an event", omc.loc)
             )

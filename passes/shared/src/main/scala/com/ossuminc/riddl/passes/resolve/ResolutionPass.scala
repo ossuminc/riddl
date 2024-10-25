@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
+import com.ossuminc.riddl.utils.PlatformIOContext
 
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
@@ -53,7 +53,7 @@ object ResolutionPass extends PassInfo[PassOptions] {
   * @param input
   *   The input to the original pass.
   * @param outputs
-  *   THe outputs from preceding passes, which should only be the [[com.ossuminc.riddl.passes.symbols.SymbolsPass]]
+  *   THe outputs from preceding passes, which should only be the [[riddl.utils.symbols.SymbolsPass]]
   *   output.
   */
 case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: PlatformIOContext)

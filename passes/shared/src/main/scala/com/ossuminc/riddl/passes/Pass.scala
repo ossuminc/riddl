@@ -261,7 +261,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
     }
   }
 
-  protected val messages: Messages.Accumulator = Messages.Accumulator(io.options)
+  protected val messages: Messages.Accumulator = Messages.Accumulator()
 }
 
 /** A Pass base class that allows the processing to be done based on containers, and calling these methods:

@@ -10,20 +10,20 @@ import scala.concurrent.{ExecutionContext, Future}
 trait PlatformIOContext {
 
   given pc: PlatformIOContext = this
-  
+
   /** The Logger instance to use on this platform. */
   protected var logger: Logger = SysLogger()
   def log: Logger = logger
-  def setLog(newLogger: Logger): Unit = logger = newLogger
+  def setLog(newLogger: Logger): Unit = synchronized { logger = newLogger }
 
   /** The default CommonOptions to use on this platform. */
   protected var options_ : CommonOptions = CommonOptions()
   def options: CommonOptions = options_
-  def setOptions(commonOptions: CommonOptions): Unit = options_ = commonOptions
+  def setOptions(commonOptions: CommonOptions): Unit = synchronized { options_ = commonOptions }
 
   /** The ExecutionContext that will be used for Futures and Promises */
   def ec: ExecutionContext
-  
+
   type Path
 
   /** Load the content of a text file asynchronously and return it as a string. THe content, typically a RIDDL or

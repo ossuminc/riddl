@@ -190,13 +190,12 @@ object Messages {
   /** Generate an error message resulting from an exception received */
   private def exceptionToError(exception: Throwable, loc: At = At.empty, context: String = ""): Message = {
     val message = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
-    Message(loc, s"While $context: $message")
+    Message(loc, s"While $context: $message", SevereError)
   }
 
   /** Generate a severe error message based on an exception received */
   @JSExport def severe(message: String, exception: Throwable, loc: At): Message = {
-    val message2 = ExceptionUtils.getRootCauseStackTrace(exception).mkString("\n", "\n  ", "\n")
-    Message(loc, message + ": " + message2, SevereError)
+    exceptionToError(exception, loc, message + ": ")
   }
 
   /** Generate a severe error message */
@@ -281,10 +280,6 @@ object Messages {
     *
     * @param messages
     *   The list of messages to log
-    * @param log
-    *   The [[com.ossuminc.riddl.utils.Logger]] instance to which the messages are sent.
-    * @param options
-    *   The [[com.ossuminc.riddl.utils.CommonOptions]] that can control how the logged messages appear.
     * @return
     */
   @JSExport
@@ -360,7 +355,7 @@ object Messages {
 
   /** A utility to help accumulate error messages with regards to the settings in the [[CommonOptions]] */
   @JSExportTopLevel("Accumulator")
-  case class Accumulator(commonOptions: CommonOptions) {
+  case class Accumulator() {
     private val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
 
     def size: Int = msgs.length
@@ -374,25 +369,23 @@ object Messages {
       *
       * @param message
       *   The text of the message to add
-      * @param loc
-      *   The location in the source related to the message.
       * @return
       *   This type, so you can chain another call to this accumulator
       */
     @JSExport
-    def add(msg: Message): this.type = {
-      msg.kind match {
+    def add(message: Message)(using pc: PlatformIOContext): this.type = {
+      message.kind match {
         case Warning =>
-          if commonOptions.showWarnings then msgs.append(msg)
+          if pc.options.showWarnings then msgs.append(message)
         case StyleWarning =>
-          if commonOptions.showStyleWarnings && commonOptions.showWarnings then msgs.append(msg)
+          if pc.options.showStyleWarnings && pc.options.showWarnings then msgs.append(message)
         case MissingWarning =>
-          if commonOptions.showMissingWarnings && commonOptions.showWarnings then msgs.append(msg)
+          if pc.options.showMissingWarnings && pc.options.showWarnings then msgs.append(message)
         case UsageWarning =>
-          if commonOptions.showUsageWarnings && commonOptions.showWarnings then msgs.append(msg)
+          if pc.options.showUsageWarnings && pc.options.showWarnings then msgs.append(message)
         case Info =>
-          if commonOptions.showInfoMessages then msgs.append(msg)
-        case Error | SevereError => msgs.append(msg)
+          if pc.options.showInfoMessages then msgs.append(message)
+        case Error | SevereError => msgs.append(message)
       }
       this
     }
@@ -406,7 +399,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def style(message: String, loc: At = At.empty): this.type = {
+    @inline def style(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, message, StyleWarning))
     }
 
@@ -419,7 +412,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def info(message: String, loc: At = At.empty): this.type = {
+    @inline def info(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, message, Info))
     }
 
@@ -432,7 +425,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def warning(message: String, loc: At = At.empty): this.type = {
+    @inline def warning(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, message, Warning))
     }
 
@@ -445,7 +438,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def error(message: String, loc: At = At.empty): this.type = {
+    @inline def error(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, message, Error))
     }
 
@@ -458,92 +451,91 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def severe(message: String, loc: At = At.empty): this.type = {
+    @inline def severe(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, message, SevereError))
     }
 
     /** Add a [[StyleWarning]] message to the accumulated [[Messages]]
       *
-      * @param message
-      *   The text of the message to add
       * @param loc
       *   The location in the source related to the message.
+      * @param msg
+      *   The text of the message to add
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addStyle(loc: At, msg: String): this.type = {
+    @inline def addStyle(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, msg, StyleWarning))
     }
 
     /** Add a [[UsageWarning]] message to the accumulated [[Messages]]
       *
-      * @param message
+      * @param msg
       *   The text of the message to add
       * @param loc
       *   The location in the source related to the message.
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addUsage(loc: At, msg: String): this.type = {
+    @inline def addUsage(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, msg, UsageWarning))
     }
 
     /** Add a [[MissingWarning]] message to the accumulated [[Messages]]
       *
-      * @param message
+      * @param msg
       *   The text of the message to add
       * @param loc
       *   The location in the source related to the message.
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addMissing(loc: At, msg: String): this.type = {
+    @inline def addMissing(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, msg, MissingWarning))
     }
 
     /** Add a [[Warning]] message to the accumulated [[Messages]]
       *
-      * @param message
+      * @param msg
       *   The text of the message to add
       * @param loc
       *   The location in the source related to the message.
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addWarning(loc: At, msg: String): this.type = {
+    @inline def addWarning(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, msg, Warning))
     }
 
     /** Add an [[Error]] message to the accumulated [[Messages]]
       *
-      * @param message
+      * @param msg
       *   The text of the message to add
       * @param loc
       *   The location in the source related to the message.
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addError(loc: At, msg: String): this.type = {
+    @inline def addError(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, msg, Error))
     }
 
     /** Add a [[SevereError]] message to the accumulated [[Messages]]
       *
-      * @param message
+      * @param msg
       *   The text of the message to add
       * @param loc
       *   The location in the source related to the message.
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addSevere(loc: At, msg: String): this.type = {
+    @inline def addSevere(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
       add(Message(loc, msg, SevereError))
     }
   }
 
   @JSExportTopLevel("Accumulator$")
   object Accumulator {
-    val empty: Accumulator = new Accumulator(CommonOptions())
-    def apply(commonOptions: CommonOptions): Accumulator = new Accumulator(commonOptions)
+    val empty: Accumulator = new Accumulator()
   }
 }

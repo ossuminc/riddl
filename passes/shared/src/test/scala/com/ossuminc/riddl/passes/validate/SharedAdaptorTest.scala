@@ -27,9 +27,9 @@ trait SharedAdaptorTest(using PlatformIOContext) extends AbstractValidatingTest 
     "allow message actions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain ignore is {
-          |  context Target is {???}  
+          |  context Target is {???}
           |  context Foo is {
-          |    type ItHappened = event { abc: String } with { described as "abc" } 
+          |    type ItHappened = event { abc: String } with { described as "abc" }
           |    adaptor PaymentAdapter to context Target is {
           |      handler sendAMessage is {
           |        on event ItHappened {
@@ -39,10 +39,10 @@ trait SharedAdaptorTest(using PlatformIOContext) extends AbstractValidatingTest 
           |    } with {
           |      explained as "?"
           |    }
-          |  } with {  
+          |  } with {
           |    explained as "?"
           |  }
-          |} with {  
+          |} with {
           |  explained as "?"
           |}
           |""".stripMargin,
@@ -60,7 +60,7 @@ trait SharedAdaptorTest(using PlatformIOContext) extends AbstractValidatingTest 
           | context Foo is {
           |  type ItWillHappen = command { abc: String } with { described as "abc" }
           |  command  LetsDoIt is { bcd: String with { described as "abc" } } with { described as "?" }
-          |  
+          |
           |  entity MyEntity is {
           |    sink phum is { inlet commands is command LetsDoIt }
           |  }
@@ -76,10 +76,10 @@ trait SharedAdaptorTest(using PlatformIOContext) extends AbstractValidatingTest 
           |      } with { described as "?" }
           |    } with { explained as "?" }
           |  } with { explained as "?" }
-          | } with {  
-          |  explained as "?" 
+          | } with {
+          |  explained as "?"
           | }
-          |} with { explained as "?" } 
+          |} with { explained as "?" }
           |""".stripMargin,
         td
       )

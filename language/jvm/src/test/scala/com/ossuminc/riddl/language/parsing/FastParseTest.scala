@@ -1,20 +1,19 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.pc
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, CommonOptions, JVMPlatformIOContext, PlatformIOContext}
+import com.ossuminc.riddl.utils.*
+
 import fastparse.Parsed.{Failure, Success}
 import fastparse.*
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-class FastParseTest extends ParsingContext with AbstractTestingBasisWithTestData {
+class FastParseTest(using PlatformIOContext) extends ParsingContext with AbstractTestingBasisWithTestData {
 
   given io: PlatformIOContext = JVMPlatformIOContext()
 

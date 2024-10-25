@@ -3,7 +3,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.utils.{CommonOptions, PathUtils}
 
 import java.nio.file.Path
@@ -23,8 +23,8 @@ class ValidationPassTest extends AbstractValidatingTest {
       val input = RiddlParserInput.fromURL(url, td).map { rpi =>
         parseAndValidateAggregate(rpi) { (vo: PassesResult) =>
           val errors = vo.messages.justErrors
-          if vo.messages.size != 0 then info(errors.format)
-          vo.messages.justErrors.size mustBe 0
+          if errors.size != 0 then info(errors.format)
+          errors.size mustBe 0
           if vo.refMap.size != 29 then
             // info(vo.refMap.toString)
             fail("refMap.size != 29")

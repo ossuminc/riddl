@@ -2,7 +2,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
 /** Unit Tests for Options Validation */

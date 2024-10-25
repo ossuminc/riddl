@@ -1,8 +1,8 @@
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.language.{pc,ec}
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
+import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import org.scalatest.TestData
 

@@ -2,7 +2,7 @@ package com.ossuminc.riddl.testkit
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.stats.StatsPass
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.utils.{Await, URL}
 import org.scalatest.TestData
 

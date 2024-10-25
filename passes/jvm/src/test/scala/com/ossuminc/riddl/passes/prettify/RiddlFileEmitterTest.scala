@@ -1,17 +1,14 @@
 package com.ossuminc.riddl.passes.prettify
 
-import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.prettify.RiddlFileEmitter
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import com.ossuminc.riddl.utils.{AbstractTestingBasis, URL}
 
 import java.nio.file.{Files, Path}
 
-
 /** Tests For RiddlFileEmitter */
-abstract class RiddlFileEmitterTest extends AnyWordSpec with Matchers {
+abstract class RiddlFileEmitterTest extends AbstractTestingBasis {
 
   private val path: URL = URL.fromCwdPath("prettify/target/test/rfe.out")
   val rfe = RiddlFileEmitter(path)

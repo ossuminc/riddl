@@ -12,6 +12,7 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
@@ -66,8 +67,7 @@ trait BasicValidation {
         s"An empty path cannot be resolved to ${article(tc.getSimpleName)}"
       messages.addError(pid.loc, message)
       Option.empty[T]
-    else
-      resolvePath[T](pid, parents)
+    else resolvePath[T](pid, parents)
   }
 
   def checkRef[T <: Definition: ClassTag](

@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.pc
+import com.ossuminc.riddl.utils.pc
 import com.ossuminc.riddl.utils.CommonOptions
 
 import org.scalatest.TestData

@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.utils.AbstractTestingBasisWithTestData
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+
 import org.scalatest.matchers.must
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.TestData

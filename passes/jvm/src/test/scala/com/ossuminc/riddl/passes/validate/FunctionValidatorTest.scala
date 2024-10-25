@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.{Inside, TestData}
 
 class FunctionValidatorTest extends AbstractValidatingTest with Inside {

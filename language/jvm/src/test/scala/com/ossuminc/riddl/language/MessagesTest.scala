@@ -226,7 +226,7 @@ class MessagesTest extends JVMTestingBasis {
   }
 
   "Accumulator" must {
-    val acc: Accumulator = Accumulator(CommonOptions())
+    val acc: Accumulator = Accumulator()
     "has an empty companion" in {
       Accumulator.empty must be(empty)
     }

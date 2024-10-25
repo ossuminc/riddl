@@ -7,8 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.utils.CommonOptions
-import com.ossuminc.riddl.passes.pc
-
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 import scala.runtime.stdLibPatches.Predef.assert
@@ -75,6 +74,7 @@ class ValidateExamplesTest extends JVMAbstractValidatingTest {
         assert(!messages.exists(_.kind.isStyle))
         assert(messages.exists(_.kind.isMissing))
       }
+      pc.setOptions(CommonOptions())
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl"
@@ -95,6 +95,7 @@ class ValidateExamplesTest extends JVMAbstractValidatingTest {
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isMissing))
       }
+      pc.setOptions(CommonOptions())
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl"

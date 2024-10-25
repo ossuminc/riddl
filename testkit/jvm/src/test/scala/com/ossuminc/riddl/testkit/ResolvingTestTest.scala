@@ -1,9 +1,9 @@
 package com.ossuminc.riddl.testkit
 
-import com.ossuminc.riddl.passes
-import com.ossuminc.riddl.language.{pc, ec}
+import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.passes.resolve.ResolvingTest
 
 class ResolvingTestTest extends ResolvingTest {
-  val delegate = passes.resolve.SharedPathResolutionPassTest()
+  val delegate = com.ossuminc.riddl.passes.resolve.SharedPathResolutionPassTest()
   delegate.execute()
 }

@@ -6,11 +6,11 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.utils.CommonOptions
 import com.ossuminc.riddl.language.AST.Domain
-import com.ossuminc.riddl.language.{Messages, pc}
+import com.ossuminc.riddl.language.{Messages}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.{pc, ec, CommonOptions}
 import org.scalatest.TestData
 
 class HandlerValidatorTest extends AbstractValidatingTest {
