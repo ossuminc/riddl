@@ -35,9 +35,8 @@ object Timer {
     */
   def time[T](
     stage: String,
-    show: Boolean = true,
-    out: Logger = SysLogger()
-  )(f: => T): T = {
+    show: Boolean = true
+  )(using io: PlatformContext)(f: => T): T = {
     if show then {
       val clock = Clock.systemUTC()
       val start = clock.millis()
@@ -48,7 +47,7 @@ object Timer {
           val delta = stop - start
           val seconds = delta / 1000
           val milliseconds = delta % 1000
-          out.info(f"$seconds%3d.$milliseconds%03d sec: $stage")
+          io.log.info(f"$seconds%3d.$milliseconds%03d sec: $stage")
         }
       result
     } else { f }

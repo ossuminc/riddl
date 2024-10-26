@@ -7,8 +7,9 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.Messages.*
-import org.scalatest.Assertion
+import com.ossuminc.riddl.utils.{pc, ec}
 
+import org.scalatest.Assertion
 import java.nio.file.Path
 import scala.annotation.unused
 

@@ -11,14 +11,15 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.{Parentage, SymTab, SymTabItem}
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.annotation.unused
 import scala.collection.mutable
 
 object SymbolsPass extends PassInfo[PassOptions] {
   val name: String = "Symbols"
-  def creator(options: PassOptions = PassOptions.empty): PassCreator = { (in: PassInput, out: PassesOutput) =>
-    SymbolsPass(in, out)
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformContext): PassCreator = {
+    (in: PassInput, out: PassesOutput) => SymbolsPass(in, out)
   }
 }
 
@@ -32,7 +33,7 @@ object SymbolsPass extends PassInfo[PassOptions] {
   * @param input
   *   The output of the parser pass is the input to SymbolPass
   */
-case class SymbolsPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
+case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using PlatformContext) extends Pass(input, outputs) {
 
   override def name: String = SymbolsPass.name
 

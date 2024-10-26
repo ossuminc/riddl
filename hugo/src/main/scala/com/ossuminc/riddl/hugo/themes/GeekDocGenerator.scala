@@ -2,8 +2,9 @@ package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.utils.PlatformContext
 
 import java.nio.file.Path
 
@@ -12,7 +13,7 @@ case class GeekDocGenerator(
   input: PassInput,
   outputs: PassesOutput,
   messages: Messages.Accumulator
-) extends ThemeGenerator {
+)(using PlatformContext) extends ThemeGenerator {
 
   /** Generate a string that contains the name of a definition that is markdown linked to the definition in its source.
     * For example, given sourceURL option of https://github.com/a/b and for an editPath option of src/main/riddl and for

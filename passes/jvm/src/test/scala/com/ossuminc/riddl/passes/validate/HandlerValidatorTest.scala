@@ -7,12 +7,13 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Domain
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
 
-class HandlerValidatorTest extends ValidatingTest {
+class HandlerValidatorTest extends AbstractValidatingTest {
 
   "Handler Validation" should {
     "produce an error when on clause references a command that does not exist" in { (td: TestData) =>
@@ -37,23 +38,23 @@ class HandlerValidatorTest extends ValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_: Domain, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            """Path 'EntityCommand' was not resolved, in OnMessageClause 'command EntityCommand'
+      pc.setOptions(CommonOptions.noMinorWarnings)
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          """Path 'EntityCommand' was not resolved, in OnMessageClause 'command EntityCommand'
               |because the sought name, 'EntityCommand', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
-          )
-          assertValidationMessage(
-            msgs,
-            Error,
-            """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
+        )
+        assertValidationMessage(
+          msgs,
+          Error,
+          """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
               |because the sought name, 'EntityEvent', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
-          )
-          msgs.justErrors.size must be(2)
+        )
+        msgs.justErrors.size must be(2)
       }
     }
 
@@ -74,21 +75,21 @@ class HandlerValidatorTest extends ValidatingTest {
           |  }
           | } with {
           |  term Incoming is "This is a term definition to generate an error"
-          | } 
+          | }
           |}
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Path 'EntityContext.Incoming' was not resolved, in Context 'EntityContext'\n" +
-              "because the name 'Incoming' was not found in Context 'EntityContext'\n" +
-              "and it should refer to a Type"
-          )
-          msgs.justErrors.size must be(1)
+      pc.setOptions(CommonOptions.noMinorWarnings)
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Path 'EntityContext.Incoming' was not resolved, in Context 'EntityContext'\n" +
+            "because the name 'Incoming' was not found in Context 'EntityContext'\n" +
+            "and it should refer to a Type"
+        )
+        msgs.justErrors.size must be(1)
       }
     }
 
@@ -111,12 +112,13 @@ class HandlerValidatorTest extends ValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
-          msgs.justErrors mustBe empty
+      pc.setOptions(CommonOptions.noMinorWarnings)
+      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+        msgs.justErrors mustBe empty
       }
     }
-    "produce a warning for commands with no events sent" in { (td: TestData) =>
+    "produce a warning for commands with no events sent" in { (_: TestData) =>
+      pc.setOptions(CommonOptions.empty)
       val input =
         """domain ignore is {
           |  context ignore is {
@@ -133,7 +135,7 @@ class HandlerValidatorTest extends ValidatingTest {
           |    }
           |  }
           |}""".stripMargin
-      parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) { case (_, messages: Messages) =>
+      parseAndValidate(input, "test", shouldFailOnErrors = false) { case (_, messages: Messages) =>
         val warnings = messages.justWarnings.format
         // info(warnings)
         warnings mustNot be(empty)

@@ -1,8 +1,9 @@
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-class NebulaTest extends NoJVMParsingTest {
+abstract class NebulaTest(using PlatformContext) extends AbstractParsingTest {
 
   "Module" should {
     "be accepted at root scope" in { (td: TestData) =>

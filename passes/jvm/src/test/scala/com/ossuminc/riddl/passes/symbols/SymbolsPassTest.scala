@@ -2,8 +2,10 @@ package com.ossuminc.riddl.passes.symbols
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.ParsingTest
-import com.ossuminc.riddl.language.{At,CommonOptions}
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.{CommonOptions,PlatformContext,JVMPlatformContext}
+import com.ossuminc.riddl.utils.{pc,ec}
 import org.scalatest.Assertion
 
 import scala.reflect.ClassTag
@@ -13,7 +15,7 @@ class SymbolsPassTest extends ParsingTest {
 
   val (root: Root, st: SymbolsOutput) = {
     val (root,rpi) = checkFile("everything", "everything.riddl")
-    val input: PassInput = PassInput(root, CommonOptions())
+    val input: PassInput = PassInput(root)
     val outputs = PassesOutput()
     root -> Pass.runSymbols(input, outputs)
   }

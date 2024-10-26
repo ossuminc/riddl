@@ -6,10 +6,10 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.URL
-import com.ossuminc.riddl.language.AST.{Comment, *}
+import com.ossuminc.riddl.utils.{PlatformContext, URL}
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import fastparse.{P, *}
+import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import wvlet.airframe.ulid.ULID
 
@@ -19,7 +19,7 @@ import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.Future
 
 /** Common Parsing Rules */
-private[parsing] trait CommonParser
+private[parsing] trait CommonParser(using io: PlatformContext)
     extends ReferenceParser
     with Readability
     with NoWhiteSpaceParsers
@@ -191,13 +191,13 @@ private[parsing] trait CommonParser
     ).map { case (loc, id, mimeType, value) =>
       StringAttachment(loc, id, mimeType, value)
     }
-    
+
   def ulidAttachment[u:P]: P[ULIDAttachment] =
     P(
-      location ~ Keywords.attachment ~ "ULID" ~ is ~ literalString 
+      location ~ Keywords.attachment ~ "ULID" ~ is ~ literalString
     ).map { case (loc, ulidString) =>
       val ulid = ULID.fromString(ulidString.s)
-      ULIDAttachment(loc, ulid)  
+      ULIDAttachment(loc, ulid)
     }
   end ulidAttachment
 

@@ -7,7 +7,7 @@ package com.ossuminc.riddl.command
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.translate.TranslatingOptions
-import com.ossuminc.riddl.utils.{OutputFile, Timer}
+import com.ossuminc.riddl.utils.{PlatformContext, OutputFile, Timer}
 
 import java.nio.file.Path
 import scala.collection.mutable
@@ -32,5 +32,5 @@ object TranslationCommand {
   * @tparam OPT
   *   The option type for the command
   */
-abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](name: String)
+abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](name: String)(using io: PlatformContext)
     extends PassCommand[OPT](name) {}

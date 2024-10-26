@@ -72,7 +72,6 @@ class ReadRiddlOptionsTest extends CommandTestBase("commands/src/test/input/") {
           options.showMissingWarnings must be(false)
           options.showStyleWarnings must be(false)
           options.showUsageWarnings must be(true)
-          options.pluginsDir must be(None)
           options.sortMessagesByLocation must be(false)
       }
     }

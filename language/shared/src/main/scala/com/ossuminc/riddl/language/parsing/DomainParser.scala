@@ -8,10 +8,11 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.utils.Await
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 /** Parsing rules for domains. */
 private[parsing] trait DomainParser {

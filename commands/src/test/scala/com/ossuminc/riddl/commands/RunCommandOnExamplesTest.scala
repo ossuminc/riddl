@@ -7,8 +7,7 @@
 package com.ossuminc.riddl.commands
 
 /** Unit Tests For RunCommandOnExamplesTest */
-import com.ossuminc.riddl.utils.{Logger, PathUtils, SysLogger, TestingBasis, Zip}
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.language.Messages.{Messages, errors, warnings}
 import com.ossuminc.riddl.passes.PassesResult
 import org.apache.commons.io.FileUtils
@@ -31,7 +30,8 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   */
 trait RunCommandOnExamplesTest(
   shouldDelete: Boolean = true
-) extends TestingBasis
+)(using io: PlatformContext)
+    extends AbstractTestingBasis
     with BeforeAndAfterAll {
 
   val examplesRepo: String =
@@ -41,16 +41,6 @@ trait RunCommandOnExamplesTest(
   val examplesPath: Path = Path.of(s"riddl-examples-main/src/riddl")
   val srcDir: Path = tmpDir.resolve(examplesPath)
   val outDir: Path = tmpDir.resolve("out")
-
-  val commonOptions: CommonOptions = CommonOptions(
-    showTimes = true,
-    showWarnings = false,
-    showMissingWarnings = false,
-    showStyleWarnings = false,
-    verbose = true
-  )
-
-  val logger: Logger = SysLogger()
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -82,7 +72,7 @@ trait RunCommandOnExamplesTest(
       name = config.getAbsolutePath.dropRight(suffix.length + 1)
     yield {
       if validateTestName(name) then {
-        Commands.loadCandidateCommands(config.toPath, SysLogger()) match {
+        Commands.loadCandidateCommands(config.toPath) match {
           case Right(commands) =>
             if commands.contains(commandName) then {
               Right(f(name, config.toPath))
@@ -116,7 +106,7 @@ trait RunCommandOnExamplesTest(
           case Some(folder) =>
             folder.listFiles.toSeq.find(fName => fName.getName == folderName + ".conf") match {
               case Some(config) =>
-                Commands.loadCandidateCommands(config.toPath, SysLogger()).flatMap { commands =>
+                Commands.loadCandidateCommands(config.toPath).flatMap { commands =>
                   if commands.contains(commandName) then validate(folderName, config.toPath)
                   else Left(errors(s"Config file $commandName not found in $config"))
 
@@ -143,8 +133,6 @@ trait RunCommandOnExamplesTest(
       val result = Commands.runCommandNamed(
         commandName,
         path,
-        logger,
-        commonOptions,
         outputDirOverride = Some(outputDir)
       )
       result match {
@@ -168,14 +156,12 @@ trait RunCommandOnExamplesTest(
 
   def runTestWithArgs(
     folderName: String,
-    args: Array[String],
-    logger: Logger,
-    commonOptions: CommonOptions 
- ): Unit = {
-    val commandName = args.head 
+    args: Array[String]
+  ): Unit = {
+    val commandName = args.head
     forAFolder(folderName, commandName) { case (name, _) =>
       val outputDir = outDir.resolve(name)
-      val result = Commands.runCommandWithArgs(args, logger, commonOptions)
+      val result = Commands.runCommandWithArgs(args)
       result match {
         case Right(passesResult) =>
           onSuccess(commandName, folderName, passesResult, outputDir)
@@ -185,7 +171,7 @@ trait RunCommandOnExamplesTest(
       result
     }
   }
-  
+
   /** Call this from your test suite subclass to run all the examples found.
     */
   def runTest(folderName: String, commandName: String): Unit = {
@@ -194,8 +180,6 @@ trait RunCommandOnExamplesTest(
       val result = Commands.runCommandNamed(
         commandName,
         config,
-        logger,
-        commonOptions,
         outputDirOverride = Some(outputDir)
       )
       result match {

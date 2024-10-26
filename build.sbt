@@ -125,6 +125,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.publishing)
   .settings(
+    Test / parallelExecution := false,
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "AST Pass infrastructure and essential passes"
   )
@@ -156,7 +157,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
   .settings(
     description := "Testing kit for RIDDL language and passes"
   )
-  .dependsOn(language_cp % "compile->test", passes_cp % "compile->test")
+  .dependsOn(language_cp % "compile->test;test->test", passes_cp % "compile->test;test->test")
   .jvmSettings(
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % V.scalatest,

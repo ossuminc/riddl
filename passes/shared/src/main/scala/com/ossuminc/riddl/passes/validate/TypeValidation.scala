@@ -8,6 +8,8 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.utils.{pc, ec}
+
 
 import java.util.regex.PatternSyntaxException
 
@@ -54,7 +56,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkAlternation(
     alternation: Alternation,
     typeDef: Definition,
-    parents: Parents 
+    parents: Parents
   ): this.type = {
     checkSequence(alternation.of.toSeq) { (typex: TypeExpression) =>
       checkTypeExpression(typex, typeDef, parents)
@@ -94,7 +96,7 @@ trait TypeValidation extends DefinitionValidation {
   private def checkAggregateUseCase(
     mt: AggregateUseCaseTypeExpression,
     typeDef: Definition,
-    parents: Parents 
+    parents: Parents
   ): this.type = {
     checkSequence(mt.fields) { (field: Field) =>
       checkIdentifierLength(field)
@@ -151,14 +153,13 @@ trait TypeValidation extends DefinitionValidation {
   ): Unit = {
     checkTypeExpression(replica.of, typeDef, parents)
     replica.of match {
-      case _: Mapping | _: Sequence | _: Set  | _: IntegerTypeExpression => // these are okay
+      case _: Mapping | _: Sequence | _: Set | _: IntegerTypeExpression => // these are okay
       case _: Cardinality =>
         messages.addError(replica.loc, s"Replica type expressions may not have cardinality")
       case t: TypeExpression =>
         messages.addError(replica.loc, s"Type expression in Replica is not a replicable type")
     }
   }
-
 
   def checkTypeExpression(
     typ: TypeExpression,

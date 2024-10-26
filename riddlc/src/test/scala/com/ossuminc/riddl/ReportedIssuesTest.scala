@@ -1,17 +1,19 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.utils.URL
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.passes.validate.ValidatingTest
+import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
 import com.ossuminc.riddl.commands.Commands
-import org.scalatest.{TestData,Assertion}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils, URL}
+import com.ossuminc.riddl.utils.{pc, ec}
+import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.Path
+import scala.concurrent.duration.DurationInt
 
-class ReportedIssuesTest extends ValidatingTest {
+class ReportedIssuesTest extends JVMAbstractValidatingTest {
 
   val dir = "riddlc/src/test/input/issues"
 
@@ -22,21 +24,22 @@ class ReportedIssuesTest extends ValidatingTest {
   )
 
   def checkOneDir(configFile: String, command: String): Assertion = {
-    val commandArgs = Seq(
-      "from",
-      dir ++ "/" ++ configFile,
-      command
-    )
+    val path = Path.of(dir ++ "/" + configFile).toAbsolutePath.toString
+    val commandArgs = Seq("from", path, command)
     Commands.runMain(commandArgs.toArray) must be(0)
   }
 
   def doOne(fileName: String, options: CommonOptions = defaultOptions)(
     checkResult: Either[Messages.Messages, PassesResult] => Assertion
   ): Assertion = {
+    pc.setOptions(options)
     val path = Path.of(dir).resolve(fileName)
-    val rpi = RiddlParserInput.fromCwdPath(path)
-    val either = Riddl.parseAndValidate(rpi, options)
-    checkResult(either)
+    val url = PathUtils.urlFromPath(path)
+    val future = RiddlParserInput.fromURL(url).map { rpi =>
+      val either = Riddl.parseAndValidate(rpi)
+      checkResult(either)
+    }
+    Await.result(future, 10.seconds)
   }
 
   def checkOne(fileName: String): Assertion = {
@@ -49,7 +52,7 @@ class ReportedIssuesTest extends ValidatingTest {
   }
 
   "Reported Issues" should {
-    "375" in { (td:TestData) =>
+    "375" in { (td: TestData) =>
       doOne("375.riddl") {
         case Left(messages) =>
           // info(messages.format)
@@ -80,7 +83,7 @@ class ReportedIssuesTest extends ValidatingTest {
             fail("Expected 3 errors")
       }
     }
-    "435" in { (td:TestData) =>
+    "435" in { (td: TestData) =>
       doOne("435.riddl") {
         case Left(messages) =>
           // info(messages.format)
@@ -93,16 +96,16 @@ class ReportedIssuesTest extends ValidatingTest {
           fail("Should have produced a syntax error on 'contest'")
       }
     }
-    "406" in { (td:TestData) =>
+    "406" in { (td: TestData) =>
       checkOne("406.riddl")
     }
-    "445" in { (td:TestData) =>
+    "445" in { (td: TestData) =>
       checkOne("445.riddl")
     }
-    "447" in { (td:TestData) =>
+    "447" in { (td: TestData) =>
       checkOne("447.riddl")
     }
-    "479" in { (td:TestData) =>
+    "479" in { (td: TestData) =>
       doOne("479.riddl") {
         case Left(messages) =>
           val errors = messages.justErrors
@@ -112,13 +115,13 @@ class ReportedIssuesTest extends ValidatingTest {
           fail("should not have parsed correctly")
       }
     }
-    "480" in { (td:TestData) =>
+    "480" in { (td: TestData) =>
       checkOne("480.riddl")
     }
-    "480b" in { (td:TestData) =>
+    "480b" in { (td: TestData) =>
       checkOne("480b.riddl")
     }
-    "486" in { (td:TestData) =>
+    "486" in { (td: TestData) =>
       doOne("486.riddl") {
         case Left(messages) =>
           val errors = messages.justErrors
@@ -128,19 +131,19 @@ class ReportedIssuesTest extends ValidatingTest {
           fail("Should not have parsed correctly")
       }
     }
-    "495" in { (td:TestData) =>
+    "495" in { (td: TestData) =>
       checkOne("495.riddl")
     }
-    "584" in { (td:TestData) =>
+    "584" in { (td: TestData) =>
       checkOneDir("584/Foo.conf", "validate")
     }
-    "588" in { (td:TestData) =>
+    "588" in { (td: TestData) =>
       val warning_text = "Vital definitions should have an author reference"
       doOne("588.riddl", defaultOptions.copy(showWarnings = true)) {
         case Left(messages: Messages) =>
           val errors = messages.justErrors
           if errors.nonEmpty then fail(errors.format)
-          val warnings= messages.justWarnings
+          val warnings = messages.justWarnings
           warnings.size must be > 1
           warnings.find(_.message.contains(warning_text)) match {
             case Some(msg) => fail(s"Message with '$warning_text' found")
@@ -157,7 +160,7 @@ class ReportedIssuesTest extends ValidatingTest {
           }
       }
     }
-    "592" in { (td:TestData) =>
+    "592" in { (td: TestData) =>
       doOne("592.riddl") {
         case Left(messages) =>
           val errors = messages.justErrors

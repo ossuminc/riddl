@@ -1,20 +1,23 @@
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.utils.TestingBasisWithTestData
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Accumulator
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
-import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.validate.ValidationOutput
+import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.utils.{PathUtils, PlatformContext,AbstractTestingBasisWithTestData}
+import com.ossuminc.riddl.utils.{pc,ec, Await}
 
 import scala.collection.mutable
 import java.nio.file.Path
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 /** Test case for Pass and its related classes */
-class PassTest extends TestingBasisWithTestData {
+class PassTest extends AbstractTestingBasisWithTestData {
 
   "PassOutput" must {
     "have an empty value" in { _ =>
@@ -42,13 +45,14 @@ class PassTest extends TestingBasisWithTestData {
 
     protected def process(definition: RiddlValue, parents: ParentStack): Unit = ???
 
-    def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root: Root): PassOutput = ???
   }
 
   object TestPass extends PassInfo[PassOptions] {
     val name: String = "TestPass"
 
-    override def creator(options: PassOptions): PassCreator = (input, output) => new TestPass(input, output)
+    override def creator(options: PassOptions)(using PlatformContext): PassCreator = (input, output) =>
+      new TestPass(input, output)
   }
 
   class TestPass2(input: PassInput, output: PassesOutput) extends Pass(input, output) {
@@ -60,13 +64,14 @@ class PassTest extends TestingBasisWithTestData {
 
     protected def process(definition: RiddlValue, parents: ParentStack): Unit = {}
 
-    def result(root: Root): com.ossuminc.riddl.passes.PassOutput = ???
+    def result(root: Root): PassOutput = ???
   }
 
   object TestPass2 extends PassInfo[PassOptions] {
     val name: String = "TestPass2"
 
-    override def creator(options: PassOptions): PassCreator = (input, output) => new TestPass2(input, output)
+    override def creator(options: PassOptions)(using PlatformContext): PassCreator = (input, output) =>
+      new TestPass2(input, output)
   }
 
   "Pass" must {
@@ -81,26 +86,34 @@ class PassTest extends TestingBasisWithTestData {
     }
 
     "runValidation works" in { td =>
-      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
-      Riddl.parse(testInput) match
-        case Left(messages) => fail(messages.justErrors.format)
-        case Right(root) =>
-          val input = PassInput(root, CommonOptions.empty)
-          val result = Pass.runThesePasses(input, Pass.standardPasses)
-          if result.messages.hasErrors then fail(result.messages.justErrors.format)
-          val vo = Pass.runValidation(input, result.outputs)
-          vo.messages.justErrors mustBe empty
+      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      implicit val ec: ExecutionContext = pc.ec
+      val future = RiddlParserInput.fromURL(url, td).map { rpi =>
+        Riddl.parse(rpi) match
+          case Left(messages) => fail(messages.justErrors.format)
+          case Right(root) =>
+            val input = PassInput(root)
+            val result = Pass.runThesePasses(input, Pass.standardPasses)
+            if result.messages.hasErrors then fail(result.messages.justErrors.format)
+            val vo = Pass.runValidation(input, result.outputs)
+            vo.messages.justErrors mustBe empty
+      }
+      Await.result(future, 10.seconds)
     }
 
     "runThesePasses catches exceptions" in { td =>
-      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
-      Riddl.parse(testInput) match
-        case Left(messages) => fail(messages.justErrors.format)
-        case Right(root) =>
-          val input = PassInput(root, CommonOptions.empty)
-          val result = Pass.runThesePasses(input, Pass.standardPasses)
-          if result.messages.hasErrors then fail(result.messages.justErrors.format)
-          succeed
+      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      implicit val ec: ExecutionContext = pc.ec
+      val future = RiddlParserInput.fromURL(url, td).map { rpi =>
+        Riddl.parse(rpi) match
+          case Left(messages) => fail(messages.justErrors.format)
+          case Right(root) =>
+            val input = PassInput(root)
+            val result = Pass.runThesePasses(input, Pass.standardPasses)
+            if result.messages.hasErrors then fail(result.messages.justErrors.format)
+            succeed
+      }
+      Await.result(future, 10.seconds)
     }
   }
 
@@ -129,28 +142,32 @@ class PassTest extends TestingBasisWithTestData {
 
   "HierarchyPass" must {
     "traverses all kinds of nodes" in { td =>
-      val testInput = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"), td)
-      Riddl.parseAndValidate(testInput) match
-        case Left(messages) => fail(messages.justErrors.format)
-        case Right(result: PassesResult) =>
-          val input = PassInput(result.root)
-          val outputs = PassesOutput()
-          val hp = TestHierarchyPass(input, outputs)
-          Pass.runPass[PassOutput](input, outputs, hp)
-          val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
-          opens must be(closes)
-          opens must be(55)
-          values must be(26)
-          leaves must be(19)
+      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val future = RiddlParserInput.fromURL(url, td).map { rpi =>
+        Riddl.parseAndValidate(rpi) match
+          case Left(messages) => fail(messages.justErrors.format)
+          case Right(result: PassesResult) =>
+            val input = PassInput(result.root)
+            val outputs = PassesOutput()
+            val hp = TestHierarchyPass(input, outputs)
+            Pass.runPass[PassOutput](input, outputs, hp)
+            val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
+            opens must be(closes)
+            opens must be(55)
+            values must be(26)
+            leaves must be(19)
+      }
+      Await.result(future, 10.seconds)
     }
     "traverses partial trees" in { td =>
       val input = RiddlParserInput(
-        """domain foo is { 
+        """domain foo is {
           |  context bar is {
           |   /* comment */
           |  } with { term baz is "a character in a play" }
-          |}  
-          |""".stripMargin, td
+          |}
+          |""".stripMargin,
+        td
       )
       Riddl.parseAndValidate(input) match
         case Left(messages) => fail(messages.justErrors.format)

@@ -5,7 +5,7 @@ import org.scalatest.TestData
 import java.time.Instant
 import java.io.InputStream
 
-class BuildInfoTest extends TestingBasis {
+class BuildInfoTest extends AbstractTestingBasis {
 
   "BuildInfo" must {
     "have all the fields" in { (td: TestData) =>

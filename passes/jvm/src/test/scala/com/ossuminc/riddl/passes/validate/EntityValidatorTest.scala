@@ -7,17 +7,19 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.CommonOptions
+
 import org.scalatest.TestData
 
 /** Unit Tests For EntityValidatorTest */
-class EntityValidatorTest extends ValidatingTest {
+class EntityValidatorTest extends AbstractValidatingTest {
 
   "EntityValidator" should {
     "handle a variety of options" in { (td: TestData) =>
-      val input = 
+      val input =
         """entity WithOptions is {
           | option finite-state-machine
           | option message-queue
@@ -35,7 +37,7 @@ class EntityValidatorTest extends ValidatingTest {
             msgs.count(_.kind.isMissing)
           numMissing must be(6)
           entity.options must contain(OptionValue((3, 9, rpi), "finite-state-machine"))
-          entity.options must contain(OptionValue((4, 9, rpi),"message-queue"))
+          entity.options must contain(OptionValue((4, 9, rpi), "message-queue"))
           entity.options must contain(OptionValue((5, 9, rpi), "aggregate"))
           entity.options must contain(OptionValue((6, 9, rpi), "transient"))
           entity.options must contain(OptionValue((7, 9, rpi), "available"))
@@ -43,13 +45,13 @@ class EntityValidatorTest extends ValidatingTest {
     }
 
     "handle entity with multiple states" in { (td: TestData) =>
-      val input = 
+      val input =
         """entity MultiState is {
           |  option finite-state-machine
           |  record fields is { field: String  }
           |  state foo of MultiState.fields
           |  handler x is {???}
-          |  state bar of MultiState.fields 
+          |  state bar of MultiState.fields
           |  handler y is {???}
           |  handler fum is { ??? }
           |}""".stripMargin
@@ -66,14 +68,14 @@ class EntityValidatorTest extends ValidatingTest {
           |  state foo of MultiState.fields
           |  handler x is {???}
           |}""".stripMargin
-      parseAndValidateInContext[Entity](input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_: Entity, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            "Entity 'MultiState' is declared as an fsm, but doesn't have " +
-              "at least two states"
-          )
+      pc.setOptions(CommonOptions.noMinorWarnings)
+      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
+        assertValidationMessage(
+          msgs,
+          Error,
+          "Entity 'MultiState' is declared as an fsm, but doesn't have " +
+            "at least two states"
+        )
       }
     }
     "catch missing things" in { (td: TestData) =>
@@ -81,6 +83,7 @@ class EntityValidatorTest extends ValidatingTest {
                     |  record fields is { field: SomeType }
                     |  state foo of Hamburger.fields
                     |}""".stripMargin
+      pc.setOptions(CommonOptions.default)
       parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
@@ -115,7 +118,9 @@ class EntityValidatorTest extends ValidatingTest {
           |  }
           |}
           |}
-          |""".stripMargin,td) 
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
@@ -145,7 +150,9 @@ class EntityValidatorTest extends ValidatingTest {
           |  }
           |}
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         val errors = msgs.justErrors
         if errors.nonEmpty then fail(errors.format)

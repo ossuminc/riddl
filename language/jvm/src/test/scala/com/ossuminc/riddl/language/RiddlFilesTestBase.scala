@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.parsing.ParsingTest
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.Assertion
 
 import java.io.File

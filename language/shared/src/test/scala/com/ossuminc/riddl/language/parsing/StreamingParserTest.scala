@@ -8,10 +8,11 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
 /** Unit Tests For StreamingParser */
-class StreamingParserTest extends NoJVMParsingTest {
+abstract class StreamingParserTest(using PlatformContext) extends AbstractParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 
@@ -19,9 +20,9 @@ class StreamingParserTest extends NoJVMParsingTest {
     """source GetWeatherForecast is {
       |  outlet Weather is command Forecast
       | } with {
-      |  briefly as "foo" 
+      |  briefly as "foo"
       |  described as "This is a source for Forecast data"
-      |} 
+      |}
       |""".stripMargin
   def sourceExpected(
     rpi: RiddlParserInput,
@@ -42,7 +43,8 @@ class StreamingParserTest extends NoJVMParsingTest {
             PathIdentifier((row + 2, 29, rpi), List("Forecast"))
           )
         )
-      ),Contents(
+      ),
+      Contents(
         BriefDescription((row + 4, 3, rpi), LiteralString((row + 4, 14, rpi), "foo")),
         BlockDescription(
           (row + 5, 3, rpi),
@@ -81,9 +83,9 @@ class StreamingParserTest extends NoJVMParsingTest {
           |  command Temperature is { ??? }
           |  source GetWeatherForecast is {
           |    outlet Weather is command Forecast
-          |  } with { 
+          |  } with {
           |    described as "This is a source for Forecast data"
-          |  } 
+          |  }
           |
           |  flow GetCurrentTemperature is {
           |    inlet Weather is command Forecast
@@ -94,12 +96,12 @@ class StreamingParserTest extends NoJVMParsingTest {
           |
           |  sink AttenuateSensor is {
           |    inlet CurrentTemp is command Temperature
-          |  } with {  
+          |  } with {
           |    described as "This is a Sink for making sensor adjustments based on temperature"
           |  }
           |} with {
           |  described as "A complete plant definition for temperature based sensor attenuation."
-          |}  
+          |}
           |} with {
           |  described as "Plants can only be specified in a domain definition"
           |}
@@ -134,7 +136,8 @@ class StreamingParserTest extends NoJVMParsingTest {
                   PathIdentifier((7, 31, rpi), List("Forecast"))
                 )
               )
-            ), Contents(
+            ),
+            Contents(
               BlockDescription(
                 (9, 5, rpi),
                 List(
@@ -169,7 +172,8 @@ class StreamingParserTest extends NoJVMParsingTest {
                   PathIdentifier((14, 35, rpi), List("Temperature"))
                 )
               )
-            ), Contents(
+            ),
+            Contents(
               BlockDescription(
                 (16, 5, rpi),
                 List(
@@ -195,7 +199,8 @@ class StreamingParserTest extends NoJVMParsingTest {
                   PathIdentifier((20, 34, rpi), List("Temperature"))
                 )
               )
-            ), Contents(
+            ),
+            Contents(
               BlockDescription(
                 (22, 5, rpi),
                 List(
@@ -207,7 +212,8 @@ class StreamingParserTest extends NoJVMParsingTest {
               )
             )
           )
-        ), Contents(
+        ),
+        Contents(
           BlockDescription(
             (25, 3, rpi),
             List(
