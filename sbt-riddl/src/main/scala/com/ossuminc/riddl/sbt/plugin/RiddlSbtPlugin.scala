@@ -1,17 +1,7 @@
 /*
- * Copyright 2019-2024 Ossum, Inc.
+ * Copyright 2019 Ossum, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.ossuminc.riddl.sbt.plugin
@@ -48,9 +38,6 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   private object V {
     val scala = "3.4.2" // NOTE: Synchronize with Helpers.C.withScala3
-    val scalacheck = "1.18.1" // NOTE: Synchronize with Dependencies.V.scalacheck
-    val scalatest = "3.2.19" // NOTE: Synchronize with Depenendencies.V.scalatest
-    val riddl: String = SbtRiddlPluginBuildInfo.version
   }
 
   /*private def getLogger(project: Extracted, state: State): ManagedLogger = {

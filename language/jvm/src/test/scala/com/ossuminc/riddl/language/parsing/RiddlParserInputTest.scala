@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.{JVMTestingBasis, URL, Await}
