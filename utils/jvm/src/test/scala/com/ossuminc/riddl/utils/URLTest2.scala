@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.utils
 
-class URLTest2 extends JVMTestingBasis {
+class URLTest2 extends AbstractTestingBasis {
 
   "URL" should {
     "create with fromCwdPath" in {

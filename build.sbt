@@ -92,7 +92,8 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
-    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings")
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
+    Test / parallelExecution := true
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
@@ -129,7 +130,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
-    Test / parallelExecution := false,
+    Test / parallelExecution := true,
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "AST Pass infrastructure and essential passes"
   )
@@ -199,6 +200,7 @@ lazy val command = Module("command", "riddl-command")
   .settings(
     coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
+    Test / parallelExecution := true,
     libraryDependencies ++= Seq(
       Dep.scopt,
       Dep.pureconfig,

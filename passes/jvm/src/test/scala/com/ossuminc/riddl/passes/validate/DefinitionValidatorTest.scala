@@ -15,7 +15,6 @@ import org.scalatest.TestData
 class DefinitionValidatorTest extends AbstractValidatingTest {
 
   "Definition Validation" should {
-    pc.setOptions(CommonOptions.empty)
     "warn when an identifier is less than 3 characters" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain po is {

@@ -18,25 +18,18 @@ class ExamplesTest extends JVMAbstractValidatingTest {
 
   val dir = "language/jvm/src/test/input/"
 
-  pc.setOptions(
-    CommonOptions(
-      showTimes = true,
-      showWarnings = false,
-      showMissingWarnings = false,
-      showStyleWarnings = false
-    )
-  )
-
   def doOne(fileName: String): Assertion = {
-
     parseAndValidateFile(Path.of(dir, fileName))
     succeed
   }
+  
+  pc.withOptions(CommonOptions.noWarnings) { _ =>
 
-  "Examples" should {
-    "compile Reactive BBQ" in { (td: TestData) => doOne("rbbq.riddl") }
-    "compile Pet Store" in { (td: TestData) => doOne("petstore.riddl") }
-    "compile Everything" in { (td: TestData) => doOne("everything.riddl") }
-    "compile dokn" in { (td: TestData) => doOne("dokn.riddl") }
+    "Examples" should {
+      "compile Reactive BBQ" in { (td: TestData) => doOne("rbbq.riddl") }
+      "compile Pet Store" in { (td: TestData) => doOne("petstore.riddl") }
+      "compile Everything" in { (td: TestData) => doOne("everything.riddl") }
+      "compile dokn" in { (td: TestData) => doOne("dokn.riddl") }
+    }
   }
 }

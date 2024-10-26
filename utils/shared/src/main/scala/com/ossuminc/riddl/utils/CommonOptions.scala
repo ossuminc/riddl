@@ -74,6 +74,7 @@ case class CommonOptions(
 object CommonOptions {
   def empty: CommonOptions = CommonOptions()
   def default: CommonOptions = CommonOptions()
+  def noANSIMessages: CommonOptions = CommonOptions(noANSIMessages = true)
   def noWarnings: CommonOptions = empty.copy(showWarnings = false)
   def noMinorWarnings: CommonOptions = empty.copy(
     showMissingWarnings = false,

@@ -68,14 +68,15 @@ class EntityValidatorTest extends AbstractValidatingTest {
           |  state foo of MultiState.fields
           |  handler x is {???}
           |}""".stripMargin
-      pc.setOptions(CommonOptions.noMinorWarnings)
-      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Entity 'MultiState' is declared as an fsm, but doesn't have " +
-            "at least two states"
-        )
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Entity 'MultiState' is declared as an fsm, but doesn't have " +
+              "at least two states"
+          )
+        }
       }
     }
     "catch missing things" in { (td: TestData) =>
@@ -83,7 +84,6 @@ class EntityValidatorTest extends AbstractValidatingTest {
                     |  record fields is { field: SomeType }
                     |  state foo of Hamburger.fields
                     |}""".stripMargin
-      pc.setOptions(CommonOptions.default)
       parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,

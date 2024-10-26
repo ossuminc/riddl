@@ -17,7 +17,6 @@ import java.nio.file.Path
 case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
 
 class VisitingPassTest extends ParsingTest {
-  given PlatformContext = JVMPlatformContext()
 
   "VisitingPass" must {
     "descend cleanly" in { _ =>

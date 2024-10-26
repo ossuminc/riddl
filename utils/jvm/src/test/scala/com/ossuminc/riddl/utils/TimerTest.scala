@@ -11,10 +11,8 @@ import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.Instant
 
-class TimerTest extends JVMTestingBasis {
-
-  given PlatformContext = JVMPlatformContext()
-
+class TimerTest extends AbstractTestingBasis {
+  
   "timer" should {
     "measure the correct time" in { (td: TestData) =>
       val start = Instant.parse("2007-12-03T00:00:00.00Z")

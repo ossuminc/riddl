@@ -16,7 +16,6 @@ import org.scalatest.TestData
 /** Unit Tests For TypeValidationTest */
 class TypeValidatorTest extends AbstractValidatingTest {
 
-  pc.setOptions(CommonOptions.default)
   "TypeValidator" should {
     "ensure type names start with capital letter" in { (td: TestData) =>
       val input = RiddlParserInput(

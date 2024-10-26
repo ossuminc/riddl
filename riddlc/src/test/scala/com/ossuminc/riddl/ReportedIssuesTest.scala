@@ -38,12 +38,13 @@ class ReportedIssuesTest extends JVMAbstractValidatingTest {
   def doOne(fileName: String, options: CommonOptions = defaultOptions)(
     checkResult: Either[Messages.Messages, PassesResult] => Assertion
   ): Assertion = {
-    pc.setOptions(options)
     val path = Path.of(dir).resolve(fileName)
     val url = PathUtils.urlFromPath(path)
-    val future = RiddlParserInput.fromURL(url).map { rpi =>
-      val either = Riddl.parseAndValidate(rpi)
-      checkResult(either)
+    val future = pc.withOptions(options) { _ =>
+      RiddlParserInput.fromURL(url).map { rpi =>
+        val either = Riddl.parseAndValidate(rpi)
+        checkResult(either)
+      }
     }
     Await.result(future, 10.seconds)
   }

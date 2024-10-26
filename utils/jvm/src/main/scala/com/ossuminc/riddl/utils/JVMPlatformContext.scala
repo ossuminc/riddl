@@ -23,9 +23,7 @@ class JVMPlatformContext extends PlatformContext {
 
   given PlatformContext = this
 
-  type Path = java.nio.file.Path
-
-  this.setLog(SysLogger())
+  logger = SysLogger()
 
   @JSExport
   override def load(url: URL): Future[String] = {

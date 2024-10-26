@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.SysLogger 
+import com.ossuminc.riddl.utils.pc
 
 import java.nio.file.{Path,Files}
 

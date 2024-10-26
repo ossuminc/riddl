@@ -32,17 +32,18 @@ class StreamValidatorTest extends AbstractValidatingTest {
         |  connector c1 is { from outlet a.foo.out to inlet a.foo.in }
         | }
         |} """.stripMargin,td)
-      pc.setOptions(CommonOptions.noMinorWarnings)
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (domain, _, messages) =>
-          domain.isEmpty must be(false)
-          messages.isEmpty must be(false)
-          messages.hasErrors must be(true)
-          val errors = messages.justErrors
-          info(errors.format)
-          errors.exists { (msg: Messages.Message) =>
-            msg.message.startsWith("Type mismatch in Connector 'c1':")
-          } must be(true)
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) {
+          case (domain, _, messages) =>
+            domain.isEmpty must be(false)
+            messages.isEmpty must be(false)
+            messages.hasErrors must be(true)
+            val errors = messages.justErrors
+            info(errors.format)
+            errors.exists { (msg: Messages.Message) =>
+              msg.message.startsWith("Type mismatch in Connector 'c1':")
+            } must be(true)
+        }
       }
     }
     "error on unattached inlets" in { (td:TestData) =>

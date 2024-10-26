@@ -12,11 +12,9 @@ import org.scalatest.wordspec.AnyWordSpec
 class LoaderTest extends AnyWordSpec with Matchers {
 
   "Loader" must {
-    "load" in {
-      import scala.concurrent.duration.DurationInt
-      val url = URL(
-        "https://raw.githubusercontent.com/ossuminc/riddl/scalaJs-support/language/jvm/src/test/input/domains/rbbq.riddl"
-      )
+    "load a file" in {
+      val path = "language/jvm/src/test/input/domains/rbbq.riddl"
+      val url = URL.fromCwdPath(path)
       val io = DOMPlatformContext()
       val future = io.load(url).map[String] { (content: String) =>
         content must not be (empty)

@@ -185,7 +185,7 @@ object CommonOptionsHelper {
     val (common, effects1) = OParser.runParser[CommonOptions](
       commonOptionsParser,
       options,
-      com.ossuminc.riddl.utils.CommonOptions.empty,
+      com.ossuminc.riddl.utils.CommonOptions.default,
       setup
     )
     OParser.runEffects(effects1, dontTerminate)

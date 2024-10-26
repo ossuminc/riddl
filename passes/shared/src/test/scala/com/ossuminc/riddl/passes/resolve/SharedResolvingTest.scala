@@ -19,18 +19,13 @@ abstract class SharedResolvingTest(using pc: PlatformContext) extends AbstractPa
   def resolve(
     root: Root
   ): (PassInput, PassesOutput) = {
-    pc.setOptions(
-      CommonOptions(
-        showMissingWarnings = false,
-        showUsageWarnings = false,
-        showStyleWarnings = false
-      )
-    )
-    val input = PassInput(root)
-    val outputs = PassesOutput()
-    Pass.runSymbols(input, outputs)
-    Pass.runResolution(input, outputs)
-    input -> outputs
+    pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+      val input = PassInput(root)
+      val outputs = PassesOutput()
+      Pass.runSymbols(input, outputs)
+      Pass.runResolution(input, outputs)
+      input -> outputs
+    }
   }
 
   def parseAndResolve(

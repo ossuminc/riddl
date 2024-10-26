@@ -6,16 +6,18 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{StringLogger,CommonOptions}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{StringLogger, CommonOptions}
+import com.ossuminc.riddl.utils.pc
 
 class RunCommandsOnExamplesTest extends RunCommandOnExamplesTest(shouldDelete = false) {
 
   "RunCommandsOnExamplesTest" should {
     "handle from as in IDEA Plugin" in {
-      pc.setOptions(CommonOptions(noANSIMessages = true))
-      pc.setLog(StringLogger(withHighlighting = false))
-      runTestWithArgs("ReactiveBBQ", Array("from", "ReactiveBBQ.conf"))
+      pc.withOptions(CommonOptions(noANSIMessages = true)) { _ =>
+        pc.withLogger(StringLogger()) { _ =>
+          runTestWithArgs("ReactiveBBQ", Array("from", "ReactiveBBQ.conf"))
+        }
+      }
     }
   }
 }

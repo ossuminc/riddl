@@ -7,7 +7,7 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.commands.RunCommandSpecBase
-import com.ossuminc.riddl.utils.{PathUtils, Zip}
+import com.ossuminc.riddl.utils.{pc, PathUtils, Zip}
 import org.scalatest.Assertion
 
 import java.net.URL
