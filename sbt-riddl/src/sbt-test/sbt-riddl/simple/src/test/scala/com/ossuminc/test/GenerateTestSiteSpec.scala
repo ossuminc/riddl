@@ -3,6 +3,7 @@ package com.ossuminc.riddl.sbt.test.app
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.Assertion
+import com.ossuminc.riddl.utils.pc
 
 import com.ossuminc.riddl.commands.Commands
 

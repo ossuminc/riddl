@@ -53,7 +53,7 @@ object ResolutionPass extends PassInfo[PassOptions] {
   * @param input
   *   The input to the original pass.
   * @param outputs
-  *   THe outputs from preceding passes, which should only be the [[riddl.utils.symbols.SymbolsPass]]
+  *   THe outputs from preceding passes, which should only be the [[com.ossuminc.riddl.passes.symbols.SymbolsPass]]
   *   output.
   */
 case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: PlatformContext)
@@ -95,8 +95,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveOnMessageClause(mc, parents)
       case statement: Statement =>
         resolveStatement(statement, parents)
-      case tc: OnTerminationClause => ()
-      case oc: OnOtherClause       => ()
+      case _: OnTerminationClause => ()
+      case _: OnOtherClause       => ()
       case e: Entity =>
         resolveAuthorRefs(e, parents)
         addEntity(e)
@@ -347,7 +347,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             resolved[T](pathId, parent, d)
             Some(d.asInstanceOf[T] -> pars)
           case (d, _) :: Nil =>
-            // List has one component but its the wrong type
+            // List has one component but it's the wrong type
             wrongType[T](pathId, parent, d)
             None
           case (d, pars) :: _ if isSameKindAndHasDifferentPathsToSameNode(list) =>
@@ -428,7 +428,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         findAnchorInParents(topName, parents) match
           case afip: AnchorFoundInParents => afip
           case _: AnchorNotFoundInParents =>
-            // Its not an ancestor so let's try the symbol table
+            // It's not an ancestor so let's try the symbol table
             findAnchorInSymTab(topName) match
               case afis: AnchorFoundInSymTab     => afis
               case anfis: AnchorNotFoundInSymTab => anfis
@@ -494,17 +494,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       // return the resolution
       resolution
     else
-      val maybeFound = stack.toSeq
       stack.headOption match
         case Some(_: Root) if stack.size == 1 =>
-          // then pop it off because RootContainers don't count and we want to
+          // then pop it off because RootContainers don't count, and we want to
           // rightfully return an empty sequence for "not found"
           stack.pop()
           // Convert parent stack to immutable sequence
           Some(stack.head.asInstanceOf[T] -> stack.tail.toSeq.asInstanceOf[Seq[Parent]])
-        case Some(dfntn: T) =>
+        case Some(definition: T) =>
           // Not the root, just convert the result to immutable Seq
-          Some(dfntn -> stack.tail.toSeq.asInstanceOf[Seq[Parent]])
+          Some(definition -> stack.tail.toSeq.asInstanceOf[Seq[Parent]])
         case Some(_) =>
           None
         case None =>
@@ -518,7 +517,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     pidDirectParent: Parent,
     definition: Definition
   ): T =
-    // a candidate was found and it has the same type as expected
+    // A candidate was found, and it has the same type as expected
     val t = definition.asInstanceOf[T]
     refMap.add[T](pathId, pidDirectParent, t)
     associateUsage(pidDirectParent, t)
@@ -679,7 +678,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   end resolveAMessageRef
 
   private def handleTypeResolution(
-    loc: At,
     typ: Type,
     useCase: AggregateUseCase,
     resolution: Resolution[Type]
@@ -709,11 +707,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case Some((typ: Type, _: Parents)) =>
         keyword match
           case Keyword.type_ | "" => resolution // this is generic, any type so just pass the result
-          case Keyword.command    => handleTypeResolution(loc, typ, CommandCase, resolution)
-          case Keyword.query      => handleTypeResolution(loc, typ, QueryCase, resolution)
-          case Keyword.event      => handleTypeResolution(loc, typ, EventCase, resolution)
-          case Keyword.result     => handleTypeResolution(loc, typ, ResultCase, resolution)
-          case Keyword.record     => handleTypeResolution(loc, typ, RecordCase, resolution)
+          case Keyword.command    => handleTypeResolution(typ, CommandCase, resolution)
+          case Keyword.query      => handleTypeResolution(typ, QueryCase, resolution)
+          case Keyword.event      => handleTypeResolution(typ, EventCase, resolution)
+          case Keyword.result     => handleTypeResolution(typ, ResultCase, resolution)
+          case Keyword.record     => handleTypeResolution(typ, RecordCase, resolution)
           case Keyword.graph =>
             typ.typEx match
               case _: Graph => resolution // success
@@ -826,7 +824,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case Some(head) if head.isAnonymous && allDifferent =>
         // pick the one that is the right type or the first one
         list.find(_._1.getClass == expectedClass) match {
-          case Some((defn, parents)) => defn +: parents
+          case Some((definition, parents)) => definition +: parents
           case None                  => list.take(1).map(_._1)
         }
       case _ =>
@@ -923,24 +921,24 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     }
   end candidatesFromContents
 
-  private def candidatesFromStateTypeRef(typeRef: TypeRef, parents: Parents): Contents[Definition] = {
-    val resolution: Resolution[Type] = resolveATypeRef(typeRef, parents)
-    resolution match {
-      case None => Contents.empty[Definition] // not found
-      case Some((typ: Type, _: Parents)) =>
-        typ.typEx match {
-          case agg: AggregateTypeExpression => agg.fields.toContents
-          case _                            => Contents.empty[Definition]
-        }
-    }
-  }
+  // private def candidatesFromStateTypeRef(typeRef: TypeRef, parents: Parents): Contents[Definition] = {
+  //   val resolution: Resolution[Type] = resolveATypeRef(typeRef, parents)
+  //   resolution match {
+  //     case None => Contents.empty[Definition] // not found
+  //     case Some((typ: Type, _: Parents)) =>
+  //       typ.typEx match {
+  //         case agg: AggregateTypeExpression => agg.fields.toContents
+  //         case _                            => Contents.empty[Definition]
+  //       }
+  //   }
+  // }
 
-  private def findResolution(soughtName: String, candidate: Definition): Boolean = {
-    candidate match {
-      case omc: OnMessageClause if omc.msg.id.nonEmpty =>
-        omc.msg.id.getOrElse(Identifier.empty).value == soughtName
-      case other: Definition =>
-        other.id.value == soughtName
-    }
-  }
+  // private def findResolution(soughtName: String, candidate: Definition): Boolean = {
+  //   candidate match {
+  //     case omc: OnMessageClause if omc.msg.id.nonEmpty =>
+  //       omc.msg.id.getOrElse(Identifier.empty).value == soughtName
+  //     case other: Definition =>
+  //       other.id.value == soughtName
+  //   }
+  // }
 }

@@ -353,7 +353,9 @@ object Messages {
     }
   }
 
-  /** A utility to help accumulate error messages with regards to the settings in the [[CommonOptions]] */
+  /** A utility to help accumulate error messages. Whether the messages are accumulated or not is governed by the
+    * settings in the `options` field of [[com.ossuminc.riddl.utils.PlatformContext]]
+    */
   @JSExportTopLevel("Accumulator")
   case class Accumulator() {
     private val msgs: mutable.ListBuffer[Message] = mutable.ListBuffer.empty

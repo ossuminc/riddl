@@ -12,9 +12,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.PassCreators
-import com.ossuminc.riddl.utils.{PlatformContext,URL,Await}
-
-import java.nio.file.Path
+import com.ossuminc.riddl.utils.{PlatformContext, URL, Await}
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
@@ -23,8 +21,6 @@ object Riddl {
     *
     * @param input
     *   The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input of the parsing
-    * @param commonOptions
-    *   The [[com.ossuminc.riddl.language.CommonOptions]] to use during the parsing
     * @return
     */
   def parse(input: RiddlParserInput)(using io: PlatformContext): Either[Messages, Root] = {
@@ -35,8 +31,6 @@ object Riddl {
     *
     * @param root
     *   The root object of the model which is the product of parsing
-    * @param options
-    *   The common options to use for the validation
     * @param shouldFailOnError
     *   Whether this should just return the Left[Messages] if an error occurs in them, or not
     * @return
@@ -44,7 +38,7 @@ object Riddl {
   def validate(
     root: Root,
     shouldFailOnError: Boolean = true
-  )(using PlatformContext) = {
+  )(using PlatformContext): Either[Messages, PassesResult] = {
     val result = Pass.runStandardPasses(root)
     if shouldFailOnError && result.messages.hasErrors then Left(result.messages)
     else Right(result)
@@ -54,16 +48,9 @@ object Riddl {
     *
     * @param input
     *   The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input to the parser
-    * @param commonOptions
-    *   The [[com.ossuminc.riddl.language.CommonOptions]] to use during parsing and validation
     * @param shouldFailOnError
     *   If set to true if the parsing succeeds and the validation generates errors in which case the errors will simply
     *   be returned, otherwise the PassesResult will be returned.
-    * @param passes
-    *   The set of passes to be run after parsing. It defaults to the standard passes: symbols, reference resolution,
-    *   validation
-    * @param log
-    *   The log to which messages should be logged
     * @return
     */
   def parseAndValidate(
