@@ -33,9 +33,9 @@ object RiddlSbtPlugin extends AutoPlugin {
 
     lazy val riddlcPath = settingKey[Option[File]]("Optional path to riddlc").withRank(KeyRanks.Invisible)
 
-    lazy val riddlcConf = settingKey[File]("Path to the config file")
+    lazy val riddlcConf = settingKey[File]("Path to the config file").withRank(KeyRanks.Invisible)
 
-    lazy val riddlcOptions = settingKey[Seq[String]]("Options to pass to riddlc")
+    lazy val riddlcOptions = settingKey[Seq[String]]("Options to pass to riddlc").withRank(KeyRanks.Invisible)
 
     lazy val riddlcMinVersion = {
       settingKey[String]("Ensure the riddlc used is at least this version")

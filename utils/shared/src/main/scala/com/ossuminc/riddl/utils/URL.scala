@@ -70,15 +70,15 @@ case class URL(scheme: String="", authority: String="", basis: String="", path: 
 
   @JSExport def resolve(pathElement: String): URL = {
     require(!pathElement.startsWith("/"),"Invalid path element starts with: /")
-    val p = 
-      if path.isEmpty then 
+    val p =
+      if path.isEmpty then
         pathElement
       else if path.contains("/") then
         val prefix = path.substring(0, path.lastIndexOf('/'))
         prefix + "/" + pathElement
-      else 
-        pathElement   
-      end if  
+      else
+        pathElement
+      end if
     URL(scheme, authority, basis, p)
   }
 }
@@ -105,7 +105,7 @@ object URL {
 
   /** Create a URL from a string, ensuring validity first.
    * This URL constructor parses a url string for validity and then constructs the URL. In no
-   * case will it construct a URL with a basis. 
+   * case will it construct a URL with a basis.
    * @constructor
    * @param url
    *   The string to parse into a URL. Only supports file: http: and https: schemes
@@ -136,8 +136,8 @@ object URL {
   }
 
   /** Construct a URL from a partial path that is interpreted as the suffix
-   * to the current working directory (cwd).   
-   * 
+   * to the current working directory (cwd).
+   *
    * @param path
    *   The trailing path to add to the current working directory. This must not start with a '/' or an
    *   exception will be thrown.
@@ -152,7 +152,7 @@ object URL {
 
   /** Construct a URL from a path string. The entire path is taken as the basis of the URL
    * so relative paths can be constructed from it. Generally only directory paths should
-   * be used with this constructor. 
+   * be used with this constructor.
    *
    * @param path
    *  The full path of the intended URL. This *must* start with a / or an exception will be thrown.

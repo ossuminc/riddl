@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.utils
 
-class URLTest extends TestingBasis {
+class URLTest extends AbstractTestingBasis {
 
   "URL" should {
     "construct a file URL from string" in {

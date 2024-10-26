@@ -7,11 +7,13 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At,AST}
+import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
-import scala.concurrent.ExecutionContext.Implicits.global
 import org.scalatest.TestData
+import scala.concurrent.duration.DurationInt
 
 /** Unit Tests For Parsing */
 class ParserTest extends ParsingTest with org.scalatest.Inside {
@@ -169,22 +171,26 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((content, rpi)) =>
-          content must be( Context(
-            (1, 1, rpi),
-            Identifier((1, 9, rpi), "bar"),
-            Contents(
-              OptionValue((2, 10, rpi), "service", Seq.empty),
-              OptionValue((3, 10, rpi), "wrapper", Seq.empty),
-              OptionValue((4, 10, rpi), "gateway", Seq.empty)
+          content must be(
+            Context(
+              (1, 1, rpi),
+              Identifier((1, 9, rpi), "bar"),
+              Contents(
+                OptionValue((2, 10, rpi), "service", Seq.empty),
+                OptionValue((3, 10, rpi), "wrapper", Seq.empty),
+                OptionValue((4, 10, rpi), "gateway", Seq.empty)
+              )
             )
-          ))
+          )
       }
     }
-    "allow type definitions in contexts" in {  (td: TestData) =>
+    "allow type definitions in contexts" in { (td: TestData) =>
       val rpi = RiddlParserInput(
-      """type Vikings = any of {
+        """type Vikings = any of {
         |  Ragnar Lagertha Bjorn Floki Rollo Ivar Aslaug Ubbe
-        |}""".stripMargin, td)
+        |}""".stripMargin,
+        td
+      )
       parseInContext(rpi, _.types.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -253,7 +259,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       }
     }
     "allow entity definitions" in { (td: TestData) =>
-      val input = RiddlParserInput("""entity Hamburger is {
+      val input = RiddlParserInput(
+        """entity Hamburger is {
          |  option transient
          |  option aggregate
          |  type Foo is { x: String }
@@ -335,28 +342,32 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                   Identifier(_, "foo"),
                   Some(Aggregation(_, firstAggrContents)),
                   Some(Aggregation(_, secondAggrContents)),
-                  _, _
+                  _,
+                  _
                 ) =>
-              firstAggrContents must be (
-                Contents(Field(At(3,14,rpi), Identifier(At(3,14,rpi), "b"), Bool(At(3,18,rpi)), Contents.empty))
+              firstAggrContents must be(
+                Contents(Field(At(3, 14, rpi), Identifier(At(3, 14, rpi), "b"), Bool(At(3, 18, rpi)), Contents.empty))
               )
-              secondAggrContents must be (
-                Contents(Field(At(4,13,rpi), Identifier(At(4,13,rpi), "i"), Integer(At(4,17,rpi)), Contents.empty))
+              secondAggrContents must be(
+                Contents(
+                  Field(At(4, 13, rpi), Identifier(At(4, 13, rpi), "i"), Integer(At(4, 17, rpi)), Contents.empty)
+                )
               )
           }
       }
     }
     "handle a comment" in { (td: TestData) =>
       val input: RiddlParserInput = RiddlParserInput(
-        """/* this is a comment */""".stripMargin, td
+        """/* this is a comment */""".stripMargin,
+        td
       )
-      parseInContext[InlineComment](input,_.contents.filter[InlineComment].head) match
+      parseInContext[InlineComment](input, _.contents.filter[InlineComment].head) match
         case Left(messages) =>
           fail(messages.format)
-        case Right(comment, _ ) =>
+        case Right(comment, _) =>
           comment.lines.head must be("this is a comment ")
     }
-    "support Replica types in Contexts" in {  (td: TestData) =>
+    "support Replica types in Contexts" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {
           |  context bar is {
@@ -374,12 +385,13 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       }
     }
     "parse from a complex file" in { (td: TestData) =>
-      val rpi = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"),td)
-      parseTopLevelDomains(rpi) match {
-        case Left(errors) =>
-          fail(errors.format)
-        case Right(root) =>
-          /*
+      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val future = RiddlParserInput.fromURL(url, td).map { rpi =>
+        parseTopLevelDomains(rpi) match {
+          case Left(errors) =>
+            fail(errors.format)
+          case Right(root) =>
+            /*
           // Top Level Author
           author Reid is { name: "Reid" email: "reid@ossum.biz" }
 
@@ -392,19 +404,21 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
 
           /* This is another way to do a comment, just like C/C++ */
           command DoAThing is { thingField: Integer }
-           */
-          root.contents.startsWith(
-            Seq(
-              LineComment((1, 1, rpi), "Top Level Author"),
-              Author(
-                (2, 1, rpi),
-                Identifier((2, 8, rpi), "Reid"),
-                LiteralString((2, 23, rpi), "Reid"),
-                LiteralString((2, 37, rpi), "reid@ossum.biz")
+             */
+            root.contents.startsWith(
+              Seq(
+                LineComment((1, 1, rpi), "Top Level Author"),
+                Author(
+                  (2, 1, rpi),
+                  Identifier((2, 8, rpi), "Reid"),
+                  LiteralString((2, 23, rpi), "Reid"),
+                  LiteralString((2, 37, rpi), "reid@ossum.biz")
+                )
               )
             )
-          )
+        }
       }
+      Await.result(future, 10.seconds)
     }
   }
 }

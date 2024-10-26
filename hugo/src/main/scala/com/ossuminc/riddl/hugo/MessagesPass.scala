@@ -1,11 +1,12 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.language.Messages
 
 import scala.collection.mutable
 
@@ -30,7 +31,7 @@ case class MessageInfo(
 )
 
 case class MessageOutput(
-  root: Root, 
+  root: Root,
   messages: Messages.Messages,
   collected: Seq[MessageInfo]
 ) extends CollectingPassOutput[MessageInfo]
@@ -46,7 +47,7 @@ case class MessageOutput(
 // a set of tabs:
 //
 
-case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)
+case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)(using PlatformContext)
     extends CollectingPass[MessageInfo](input, outputs) {
 
   requires(SymbolsPass)
@@ -91,7 +92,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
 object MessagesPass extends PassInfo[HugoPass.Options] {
   val name: String = "Messages"
-  def creator(options: HugoPass.Options): PassCreator = {
-    (in: PassInput, out: PassesOutput) => MessagesPass(in, out, options)
+  def creator(options: HugoPass.Options)(using PlatformContext) = { (in: PassInput, out: PassesOutput) =>
+    MessagesPass(in, out, options)
   }
 }

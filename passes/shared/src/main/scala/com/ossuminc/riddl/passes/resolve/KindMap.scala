@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.utils
 
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}

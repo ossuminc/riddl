@@ -5,8 +5,8 @@
  */
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Messages, errors}
+import com.ossuminc.riddl.language.Messages
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader}
 import pureconfig.error.ConfigReaderFailures
 import scopt.OParser
@@ -54,7 +54,7 @@ object CommandOptions {
     def command: String = "unspecified"
     def inputFile: Option[Path] = Option.empty[Path]
   }
-  
+
   /** A helper function for reading optional items from a config file.
     *
     * @param objCur

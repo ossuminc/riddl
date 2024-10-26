@@ -1,12 +1,12 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Root
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
 /** Unit Tests for Options Validation */
-class OptionsValidationTest extends ValidatingTest {
+class OptionsValidationTest extends AbstractValidatingTest {
 
   "Options" should {
     "identify incorrect css" in { (td: TestData) =>

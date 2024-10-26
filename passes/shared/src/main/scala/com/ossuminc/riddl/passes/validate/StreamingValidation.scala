@@ -7,7 +7,10 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.utils.{pc, ec}
+
 import scala.math.abs
 import scala.collection.mutable
 
@@ -78,7 +81,7 @@ trait StreamingValidation extends TypeValidation {
 
   private def checkUnattachedOutlets(): Unit = {
     val connected: Seq[(Outlet, Inlet)] = for
-      conn <- connectors.toSeq 
+      conn <- connectors.toSeq
       parents = symbols.parentsOf(conn)
       inletRef = conn.to
       outletRef = conn.from

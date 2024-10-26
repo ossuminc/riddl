@@ -6,9 +6,10 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
-import com.ossuminc.riddl.language.{AST, Messages}
+import com.ossuminc.riddl.language.{Messages, AST}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
 
@@ -25,7 +26,11 @@ case class ToDoListOutput(
   collected: Seq[ToDoItem] = Seq.empty
 ) extends CollectingPassOutput[ToDoItem]
 
-case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPass.Options)
+case class ToDoListPass(
+  input: PassInput,
+  outputs: PassesOutput,
+  options: HugoPass.Options
+)(using PlatformContext)
     extends CollectingPass[ToDoItem](input, outputs) {
 
   private val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
@@ -80,7 +85,7 @@ case class ToDoListPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
 object ToDoListPass extends PassInfo[HugoPass.Options] {
   val name: String = "ToDoList"
-  def creator(options: HugoPass.Options): PassCreator = { (in: PassInput, out: PassesOutput) =>
+  def creator(options: HugoPass.Options)(using PlatformContext): PassCreator = { (in: PassInput, out: PassesOutput) =>
     ToDoListPass(in, out, options)
   }
 }

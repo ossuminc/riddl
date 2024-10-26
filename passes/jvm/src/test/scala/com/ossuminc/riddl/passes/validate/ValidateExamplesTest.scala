@@ -6,13 +6,14 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.utils.CommonOptions
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 import scala.runtime.stdLibPatches.Predef.assert
 
 /** Validate files */
-class ValidateExamplesTest extends ValidatingTest {
+class ValidateExamplesTest extends JVMAbstractValidatingTest {
 
   val files: Map[String, String] = Map(
     "Reactive BBQ" -> "rbbq.riddl",
@@ -20,7 +21,7 @@ class ValidateExamplesTest extends ValidatingTest {
   )
 
   "ValidateExamples" should {
-    "validate all with no errors or warnings" in {  (td:TestData) =>
+    "validate all with no errors or warnings" in { (td: TestData) =>
       for ((label, fileName) <- files) yield {
         validateFile(label, fileName) { case (_, messages) =>
           val errors = messages.justErrors
@@ -35,20 +36,19 @@ class ValidateExamplesTest extends ValidatingTest {
   }
 
   "Enumerations" should {
-    "enforce Enumerators to start with lower case" in { (td:TestData) =>
-      validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") {
-        case (_, messages) =>
-          assertValidationMessage(messages, "style warnings")(_.kind.isStyle)
+    "enforce Enumerators to start with lower case" in { (td: TestData) =>
+      validateFile(label = "t0001", fileName = "enumerations/t0001.riddl") { case (_, messages) =>
+        assertValidationMessage(messages, "style warnings")(_.kind.isStyle)
       }
     }
-    "allow enumerators with values" in { (td:TestData) =>
+    "allow enumerators with values" in { (td: TestData) =>
       validateFile("t0002", "enumerations/t0002.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
     }
   }
   "Mappings" should {
-    "allow ranges" in { (td:TestData) =>
+    "allow ranges" in { (td: TestData) =>
       validateFile("t0001", "mappings/t0001.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
@@ -56,7 +56,7 @@ class ValidateExamplesTest extends ValidatingTest {
   }
 
   "Ranges" should {
-    "allow ranges" in { (td:TestData) =>
+    "allow ranges" in { (td: TestData) =>
       validateFile("t0001", "ranges/t0001.riddl") { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
       }
@@ -64,20 +64,20 @@ class ValidateExamplesTest extends ValidatingTest {
   }
 
   "options.showStyleWarnings" should {
-    "determine if style warnings are returned from validation" in { (td:TestData) =>
+    "determine if style warnings are returned from validation" in { (td: TestData) =>
+      pc.setOptions(CommonOptions(showStyleWarnings = false))
       validateFile(
         label = "badstyle",
-        fileName = "domains/badstyle.riddl",
-        options = CommonOptions(showStyleWarnings = false)
+        fileName = "domains/badstyle.riddl"
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isStyle))
         assert(messages.exists(_.kind.isMissing))
       }
+      pc.setOptions(CommonOptions())
       validateFile(
         label = "badstyle",
-        fileName = "domains/badstyle.riddl",
-        options = CommonOptions()
+        fileName = "domains/badstyle.riddl"
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isStyle))
@@ -86,19 +86,19 @@ class ValidateExamplesTest extends ValidatingTest {
     }
   }
   "options.showMissingWarnings" should {
-    "determine if missing warnings are returned from validation" in { (td:TestData) =>
+    "determine if missing warnings are returned from validation" in { (td: TestData) =>
+      pc.setOptions(CommonOptions(showMissingWarnings = false))
       validateFile(
         label = "badstyle",
-        fileName = "domains/badstyle.riddl",
-        options = CommonOptions(showMissingWarnings = false)
+        fileName = "domains/badstyle.riddl"
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(!messages.exists(_.kind.isMissing))
       }
+      pc.setOptions(CommonOptions())
       validateFile(
         label = "badstyle",
-        fileName = "domains/badstyle.riddl",
-        options = CommonOptions()
+        fileName = "domains/badstyle.riddl"
       ) { case (_, messages) =>
         assert(!messages.exists(_.kind.isError))
         assert(messages.exists(_.kind.isMissing))

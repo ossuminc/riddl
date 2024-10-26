@@ -2,14 +2,17 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.{Messages, StyleWarning}
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import org.scalatest.TestData 
+import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.CommonOptions
 
-class StatementValidatorTest extends ValidatingTest {
+import org.scalatest.TestData
+
+class StatementValidatorTest extends AbstractValidatingTest {
 
   "Statement Validation" must {
-    "identify cross-context references" in { (td:TestData) =>
+    "identify cross-context references" in { (td: TestData) =>
       val input =
         """domain test {
           |  context one {
@@ -30,8 +33,8 @@ class StatementValidatorTest extends ValidatingTest {
           |  }
           |}
           |""".stripMargin
-      parseAndValidate(input, "test case",CommonOptions(), shouldFailOnErrors = false) {
-        (root: Root, messages: Messages ) =>
+      parseAndValidate(input, "test case", shouldFailOnErrors = false) {
+        (root: Root, messages: Messages) =>
           // info(messages.format)
           root.isEmpty mustBe false
           messages.hasErrors mustBe false
@@ -43,6 +46,6 @@ class StatementValidatorTest extends ValidatingTest {
           } must be(true)
       }
 
-      }
+    }
   }
 }

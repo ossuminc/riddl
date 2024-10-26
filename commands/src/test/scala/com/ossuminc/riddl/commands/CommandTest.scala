@@ -7,14 +7,14 @@ package com.ossuminc.riddl.commands
 
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
-import com.ossuminc.riddl.utils.TestingBasis
-import com.ossuminc.riddl.command.{Command,CommandOptions}
+import com.ossuminc.riddl.utils.AbstractTestingBasis
+import com.ossuminc.riddl.utils.{pc, ec}
 import pureconfig.*
 import scopt.*
 
 import java.nio.file.Path
 
-class CommandTest extends TestingBasis {
+class CommandTest extends AbstractTestingBasis {
 //PluginSpecBase(
 //      svcClassPath = Path.of("com/ossuminc/riddl/command/CommandPlugin.class"),
 //      implClassPath = Path
@@ -23,7 +23,7 @@ class CommandTest extends TestingBasis {
 //      jarFilename = "test-command.jar"
 //    ) {
 
-  "CommandPlugin " should {
+  "CommandTest" should {
     "get options from command line" in {
       val cmd = ASimpleTestCommand()
       val args: Seq[String] = Seq("test", "input-file", "Success!")

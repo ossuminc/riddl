@@ -1,17 +1,18 @@
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.*
 import com.ossuminc.riddl.passes.symbols.*
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 
 import java.nio.file.Path
 
-trait ThemeGenerator extends UseCaseDiagramSupport {
+trait ThemeGenerator(using pc: PlatformContext) extends UseCaseDiagramSupport {
 
   def input: PassInput
 
@@ -21,7 +22,7 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
 
   val messages: Messages.Accumulator
   lazy val inputFile: Option[Path] = options.inputFile
-  lazy val commonOptions: CommonOptions = input.commonOptions
+  lazy val commonOptions: CommonOptions = pc.options
   lazy val refMap: ReferenceMap = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get.refMap
 
   lazy val symbolsOutput: SymbolsOutput = outputs.symbols
@@ -99,11 +100,16 @@ trait ThemeGenerator extends UseCaseDiagramSupport {
 }
 
 object ThemeGenerator {
-  def apply(options: HugoPass.Options, inputs: PassInput, outputs: PassesOutput, messages: Messages.Accumulator): ThemeGenerator = {
+  def apply(
+    options: HugoPass.Options,
+    inputs: PassInput,
+    outputs: PassesOutput,
+    messages: Messages.Accumulator
+  )(using PlatformContext): ThemeGenerator = {
     options.hugoThemeName match {
       case None                            => GeekDocGenerator(options, inputs, outputs, messages)
       case Some(GeekDocWriter.name) | None => GeekDocGenerator(options, inputs, outputs, messages)
-      case Some(DotdockWriter.name)         => DotdockGenerator(options, inputs, outputs, messages)
+      case Some(DotdockWriter.name)        => DotdockGenerator(options, inputs, outputs, messages)
       case Some(s) =>
         messages.addWarning((0, 0), s"Hugo theme named '$s' is not supported, using GeekDoc ")
         GeekDocGenerator(options, inputs, outputs, messages)

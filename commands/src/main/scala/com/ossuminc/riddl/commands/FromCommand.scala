@@ -6,11 +6,11 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.commands.Commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{Logger, StringHelpers}
-import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger, StringHelpers}
+import com.ossuminc.riddl.utils.{pc,ec}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -28,7 +28,7 @@ object FromCommand {
   }
 }
 
-class FromCommand extends Command[FromCommand.Options](FromCommand.cmdName) {
+class FromCommand(using io: PlatformContext) extends Command[FromCommand.Options](FromCommand.cmdName) {
   import FromCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -65,27 +65,26 @@ class FromCommand extends Command[FromCommand.Options](FromCommand.cmdName) {
 
   override def run(
     options: FromCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val loadedCO =
       CommonOptionsHelper.loadCommonOptions(options.inputFile.fold(Path.of(""))(identity)) match
         case Right(newCO: CommonOptions) =>
-          if commonOptions.verbose then
-            log.info(
+          if io.options.verbose then
+            io.log.info(
               s"Read new common options from ${options.inputFile.get} as:\n" +
                 StringHelpers.toPrettyString(newCO)
             )
           newCO
         case Left(messages) =>
-          if commonOptions.debug then
-            println(
+          if io.options.debug then
+            io.stdout(
               s"Failed to read common options from ${options.inputFile.get} because:\n" ++
                 messages.format
             )
-          commonOptions
+          CommonOptions.empty
       end match
+    io.setOptions(loadedCO)
       //     configFile: Option[Path],
       //    targetCommand: String,
       //    commonOptions: CommonOptions,
@@ -94,8 +93,6 @@ class FromCommand extends Command[FromCommand.Options](FromCommand.cmdName) {
     val result = Commands.runFromConfig(
       options.inputFile,
       options.targetCommand,
-      loadedCO,
-      log,
       "from"
     )
     result
@@ -107,12 +104,10 @@ class FromCommand extends Command[FromCommand.Options](FromCommand.cmdName) {
   ): Options = { opts.copy(inputFile = Some(inputFile)) }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    log: Logger,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 }

@@ -1,14 +1,14 @@
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.AST.{Domain, Root, Context, Entity, Parents}
+import com.ossuminc.riddl.language.AST.{Context, Domain, Entity, Parents, Root}
 import com.ossuminc.riddl.passes.symbols.Symbols
-import com.ossuminc.riddl.utils.Timer
+import com.ossuminc.riddl.utils.{PlatformContext, Timer}
 import com.ossuminc.riddl.diagrams.mermaid.RootOverviewDiagram
 
 import scala.reflect.ClassTag
 
-trait Summarizer {
+trait Summarizer(using PlatformContext) {
   this: HugoPass =>
 
   def summarize(): Unit = {

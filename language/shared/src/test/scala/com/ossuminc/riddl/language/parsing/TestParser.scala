@@ -2,7 +2,8 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{AST, CommonOptions}
+import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 import fastparse.*
 import fastparse.Parsed.{Failure, Success}
 import org.scalatest.matchers.must.Matchers
@@ -14,7 +15,7 @@ import scala.util.control.NonFatal
 case class TestParser(
   input: RiddlParserInput,
   throwOnError: Boolean = false
-) extends TopLevelParser(CommonOptions())
+)(using PlatformContext) extends TopLevelParser()
     with Matchers {
 
   def expect[CT <: RiddlValue](

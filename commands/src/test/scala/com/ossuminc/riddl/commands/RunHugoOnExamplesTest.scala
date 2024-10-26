@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.passes.PassesResult
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}
@@ -41,7 +42,5 @@ class RunHugoOnExamplesTest extends RunCommandOnExamplesTest {
     val toml = tempDir.resolve("config.toml")
     Files.isReadable(toml) mustBe true
     Files.isRegularFile(toml) mustBe true
-    passesResult.commonOptions mustBe commonOptions
-    succeed
   }
 }

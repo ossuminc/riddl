@@ -106,16 +106,15 @@ trait Logger {
   }
 }
 
-case class SysLogger(override val withHighlighting: Boolean = true) extends Logger {
+case class SysLogger(override val withHighlighting: Boolean = true)(using io: PlatformContext) extends Logger {
   override def write(level: Logging.Lvl, s: String): Unit = {
     super.count(level)
-    System.out.println(highlight(level, s))
+    io.stdoutln(highlight(level, s))
   }
 }
 
 @JSExportTopLevel("StringLogger")
-case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: Boolean = true)
-    extends Logger {
+case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: Boolean = true) extends Logger {
   private val stringBuilder = new mutable.StringBuilder(capacity)
 
   override def write(level: Logging.Lvl, s: String): Unit = {
@@ -134,7 +133,7 @@ case class InMemoryLogger(override val withHighlighting: Boolean = false) extend
 
   private val buffer = ArrayBuffer[Line]()
 
-  /** Returns an Iterator of all lines logged to this logger, oldest-first */
+  /** Returns an Iterator of all lines logged to this log, oldest-first */
   def lines(): Iterator[Line] = buffer.iterator
 
   def write(level: Logging.Lvl, s: String): Unit = {

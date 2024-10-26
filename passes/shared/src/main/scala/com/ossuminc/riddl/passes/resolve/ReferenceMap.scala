@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.resolve
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.utils.StringHelpers
+import com.ossuminc.riddl.utils.{pc,ec}
 
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
@@ -60,7 +61,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
     val potentials = map.find(key => key._1.path == pathId)
     potentials match
       case None => Option.empty[T]
-      case Some((key, definition)) =>
+      case Some((_, definition)) =>
         val klass = classTag[T].runtimeClass
         if definition.getClass == klass then Some(definition.asInstanceOf[T]) else Option.empty[T]
   }

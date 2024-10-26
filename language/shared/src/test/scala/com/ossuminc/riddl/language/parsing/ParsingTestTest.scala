@@ -8,9 +8,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-class ParsingTestTest extends NoJVMParsingTest {
+abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTest {
 
   "ParsingTest" should {
 

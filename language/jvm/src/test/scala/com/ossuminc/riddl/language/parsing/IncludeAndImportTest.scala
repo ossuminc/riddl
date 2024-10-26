@@ -7,13 +7,12 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext, URL}
+import com.ossuminc.riddl.utils.{pc, ec}
 
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-
-import org.scalatest.TestData
+import org.scalatest.{Assertion, TestData}
 
 /** Unit Tests For Includes */
 class IncludeAndImportTest extends ParsingTest {
@@ -98,7 +97,7 @@ class IncludeAndImportTest extends ParsingTest {
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
         String_((1, 12, inc)),
-        Contents.empty 
+        Contents.empty
       )
       actual mustBe expected
     }
@@ -109,19 +108,21 @@ class IncludeAndImportTest extends ParsingTest {
     }
     "warn about duplicate includes" in { (td: TestData) =>
       val path = java.nio.file.Path.of("language/jvm/src/test/input/includes/duplicateInclude.riddl")
-      val input = RiddlParserInput.fromCwdPath(path,td)
-      TopLevelParser.parseInput(input) match {
-        case Right(_) =>
-          fail("Should have failed with warnings")
-        case Left(messages) =>
-          val errors = messages.justErrors
-          if errors.nonEmpty then fail(errors.format)
-          val warnings = messages.justWarnings
-          warnings.size mustBe 1
-          warnings.head.message must include("Duplicate include origin detected in")
-          succeed
+      val url = PathUtils.urlFromCwdPath(path)
+      val future: Future[Assertion] = RiddlParserInput.fromURL(url, td).map { rpi =>
+        TopLevelParser.parseInput(rpi) match {
+          case Right(_) =>
+            fail("Should have failed with warnings")
+          case Left(messages) =>
+            val errors = messages.justErrors
+            if errors.nonEmpty then fail(errors.format)
+            val warnings = messages.justWarnings
+            warnings.size mustBe 1
+            warnings.head.message must include("Duplicate include origin detected in")
+            succeed
+        }
       }
-
+      Await.result(future, 10.seconds)
     }
   }
 
