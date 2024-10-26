@@ -125,6 +125,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.publishing)
   .settings(
+    Test / parallelExecution := false,
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "AST Pass infrastructure and essential passes"
   )

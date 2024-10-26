@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformIOContext, StringHelpers, URL}
-import com.ossuminc.riddl.utils.{pc,ec}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
@@ -30,8 +30,7 @@ class DumpCommand(using io: PlatformIOContext) extends InputFileCommand(DumpComm
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val url = URL.fromFullPath(inputFile.toAbsolutePath.toString)
-      val future = RiddlParserInput.fromURL(url).map { rpi =>
+      val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
         Riddl.parseAndValidate(rpi).map { result =>
           io.log.info(s"AST of $inputFile is:")
           io.log.info(StringHelpers.toPrettyString(result, 1, None))

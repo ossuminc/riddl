@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.utils.{Await,Logger, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Await, Logger, PlatformIOContext, URL}
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 
 import java.nio.file.Path
@@ -31,8 +31,7 @@ class ParseCommand(using io: PlatformIOContext) extends InputFileCommand(ParseCo
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val url = URL.fromCwdPath(inputFile.toString)
-      val future = RiddlParserInput.fromURL(url).map { rpi =>
+      val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
         TopLevelParser
           .parseInput(rpi)
           .map(_ => PassesResult())

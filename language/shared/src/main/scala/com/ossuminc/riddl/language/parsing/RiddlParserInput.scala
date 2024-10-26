@@ -12,7 +12,7 @@ import fastparse.ParserInput
 import fastparse.internal.Util
 
 import scala.collection.Searching
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
@@ -64,8 +64,14 @@ object RiddlParserInput {
     *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
     */
   def fromURL(url: URL, purpose: String = "")(using io: PlatformIOContext): Future[RiddlParserInput] = {
-    implicit val ec = io.ec
+    implicit val ec: ExecutionContext = io.ec
     io.load(url).map(data => apply(data, url, purpose))
+  }
+
+  def fromPath(path: String, purpose: String = "")(using io: PlatformIOContext): Future[RiddlParserInput] = {
+    assert(path.nonEmpty, "Path provided to RiddlParserInput.fromPath is empty")
+    val url: URL = if path.head == '/' then URL.fromFullPath(path) else URL.fromCwdPath(path)
+    fromURL(url, purpose)
   }
 }
 
