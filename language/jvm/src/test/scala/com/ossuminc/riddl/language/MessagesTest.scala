@@ -147,7 +147,7 @@ class MessagesTest extends JVMTestingBasis {
       mix.justInfo mustBe Seq(i)
     }
     "log with retained order" in {
-      given io: PlatformIOContext = new JVMPlatformIOContext {
+      given io: PlatformContext = new JVMPlatformContext {
         override val log: Logger = StringLogger()
       }
       Messages.logMessages(mix)
@@ -163,7 +163,7 @@ class MessagesTest extends JVMTestingBasis {
       content mustBe expected
     }
     "log grouped by message kind" in {
-      given io: PlatformIOContext = new JVMPlatformIOContext {
+      given io: PlatformContext = new JVMPlatformContext {
         override val log: Logger = StringLogger()
       }
       io.setOptions(CommonOptions(groupMessagesByKind = true))

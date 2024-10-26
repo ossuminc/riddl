@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.utils.CommonOptions
 import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
-import com.ossuminc.riddl.utils.{PlatformIOContext, RiddlBuildInfo, SysLogger}
+import com.ossuminc.riddl.utils.{PlatformContext, RiddlBuildInfo, SysLogger}
 import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
 import pureconfig.error.ConfigReaderFailures
 import scopt.*
@@ -157,7 +157,7 @@ object CommonOptionsHelper {
 
   def parseCommonOptions(
     args: Array[String]
-  )(using io: PlatformIOContext): (Option[CommonOptions], Array[String]) = {
+  )(using io: PlatformContext): (Option[CommonOptions], Array[String]) = {
     val setup: OParserSetup = new DefaultOParserSetup {
       override def showUsageOnError: Option[Boolean] = Option(false)
 

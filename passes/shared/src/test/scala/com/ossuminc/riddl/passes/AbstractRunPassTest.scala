@@ -4,10 +4,10 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, SysLogger}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, SysLogger}
 import org.scalatest.Suite
 
-abstract class AbstractRunPassTest(using PlatformIOContext) extends AbstractValidatingTest {
+abstract class AbstractRunPassTest(using PlatformContext) extends AbstractValidatingTest {
 
   def runPassesWith(
     input: RiddlParserInput,

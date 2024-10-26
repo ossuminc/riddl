@@ -12,14 +12,14 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.scalajs.js.annotation.JSExportTopLevel
 
 @JSExportTopLevel("PrettifyPass$")
 object PrettifyPass extends PassInfo[PrettifyPass.Options]:
   val name: String = "prettify"
-  def creator(options: PrettifyPass.Options = PrettifyPass.Options())(using PlatformIOContext) =
+  def creator(options: PrettifyPass.Options = PrettifyPass.Options())(using PlatformContext) =
     (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, options)
   end creator
 
@@ -39,7 +39,7 @@ class PrettifyPass(
   input: PassInput,
   outputs: PassesOutput,
   options: PrettifyPass.Options
-)(using PlatformIOContext)
+)(using PlatformContext)
     extends VisitingPass[PrettifyVisitor](input, outputs, new PrettifyVisitor(options)):
   def name: String = PrettifyPass.name
 

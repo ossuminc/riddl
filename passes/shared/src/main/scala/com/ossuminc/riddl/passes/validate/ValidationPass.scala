@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import com.ossuminc.riddl.utils.SeqHelpers.*
 import com.ossuminc.riddl.utils.*
 
@@ -21,7 +21,7 @@ import scala.collection.immutable.Seq
 
 object ValidationPass extends PassInfo[PassOptions] {
   val name: String = "Validation"
-  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = {
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformContext): PassCreator = {
     (in: PassInput, out: PassesOutput) => ValidationPass(in, out)
   }
 }
@@ -35,7 +35,7 @@ object ValidationPass extends PassInfo[PassOptions] {
 case class ValidationPass(
   input: PassInput,
   outputs: PassesOutput
-)(using PlatformIOContext)
+)(using PlatformContext)
     extends Pass(input, outputs)
     with StreamingValidation {
 

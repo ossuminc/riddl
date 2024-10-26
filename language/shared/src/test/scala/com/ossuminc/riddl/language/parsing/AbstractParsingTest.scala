@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.RiddlValue
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
-import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, CommonOptions, PlatformIOContext}
+import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, CommonOptions, PlatformContext}
 import fastparse.*
 
 import scala.annotation.unused
@@ -19,7 +19,7 @@ import scala.concurrent.duration.DurationInt
 import scala.reflect.*
 
 /** A helper class for testing the parser */
-trait AbstractParsingTest(using PlatformIOContext) extends AbstractTestingBasisWithTestData {
+trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWithTestData {
 
   case class StringParser(content: String, testCase: String = "unknown test case") extends TopLevelParser():
     val rpi = RiddlParserInput(content, testCase)

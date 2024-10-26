@@ -5,7 +5,7 @@ import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 
 import java.nio.file.Path
 import java.net.URL
@@ -20,7 +20,7 @@ case class GeekDocWriter(
   input: PassInput,
   outputs: PassesOutput,
   options: HugoPass.Options
-)(using pc: PlatformIOContext) extends MarkdownWriter {
+)(using pc: PlatformContext) extends MarkdownWriter {
 
   val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
 

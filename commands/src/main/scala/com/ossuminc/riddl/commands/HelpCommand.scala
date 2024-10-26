@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -23,7 +23,7 @@ object HelpCommand {
   case class Options(command: String = "help", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
 
-  private def commandOptionsParser(using io: PlatformIOContext): OParser[Unit, ?] = {
+  private def commandOptionsParser(using io: PlatformContext): OParser[Unit, ?] = {
     val optionParsers = Seq(
       AboutCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
@@ -45,7 +45,7 @@ object HelpCommand {
 
 }
 
-class HelpCommand(using io: PlatformIOContext) extends Command[HelpCommand.Options]("help") {
+class HelpCommand(using io: PlatformContext) extends Command[HelpCommand.Options]("help") {
   import HelpCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*

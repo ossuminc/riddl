@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassCreators, PassInput, PassOptions, PassesOutput, PassesResult}
-import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformIOContext}
+import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformContext}
 import com.ossuminc.riddl.command.{CommandOptions, PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
@@ -38,7 +38,7 @@ object PrettifyCommand {
 }
 
 /** A command to Prettify RIDDL Source */
-class PrettifyCommand(using io: PlatformIOContext)
+class PrettifyCommand(using io: PlatformContext)
     extends TranslationCommand[PrettifyCommand.Options](PrettifyCommand.cmdName) {
 
   import PrettifyCommand.Options
@@ -122,7 +122,7 @@ class PrettifyCommand(using io: PlatformIOContext)
     output: PrettifyOutput,
     originalOptions: Options,
     dirOverrides: Option[Path],
-  )(using io: PlatformIOContext): Unit =
+  )(using io: PlatformContext): Unit =
     try {
       val dir = originalOptions.outputDir
         .getOrElse(

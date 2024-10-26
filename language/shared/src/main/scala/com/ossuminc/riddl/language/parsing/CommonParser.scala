@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.{PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{PlatformContext, URL}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import fastparse.*
@@ -19,7 +19,7 @@ import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.Future
 
 /** Common Parsing Rules */
-private[parsing] trait CommonParser(using io: PlatformIOContext)
+private[parsing] trait CommonParser(using io: PlatformContext)
     extends ReferenceParser
     with Readability
     with NoWhiteSpaceParsers

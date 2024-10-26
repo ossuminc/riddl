@@ -1,12 +1,12 @@
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-abstract class ModuleTest(using PlatformIOContext) extends AbstractParsingTest {
+abstract class ModuleTest(using PlatformContext) extends AbstractParsingTest {
 
   "Module" should {
-    "be accepted at root scope" in { (td: TestData) => 
+    "be accepted at root scope" in { (td: TestData) =>
       val input = RiddlParserInput(
         """
           |module foo is {
@@ -17,12 +17,12 @@ abstract class ModuleTest(using PlatformIOContext) extends AbstractParsingTest {
       )
       parseTopLevelDomains(input) match
         case Left(messages) => fail(messages.format)
-        case Right(root) => 
+        case Right(root) =>
           root.modules must not be(empty)
           root.modules.head.id.value must be("foo")
           root.modules.head.domains must not be(empty)
           root.modules.head.domains.head.id.value must be("blah")
-          
+
     }
   }
 

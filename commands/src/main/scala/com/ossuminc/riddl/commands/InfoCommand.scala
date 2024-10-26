@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, Logger, RiddlBuildInfo}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger, RiddlBuildInfo}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import pureconfig.ConfigCursor
@@ -24,7 +24,7 @@ object InfoCommand {
       extends CommandOptions
 }
 
-class InfoCommand(using io: PlatformIOContext) extends Command[InfoCommand.Options]("info") {
+class InfoCommand(using io: PlatformContext) extends Command[InfoCommand.Options]("info") {
   import InfoCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*

@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -22,7 +22,7 @@ object InputFileCommand {
   * @param name
   *   The name of the command
   */
-abstract class InputFileCommand(name: String)(using io: PlatformIOContext) extends Command[InputFileCommand.Options](name) {
+abstract class InputFileCommand(name: String)(using io: PlatformContext) extends Command[InputFileCommand.Options](name) {
   import InputFileCommand.Options
   def getOptions: (OParser[Unit, Options], Options) = {
     import builder.*

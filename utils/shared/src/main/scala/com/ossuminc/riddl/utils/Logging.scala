@@ -106,7 +106,7 @@ trait Logger {
   }
 }
 
-case class SysLogger(override val withHighlighting: Boolean = true)(using io: PlatformIOContext) extends Logger {
+case class SysLogger(override val withHighlighting: Boolean = true)(using io: PlatformContext) extends Logger {
   override def write(level: Logging.Lvl, s: String): Unit = {
     super.count(level)
     io.stdoutln(highlight(level, s))

@@ -11,15 +11,13 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
-import com.ossuminc.riddl.utils.{Await, CommonOptions, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.PlatformContext
 
-import java.nio.file.Path
 import org.scalatest.Assertion
 import scala.reflect.*
-import scala.concurrent.duration.DurationInt
 
 /** Convenience functions for tests that do validation */
-abstract class AbstractValidatingTest(using PlatformIOContext) extends AbstractParsingTest {
+abstract class AbstractValidatingTest(using PlatformContext) extends AbstractParsingTest {
 
   protected def runStandardPasses(
     model: Root,

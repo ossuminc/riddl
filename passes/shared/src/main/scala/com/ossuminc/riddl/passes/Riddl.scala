@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.PassCreators
-import com.ossuminc.riddl.utils.{PlatformIOContext,URL,Await}
+import com.ossuminc.riddl.utils.{PlatformContext,URL,Await}
 
 import java.nio.file.Path
 
@@ -27,7 +27,7 @@ object Riddl {
     *   The [[com.ossuminc.riddl.language.CommonOptions]] to use during the parsing
     * @return
     */
-  def parse(input: RiddlParserInput)(using io: PlatformIOContext): Either[Messages, Root] = {
+  def parse(input: RiddlParserInput)(using io: PlatformContext): Either[Messages, Root] = {
     TopLevelParser.parseInput(input)
   }
 
@@ -44,7 +44,7 @@ object Riddl {
   def validate(
     root: Root,
     shouldFailOnError: Boolean = true
-  )(using PlatformIOContext) = {
+  )(using PlatformContext) = {
     val result = Pass.runStandardPasses(root)
     if shouldFailOnError && result.messages.hasErrors then Left(result.messages)
     else Right(result)
@@ -70,7 +70,7 @@ object Riddl {
     input: RiddlParserInput,
     shouldFailOnError: Boolean = true,
     extraPasses: PassCreators = Seq.empty[PassCreator]
-  )(using io: PlatformIOContext): Either[Messages, PassesResult] = {
+  )(using io: PlatformContext): Either[Messages, PassesResult] = {
     TopLevelParser.parseInput(input) match {
       case Left(messages) =>
         Left(messages)
@@ -87,7 +87,7 @@ object Riddl {
     path: String,
     shouldFailOnError: Boolean = true,
     extraPasses: PassCreators = Seq.empty[PassCreator]
-  )(using io: PlatformIOContext): Either[Messages, PassesResult] = {
+  )(using io: PlatformContext): Either[Messages, PassesResult] = {
     val url = URL.fromCwdPath(path)
     val rpi = Await.result(RiddlParserInput.fromURL(url), 10)
     parseAndValidate(rpi, shouldFailOnError, Pass.standardPasses ++ extraPasses)

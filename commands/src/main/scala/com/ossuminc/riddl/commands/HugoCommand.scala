@@ -19,7 +19,7 @@ import com.ossuminc.riddl.commands.Commands
 import com.ossuminc.riddl.command.PassCommand
 import com.ossuminc.riddl.passes.diagrams.DiagramsPass
 import com.ossuminc.riddl.passes.stats.StatsPass
-import com.ossuminc.riddl.utils.{Await,CommonOptions, Logger, PlatformIOContext}
+import com.ossuminc.riddl.utils.{Await,CommonOptions, Logger, PlatformContext}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import pureconfig.ConfigCursor
@@ -31,7 +31,7 @@ import java.nio.file.Path
 import scala.annotation.unused
 import scala.concurrent.duration.DurationInt
 
-class HugoCommand(using io: PlatformIOContext) extends PassCommand[HugoPass.Options]("hugo") {
+class HugoCommand(using io: PlatformContext) extends PassCommand[HugoPass.Options]("hugo") {
 
   import HugoPass.Options
 

@@ -46,7 +46,7 @@ trait PassInfo[OPT <: PassOptions] {
     *   The options the pass requires
     * @return
     */
-  def creator(options: OPT)(using PlatformIOContext): PassCreator
+  def creator(options: OPT)(using PlatformContext): PassCreator
 }
 
 /** Information that a Pass must produce, currently just any messages it generated. Passes should derive their own
@@ -168,7 +168,7 @@ object PassesResult {
   * @param out
   *   The output from previous runs of OTHER passes, which is a form of input to the pass, perhaps.
   */
-abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: PlatformIOContext) {
+abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: PlatformContext) {
 
   /** THe name of the pass for inclusion in messages it produces. This must be implemented by the subclass
     * @return
@@ -279,7 +279,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
   * @param outputs
   *   The outputs of previous passes in case this pass needs it
   */
-abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using PlatformIOContext)
+abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using PlatformContext)
     extends Pass(input, outputs) {
 
   /** not required in this kind of pass, final override it as a result
@@ -442,7 +442,7 @@ abstract class VisitingPass[VT <: PassVisitor](
   val input: PassInput,
   val outputs: PassesOutput,
   val visitor: VT
-)(using PlatformIOContext)
+)(using PlatformContext)
     extends HierarchyPass(input, outputs):
   protected final def openContainer(container: Definition, parents: Parents): Unit =
     container match
@@ -578,7 +578,7 @@ abstract class CollectingPassOutput[T](
   * @tparam ET
   *   The element type of the collected values
   */
-abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using PlatformIOContext) extends Pass(input, outputs) {
+abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using PlatformContext) extends Pass(input, outputs) {
 
   /** The method usually called for each definition that is to be processed but our implementation of traverse instead
     * calls collect so a value can be returned. This implementation is final because it is meant to be ignored.
@@ -618,7 +618,7 @@ object Pass {
     * resolve path references, and validate the input. Only after these three have passed successful should the model be
     * considered processable by other passes
     */
-  def standardPasses(using PlatformIOContext) =
+  def standardPasses(using PlatformContext) =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
   /** A PassesCreate of the passes that extract information but don't do much real work. These generate the symbol
@@ -626,7 +626,7 @@ object Pass {
     * a full validation
     */
 
-  def informationPasses(using PlatformIOContext): PassCreators =
+  def informationPasses(using PlatformContext): PassCreators =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), StatsPass.creator())
 
   /** Run a set of passes against some input to obtain a result
@@ -643,7 +643,7 @@ object Pass {
   def runThesePasses(
     input: PassInput,
     passes: PassCreators
-  )(using PlatformIOContext): PassesResult = {
+  )(using PlatformContext): PassesResult = {
     val outputs = PassesOutput()
     try {
       for pass <- passes yield {
@@ -663,48 +663,48 @@ object Pass {
   /** Run the standard passes with the input provided */
   def runStandardPasses(
     input: PassInput
-  )(using PlatformIOContext): PassesResult = {
+  )(using PlatformContext): PassesResult = {
     runThesePasses(input, standardPasses)
   }
 
   /** Run the standard passes on a Root */
   def runStandardPasses(
     model: Root
-  )(using PlatformIOContext): PassesResult = {
+  )(using PlatformContext): PassesResult = {
     val input: PassInput = PassInput(model)
     runStandardPasses(input)
   }
 
   /** Run the information passes with the input provided */
-  def runInformationPasses(input: PassInput)(using PlatformIOContext): PassesResult = {
+  def runInformationPasses(input: PassInput)(using PlatformContext): PassesResult = {
     runThesePasses(input, informationPasses)
   }
 
   /** Run the information passes on a Root */
   def runInformationPasses(
     model: Root
-  )(using PlatformIOContext): PassesResult = {
+  )(using PlatformContext): PassesResult = {
     val input: PassInput = PassInput(model)
     runInformationPasses(input)
   }
 
   /** Run the Symbols Pass */
-  def runSymbols(input: PassInput, outputs: PassesOutput)(using PlatformIOContext): SymbolsOutput = {
+  def runSymbols(input: PassInput, outputs: PassesOutput)(using PlatformContext): SymbolsOutput = {
     runPass[SymbolsOutput](input, outputs, SymbolsPass(input, outputs))
   }
 
   /** Run the Resolution Pass */
-  def runResolution(input: PassInput, outputs: PassesOutput)(using PlatformIOContext): ResolutionOutput = {
+  def runResolution(input: PassInput, outputs: PassesOutput)(using PlatformContext): ResolutionOutput = {
     runPass[ResolutionOutput](input, outputs, ResolutionPass(input, outputs))
   }
 
   /** Run the Validation pass */
-  def runValidation(input: PassInput, outputs: PassesOutput)(using PlatformIOContext): ValidationOutput = {
+  def runValidation(input: PassInput, outputs: PassesOutput)(using PlatformContext): ValidationOutput = {
     runPass[ValidationOutput](input, outputs, ValidationPass(input, outputs))
   }
 
   /** Run an arbitrary pass */
-  def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass)(using PlatformIOContext): OUT = {
+  def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass)(using PlatformContext): OUT = {
     val output: OUT = Pass.runOnePass(input.root, pass).asInstanceOf[OUT]
     outputs.outputIs(pass.name, output)
     output
@@ -713,7 +713,7 @@ object Pass {
   private def runOnePass(
     root: Root,
     mkPass: => Pass
-  )(using io: PlatformIOContext): PassOutput = {
+  )(using io: PlatformContext): PassOutput = {
     val pass: Pass = mkPass
     Timer.time[PassOutput](pass.name, io.options.showTimes) {
       val parents: ParentStack = ParentStack.empty

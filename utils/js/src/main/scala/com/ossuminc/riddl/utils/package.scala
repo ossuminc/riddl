@@ -1,10 +1,10 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.utils.{DOMPlatformIOContext, PlatformIOContext}
+import com.ossuminc.riddl.utils.{DOMPlatformContext, PlatformContext}
 
 import scala.concurrent.ExecutionContext
 
 package object utils {
-  given pc: PlatformIOContext = DOMPlatformIOContext()
+  given pc: PlatformContext = DOMPlatformContext()
   implicit val ec: ExecutionContext = pc.ec
 }

@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.resolve
 
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 
@@ -25,7 +25,7 @@ trait UsageBase {
 /** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call associateUsage. After
   * parsing ends, call checkUnused. Collects entities, types and functions too
   */
-trait UsageResolution(using io: PlatformIOContext) extends UsageBase {
+trait UsageResolution(using io: PlatformContext) extends UsageBase {
 
   protected def messages: Messages.Accumulator
 

@@ -2,13 +2,13 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-abstract class ProjectorTest(using PlatformIOContext) extends AbstractParsingTest {
+abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest {
 
   "Projector" should {
-    "use a Repository" in { (td:TestData) => 
+    "use a Repository" in { (td:TestData) =>
       val rpi = RiddlParserInput("""domain ignore {
         |  context ignore {
         |    repository storage is {
@@ -67,14 +67,14 @@ abstract class ProjectorTest(using PlatformIOContext) extends AbstractParsingTes
           |       updates repository storage
           |       relationship updates to repository storage as 1:1 with {
           |         brief "Just to show that this projector updates the repository"
-          |       }  
+          |       }
           |    }
           |  }
           |}
           |""".stripMargin, td)
       parseTopLevelDomain[Projector](rpi, _.domains.head.contexts.head.projectors.head) match
         case Left(messages) =>
-          val errors = messages.justErrors 
+          val errors = messages.justErrors
           if errors.nonEmpty then fail(errors.format) else succeed
         case Right(proj: Projector, input) =>
           val rels = proj.contents.filter[Relationship]

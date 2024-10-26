@@ -8,11 +8,11 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
 /** Unit Tests For StreamingParser */
-abstract class StreamingParserTest(using PlatformIOContext) extends AbstractParsingTest {
+abstract class StreamingParserTest(using PlatformContext) extends AbstractParsingTest {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 
@@ -20,9 +20,9 @@ abstract class StreamingParserTest(using PlatformIOContext) extends AbstractPars
     """source GetWeatherForecast is {
       |  outlet Weather is command Forecast
       | } with {
-      |  briefly as "foo" 
+      |  briefly as "foo"
       |  described as "This is a source for Forecast data"
-      |} 
+      |}
       |""".stripMargin
   def sourceExpected(
     rpi: RiddlParserInput,
@@ -83,9 +83,9 @@ abstract class StreamingParserTest(using PlatformIOContext) extends AbstractPars
           |  command Temperature is { ??? }
           |  source GetWeatherForecast is {
           |    outlet Weather is command Forecast
-          |  } with { 
+          |  } with {
           |    described as "This is a source for Forecast data"
-          |  } 
+          |  }
           |
           |  flow GetCurrentTemperature is {
           |    inlet Weather is command Forecast
@@ -96,12 +96,12 @@ abstract class StreamingParserTest(using PlatformIOContext) extends AbstractPars
           |
           |  sink AttenuateSensor is {
           |    inlet CurrentTemp is command Temperature
-          |  } with {  
+          |  } with {
           |    described as "This is a Sink for making sensor adjustments based on temperature"
           |  }
           |} with {
           |  described as "A complete plant definition for temperature based sensor attenuation."
-          |}  
+          |}
           |} with {
           |  described as "Plants can only be specified in a domain definition"
           |}

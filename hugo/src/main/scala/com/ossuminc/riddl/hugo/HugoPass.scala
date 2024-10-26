@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.hugo
 
-import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformIOContext, Tar, Timer, Zip}
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformContext, Tar, Timer, Zip}
 import com.ossuminc.riddl.language.*
 import com.ossuminc.riddl.language.AST.{Include, *}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -31,7 +31,7 @@ import scala.collection.mutable
 
 object HugoPass extends PassInfo[HugoPass.Options] {
   val name: String = "hugo"
-  def creator(options: HugoPass.Options)(using PlatformIOContext): (PassInput, PassesOutput) => HugoPass = {
+  def creator(options: HugoPass.Options)(using PlatformContext): (PassInput, PassesOutput) => HugoPass = {
     (in: PassInput, out: PassesOutput) => HugoPass(in, out, options)
   }
 
@@ -76,7 +76,7 @@ object HugoPass extends PassInfo[HugoPass.Options] {
 
   def getPasses(
     options: HugoPass.Options
-  )(using PlatformIOContext): PassCreators = {
+  )(using PlatformContext): PassCreators = {
     val glossary: PassCreators =
       if options.withGlossary then
         Seq({ (input: PassInput, outputs: PassesOutput) => GlossaryPass(input, outputs, options) })
@@ -125,7 +125,7 @@ case class HugoPass(
   input: PassInput,
   outputs: PassesOutput,
   options: HugoPass.Options
-)(using pc: PlatformIOContext) extends Pass(input, outputs)
+)(using pc: PlatformContext) extends Pass(input, outputs)
     with TranslatingState[MarkdownWriter]
     with Summarizer {
 

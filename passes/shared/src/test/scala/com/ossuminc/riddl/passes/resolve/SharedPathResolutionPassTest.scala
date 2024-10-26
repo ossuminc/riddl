@@ -5,11 +5,11 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.{Assertion, TestData}
 
 /** Unit Tests For the ResolutionPass */
-abstract class SharedPathResolutionPassTest(using pc: PlatformIOContext) extends SharedResolvingTest {
+abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends SharedResolvingTest {
 
   "PathResolutionPass" must {
     "resolve a full path" in { (td: TestData) =>

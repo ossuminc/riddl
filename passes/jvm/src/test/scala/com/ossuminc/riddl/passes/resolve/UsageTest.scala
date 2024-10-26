@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext, JVMPlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, JVMPlatformContext}
 import com.ossuminc.riddl.utils.{ec, pc}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec

@@ -2,10 +2,10 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Adaptor
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-trait SharedAdaptorTest(using PlatformIOContext) extends AbstractValidatingTest {
+trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
 
   "Adaptors" should {
     "handle undefined body" in { (td: TestData) =>

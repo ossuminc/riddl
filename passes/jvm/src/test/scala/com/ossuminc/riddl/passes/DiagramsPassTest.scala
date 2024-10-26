@@ -4,7 +4,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.diagrams.*
-import com.ossuminc.riddl.utils.{PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{PlatformContext, URL}
 import com.ossuminc.riddl.utils.{ec, pc, Await}
 
 import scala.concurrent.duration.DurationInt

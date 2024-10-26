@@ -5,7 +5,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformContext, PathUtils, PlatformContext}
 import com.ossuminc.riddl.utils.{ec, pc, Await}
 
 import java.nio.file.Path

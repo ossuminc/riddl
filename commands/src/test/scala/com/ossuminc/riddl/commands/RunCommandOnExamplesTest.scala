@@ -30,7 +30,7 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
   */
 trait RunCommandOnExamplesTest(
   shouldDelete: Boolean = true
-)(using io: PlatformIOContext)
+)(using io: PlatformContext)
     extends AbstractTestingBasis
     with BeforeAndAfterAll {
 

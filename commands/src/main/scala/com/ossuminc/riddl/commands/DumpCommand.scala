@@ -10,7 +10,7 @@ import com.ossuminc.riddl.command.Command
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformIOContext, StringHelpers, URL}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformContext, StringHelpers, URL}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
@@ -22,7 +22,7 @@ object DumpCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class DumpCommand(using io: PlatformIOContext) extends InputFileCommand(DumpCommand.cmdName) {
+class DumpCommand(using io: PlatformContext) extends InputFileCommand(DumpCommand.cmdName) {
   import InputFileCommand.Options
 
   override def run(

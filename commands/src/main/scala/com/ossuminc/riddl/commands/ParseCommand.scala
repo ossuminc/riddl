@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.utils.{Await, Logger, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Await, Logger, PlatformContext, URL}
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 
 import java.nio.file.Path
@@ -23,7 +23,7 @@ object ParseCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class ParseCommand(using io: PlatformIOContext) extends InputFileCommand(ParseCommand.cmdName) {
+class ParseCommand(using io: PlatformContext) extends InputFileCommand(ParseCommand.cmdName) {
   import InputFileCommand.Options
 
   override def run(

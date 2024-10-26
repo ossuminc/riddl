@@ -2,11 +2,11 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalacheck.Arbitrary
 import org.scalatest.{Assertion, TestData}
 
-abstract class StatementsTest(using PlatformIOContext) extends AbstractParsingTest{
+abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest{
 
   def checkStatement(s: Statement): Assertion = {
     s.loc must be(empty)
@@ -20,7 +20,7 @@ abstract class StatementsTest(using PlatformIOContext) extends AbstractParsingTe
     s.isProcessor must be(false)
   }
   "Statements" must {
-    "check Arbitrary Statements" in { td => 
+    "check Arbitrary Statements" in { td =>
       val comment = LiteralString(At.empty, "foo")
       val arb = ArbitraryStatement(At.empty, comment)
       arb.kind must be("Arbitrary Statement")

@@ -2,7 +2,7 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.utils.{AbstractTestingBasis, JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{AbstractTestingBasis, JVMPlatformContext, PathUtils, PlatformContext}
 import com.ossuminc.riddl.utils.{pc, ec, Await}
 
 import java.nio.file.Path

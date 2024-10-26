@@ -3,6 +3,6 @@ package com.ossuminc.riddl
 import scala.concurrent.ExecutionContext
 
 package object utils {
-  given pc: PlatformIOContext = JVMPlatformIOContext()
+  given pc: PlatformContext = JVMPlatformContext()
   implicit val ec: ExecutionContext = pc.ec
 }

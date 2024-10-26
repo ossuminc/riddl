@@ -14,17 +14,17 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * returning the Future that will obtain it. Further processing can be chained onto the future. This handles the I/O
   * part of parsing in a platform specific way.
   */
-@JSExportTopLevel("JVMPlatformIOContext")
-class JVMPlatformIOContext extends PlatformIOContext {
+@JSExportTopLevel("JVMPlatformContext")
+class JVMPlatformContext extends PlatformContext {
 
   import scala.concurrent.{ExecutionContext, Future}
   import scala.io.Source
   import scala.scalajs.js.annotation.JSExport
 
-  given PlatformIOContext = this
+  given PlatformContext = this
 
   type Path = java.nio.file.Path
-  
+
   this.setLog(SysLogger())
 
   @JSExport

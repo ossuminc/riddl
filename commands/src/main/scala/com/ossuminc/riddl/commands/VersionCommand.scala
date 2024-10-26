@@ -8,7 +8,7 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger, RiddlBuildInfo}
+import com.ossuminc.riddl.utils.{PlatformContext, Logger, RiddlBuildInfo}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import pureconfig.ConfigCursor
@@ -24,7 +24,7 @@ object VersionCommand {
       extends CommandOptions
 }
 
-class VersionCommand(using io: PlatformIOContext) extends Command[VersionCommand.Options]("version") {
+class VersionCommand(using io: PlatformContext) extends Command[VersionCommand.Options]("version") {
   import VersionCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*

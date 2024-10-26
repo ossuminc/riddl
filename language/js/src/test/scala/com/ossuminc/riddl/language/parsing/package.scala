@@ -1,6 +1,6 @@
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.{DOMPlatformIOContext, PlatformIOContext}
+import com.ossuminc.riddl.utils.{DOMPlatformContext, PlatformContext}
 package object parsing {
-  given io: PlatformIOContext = DOMPlatformIOContext()
+  given io: PlatformContext = DOMPlatformContext()
 }

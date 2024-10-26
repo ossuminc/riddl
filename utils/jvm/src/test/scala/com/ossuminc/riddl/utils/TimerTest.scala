@@ -13,8 +13,8 @@ import java.time.Instant
 
 class TimerTest extends JVMTestingBasis {
 
-  given PlatformIOContext = JVMPlatformIOContext()
-  
+  given PlatformContext = JVMPlatformContext()
+
   "timer" should {
     "measure the correct time" in { (td: TestData) =>
       val start = Instant.parse("2007-12-03T00:00:00.00Z")

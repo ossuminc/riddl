@@ -23,7 +23,7 @@ import scala.annotation.unused
 import scala.reflect.ClassTag
 
 /** The service interface for Riddlc command plugins */
-trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io: PlatformIOContext):
+trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io: PlatformContext):
 
   // private val optionsClass : Class[?] = classTag[OPT].runtimeClass
 

@@ -5,7 +5,7 @@ import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 
 import java.nio.file.Path
 
@@ -40,7 +40,7 @@ object ThemeWriter {
     input: PassInput,
     outputs: PassesOutput,
     options: HugoPass.Options
-  )(using PlatformIOContext): MarkdownWriter = {
+  )(using PlatformContext): MarkdownWriter = {
     options.hugoThemeName match {
       case None                            => GeekDocWriter(path, input, outputs, options)
       case Some(GeekDocWriter.name) | None => GeekDocWriter(path, input, outputs, options)

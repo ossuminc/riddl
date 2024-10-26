@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{Logger, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Logger, PlatformContext, URL}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
@@ -17,7 +17,7 @@ import scala.annotation.unused
 import scala.concurrent.duration.DurationInt
 
 /** Validate Command */
-class ValidateCommand(using io: PlatformIOContext) extends InputFileCommand("validate") {
+class ValidateCommand(using io: PlatformContext) extends InputFileCommand("validate") {
   import InputFileCommand.Options
 
   override def run(

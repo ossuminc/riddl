@@ -5,7 +5,7 @@ import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 
 import java.nio.file.Path
 
@@ -29,7 +29,7 @@ case class DotdockWriter(
   input: PassInput,
   outputs: PassesOutput,
   options: HugoPass.Options
-)(using PlatformIOContext) extends MarkdownWriter {
+)(using PlatformContext) extends MarkdownWriter {
   final val name: String = DotdockWriter.name
 
   lazy val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)

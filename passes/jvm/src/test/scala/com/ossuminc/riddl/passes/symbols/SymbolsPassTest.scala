@@ -4,7 +4,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.ParsingTest
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
-import com.ossuminc.riddl.utils.{CommonOptions,PlatformIOContext,JVMPlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions,PlatformContext,JVMPlatformContext}
 import com.ossuminc.riddl.utils.{pc,ec}
 import org.scalatest.Assertion
 

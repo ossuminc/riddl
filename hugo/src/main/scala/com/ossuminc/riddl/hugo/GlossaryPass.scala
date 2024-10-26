@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInput, PassesOutput, PassesResult}
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 
 import java.nio.file.Path
 import scala.collection.mutable
@@ -34,7 +34,7 @@ case class GlossaryPass(
   input: PassInput,
   outputs: PassesOutput,
   options: HugoPass.Options
-)(using PlatformIOContext) extends CollectingPass[GlossaryEntry](input, outputs) {
+)(using PlatformContext) extends CollectingPass[GlossaryEntry](input, outputs) {
 
   private val generator = ThemeGenerator(options, input, outputs, messages)
 

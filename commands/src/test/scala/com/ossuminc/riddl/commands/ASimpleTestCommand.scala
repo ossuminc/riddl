@@ -8,7 +8,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{PlatformIOContext, Logger}
+import com.ossuminc.riddl.utils.{PlatformContext, Logger}
 import pureconfig.{ConfigCursor, ConfigReader}
 import scopt.OParser
 
@@ -21,7 +21,7 @@ object ASimpleTestCommand {
 }
 
 /** A pluggable command for testing plugin commands! */
-class ASimpleTestCommand(using io: PlatformIOContext) extends Command[ASimpleTestCommand.Options]("test") {
+class ASimpleTestCommand(using io: PlatformContext) extends Command[ASimpleTestCommand.Options]("test") {
   import ASimpleTestCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]

@@ -2,12 +2,12 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput}
-import com.ossuminc.riddl.utils.{PlatformIOContext,JVMPlatformIOContext}
+import com.ossuminc.riddl.utils.{PlatformContext,JVMPlatformContext}
 import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
 class FinderTest extends AbstractParsingTest {
-  
+
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
       |  context one is {

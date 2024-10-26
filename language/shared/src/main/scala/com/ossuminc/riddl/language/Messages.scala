@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.utils.{CommonOptions, ExceptionUtils, Logger, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, ExceptionUtils, Logger, PlatformContext}
 
 import scala.collection.mutable
 import scala.io.AnsiColor.*
@@ -285,14 +285,14 @@ object Messages {
   @JSExport
   def logMessages(
     messages: Messages
-  )(using io: PlatformIOContext): Int = {
+  )(using io: PlatformContext): Int = {
     val list = if io.options.sortMessagesByLocation then messages.sorted else messages
     if io.options.groupMessagesByKind then { logMessagesByGroup(list) }
     else { logMessagesRetainingOrder(list) }
     list.highestSeverity
   }
 
-  private def logMessage(message: Message)(using io: PlatformIOContext): Unit = {
+  private def logMessage(message: Message)(using io: PlatformContext): Unit = {
     message.kind match {
       case Info           => io.log.info(message.format)
       case StyleWarning   => io.log.style(message.format)
@@ -304,13 +304,13 @@ object Messages {
     }
   }
 
-  private def logMessagesRetainingOrder(list: Messages)(using io: PlatformIOContext): Unit = {
+  private def logMessagesRetainingOrder(list: Messages)(using io: PlatformContext): Unit = {
     list.foreach { msg => logMessage(msg) }
   }
 
   private def logMessagesByGroup(
     messages: Messages
-  )(using io: PlatformIOContext): Unit = {
+  )(using io: PlatformContext): Unit = {
     def logMsgs(kind: KindOfMessage, maybeMessages: Option[Seq[Message]]): Unit = {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])
       if messages.nonEmpty then {
@@ -373,7 +373,7 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @JSExport
-    def add(message: Message)(using pc: PlatformIOContext): this.type = {
+    def add(message: Message)(using pc: PlatformContext): this.type = {
       message.kind match {
         case Warning =>
           if pc.options.showWarnings then msgs.append(message)
@@ -399,7 +399,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def style(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
+    @inline def style(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
       add(Message(loc, message, StyleWarning))
     }
 
@@ -412,7 +412,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def info(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
+    @inline def info(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
       add(Message(loc, message, Info))
     }
 
@@ -425,7 +425,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def warning(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
+    @inline def warning(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
       add(Message(loc, message, Warning))
     }
 
@@ -438,7 +438,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def error(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
+    @inline def error(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
       add(Message(loc, message, Error))
     }
 
@@ -451,7 +451,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def severe(message: String, loc: At = At.empty)(using pc: PlatformIOContext): this.type = {
+    @inline def severe(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
       add(Message(loc, message, SevereError))
     }
 
@@ -464,7 +464,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addStyle(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
+    @inline def addStyle(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, StyleWarning))
     }
 
@@ -477,7 +477,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addUsage(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
+    @inline def addUsage(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, UsageWarning))
     }
 
@@ -490,7 +490,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addMissing(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
+    @inline def addMissing(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, MissingWarning))
     }
 
@@ -503,7 +503,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addWarning(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
+    @inline def addWarning(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, Warning))
     }
 
@@ -516,7 +516,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addError(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
+    @inline def addError(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, Error))
     }
 
@@ -529,7 +529,7 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addSevere(loc: At, msg: String)(using pc: PlatformIOContext): this.type = {
+    @inline def addSevere(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, SevereError))
     }
   }

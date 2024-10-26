@@ -1,7 +1,7 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.utils.{DOMPlatformIOContext, PlatformIOContext}
+import com.ossuminc.riddl.utils.{DOMPlatformContext, PlatformContext}
 
 package object passes {
-  given pc: PlatformIOContext = DOMPlatformIOContext()
+  given pc: PlatformContext = DOMPlatformContext()
 }

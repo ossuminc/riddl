@@ -5,7 +5,7 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.diagrams.{ContextDiagramData, DiagramsPass, DiagramsPassOutput}
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
-import com.ossuminc.riddl.utils.{Await,PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Await,PlatformContext, URL}
 import org.scalatest.TestData
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -13,7 +13,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
-abstract class SharedDiagramsPassTest(using PlatformIOContext) extends AbstractValidatingTest {
+abstract class SharedDiagramsPassTest(using PlatformContext) extends AbstractValidatingTest {
 
   "Diagrams Data" must {
     "construct ContextDiagramData" in { (td: TestData) =>

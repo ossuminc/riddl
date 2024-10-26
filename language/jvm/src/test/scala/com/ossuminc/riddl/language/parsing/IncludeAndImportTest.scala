@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.{Await, JVMPlatformIOContext, PathUtils, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext, URL}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import scala.concurrent.Future

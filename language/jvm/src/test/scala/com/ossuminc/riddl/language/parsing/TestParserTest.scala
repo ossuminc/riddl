@@ -4,7 +4,7 @@ import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.utils.{Await, JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext}
 
 import java.nio.file.Path
 import org.scalatest.TestData

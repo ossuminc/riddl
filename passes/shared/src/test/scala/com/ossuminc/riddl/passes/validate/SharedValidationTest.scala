@@ -11,10 +11,10 @@ import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, StringParserInput}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-abstract class SharedValidationTest(using PlatformIOContext) extends AbstractParsingTest {
+abstract class SharedValidationTest(using PlatformContext) extends AbstractParsingTest {
 
   "ValidationMessage#format" should {
     "produce a correct string" in { (td:TestData) =>

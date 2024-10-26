@@ -7,9 +7,9 @@ import scala.concurrent.{ExecutionContext, Future}
   * pure-scala implementation to be used with: JVM, scala-native, scala-js for Browser, scala-js for Node, or any other
   * environment that supports simple input/output operations on files.
   */
-trait PlatformIOContext {
+trait PlatformContext {
 
-  given pc: PlatformIOContext = this
+  given pc: PlatformContext = this
 
   /** The Logger instance to use on this platform. */
   protected var logger: Logger = SysLogger()

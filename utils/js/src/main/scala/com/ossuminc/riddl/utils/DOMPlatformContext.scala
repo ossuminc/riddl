@@ -13,14 +13,14 @@ import org.scalajs.dom
   * returning the Future that will obtain it. Further processing can be chained onto the future. This handles the I/O
   * part of parsing in a platform specific way.
   */
-@JSExportTopLevel("DOMPlatformIOContext")
-case class DOMPlatformIOContext() extends PlatformIOContext {
+@JSExportTopLevel("DOMPlatformContext")
+case class DOMPlatformContext() extends PlatformContext {
 
   import scala.concurrent.{ExecutionContext, Future}
   import scala.scalajs.js.annotation.JSExport
   import scalajs.js
 
-  given io: PlatformIOContext = this
+  given io: PlatformContext = this
 
   case class FileNotFoundException(url: URL)
       extends Exception(

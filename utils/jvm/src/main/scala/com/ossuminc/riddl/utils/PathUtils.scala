@@ -88,7 +88,7 @@ object PathUtils {
     }
   }
 
-  private def fromPaths(basis: String, path: String, purpose: String = "")(using PlatformIOContext): URL =
+  private def fromPaths(basis: String, path: String, purpose: String = "")(using PlatformContext): URL =
     URL("file", "", basis.dropWhile(_ == '/'), path.dropWhile(_ == '/'))
 
   /** Set up a parser input for parsing directly from a local file based on the current working directory
@@ -99,11 +99,11 @@ object PathUtils {
   def urlFromCwdPath(path: Path, purpose: String = ""): URL =
     URL.fromCwdPath(path.toString)
 
-  def urlFromFullPath(path: Path, purpose: String = "")(using PlatformIOContext): URL =
+  def urlFromFullPath(path: Path, purpose: String = "")(using PlatformContext): URL =
     require(path.toString.startsWith("/"))
     URL.fromFullPath(path.toString)
 
-  def urlFromPath(path: Path, purpose: String = "")(using PlatformIOContext): URL =
+  def urlFromPath(path: Path, purpose: String = "")(using PlatformContext): URL =
     if path.toString.startsWith("/") then urlFromFullPath(path, purpose)
     else urlFromCwdPath(path, purpose)
 

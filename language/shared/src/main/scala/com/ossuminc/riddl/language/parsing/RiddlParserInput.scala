@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{Await, PlatformIOContext, URL}
+import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -63,12 +63,12 @@ object RiddlParserInput {
     * @return
     *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
     */
-  def fromURL(url: URL, purpose: String = "")(using io: PlatformIOContext): Future[RiddlParserInput] = {
+  def fromURL(url: URL, purpose: String = "")(using io: PlatformContext): Future[RiddlParserInput] = {
     implicit val ec: ExecutionContext = io.ec
     io.load(url).map(data => apply(data, url, purpose))
   }
 
-  def fromPath(path: String, purpose: String = "")(using io: PlatformIOContext): Future[RiddlParserInput] = {
+  def fromPath(path: String, purpose: String = "")(using io: PlatformContext): Future[RiddlParserInput] = {
     assert(path.nonEmpty, "Path provided to RiddlParserInput.fromPath is empty")
     val url: URL = if path.head == '/' then URL.fromFullPath(path) else URL.fromCwdPath(path)
     fromURL(url, purpose)

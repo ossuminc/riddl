@@ -8,11 +8,11 @@ import com.ossuminc.riddl.passes.symbols.*
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.diagrams.mermaid.*
 import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 
 import java.nio.file.Path
 
-trait ThemeGenerator(using pc: PlatformIOContext) extends UseCaseDiagramSupport {
+trait ThemeGenerator(using pc: PlatformContext) extends UseCaseDiagramSupport {
 
   def input: PassInput
 
@@ -105,7 +105,7 @@ object ThemeGenerator {
     inputs: PassInput,
     outputs: PassesOutput,
     messages: Messages.Accumulator
-  )(using PlatformIOContext): ThemeGenerator = {
+  )(using PlatformContext): ThemeGenerator = {
     options.hugoThemeName match {
       case None                            => GeekDocGenerator(options, inputs, outputs, messages)
       case Some(GeekDocWriter.name) | None => GeekDocGenerator(options, inputs, outputs, messages)

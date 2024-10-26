@@ -2,10 +2,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
-abstract class RepositoryTest(using PlatformIOContext) extends AbstractParsingTest {
+abstract class RepositoryTest(using PlatformContext) extends AbstractParsingTest {
 
   "Repository" should {
     "have a schema" in { (td:TestData) =>
@@ -47,7 +47,7 @@ abstract class RepositoryTest(using PlatformIOContext) extends AbstractParsingTe
           |     handler X is {
           |       on command PutIt {
           |         put "thing" to record Foo
-          |         read "what" from record Foo 
+          |         read "what" from record Foo
           |       }
           |     }
           |   }
@@ -56,9 +56,9 @@ abstract class RepositoryTest(using PlatformIOContext) extends AbstractParsingTe
       parseTopLevelDomain[Repository](rpi, _.domains.head.contexts.head.repositories.head) match {
         case Left(messages) =>
           val errors = messages.justErrors
-          if errors.nonEmpty then 
+          if errors.nonEmpty then
             succeed
-          else  
+          else
             fail(errors.format)
         case Right(_, _) =>
           succeed

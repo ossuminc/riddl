@@ -1,12 +1,16 @@
+/*
+ * Copyright 2024 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.passes.{Pass, PassesResult}
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.utils.{Await, PlatformIOContext, CommonOptions, URL, PathUtils}
+import com.ossuminc.riddl.utils.{Await, URL, PathUtils}
 
 import org.scalatest.Assertion
 

@@ -5,7 +5,7 @@ import com.ossuminc.riddl.language.AST.{Author, Definition, PathIdentifier, UseC
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.diagrams.mermaid.UseCaseDiagramSupport
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.PlatformIOContext 
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.reflect.ClassTag
 
@@ -14,7 +14,7 @@ case class DotdockGenerator(
   input: PassInput,
   outputs: PassesOutput,
   messages: Messages.Accumulator
-)(using PlatformIOContext) extends ThemeGenerator
+)(using PlatformContext) extends ThemeGenerator
     with UseCaseDiagramSupport {
 
   def makeDocLink(definition: Definition, parents: Seq[String]): String = "" // TODO: implement makeDocLink

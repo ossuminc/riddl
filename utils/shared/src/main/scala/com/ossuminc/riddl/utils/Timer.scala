@@ -36,7 +36,7 @@ object Timer {
   def time[T](
     stage: String,
     show: Boolean = true
-  )(using io: PlatformIOContext)(f: => T): T = {
+  )(using io: PlatformContext)(f: => T): T = {
     if show then {
       val clock = Clock.systemUTC()
       val start = clock.millis()

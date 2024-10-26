@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformIOContext, StringHelpers, URL}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformContext, StringHelpers, URL}
 import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
@@ -21,7 +21,7 @@ object FlattenCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class FlattenCommand(using io: PlatformIOContext) extends InputFileCommand(DumpCommand.cmdName) {
+class FlattenCommand(using io: PlatformContext) extends InputFileCommand(DumpCommand.cmdName) {
   import InputFileCommand.Options
 
   override def run(

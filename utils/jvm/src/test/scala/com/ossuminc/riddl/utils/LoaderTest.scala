@@ -11,7 +11,7 @@ class LoaderTest extends AnyWordSpec with Matchers {
       val url = URL(
         "https://raw.githubusercontent.com/ossuminc/riddl/main/language/jvm/src/test/input/domains/rbbq.riddl"
       )
-      val contentF = JVMPlatformIOContext().load(url)
+      val contentF = JVMPlatformContext().load(url)
       val content = Await.result(contentF, 5.seconds)
       // info(content)
     }

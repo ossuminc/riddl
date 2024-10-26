@@ -9,7 +9,7 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformIOContext, URL, Await}
+import com.ossuminc.riddl.utils.{CommonOptions, Logger, PathUtils, PlatformContext, URL, Await}
 import com.ossuminc.riddl.passes.{Pass, PassCreators, PassInput, PassesResult}
 
 import java.nio.file.Path
@@ -37,7 +37,7 @@ trait PassCommandOptions extends CommandOptions {
   * @tparam OPT
   *   The option type for the command
   */
-abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(using pc: PlatformIOContext)
+abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(using pc: PlatformContext)
     extends Command[OPT](name) {
 
   /** Get the passes to run given basic input for pass creation

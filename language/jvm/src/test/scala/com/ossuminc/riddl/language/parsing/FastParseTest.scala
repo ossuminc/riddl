@@ -13,9 +13,9 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-class FastParseTest(using PlatformIOContext) extends ParsingContext with AbstractTestingBasisWithTestData {
+class FastParseTest(using PlatformContext) extends ParsingContext with AbstractTestingBasisWithTestData {
 
-  given io: PlatformIOContext = JVMPlatformIOContext()
+  given io: PlatformContext = JVMPlatformContext()
 
   implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
 

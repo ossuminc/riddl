@@ -7,8 +7,8 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Usages}
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.validate.ValidationOutput
-import com.ossuminc.riddl.passes.* 
-import com.ossuminc.riddl.utils.{PathUtils, PlatformIOContext,AbstractTestingBasisWithTestData}
+import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.utils.{PathUtils, PlatformContext,AbstractTestingBasisWithTestData}
 import com.ossuminc.riddl.utils.{pc,ec, Await}
 
 import scala.collection.mutable
@@ -51,7 +51,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
   object TestPass extends PassInfo[PassOptions] {
     val name: String = "TestPass"
 
-    override def creator(options: PassOptions)(using PlatformIOContext): PassCreator = (input, output) =>
+    override def creator(options: PassOptions)(using PlatformContext): PassCreator = (input, output) =>
       new TestPass(input, output)
   }
 
@@ -70,7 +70,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
   object TestPass2 extends PassInfo[PassOptions] {
     val name: String = "TestPass2"
 
-    override def creator(options: PassOptions)(using PlatformIOContext): PassCreator = (input, output) =>
+    override def creator(options: PassOptions)(using PlatformContext): PassCreator = (input, output) =>
       new TestPass2(input, output)
   }
 

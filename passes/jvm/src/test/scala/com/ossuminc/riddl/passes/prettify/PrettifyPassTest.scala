@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.prettify
 
-import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformIOContext, PathUtils, PlatformIOContext}
+import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformContext, PathUtils, PlatformContext}
 import com.ossuminc.riddl.language.{Messages, RiddlFilesTestBase}
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.parsing.RiddlParserInput

@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{CommonOptions, ec, pc}
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
 
 /** Unit Tests For TypeValidationTest */
@@ -18,12 +18,13 @@ class TypeValidatorTest extends AbstractValidatingTest {
 
   pc.setOptions(CommonOptions.default)
   "TypeValidator" should {
-    "ensure type names start with capital letter" in { (td:TestData) =>
+    "ensure type names start with capital letter" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
           |type bar is String
           |}
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(input) { case (_: Domain, _, msgs: Seq[Message]) =>
         if msgs.isEmpty then fail("Type 'bar' should have generated warning")
@@ -32,7 +33,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
         else { fail("No such message") }
       }
     }
-    "identify undefined type references" in { (td:TestData) =>
+    "identify undefined type references" in { (td: TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
@@ -47,51 +48,55 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |  type Alternation is one of { Bar or Foo }
           |  type Order is Id(Bar)
           |}
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) {
         case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
           val errors = msgsAndWarnings.justErrors
-          errors.size mustBe (1)
+          errors.size mustBe 1
           errors.head.message must include("but an Entity was expected")
       }
     }
-    "allow ??? in aggregate bodies without warning" in { (td:TestData) =>
+    "allow ??? in aggregate bodies without warning" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {
           |  type Empty is { ??? } with { described as "empty" }
           |} with { explained as "nothing" }
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         msgs mustNot be(empty)
         info(msgs.format)
-        msgs.size must be (4)
+        msgs.size must be(4)
         msgs.filter(_.kind == Messages.UsageWarning).last.format must include("is unused")
       }
     }
 
-    "identify when pattern type does not refer to a valid pattern" in { (td:TestData) =>
+    "identify when pattern type does not refer to a valid pattern" in { (td: TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
           |type pat is Pattern("[")
           |}
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(msgs, Error, "Unclosed character class")
       }
     }
 
-    "identify when unique ID types reference something other than an entity" in { (td:TestData) =>
+    "identify when unique ID types reference something other than an entity" in { (td: TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
           |context TypeTest is { ??? }
           |type Order is Id(TypeTest)
           |}
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
         assertValidationMessage(
@@ -102,7 +107,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
       }
     }
 
-    "check infrequently used TypeExpressions" in { (td:TestData) =>
+    "check infrequently used TypeExpressions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo is {
@@ -113,7 +118,8 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |  type d = Decimal(3,8)
           |  command c(int: Integer, str: String)
           |}
-          |""".stripMargin,td
+          |""".stripMargin,
+        td
       )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain: Domain, _, msgs: Messages) =>
         msgs.justErrors must be(empty)
@@ -133,6 +139,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
         rng.typEx.asInstanceOf[RangeType].format must be("Range(23,42)")
         c.typEx.isInstanceOf[AggregateUseCaseTypeExpression] must be(true)
         c.typEx.asInstanceOf[AggregateUseCaseTypeExpression].format must be("command { int: Integer, str: String }")
+        d.typEx.asInstanceOf[Decimal].format must be("Decimal(3,8)")
       }
 
     }

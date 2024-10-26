@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.utils.{Logger, PlatformIOContext}
+import com.ossuminc.riddl.utils.{Logger, PlatformContext}
 import com.ossuminc.riddl.utils.{pc, ec}
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
@@ -37,7 +37,7 @@ object StatsCommand {
 }
 
 /** Stats Command */
-class StatsCommand(using io: PlatformIOContext) extends PassCommand[StatsCommand.Options]("stats") {
+class StatsCommand(using io: PlatformContext) extends PassCommand[StatsCommand.Options]("stats") {
   import StatsCommand.Options
 
   // Members declared in com.ossuminc.riddl.commands.CommandPlugin

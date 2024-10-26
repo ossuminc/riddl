@@ -12,7 +12,7 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
-import com.ossuminc.riddl.utils.PlatformIOContext
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.{immutable, mutable}
 import scala.scalajs.js.annotation.*
@@ -77,7 +77,7 @@ case class DiagramsPassOutput(
 ) extends PassOutput
 
 @JSExportTopLevel("DiagramsPass")
-class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOContext) extends Pass(input, outputs) {
+class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContext) extends Pass(input, outputs) {
 
   def name: String = DiagramsPass.name
 
@@ -353,7 +353,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformIOCont
 @JSExportTopLevel("DiagramsPass$")
 object DiagramsPass extends PassInfo[PassOptions] {
   val name: String = "Diagrams"
-  def creator(options: PassOptions = PassOptions.empty)(using PlatformIOContext): PassCreator = {
+  def creator(options: PassOptions = PassOptions.empty)(using PlatformContext): PassCreator = {
     (in: PassInput, out: PassesOutput) =>
       DiagramsPass(in, out)
   }

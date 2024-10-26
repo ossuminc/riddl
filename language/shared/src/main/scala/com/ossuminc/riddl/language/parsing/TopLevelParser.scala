@@ -9,7 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.{PlatformIOContext, Timer, CommonOptions}
+import com.ossuminc.riddl.utils.{PlatformContext, Timer, CommonOptions}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -23,7 +23,7 @@ import scala.scalajs.js.annotation.*
   *   Common options to use during the parsing
   */
 @JSExportTopLevel("TopLevelParser")
-class TopLevelParser(using io: PlatformIOContext)
+class TopLevelParser(using io: PlatformContext)
     extends ProcessorParser
     with DomainParser
     with AdaptorParser
@@ -93,7 +93,7 @@ object TopLevelParser {
   def parseURL(
     url: URL,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformIOContext): Future[Either[Messages, Root]] = {
+  )(using io: PlatformContext): Future[Either[Messages, Root]] = {
     io.load(url).map { (data: String) =>
       val rpi = RiddlParserInput(data.mkString, url)
       parseInput(rpi, withVerboseFailures)
@@ -113,7 +113,7 @@ object TopLevelParser {
   def parseInput(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformIOContext): Either[Messages, Root] = {
+  )(using io: PlatformContext): Either[Messages, Root] = {
     Timer.time(s"parse ${input.origin}", io.options.showTimes) {
       implicit val _: ExecutionContext = io.ec
       val tlp = new TopLevelParser()
@@ -124,7 +124,7 @@ object TopLevelParser {
   def parseString(
     input: String,
     withVerboseFailures: Boolean = false
-  )(using PlatformIOContext): Either[Messages, Root] = {
+  )(using PlatformContext): Either[Messages, Root] = {
     val rpi = RiddlParserInput(input, "")
     parseInput(rpi)
   }
@@ -132,7 +132,7 @@ object TopLevelParser {
   def parseNebulaFromInput(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformIOContext): Either[Messages, Nebula] = {
+  )(using io: PlatformContext): Either[Messages, Nebula] = {
     Timer.time(s"parse nebula from ${input.origin}", io.options.showTimes) {
       implicit val _: ExecutionContext = io.ec
       val tlp = new TopLevelParser()
