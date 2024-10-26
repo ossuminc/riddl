@@ -31,7 +31,6 @@ class ReferenceMapTest extends AbstractValidatingTest {
     val refMap = result.refMap
 
     "convert to a pretty string" in { _ =>
-      info("pretty: " + refMap.toString)
       refMap.toString must not be empty
     }
     "have correct size" in { _ =>

@@ -1,7 +1,5 @@
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.utils.{JVMPlatformIOContext, PlatformIOContext}
-
 import scala.concurrent.ExecutionContext
 
 package object utils {

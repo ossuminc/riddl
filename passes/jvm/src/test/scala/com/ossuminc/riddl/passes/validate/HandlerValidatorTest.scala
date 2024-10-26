@@ -7,10 +7,10 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Domain
-import com.ossuminc.riddl.language.{Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{pc, ec, CommonOptions}
+import com.ossuminc.riddl.utils.{CommonOptions, JVMPlatformIOContext, PlatformIOContext, ec, pc}
 import org.scalatest.TestData
 
 class HandlerValidatorTest extends AbstractValidatingTest {
@@ -118,6 +118,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
       }
     }
     "produce a warning for commands with no events sent" in { (td: TestData) =>
+      pc.setOptions(CommonOptions.empty)
       val input =
         """domain ignore is {
           |  context ignore is {

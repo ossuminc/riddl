@@ -73,6 +73,7 @@ case class CommonOptions(
 @JSExportTopLevel("CommonOptions$")
 object CommonOptions {
   def empty: CommonOptions = CommonOptions()
+  def default: CommonOptions = CommonOptions()
   def noWarnings: CommonOptions = empty.copy(showWarnings = false)
   def noMinorWarnings: CommonOptions = empty.copy(
     showMissingWarnings = false,

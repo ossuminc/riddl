@@ -83,6 +83,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
                     |  record fields is { field: SomeType }
                     |  state foo of Hamburger.fields
                     |}""".stripMargin
+      pc.setOptions(CommonOptions.default)
       parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
         assertValidationMessage(
           msgs,
