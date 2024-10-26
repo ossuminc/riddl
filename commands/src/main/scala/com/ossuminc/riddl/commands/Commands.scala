@@ -21,7 +21,7 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 object Commands:
 
   /** Convert a string and some [[com.ossuminc.riddl.utils.CommonOptions]] into either a
-    * [[com.ossuminc.riddl.command.Command]] or some [[Messages.Messages]] Note that the
+    * [[com.ossuminc.riddl.command.Command]] or some [[com.ossuminc.riddl.language.Messages.Messages]] Note that the
     * [[com.ossuminc.riddl.command.CommandOptions]] will be passed to the command when you run it.
     *
     * @param name
