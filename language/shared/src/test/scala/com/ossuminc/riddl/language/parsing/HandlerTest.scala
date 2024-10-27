@@ -7,11 +7,12 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.{Context, Entity}
-import com.ossuminc.riddl.language.parsing.NoJVMParsingTest
+import com.ossuminc.riddl.language.parsing.AbstractParsingTest
+import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
 /** Unit Tests For Handler */
-class HandlerTest extends NoJVMParsingTest {
+abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
   "Handlers" should {
     "be allowed in contexts" in { (td: TestData) =>
       val input = RiddlParserInput(
@@ -117,8 +118,8 @@ class HandlerTest extends NoJVMParsingTest {
           |      else
           |        "nothing required"
           |      end
-          |    } with {  
-          |      described as "Helps update this item's location"   
+          |    } with {
+          |      described as "Helps update this item's location"
           |    }
           |  }
           |}
@@ -146,8 +147,8 @@ class HandlerTest extends NoJVMParsingTest {
           |      "if ==(field ContainerNestedInContainer.id,parentContainer) then"
           |        set field DistributionItem.workCenter to "lastKnownWorkCenter"
           |      "end"
-          |    } with {  
-          |      described as "Helps update this item's location" 
+          |    } with {
+          |      described as "Helps update this item's location"
           |    }
           |    on other is { ??? }
           |  }

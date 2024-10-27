@@ -51,7 +51,7 @@ case class SymbolsOutput(
   def parentsOf(definition: Definition): Parents = {
     parentage.get(definition) match {
       case Some(list) => list
-      case None       => Parents.empty 
+      case None       => Parents.empty
     }
   }
 

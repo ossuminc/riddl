@@ -15,7 +15,7 @@ import com.ossuminc.riddl.diagrams.mermaid.DomainMapDiagram
 
 import java.io.{PrintWriter, StringWriter}
 import java.nio.file.Path
-import org.scalatest.TestData 
+import org.scalatest.TestData
 
 class MarkdownWriterTest extends HugoTestBase {
 

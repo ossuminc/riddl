@@ -7,12 +7,12 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.AbstractTestingBasis
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 /** Unit Tests For AssignmentCompatibility */
-class AssignmentCompatibilityTest extends TestingBasis {
+class AssignmentCompatibilityTest extends AbstractTestingBasis {
 
   val abstrct = Abstract(At.empty)
   val datetime = DateTime(At.empty)

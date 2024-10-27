@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.utils
 
 import java.io.{File, InputStream}
-import java.net.URL
+import java.net.URL as JNURL
 import java.nio.file.{Files, Path, StandardCopyOption}
 import scala.jdk.Accumulator
 import scala.jdk.StreamConverters.StreamHasToScala
@@ -33,12 +33,14 @@ object PathUtils {
     *   True if the program is in the path, false otherwise
     */
   def existsInPath(program: String): Boolean = {
-    System.getenv("PATH")
-      .split(java.util.regex.Pattern.quote(File.pathSeparator)).map(Path.of(_))
+    System
+      .getenv("PATH")
+      .split(java.util.regex.Pattern.quote(File.pathSeparator))
+      .map(Path.of(_))
       .exists(p => Files.isExecutable(p.resolve(program)))
   }
 
-  def copyURLToDir(from: URL, destDir: Path): String = {
+  def copyURLToDir(from: JNURL, destDir: Path): String = {
     val nameParts = from.getFile.split('/')
     if nameParts.nonEmpty then {
       val fileName = scala.util.Random.self.nextLong.toString ++ nameParts.last
@@ -58,14 +60,18 @@ object PathUtils {
   def compareDirectories(
     a: Path,
     b: Path
-  )(missing: Path => Boolean,
+  )(
+    missing: Path => Boolean,
     differentSize: (Path, Path) => Boolean,
     differentContent: (Path, Path) => Boolean
   ): Unit = {
     var exit = false
-    val sourceFiles = Files.list(a).toScala(Accumulator).toList
+    val sourceFiles = Files
+      .list(a)
+      .toScala(Accumulator)
+      .toList
       .filterNot(_.getFileName.toString.startsWith("."))
-    for  fileA <- sourceFiles  do {
+    for fileA <- sourceFiles do {
       val fileNameA = fileA.getFileName
       val fileB = b.resolve(fileNameA)
       if !Files.exists(fileB) then { exit = missing(fileB) }
@@ -81,6 +87,24 @@ object PathUtils {
       }
     }
   }
-  
-  
+
+  private def fromPaths(basis: String, path: String, purpose: String = "")(using PlatformContext): URL =
+    URL("file", "", basis.dropWhile(_ == '/'), path.dropWhile(_ == '/'))
+
+  /** Set up a parser input for parsing directly from a local file based on the current working directory
+    *
+    * @param path
+    *   The path that will be added to the current working directory
+    */
+  def urlFromCwdPath(path: Path, purpose: String = ""): URL =
+    URL.fromCwdPath(path.toString)
+
+  def urlFromFullPath(path: Path, purpose: String = "")(using PlatformContext): URL =
+    require(path.toString.startsWith("/"))
+    URL.fromFullPath(path.toString)
+
+  def urlFromPath(path: Path, purpose: String = "")(using PlatformContext): URL =
+    if path.toString.startsWith("/") then urlFromFullPath(path, purpose)
+    else urlFromCwdPath(path, purpose)
+
 }

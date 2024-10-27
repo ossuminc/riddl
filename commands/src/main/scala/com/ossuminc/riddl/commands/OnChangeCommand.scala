@@ -6,14 +6,16 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.command.{Command, CommandOptions}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger}
+import com.ossuminc.riddl.utils.{pc, ec}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -28,8 +30,6 @@ import java.time.Instant
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-import com.ossuminc.riddl.command.{Command, CommandOptions}
-
 
 object OnChangeCommand {
   final val cmdName: String = "onchange"
@@ -47,8 +47,7 @@ object OnChangeCommand {
   }
 }
 
-class OnChangeCommand
-    extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
+class OnChangeCommand(using io: PlatformContext) extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
 
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
@@ -168,12 +167,10 @@ class OnChangeCommand
   ): Options = { opts.copy(configFile = inputFile) }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    log: Logger,
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 
@@ -184,21 +181,18 @@ class OnChangeCommand
     *   The command specific options
     * @param commonOptions
     *   The options common to all commands
-    * @param log
-    *   A logger for logging errors, warnings, and info
     * @return
     *   Either a set of Messages on error or a Unit on success
     */
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     Left(errors("Not Implemented"))
   }
 
   private final val timeStampFileName: String = ".riddl-timestamp"
+
   def getTimeStamp(dir: Path): FileTime = {
     val filePath = dir.resolve(timeStampFileName)
     if Files.notExists(filePath) then {

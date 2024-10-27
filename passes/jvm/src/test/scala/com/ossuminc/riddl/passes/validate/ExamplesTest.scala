@@ -6,32 +6,26 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.CommonOptions
-import com.ossuminc.riddl.passes.validate.ValidatingTest
+import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.CommonOptions
+
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.Path
 
 /** Unit Tests For ExamplesTest */
-class ExamplesTest extends ValidatingTest {
+class ExamplesTest extends JVMAbstractValidatingTest {
 
   val dir = "language/jvm/src/test/input/"
 
   def doOne(fileName: String): Assertion = {
-    parseAndValidateFile(
-      Path.of(dir, fileName),
-      CommonOptions(
-        showTimes = true,
-        showWarnings = false,
-        showMissingWarnings = false,
-        showStyleWarnings = false
-      )
-    )
-    succeed
+    pc.withOptions(CommonOptions.noWarnings.copy(showTimes = true)) { _ =>
+      parseAndValidateFile(Path.of(dir, fileName))
+    }
   }
 
   "Examples" should {
-    "compile Reactive BBQ" in { (td: TestData) =>  doOne("rbbq.riddl") }
+    "compile Reactive BBQ" in { (td: TestData) => doOne("rbbq.riddl") }
     "compile Pet Store" in { (td: TestData) => doOne("petstore.riddl") }
     "compile Everything" in { (td: TestData) => doOne("everything.riddl") }
     "compile dokn" in { (td: TestData) => doOne("dokn.riddl") }

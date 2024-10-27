@@ -7,11 +7,9 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
-
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger}
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -25,7 +23,7 @@ object HelpCommand {
   case class Options(command: String = "help", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
 
-  lazy val commandOptionsParser: OParser[Unit, ?] = {
+  private def commandOptionsParser(using io: PlatformContext): OParser[Unit, ?] = {
     val optionParsers = Seq(
       AboutCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
@@ -47,7 +45,7 @@ object HelpCommand {
 
 }
 
-class HelpCommand extends Command[HelpCommand.Options]("help") {
+class HelpCommand(using io: PlatformContext) extends Command[HelpCommand.Options]("help") {
   import HelpCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -66,11 +64,9 @@ class HelpCommand extends Command[HelpCommand.Options]("help") {
 
   override def run(
     options: HelpCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if commonOptions.verbose || !commonOptions.quiet then {
+    if io.options.verbose || !io.options.quiet then {
       val usage: String = {
         val common = OParser.usage(CommonOptionsHelper.commonOptionsParser, OneColumn)
         val commands = OParser.usage(HelpCommand.commandOptionsParser, OneColumn)
@@ -87,7 +83,7 @@ class HelpCommand extends Command[HelpCommand.Options]("help") {
           .mkString(System.lineSeparator())
         common ++ "\n\n" ++ improved_commands
       }
-      log.info(usage)
+      io.log.info(usage)
     }
     Right(PassesResult())
   }

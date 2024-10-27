@@ -8,9 +8,10 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
 
-class InvariantValidator extends ValidatingTest {
+class InvariantValidator extends AbstractValidatingTest {
 
   "InvariantValidator" should {
     "allow undefined expressions in invariants" in { (td: TestData) =>

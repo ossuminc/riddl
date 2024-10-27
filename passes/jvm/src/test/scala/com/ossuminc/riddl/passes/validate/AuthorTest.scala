@@ -6,12 +6,15 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
+import com.ossuminc.riddl.utils.CommonOptions
+import com.ossuminc.riddl.utils.pc
+
 import org.scalatest.TestData
 
-class AuthorTest extends ValidatingTest {
+class AuthorTest extends AbstractValidatingTest {
 
   "Authors" should {
     "be defined empty in domains" in { (td: TestData) =>
@@ -40,17 +43,19 @@ class AuthorTest extends ValidatingTest {
     }
     "author must be defined" in { (td: TestData) =>
       val input = RiddlParserInput(s"""domain foo is { ??? } with { by author Bar }""", td)
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) { case (_, _, msgs) =>
-        val errs = msgs.justErrors
-        errs mustNot be(empty)
-        assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
-        assertValidationMessage(
-          errs,
-          Messages.Error,
-          """Path 'Bar' was not resolved, in Domain 'foo'
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
+          val errs = msgs.justErrors
+          errs mustNot be(empty)
+          assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
+          assertValidationMessage(
+            errs,
+            Messages.Error,
+            """Path 'Bar' was not resolved, in Domain 'foo'
               |because the sought name, 'Bar', was not found in the symbol table,
               |and it should refer to an Author""".stripMargin
-        )
+          )
+        }
       }
     }
     "referenced from Application" in { (td: TestData) =>
@@ -126,7 +131,7 @@ class AuthorTest extends ValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  context Bar  is { 
+          |  context Bar  is {
           |    entity Bar is { ??? } with { by author Reid  }
           |  } with {
           |    by author Reid
@@ -191,7 +196,7 @@ class AuthorTest extends ValidatingTest {
           |    user U wants to "hum" so that "haw"
           |    ???
           |  } with {
-          |    by author Reid  
+          |    by author Reid
           |  }
           |}
           |""".stripMargin,

@@ -1,32 +1,43 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.passes.resolve
 
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.validate.ValidatingTest
 import com.ossuminc.riddl.passes.PassesResult
-
+import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
+import com.ossuminc.riddl.utils.{pc, ec, Await}
+import com.ossuminc.riddl.utils.PathUtils
 
 import java.nio.file.Path
 import org.scalatest.TestData
 
-class ReferenceMapTest extends ValidatingTest {
+import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
-  protected def create: PassesResult = {
-    val input = RiddlParserInput.fromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
-    simpleParseAndValidate(input) match {
-      case Left(messages) => fail(messages.format)
-      case Right(result) => result
+class ReferenceMapTest extends AbstractValidatingTest {
+
+  protected def create: Future[PassesResult] = {
+    val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+    RiddlParserInput.fromURL(url).map { rpi =>
+      simpleParseAndValidate(rpi) match {
+        case Left(messages) => fail(messages.format)
+        case Right(result)  => result
+      }
     }
   }
 
   "ReferenceMap" must {
-    val result: PassesResult = create
+    val result: PassesResult = Await.result(create, 10.seconds)
     val refMap = result.refMap
+
     "convert to a pretty string" in { _ =>
-      info("pretty: " + refMap.toString)
-      refMap.toString must not be(empty)
+      refMap.toString must not be empty
     }
     "have correct size" in { _ =>
       info("size: " + refMap.size.toString)
@@ -35,18 +46,18 @@ class ReferenceMapTest extends ValidatingTest {
 
     "have definitionOf(pathId:String) work" in { _ =>
       refMap.definitionOf[Author]("Reid") match {
-        case None => fail("Expected to find Author 'Reid'")
-        case Some(author: Author) => author.name.s mustBe("Reid")
-        case x => fail(s"Unexpected result: ${x.toString}")
+        case None                 => fail("Expected to find Author 'Reid'")
+        case Some(author: Author) => author.name.s mustBe "Reid"
+        case x                    => fail(s"Unexpected result: ${x.toString}")
       }
     }
 
     "inserts a value and finds it" in { _ =>
       val context: Context = Context(At(), Identifier(At(), "context"))
-      val parent: Parent = Domain(At(), Identifier(At(),"domain"))
+      val parent: Parent = Domain(At(), Identifier(At(), "domain"))
       val pid = PathIdentifier(At(), Seq("wrong-name"))
       refMap.add[Context](pid, parent, context)
-      refMap.definitionOf[Context](pid, parent) must not be(empty)
+      refMap.definitionOf[Context](pid, parent) must not be empty
     }
 
     "have definitionOf(pid: PathIdentifier, parent: Parent) work" in { _ =>
@@ -56,19 +67,19 @@ class ReferenceMapTest extends ValidatingTest {
       parent.id.value mustBe "AChannel"
       refMap.definitionOf[Inlet](pid) match {
         case Some(actual: Inlet) =>
-          actual.id.value mustBe("Commands")
+          actual.id.value mustBe ("Commands")
           val expected = context.streamlets.find("Sink")
           expected match {
             case Some(streamlet: Streamlet) =>
-              streamlet.id.value mustBe("Sink")
-              streamlet.inlets must(not be(empty))
+              streamlet.id.value mustBe ("Sink")
+              streamlet.inlets must (not be (empty))
               val expected = streamlet.inlets.head
               actual mustBe expected
             case None => fail("Didn't find streamlets 'Sink'")
-            case x => fail(s"Unexpected result: ${x.toString}")
+            case x    => fail(s"Unexpected result: ${x.toString}")
           }
         case None => fail("Expected to find 'Source'")
-        case x => fail(s"Unexpected result: ${x.toString}")
+        case x    => fail(s"Unexpected result: ${x.toString}")
       }
     }
 
@@ -81,9 +92,9 @@ class ReferenceMapTest extends ValidatingTest {
       refMap.definitionOf[Type](ref, entity) match {
         case Some(actual: Type) =>
           actual mustBe expected
-          actual.id.value mustBe("someData")
+          actual.id.value mustBe ("someData")
         case None => fail("Expected to find 'Something'")
-        case x => fail(s"Unexpected result: ${x.toString}")
+        case x    => fail(s"Unexpected result: ${x.toString}")
       }
     }
   }

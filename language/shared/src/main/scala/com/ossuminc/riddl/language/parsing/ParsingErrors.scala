@@ -6,14 +6,13 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.ExceptionUtils
+import com.ossuminc.riddl.utils.{ExceptionUtils, CommonOptions}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.At
 import fastparse.Parsed.{Failure, Success}
 import fastparse.internal.Lazy
 import fastparse.*
-
 
 import java.nio.file.Path
 import java.util.concurrent.{ExecutorService, Executors}

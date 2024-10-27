@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.language.AST
@@ -7,13 +13,14 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.validate.ValidationPass
+import com.ossuminc.riddl.utils.PlatformContext
 
-import scala.scalajs.js.annotation.{JSExportTopLevel,JSExport}
+import scala.scalajs.js.annotation.JSExportTopLevel
 
 @JSExportTopLevel("PrettifyPass$")
 object PrettifyPass extends PassInfo[PrettifyPass.Options]:
   val name: String = "prettify"
-  def creator(options: PrettifyPass.Options = PrettifyPass.Options()): PassCreator =
+  def creator(options: PrettifyPass.Options = PrettifyPass.Options())(using PlatformContext) =
     (in: PassInput, out: PassesOutput) => PrettifyPass(in, out, options)
   end creator
 
@@ -33,7 +40,8 @@ class PrettifyPass(
   input: PassInput,
   outputs: PassesOutput,
   options: PrettifyPass.Options
-) extends VisitingPass[PrettifyVisitor](input, outputs, new PrettifyVisitor(options)):
+)(using PlatformContext)
+    extends VisitingPass[PrettifyVisitor](input, outputs, new PrettifyVisitor(options)):
   def name: String = PrettifyPass.name
 
   requires(SymbolsPass)

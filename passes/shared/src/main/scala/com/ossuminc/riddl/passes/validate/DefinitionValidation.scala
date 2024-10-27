@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
+import com.ossuminc.riddl.utils.pc
 
 /** A Trait that defines typical Validation checkers for validating definitions */
 trait DefinitionValidation extends BasicValidation:
@@ -112,7 +113,7 @@ trait DefinitionValidation extends BasicValidation:
     )
     var hasAuthorRef = false
     var hasDescription = false
-    for {meta <- definition.metadata.toSeq} do {
+    for { meta <- definition.metadata.toSeq } do {
       meta match
         case bd: BriefDescription =>
           check(
@@ -151,14 +152,14 @@ trait DefinitionValidation extends BasicValidation:
             Warning,
             t.loc
           )
-        case _: AuthorRef   =>
+        case _: AuthorRef =>
           hasAuthorRef = true
         case _: StringAttachment => ()
-        case _: FileAttachment => ()
-        case _: ULIDAttachment => () 
-        case _: Description => ()
+        case _: FileAttachment   => ()
+        case _: ULIDAttachment   => ()
+        case _: Description      => ()
     }
-    check(hasDescription,s"$identity should have a description", MissingWarning, definition.loc)
-    check(hasAuthorRef,s"$identity should have an author reference", MissingWarning, definition.loc)
+    check(hasDescription, s"$identity should have a description", MissingWarning, definition.loc)
+    check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, definition.loc)
   end checkDescriptives
 end DefinitionValidation

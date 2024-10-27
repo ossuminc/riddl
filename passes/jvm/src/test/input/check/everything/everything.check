@@ -274,3 +274,7 @@ passes/jvm/src/test/input/check/everything/everything.riddl(8:5):
  Sink 'Sink' should have an author reference:
      sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
      ^
+passes/jvm/src/test/input/check/everything/everything.riddl(58:9):
+ Processing for commands should result in sending an event:
+         on command ACommand {
+         ^

@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.utils
 
 import org.scalatest.wordspec.AnyWordSpec
@@ -5,7 +11,7 @@ import org.scalatest.TestData
 import java.time.Instant
 import java.io.InputStream
 
-class BuildInfoTest extends TestingBasis {
+class BuildInfoTest extends AbstractTestingBasis {
 
   "BuildInfo" must {
     "have all the fields" in { (td: TestData) =>

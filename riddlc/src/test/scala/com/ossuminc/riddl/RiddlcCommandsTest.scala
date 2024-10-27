@@ -6,9 +6,9 @@
 
 package com.ossuminc.riddl
 
-
-import com.ossuminc.riddl.commands.{Commands, RunCommandSpecBase}
+import com.ossuminc.riddl.commands.RunCommandSpecBase
 import org.scalatest.Assertion
+import com.ossuminc.riddl.utils.pc
 
 class RiddlcCommandsTest extends RunCommandSpecBase {
 
@@ -19,8 +19,12 @@ class RiddlcCommandsTest extends RunCommandSpecBase {
     (name: String) => s"riddlc/target/test/$name"
 
   "Riddlc Commands" should {
-    "tell about riddl" in {
+    "provide about info " in {
       val args = Seq("about")
+      runWith(args)
+    }
+    "provide about info without ANSI coloring" in {
+      val args = Seq("--no-ansi-messages", "about")
       runWith(args)
     }
     "provide help" in {

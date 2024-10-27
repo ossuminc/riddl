@@ -9,10 +9,10 @@ package com.ossuminc.riddl.language
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.PredefType
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.AbstractTestingBasis
 
 /** Unit Tests For TypeExpressions */
-class TypeExpressionTest extends TestingBasis {
+class TypeExpressionTest extends AbstractTestingBasis {
 
   val abstract_ = Abstract(At.empty)
   val bool: Bool = Bool(At.empty)

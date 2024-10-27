@@ -11,7 +11,8 @@ import com.ossuminc.riddl.language.AST.*
 import scala.reflect.{ClassTag, classTag}
 import scalajs.js.annotation._
 
-/** The context for finding things within a given [[Container]] of [[com.ossuminc.riddl.language.AST.RiddlValue]] as
+/** The context for finding things within a given [[com.ossuminc.riddl.language.AST.Container]] of 
+  * [[com.ossuminc.riddl.language.AST.RiddlValue]] as
   * found in the AST model. This provides the ability to find values in the model by traversing it and looking for the
   * matching condition.
   * @param root
@@ -77,8 +78,9 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
   }
 
   /** Run a transformation function on the [[Finder]] contents. They type parameter specifies what kind of thing
-   * should be found, the [[select]] argument provides further refinement of which things of that type should
-   * be selected. The transformation function does the transformation, probably by using the Scala `.copy` method.
+   * should be found, the `select` argument provides further refinement of which things of that type should
+   * be selected. The transformation function, `transformF` does the transformation, probably by using the 
+   * Scala `.copy` method.
    *
    * @tparam TT
    *   The transform type. This narrows the search to just the contents that have the base type TT. 

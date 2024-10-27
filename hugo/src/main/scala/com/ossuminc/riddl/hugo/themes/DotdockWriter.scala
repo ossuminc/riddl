@@ -1,10 +1,17 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.hugo.HugoPass
-import com.ossuminc.riddl.language.{AST, CommonOptions}
+import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 
 import java.nio.file.Path
 
@@ -27,9 +34,8 @@ case class DotdockWriter(
   filePath: Path,
   input: PassInput,
   outputs: PassesOutput,
-  options: HugoPass.Options,
-  commonOptions: CommonOptions
-) extends MarkdownWriter {
+  options: HugoPass.Options
+)(using PlatformContext) extends MarkdownWriter {
   final val name: String = DotdockWriter.name
 
   lazy val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
