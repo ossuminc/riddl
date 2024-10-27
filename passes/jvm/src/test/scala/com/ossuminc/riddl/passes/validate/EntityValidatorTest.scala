@@ -28,19 +28,21 @@ class EntityValidatorTest extends AbstractValidatingTest {
           | option available
           |}
           |""".stripMargin
-      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
-        case (entity: Entity, rpi, msgs: Messages) =>
-          // info(msgs.format)
-          msgs.count(_.kind.isError) mustBe 1
-          // msgs.count(_.kind.isWarning) mustBe 1
-          val numMissing =
-            msgs.count(_.kind.isMissing)
-          numMissing must be(6)
-          entity.options must contain(OptionValue((3, 9, rpi), "finite-state-machine"))
-          entity.options must contain(OptionValue((4, 9, rpi), "message-queue"))
-          entity.options must contain(OptionValue((5, 9, rpi), "aggregate"))
-          entity.options must contain(OptionValue((6, 9, rpi), "transient"))
-          entity.options must contain(OptionValue((7, 9, rpi), "available"))
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) {
+          case (entity: Entity, rpi, msgs: Messages) =>
+            // info(msgs.format)
+            msgs.count(_.kind.isError) mustBe 1
+            // msgs.count(_.kind.isWarning) mustBe 1
+            val numMissing =
+              msgs.count(_.kind.isMissing)
+            numMissing must be(6)
+            entity.options must contain(OptionValue((3, 9, rpi), "finite-state-machine"))
+            entity.options must contain(OptionValue((4, 9, rpi), "message-queue"))
+            entity.options must contain(OptionValue((5, 9, rpi), "aggregate"))
+            entity.options must contain(OptionValue((6, 9, rpi), "transient"))
+            entity.options must contain(OptionValue((7, 9, rpi), "available"))
+        }
       }
     }
 
@@ -79,29 +81,32 @@ class EntityValidatorTest extends AbstractValidatingTest {
         }
       }
     }
+
     "catch missing things" in { (td: TestData) =>
       val input = """entity Hamburger is {
                     |  record fields is { field: SomeType }
                     |  state foo of Hamburger.fields
                     |}""".stripMargin
-      parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Entity 'Hamburger' has 1 state but no handlers."
-        )
-        assertValidationMessage(
-          msgs,
-          Error,
-          """Path 'SomeType' was not resolved, in Record 'fields'
-            |because the sought name, 'SomeType', was not found in the symbol table,
-            |and it should refer to a Type""".stripMargin
-        )
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
-          "Entity 'Hamburger' should have a description"
-        )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateInContext[Entity](input, shouldFailOnErrors = false) { case (_: Entity, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Entity 'Hamburger' has 1 state but no handlers."
+          )
+          assertValidationMessage(
+            msgs,
+            Error,
+            """Path 'SomeType' was not resolved, in Record 'fields'
+              |because the sought name, 'SomeType', was not found in the symbol table,
+              |and it should refer to a Type""".stripMargin
+          )
+          assertValidationMessage(
+            msgs,
+            MissingWarning,
+            "Entity 'Hamburger' should have a description"
+          )
+        }
       }
     }
 
@@ -121,12 +126,14 @@ class EntityValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          MissingWarning,
-          "Entity 'Hamburger' has only empty handler"
-        )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            MissingWarning,
+            "Entity 'Hamburger' has only empty handler"
+          )
+        }
       }
     }
     "produce correct field references" in { (td: TestData) =>
@@ -153,10 +160,12 @@ class EntityValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        val errors = msgs.justErrors
-        if errors.nonEmpty then fail(errors.format)
-        succeed
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+          val errors = msgs.justErrors
+          if errors.nonEmpty then fail(errors.format)
+          succeed
+        }
       }
     }
   }

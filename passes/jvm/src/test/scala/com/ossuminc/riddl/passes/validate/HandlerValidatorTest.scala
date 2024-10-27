@@ -137,11 +137,13 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |    }
           |  }
           |}""".stripMargin
-      parseAndValidate(input, "test", shouldFailOnErrors = false) { case (_, messages: Messages) =>
-        val warnings = messages.justWarnings.format
-        // info(warnings)
-        warnings mustNot be(empty)
-        warnings must include("commands should result in sending an event")
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input, "test", shouldFailOnErrors = false) { case (_, messages: Messages) =>
+          val warnings = messages.justWarnings.format
+          // info(warnings)
+          warnings mustNot be(empty)
+          warnings must include("commands should result in sending an event")
+        }
       }
     }
   }

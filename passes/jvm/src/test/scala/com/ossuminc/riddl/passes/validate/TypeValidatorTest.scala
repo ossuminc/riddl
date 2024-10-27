@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
 
 /** Unit Tests For TypeValidationTest */
@@ -25,11 +25,16 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input) { case (_: Domain, _, msgs: Seq[Message]) =>
-        if msgs.isEmpty then fail("Type 'bar' should have generated warning")
-        else if msgs.map(_.message).exists(_.contains("should start with"))
-        then { succeed }
-        else { fail("No such message") }
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input) { case (_: Domain, _, msgs: Seq[Message]) =>
+          if msgs.isEmpty then fail("Type 'bar' should have generated warning")
+          else if msgs.map(_.message).exists(_.contains("should start with"))
+          then {
+            succeed
+          } else {
+            fail("No such message")
+          }
+        }
       }
     }
     "identify undefined type references" in { (td: TestData) =>
@@ -50,11 +55,13 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) {
-        case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
-          val errors = msgsAndWarnings.justErrors
-          errors.size mustBe 1
-          errors.head.message must include("but an Entity was expected")
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) {
+          case (_: Domain, _, msgsAndWarnings: Messages.Messages) =>
+            val errors = msgsAndWarnings.justErrors
+            errors.size mustBe 1
+            errors.head.message must include("but an Entity was expected")
+        }
       }
     }
     "allow ??? in aggregate bodies without warning" in { (td: TestData) =>
@@ -65,11 +72,13 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        msgs mustNot be(empty)
-        info(msgs.format)
-        msgs.size must be(4)
-        msgs.filter(_.kind == Messages.UsageWarning).last.format must include("is unused")
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+          msgs mustNot be(empty)
+          info(msgs.format)
+          msgs.size must be(4)
+          msgs.filter(_.kind == Messages.UsageWarning).last.format must include("is unused")
+        }
       }
     }
 
@@ -82,8 +91,10 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(msgs, Error, "Unclosed character class")
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(msgs, Error, "Unclosed character class")
+        }
       }
     }
 
@@ -97,12 +108,14 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1), in Type 'Order', but an Entity"
-        )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1), in Type 'Order', but an Entity"
+          )
+        }
       }
     }
 
@@ -120,27 +133,28 @@ class TypeValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain: Domain, _, msgs: Messages) =>
-        msgs.justErrors must be(empty)
-        val si = domain.types.find("SI").get
-        val sn = domain.types.find("SN").get
-        val r = domain.types.find("r").get
-        val rng = domain.types.find("rng").get
-        val d = domain.types.find("d").get
-        val c = domain.types.find("c").get
-        si.typEx.isInstanceOf[Set] must be(true)
-        si.typEx.asInstanceOf[Set].format must be("set of Integer")
-        sn.typEx.isInstanceOf[Sequence] must be(true)
-        sn.typEx.asInstanceOf[Sequence].format must be("sequence of Number")
-        r.typEx.isInstanceOf[Replica] must be(true)
-        r.typEx.asInstanceOf[Replica].format must be("replica of Integer")
-        rng.typEx.isInstanceOf[RangeType] must be(true)
-        rng.typEx.asInstanceOf[RangeType].format must be("Range(23,42)")
-        c.typEx.isInstanceOf[AggregateUseCaseTypeExpression] must be(true)
-        c.typEx.asInstanceOf[AggregateUseCaseTypeExpression].format must be("command { int: Integer, str: String }")
-        d.typEx.asInstanceOf[Decimal].format must be("Decimal(3,8)")
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain: Domain, _, msgs: Messages) =>
+          msgs.justErrors must be(empty)
+          val si = domain.types.find("SI").get
+          val sn = domain.types.find("SN").get
+          val r = domain.types.find("r").get
+          val rng = domain.types.find("rng").get
+          val d = domain.types.find("d").get
+          val c = domain.types.find("c").get
+          si.typEx.isInstanceOf[Set] must be(true)
+          si.typEx.asInstanceOf[Set].format must be("set of Integer")
+          sn.typEx.isInstanceOf[Sequence] must be(true)
+          sn.typEx.asInstanceOf[Sequence].format must be("sequence of Number")
+          r.typEx.isInstanceOf[Replica] must be(true)
+          r.typEx.asInstanceOf[Replica].format must be("replica of Integer")
+          rng.typEx.isInstanceOf[RangeType] must be(true)
+          rng.typEx.asInstanceOf[RangeType].format must be("Range(23,42)")
+          c.typEx.isInstanceOf[AggregateUseCaseTypeExpression] must be(true)
+          c.typEx.asInstanceOf[AggregateUseCaseTypeExpression].format must be("command { int: Integer, str: String }")
+          d.typEx.asInstanceOf[Decimal].format must be("Decimal(3,8)")
+        }
       }
-
     }
   }
 }
