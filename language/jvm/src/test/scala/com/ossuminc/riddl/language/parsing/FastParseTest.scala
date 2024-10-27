@@ -1,23 +1,25 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{At, CommonOptions}
-import com.ossuminc.riddl.utils.{TestingBasis, TestingBasisWithTestData}
+import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, PlatformContext}
 import fastparse.Parsed.{Failure, Success}
-import fastparse.{P, *}
-import org.scalatest.Assertion
+import fastparse.*
+import org.scalatest.*
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-class FastParseTest extends TestingBasisWithTestData with ParsingContext {
-
-  def commonOptions: CommonOptions = CommonOptions()
-
-  implicit val ec: ExecutionContext = ExecutionContext.Implicits.global
+class FastParseTest(using PlatformContext) extends ParsingContext with AbstractTestingBasisWithTestData {
 
   def validateResult[RESULT](result: Either[Messages, RESULT], input: RiddlParserInput, index: Int): RESULT = {
     result match {

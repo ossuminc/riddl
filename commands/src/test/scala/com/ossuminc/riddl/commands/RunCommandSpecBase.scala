@@ -6,12 +6,11 @@
 
 package com.ossuminc.riddl.commands
 
+import com.ossuminc.riddl.utils.{AbstractTestingBasis, PlatformContext}
 import org.scalatest.*
-import org.scalatest.matchers.must.Matchers
-import org.scalatest.wordspec.AnyWordSpec
 
 /** A base class for specs that just want to run a command */
-abstract class RunCommandSpecBase extends AnyWordSpec with Matchers {
+abstract class RunCommandSpecBase(using io: PlatformContext) extends AbstractTestingBasis {
 
   def runWith(
     commandArgs: Seq[String]

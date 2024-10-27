@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.Contents.unapply
-import com.ossuminc.riddl.utils.URL
+import com.ossuminc.riddl.utils.{URL, PlatformContext, Await}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
@@ -299,10 +299,9 @@ object AST:
     * @param url
     *   The URL for the file content that is the description.
     */
-  case class URLDescription(loc: At, url: URL) extends Description:
+  case class URLDescription(loc: At, url: URL)(using urlLoader: PlatformContext) extends Description:
     lazy val lines: Seq[LiteralString] = {
-      import com.ossuminc.riddl.utils.{Loader, Await}
-      val future = Loader(url).load.map(_.split("\n").toSeq.map(LiteralString(loc, _)))
+      val future = urlLoader.load(url).map(_.split("\n").toSeq.map(LiteralString(loc, _)))
       Await.result(future, 10)
     }
     override def format: String = url.toExternalForm
@@ -448,7 +447,7 @@ object AST:
     /** A reliable extractor of the brief description, dealing with the optionality and plurality of it */
     def briefString: String = brief.map(_.brief.s).getOrElse("No brief description.")
 
-    /** A lazily constructed [[mutable.Seq]] of [[Description]] */
+    /** A lazily constructed [[scala.Seq]] of [[Description]] */
     def descriptions: Seq[Description] = metadata.filter[Description]
 
     /** A reliable extractor of the description, dealing with the optionality and plurality of it */

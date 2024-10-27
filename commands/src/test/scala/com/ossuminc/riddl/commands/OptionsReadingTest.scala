@@ -6,13 +6,14 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{SysLogger, TestingBasis}
 import com.ossuminc.riddl.command.CommonOptionsHelper
+import com.ossuminc.riddl.utils.{SysLogger, AbstractTestingBasis}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
-class OptionsReadingTest extends TestingBasis {
+class OptionsReadingTest extends AbstractTestingBasis {
 
   "RiddlOptions Reading" must {
     "load repeat options from a file" in {
@@ -28,10 +29,9 @@ class OptionsReadingTest extends TestingBasis {
           opts.showMissingWarnings mustBe false
         case Left(messages) => fail(messages.format)
       }
-      val logger = SysLogger()
-      Commands.loadCommandNamed("repeat", logger) match {
+      Commands.loadCommandNamed("repeat") match {
         case Right(cmd) =>
-          cmd.loadOptionsFrom(optionFile, logger) match {
+          cmd.loadOptionsFrom(optionFile) match {
             case Left(errors) => fail(errors.format)
             case Right(options) =>
               val opts = options.asInstanceOf[RepeatCommand.Options]

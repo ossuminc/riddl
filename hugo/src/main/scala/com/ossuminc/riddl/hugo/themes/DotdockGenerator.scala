@@ -1,10 +1,17 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.language.AST.{Author, Definition, PathIdentifier, UseCase}
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.diagrams.mermaid.UseCaseDiagramSupport
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.reflect.ClassTag
 
@@ -13,7 +20,8 @@ case class DotdockGenerator(
   input: PassInput,
   outputs: PassesOutput,
   messages: Messages.Accumulator
-) extends ThemeGenerator with UseCaseDiagramSupport {
+)(using PlatformContext) extends ThemeGenerator
+    with UseCaseDiagramSupport {
 
   def makeDocLink(definition: Definition, parents: Seq[String]): String = "" // TODO: implement makeDocLink
 

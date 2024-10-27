@@ -1,17 +1,28 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST,At}
-import com.ossuminc.riddl.language.Messages.* 
+import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext}
 
 import java.nio.file.Path
 import org.scalatest.TestData
+import scala.concurrent.duration.DurationInt
 
 class TestParserTest extends ParsingTest {
 
   "TestParser" should {
     val path = Path.of("language/jvm/src/test/input/everything.riddl")
-    val input = RiddlParserInput.fromCwdPath(path)
+    val url = PathUtils.urlFromCwdPath(path)
+    val future = RiddlParserInput.fromURL(url)
+    val input = Await.result(future, 10.seconds)
     val tp = TestParser(input)
 
     "provide expect" in { (td: TestData) =>
@@ -24,6 +35,7 @@ class TestParserTest extends ParsingTest {
           domains.head.identify must be("Domain 'Everything'")
       }
     }
+
     "provide parse" in { (td: TestData) =>
       tp.parse[Root, Domain](tp.root, AST.getTopLevelDomains(_).head) match {
         case Left(messages) => fail(messages.justErrors.format)
@@ -32,6 +44,7 @@ class TestParserTest extends ParsingTest {
           domain.identify must be("Domain 'Everything'")
       }
     }
+
     "provide parserRoot" in { (td: TestData) =>
       tp.parseRoot match {
         case Left(messages) => fail(messages.justErrors.format)
@@ -42,6 +55,7 @@ class TestParserTest extends ParsingTest {
           domains.head.identify must be("Domain 'Everything'")
       }
     }
+
     "provide parseTopLevelDomain" in { (td: TestData) =>
       tp.parseTopLevelDomains match {
         case Left(messages) => fail(messages.justErrors.format)

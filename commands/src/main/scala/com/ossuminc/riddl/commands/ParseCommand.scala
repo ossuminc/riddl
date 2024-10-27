@@ -7,14 +7,15 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.parsing.TopLevelParser
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{Await, Logger, PlatformContext, URL}
+import com.ossuminc.riddl.command.{Command, CommandOptions}
 
 import java.nio.file.Path
-import com.ossuminc.riddl.command.{Command, CommandOptions}
+import scala.concurrent.duration.DurationInt
 
 object ParseCommand {
   val cmdName = "parse"
@@ -22,29 +23,29 @@ object ParseCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class ParseCommand extends InputFileCommand(ParseCommand.cmdName) {
+class ParseCommand(using io: PlatformContext) extends InputFileCommand(ParseCommand.cmdName) {
   import InputFileCommand.Options
 
   override def run(
-                    options: Options,
-                    commonOptions: CommonOptions,
-                    log: Logger,
-                    outputDirOverride: Option[Path]
+    options: Options,
+    outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
-      val rpi = RiddlParserInput.fromPath(inputFile)
-      TopLevelParser.parseInput(rpi, commonOptions)
-        .map(_ => PassesResult()).map(_ => PassesResult())
+      val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
+        TopLevelParser
+          .parseInput(rpi)
+          .map(_ => PassesResult())
+          .map(_ => PassesResult())
+      }
+      Await.result(future, 10.seconds)
     }
   }
 
   override def loadOptionsFrom(
-    configFile: Path,
-    log: Logger, 
-    commonOptions: CommonOptions
+    configFile: Path
   ): Either[Messages, Options] = {
-    super.loadOptionsFrom(configFile, log, commonOptions).map { options =>
-      resolveInputFileToConfigFile(options, commonOptions, configFile)
+    super.loadOptionsFrom(configFile).map { options =>
+      resolveInputFileToConfigFile(options, configFile)
     }
   }
 }

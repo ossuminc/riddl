@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.commands.{CommandTestBase,InputFileCommand}
@@ -72,7 +78,6 @@ class ReadRiddlOptionsTest extends CommandTestBase("commands/src/test/input/") {
           options.showMissingWarnings must be(false)
           options.showStyleWarnings must be(false)
           options.showUsageWarnings must be(true)
-          options.pluginsDir must be(None)
           options.sortMessagesByLocation must be(false)
       }
     }

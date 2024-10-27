@@ -7,8 +7,8 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.PassOutput
+import com.ossuminc.riddl.language.Messages
 
 /** The output of the Validation Pass */
 case class ValidationOutput(

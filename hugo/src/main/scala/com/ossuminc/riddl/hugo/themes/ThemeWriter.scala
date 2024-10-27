@@ -1,10 +1,17 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.hugo.themes
 
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.writers.MarkdownWriter
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 
 import java.nio.file.Path
 
@@ -38,14 +45,13 @@ object ThemeWriter {
     path: Path,
     input: PassInput,
     outputs: PassesOutput,
-    options: HugoPass.Options,
-    commonOptions: CommonOptions
-  ): MarkdownWriter = {
+    options: HugoPass.Options
+  )(using PlatformContext): MarkdownWriter = {
     options.hugoThemeName match {
-      case None                            => GeekDocWriter(path, input, outputs, options, commonOptions)
-      case Some(GeekDocWriter.name) | None => GeekDocWriter(path, input, outputs, options, commonOptions)
-      case Some(DotdockWriter.name)        => DotdockWriter(path, input, outputs, options, commonOptions)
-      case Some(s)                         => GeekDocWriter(path, input, outputs, options, commonOptions)
+      case None                            => GeekDocWriter(path, input, outputs, options)
+      case Some(GeekDocWriter.name) | None => GeekDocWriter(path, input, outputs, options)
+      case Some(DotdockWriter.name)        => DotdockWriter(path, input, outputs, options)
+      case Some(s)                         => GeekDocWriter(path, input, outputs, options)
     }
   }
 }

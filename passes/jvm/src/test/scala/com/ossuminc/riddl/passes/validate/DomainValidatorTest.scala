@@ -7,15 +7,16 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass
 import com.ossuminc.riddl.passes.Riddl
+import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.CommonOptions
 import org.scalatest.TestData
 
 /** Unit Tests For ValidatorTest */
-class DomainValidatorTest extends ValidatingTest {
+class DomainValidatorTest extends AbstractValidatingTest {
 
   "DomainValidator" should {
     "identify duplicate domain definitions" in { (td: TestData) =>
@@ -27,7 +28,7 @@ class DomainValidatorTest extends ValidatingTest {
         )
       )
 
-      runStandardPasses(root, CommonOptions(), true) match {
+      runStandardPasses(root, true) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
           val theErrors: Messages = result.messages.justErrors
@@ -50,7 +51,9 @@ class DomainValidatorTest extends ValidatingTest {
                 |  by author Reid
                 |  described as "example"
                 |}
-                |""".stripMargin,td)
+                |""".stripMargin,
+        td
+      )
       Riddl.parseAndValidate(rpi) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
@@ -87,7 +90,9 @@ class DomainValidatorTest extends ValidatingTest {
         """
           |domain foo is {
           |  domain bar is { ??? }
-          |}""".stripMargin,td)
+          |}""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { (domain: Domain, _: RiddlParserInput, messages: Messages) =>
         domain mustNot be(empty)
         domain.contents mustNot be(empty)

@@ -114,14 +114,14 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitAuthorRef(authorRef: AuthorRef): this.type =
     addIndent("by ").add(authorRef.format).nl
   end emitAuthorRef
-  
+
   private def emitStringAttachment(a: StringAttachment): this.type =
     addIndent(a.identify).add(s" is \"${a.mimeType}\" as \"${a.value}\"")
   end emitStringAttachment
-  
+
   private def emitFileAttachment(a: FileAttachment): this.type =
     addIndent(a.identify).add(s" is \"${a.mimeType} in file \"${a.inFile}\"")
-  
+
   private def emitULIDAttachment(ulid: ULIDAttachment): this.type =
     addIndent(ulid.identify)
 
@@ -156,7 +156,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   private def emitAlternation(alternation: Alternation): this.type = {
     add(s"one of {").nl.incr.addIndent("")
-    val paths: Seq[String] = 
+    val paths: Seq[String] =
       alternation.of.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }.toSeq
     add(paths.mkString("", " or ", new_line))
     decr.addIndent("}")
@@ -280,7 +280,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitType(t: Type): this.type = {
     add(s"${spc}type ${t.id.value} is ")
     emitTypeExpression(t.typEx)
-    if t.metadata.nonEmpty then 
+    if t.metadata.nonEmpty then
       add(" with {").nl.incr.emitDescriptives(t.metadata.toSeq).decr.addLine("}")
     end if
     this

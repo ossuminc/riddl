@@ -3,13 +3,13 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
+import com.ossuminc.riddl.utils.{PlatformContext, Logger}
 import pureconfig.{ConfigCursor, ConfigReader}
 import scopt.OParser
 
@@ -22,7 +22,7 @@ object ASimpleTestCommand {
 }
 
 /** A pluggable command for testing plugin commands! */
-class ASimpleTestCommand extends Command[ASimpleTestCommand.Options]("test") {
+class ASimpleTestCommand(using io: PlatformContext) extends Command[ASimpleTestCommand.Options]("test") {
   import ASimpleTestCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     val builder = OParser.builder[Options]
@@ -52,11 +52,9 @@ class ASimpleTestCommand extends Command[ASimpleTestCommand.Options]("test") {
 
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    log.info(s"arg1: '${options.arg1}''")
+    io.log.info(s"arg1: '${options.arg1}''")
     Right(PassesResult())
   }
 }
