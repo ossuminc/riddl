@@ -1,14 +1,20 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.passes.translate
 
-import com.ossuminc.riddl.language.AST.{Domain,Identifier}
+import com.ossuminc.riddl.language.AST.{Domain, Identifier}
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.OutputFile
+import com.ossuminc.riddl.utils.{AbstractTestingBasis, OutputFile}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.{Files, Path}
 
-class TranslatingStateTest extends AnyWordSpec with Matchers {
+class TranslatingStateTest extends AbstractTestingBasis {
 
   case class TestTranslatingOptions(
     inputFile: Option[Path] = None,

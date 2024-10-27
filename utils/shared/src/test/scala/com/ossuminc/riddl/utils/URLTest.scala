@@ -1,6 +1,12 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.utils
 
-class URLTest extends TestingBasis {
+class URLTest extends AbstractTestingBasis {
 
   "URL" should {
     "construct a file URL from string" in {

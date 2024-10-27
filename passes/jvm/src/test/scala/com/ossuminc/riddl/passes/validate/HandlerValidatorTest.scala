@@ -7,12 +7,13 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Domain
-import com.ossuminc.riddl.language.{CommonOptions, Messages}
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
 import org.scalatest.TestData
 
-class HandlerValidatorTest extends ValidatingTest {
+class HandlerValidatorTest extends AbstractValidatingTest {
 
   "Handler Validation" should {
     "produce an error when on clause references a command that does not exist" in { (td: TestData) =>
@@ -37,8 +38,8 @@ class HandlerValidatorTest extends ValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_: Domain, _, msgs: Messages) =>
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
             Error,
@@ -54,6 +55,7 @@ class HandlerValidatorTest extends ValidatingTest {
               |and it should refer to a Type""".stripMargin
           )
           msgs.justErrors.size must be(2)
+        }
       }
     }
 
@@ -74,13 +76,13 @@ class HandlerValidatorTest extends ValidatingTest {
           |  }
           | } with {
           |  term Incoming is "This is a term definition to generate an error"
-          | } 
+          | }
           |}
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
           assertValidationMessage(
             msgs,
             Error,
@@ -89,6 +91,7 @@ class HandlerValidatorTest extends ValidatingTest {
               "and it should refer to a Type"
           )
           msgs.justErrors.size must be(1)
+        }
       }
     }
 
@@ -111,12 +114,13 @@ class HandlerValidatorTest extends ValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidateDomain(input, CommonOptions.noMinorWarnings, shouldFailOnErrors = false) {
-        case (_, _, msgs: Messages) =>
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
           msgs.justErrors mustBe empty
+        }
       }
     }
-    "produce a warning for commands with no events sent" in { (td: TestData) =>
+    "produce a warning for commands with no events sent" in { (_: TestData) =>
       val input =
         """domain ignore is {
           |  context ignore is {
@@ -133,11 +137,13 @@ class HandlerValidatorTest extends ValidatingTest {
           |    }
           |  }
           |}""".stripMargin
-      parseAndValidate(input, "test", CommonOptions(), shouldFailOnErrors = false) { case (_, messages: Messages) =>
-        val warnings = messages.justWarnings.format
-        // info(warnings)
-        warnings mustNot be(empty)
-        warnings must include("commands should result in sending an event")
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input, "test", shouldFailOnErrors = false) { case (_, messages: Messages) =>
+          val warnings = messages.justWarnings.format
+          // info(warnings)
+          warnings mustNot be(empty)
+          warnings must include("commands should result in sending an event")
+        }
       }
     }
   }

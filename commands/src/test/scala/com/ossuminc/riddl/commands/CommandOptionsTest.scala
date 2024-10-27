@@ -3,16 +3,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.TestingBasis
+import com.ossuminc.riddl.utils.AbstractTestingBasis
 import org.scalatest.Assertion
 
 import java.nio.file.{Files, Path}
 
-class CommandOptionsTest extends TestingBasis {
+class CommandOptionsTest extends AbstractTestingBasis {
 
   "CommandOptions" must {
     "check inputFile validity" in {

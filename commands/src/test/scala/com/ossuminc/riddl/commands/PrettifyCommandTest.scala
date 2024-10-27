@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.SysLogger 
+import com.ossuminc.riddl.utils.pc
 
 import java.nio.file.{Path,Files}
 
@@ -32,7 +32,7 @@ class PrettifyCommandTest extends RunCommandSpecBase {
         outputDir = Some(Path.of("commands/target/prettify/")),
         projectName = Some("Nada")
       )
-      cmd.loadOptionsFrom(conf, SysLogger()) match {
+      cmd.loadOptionsFrom(conf) match {
         case Left(errors) => fail(errors.format)
         case Right(options) =>
           options must be(expected)

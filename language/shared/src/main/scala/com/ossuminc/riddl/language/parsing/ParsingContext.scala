@@ -7,26 +7,23 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.Timer
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Timer}
 import com.ossuminc.riddl.utils.SeqHelpers.*
+import com.ossuminc.riddl.utils.URL
 import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 
 import scala.annotation.unused
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
-trait ParsingContext extends ParsingErrors {
+trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
 
-  import com.ossuminc.riddl.utils.URL
   import fastparse.P
-
-  def commonOptions: CommonOptions
 
   def parseRule[RESULT <: RiddlValue](
     rpi: RiddlParserInput,
@@ -72,7 +69,7 @@ trait ParsingContext extends ParsingErrors {
   def doIncludeParsing[CT <: RiddlValue](loc: At, path: String, rule: P[?] => P[Seq[CT]])(implicit
     ctx: P[?]
   ): Include[CT] = {
-    import com.ossuminc.riddl.utils.{Loader, URL}
+    import com.ossuminc.riddl.utils.{PlatformContext, URL}
     val newURL = if URL.isValid(path) then {
       URL(path)
     } else {
@@ -84,7 +81,8 @@ trait ParsingContext extends ParsingErrors {
     }
     try {
       import com.ossuminc.riddl.utils.Await
-      val future: Future[Include[CT]] = Loader(newURL).load.map { (data: String) =>
+      implicit val ec: ExecutionContext = pc.ec
+      val future: Future[Include[CT]] = pc.load(newURL).map { (data: String) =>
         val rpi = RiddlParserInput(data, newURL)
         val contents = doParse[CT](loc, rpi, newURL, rule)
         Include(loc, newURL, contents.toContents)

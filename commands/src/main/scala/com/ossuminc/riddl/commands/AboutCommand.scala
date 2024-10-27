@@ -6,25 +6,25 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
+import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.Logger
-import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
-
+import com.ossuminc.riddl.utils.{PlatformContext, Logger}
+import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.CommonOptions
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
 
 import java.nio.file.Path
 
-/** Implementation of the  */
+/** Implementation of the */
 object AboutCommand {
   case class Options(command: String = "about", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
 }
 
-class AboutCommand extends Command[AboutCommand.Options]("about") {
+class AboutCommand(using io: PlatformContext) extends Command[AboutCommand.Options]("about") {
   import AboutCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -43,17 +43,15 @@ class AboutCommand extends Command[AboutCommand.Options]("about") {
 
   override def run(
     options: AboutCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    if commonOptions.verbose || !commonOptions.quiet then {
+    if io.options.verbose || !io.options.quiet then {
       val about: String = {
         CommonOptionsHelper.blurb ++ System.lineSeparator() ++
           "Extensive Documentation here: https://riddl.tech"
       }
-      
-      log.info(about)
+
+      io.log.info(about)
     }
     Right(PassesResult())
   }

@@ -6,12 +6,12 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.CommonOptions
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{Interrupt, Logger}
 import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.commands.Commands
+import com.ossuminc.riddl.utils.{PlatformContext, Interrupt, Logger}
+import com.ossuminc.riddl.utils.{pc, ec}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -42,10 +42,10 @@ object RepeatCommand {
   }
 }
 
-class RepeatCommand extends Command[RepeatCommand.Options](RepeatCommand.cmdName) {
+class RepeatCommand(using io: PlatformContext) extends Command[RepeatCommand.Options](RepeatCommand.cmdName) {
   import RepeatCommand.Options
 
-  /** Provide an scopt OParser for the commands options type, OPT
+  /** Provide a scopt OParser for the commands options type, OPT
     *
     * @return
     *   A pair: the OParser and the default values for OPT
@@ -153,17 +153,11 @@ class RepeatCommand extends Command[RepeatCommand.Options](RepeatCommand.cmdName
     *
     * @param options
     *   The command specific options
-    * @param commonOptions
-    *   The options common to all commands
-    * @param log
-    *   A logger for logging errors, warnings, and info
     * @return
     *   Either a set of Messages on error or a Unit on success
     */
   override def run(
     options: Options,
-    commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     val maxCycles = options.maxCycles
@@ -181,8 +175,6 @@ class RepeatCommand extends Command[RepeatCommand.Options](RepeatCommand.cmdName
         .runFromConfig(
           options.inputFile,
           options.targetCommand,
-          commonOptions,
-          log,
           "repeat"
         )
         .map { _ =>
@@ -191,8 +183,8 @@ class RepeatCommand extends Command[RepeatCommand.Options](RepeatCommand.cmdName
             shouldContinue = false
           } else {
             i += 1
-            if commonOptions.verbose then {
-              log.info(s"Waiting for $refresh, cycle # $i of $maxCycles")
+            if io.options.verbose then {
+              io.log.info(s"Waiting for $refresh, cycle # $i of $maxCycles")
             }
             Thread.sleep(sleepTime)
           }

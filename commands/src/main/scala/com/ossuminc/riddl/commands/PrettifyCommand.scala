@@ -6,14 +6,16 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.language.{At, CommonOptions, Messages}
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
-import com.ossuminc.riddl.passes.{PassInput, PassOptions, PassesCreator, PassesOutput, PassesResult}
-import com.ossuminc.riddl.utils.{ExceptionUtils, Logger}
+import com.ossuminc.riddl.passes.{PassCreators, PassInput, PassOptions, PassesOutput, PassesResult}
+import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformContext}
 import com.ossuminc.riddl.command.{CommandOptions, PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
+import com.ossuminc.riddl.utils.{pc, ec}
+
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -36,7 +38,8 @@ object PrettifyCommand {
 }
 
 /** A command to Prettify RIDDL Source */
-class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](PrettifyCommand.cmdName) {
+class PrettifyCommand(using io: PlatformContext)
+    extends TranslationCommand[PrettifyCommand.Options](PrettifyCommand.cmdName) {
 
   import PrettifyCommand.Options
 
@@ -88,10 +91,8 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
   }
 
   override def getPasses(
-    log: Logger,
-    commonOptions: CommonOptions,
     options: PrettifyCommand.Options
-  ): PassesCreator = {
+  ): PassCreators = {
     standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
         PrettifyPass(input, outputs, PrettifyPass.Options(flatten = options.singleFile))
@@ -101,16 +102,14 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
 
   override def run(
     originalOptions: PrettifyCommand.Options,
-    commonOptions: CommonOptions,
-    log: Logger,
     outputDirOverride: Option[Path]
-  ): Either[Messages, PassesResult] =
-    super.run(originalOptions, commonOptions, log, outputDirOverride) match
+  ): Either[List[Messages.Message], PassesResult] =
+    super.run(originalOptions, outputDirOverride) match
       case Left(messages) => Left(messages)
       case result @ Right(passesResult: PassesResult) =>
         passesResult.outputOf[PrettifyOutput](PrettifyPass.name) match
           case Some(output: PrettifyOutput) =>
-            writeOutput(output, originalOptions, outputDirOverride, log)
+            writeOutput(output, originalOptions, outputDirOverride)
             result
           case None =>
             // shouldn't happen
@@ -123,12 +122,13 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
     output: PrettifyOutput,
     originalOptions: Options,
     dirOverrides: Option[Path],
-    logger: Logger
-  ): Unit =
+  )(using io: PlatformContext): Unit =
     try {
       val dir = originalOptions.outputDir
-        .getOrElse(dirOverrides
-          .getOrElse(Path.of(Option(System.getProperty("user.dir")).getOrElse("."))))
+        .getOrElse(
+          dirOverrides
+            .getOrElse(Path.of(Option(System.getProperty("user.dir")).getOrElse(".")))
+        )
       Files.createDirectories(dir)
       if output.state.flatten then
         val path = dir.resolve("prettify-output.riddl")
@@ -144,7 +144,9 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
         output.state.withFiles { (file: RiddlFileEmitter) =>
           val content = file.toString
           val path = base.resolve(file.url.path)
-          Files.writeString(path, content,
+          Files.writeString(
+            path,
+            content,
             Charset.forName("UTF-8"),
             StandardOpenOption.CREATE_NEW,
             StandardOpenOption.WRITE
@@ -153,9 +155,9 @@ class PrettifyCommand extends TranslationCommand[PrettifyCommand.Options](Pretti
       end if
     } catch {
       case e: java.io.IOException =>
-        logger.info(s"Exception while writing: ${e.getClass.getName}: ${e.getMessage}")
+        io.log.info(s"Exception while writing: ${e.getClass.getName}: ${e.getMessage}")
         val stackTrace = ExceptionUtils.getRootCauseStackTrace(e).mkString("\n")
-        logger.info(stackTrace)
+        io.log.info(stackTrace)
     }
   end writeOutput
 }

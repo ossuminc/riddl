@@ -6,17 +6,15 @@
 
 package com.ossuminc.riddl.passes
 
+import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.{AST, At, CommonOptions, Messages}
-import com.ossuminc.riddl.utils.{Logger, SysLogger, Timer}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.passes.PassCreator
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.stats.StatsPass
-
 import com.ossuminc.riddl.passes.validate.{ValidationOutput, ValidationPass}
-import com.ossuminc.riddl.utils.ExceptionUtils
 
 import scala.annotation.unused
 import scala.collection.mutable
@@ -26,7 +24,7 @@ import scala.util.control.NonFatal
 type PassCreator = (PassInput, PassesOutput) => Pass
 
 /** A sequence of PassCreator. This is used to run a set of passes */
-type PassesCreator = Seq[PassCreator]
+type PassCreators = Seq[PassCreator]
 
 /** Base trait for options classes that are needed by passes */
 trait PassOptions
@@ -48,7 +46,7 @@ trait PassInfo[OPT <: PassOptions] {
     *   The options the pass requires
     * @return
     */
-  def creator(options: OPT): PassCreator
+  def creator(options: OPT)(using PlatformContext): PassCreator
 }
 
 /** Information that a Pass must produce, currently just any messages it generated. Passes should derive their own
@@ -76,12 +74,9 @@ object PassOutput {
   * cannot extend this.
   * @param root
   *   The result of the parsing run, consisting of the RootContainer from which all AST content can be reached
-  * @param commonOptions
-  *   THe common options that should be used to run the pass
   */
 case class PassInput(
-  root: Root,
-  commonOptions: CommonOptions = CommonOptions.empty
+  root: Root
 )
 object PassInput {
   val empty: PassInput = PassInput(Root.empty)
@@ -94,7 +89,7 @@ case class PassesOutput() {
 
   private val outputs: mutable.HashMap[String, PassOutput] = mutable.HashMap.empty
 
-  def getAllMessages: Messages = {
+  def getAllMessages: Messages.Messages = {
     outputs.values.foldLeft(Messages.empty) { case (prior, current) =>
       prior.appendedAll(current.messages)
     }
@@ -112,7 +107,7 @@ case class PassesOutput() {
     outputs.contains(passName)
   }
 
-  lazy val messages: Messages = getAllMessages
+  lazy val messages: Messages.Messages = getAllMessages
 
   lazy val symbols: SymbolsOutput =
     outputOf[SymbolsOutput](SymbolsPass.name).getOrElse(SymbolsOutput())
@@ -139,10 +134,9 @@ case class PassesOutput() {
 case class PassesResult(
   input: PassInput = PassInput.empty,
   outputs: PassesOutput = PassesOutput(),
-  additionalMessages: Messages = Messages.empty
+  additionalMessages: Messages.Messages = Messages.empty
 ) {
   def root: Root = input.root
-  def commonOptions: CommonOptions = input.commonOptions
 
   /** Get the output of one pass that ran
     *
@@ -155,7 +149,7 @@ case class PassesResult(
   def outputOf[T <: PassOutput](passName: String): Option[T] = outputs.outputOf[T](passName)
   def hasOutputOf(passName: String): Boolean = outputs.hasPassOutput(passName)
 
-  lazy val messages: Messages = outputs.messages ++ additionalMessages
+  lazy val messages: Messages.Messages = outputs.messages ++ additionalMessages
   lazy val symbols: SymbolsOutput = outputs.symbols
   lazy val resolution: ResolutionOutput = outputs.resolution
   lazy val validation: ValidationOutput = outputs.validation
@@ -174,7 +168,7 @@ object PassesResult {
   * @param out
   *   The output from previous runs of OTHER passes, which is a form of input to the pass, perhaps.
   */
-abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
+abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: PlatformContext) {
 
   /** THe name of the pass for inclusion in messages it produces. This must be implemented by the subclass
     * @return
@@ -267,13 +261,13 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
     }
   }
 
-  protected val messages: Messages.Accumulator = Messages.Accumulator(in.commonOptions)
+  protected val messages: Messages.Accumulator = Messages.Accumulator()
 }
 
 /** A Pass base class that allows the processing to be done based on containers, and calling these methods:
   *   - openContainer at the start of container's processing
   *   - processLeaf for any leaf nodes within the container
- *    - processValue for any non-definitions within the container
+  *     - processValue for any non-definitions within the container
   *   - closeContainer after all the container's contents have been processed
   *
   * This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all their
@@ -285,7 +279,8 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput) {
   * @param outputs
   *   The outputs of previous passes in case this pass needs it
   */
-abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
+abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using PlatformContext)
+    extends Pass(input, outputs) {
 
   /** not required in this kind of pass, final override it as a result
     *
@@ -352,11 +347,11 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput) extends Pa
         openContainer(container, def_parents)
         if container.contents.nonEmpty then // just optimize out the push/pop for empty contents, which is frequent
           parents.push(container)
-          container.contents.foreach( item => traverse(item, parents)) // recurse!
+          container.contents.foreach(item => traverse(item, parents)) // recurse!
           parents.pop()
         end if
         closeContainer(container, def_parents)
-      case leaf: LeafDefinition  => // no further descent
+      case leaf: LeafDefinition => // no further descent
         processLeaf(leaf, parents.toParents)
       case value: RiddlValue => // no further descent
         processValue(value, parents.toParents)
@@ -443,7 +438,11 @@ trait PassVisitor:
   * @param outputs
   *   The outputs of previous passes in case this pass needs it
   */
-abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs: PassesOutput, val visitor: VT)
+abstract class VisitingPass[VT <: PassVisitor](
+  val input: PassInput,
+  val outputs: PassesOutput,
+  val visitor: VT
+)(using PlatformContext)
     extends HierarchyPass(input, outputs):
   protected final def openContainer(container: Definition, parents: Parents): Unit =
     container match
@@ -497,8 +496,8 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
       case _: Root                  => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
           _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
-         _: Definition => () // not  containers
+          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | _: Definition =>
+        () // not  containers
     end match
   end closeContainer
 
@@ -524,23 +523,23 @@ abstract class VisitingPass[VT <: PassVisitor](val input: PassInput, val outputs
 
   protected final def processValue(value: RiddlValue, parents: Parents): Unit =
     value match
-      case comment: Comment         =>
+      case comment: Comment =>
         visitor.doComment(comment)
-      case authorRef: AuthorRef     =>
+      case authorRef: AuthorRef =>
         visitor.doAuthorRef(authorRef)
-      case brief: BriefDescription  =>
+      case brief: BriefDescription =>
         visitor.doBriefDescription(brief)
       case description: Description =>
         visitor.doDescription(description)
-      case statement: Statement     =>
+      case statement: Statement =>
         visitor.doStatement(statement)
       case interaction: Interaction =>
         visitor.doInteraction(interaction)
       case optionValue: OptionValue =>
         visitor.doOptionValue(optionValue)
-      case enumerator: Enumerator   =>
+      case enumerator: Enumerator =>
         visitor.doEnumerator(enumerator)
-      case _                        => ()
+      case _ => ()
     end match
   end processValue
 
@@ -565,7 +564,7 @@ end VisitingPass
   */
 abstract class CollectingPassOutput[T](
   root: Root = Root.empty,
-  messages: Messages = Messages.empty,
+  messages: Messages.Messages = Messages.empty,
   collected: Seq[T] = Seq.empty[T]
 ) extends PassOutput
 
@@ -579,7 +578,7 @@ abstract class CollectingPassOutput[T](
   * @tparam ET
   *   The element type of the collected values
   */
-abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput) extends Pass(input, outputs) {
+abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using PlatformContext) extends Pass(input, outputs) {
 
   /** The method usually called for each definition that is to be processed but our implementation of traverse instead
     * calls collect so a value can be returned. This implementation is final because it is meant to be ignored.
@@ -615,39 +614,41 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput) exten
 
 object Pass {
 
-  /** A PassesCreator of the standard passes that should be run on every AST pass. These generate the symbol table,
+  /** A PassCreators of the standard passes that should be run on every AST pass. These generate the symbol table,
     * resolve path references, and validate the input. Only after these three have passed successful should the model be
     * considered processable by other passes
     */
-  val standardPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
-  
+  def standardPasses(using PlatformContext) =
+    Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
+
   /** A PassesCreate of the passes that extract information but don't do much real work. These generate the symbol
-   * table, resolve path references, and calculate statistics. This allows basic information be refreshed without
-   * doing a full validation */
-  
-  val informationPasses: PassesCreator = Seq(SymbolsPass.creator(), ResolutionPass.creator(), StatsPass.creator())
+    * table, resolve path references, and calculate statistics. This allows basic information be refreshed without doing
+    * a full validation
+    */
+
+  def informationPasses(using PlatformContext): PassCreators =
+    Seq(SymbolsPass.creator(), ResolutionPass.creator(), StatsPass.creator())
 
   /** Run a set of passes against some input to obtain a result
     *
     * @param input
-    *   The post-parsing input to the passes as a PassInput containing a RootContainer and CommonOptions
+    *   The post-parsing input to the passes as a PassInput containing a Root
     * @param passes
     *   The list of Pass construction functions to use to instantiate the passes and run them. The type
-    * @param logger
-    *   The logger to which messages are logged
+    * @param log
+    *   The log to which messages are logged
     * @return
     *   A PassesResult which provides the individual
     */
   def runThesePasses(
     input: PassInput,
-    passes: PassesCreator = standardPasses,
-    logger: Logger = SysLogger()
-  ): PassesResult = {
+    passes: PassCreators
+  )(using PlatformContext): PassesResult = {
     val outputs = PassesOutput()
     try {
       for pass <- passes yield {
         val aPass = pass(input, outputs)
-        val output: PassOutput = runOnePass(input.root, input.commonOptions, aPass, logger)
+        val output: PassOutput = runOnePass(input.root, aPass)
         outputs.outputIs(aPass.name, output)
       }
       PassesResult(input, outputs, Messages.empty)
@@ -662,63 +663,59 @@ object Pass {
   /** Run the standard passes with the input provided */
   def runStandardPasses(
     input: PassInput
-  ): PassesResult = {
-    runThesePasses(input, standardPasses, SysLogger())
+  )(using PlatformContext): PassesResult = {
+    runThesePasses(input, standardPasses)
   }
 
-  /** Run the standard passes on a Root and CommonOptions */
+  /** Run the standard passes on a Root */
   def runStandardPasses(
-    model: Root,
-    options: CommonOptions
-  ): PassesResult = {
-    val input: PassInput = PassInput(model, options)
+    model: Root
+  )(using PlatformContext): PassesResult = {
+    val input: PassInput = PassInput(model)
     runStandardPasses(input)
   }
 
   /** Run the information passes with the input provided */
-  def runInformationPasses(input: PassInput): PassesResult = {
-    runThesePasses(input, informationPasses, SysLogger())
+  def runInformationPasses(input: PassInput)(using PlatformContext): PassesResult = {
+    runThesePasses(input, informationPasses)
   }
 
-  /** Run the information passes on a Root and CommonOptions */
+  /** Run the information passes on a Root */
   def runInformationPasses(
-    model: Root,
-    options: CommonOptions
-  ): PassesResult = {
-    val input: PassInput = PassInput(model, options)
+    model: Root
+  )(using PlatformContext): PassesResult = {
+    val input: PassInput = PassInput(model)
     runInformationPasses(input)
   }
 
   /** Run the Symbols Pass */
-  def runSymbols(input: PassInput, outputs: PassesOutput): SymbolsOutput = {
+  def runSymbols(input: PassInput, outputs: PassesOutput)(using PlatformContext): SymbolsOutput = {
     runPass[SymbolsOutput](input, outputs, SymbolsPass(input, outputs))
   }
 
   /** Run the Resolution Pass */
-  def runResolution(input: PassInput, outputs: PassesOutput): ResolutionOutput = {
+  def runResolution(input: PassInput, outputs: PassesOutput)(using PlatformContext): ResolutionOutput = {
     runPass[ResolutionOutput](input, outputs, ResolutionPass(input, outputs))
   }
 
   /** Run the Validation pass */
-  def runValidation(input: PassInput, outputs: PassesOutput): ValidationOutput = {
+  def runValidation(input: PassInput, outputs: PassesOutput)(using PlatformContext): ValidationOutput = {
     runPass[ValidationOutput](input, outputs, ValidationPass(input, outputs))
   }
 
   /** Run an arbitrary pass */
-  def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass): OUT = {
-    val output: OUT = Pass.runOnePass(input.root, input.commonOptions, pass).asInstanceOf[OUT]
+  def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass)(using PlatformContext): OUT = {
+    val output: OUT = Pass.runOnePass(input.root, pass).asInstanceOf[OUT]
     outputs.outputIs(pass.name, output)
     output
   }
 
   private def runOnePass(
     root: Root,
-    commonOptions: CommonOptions,
-    mkPass: => Pass,
-    logger: Logger = SysLogger()
-  ): PassOutput = {
+    mkPass: => Pass
+  )(using io: PlatformContext): PassOutput = {
     val pass: Pass = mkPass
-    Timer.time[PassOutput](pass.name, commonOptions.showTimes, logger) {
+    Timer.time[PassOutput](pass.name, io.options.showTimes) {
       val parents: ParentStack = ParentStack.empty
       val root1: Root = pass.preProcess(root)
       pass.traverse(root1, parents)

@@ -1,7 +1,13 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.passes.translate
 
 import com.ossuminc.riddl.language.AST.{Definition, Root}
-import com.ossuminc.riddl.utils.{OutputFile, Timer}
+import com.ossuminc.riddl.utils.{PlatformContext, OutputFile, Timer}
 
 import java.nio.file.Path
 import scala.collection.mutable
@@ -30,7 +36,7 @@ trait TranslatingState[OF <: OutputFile] {
     path.resolve(nm)
   }
 
-  def writeFiles(timeEach: Boolean): Unit = {
+  def writeFiles(timeEach: Boolean)(using PlatformContext): Unit = {
     files.foreach { (file: OF) =>
       Timer.time(s"Writing file: ${file.filePath}", timeEach) {
         file.write()

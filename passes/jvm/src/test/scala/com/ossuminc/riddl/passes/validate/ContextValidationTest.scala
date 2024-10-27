@@ -9,11 +9,15 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.utils.{ec, pc, Await}
+import com.ossuminc.riddl.utils.PathUtils
 
 import java.nio.file.Path
 import org.scalatest.TestData
 
-class ContextValidationTest extends ValidatingTest {
+import scala.concurrent.duration.DurationInt
+
+class ContextValidationTest extends JVMAbstractValidatingTest {
 
   "Context" should {
     "allow options" in { (td: TestData) =>
@@ -156,22 +160,25 @@ class ContextValidationTest extends ValidatingTest {
     "allow includes" in { (td: TestData) =>
       val name = "language/jvm/src/test/input/context/context-with-include.riddl"
       val path = Path.of(name)
-      val rpi = RiddlParserInput.fromCwdPath(path)
-      parseTopLevelDomains(rpi) match {
-        case Left(errors) => fail(errors.format)
-        case Right(root) =>
-          root mustNot be(empty)
-          root.contents mustNot be(empty)
-          val d = root.domains.head
-          d.contexts mustNot be(empty)
-          val c = d.contexts.head
-          c.includes mustNot be(empty)
-          val inc = c.includes.head
-          inc.contents.filter[Comment].headOption match
-            case Some(c: Comment) => c.format.contains("foo")
-            case None             => fail("test case should have term 'foo'")
-          end match
+      val url = PathUtils.urlFromCwdPath(path)
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        parseTopLevelDomains(rpi) match
+          case Left(errors) => fail(errors.format)
+          case Right(root) =>
+            root mustNot be(empty)
+            root.contents mustNot be(empty)
+            val d = root.domains.head
+            d.contexts mustNot be(empty)
+            val c = d.contexts.head
+            c.includes mustNot be(empty)
+            val inc = c.includes.head
+            inc.contents.filter[Comment].headOption match
+              case Some(c: Comment) => c.format.contains("foo")
+              case None             => fail("test case should have term 'foo'")
+            end match
+        end match
       }
+      Await.result(future, 10.seconds)
     }
   }
 }

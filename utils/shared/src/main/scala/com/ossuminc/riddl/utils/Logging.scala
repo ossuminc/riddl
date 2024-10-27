@@ -29,10 +29,8 @@ object Logging {
   val nl: String = "\n"
 }
 
-trait Logger {
+trait Logger(using pc: PlatformContext) {
   import Logging.*
-
-  protected def withHighlighting: Boolean = true
 
   final def severe(s: => String): Unit = { write(Severe, s) }
   final def severe(s: => String, xcptn: Throwable): Unit = {
@@ -62,7 +60,7 @@ trait Logger {
   private var nInfo = 0
 
   protected def highlight(level: Lvl, s: String): String = {
-    if !withHighlighting then s"[$level] $s"
+    if pc.options.noANSIMessages then s"[$level] $s"
     else
       val prefix = level match {
         case Logging.Severe  => s"$RED_B$BLACK"
@@ -106,16 +104,15 @@ trait Logger {
   }
 }
 
-case class SysLogger(override val withHighlighting: Boolean = true) extends Logger {
+case class SysLogger()(using io: PlatformContext) extends Logger {
   override def write(level: Logging.Lvl, s: String): Unit = {
     super.count(level)
-    System.out.println(highlight(level, s))
+    io.stdoutln(highlight(level, s))
   }
 }
 
 @JSExportTopLevel("StringLogger")
-case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: Boolean = true)
-    extends Logger {
+case class StringLogger(capacity: Int = 512 * 2) extends Logger {
   private val stringBuilder = new mutable.StringBuilder(capacity)
 
   override def write(level: Logging.Lvl, s: String): Unit = {
@@ -124,23 +121,6 @@ case class StringLogger(capacity: Int = 512 * 2, override val withHighlighting: 
   }
 
   override def toString: String = stringBuilder.toString()
-}
-
-/** A Logger which captures logged lines into an in-memory buffer, useful for testing purposes.
-  */
-@JSExportTopLevel("InMemoryLogger")
-case class InMemoryLogger(override val withHighlighting: Boolean = false) extends Logger {
-  case class Line(level: Logging.Lvl, msg: String)
-
-  private val buffer = ArrayBuffer[Line]()
-
-  /** Returns an Iterator of all lines logged to this logger, oldest-first */
-  def lines(): Iterator[Line] = buffer.iterator
-
-  def write(level: Logging.Lvl, s: String): Unit = {
-    super.count(level)
-    buffer += Line(level, s)
-  }
 }
 
 @JSExportTopLevel("CallBackLogger")

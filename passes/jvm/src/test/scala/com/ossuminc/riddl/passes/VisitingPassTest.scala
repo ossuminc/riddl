@@ -1,10 +1,17 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.ParsingTest
-import scala.collection.mutable
+import com.ossuminc.riddl.utils.{pc, ec, JVMPlatformContext, PlatformContext}
 
+import scala.collection.mutable
 import java.nio.file.Path
 
 case class TestPassOutput(root: Root, messages: Messages) extends PassOutput

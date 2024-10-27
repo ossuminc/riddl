@@ -1,6 +1,12 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.utils
 
-class URLTest2 extends TestingBasis {
+class URLTest2 extends AbstractTestingBasis {
 
   "URL" should {
     "create with fromCwdPath" in {

@@ -3,9 +3,11 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.ossuminc.riddl.passes.symbols
 
-import com.ossuminc.riddl.language.AST.{Definition, WithIdentifier, Parent, Parents}
+import com.ossuminc.riddl.language.AST.{Definition, Parent, Parents, WithIdentifier}
+import com.ossuminc.riddl.utils
 
 import scala.collection.mutable
 
