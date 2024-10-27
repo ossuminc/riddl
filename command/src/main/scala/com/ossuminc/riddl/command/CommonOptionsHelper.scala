@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.ossuminc.riddl.command
 
 import com.ossuminc.riddl.command.CommandOptions.optional
@@ -67,7 +68,7 @@ object CommonOptionsHelper {
         .optional()
         .action((_, c) => c.copy(quiet = true))
         .text("Do not print out any output, just do the requested command"),
-      opt[Unit]('a', "noANSIMessages")
+      opt[Unit]('a', "no-ansi-messages")
         .optional()
         .action((_, c) => c.copy(noANSIMessages = true))
         .text("Do not print messages with ANSI formatting"),
@@ -184,7 +185,7 @@ object CommonOptionsHelper {
     val (common, effects1) = OParser.runParser[CommonOptions](
       commonOptionsParser,
       options,
-      com.ossuminc.riddl.utils.CommonOptions.empty,
+      com.ossuminc.riddl.utils.CommonOptions.default,
       setup
     )
     OParser.runEffects(effects1, dontTerminate)

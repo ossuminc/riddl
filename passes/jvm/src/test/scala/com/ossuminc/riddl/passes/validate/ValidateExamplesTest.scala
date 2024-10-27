@@ -65,16 +65,16 @@ class ValidateExamplesTest extends JVMAbstractValidatingTest {
 
   "options.showStyleWarnings" should {
     "determine if style warnings are returned from validation" in { (td: TestData) =>
-      pc.setOptions(CommonOptions(showStyleWarnings = false))
-      validateFile(
-        label = "badstyle",
-        fileName = "domains/badstyle.riddl"
-      ) { case (_, messages) =>
-        assert(!messages.exists(_.kind.isError))
-        assert(!messages.exists(_.kind.isStyle))
-        assert(messages.exists(_.kind.isMissing))
+      pc.withOptions(CommonOptions(showStyleWarnings = false)) { _ =>
+        validateFile(
+          label = "badstyle",
+          fileName = "domains/badstyle.riddl"
+        ) { case (_, messages) =>
+          assert(!messages.exists(_.kind.isError))
+          assert(!messages.exists(_.kind.isStyle))
+          assert(messages.exists(_.kind.isMissing))
+        }
       }
-      pc.setOptions(CommonOptions())
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl"
@@ -87,15 +87,15 @@ class ValidateExamplesTest extends JVMAbstractValidatingTest {
   }
   "options.showMissingWarnings" should {
     "determine if missing warnings are returned from validation" in { (td: TestData) =>
-      pc.setOptions(CommonOptions(showMissingWarnings = false))
-      validateFile(
-        label = "badstyle",
-        fileName = "domains/badstyle.riddl"
-      ) { case (_, messages) =>
-        assert(!messages.exists(_.kind.isError))
-        assert(!messages.exists(_.kind.isMissing))
+      pc.withOptions(CommonOptions(showMissingWarnings = false)) { _ =>
+        validateFile(
+          label = "badstyle",
+          fileName = "domains/badstyle.riddl"
+        ) { case (_, messages) =>
+          assert(!messages.exists(_.kind.isError))
+          assert(!messages.exists(_.kind.isMissing))
+        }
       }
-      pc.setOptions(CommonOptions())
       validateFile(
         label = "badstyle",
         fileName = "domains/badstyle.riddl"

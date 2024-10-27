@@ -43,18 +43,19 @@ class AuthorTest extends AbstractValidatingTest {
     }
     "author must be defined" in { (td: TestData) =>
       val input = RiddlParserInput(s"""domain foo is { ??? } with { by author Bar }""", td)
-      pc.setOptions(CommonOptions.noMinorWarnings)
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
-        val errs = msgs.justErrors
-        errs mustNot be(empty)
-        assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
-        assertValidationMessage(
-          errs,
-          Messages.Error,
-          """Path 'Bar' was not resolved, in Domain 'foo'
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
+          val errs = msgs.justErrors
+          errs mustNot be(empty)
+          assertValidationMessage(errs, Messages.Error, "author Bar is not defined")
+          assertValidationMessage(
+            errs,
+            Messages.Error,
+            """Path 'Bar' was not resolved, in Domain 'foo'
               |because the sought name, 'Bar', was not found in the symbol table,
               |and it should refer to an Author""".stripMargin
-        )
+          )
+        }
       }
     }
     "referenced from Application" in { (td: TestData) =>

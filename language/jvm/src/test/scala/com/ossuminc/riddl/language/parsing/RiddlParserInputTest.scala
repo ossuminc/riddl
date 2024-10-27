@@ -1,13 +1,18 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.{JVMTestingBasis, URL, Await}
-import com.ossuminc.riddl.utils.{pc, ec}
-
+import com.ossuminc.riddl.utils.{AbstractTestingBasis, Await, URL, ec, pc}
 import org.scalatest.Assertion
+
 import scala.io.Source
 import scala.concurrent.duration.DurationInt
 
-class RiddlParserInputTest extends JVMTestingBasis {
+class RiddlParserInputTest extends AbstractTestingBasis {
 
   import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
@@ -15,7 +20,7 @@ class RiddlParserInputTest extends JVMTestingBasis {
   val src = s"https://raw.githubusercontent.com$fullPath"
 
   def getFromURI(url: URL): String = {
-    val contentF = io.load(url)
+    val contentF = pc.load(url)
     Await.result(contentF, 10.seconds)
   }
 

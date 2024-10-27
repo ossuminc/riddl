@@ -18,19 +18,10 @@ class ExamplesTest extends JVMAbstractValidatingTest {
 
   val dir = "language/jvm/src/test/input/"
 
-  pc.setOptions(
-    CommonOptions(
-      showTimes = true,
-      showWarnings = false,
-      showMissingWarnings = false,
-      showStyleWarnings = false
-    )
-  )
-
   def doOne(fileName: String): Assertion = {
-
-    parseAndValidateFile(Path.of(dir, fileName))
-    succeed
+    pc.withOptions(CommonOptions.noWarnings.copy(showTimes = true)) { _ =>
+      parseAndValidateFile(Path.of(dir, fileName))
+    }
   }
 
   "Examples" should {

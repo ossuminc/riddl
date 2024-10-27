@@ -1,6 +1,9 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
+import de.heikoseeberger.sbtheader.License.ALv2
+import de.heikoseeberger.sbtheader.LicenseStyle
+import de.heikoseeberger.sbtheader.LicenseStyle.SpdxSyntax
 import sbt.Append.{appendSeqImplicit, appendSet}
 import sbt.Keys.{description, libraryDependencies}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
@@ -13,11 +16,12 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
+lazy val license = ALv2(yyyy = "2019-2025", copyrightOwner = "Ossum Inc.", licenseStyle = SpdxSyntax)
 
 def cpDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
 def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
 
-lazy val riddl: Project = Root("riddl", startYr = startYear)
+lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apache-2.0" */ )
   .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
   .aggregate(
     utils,
@@ -40,7 +44,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear)
 
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
-  .configure(With.typical)
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .configure(With.build_info)
   .settings(
     scalacOptions += "-explain-cyclic",
@@ -85,10 +89,11 @@ lazy val utilsJS = utils_cp.js
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
   .dependsOn(cpDep(utils_cp))
-  .configure(With.typical)
+  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
-    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings")
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
+    Test / parallelExecution := true
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
@@ -123,7 +128,7 @@ lazy val languageJS = language_cp.js.dependsOn(utilsJS)
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
-  .configure(With.typical, With.publishing)
+  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     Test / parallelExecution := false,
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
@@ -153,7 +158,7 @@ val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 
 lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
-  .configure(With.typical, With.publishing)
+  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Testing kit for RIDDL language and passes"
   )
@@ -174,7 +179,7 @@ val testkitJS = testkit_cp.js
 val Diagrams = config("diagrams")
 lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
-  .configure(With.typical, With.publishing)
+  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
@@ -191,10 +196,11 @@ val diagramsJS = diagrams_cp.js
 val Command = config("command")
 lazy val command = Module("command", "riddl-command")
   .configure(With.typical, With.coverage(30), With.MiMa("0.52.1"))
-  .configure(With.publishing)
+  .configure(With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
+    Test / parallelExecution := false,
     libraryDependencies ++= Seq(
       Dep.scopt,
       Dep.pureconfig,
@@ -207,9 +213,8 @@ def testDep(project: Project): ClasspathDependency = project % "compile->compile
 
 val Hugo = config("hugo")
 lazy val hugo = Module("hugo", "riddl-hugo")
-  .configure(With.typical)
+  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(65))
-  .configure(With.publishing)
   .configure(With.MiMa("0.52.1"))
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
@@ -223,10 +228,9 @@ lazy val hugo = Module("hugo", "riddl-hugo")
 
 val Commands = config("commands")
 lazy val commands: Project = Module("commands", "riddl-commands")
-  .configure(With.typical)
+  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50))
   .configure(With.MiMa("0.52.1"))
-  .configure(With.publishing)
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
@@ -245,7 +249,7 @@ lazy val commands: Project = Module("commands", "riddl-commands")
 
 val Riddlc = config("riddlc")
 lazy val riddlc: Project = Program("riddlc", "riddlc")
-  .configure(With.typical)
+  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50.0))
   .configure(With.publishing)
   .configure(With.noMiMa)
@@ -306,6 +310,7 @@ lazy val docsite = DocSite(
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info, With.scala2, With.noMiMa, With.publishing)
+  .configure(With.headerLicense("Apache-2.0"))
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",
     buildInfoObject := "SbtRiddlPluginBuildInfo",

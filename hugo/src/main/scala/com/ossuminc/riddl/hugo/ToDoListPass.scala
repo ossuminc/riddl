@@ -1,8 +1,9 @@
 /*
- * Copyright 2023 Ossum, Inc.
+ * Copyright 2019 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.ossuminc.riddl.hugo
 
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator

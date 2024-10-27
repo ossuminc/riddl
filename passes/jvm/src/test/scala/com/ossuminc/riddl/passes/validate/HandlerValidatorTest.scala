@@ -38,23 +38,24 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      pc.setOptions(CommonOptions.noMinorWarnings)
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          """Path 'EntityCommand' was not resolved, in OnMessageClause 'command EntityCommand'
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            """Path 'EntityCommand' was not resolved, in OnMessageClause 'command EntityCommand'
               |because the sought name, 'EntityCommand', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
-        )
-        assertValidationMessage(
-          msgs,
-          Error,
-          """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
+          )
+          assertValidationMessage(
+            msgs,
+            Error,
+            """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
               |because the sought name, 'EntityEvent', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
-        )
-        msgs.justErrors.size must be(2)
+          )
+          msgs.justErrors.size must be(2)
+        }
       }
     }
 
@@ -80,16 +81,17 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      pc.setOptions(CommonOptions.noMinorWarnings)
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-        assertValidationMessage(
-          msgs,
-          Error,
-          "Path 'EntityContext.Incoming' was not resolved, in Context 'EntityContext'\n" +
-            "because the name 'Incoming' was not found in Context 'EntityContext'\n" +
-            "and it should refer to a Type"
-        )
-        msgs.justErrors.size must be(1)
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+          assertValidationMessage(
+            msgs,
+            Error,
+            "Path 'EntityContext.Incoming' was not resolved, in Context 'EntityContext'\n" +
+              "because the name 'Incoming' was not found in Context 'EntityContext'\n" +
+              "and it should refer to a Type"
+          )
+          msgs.justErrors.size must be(1)
+        }
       }
     }
 
@@ -112,13 +114,13 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      pc.setOptions(CommonOptions.noMinorWarnings)
-      parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
-        msgs.justErrors mustBe empty
+      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs: Messages) =>
+          msgs.justErrors mustBe empty
+        }
       }
     }
     "produce a warning for commands with no events sent" in { (_: TestData) =>
-      pc.setOptions(CommonOptions.empty)
       val input =
         """domain ignore is {
           |  context ignore is {
@@ -135,11 +137,13 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |    }
           |  }
           |}""".stripMargin
-      parseAndValidate(input, "test", shouldFailOnErrors = false) { case (_, messages: Messages) =>
-        val warnings = messages.justWarnings.format
-        // info(warnings)
-        warnings mustNot be(empty)
-        warnings must include("commands should result in sending an event")
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input, "test", shouldFailOnErrors = false) { case (_, messages: Messages) =>
+          val warnings = messages.justWarnings.format
+          // info(warnings)
+          warnings mustNot be(empty)
+          warnings must include("commands should result in sending an event")
+        }
       }
     }
   }

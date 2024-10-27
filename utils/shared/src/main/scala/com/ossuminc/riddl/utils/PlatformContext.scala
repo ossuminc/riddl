@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.utils
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -14,17 +20,33 @@ trait PlatformContext {
   /** The Logger instance to use on this platform. */
   protected var logger: Logger = SysLogger()
   def log: Logger = logger
-  def setLog(newLogger: Logger): Unit = synchronized { logger = newLogger }
+  def withLogger[T,L <: Logger](newLogger: L)(doIt: (L) => T): T = synchronized {
+    val save = logger
+    logger = newLogger
+    val result = doIt(newLogger)
+    logger = save
+    result
+  }
 
-  /** The default CommonOptions to use on this platform. */
+  /** The default CommonOptions to use on this platform but not publicly available */
   protected var options_ : CommonOptions = CommonOptions()
+
+  /** The public accessor to get the current options */
   def options: CommonOptions = options_
-  def setOptions(commonOptions: CommonOptions): Unit = synchronized { options_ = commonOptions }
+
+  /** Do a task with a different set of options and then return to what they were */
+  def withOptions[T](newOptions: CommonOptions)(doIt: (options: CommonOptions) => T): T = {
+    val cachedOptions = options_
+    synchronized {
+      options_ = newOptions
+      val result = doIt(newOptions)
+      options_ = cachedOptions
+      result
+    }
+  }
 
   /** The ExecutionContext that will be used for Futures and Promises */
   def ec: ExecutionContext
-
-  type Path
 
   /** Load the content of a text file asynchronously and return it as a string. THe content, typically a RIDDL or
     * Markdown file, is expected to be encoded in UTF-8

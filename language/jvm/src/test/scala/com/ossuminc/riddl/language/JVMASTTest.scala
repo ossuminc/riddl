@@ -1,12 +1,18 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.JVMTestingBasis
+import com.ossuminc.riddl.utils.{pc, AbstractTestingBasis}
 import wvlet.airframe.ulid.ULID
 
-class ASTTestJVM extends JVMTestingBasis {
+class JVMASTTest extends AbstractTestingBasis {
 
   "RiddlValue" must {
     "allow attachments to be added programmatically" in {
