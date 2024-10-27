@@ -6,11 +6,9 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.commands.Commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger, StringHelpers}
-import com.ossuminc.riddl.utils.{pc,ec}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, StringHelpers}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -82,20 +80,17 @@ class FromCommand(using io: PlatformContext) extends Command[FromCommand.Options
               s"Failed to read common options from ${options.inputFile.get} because:\n" ++
                 messages.format
             )
-          CommonOptions.empty
+          end if
+          io.options
+
       end match
-    io.setOptions(loadedCO)
-      //     configFile: Option[Path],
-      //    targetCommand: String,
-      //    commonOptions: CommonOptions,
-      //    log: Logger,
-      //    commandName: String
-    val result = Commands.runFromConfig(
-      options.inputFile,
-      options.targetCommand,
-      "from"
-    )
-    result
+    io.withOptions(loadedCO) { _ =>
+      Commands.runFromConfig(
+        options.inputFile,
+        options.targetCommand,
+        "from"
+      )
+    }
   }
 
   override def replaceInputFile(

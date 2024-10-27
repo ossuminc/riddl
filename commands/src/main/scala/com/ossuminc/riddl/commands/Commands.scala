@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.{At, Messages}
@@ -52,7 +53,7 @@ object Commands:
   end loadCommandNamed
 
   /** Probably the easiest way to run a command if you're familiar with the command line options and still get the
-    * [[Messages.Messages]] or [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
+    * [[com.ossuminc.riddl.language.Messages.Messages]] or [[com.ossuminc.riddl.passes.PassesResult]] objects out of it.
     *
     * @param args
     *   An [[Array[String]] of arguments, one argument per array element. This should follow the same pattern as by the
@@ -62,8 +63,7 @@ object Commands:
     * @return
     *   One of two things:
     *   - [[scala.util.Left]] of [[com.ossuminc.riddl.language.Messages.Messages]] if the command fails and the
-    *     contained [[com.ossuminc.riddl.language.Messages.Messages]], a [[scala.collection.immutable.List]] of
-    *     [[com.ossuminc.riddl.language.Messages.Message]], that explain why it failed
+    *     contained messages, a [[List]] of [[com.ossuminc.riddl.language.Messages.Messages]], that explain the errors
     *   - [[scala.util.Right]] of [[com.ossuminc.riddl.passes.PassesResult]] to provide the details of what the
     *     [[com.ossuminc.riddl.passes.Pass]]es that run produced.
     */
@@ -72,8 +72,9 @@ object Commands:
   )(using io: PlatformContext): Either[Messages, PassesResult] =
     require(args.nonEmpty, "Empty argument list provided")
     val name = args.head
-    val result = loadCommandNamed(name)
-      .flatMap { cmd => cmd.run(args) }
+    val result = loadCommandNamed(name).flatMap { cmd =>
+      cmd.run(args)
+    }
     if io.options.verbose then
       val rc = if result.isRight then "yes" else "no"
       io.log.info(s"Ran: ${args.mkString(" ")}: success=$rc")
@@ -197,9 +198,10 @@ object Commands:
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match
         case Some(commonOptions) =>
-          io.setOptions(commonOptions)
-          if remaining.isEmpty then Left(List(error("No command argument was provided")))
-          else runCommandWithArgs(remaining)
+          io.withOptions(commonOptions) { _ =>
+            if remaining.isEmpty then Left(List(error("No command argument was provided")))
+            else runCommandWithArgs(remaining)
+          }
         case None =>
           Left(List(error("Option parsing failed, terminating.")))
       end match
@@ -210,16 +212,19 @@ object Commands:
 
   def runMain(args: Array[String])(using io: PlatformContext): Int =
     try
+      
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match
         case Some(commonOptions) =>
-          io.setOptions(commonOptions)
-          handleCommandRun(remaining)
+          io.withOptions[Int](commonOptions) { _ => 
+            handleCommandRun(remaining) 
+          }
         case None =>
           // arguments are bad, error message will have been displayed
           io.log.info("Option parsing failed, terminating.")
           1
       end match
+      
     catch
       case NonFatal(exception) =>
         io.log.severe("Exception Thrown:", exception)

@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*

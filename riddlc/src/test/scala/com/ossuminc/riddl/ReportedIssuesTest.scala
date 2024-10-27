@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.language.Messages
@@ -6,7 +12,7 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
 import com.ossuminc.riddl.commands.Commands
-import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils, URL}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils}
 import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.{Assertion, TestData}
 
@@ -32,14 +38,15 @@ class ReportedIssuesTest extends JVMAbstractValidatingTest {
   def doOne(fileName: String, options: CommonOptions = defaultOptions)(
     checkResult: Either[Messages.Messages, PassesResult] => Assertion
   ): Assertion = {
-    pc.setOptions(options)
     val path = Path.of(dir).resolve(fileName)
     val url = PathUtils.urlFromPath(path)
-    val future = RiddlParserInput.fromURL(url).map { rpi =>
-      val either = Riddl.parseAndValidate(rpi)
-      checkResult(either)
+    pc.withOptions(options) { _ =>
+      val future = RiddlParserInput.fromURL(url).map { rpi =>
+        val either = Riddl.parseAndValidate(rpi)
+        checkResult(either)
+      }
+      Await.result(future, 10.seconds)
     }
-    Await.result(future, 10.seconds)
   }
 
   def checkOne(fileName: String): Assertion = {

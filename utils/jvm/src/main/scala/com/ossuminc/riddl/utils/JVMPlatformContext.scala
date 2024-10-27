@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Ossum, Inc.
+ * Copyright 2019 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,9 +23,7 @@ class JVMPlatformContext extends PlatformContext {
 
   given PlatformContext = this
 
-  type Path = java.nio.file.Path
-
-  this.setLog(SysLogger())
+  logger = SysLogger()
 
   @JSExport
   override def load(url: URL): Future[String] = {

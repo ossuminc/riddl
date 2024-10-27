@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Ossum, Inc.
+ * Copyright 2019 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,9 +19,7 @@ case class DOMPlatformContext() extends PlatformContext {
   import scala.concurrent.{ExecutionContext, Future}
   import scala.scalajs.js.annotation.JSExport
   import scalajs.js
-
-  given io: PlatformContext = this
-
+  
   case class FileNotFoundException(url: URL)
       extends Exception(
         s"Files cannot be loaded from Javascript: ${url.toString}"

@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Timer}
 import com.ossuminc.riddl.utils.SeqHelpers.*
+import com.ossuminc.riddl.utils.URL
 import fastparse.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
@@ -20,9 +21,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
 /** Unit Tests For ParsingContext */
-trait ParsingContext(using io: PlatformContext) extends ParsingErrors {
+trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
 
-  import com.ossuminc.riddl.utils.URL
   import fastparse.P
 
   def parseRule[RESULT <: RiddlValue](
@@ -81,8 +81,8 @@ trait ParsingContext(using io: PlatformContext) extends ParsingErrors {
     }
     try {
       import com.ossuminc.riddl.utils.Await
-      given  x: ExecutionContext = io.ec
-      val future: Future[Include[CT]] = io.load(newURL).map { (data: String) =>
+      implicit val ec: ExecutionContext = pc.ec
+      val future: Future[Include[CT]] = pc.load(newURL).map { (data: String) =>
         val rpi = RiddlParserInput(data, newURL)
         val contents = doParse[CT](loc, rpi, newURL, rule)
         Include(loc, newURL, contents.toContents)

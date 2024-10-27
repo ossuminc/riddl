@@ -9,9 +9,9 @@ package com.ossuminc.riddl.language
 import Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
-import com.ossuminc.riddl.utils.*
+import com.ossuminc.riddl.utils.{pc, AbstractTestingBasis, StringLogger, URL, CommonOptions}
 
-class MessagesTest extends JVMTestingBasis {
+class MessagesTest extends AbstractTestingBasis {
 
   "MessageKinds" must {
     "have MissingWarning with correct queries" in {
@@ -147,43 +147,43 @@ class MessagesTest extends JVMTestingBasis {
       mix.justInfo mustBe Seq(i)
     }
     "log with retained order" in {
-      given io: PlatformContext = new JVMPlatformContext {
-        override val log: Logger = StringLogger()
+      pc.withLogger(StringLogger()) { slog =>
+        Messages.logMessages(mix)
+        val content = slog.toString
+        val expected =
+          """[34m[1m[info] empty(1:1)info[0m
+            |[32m[1m[style] empty(1:1)style[0m
+            |[32m[1m[missing] empty(1:1)missing[0m
+            |[32m[1m[usage] empty(1:1)usage[0m
+            |[33m[1m[warning] empty(1:1)warning[0m
+            |[31m[1m[error] empty(1:1)error[0m
+            |[41m[30m[1m[severe] empty(1:1)severe[0m
+            |""".stripMargin
+        content mustBe expected
       }
-      Messages.logMessages(mix)
-      val content = io.log.toString
-      val expected = """[34m[1m[info] empty(1:1)info[0m
-                       |[32m[1m[style] empty(1:1)style[0m
-                       |[32m[1m[missing] empty(1:1)missing[0m
-                       |[32m[1m[usage] empty(1:1)usage[0m
-                       |[33m[1m[warning] empty(1:1)warning[0m
-                       |[31m[1m[error] empty(1:1)error[0m
-                       |[41m[30m[1m[severe] empty(1:1)severe[0m
-                       |""".stripMargin
-      content mustBe expected
     }
     "log grouped by message kind" in {
-      given io: PlatformContext = new JVMPlatformContext {
-        override val log: Logger = StringLogger()
+      pc.withLogger(StringLogger()) { _ =>
+        pc.withOptions(CommonOptions(groupMessagesByKind = true)) { _ =>
+          Messages.logMessages(mix)
+          val content = pc.log.toString
+          val expected =
+            """[41m[30m[1m[severe] Severe Message Count: 1[0m
+              |[41m[30m[1m[severe] empty(1:1)severe[0m
+              |[31m[1m[error] Error Message Count: 1[0m
+              |[31m[1m[error] empty(1:1)error[0m
+              |[32m[1m[usage] Usage Message Count: 1[0m
+              |[32m[1m[usage] empty(1:1)usage[0m
+              |[32m[1m[missing] Missing Message Count: 1[0m
+              |[32m[1m[missing] empty(1:1)missing[0m
+              |[32m[1m[style] Style Message Count: 1[0m
+              |[32m[1m[style] empty(1:1)style[0m
+              |[34m[1m[info] Info Message Count: 1[0m
+              |[34m[1m[info] empty(1:1)info[0m
+              |""".stripMargin
+          content mustBe expected
+        }
       }
-      io.setOptions(CommonOptions(groupMessagesByKind = true))
-      Messages.logMessages(mix)
-      val content = io.log.toString
-      val expected =
-        """[41m[30m[1m[severe] Severe Message Count: 1[0m
-          |[41m[30m[1m[severe] empty(1:1)severe[0m
-          |[31m[1m[error] Error Message Count: 1[0m
-          |[31m[1m[error] empty(1:1)error[0m
-          |[32m[1m[usage] Usage Message Count: 1[0m
-          |[32m[1m[usage] empty(1:1)usage[0m
-          |[32m[1m[missing] Missing Message Count: 1[0m
-          |[32m[1m[missing] empty(1:1)missing[0m
-          |[32m[1m[style] Style Message Count: 1[0m
-          |[32m[1m[style] empty(1:1)style[0m
-          |[34m[1m[info] Info Message Count: 1[0m
-          |[34m[1m[info] empty(1:1)info[0m
-          |""".stripMargin
-      content mustBe expected
     }
 
     "has inquiry methods" in {
@@ -196,8 +196,7 @@ class MessagesTest extends JVMTestingBasis {
     }
 
     "format a correct string for empty location" in {
-      val msg =
-        Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
+      val msg = Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
       val content = msg.format
       val expected = "empty(1:2)the_message"
       content mustBe expected

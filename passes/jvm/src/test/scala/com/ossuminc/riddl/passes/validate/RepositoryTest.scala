@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Domain
@@ -31,11 +37,12 @@ class RepositoryTest extends AbstractValidatingTest {
           |     }
           |  }
           |}
-          |""".stripMargin,td)
-      val options = CommonOptions.noWarnings.copy(showMissingWarnings=false)
-      pc.setOptions(options)
-      parseAndValidateDomain(input)  {
-        case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
+          |""".stripMargin,
+        td
+      )
+      val options = CommonOptions.noWarnings.copy(showMissingWarnings = false)
+      pc.withOptions(options) { _ =>
+        parseAndValidateDomain(input) { case (domain: Domain, _: RiddlParserInput, msgs: Messages.Messages) =>
           domain mustNot be(empty)
           domain.contexts.headOption match {
             case Some(context) =>
@@ -48,7 +55,7 @@ class RepositoryTest extends AbstractValidatingTest {
             case _ =>
               fail("Did not parse a context!")
           }
-
+        }
       }
     }
   }

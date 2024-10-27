@@ -9,13 +9,12 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.Domain
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{CommonOptions, pc}
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 class DefinitionValidatorTest extends AbstractValidatingTest {
 
   "Definition Validation" should {
-    pc.setOptions(CommonOptions.empty)
     "warn when an identifier is less than 3 characters" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain po is {

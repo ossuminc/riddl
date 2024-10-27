@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.*
@@ -11,7 +17,6 @@ import java.nio.file.Path
 case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
 
 class VisitingPassTest extends ParsingTest {
-  given PlatformContext = JVMPlatformContext()
 
   "VisitingPass" must {
     "descend cleanly" in { _ =>
