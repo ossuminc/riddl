@@ -36,7 +36,7 @@ trait PlatformContext {
 
   /** Do a task with a different set of options and then return to what they were */
   def withOptions[T](newOptions: CommonOptions)(doIt: (options: CommonOptions) => T): T = {
-    val cachedOptions = newOptions
+    val cachedOptions = options_
     synchronized {
       options_ = newOptions
       val result = doIt(newOptions)

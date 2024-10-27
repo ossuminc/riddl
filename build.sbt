@@ -130,7 +130,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
-    Test / parallelExecution := true,
+    Test / parallelExecution := false,
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "AST Pass infrastructure and essential passes"
   )
@@ -200,7 +200,7 @@ lazy val command = Module("command", "riddl-command")
   .settings(
     coverageExcludedPackages := "<empty>;$anon",
     description := "Command infrastructure needed to define a command",
-    Test / parallelExecution := true,
+    Test / parallelExecution := false,
     libraryDependencies ++= Seq(
       Dep.scopt,
       Dep.pureconfig,

@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{CommonOptions, pc}
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 /** Unit Tests For TypeValidationTest */

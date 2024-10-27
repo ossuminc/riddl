@@ -12,9 +12,10 @@ import org.scalatest.wordspec.AnyWordSpec
 class LoaderTest extends AnyWordSpec with Matchers {
 
   "Loader" must {
-    "load a file" in {
-      val path = "language/jvm/src/test/input/domains/rbbq.riddl"
-      val url = URL.fromCwdPath(path)
+    "load" in {
+      val url = URL(
+"https://raw.githubusercontent.com/ossuminc/riddl/scalaJs-support/language/jvm/src/test/input/domains/rbbq.riddl"
+      )
       val io = DOMPlatformContext()
       val future = io.load(url).map[String] { (content: String) =>
         content must not be (empty)
