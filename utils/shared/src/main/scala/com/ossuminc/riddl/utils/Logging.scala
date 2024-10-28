@@ -112,7 +112,7 @@ case class SysLogger()(using io: PlatformContext) extends Logger {
 }
 
 @JSExportTopLevel("StringLogger")
-case class StringLogger(capacity: Int = 512 * 2) extends Logger {
+case class StringLogger(capacity: Int = 512 * 2)(using io: PlatformContext = pc) extends Logger {
   private val stringBuilder = new mutable.StringBuilder(capacity)
 
   override def write(level: Logging.Lvl, s: String): Unit = {

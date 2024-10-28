@@ -46,8 +46,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
-  .configure(With.typical)
-  .configure(With.build_info)
+  .configure(With.build_info, With.publishing)
   .settings(
     scalacOptions += "-explain-cyclic",
     buildInfoPackage := "com.ossuminc.riddl.utils",
@@ -55,7 +54,6 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     description := "Various utilities used throughout riddl libraries"
   )
   .jvmConfigure(With.coverage(70))
-  .jvmConfigure(With.publishing)
   .jvmConfigure(With.MiMa("0.52.1", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
@@ -77,7 +75,6 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
   )
   .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .jsConfigure(With.publishing)
   .jsSettings(
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
@@ -85,8 +82,13 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalacheck" %%% "scalacheck" % V.scalacheck % Test
     )
   )
-  .nativeConfigure(With.native(lto = "none", targetTriple = "arm64-apple-darwin23.6.0"))
-  .nativeSettings(
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/Cellar/lld/19.1.2/bin/ld64.lld"
+      )
   )
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js
@@ -179,8 +181,6 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
   .jvmSettings(
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % V.scalatest,
-      "org.scalatest" %% "scalatest" % V.scalatest,
-      "org.scalactic" %% "scalactic" % V.scalatest % Test,
       "org.scalatest" %% "scalatest" % V.scalatest % Test
     )
   )
