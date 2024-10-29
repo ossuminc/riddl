@@ -34,6 +34,8 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
     testkitJS,
     diagrams,
     diagramsJS,
+    riddlLib,
+    riddlLibJS,
     command,
     hugo,
     commands,
@@ -106,7 +108,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
-    Test / parallelExecution := true
+    Test / parallelExecution := false
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
@@ -210,6 +212,15 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   .jsConfigure(With.noMiMa)
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
+
+lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM)
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
+  .configure(With.scala3,With.publishing)
+  .settings(
+    description := "Bundling of essential RIDDL libraries"
+  )
+val riddlLib = riddlLib_cp.jvm
+val riddlLibJS = riddlLib_cp.js
 
 val Command = config("command")
 lazy val command = Module("command", "riddl-command")

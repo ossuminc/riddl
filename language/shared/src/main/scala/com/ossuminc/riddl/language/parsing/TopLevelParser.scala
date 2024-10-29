@@ -7,71 +7,30 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.{PlatformContext, Timer, CommonOptions}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Timer, URL}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.{ClassTag, classTag}
 import scala.scalajs.js.annotation.*
 
-/** The TopLevel (Root) parser. This class
-  * @param commonOptions
-  *   Common options to use during the parsing
+/** The TopLevel (Root) parser. This class munges all the individual parsers together and provides top level parsing
+  * functionality.
+  * @param input
+  *   The RiddlParserInput that contains the data to parse
+  * @param withVerboseFailures
+  *   For the utility of RIDDL implementers.
   */
 @JSExportTopLevel("TopLevelParser")
-class TopLevelParser(using io: PlatformContext)
-    extends ProcessorParser
-    with DomainParser
-    with AdaptorParser
-    with ApplicationParser
-    with ContextParser
-    with EntityParser
-    with EpicParser
-    with FunctionParser
-    with ModuleParser
-    with NebulaParser
-    with ProjectorParser
-    with RepositoryParser
-    with RootParser
-    with SagaParser
-    with StreamingParser
-    with StatementParser
-    with ParsingContext {
-
-  @JSExport
-  def parseRoot(input: RiddlParserInput, withVerboseFailures: Boolean = false): Either[Messages, Root] = {
-    parseRule[Root](input, root(_), withVerboseFailures) {
-      (result: Either[Messages, Root], input: RiddlParserInput, index: Int) =>
-        result match {
-          case l: Left[Messages, Root] => l
-          case r @ Right(root) =>
-            if root.contents.isEmpty then
-              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
-            end if
-            r
-        }
-    }
-  }
-
-  @JSExport
-  def parseNebula(input: RiddlParserInput, withVerboseFailures: Boolean = false): Either[Messages, Nebula] = {
-    parseRule[Nebula](input, nebula(_), withVerboseFailures) {
-      (result: Either[Messages, Nebula], input: RiddlParserInput, index: Int) =>
-        result match {
-          case left: Left[Messages, Root] => left
-          case r @ Right(root) =>
-            if root.contents.isEmpty then
-              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
-            end if
-            r
-        }
-    }
-  }
-}
+case class TopLevelParser(
+  input: RiddlParserInput,
+  withVerboseFailures: Boolean
+)(using io: PlatformContext) extends ExtensibleTopLevelParser
 
 @JSExportTopLevel("TopLevelParser$")
 object TopLevelParser {
@@ -84,8 +43,6 @@ object TopLevelParser {
     * parser.
     * @param url
     *   A `file://` or `https://` based url to specify the source of the parser input
-    * @param commonOptions
-    *   Options relevant to parsing the input
     * @param withVerboseFailures
     *   Control whether parse failures are diagnosed verbosely or not. Typically only useful to maintainers of RIDDL, or
     *   test cases
@@ -96,7 +53,8 @@ object TopLevelParser {
   )(using io: PlatformContext): Future[Either[Messages, Root]] = {
     io.load(url).map { (data: String) =>
       val rpi = RiddlParserInput(data.mkString, url)
-      parseInput(rpi, withVerboseFailures)
+      val tlp = new TopLevelParser(rpi, withVerboseFailures)
+      tlp.parseRoot
     }
   }
 
@@ -104,8 +62,6 @@ object TopLevelParser {
     * RiddlParserInput from a string and call this to start parsing.
     * @param input
     *   The RiddlParserInput that contains the data to parse
-    * @param commonOptions
-    *   The common options that could affect parsing or its output
     * @param withVerboseFailures
     *   For the utility of RIDDL implementers.
     * @return
@@ -116,8 +72,8 @@ object TopLevelParser {
   )(using io: PlatformContext): Either[Messages, Root] = {
     Timer.time(s"parse ${input.origin}", io.options.showTimes) {
       implicit val _: ExecutionContext = io.ec
-      val tlp = new TopLevelParser()
-      tlp.parseRoot(input, withVerboseFailures)
+      val tlp = new TopLevelParser(input, withVerboseFailures)
+      tlp.parseRoot
     }
   }
 
@@ -126,7 +82,8 @@ object TopLevelParser {
     withVerboseFailures: Boolean = false
   )(using PlatformContext): Either[Messages, Root] = {
     val rpi = RiddlParserInput(input, "")
-    parseInput(rpi)
+    val tlp = new TopLevelParser(rpi, withVerboseFailures)
+    tlp.parseRoot
   }
 
   def parseNebulaFromInput(
@@ -134,9 +91,8 @@ object TopLevelParser {
     withVerboseFailures: Boolean = false
   )(using io: PlatformContext): Either[Messages, Nebula] = {
     Timer.time(s"parse nebula from ${input.origin}", io.options.showTimes) {
-      implicit val _: ExecutionContext = io.ec
-      val tlp = new TopLevelParser()
-      tlp.parseNebula(input, withVerboseFailures)
+      val tlp = new TopLevelParser(input, withVerboseFailures)
+      tlp.parseNebula
     }
   }
 }
