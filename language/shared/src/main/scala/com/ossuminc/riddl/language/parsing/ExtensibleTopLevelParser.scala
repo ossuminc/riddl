@@ -65,9 +65,9 @@ trait ExtensibleTopLevelParser(using PlatformContext)
 
   def parseNebula: Either[Messages, Nebula] = doParse[Nebula](nebula(_))
 
-  def parseRootWithURLs: Either[Messages, (Root, Seq[URL])] = {
+  def parseRootWithURLs: Either[(Messages, Seq[URL]), (Root, Seq[URL])] = {
     doParse[Root](root(_)) match {
-      case l @ Left(messages) => Left(messages)
+      case l @ Left(messages) => Left(messages -> this.getURLs)
       case r @ Right(root)    => Right(root -> this.getURLs)
     }
   }
