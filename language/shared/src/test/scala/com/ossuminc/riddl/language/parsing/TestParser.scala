@@ -20,10 +20,11 @@ import scala.util.control.NonFatal
 
 case class TestParser(
   input: RiddlParserInput,
-  throwOnError: Boolean = false
-)(using PlatformContext) extends TopLevelParser()
+  throwOnError: Boolean = false,
+  withVerboseFailures: Boolean = true
+)(using PlatformContext) extends ExtensibleTopLevelParser
     with Matchers {
-
+  
   def expect[CT <: RiddlValue](
     parser: P[?] => P[CT],
     withVerboseFailures: Boolean = false
@@ -75,19 +76,15 @@ case class TestParser(
     }
     parser.asInstanceOf[P[?] => P[T]]
   }
-
-  def parseRoot: Either[Messages, Root] = {
-    parseRoot(input, withVerboseFailures = true)
-  }
-
+  
   def parseTopLevelDomains: Either[Messages, Root] = {
-    parseRoot(input, withVerboseFailures = true)
+    parseRoot
   }
 
   def parseTopLevelDomain[TO <: RiddlValue](
     extract: Root => TO
   ): Either[Messages, TO] = {
-    parseRoot(input, withVerboseFailures = true).map { (root: Root) => extract(root) }
+    parseRoot.map { (root: Root) => extract(root) }
   }
 
   def parseDefinition[FROM <: Definition: ClassTag, TO <: RiddlValue](

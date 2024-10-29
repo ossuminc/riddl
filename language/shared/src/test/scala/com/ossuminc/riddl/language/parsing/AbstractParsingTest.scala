@@ -21,8 +21,9 @@ import scala.reflect.*
 /** A helper class for testing the parser */
 trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWithTestData {
 
-  case class StringParser(content: String, testCase: String = "unknown test case") extends TopLevelParser():
-    val rpi = RiddlParserInput(content, testCase)
+  case class StringParser(content: String, testCase: String = "unknown test case") extends ExtensibleTopLevelParser():
+    val input: RiddlParserInput = RiddlParserInput(content, testCase)
+    val withVerboseFailures: Boolean = true 
   end StringParser
 
   def parse[T <: RiddlValue, U <: RiddlValue](
@@ -51,7 +52,7 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
 
   def parseNebula(input: RiddlParserInput): Either[Messages, Nebula] = {
     val tp = TestParser(input)
-    tp.parseNebula(input)
+    tp.parseNebula
   }
 
   def parseDomainDefinition[TO <: RiddlValue](
