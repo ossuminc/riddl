@@ -83,13 +83,24 @@ class TopLevelParserTest extends ParsingTest {
       val rpi: RiddlParserInput = Await.result(RiddlParserInput.fromURL(url), 10.seconds)
       val tlp = TopLevelParser(rpi,false)
       tlp.parseRootWithURLs match {
-        case Left(messages) => fail(messages.format)
+        case Left((messages, _)) => fail(messages.format)
         case Right((root, urls)) =>
           root.domains.head.id.value must be("Everything")
           val paths: Seq[String] = urls.map(_.path)
           paths must contain("language/jvm/src/test/input/everything_APlant.riddl")
           paths must contain("language/jvm/src/test/input/everything_app.riddl")
           paths must contain("language/jvm/src/test/input/everything_full.riddl")
+      }
+    }
+    "return URLs on failure" in { (td: TestData) =>
+      val rpi: RiddlParserInput = RiddlParserInput("some source that ain't riddl", td)
+      val tlp = TopLevelParser(rpi, false)
+      tlp.parseRootWithURLs match {
+        case Left((messages, urls)) =>
+          urls must be(empty)
+          messages mustNot be(empty)
+          succeed
+        case Right((root, urls)) => fail("Test should have yields Left")
       }
     }
   }
