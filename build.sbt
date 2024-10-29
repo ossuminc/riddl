@@ -2,7 +2,6 @@ import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import de.heikoseeberger.sbtheader.License.ALv2
-import de.heikoseeberger.sbtheader.LicenseStyle
 import de.heikoseeberger.sbtheader.LicenseStyle.SpdxSyntax
 import sbt.Append.{appendSeqImplicit, appendSet}
 import sbt.Keys.{description, libraryDependencies}
@@ -45,7 +44,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
 
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
-  .configure(With.typical, With.headerLicense("Apache-2.0"))
+  .configure(With.scala3, With.headerLicense("Apache-2.0"))
   .configure(With.build_info, With.publishing)
   .settings(
     scalacOptions += "-explain-cyclic",
@@ -89,6 +88,12 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
         targetTriple = "arm64-apple-darwin23.6.0",
         ld64Path = "/opt/homebrew/Cellar/lld/19.1.2/bin/ld64.lld"
       )
+  )
+  .nativeSettings(
+    libraryDependencies ++= Seq(
+      "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
+      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0"
+    )
   )
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js
