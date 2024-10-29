@@ -24,4 +24,24 @@ object Punctuation {
   final val squareClose = "]"
   final val undefinedMark = "???"
   final val verticalBar = "|"
+
+  def allPunctuation: Seq[String] = Seq(
+    asterisk,
+    atSign,
+    comma,
+    colon,
+    curlyOpen,
+    curlyClose,
+    dot,
+    equalsSign,
+    plus,
+    question,
+    quote,
+    roundOpen,
+    roundClose,
+    squareOpen,
+    squareClose,
+    undefinedMark,
+    verticalBar
+  )
 }
