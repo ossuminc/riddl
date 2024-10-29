@@ -94,7 +94,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
-    Test / parallelExecution := true
+    Test / parallelExecution := false
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
