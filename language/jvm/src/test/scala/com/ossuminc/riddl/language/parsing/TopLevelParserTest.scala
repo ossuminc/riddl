@@ -9,12 +9,12 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{AST, At}
-import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext, URL, ec, pc}
 
 import java.nio.file.Path
 import scala.io.Source
 import org.scalatest.TestData
+
 import scala.concurrent.duration.DurationInt
 
 class TopLevelParserTest extends ParsingTest {
@@ -23,8 +23,8 @@ class TopLevelParserTest extends ParsingTest {
 
   val origin = "simpleDomain.riddl"
 
-  val simpleDomainFile = Path.of(s"language/jvm/src/test/input/domains/$origin")
-  val url = PathUtils.urlFromCwdPath(simpleDomainFile)
+  val simpleDomainFile: Path = Path.of(s"language/jvm/src/test/input/domains/$origin")
+  val url: URL = PathUtils.urlFromCwdPath(simpleDomainFile)
   val rpi: RiddlParserInput =
     Await.result(RiddlParserInput.fromURL(url), 10.seconds)
 
@@ -34,26 +34,24 @@ class TopLevelParserTest extends ParsingTest {
   )
   val simpleDomainResults: AST.Root = Root(Contents(simpleDomain))
 
-  "parse" should {
-    "parse RiddlParserInput" in { (td: TestData) =>
+  "TopLevelParser Companion" should {
+    "parse RiddlParserInput" in { (_: TestData) =>
       TopLevelParser.parseInput(rpi) mustBe Right(simpleDomainResults)
     }
-    "parse File" in { (td: TestData) =>
+    "parse File" in { (_: TestData) =>
       TopLevelParser.parseInput(rpi) mustBe Right(simpleDomainResults)
     }
-    "parse String" in { (td: TestData) =>
+    "parse String" in { (_: TestData) =>
       val source = Source.fromFile(simpleDomainFile.toFile)
       try {
-        val stringContents = source.mkString
         val result = TopLevelParser.parseInput(rpi)
         val expected = Root(Contents(simpleDomain))
         result mustBe Right(expected)
       } finally { source.close() }
     }
-    "parse empty String" in { (td: TestData) =>
-      val expected = Root(Contents())
+    "parse empty String" in { (_: TestData) =>
       val parser = StringParser("")
-      parser.parseRoot(parser.rpi) match {
+      parser.parseRoot match {
         case Right(r: Root) =>
           fail(s"Should have failed expecting an author or domain but got ${r.format}")
         case Left(messages: Messages) =>
@@ -76,6 +74,22 @@ class TopLevelParserTest extends ParsingTest {
           msg.message must include("Expected one of")
           msg.message must include("\"author\"")
           msg.message must include("\"domain\"")
+      }
+    }
+  }
+  "TopLevelParser" should {
+    "return URLs when asked" in { (td: TestData) =>
+      val url: URL = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val rpi: RiddlParserInput = Await.result(RiddlParserInput.fromURL(url), 10.seconds)
+      val tlp = TopLevelParser(rpi,false)
+      tlp.parseRootWithURLs match {
+        case Left(messages) => fail(messages.format)
+        case Right((root, urls)) =>
+          root.domains.head.id.value must be("Everything")
+          val paths: Seq[String] = urls.map(_.path)
+          paths must contain("language/jvm/src/test/input/everything_APlant.riddl")
+          paths must contain("language/jvm/src/test/input/everything_app.riddl")
+          paths must contain("language/jvm/src/test/input/everything_full.riddl")
       }
     }
   }
