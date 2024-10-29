@@ -19,11 +19,15 @@ import fastparse.Parsed.Success
 import scala.annotation.unused
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
+import scala.collection.mutable
 
 /** Unit Tests For ParsingContext */
 trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
 
   import fastparse.P
+
+  private val urlSeen: mutable.ListBuffer[URL] = mutable.ListBuffer[URL]()
+  def getURLs: Seq[URL] = urlSeen.toSeq
 
   def parseRule[RESULT <: RiddlValue](
     rpi: RiddlParserInput,
@@ -79,6 +83,7 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
       }
       ctx.input.asInstanceOf[RiddlParserInput].root.parent.resolve(name)
     }
+    urlSeen.append(newURL)
     try {
       import com.ossuminc.riddl.utils.Await
       implicit val ec: ExecutionContext = pc.ec

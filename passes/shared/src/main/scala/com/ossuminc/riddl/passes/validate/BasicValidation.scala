@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.pc
 
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
