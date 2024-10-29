@@ -19,7 +19,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   The offset in that file/stream the defines the location
   */
 @JSExportTopLevel("At")
-case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
+case class At(source: RiddlParserInput, offset: Int = 0, length: Int = 0) extends Ordered[At] {
 
   import scala.scalajs.js.annotation.JSExport
 
@@ -49,6 +49,26 @@ case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
   @targetName("plus")
   @JSExport
   def +(int: Int): At = At(source, offset + int)
+
+  /** Return a copy of `this` with a new length
+   *
+    * @param newLength
+   * The value of the `length` field for the returned At instance
+   * @return
+   * A cpy of this with a new length
+   */
+  @JSExport
+  def withLength(newLength: Int): At = this.copy(length = newLength)
+
+  /**  Extend the length of this At
+   *
+   * @param extent
+   * The amount by which the length is extended.
+   * @return
+   * A copy of this At with the extended length
+   */
+  @JSExport
+  def withExtension(extent: Int): At = this.copy(length = length + extent)
 
   @JSExport
   override def equals(obj: Any): Boolean = {
