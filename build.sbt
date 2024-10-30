@@ -28,14 +28,19 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
     utilsNative,
     language,
     languageJS,
+    languageNative,
     passes,
     passesJS,
+    languageNative,
     testkit,
     testkitJS,
+    testkitNative,
     diagrams,
     diagramsJS,
+    diagramsNative,
     riddlLib,
     riddlLibJS,
+    riddlLibNative,
     command,
     hugo,
     commands,
@@ -61,7 +66,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
-      import tastymima.intf._
+      import tastymima.intf.*
       prevConfig.withMoreProblemFilters(
         asList(
           ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.version"),
@@ -116,7 +121,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .jvmSettings(
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
-      import tastymima.intf._
+      import tastymima.intf.*
       prevConfig.withMoreProblemFilters(
         asList(
           ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc"),
@@ -137,18 +142,26 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
-  .nativeConfigure(With.native())
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/bin/ld64.lld"
+      )
+  )
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
+
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
 lazy val languageNative = language_cp.native.dependsOn(utilsNative)
 
 val Passes = config("passes")
-lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
+lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
@@ -165,7 +178,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
     ),
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
-      import tastymima.intf._
+      import tastymima.intf.*
       prevConfig.withMoreProblemFilters(
         asList(
           ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.passes.PassVisitor.doRelationship")
@@ -176,10 +189,20 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
   .jsConfigure(With.publishing)
   .jsConfigure(With.noMiMa)
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/bin/ld64.lld"
+      )
+  )
+  .nativeConfigure(With.noMiMa)
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
+val passesNative = passes_cp.native
 
-lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
+lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Testing kit for RIDDL language and passes"
@@ -193,11 +216,22 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.publishing)
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/bin/ld64.lld"
+      )
+  )
+  .nativeConfigure(With.noMiMa)
+  .nativeSettings(evictionErrorLevel := sbt.util.Level.Warn)
 val testkit = testkit_cp.jvm
 val testkitJS = testkit_cp.js
+val testkitNative = testkit_cp.native
 
 val Diagrams = config("diagrams")
-lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
+lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
@@ -210,17 +244,28 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/bin/ld64.lld"
+      )
+  )
+  .nativeConfigure(With.noMiMa)
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
+val diagramsNative = diagrams_cp.native
 
-lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM)
+lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
-  .configure(With.scala3,With.publishing)
+  .configure(With.scala3, With.publishing)
   .settings(
     description := "Bundling of essential RIDDL libraries"
   )
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
+val riddlLibNative = riddlLib_cp.native
 
 val Command = config("command")
 lazy val command = Module("command", "riddl-command")
