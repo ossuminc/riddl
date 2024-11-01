@@ -70,8 +70,8 @@ object Keywords {
   def append[u: P]: P[Unit] = keyword(Keyword.append)
 
   def application[u: P]: P[Unit] = keyword(Keyword.application)
-  
-  def attachment[u:P]: P[Unit] = keyword(Keyword.attachment)
+
+  def attachment[u: P]: P[Unit] = keyword(Keyword.attachment)
 
   def author[u: P]: P[Unit] = keyword(Keyword.author)
 
@@ -110,7 +110,8 @@ object Keywords {
   def direct[u: P]: P[Unit] = keyword(Keyword.direct)
 
   def described[u: P]: P[Unit] = keywords(
-    StringIn(Keyword.described, Keyword.explained, Keyword.description, Keyword.explanation))
+    StringIn(Keyword.described, Keyword.explained, Keyword.description, Keyword.explanation)
+  )
 
   def details[u: P]: P[Unit] = keyword(Keyword.details)
 
@@ -182,7 +183,7 @@ object Keywords {
 
   def items[u: P]: P[Unit] = keyword(Keyword.items)
 
-  def label[u:P]: P[Unit] = keyword(Keyword.label)
+  def label[u: P]: P[Unit] = keyword(Keyword.label)
 
   def link[u: P]: P[Unit] = keyword(Keyword.link)
 
@@ -199,8 +200,8 @@ object Keywords {
   def morph[u: P]: P[Unit] = keyword(Keyword.morph)
 
   def name[u: P]: P[Unit] = keyword(Keyword.name)
-  
-  def nebula[u:P]: P[Unit] = keyword(Keyword.nebula)
+
+  def nebula[u: P]: P[Unit] = keyword(Keyword.nebula)
 
   def on[u: P]: P[Unit] = keyword(Keyword.on)
 
@@ -473,4 +474,147 @@ object Keyword {
   final val when = "when"
   final val where = "where"
   final val with_ = "with"
+
+  def allKeywords: Seq[String] = Seq(
+    acquires,
+    adaptor,
+    all,
+    any,
+    append,
+    application,
+    attachment,
+    author,
+    become,
+    benefit,
+    brief,
+    briefly,
+    body,
+    call,
+    case_,
+    capability,
+    command,
+    commands,
+    condition,
+    connector,
+    constant,
+    container,
+    contains,
+    context,
+    create,
+    described,
+    description,
+    details,
+    direct,
+    presents,
+    do_,
+    domain,
+    else_,
+    email,
+    end_,
+    entity,
+    epic,
+    error,
+    event,
+    example,
+    execute,
+    explanation,
+    explained,
+    field,
+    fields,
+    file,
+    flow,
+    focus,
+    for_,
+    foreach,
+    form,
+    from,
+    fully,
+    function,
+    graph,
+    group,
+    handler,
+    if_,
+    import_,
+    include,
+    index,
+    init,
+    inlet,
+    inlets,
+    input,
+    invariant,
+    items,
+    label,
+    link,
+    many,
+    mapping,
+    merge,
+    message,
+    module,
+    morph,
+    name,
+    nebula,
+    on,
+    one,
+    organization,
+    option,
+    optional,
+    options,
+    other,
+    outlet,
+    outlets,
+    output,
+    parallel,
+    pipe,
+    plant,
+    projector,
+    query,
+    range,
+    reference,
+    relationship,
+    remove,
+    replica,
+    reply,
+    repository,
+    requires,
+    required,
+    record,
+    result,
+    results,
+    return_,
+    returns,
+    reverted,
+    router,
+    saga,
+    schema,
+    selects,
+    send,
+    sequence,
+    set,
+    show,
+    shown,
+    sink,
+    source,
+    split,
+    state,
+    step,
+    stop,
+    story,
+    streamlet,
+    table,
+    take,
+    tell,
+    term,
+    then_,
+    title,
+    type_,
+    url,
+    updates,
+    user,
+    value,
+    void,
+    when,
+    where,
+    with_
+  )
+
 }
