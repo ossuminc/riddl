@@ -17,17 +17,17 @@ private[parsing] trait StreamingParser {
 
   def inlet[u: P]: P[Inlet] = {
     P(
-      location ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ withMetaData
-    )./.map { case (loc, id, typeRef, descriptives) =>
-      Inlet(loc, id, typeRef, descriptives.toContents)
+      Index ~ Keywords.inlet ~ identifier ~ is ~ typeRef ~/ withMetaData ~/ Index
+    ).map { case (start, id, typeRef, descriptives, end) =>
+      Inlet(at(start, end), id, typeRef, descriptives.toContents)
     }
   }
 
   def outlet[u: P]: P[Outlet] = {
     P(
-      location ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ withMetaData
-    )./.map { case (loc, id, typeRef, descriptives) =>
-      Outlet(loc, id, typeRef, descriptives.toContents)
+      Index ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ withMetaData ~/ Index
+    ).map { case (start, id, typeRef, descriptives, end) =>
+      Outlet(at(start,end), id, typeRef, descriptives.toContents)
     }
   }
 
@@ -40,9 +40,9 @@ private[parsing] trait StreamingParser {
 
   def connector[u: P]: P[Connector] = {
     P(
-      location ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~ withMetaData
-    )./.map { case (loc, id, (out, in, opts), descriptives) =>
-      Connector(loc, id, out, in, opts, descriptives.toContents)
+      Index ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~ withMetaData ~/ Index
+    ).map { case (start, id, (out, in, opts), descriptives, end) =>
+      Connector(at(start,end), id, out, in, opts, descriptives.toContents)
     }
   }
 
@@ -104,10 +104,11 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int = 0
   ): P[Streamlet] = {
     P(
-      location ~ keyword ~ identifier ~ is ~ open ~
+      Index ~ keyword ~ identifier ~ is ~ open ~
         streamletBody(minInlets, maxInlets, minOutlets, maxOutlets) ~
-        close ~ withMetaData
-    )./.map { case (loc, id, contents, descriptives) =>
+        close ~ withMetaData ~ Index
+    )./.map { case (start, id, contents, descriptives, end) =>
+      val loc = at(start, end)
       val shape = keywordToKind(keyword, loc)
       checkForDuplicateIncludes(contents)
       Streamlet(loc, id, shape, contents.toContents, descriptives.toContents)

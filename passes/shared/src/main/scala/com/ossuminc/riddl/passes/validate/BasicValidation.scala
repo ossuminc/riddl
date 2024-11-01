@@ -262,12 +262,14 @@ trait BasicValidation {
         symbols.contextOf(container) match {
           case Some(containerContext) =>
             if definitionContext != containerContext then
+              val formatted = ref.format 
               messages.add(
                 style(
-                  s"Path Identifier ${ref.format} at ${ref.loc} references ${definition.identify} in " +
+                  s"Path Identifier $formatted at ${ref.loc} references ${definition.identify} in " +
                     s"${definitionContext.identify} but occurs in ${container.identify} in ${containerContext.identify}." +
                     " Cross-context references are ill-advised as they lead to model confusion and violate " +
-                    "the 'bounded' aspect of bounded contexts"
+                    "the 'bounded' aspect of bounded contexts",
+                  ref.loc.extend(formatted.length)
                 )
               )
             else ()

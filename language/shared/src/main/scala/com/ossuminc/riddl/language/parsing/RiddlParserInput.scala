@@ -146,7 +146,16 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  @inline final def location(index: Int): At = { At(this, index) }
+  @inline final def location(index: Int): At = {
+    At(this, index, index + 1)
+  }
+
+  @inline final def at(start: Int, end: Int): At = { At(this, start, end) }
+
+  @inline final def lineAt(index: Int): At = {
+    val (start, end) = rangeOf(index)
+    At(this, start, end)
+  }
 
   def prettyIndex(index: Int): String = { location(index).toString }
 

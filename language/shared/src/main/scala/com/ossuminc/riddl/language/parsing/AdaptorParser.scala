@@ -34,22 +34,26 @@ private[parsing] trait AdaptorParser(using io: PlatformContext) {
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {
-    P(location ~ (from.! | to.!)).map {
-      case (loc, "from") => InboundAdaptor(loc)
-      case (loc, "to")   => OutboundAdaptor(loc)
-      case (loc, str) =>
-        error(s"Impossible condition at $loc $str")
-        InboundAdaptor(loc)
+    P(Index ~ (from.! | to.!) ~ Index).map { case (start, str, end) =>
+      val loc = at(start, end)
+      str match
+        case "from" => InboundAdaptor(loc)
+        case "to"   => OutboundAdaptor(loc)
+        case str: String =>
+          error(s"Impossible condition at $loc $str")
+          InboundAdaptor(loc)
+      end match
     }
   }
 
   def adaptor[u: P]: P[Adaptor] = {
     P(
-      location ~ Keywords.adaptor ~/ identifier ~
-        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~ close ~ withMetaData
-    )./map { case (loc, id, direction, cRef, contents, descriptives) =>
+      Index ~ Keywords.adaptor ~/ identifier ~
+        adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~
+        close ~ withMetaData ~ Index
+    )./ map { case (start, id, direction, cRef, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Adaptor(loc, id, direction, cRef, contents.toContents, descriptives.toContents)
+      Adaptor(at(start, end), id, direction, cRef, contents.toContents, descriptives.toContents)
     }
   }
 }

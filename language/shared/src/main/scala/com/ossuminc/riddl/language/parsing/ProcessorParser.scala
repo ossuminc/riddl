@@ -19,11 +19,10 @@ trait ProcessorParser
 
   def option[u: P]: P[OptionValue] =
     P(
-      Keywords.option ~/ is.? ~
-        location ~ CharsWhile(ch => ch.isLower | ch.isDigit | ch == '_' | ch == '-').! ~
-        (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~ Punctuation.roundClose).?
-    ).map { case (loc, option, params) =>
-      OptionValue(loc, option, params.getOrElse(Seq.empty[LiteralString]))
+      Index ~ Keywords.option ~/ is.? ~ CharsWhile(ch => ch.isLower | ch.isDigit | ch == '_' | ch == '-').! ~
+        (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~ Punctuation.roundClose).? ~ Index
+    ).map { case (start, option, params, end) =>
+      OptionValue(at(start, end), option, params.getOrElse(Seq.empty[LiteralString]))
     }
 
   def relationshipCardinality[u: P]: P[RelationshipCardinality] =
@@ -36,10 +35,10 @@ trait ProcessorParser
 
   def relationship[u: P]: P[Relationship] =
     P(
-      location ~ Keywords.relationship ~ identifier ~/ to ~ processorRef ~ as ~ relationshipCardinality ~
-        (Keywords.label ~ as ~ literalString).? ~ withMetaData
-    ).map { case (loc, id, procRef, cardinality, label, descriptives) =>
-      Relationship(loc, id, procRef, cardinality, label, descriptives.toContents)
+      Index ~ Keywords.relationship ~ identifier ~/ to ~ processorRef ~ as ~ relationshipCardinality ~
+        (Keywords.label ~ as ~ literalString).? ~ withMetaData ~ Index
+    ).map { case (start, id, procRef, cardinality, label, descriptives, end) =>
+      Relationship(at(start, end), id, procRef, cardinality, label, descriptives.toContents)
     }
 
   def processorDefinitionContents[u: P](statementsSet: StatementsSet): P[OccursInProcessor] =

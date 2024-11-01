@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{CommonOptions, ExceptionUtils, Logger, PlatformContext}
 
 import scala.collection.mutable
@@ -125,7 +126,6 @@ object Messages {
   @JSExportTopLevel("Message")
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
-
     def isInfo: Boolean = kind.isInfo
     def isMissing: Boolean = kind.isMissing
     def isWarning: Boolean = kind.isWarning

@@ -19,12 +19,19 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   The offset in that file/stream the defines the location
   */
 @JSExportTopLevel("At")
-case class At(source: RiddlParserInput, offset: Int = 0, length: Int = 0) extends Ordered[At] {
+case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) extends Ordered[At] {
+
+  require(
+    offset <= endOffset,
+    s"Location must have a non-negative length. offset=$offset, endOffset=$endOffset, length=$length"
+  )
+
+  def length: Int = endOffset - offset
 
   import scala.scalajs.js.annotation.JSExport
 
   @JSExport
-  def isEmpty: Boolean = offset == 0 && source == RiddlParserInput.empty
+  def isEmpty: Boolean = offset == 0 && endOffset == 0 && source == RiddlParserInput.empty
 
   @JSExport
   lazy val line: Int = source.lineOf(offset) + 1
@@ -50,25 +57,15 @@ case class At(source: RiddlParserInput, offset: Int = 0, length: Int = 0) extend
   @JSExport
   def +(int: Int): At = At(source, offset + int)
 
-  /** Return a copy of `this` with a new length
-   *
-    * @param newLength
-   * The value of the `length` field for the returned At instance
-   * @return
-   * A cpy of this with a new length
-   */
+  /** Extend the length of this At
+    *
+    * @param extent
+    *   The amount by which the length is extended.
+    * @return
+    *   A copy of this At with the extended length
+    */
   @JSExport
-  def withLength(newLength: Int): At = this.copy(length = newLength)
-
-  /**  Extend the length of this At
-   *
-   * @param extent
-   * The amount by which the length is extended.
-   * @return
-   * A copy of this At with the extended length
-   */
-  @JSExport
-  def withExtension(extent: Int): At = this.copy(length = length + extent)
+  def extend(extent: Int): At = this.copy(endOffset = endOffset + extent)
 
   @JSExport
   override def equals(obj: Any): Boolean = {
@@ -88,17 +85,14 @@ object At {
 
   @JSExport("emptyConst") val empty: At = At(RiddlParserInput.empty)
   @JSExport def empty(input: RiddlParserInput): At = { At(input) }
-  @JSExport final val defaultSourceName = RiddlParserInput.empty.origin
 
   /** Empty constructor for [[At]] */
-  implicit def apply(): At = { At(RiddlParserInput.empty) }
-
-  /** Empty constructor at start of a line for the empty [[At]] */
-  implicit def apply(line: Int): At = { At(RiddlParserInput.empty, line) }
+  implicit def apply(): At = { At.empty }
 
   /** Start of line constructor for a specific [[At]] */
   implicit def apply(line: Int, src: RiddlParserInput): At = {
-    src.location(src.offsetOf(line))
+    val (start, end) = src.rangeOf(line)
+    src.at(start, end)
   }
 
   /** (line, col) constructor of [[At]] for the empty [[parsing.RiddlParserInput]] */

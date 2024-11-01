@@ -361,14 +361,14 @@ class ASTTest extends AbstractTestingBasis {
   "Repository" should { "have a test" in { pending } }
 
   "Root(Nil)" should {
-    "be at location 0,0" in { Root(Contents.empty).loc must be(At.empty) }
-    "have 'Root' id" in { Root(Contents.empty).identify must be("Root") }
-    "have no modules" in { Root(Contents.empty).modules must be(empty) }
-    "have no domains" in { Root(Contents.empty).domains must be(empty) }
-    "have no comments" in { Root(Contents.empty).comments must be(empty) }
-    "have no authors" in { Root(Contents.empty).authors must be(empty) }
+    "be at location 0,0" in { Root(At.empty, Contents.empty).loc must be(At.empty) }
+    "have 'Root' id" in { Root(At.empty, Contents.empty).identify must be("Root") }
+    "have no modules" in { Root(At.empty, Contents.empty).modules must be(empty) }
+    "have no domains" in { Root(At.empty, Contents.empty).domains must be(empty) }
+    "have no comments" in { Root(At.empty, Contents.empty).comments must be(empty) }
+    "have no authors" in { Root(At.empty, Contents.empty).authors must be(empty) }
     "identify as root container" in {
-      Root(Contents.empty).isRootContainer mustBe true
+      Root(At.empty, Contents.empty).isRootContainer mustBe true
     }
   }
 
