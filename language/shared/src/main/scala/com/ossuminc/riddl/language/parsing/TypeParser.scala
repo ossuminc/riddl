@@ -218,7 +218,10 @@ private[parsing] trait TypeParser {
     P(
       Index ~ PredefTypes.URL ~/
         (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).? ~ Index
-    ).map { case (start, Some(str), end) => URI(at(start, end), Some(str)) }
+    ).map {
+      case (start, Some(str), end) => URI(at(start, end), Some(str))
+      case (start, None, end) => URI(at(start,end), None)
+    }
   }
 
   private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
