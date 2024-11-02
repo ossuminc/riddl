@@ -37,7 +37,7 @@ trait StreamingValidation extends TypeValidation {
       messages.add(
         Messages.usage(
           "Models without any streaming data will exhibit minimal effect",
-          root.at
+          root.loc
         )
       )
     }
@@ -72,7 +72,7 @@ trait StreamingValidation extends TypeValidation {
                 s"The persistence option on ${connector.identify} should be " +
                   s"specified because an end of the connector is not connected " +
                   s"within the same context"
-              messages.addWarning(connector.id.at, message)
+              messages.addWarning(connector.id.loc, message)
             }
           }
       }
@@ -94,7 +94,7 @@ trait StreamingValidation extends TypeValidation {
     def findUnconnected[OI <: Portlet](portlets: scala.collection.Set[OI]): Unit = {
       portlets.foreach { portlet =>
         val message = s"${portlet.identify} is not connected"
-        messages.addWarning(portlet.at), message)
+        messages.addWarning(portlet.loc, message)
       }
     }
 

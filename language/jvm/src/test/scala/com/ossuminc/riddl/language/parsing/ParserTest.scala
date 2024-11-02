@@ -307,8 +307,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((function, _)) =>
-          inside(function) {
+        case Right((function: Function, _)) =>
+          function match
             case Function(
                   _,
                   Identifier(_, "foo"),
@@ -318,12 +318,13 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                   _
                 ) =>
               val firstExpected =
-                Field(At(rpi, 32, 43), Identifier(At(32, 34, rpi), "b"), Bool(At(36, 43, rpi)), Contents.empty)
+                Field(At(rpi, 32, 43), Identifier(At(32, 43, rpi), "b"), Bool(At(36, 43, rpi)), Contents.empty)
               firstAggrContents.head must be(firstExpected)
               val secondExpected =
                 Field(At(57, 68, rpi), Identifier(At(57, 59, rpi), "i"), Integer(At(61, 68, rpi)), Contents.empty)
               secondAggrContents.head must be(secondExpected)
-          }
+          end match  
+          
       }
     }
     "handle a comment" in { (td: TestData) =>
