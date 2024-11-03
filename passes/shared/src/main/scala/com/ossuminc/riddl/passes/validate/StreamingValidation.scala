@@ -9,9 +9,8 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.pc
 
-import scala.math.abs
 import scala.collection.mutable
 
 trait StreamingValidation extends TypeValidation {

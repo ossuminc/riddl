@@ -22,9 +22,10 @@ case class TestParser(
   input: RiddlParserInput,
   throwOnError: Boolean = false,
   withVerboseFailures: Boolean = true
-)(using PlatformContext) extends ExtensibleTopLevelParser
+)(using PlatformContext)
+    extends ExtensibleTopLevelParser
     with Matchers {
-  
+
   def expect[CT <: RiddlValue](
     parser: P[?] => P[CT],
     withVerboseFailures: Boolean = false
@@ -52,31 +53,6 @@ case class TestParser(
     expect[T](parser).map(x => extract(x) -> input)
   }
 
-  protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
-    val parser: P[?] => P[?] = classTag[T].runtimeClass match {
-      case x if x == classOf[AST.Type]       => typeDef(_)
-      case x if x == classOf[AST.Domain]     => domain(_)
-      case x if x == classOf[AST.Context]    => context(_)
-      case x if x == classOf[AST.Entity]     => entity(_)
-      case x if x == classOf[AST.Adaptor]    => adaptor(_)
-      case x if x == classOf[AST.Invariant]  => invariant(_)
-      case x if x == classOf[AST.Function]   => function(_)
-      case x if x == classOf[AST.Streamlet]  => streamlet(_)
-      case x if x == classOf[AST.Saga]       => saga(_)
-      case x if x == classOf[AST.Repository] => repository(_)
-      case x if x == classOf[AST.Projector]  => projector(_)
-      case x if x == classOf[AST.Epic]       => epic(_)
-      case x if x == classOf[AST.Connector]  => connector(_)
-      case x if x == classOf[AST.Module]     => module(_)
-      case x if x == classOf[AST.Root]       => root(_)
-      case _ =>
-        throw new RuntimeException(
-          s"No parser defined for ${classTag[T].runtimeClass}"
-        )
-    }
-    parser.asInstanceOf[P[?] => P[T]]
-  }
-  
   def parseTopLevelDomains: Either[Messages, Root] = {
     parseRoot
   }
@@ -105,12 +81,12 @@ case class TestParser(
   def parseDomainDefinition[TO <: RiddlValue](
     extract: Domain => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    parse[Domain, TO](domain(_), extract)
+    parse[Domain, TO](parserFor[Domain], extract)
   }
 
   def parseContextDefinition[TO <: RiddlValue](
     extract: Context => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    parse[Context, TO](context(_), extract)
+    parse[Context, TO](parserFor[Context], extract)
   }
 }
