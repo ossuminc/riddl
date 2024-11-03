@@ -19,6 +19,7 @@ lazy val license = ALv2(yyyy = "2019-2025", copyrightOwner = "Ossum Inc.", licen
 
 def cpDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
 def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
+def tkDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
 
 lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apache-2.0" */ )
   .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
@@ -90,7 +91,7 @@ lazy val utilsJS = utils_cp.js
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
   .dependsOn(cpDep(utils_cp))
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
@@ -129,7 +130,7 @@ lazy val languageJS = language_cp.js.dependsOn(utilsJS)
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     Test / parallelExecution := false,
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
@@ -163,17 +164,22 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
   .settings(
     description := "Testing kit for RIDDL language and passes"
   )
-  .dependsOn(language_cp % "compile->test;test->test", passes_cp % "compile->test;test->test")
+  .dependsOn(tkDep(utils_cp), tkDep(language_cp), tkDep(passes_cp))
   .jvmSettings(
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % V.scalatest,
-      "org.scalatest" %% "scalatest" % V.scalatest,
-      "org.scalactic" %% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      "org.scalatest" %% "scalatest" % V.scalatest
     )
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.publishing)
+  .jsSettings(
+    // scalacOptions ++= Seq("-rewrite", "-source", "3.4-migration"),
+    libraryDependencies ++= Seq(
+      "org.scalactic" %%% "scalactic" % V.scalatest,
+      "org.scalatest" %%% "scalatest" % V.scalatest
+    )
+  )
 val testkit = testkit_cp.jvm
 val testkitJS = testkit_cp.js
 
@@ -196,7 +202,7 @@ val diagramsJS = diagrams_cp.js
 
 lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
-  .configure(With.scala3,With.publishing)
+  .configure(With.scala3, With.publishing)
   .settings(
     description := "Bundling of essential RIDDL libraries"
   )
@@ -261,7 +267,6 @@ val Riddlc = config("riddlc")
 lazy val riddlc: Project = Program("riddlc", "riddlc")
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50.0))
-  .configure(With.publishing)
   .configure(With.noMiMa)
   .dependsOn(
     utils,

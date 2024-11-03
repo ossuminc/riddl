@@ -22,27 +22,27 @@ import scala.scalajs.js.annotation.*
 /** An extensible version of the Top Level Parser. */
 
 trait ExtensibleTopLevelParser(using PlatformContext)
-    extends ProcessorParser
-    with DomainParser
-    with AdaptorParser
-    with ApplicationParser
-    with ContextParser
-    with EntityParser
-    with EpicParser
-    with FunctionParser
-    with ModuleParser
-    with NebulaParser
-    with ProjectorParser
-    with RepositoryParser
-    with RootParser
-    with SagaParser
-    with StreamingParser
-    with StatementParser
-    with ParsingContext {
+    extends ProcessorParser,
+      AdaptorParser,
+      ApplicationParser,
+      ContextParser,
+      DomainParser,
+      EntityParser,
+      EpicParser,
+      FunctionParser,
+      ModuleParser,
+      NebulaParser,
+      ProjectorParser,
+      RepositoryParser,
+      RootParser,
+      SagaParser,
+      StreamingParser,
+      StatementParser,
+      ParsingContext {
 
   def input: RiddlParserInput
   def withVerboseFailures: Boolean
-  
+
   private def doParse[E <: Parent: ClassTag](rule: P[?] => P[E]): Either[Messages, E] = {
     parseRule[E](input, rule, withVerboseFailures) {
       (result: Either[Messages, E], input: RiddlParserInput, index: Int) =>
@@ -53,7 +53,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
               error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
             end if
             result
-          case _ @ Right(wrongNode) =>
+          case _ @Right(wrongNode) =>
             val expected = classTag[E].runtimeClass
             val actual = wrongNode.getClass
             error(At(input, index), s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}")
@@ -71,4 +71,31 @@ trait ExtensibleTopLevelParser(using PlatformContext)
       case r @ Right(root)    => Right(root -> this.getURLs)
     }
   }
+
+  protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
+    val parser: P[?] => P[?] = classTag[T].runtimeClass match {
+      case x if x == classOf[Type]       => typeDef(_)
+      case x if x == classOf[Domain]     => domain(_)
+      case x if x == classOf[Context]    => context(_)
+      case x if x == classOf[Entity]     => entity(_)
+      case x if x == classOf[Adaptor]    => adaptor(_)
+      case x if x == classOf[Invariant]  => invariant(_)
+      case x if x == classOf[Function]   => function(_)
+      case x if x == classOf[Streamlet]  => streamlet(_)
+      case x if x == classOf[Saga]       => saga(_)
+      case x if x == classOf[Repository] => repository(_)
+      case x if x == classOf[Projector]  => projector(_)
+      case x if x == classOf[Epic]       => epic(_)
+      case x if x == classOf[Connector]  => connector(_)
+      case x if x == classOf[Module]     => module(_)
+      case x if x == classOf[Nebula]     => nebula(_)
+      case x if x == classOf[Root]       => root(_)
+      case _ =>
+        throw new RuntimeException(
+          s"No parser defined for ${classTag[T].runtimeClass}"
+        )
+    }
+    parser.asInstanceOf[P[?] => P[T]]
+  }
+
 }
