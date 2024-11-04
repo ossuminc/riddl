@@ -34,16 +34,33 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   def isEmpty: Boolean = offset == 0 && endOffset == 0 && source == RiddlParserInput.empty
 
   @JSExport
-  lazy val line: Int = source.lineOf(offset) + 1
+  @inline def line: Int = source.lineOf(offset) + 1
 
   @JSExport
-  lazy val col: Int = offset - source.offsetOf(line - 1) + 1
+  @inline def endLine: Int = source.lineOf(endOffset) + 1
+
+  @JSExport
+  @inline def col: Int = offset - source.offsetOf(line - 1) + 1
+
+  @JSExport
+  @inline def endCol: Int = endOffset - source.offsetOf(endLine - 1) + 1
 
   @JSExport
   @inline override def toString: String = { source.origin + toShort }
 
   @JSExport
-  @inline def toShort: String = { s"($line:$col)" }
+  @inline def toShort: String = { s"($offset->$endOffset)" }
+
+  @JSExport
+  @inline def toLong: String = {
+    val sLine = line
+    val eLine = endLine
+    if sLine == eLine then s"($sLine:$col->$endCol)"
+    else s"($sLine:$col->$eLine:$endCol)"
+  }
+
+  @JSExport
+  @inline def format: String = { source.origin + toLong }
 
   @JSExport
   override def compare(that: At): Int = {

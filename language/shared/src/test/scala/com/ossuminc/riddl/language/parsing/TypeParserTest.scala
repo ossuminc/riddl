@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{Field, *}
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
@@ -218,7 +218,7 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       )
       parseInContext[Type](input, _.types.last) match {
         case Left(messages)        => fail(messages.format)
-        case Right(typ: Type, rpi) => succeed
+        case Right(_: Type, _) => succeed
       }
     }
   }
@@ -286,42 +286,42 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       val rpi = RiddlParserInput("type ident = Id(entity foo)", td)
       val expected = Type(
         At(rpi, 0, 27),
-        Identifier(At(rpi, 5, 10), "ident"),
+        Identifier(At(rpi, 5, 11), "ident"),
         UniqueId(
-          At(rpi, 11, 27),
-          entityPath = PathIdentifier(At(rpi, 14, 21), Seq("foo"))
+          At(rpi, 13, 27),
+          entityPath = PathIdentifier(At(rpi, 23, 26), Seq("foo"))
         )
       )
       checkDefinition[Type, Type](rpi, expected, identity)
     }
-    "allow renames of 8 literal types" in { (td: TestData) =>
+    "allow renames of 8 literal types" in { (_: TestData) =>
       val mt = RiddlParserInput.empty
       val cases = Map[String, Type](
         "type dat = Date" ->
-          Type(At(mt, 1, 1), Identifier(At(mt, 1, 6), "dat"), Date(1 -> 12)),
+          Type(At(mt, 0, 15), Identifier(At(mt, 5, 8), "dat"), Date(At(mt, 11, 15))),
         "type tim = Time" ->
-          Type(At(mt, 1, 1), Identifier(At(mt, 1, 6), "tim"), Time(1 -> 12)),
+          Type(At(mt, 0, 15), Identifier(At(mt, 5, 9), "tim"), Time(At(mt, 11, 15))),
         "type stamp = TimeStamp" ->
-          Type(At(mt, 1, 1), Identifier(At(mt, 1, 6), "stamp"), TimeStamp(1 -> 14)),
+          Type(At(mt, 0, 22), Identifier(At(mt, 5, 10), "stamp"), TimeStamp(At(mt, 13, 23))),
         "type url = URL" ->
-          Type(At(mt, 1, 1), Identifier(At(mt, 1, 6), "url"), URI(1 -> 12)),
+          Type(At(mt, 0, 14), Identifier(At(mt, 5, 8), "url"), URI(At(mt, 11, 14))),
         "type FirstName = URL" ->
-          Type(At(mt, 1, 1), Identifier(At(mt, 1, 6), "FirstName"), URI(At(mt, 1, 18), None))
+          Type(At(mt, 0, 20), Identifier(At(mt, 5, 15), "FirstName"), URI(At(mt, 17, 20)))
       )
       checkDefinitions[Type, Type](cases, identity)
     }
     "allow enumerators" in { (td: TestData) =>
       val rpi = RiddlParserInput("type enum = any of { Apple Pear Peach Persimmon }", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "enum"),
+        At(rpi, 0, 49),
+        Identifier(At(rpi, 5, 10), "enum"),
         Enumeration(
-          At(rpi, 1, 13),
+          At(rpi, 12, 49),
           Contents(
-            Enumerator(At(rpi, 1, 22), Identifier(At(rpi, 1, 22), "Apple"), None),
-            Enumerator(At(rpi, 1, 28), Identifier(At(rpi, 1, 28), "Pear"), None),
-            Enumerator(At(rpi, 1, 33), Identifier(At(rpi, 1, 33), "Peach"), None),
-            Enumerator(At(rpi, 1, 39), Identifier(At(rpi, 1, 39), "Persimmon"), None)
+            Enumerator(At(rpi, 21, 27), Identifier(At(rpi, 21, 27), "Apple"), None),
+            Enumerator(At(rpi, 27, 32), Identifier(At(rpi, 27, 32), "Pear"), None),
+            Enumerator(At(rpi, 32, 38), Identifier(At(rpi, 32, 38), "Peach"), None),
+            Enumerator(At(rpi, 38, 48), Identifier(At(rpi, 38, 48), "Persimmon"), None)
           )
         )
       )
@@ -330,22 +330,22 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow alternation" in { (td: TestData) =>
       val rpi = RiddlParserInput("type alt = one of { type enum or type stamp or type url }", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "alt"),
+        At(rpi, 0, 57),
+        Identifier(At(rpi, 5, 9), "alt"),
         Alternation(
-          At(rpi, 1, 12),
+          At(rpi, 11, 57),
           Contents(
             AliasedTypeExpression(
-              At(rpi, 1, 21),
+              At(rpi, 20, 30),
               "type",
-              PathIdentifier(At(rpi, 1, 26), Seq("enum"))
+              PathIdentifier(At(rpi, 25, 30), Seq("enum"))
             ),
             AliasedTypeExpression(
-              At(rpi, 1, 34),
+              At(rpi, 33, 44),
               "type",
-              PathIdentifier(At(rpi, 1, 39), Seq("stamp"))
+              PathIdentifier(At(rpi, 38, 44), Seq("stamp"))
             ),
-            AliasedTypeExpression(At(rpi, 1, 48), "type", PathIdentifier(At(rpi, 1, 53), Seq("url")))
+            AliasedTypeExpression(At(rpi, 47, 56), "type", PathIdentifier(At(rpi, 52, 56), Seq("url")))
           )
         )
       )
@@ -361,12 +361,12 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         td
       )
       val expected = Alternation(
-        At(rpi, 3, 12),
+        At(rpi, 46, 66),
         Contents(
           AliasedTypeExpression(
-            At(rpi, 3, 21),
+            At(rpi, 55, 64),
             "type",
-            PathIdentifier(At(rpi, 3, 26), Seq("Foo"))
+            PathIdentifier(At(rpi, 60, 64), Seq("Foo"))
           )
         )
       )
@@ -388,28 +388,28 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         td
       )
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "agg"),
+        At(rpi, 0, 70),
+        Identifier(At(rpi, 5, 9), "agg"),
         Aggregation(
-          At(rpi, 1, 12),
+          At(rpi, 11, 70),
           Contents(
             Field(
-              At(rpi, 2, 3),
-              Identifier(At(rpi, 2, 3), "key"),
-              Number(At(rpi, 2, 8))
+              At(rpi, 15, 26),
+              Identifier(At(rpi, 15, 18), "key"),
+              Number(At(rpi, 20, 26))
             ),
             Field(
-              At(rpi, 3, 3),
-              Identifier(At(rpi, 3, 3), "id"),
+              At(rpi, 30, 48),
+              Identifier(At(rpi, 30, 32), "id"),
               UniqueId(
-                At(rpi, 3, 7),
-                PathIdentifier(At(rpi, 3, 17), Seq("foo"))
+                At(rpi, 34, 48),
+                PathIdentifier(At(rpi, 44, 47), Seq("foo"))
               )
             ),
             Field(
-              At(rpi, 4, 3),
-              Identifier(At(rpi, 4, 3), "time"),
-              TimeStamp(At(rpi, 4, 9))
+              At(rpi, 52, 68),
+              Identifier(At(rpi, 52, 56), "time"),
+              TimeStamp(At(rpi, 58, 68))
             )
           )
         )
@@ -419,28 +419,29 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow methods in aggregates" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """record agg = {
-          |  key: Number,
-          |  calc(key: Number): Number,
+          |  key: Number
+          |  calc(key: Number): Number
           |}
           |""".stripMargin,
         td
       )
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "agg"),
-        Aggregation(
-          At(rpi, 1, 12),
+        At(rpi, 0, 59),
+        Identifier(At(rpi, 7, 11), "agg"),
+        AggregateUseCaseTypeExpression(
+          At(rpi, 13, 59),
+          RecordCase,
           Contents(
             Field(
-              At(rpi, 2, 3),
-              Identifier(At(rpi, 2, 3), "key"),
-              Number(At(rpi, 2, 8))
+              At(rpi, 17, 31),
+              Identifier(At(rpi, 17, 20), "key"),
+              Number(At(rpi, 22, 31))
             ),
             Method(
-              At(rpi, 3, 3),
-              Identifier(At(rpi, 3, 3), "calc"),
-              Number(At(rpi, 3, 22)),
-              Seq(MethodArgument(At(rpi, 3, 8), "key", Number(At(rpi, 3, 13))))
+              At(rpi, 31, 57),
+              Identifier(At(rpi, 31, 35), "calc"),
+              Number(At(rpi, 50, 57)),
+              Seq(MethodArgument(At(rpi, 36, 47), "key", Number(At(rpi, 41, 47))))
             )
           )
         )
@@ -460,11 +461,12 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
             |""".stripMargin,
           td
         )
+        val l = mk.length
         val expected = Type(
-          At(rpi, 1, 1),
-          Identifier(At(rpi, 1, 6), "mkt"),
+          At(rpi, 0, 71+l),
+          Identifier(At(rpi, 5, 9), "mkt"),
           AggregateUseCaseTypeExpression(
-            At(rpi, 1, 12),
+            At(rpi, 11, 71+l),
             mk match {
               case "command" => CommandCase
               case "event"   => EventCase
@@ -473,22 +475,22 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
             },
             Contents(
               Field(
-                At(rpi, 2, 3),
-                Identifier(At(rpi, 2, 3), "key"),
-                Number(At(rpi, 2, 8))
+                At(rpi, 16+l, 27+l),
+                Identifier(At(rpi, 16+l, 19+l), "key"),
+                Number(At(rpi, 21+l, 27+l))
               ),
               Field(
-                At(rpi, 3, 3),
-                Identifier(At(rpi, 3, 3), "id"),
+                At(rpi, 31+l, 49+l),
+                Identifier(At(rpi, 31+l, 33+l), "id"),
                 UniqueId(
-                  At(rpi, 3, 7),
-                  PathIdentifier(At(rpi, 3, 17), Seq("foo"))
+                  At(rpi, 35+l, 49+l),
+                  PathIdentifier(At(rpi, 45+l, 49+l), Seq("foo"))
                 )
               ),
               Field(
-                At(rpi, 4, 3),
-                Identifier(At(rpi, 4, 3), "time"),
-                TimeStamp(At(rpi, 4, 9))
+                At(rpi, 53+l, 69+l),
+                Identifier(At(rpi, 53+l, 57+l), "time"),
+                TimeStamp(At(rpi, 59+l, 69+l))
               )
             )
           )
@@ -499,36 +501,36 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow mappings between two types" in { (td: TestData) =>
       val rpi = RiddlParserInput("type m1 = mapping from String to Number", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "m1"),
-        Mapping(At(rpi, 1, 11), String_(At(rpi, 1, 24)), Number(At(rpi, 1, 34)))
+        At(rpi, 0, 39),
+        Identifier(At(rpi, 5, 8), "m1"),
+        Mapping(At(rpi, 10, 39), String_(At(rpi, 23, 30)), Number(At(rpi, 33, 39)))
       )
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow graphs of types" in { (td: TestData) =>
       val rpi = RiddlParserInput("type g1 = graph of String", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "g1"),
-        Graph(At(rpi, 1, 11), String_(At(rpi, 1, 20)))
+        At(rpi, 0, 25),
+        Identifier(At(rpi, 5, 8), "g1"),
+        Graph(At(rpi, 10, 25), String_(At(rpi, 19, 25)))
       )
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow tables of types" in { (td: TestData) =>
       val rpi = RiddlParserInput("type t1 = table of String of [5,10]", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "t1"),
-        Table(At(rpi, 1, 11), String_(At(rpi, 1, 20)), Seq(5L, 10L))
+        At(rpi, 0, 35),
+        Identifier(At(rpi, 5, 8), "t1"),
+        Table(At(rpi, 10, 35), String_(At(rpi, 19, 26)), Seq(5L, 10L))
       )
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow range of values" in { (td: TestData) =>
       val rpi = RiddlParserInput("type r1 = range(21,  42)", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "r1"),
-        RangeType(At(rpi, 1, 11), 21, 42)
+        At(rpi, 0, 24),
+        Identifier(At(rpi, 5, 8), "r1"),
+        RangeType(At(rpi, 10, 24), 21, 42)
       )
       checkDefinition[Type, Type](rpi, expected, identity)
     }
@@ -536,14 +538,14 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow one or more in regex style" in { (td: TestData) =>
       val rpi = RiddlParserInput("type oneOrMoreB = agg+", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "oneOrMoreB"),
+        At(rpi, 0, 22),
+        Identifier(At(rpi, 5, 16), "oneOrMoreB"),
         OneOrMore(
-          At(rpi, 1, 19),
+          At(rpi, 18, 22),
           AliasedTypeExpression(
-            At(rpi, 1, 19),
+            At(rpi, 18, 21),
             "type",
-            PathIdentifier(At(rpi, 1, 19), Seq("agg"))
+            PathIdentifier(At(rpi, 18, 21), Seq("agg"))
           )
         )
       )
@@ -553,14 +555,14 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow zero or more" in { (td: TestData) =>
       val rpi = RiddlParserInput("type zeroOrMore = many optional agg", td)
       val expected = Type(
-        At(rpi, 9, 17),
-        Identifier(At(rpi, 1, 6), "zeroOrMore"),
+        At(rpi, 0, 35),
+        Identifier(At(rpi, 5, 16), "zeroOrMore"),
         ZeroOrMore(
-          At(rpi, 1, 33),
+          At(rpi, 18, 35),
           AliasedTypeExpression(
-            At(rpi, 1, 33),
+            At(rpi, 32, 35),
             "type",
-            PathIdentifier(At(rpi, 1, 33), Seq("agg"))
+            PathIdentifier(At(rpi, 32, 35), Seq("agg"))
           )
         )
       )
@@ -570,14 +572,14 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow optionality" in { (td: TestData) =>
       val rpi = RiddlParserInput("type optional = optional agg", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 6), "optional"),
+        At(rpi, 0, 28),
+        Identifier(At(rpi, 5, 14), "optional"),
         Optional(
-          At(rpi, 1, 26),
+          At(rpi, 16, 28),
           AliasedTypeExpression(
-            At(rpi, 1, 26),
+            At(rpi, 25, 28),
             "type",
-            PathIdentifier(At(rpi, 1, 26), Seq("agg"))
+            PathIdentifier(At(rpi, 25, 28), Seq("agg"))
           )
         )
       )
@@ -587,16 +589,16 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow messages defined with more natural syntax" in { (td: TestData) =>
       val rpi = RiddlParserInput("command foo is { a: Integer }", td)
       val expected = Type(
-        At(rpi, 1, 1),
-        Identifier(At(rpi, 1, 9), "foo"),
+        At(rpi, 0, 29),
+        Identifier(At(rpi, 8, 12), "foo"),
         AggregateUseCaseTypeExpression(
-          At(rpi, 1, 16),
+          At(rpi, 15, 29),
           CommandCase,
           Contents(
             Field(
-              At(rpi, 1, 18),
-              Identifier(At(rpi, 1, 18), "a"),
-              Integer(At(rpi, 1, 21))
+              At(rpi, 17, 28),
+              Identifier(At(rpi, 17, 18), "a"),
+              Integer(At(rpi, 20, 28))
             )
           )
         )
@@ -629,46 +631,46 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         case Right((typeDef, rpi)) =>
           // info(typeDef.toString)
           typeDef mustEqual Type(
-            At(rpi, 9, 3),
-            Identifier(At(rpi, 9, 8), "Complex"),
+            At(rpi, 146, 263),
+            Identifier(At(rpi, 151, 159), "Complex"),
             Aggregation(
-              At(rpi, 9, 19),
+              At(rpi, 162, 263),
               Contents(
                 Field(
-                  At(rpi, 10, 5),
-                  Identifier(At(rpi, 10, 5), "a"),
+                  At(rpi, 168, 177),
+                  Identifier(At(rpi, 168, 169), "a"),
                   AliasedTypeExpression(
-                    At(rpi, 10, 8),
+                    At(rpi, 171, 177),
                     "type",
-                    PathIdentifier(At(rpi, 10, 8), Seq("Simple"))
+                    PathIdentifier(At(rpi, 171, 177), Seq("Simple"))
                   )
                 ),
                 Field(
-                  At(rpi, 11, 5),
-                  Identifier(At(rpi, 11, 5), "b"),
-                  TimeStamp(At(rpi, 11, 8))
+                  At(rpi, 183, 195),
+                  Identifier(At(rpi, 183, 184), "b"),
+                  TimeStamp(At(rpi, 186, 195))
                 ),
                 Field(
-                  At(rpi, 12, 5),
-                  Identifier(At(rpi, 12, 5), "c"),
+                  At(rpi, 201, 233),
+                  Identifier(At(rpi, 201, 202), "c"),
                   ZeroOrMore(
-                    At(rpi, 12, 22),
+                    At(rpi, 204, 233),
                     AliasedTypeExpression(
-                      At(rpi, 12, 22),
+                      At(rpi, 218, 233),
                       "record",
-                      PathIdentifier(At(rpi, 12, 29), Seq("Compound"))
+                      PathIdentifier(At(rpi, 225, 233), Seq("Compound"))
                     )
                   )
                 ),
                 Field(
-                  At(rpi, 13, 5),
-                  Identifier(At(rpi, 13, 5), "d"),
+                  At(rpi, 239, 261),
+                  Identifier(At(rpi, 239, 240), "d"),
                   Optional(
-                    At(rpi, 13, 17),
+                    At(rpi, 242, 261),
                     AliasedTypeExpression(
-                      At(rpi, 13, 17),
+                      At(rpi, 251, 261),
                       "type",
-                      PathIdentifier(At(rpi, 13, 17), Seq("Choices"))
+                      PathIdentifier(At(rpi, 251, 261), Seq("Choices"))
                     )
                   )
                 )
