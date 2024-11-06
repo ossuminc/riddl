@@ -29,7 +29,7 @@ trait DefinitionValidation extends BasicValidation:
           }
           .mkString("", "\n  ", "\n")
         messages.addError(
-          definition.loc,
+          definition.errorLoc,
           s"${definition.identify} has duplicate content names:\n  $details"
         )
       }
@@ -44,14 +44,14 @@ trait DefinitionValidation extends BasicValidation:
       definition.id.nonEmpty | definition.isAnonymous,
       "Definitions may not have empty names",
       Error,
-      definition.loc
+      definition.errorLoc
     )
       .checkIdentifierLength(definition)
       .check(
         !definition.isVital || definition.hasAuthorRefs,
         "Vital definitions should have an author reference",
         MissingWarning,
-        definition.loc
+        definition.errorLoc
       )
     definition match
       case vd: VitalDefinition[?] =>
@@ -89,7 +89,7 @@ trait DefinitionValidation extends BasicValidation:
       container.contents.definitions.nonEmpty || container.isInstanceOf[Field],
       s"${container.identify} in ${parent.identify} should have content",
       MissingWarning,
-      container.loc
+      container.errorLoc
     )
   end checkContents
 
@@ -101,13 +101,13 @@ trait DefinitionValidation extends BasicValidation:
     checkContents(container, parents)
     checkUniqueContent(container)
   }
-  def checkDescriptives(definition: Definition & WithMetaData): Unit =
-    checkDescriptives(definition.identify, definition)
+  def checkMetadata(definition: Definition & WithMetaData): Unit =
+    checkMetadata(definition.identify, definition)
 
-  def checkDescriptives(identity: String, definition: WithMetaData): Unit =
+  def checkMetadata(identity: String, definition: WithMetaData): Unit =
     check(
       definition.metadata.nonEmpty,
-      s"Descriptives in $identity should  not be empty",
+      s"Metadata in $identity should not be empty",
       MissingWarning,
       definition.loc
     )
@@ -161,5 +161,5 @@ trait DefinitionValidation extends BasicValidation:
     }
     check(hasDescription, s"$identity should have a description", MissingWarning, definition.loc)
     check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, definition.loc)
-  end checkDescriptives
+  end checkMetadata
 end DefinitionValidation

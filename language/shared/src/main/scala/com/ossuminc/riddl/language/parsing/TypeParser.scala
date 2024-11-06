@@ -220,7 +220,7 @@ private[parsing] trait TypeParser {
         (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).? ~ Index
     ).map {
       case (start, Some(str), end) => URI(at(start, end), Some(str))
-      case (start, None, end) => URI(at(start,end), None)
+      case (start, None, end)      => URI(at(start, end), None)
     }
   }
 
@@ -286,7 +286,7 @@ private[parsing] trait TypeParser {
         case PredefType.UUID     => AST.UUID(loc)
         case PredefType.UserId   => AST.UserId(loc)
         case _ =>
-          error("Unrecognized predefined type")
+          error(loc, "Unrecognized predefined type")
           AST.Abstract(loc)
       end match
     }

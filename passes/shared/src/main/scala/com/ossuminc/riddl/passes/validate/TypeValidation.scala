@@ -88,7 +88,7 @@ trait TypeValidation extends DefinitionValidation {
           StyleWarning,
           field.loc
         )
-        .checkDescriptives(field)
+        .checkMetadata(field)
     }
     this
   }
@@ -107,7 +107,7 @@ trait TypeValidation extends DefinitionValidation {
           field.loc
         )
         .checkTypeExpression(field.typeEx, typeDef, parents)
-        .checkDescriptives(field)
+        .checkMetadata(field)
     }
     this
   }

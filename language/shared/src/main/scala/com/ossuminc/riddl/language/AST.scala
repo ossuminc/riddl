@@ -418,6 +418,8 @@ object AST:
     /** the name/identifier of this value. All definitions have one */
     def id: Identifier
 
+    def errorLoc: At = loc.copy(endOffset = id.loc.endOffset)
+
     final override inline def isIdentified: Boolean = true
 
     /** This one has an identifier so it is only anonymous if that identifier is empty */
@@ -433,7 +435,7 @@ object AST:
     end identify
 
     /** Same as [[identify]] but also adds the value's location via [[loc]] */
-    def identifyWithLoc: String = s"$identify at $loc"
+    def identifyWithLoc: String = s"$identify at ${loc.format}"
   end WithIdentifier
 
   sealed trait WithMetaData extends RiddlValue:
@@ -1004,7 +1006,7 @@ object AST:
     *   The sequence top level definitions contained by this root container
     */
   case class Root(
-    loc: At,
+    loc: At = At(),
     contents: Contents[RootContents] = Contents.empty[RootContents]
   ) extends BranchDefinition[RootContents]
       with WithModules[RootContents]

@@ -303,7 +303,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
     "resolve simple path through an include" in { _ =>
       import com.ossuminc.riddl.utils.URL
       val eL = At.empty
-      val root = Root(
+      val root = Root(At(),
         contents = Contents(
           Domain(
             eL,

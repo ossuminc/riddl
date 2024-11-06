@@ -174,10 +174,10 @@ trait BasicValidation {
           case head :: tail =>
             tail match
               case last :: Nil =>
-                messages.addStyle(last.loc, s"${last.identify} overloads ${head.identifyWithLoc}")
+                messages.addStyle(last.errorLoc, s"${last.identify} overloads ${head.identifyWithLoc}")
               case _ =>
                 val tailStr: String = tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
-                messages.addStyle(head.loc, s"${head.identify} overloads:\n  $tailStr")
+                messages.addStyle(head.errorLoc, s"${head.identify} overloads:\n  $tailStr")
         }
       }
     }
@@ -205,7 +205,7 @@ trait BasicValidation {
       value.nonEmpty,
       message = s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
-      thing.loc
+      thing.errorLoc
     )
   }
 
@@ -221,7 +221,7 @@ trait BasicValidation {
       value.nonEmpty,
       message = s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
       kind,
-      thing.loc
+      thing.errorLoc
     )
   }
 
@@ -236,7 +236,7 @@ trait BasicValidation {
       list.nonEmpty,
       s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
-      thing.loc
+      thing.errorLoc
     )
   }
 
@@ -252,7 +252,7 @@ trait BasicValidation {
       list.nonEmpty,
       s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
       kind,
-      thing.loc
+      loc
     )
   }
 

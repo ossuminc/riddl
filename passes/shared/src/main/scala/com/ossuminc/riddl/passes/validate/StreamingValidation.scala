@@ -36,7 +36,7 @@ trait StreamingValidation extends TypeValidation {
       messages.add(
         Messages.usage(
           "Models without any streaming data will exhibit minimal effect",
-          root.loc
+          root.loc.atEnd
         )
       )
     }
@@ -62,8 +62,8 @@ trait StreamingValidation extends TypeValidation {
               val message =
                 s"The persistence option on ${connector.identify} is not needed " +
                   s"since both ends of the connector connect within the same context"
-              val option: OptionValue = connector.options.find("persistent").get
-              messages.addWarning(option.at, message)
+              val option = connector.options.find(_.name == "persistent").get
+              messages.addWarning(option.loc, message)
             }
           } else {
             if !outletIsSameContext || !inletIsSameContext then {
@@ -71,7 +71,7 @@ trait StreamingValidation extends TypeValidation {
                 s"The persistence option on ${connector.identify} should be " +
                   s"specified because an end of the connector is not connected " +
                   s"within the same context"
-              messages.addWarning(connector.id.loc, message)
+              messages.addWarning(connector.errorLoc, message)
             }
           }
       }
@@ -93,7 +93,7 @@ trait StreamingValidation extends TypeValidation {
     def findUnconnected[OI <: Portlet](portlets: scala.collection.Set[OI]): Unit = {
       portlets.foreach { portlet =>
         val message = s"${portlet.identify} is not connected"
-        messages.addWarning(portlet.loc, message)
+        messages.addWarning(portlet.errorLoc, message)
       }
     }
 

@@ -16,7 +16,9 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * @param source
   *   The [[parsing.RiddlParserInput]] instance from which the location as derived
   * @param offset
-  *   The offset in that file/stream the defines the location
+  *   The offset in the `source` that defines the starting location
+  * @param endOffset
+  *   The offset in the `source` that defines the end of the location
   */
 @JSExportTopLevel("At")
 case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) extends Ordered[At] {
@@ -43,9 +45,6 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   @inline def col: Int = offset - source.offsetOf(line - 1) + 1
 
   @JSExport
-  @inline def endCol: Int = endOffset - source.offsetOf(endLine - 1) + 1
-
-  @JSExport
   @inline override def toString: String = { source.origin + toShort }
 
   @JSExport
@@ -55,6 +54,7 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   @inline def toLong: String = {
     val sLine = line
     val eLine = endLine
+    val endCol = endOffset - source.offsetOf(endLine - 1) + 1
     if sLine == eLine then s"($sLine:$col->$endCol)"
     else s"($sLine:$col->$eLine:$endCol)"
   }
@@ -66,13 +66,13 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   override def compare(that: At): Int = {
     val thisRoot = this.source.root.toExternalForm
     val thatRoot = that.source.root.toExternalForm
-    if thisRoot == thatRoot then { this.offset - that.offset }
-    else { thisRoot.compare(thatRoot) }
+    if thisRoot == thatRoot then this.offset - that.offset
+    else thisRoot.compare(thatRoot)
   }
 
   @targetName("plus")
   @JSExport
-  def +(int: Int): At = At(source, offset + int)
+  def +(int: Int): At = At(source, offset + int, endOffset + int)
 
   /** Extend the length of this At
     *
@@ -83,6 +83,11 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
     */
   @JSExport
   def extend(extent: Int): At = this.copy(endOffset = endOffset + extent)
+
+  @JSExport
+  def atEnd: At =
+    if endOffset > 0 then this.copy(offset = endOffset - 1, endOffset = endOffset)
+    else this.copy(offset = 0, endOffset = 0)
 
   @JSExport
   override def equals(obj: Any): Boolean = {
@@ -102,6 +107,12 @@ object At {
 
   @JSExport("emptyConst") val empty: At = At(RiddlParserInput.empty)
   @JSExport def empty(input: RiddlParserInput): At = { At(input) }
+
+  def range(from: At, to: At): At = {
+    require(from.source == to.source)
+    require(from.offset <= to.offset)
+    from.copy(endOffset = to.endOffset)
+  }
 
   /** Empty constructor for [[At]] */
   implicit def apply(): At = { At.empty }

@@ -229,7 +229,7 @@ class RegressionTests extends AbstractValidatingTest {
         val dup = duplicate.get
         dup.message must include(
           """Context 'ExampleContext' has duplicate content names:
-                |  Type 'Foo' at empty(9:5), and Type 'Foo' at empty(13:5)
+                |  Type 'Foo' at empty(9:5->13:5), and Type 'Foo' at empty(13:5->16:3)
                 |""".stripMargin
         )
       }

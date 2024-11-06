@@ -71,7 +71,7 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
         case x: RiddlValue =>
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
-          error(s"Expected a type reference, constant reference, or literal string, not: $xval")
+          error(loc, s"Expected a type reference, constant reference, or literal string, not: $xval")
           Output(
             loc,
             nounAlias,

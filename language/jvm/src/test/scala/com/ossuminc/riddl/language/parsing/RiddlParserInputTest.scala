@@ -33,7 +33,7 @@ class RiddlParserInputTest extends AbstractTestingBasis {
     rpi.lineOf(38) mustBe 2
     rpi.rangeOf(0) mustBe (0, 17)
     val loc = rpi.location(0)
-    rpi.rangeOf(loc) mustBe (0, 17)
+    rpi.lineRangeOf(loc) mustBe (0, 17)
     loc.col mustBe 1
     loc.line mustBe 1
   }

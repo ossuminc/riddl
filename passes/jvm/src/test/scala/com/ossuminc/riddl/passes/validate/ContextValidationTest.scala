@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{ec, pc, Await}
@@ -26,11 +27,13 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         msgs.filter(_.kind.isError) mustBe empty
         context.options.size mustBe 5
-        context.options must contain(OptionValue((2, 9, rpi), "wrapper", Seq.empty))
-        context.options must contain(OptionValue((2, 39, rpi), "gateway", Seq.empty))
-        context.options must contain(OptionValue((2, 24, rpi), "service", Seq.empty))
-        context.options must contain(OptionValue((2, 54, rpi), "package", Seq(LiteralString((2, 62, rpi), "foo"))))
-        context.options must contain(OptionValue((2, 76, rpi), "technology", Seq(LiteralString((2, 87, rpi), "http"))))
+        context.options must contain(OptionValue(At(rpi, 34, 49), "wrapper", Seq.empty))
+        context.options must contain(OptionValue(At(rpi, 49, 64), "service", Seq.empty))
+        context.options must contain(OptionValue(At(rpi, 64, 79), "gateway", Seq.empty))
+        context.options must contain(OptionValue(At(rpi, 79, 101), "package",
+          Seq(LiteralString(At(rpi, 94, 99), "foo"))))
+        context.options must contain(OptionValue(At(rpi, 101, 128), "technology",
+          Seq(LiteralString(At(rpi, 119, 125), "http"))))
       }
     }
     "allow types" in { (td: TestData) =>
@@ -134,21 +137,21 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
         val actual = context.projectors.head
         val expected =
           Projector(
-            (2, 2, rpi),
-            Identifier((2, 12, rpi), "foo"),
+            At(rpi, 34, 104),
+            Identifier(At(rpi, 44, 48), "foo"),
             Contents(
               Type(
-                (3, 3, rpi),
-                Identifier((3, 10, rpi), "one"),
+                At(rpi, 55, 79),
+                Identifier(At(rpi, 62, 66), "one"),
                 AggregateUseCaseTypeExpression(
-                  (3, 17, rpi),
+                  At(rpi, 69, 79),
                   RecordCase,
                   Contents.empty
                 )
               ),
               Handler(
-                (4, 11, rpi),
-                Identifier((4, 11, rpi), "one"),
+                At(rpi, 79, 102),
+                Identifier(At(rpi, 87, 91), "one"),
                 Contents.empty
               )
             )

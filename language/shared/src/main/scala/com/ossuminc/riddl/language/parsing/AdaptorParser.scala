@@ -40,7 +40,7 @@ private[parsing] trait AdaptorParser(using io: PlatformContext) {
         case "from" => InboundAdaptor(loc)
         case "to"   => OutboundAdaptor(loc)
         case str: String =>
-          error(s"Impossible condition at $loc $str")
+          error(loc, s"Impossible condition at $loc $str")
           InboundAdaptor(loc)
       end match
     }
