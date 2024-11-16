@@ -79,7 +79,7 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
       }
       def checkList(definitions: Seq[Definition]): Unit = {
         for defn <- definitions if !hasUsages(defn) do {
-          messages.addUsage(defn.loc, s"${defn.identify} is unused")
+          messages.addUsage(defn.errorLoc, s"${defn.identify} is unused")
         }
       }
       checkList(entities)

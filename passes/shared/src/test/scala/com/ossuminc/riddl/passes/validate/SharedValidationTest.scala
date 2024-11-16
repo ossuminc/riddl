@@ -21,14 +21,14 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
   "ValidationMessage#format" should {
     "produce a correct string" in { (td: TestData) =>
       val rpi = RiddlParserInput("abcdefg", td)
-      val at = At(rpi, 0, 7)
+      val at = At(rpi, 0, 6)
       val msg = Message(at, "the_message", Warning)
       pc.withOptions[org.scalatest.Assertion](CommonOptions.default.copy(noANSIMessages = true)) { _ =>
         val content = msg.format
         val expected =
-          s"""empty(1:1->2:1):
+          s"""empty(1:1->7):
             |the_message:
-            |abcdef""".stripMargin
+            |abcdefg""".stripMargin
         content must be(expected)
       }
     }

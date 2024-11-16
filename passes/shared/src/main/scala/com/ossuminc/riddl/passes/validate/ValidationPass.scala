@@ -152,7 +152,8 @@ case class ValidationPass(
     }
   }
   private def validateOnClause(onClause: OnClause): Unit =
-    if onClause.statements.isEmpty then messages.add(missing(s"${onClause.identify} should have statements"))
+    if onClause.statements.isEmpty then
+      messages.add(missing(s"${onClause.identify} should have statements", onClause.loc))
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
@@ -165,13 +166,13 @@ case class ValidationPass(
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
           if sends.isEmpty || !sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
             messages.add(
-              missing("Processing for commands should result in sending an event", omc.loc)
+              missing("Processing for commands should result in sending an event", omc.errorLoc)
             )
         case QueryCase =>
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
           if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == ResultCase) then
             messages.add(
-              missing("Processing for queries should result in sending a result", omc.loc)
+              missing("Processing for queries should result in sending a result", omc.errorLoc)
             )
         case _ =>
       }
@@ -401,7 +402,7 @@ case class ValidationPass(
       t.id.value.head.isUpper,
       s"${t.identify} should start with a capital letter",
       StyleWarning,
-      t.loc
+      t.errorLoc
     )
     if !t.typEx.isInstanceOf[AggregateTypeExpression] then {
       checkTypeExpression(t.typEx, t, parents)
@@ -853,7 +854,7 @@ case class ValidationPass(
 
   private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
     val useCase = parents.head
-    checkMetadata(useCase.identify, interaction)
+    checkMetadata(useCase.identify, interaction, interaction.loc)
     interaction match {
       case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)

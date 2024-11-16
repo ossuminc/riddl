@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.utils.pc
@@ -47,14 +48,9 @@ trait DefinitionValidation extends BasicValidation:
       definition.errorLoc
     )
       .checkIdentifierLength(definition)
-      .check(
-        !definition.isVital || definition.hasAuthorRefs,
-        "Vital definitions should have an author reference",
-        MissingWarning,
-        definition.errorLoc
-      )
     definition match
       case vd: VitalDefinition[?] =>
+        checkMetadata(vd)
         vd.authorRefs.foreach { (authorRef: AuthorRef) =>
           pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Parent] +: parents) match
             case None =>
@@ -102,14 +98,14 @@ trait DefinitionValidation extends BasicValidation:
     checkUniqueContent(container)
   }
   def checkMetadata(definition: Definition & WithMetaData): Unit =
-    checkMetadata(definition.identify, definition)
+    checkMetadata(definition.identify, definition, definition.errorLoc)
 
-  def checkMetadata(identity: String, definition: WithMetaData): Unit =
+  def checkMetadata(identity: String, definition: WithMetaData, loc: At): Unit =
     check(
       definition.metadata.nonEmpty,
       s"Metadata in $identity should not be empty",
       MissingWarning,
-      definition.loc
+      loc
     )
     var hasAuthorRef = false
     var hasDescription = false
@@ -159,7 +155,7 @@ trait DefinitionValidation extends BasicValidation:
         case _: ULIDAttachment   => ()
         case _: Description      => ()
     }
-    check(hasDescription, s"$identity should have a description", MissingWarning, definition.loc)
-    check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, definition.loc)
+    check(hasDescription, s"$identity should have a description", MissingWarning, loc)
+    check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, loc)
   end checkMetadata
 end DefinitionValidation
