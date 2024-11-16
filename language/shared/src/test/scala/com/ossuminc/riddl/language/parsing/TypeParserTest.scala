@@ -419,29 +419,29 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow methods in aggregates" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """record agg = {
-          |  key: Number
+          |  key: Number,
           |  calc(key: Number): Number
           |}
           |""".stripMargin,
         td
       )
       val expected = Type(
-        At(rpi, 0, 59),
-        Identifier(At(rpi, 7, 11), "agg"),
+        At(rpi, 0, 60),
+        Identifier(At(rpi, 7, 10), "agg"),
         AggregateUseCaseTypeExpression(
-          At(rpi, 13, 59),
+          At(rpi, 13, 60),
           RecordCase,
           Contents(
             Field(
-              At(rpi, 17, 31),
+              At(rpi, 17, 28),
               Identifier(At(rpi, 17, 20), "key"),
-              Number(At(rpi, 22, 31))
+              Number(At(rpi, 22, 28))
             ),
             Method(
-              At(rpi, 31, 57),
-              Identifier(At(rpi, 31, 35), "calc"),
-              Number(At(rpi, 50, 57)),
-              Seq(MethodArgument(At(rpi, 36, 47), "key", Number(At(rpi, 41, 47))))
+              At(rpi, 32, 57),
+              Identifier(At(rpi, 32, 36), "calc"),
+              Number(At(rpi, 51, 58)),
+              Seq(MethodArgument(At(rpi, 37, 48), "key", Number(At(rpi, 42, 48))))
             )
           )
         )

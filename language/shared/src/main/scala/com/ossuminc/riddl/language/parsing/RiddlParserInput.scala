@@ -111,7 +111,7 @@ abstract class RiddlParserInput extends ParserInput {
   inline final def isEmpty: Boolean = data.isEmpty
   inline final def nonEmpty: Boolean = !isEmpty
 
-  private lazy val lineNumberLookup: Array[Int] = 
+  private lazy val lineNumberLookup: Array[Int] =
     Util.lineNumberLookup(data).appended(data.length)
 
   private[language] def offsetOf(line: Int): Int = {
@@ -139,7 +139,7 @@ abstract class RiddlParserInput extends ParserInput {
   private def endOfLineFrom(offset: Int): Int = {
     require(offset <= data.length)
     val line = lineOf(offset)
-    lineNumberLookup(line) - 1
+    lineNumberLookup(line)
   }
 
   def lineRangeOf(loc: At): (Int, Int) = {
@@ -172,10 +172,11 @@ abstract class RiddlParserInput extends ParserInput {
 
   def annotateErrorLine(index: At): String = {
     require(index.source == this)
-    require(index.offset >= 0 && index.offset <= data.length, 
-      s"${index.offset}>=0 && ${index.offset} <= ${data.length}")
-    require(index.endOffset >= 0 && index.endOffset <= data.length)
-    if index.source.nonEmpty then {
+    if this.data.length > 0 && this.nonEmpty then
+      require(index.offset >= 0 && index.offset <= data.length,
+        s"${index.offset}>=0 && ${index.offset} <= ${data.length}")
+      require(index.endOffset >= 0 && index.endOffset <= data.length,
+        s"${index.endOffset} >= 0 && ${index.endOffset} <= ${data.length}")
       val (start, end) = lineRangeOf(index)
       require( start <= index.offset, s"fail: $start <= ${index.offset}")
       require( end >= index.endOffset, s"fail: $end >= ${index.endOffset}")
@@ -196,7 +197,8 @@ abstract class RiddlParserInput extends ParserInput {
           val suffix = data.substring(suffixStart, suffixEnd)
           prefix + BOLD + error + RESET + suffix
       }
-    } else ""
+    else ""
+    end if
   }
 }
 

@@ -75,7 +75,7 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
   private def briefDescription[u: P]: P[BriefDescription] = {
-    P(Index ~ Keywords.briefly ~ byAs.? ~ literalString ~ Index).map { case (off1, brief: LiteralString, off2) =>
+    P(Index ~ Keywords.briefly ~ byAs.? ~ literalString ~~ Index).map { case (off1, brief: LiteralString, off2) =>
       BriefDescription(at(off1, off2), brief)
     }
   }
@@ -117,7 +117,7 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   }
 
   private def endOfLineComment[u: P]: P[LineComment] = {
-    P(Index ~ "//" ~ toEndOfLine ~ Index).map { case (off1, comment, off2) =>
+    P(Index ~ "//" ~ toEndOfLine ~~ Index).map { case (off1, comment, off2) =>
       LineComment(at(off1, off2), comment)
     }
   }
@@ -151,11 +151,11 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   }
 
   def identifier[u: P]: P[Identifier] = {
-    P(Index ~ anyIdentifier ~ Index).map { case (off1, value, off2) => Identifier(at(off1, off2), value) }
+    P(Index ~ anyIdentifier ~~ Index).map { case (off1, value, off2) => Identifier(at(off1, off2), value) }
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(Index ~ anyIdentifier ~~ (Punctuation.dot ~~ anyIdentifier).repX(0) ~ Index).map {
+    P(Index ~ anyIdentifier ~~ (Punctuation.dot ~~ anyIdentifier).repX(0) ~~ Index).map {
       case (off1, first, strings, off2) =>
         PathIdentifier(at(off1, off2), first +: strings)
     }
@@ -216,7 +216,7 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   }
 
   def include[u: P, CT <: RiddlValue](parser: P[?] => P[Seq[CT]]): P[Include[CT]] = {
-    P(Index ~ Keywords.include ~ literalString ~ Index)./.map { case (off1, str: LiteralString, off2) =>
+    P(Index ~ Keywords.include ~ literalString ~~ Index)./.map { case (off1, str: LiteralString, off2) =>
       doIncludeParsing[CT](at(off1, off2), str.s, parser)
     }
   }

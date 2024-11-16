@@ -328,7 +328,7 @@ private[parsing] trait TypeParser {
   }
 
   def enumerator[u: P]: P[Enumerator] = {
-    P(Index ~ identifier ~ enumValue ~ Index).map { case (start, id, value, end) =>
+    P(Index ~ identifier ~ enumValue ~~ Index).map { case (start, id, value, end) =>
       Enumerator(at(start, end), id, value)
     }
   }
@@ -386,7 +386,7 @@ private[parsing] trait TypeParser {
   def arguments[u: P]: P[Seq[MethodArgument]] = {
     P(
       (
-        Index ~ identifier.map(_.value) ~ Punctuation.colon ~ fieldTypeExpression ~ Index
+        Index ~ identifier.map(_.value) ~ Punctuation.colon ~ fieldTypeExpression ~~ Index
       ).map { case (start, id, typeEx, end) => MethodArgument(at(start, end), id, typeEx) }
     ).rep(min = 0, Punctuation.comma)
   }
@@ -394,7 +394,7 @@ private[parsing] trait TypeParser {
   def method[u: P]: P[Method] = {
     P(
       Index ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
-        is ~ fieldTypeExpression ~ withMetaData ~ Index
+        is ~ fieldTypeExpression ~ withMetaData ~~ Index
     ).map { case (start, id, args, typeExp, descriptives, end) =>
       Method.apply(at(start, end), id, typeExp, args, descriptives.toContents)
     }
@@ -440,7 +440,7 @@ private[parsing] trait TypeParser {
   }
 
   private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
-    P(Index ~ aggregateUseCase ~ aggregation ~ Index).map { case (start, mk, agg, end) =>
+    P(Index ~ aggregateUseCase ~ aggregation ~~ Index).map { case (start, mk, agg, end) =>
       makeAggregateUseCaseType(at(start, end), mk, agg)
     }
   }

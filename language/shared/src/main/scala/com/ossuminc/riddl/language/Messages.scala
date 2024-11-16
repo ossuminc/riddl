@@ -146,7 +146,7 @@ object Messages {
         s"${nl}Context: $context"
       } else ""
       val location = loc.format
-      val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
+      val errorLine = loc.source.annotateErrorLine(loc)
       if loc.isEmpty || errorLine.isEmpty then {
         s"$location:$nl$message$ctxt"
       } else {

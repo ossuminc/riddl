@@ -34,7 +34,7 @@ private[parsing] trait AdaptorParser(using io: PlatformContext) {
   }
 
   private def adaptorDirection[u: P]: P[AdaptorDirection] = {
-    P(Index ~ (from.! | to.!) ~ Index).map { case (start, str, end) =>
+    P(Index ~ (from.! | to.!) ~~ Index).map { case (start, str, end) =>
       val loc = at(start, end)
       str match
         case "from" => InboundAdaptor(loc)

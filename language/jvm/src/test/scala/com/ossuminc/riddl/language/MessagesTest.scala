@@ -10,6 +10,8 @@ import Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 import com.ossuminc.riddl.utils.{pc, AbstractTestingBasis, StringLogger, URL, CommonOptions}
+import scala.io.AnsiColor.*
+
 
 class MessagesTest extends AbstractTestingBasis {
 
@@ -151,14 +153,22 @@ class MessagesTest extends AbstractTestingBasis {
         Messages.logMessages(mix)
         val content = slog.toString
         val expected =
-          """[34m[1m[info] empty(1:1->1)info[0m
-            |[32m[1m[style] empty(1:1->1)style[0m
-            |[32m[1m[missing] empty(1:1->1)missing[0m
-            |[32m[1m[usage] empty(1:1->1)usage[0m
-            |[33m[1m[warning] empty(1:1->1)warning[0m
-            |[31m[1m[error] empty(1:1->1)error[0m
-            |[41m[30m[1m[severe] empty(1:1->1)severe[0m
+          s"""$BLUE$BOLD[info] empty(1:1->1):$RESET
+            |${BLUE}info$RESET
+            |$GREEN$BOLD[style] empty(1:1->1):$RESET
+            |${GREEN}style$RESET
+            |$GREEN$BOLD[missing] empty(1:1->1):$RESET
+            |${GREEN}missing$RESET
+            |$GREEN$BOLD[usage] empty(1:1->1):$RESET
+            |${GREEN}usage$RESET
+            |$YELLOW$BOLD[warning] empty(1:1->1):$RESET
+            |${YELLOW}warning$RESET
+            |$RED$BOLD[error] empty(1:1->1):$RESET
+            |${RED}error$RESET
+            |$RED_B$BLACK$BOLD[severe] empty(1:1->1):$RESET
+            |$RED_B${BLACK}severe$RESET
             |""".stripMargin
+        info(s"Comparing expected:\n$expected\nwith actual:\n$content\n")
         content mustBe expected
       }
     }
@@ -168,18 +178,24 @@ class MessagesTest extends AbstractTestingBasis {
           Messages.logMessages(mix)
           val content = pc.log.toString
           val expected =
-            """[41m[30m[1m[severe] Severe Message Count: 1[0m
-              |[41m[30m[1m[severe] empty(1:1->1)severe[0m
-              |[31m[1m[error] Error Message Count: 1[0m
-              |[31m[1m[error] empty(1:1->1)error[0m
-              |[32m[1m[usage] Usage Message Count: 1[0m
-              |[32m[1m[usage] empty(1:1->1)usage[0m
-              |[32m[1m[missing] Missing Message Count: 1[0m
-              |[32m[1m[missing] empty(1:1->1)missing[0m
-              |[32m[1m[style] Style Message Count: 1[0m
-              |[32m[1m[style] empty(1:1->1)style[0m
-              |[34m[1m[info] Info Message Count: 1[0m
-              |[34m[1m[info] empty(1:1->1)info[0m
+            s"""$RED_B$BLACK$BOLD[severe] Severe Message Count: 1$RESET
+              |$RED_B$BLACK$BOLD[severe] empty(1:1->1):$RESET
+              |$RED_B${BLACK}severe$RESET
+              |$RED$BOLD[error] Error Message Count: 1$RESET
+              |$RED$BOLD[error] empty(1:1->1):$RESET
+              |${RED}error$RESET
+              |$GREEN$BOLD[usage] Usage Message Count: 1$RESET
+              |$GREEN$BOLD[usage] empty(1:1->1):$RESET
+              |${GREEN}usage$RESET
+              |$GREEN$BOLD[missing] Missing Message Count: 1$RESET
+              |$GREEN$BOLD[missing] empty(1:1->1):$RESET
+              |${GREEN}missing$RESET
+              |$GREEN$BOLD[style] Style Message Count: 1$RESET
+              |$GREEN$BOLD[style] empty(1:1->1):$RESET
+              |${GREEN}style$RESET
+              |$BLUE$BOLD[info] Info Message Count: 1$RESET
+              |$BLUE$BOLD[info] empty(1:1->1):$RESET
+              |${BLUE}info$RESET
               |""".stripMargin
           content mustBe expected
         }
@@ -188,7 +204,7 @@ class MessagesTest extends AbstractTestingBasis {
 
     "has inquiry methods" in {
       val mix_formatted = mix.format
-      mix_formatted.length must be(136)
+      mix_formatted.length must be(150)
       mix.isOnlyWarnings must be(false)
       mix.isOnlyIgnorable must be(false)
       mix.hasErrors must be(true)
@@ -196,22 +212,23 @@ class MessagesTest extends AbstractTestingBasis {
     }
 
     "format a correct string for empty location" in {
-      val msg = Message(At(1, 2, RiddlParserInput.empty), "the_message", Warning)
+      val rpi = RiddlParserInput.empty
+      val msg = Message(At(1, 2, rpi), "the_message", Warning)
       val content = msg.format
-      val expected = "empty(1:2->3)the_message"
+      val expected = "empty(1:2->3):\nthe_message"
       content mustBe expected
     }
 
     "format to locate output for non-empty location" in {
-      val rip: RiddlParserInput = RiddlParserInput("test", URL.empty, "test")
+      val rip: RiddlParserInput = RiddlParserInput("TEST INPUT", URL.empty, "test")
       val at = At(1, 2, rip)
       val msg = Message(at, "the_message", Warning)
       val content = msg.format
+      BOLD
       val expected =
-        """empty(1:2->3):
+        s"""empty(1:2->3):
           |the_message:
-          |test
-          | ^""".stripMargin
+          |T${BOLD}E${RESET}ST INPUT""".stripMargin
       content mustBe expected
     }
 

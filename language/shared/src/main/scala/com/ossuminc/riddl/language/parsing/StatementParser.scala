@@ -109,27 +109,27 @@ private[parsing] trait StatementParser {
   }
 
   private def focusStatement[u: P]: P[FocusStatement] = {
-    P(Index ~ Keywords.focus ~/ Keywords.on ~ groupRef ~/ Index).map { case (start, ref, end) =>
+    P(Index ~ Keywords.focus ~/ Keywords.on ~ groupRef ~~ Index).map { case (start, ref, end) =>
       FocusStatement(at(start, end), ref)
     }
   }
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
-    P(Index ~ Keywords.reply ~/ `with`.?./ ~ messageRef ~ Index).map { case (start, ref, end) =>
+    P(Index ~ Keywords.reply ~/ `with`.?./ ~ messageRef ~~ Index).map { case (start, ref, end) =>
       ReplyStatement(at(start, end), ref)
     }
   }
 
   private def returnStatement[u: P]: P[ReturnStatement] = {
     P(
-      Index ~ Keywords.`return` ~ literalString ~/ Index
+      Index ~ Keywords.`return` ~ literalString ~~ Index
     ).map { case (start, str, end) => ReturnStatement(at(start, end), str) }
   }
 
   private def readStatement[u: P]: P[ReadStatement] = {
     P(
       Index ~ StringIn("read", "get", "query", "find", "select").! ~ literalString ~
-        from ~ typeRef ~ Keywords.where ~ literalString ~ Index
+        from ~ typeRef ~ Keywords.where ~ literalString ~~ Index
     ).map { case (start, keyword, what, from, where, end) =>
       ReadStatement(at(start, end), keyword, what, from, where)
     }
