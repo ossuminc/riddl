@@ -67,7 +67,7 @@ class UseCaseDiagramTest extends AbstractRunPassTest {
       val outputs: PassesOutput = PassesOutput()
       val pid = PathIdentifier(At(), Seq("foo"))
       val item = Domain(At(), Identifier(At(), "foo"))
-      val parent = Root(Contents(item))
+      val parent = Root(At(), Contents(item))
       outputs.refMap.add[Domain](pid, parent, item)
       val passesResult = PassesResult(PassInput.empty, outputs)
       case class TestUseCaseDiagramSupport(passesResult: PassesResult) extends UseCaseDiagramSupport {
