@@ -39,11 +39,6 @@ trait ParsingErrors {
     synchronized { messages.toList }
   }
 
-  def error(message: String): Unit = {
-    val msg = Messages.Message(At.empty, message, Messages.Error)
-    addMessage(msg)
-  }
-
   def error(loc: At, message: String, context: String = ""): Unit = {
     val msg = Messages.Message(loc, message, Messages.Error, context)
     addMessage(msg)

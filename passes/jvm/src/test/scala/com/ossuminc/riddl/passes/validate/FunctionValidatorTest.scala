@@ -75,7 +75,7 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
         msgs mustNot be(empty)
         val text = msgs.format
         text must include("Function 'AnAspect' is unused")
-        text must include("Vital definitions should have an author reference")
+        text must include("Function 'AnAspect' should have an author reference")
       }
     }
   }

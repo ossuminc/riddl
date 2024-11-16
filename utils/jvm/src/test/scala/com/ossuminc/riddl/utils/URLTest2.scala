@@ -19,5 +19,10 @@ class URLTest2 extends AbstractTestingBasis {
       url.basis must be("this/is/a/full")
       url.path must be("path")
     }
+    "gets the correct basis path" in {
+      val cwd = Option(System.getProperty("user.dir")).getOrElse("").drop(1)
+      val url = URL.fromCwdPath("utils/jvm/input/diff1/a.txt")
+      url.toBasisString must be(s"file:///$cwd")
+    }
   }
 }

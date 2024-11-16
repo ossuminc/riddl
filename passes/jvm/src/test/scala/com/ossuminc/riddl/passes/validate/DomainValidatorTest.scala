@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Pass
 import com.ossuminc.riddl.passes.Riddl
@@ -20,22 +21,20 @@ class DomainValidatorTest extends AbstractValidatingTest {
 
   "DomainValidator" should {
     "identify duplicate domain definitions" in { (td: TestData) =>
-      val rpi = RiddlParserInput.empty
-      val root = Root(
-        Contents(
-          Domain((1, 1, rpi), Identifier((1, 7, rpi), "foo")),
-          Domain((2, 2, rpi), Identifier((2, 8, rpi), "foo"))
-        )
-      )
-
-      runStandardPasses(root, true) match {
-        case Left(errors) => fail(errors.format)
+      val source =
+        """
+          |domain foo is { ??? } 
+          |domain foo is { ??? }
+          |""".stripMargin
+      val rpi = RiddlParserInput(source, td)
+      Riddl.parseAndValidate(rpi) match {
+        case Left(errors) => fail(errors.justErrors.format)
         case Right(result) =>
           val theErrors: Messages = result.messages.justErrors
           theErrors mustBe empty
-          val messages = result.messages.map(_.format)
-          val notOccur = "Domain 'foo' overloads Domain 'foo' at empty(1:1)"
-          messages.exists(_.contains(notOccur)) mustBe true
+          val messages = result.messages.format
+          val notOccur = "Domain 'foo' overloads Domain 'foo' at empty(2:1->3:1)"
+          messages must include(notOccur)
       }
     }
 

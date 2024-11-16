@@ -33,9 +33,15 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     rpi: RiddlParserInput,
     rule: P[?] => P[RESULT],
     withVerboseFailures: Boolean = false
-  )(validate: (result: Either[Messages, RESULT], input: RiddlParserInput, index: Int) => Either[Messages, RESULT] = {
-    (result: Either[Messages, RESULT], _: RiddlParserInput, _: Int) => result
-  }): Either[Messages, RESULT] = {
+  )(
+    validate: (
+      result: Either[Messages, RESULT] @unused,
+      input: RiddlParserInput @unused,
+      index: Int @unused
+    ) => Either[Messages, RESULT] = { (result: Either[Messages, RESULT], _: RiddlParserInput, _: Int) =>
+      result
+    }
+  ): Either[Messages, RESULT] = {
     try {
       fastparse.parse[RESULT](rpi, rule(_), withVerboseFailures) match {
         case Success(root, index) =>
@@ -53,11 +59,11 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     }
   }
 
-  def location[u: P](implicit ctx: P[?]): P[At] = {
+  def at(offset1: Int, offset2: Int)(implicit context: P[?]): At = {
     // NOTE: This isn't strictly kosher because of the cast but as long as we
     // NOTE: always use a RiddlParserInput, should be safe enough. This is
     // NOTE: required because of includes and concurrent parsing
-    P(Index.map(idx => ctx.input.asInstanceOf[RiddlParserInput].location(idx)))
+    context.input.asInstanceOf[RiddlParserInput].at(offset1, offset2)
   }
 
   def doImport(

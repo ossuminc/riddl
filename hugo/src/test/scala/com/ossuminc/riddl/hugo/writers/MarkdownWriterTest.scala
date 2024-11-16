@@ -61,7 +61,7 @@ class MarkdownWriterTest extends HugoTestBase {
               || _Briefly_ | Just For Testing |
               || _Authors_ |  |
               || _Definition Path_ | Root.TestDomain |
-              || _View Source Link_ | [empty(1:1)]() |
+              || _View Source Link_ | [empty(0->294)]() |
               || _Used By_ | None |
               || _Uses_ | None |
               |
@@ -98,7 +98,7 @@ class MarkdownWriterTest extends HugoTestBase {
               || :---: | :---  |
               || _Briefly_ | No brief description. |
               || _Definition Path_ | TestDomain.Root.MyString |
-              || _View Source Link_ | [empty(3:3)]() |
+              || _View Source Link_ | [empty(84->154)]() |
               || _Used By_ | None |
               || _Uses_ | None |
               |

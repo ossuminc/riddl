@@ -51,10 +51,10 @@ private[parsing] trait FunctionParser {
     */
   def function[u: P]: P[Function] = {
     P(
-      location ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~ close ~ withMetaData
-    )./.map { case (loc, id, (ins, outs, contents), descriptives) =>
+      Index ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~ close ~ withMetaData ~/ Index
+    )./.map { case (start, id, (ins, outs, contents), descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Function(loc, id, ins, outs, contents.toContents, descriptives.toContents)
+      Function(at(start,end), id, ins, outs, contents.toContents, descriptives.toContents)
     }
   }
 }

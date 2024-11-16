@@ -113,7 +113,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
           assertValidationMessage(
             msgs,
             Error,
-            "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1), in Type 'Order', but an Entity"
+            "Path 'TypeTest' resolved to Context 'TypeTest' at empty(3:1->4:1), in Type 'Order', but an Entity"
           )
         }
       }

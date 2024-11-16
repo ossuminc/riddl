@@ -1,40 +1,15 @@
-passes/jvm/src/test/input/check/streaming/streaming.riddl(17:3):
- Vital definitions should have an author reference:
-   sink AttenuateSensor is {
-   ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(1:1):
- Vital definitions should have an author reference:
- domain AnyDomain is {
- ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(2:1):
- Vital definitions should have an author reference:
- context SensorMaintenance is {
- ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(4:3):
- Vital definitions should have an author reference:
-   source GetWeatherForecast is {
-   ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(10:3):
- Vital definitions should have an author reference:
-   flow GetCurrentTemperature is {
-   ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(10:3):
+passes/jvm/src/test/input/check/streaming/streaming.riddl(10:3->29):
  Flow 'GetCurrentTemperature' should have an author reference:
    flow GetCurrentTemperature is {
-   ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(17:3):
+passes/jvm/src/test/input/check/streaming/streaming.riddl(17:3->23):
  Sink 'AttenuateSensor' should have an author reference:
    sink AttenuateSensor is {
-   ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(1:1):
+passes/jvm/src/test/input/check/streaming/streaming.riddl(1:1->17):
  Domain 'AnyDomain' should have an author reference:
  domain AnyDomain is {
- ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(2:1):
+passes/jvm/src/test/input/check/streaming/streaming.riddl(2:1->26):
  Context 'SensorMaintenance' should have an author reference:
  context SensorMaintenance is {
- ^
-passes/jvm/src/test/input/check/streaming/streaming.riddl(4:3):
+passes/jvm/src/test/input/check/streaming/streaming.riddl(4:3->28):
  Source 'GetWeatherForecast' should have an author reference:
    source GetWeatherForecast is {
-   ^

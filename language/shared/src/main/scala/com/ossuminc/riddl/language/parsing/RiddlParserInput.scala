@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
+import com.ossuminc.riddl.utils.{pc, Await, PlatformContext, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -17,6 +17,7 @@ import scala.concurrent.duration.DurationInt
 import scala.language.implicitConversions
 import scala.util.{Failure, Success, Try}
 import scala.scalajs.js.annotation.*
+import scala.io.AnsiColor.{BOLD, RESET}
 
 /** Primary interface to setting up a RIDDL Parser's input. The idea here is to use one of the apply methods in this
   * companion object to construct a RiddlParserInput for a specific input source (file, path, Source, data string, URL,
@@ -68,7 +69,7 @@ object RiddlParserInput {
     io.load(url).map(data => apply(data, url, purpose))
   }
 
-  def fromPath(path: String, purpose: String = "")(using io: PlatformContext): Future[RiddlParserInput] = {
+  def fromPath(path: String, purpose: String = "")(using PlatformContext): Future[RiddlParserInput] = {
     assert(path.nonEmpty, "Path provided to RiddlParserInput.fromPath is empty")
     val url: URL = if path.head == '/' then URL.fromFullPath(path) else URL.fromCwdPath(path)
     fromURL(url, purpose)
@@ -110,7 +111,8 @@ abstract class RiddlParserInput extends ParserInput {
   inline final def isEmpty: Boolean = data.isEmpty
   inline final def nonEmpty: Boolean = !isEmpty
 
-  private lazy val lineNumberLookup: Array[Int] = Util.lineNumberLookup(data)
+  private lazy val lineNumberLookup: Array[Int] =
+    Util.lineNumberLookup(data).appended(data.length)
 
   private[language] def offsetOf(line: Int): Int = {
     if line < 0 then { lineNumberLookup(line) }
@@ -134,34 +136,69 @@ abstract class RiddlParserInput extends ParserInput {
     start -> end
   }
 
-  def rangeOf(loc: At): (Int, Int) = {
+  private def endOfLineFrom(offset: Int): Int = {
+    require(offset <= data.length)
+    val line = lineOf(offset)
+    lineNumberLookup(line)
+  }
+
+  def lineRangeOf(loc: At): (Int, Int) = {
+    require(loc.source == this)
+    require(loc.offset >= 0)
+    require(loc.offset <= loc.endOffset)
+    val startLine = lineOf(loc.offset)
+    val endLine = lineOf(loc.endOffset) + 1
+
     require(loc.line > 0)
-    val start = lineNumberLookup(loc.line - 1)
+    val start = lineNumberLookup(startLine)
     val end =
       if lineNumberLookup.length == 1 then { data.length }
-      else if loc.line >= lineNumberLookup.length then {
+      else if endLine >= lineNumberLookup.length then {
         // actually out of bounds but go to last line
         lineNumberLookup(lineNumberLookup.length - 1)
-      } else { lineNumberLookup(loc.line) }
+      } else { lineNumberLookup(endLine) }
     start -> end
   }
 
-  @inline final def location(index: Int): At = { At(this, index) }
+  @inline final def location(index: Int): At = {
+    At(this, index, index + 1)
+  }
+
+  @inline final def at(start: Int, end: Int): At = { At(this, start, end) }
 
   def prettyIndex(index: Int): String = { location(index).toString }
 
   val nl: String = System.getProperty("line.separator")
 
   def annotateErrorLine(index: At): String = {
-    if index.source.nonEmpty then {
-      val (start, end) = rangeOf(index)
-      val quoted = slice(start, end).stripTrailing()
+    require(index.source == this)
+    if this.data.length > 0 && this.nonEmpty then
+      require(index.offset >= 0 && index.offset <= data.length,
+        s"${index.offset}>=0 && ${index.offset} <= ${data.length}")
+      require(index.endOffset >= 0 && index.endOffset <= data.length,
+        s"${index.endOffset} >= 0 && ${index.endOffset} <= ${data.length}")
+      val (start, end) = lineRangeOf(index)
+      require( start <= index.offset, s"fail: $start <= ${index.offset}")
+      require( end >= index.endOffset, s"fail: $end >= ${index.endOffset}")
+      val quoted = slice(start, end)
       if quoted.isEmpty then ""
       else {
-        val col = Integer.max(index.col - 1, 0)
-        quoted + nl + " ".repeat(col) + "^" + nl
+        if pc.options.noANSIMessages then
+          quoted
+        else
+          val prefixStart = offsetOf(lineOf(start))
+          val prefixEnd = Math.max(0, index.offset)
+          val errorStart = index.offset
+          val errorEnd = Math.min(Math.min(index.endOffset,end),data.length)
+          val suffixStart = Math.min(errorEnd, index.source.length)
+          val suffixEnd = Math.max(suffixStart, Math.min(endOfLineFrom(end), index.source.length))
+          val prefix = data.substring(prefixStart, prefixEnd)
+          val error = data.substring(errorStart, errorEnd)
+          val suffix = data.substring(suffixStart, suffixEnd)
+          prefix + BOLD + error + RESET + suffix
       }
-    } else ""
+    else ""
+    end if
   }
 }
 

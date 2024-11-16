@@ -1,20 +1,13 @@
-passes/jvm/src/test/input/check/domain/simpleDomain.riddl(1:8):
+passes/jvm/src/test/input/check/domain/simpleDomain.riddl(12:1->13:1):
  Models without any streaming data will exhibit minimal effect:
- domain foo is {
-        ^
-passes/jvm/src/test/input/check/domain/simpleDomain.riddl(1:1):
- Vital definitions should have an author reference:
- domain foo is {
- ^
-passes/jvm/src/test/input/check/domain/simpleDomain.riddl(1:1):
+ }
+passes/jvm/src/test/input/check/domain/simpleDomain.riddl(1:1->11):
  Domain 'foo' should have an author reference:
  domain foo is {
- ^
-passes/jvm/src/test/input/check/domain/simpleDomain.riddl(2:3):
+passes/jvm/src/test/input/check/domain/simpleDomain.riddl(2:3->14):
  Author 'Nada' should have an author reference:
    author Nada is {
-   ^
-passes/jvm/src/test/input/check/domain/simpleDomain.riddl(7:5):
+passes/jvm/src/test/input/check/domain/simpleDomain.riddl(7:5->8:3):
  Term 'Fum''s definition is too short. It must be at least 10 characters':
      term Fum is "Phi-Pho" with { described by "A Fum Description" }
-     ^
+   }

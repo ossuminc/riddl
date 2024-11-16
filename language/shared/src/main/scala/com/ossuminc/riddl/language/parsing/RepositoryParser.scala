@@ -58,12 +58,12 @@ private[parsing] trait RepositoryParser {
 
   def schema[u: P]: P[Schema] = {
     P(
-      location ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
-        data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withMetaData
-    )./.map { case (at, id, kind, data, links, indices, descriptives) =>
-      val dataMap = Map.from[Identifier,TypeRef](data)
-      val linkMap = Map.from[Identifier,(FieldRef,FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
-      Schema(at, id, kind, dataMap, linkMap, indices, descriptives.toContents)
+      Index ~ Keywords.schema ~ identifier ~ is ~ schemaKind ~
+        data.rep(1) ~ link.rep(0) ~ index.rep(0) ~ withMetaData ~ Index
+    )./.map { case (start, id, kind, data, links, indices, descriptives, end) =>
+      val dataMap = Map.from[Identifier, TypeRef](data)
+      val linkMap = Map.from[Identifier, (FieldRef, FieldRef)](links.map(i => i._1 -> (i._2 -> i._3)))
+      Schema(at(start, end), id, kind, dataMap, linkMap, indices, descriptives.toContents)
     }
   }
 
@@ -81,10 +81,10 @@ private[parsing] trait RepositoryParser {
 
   def repository[u: P]: P[Repository] = {
     P(
-      location ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ withMetaData
-    ).map { case (loc, id, contents, descriptives) =>
+      Index ~ Keywords.repository ~/ identifier ~ is ~ open ~ repositoryBody ~ close ~ withMetaData ~ Index
+    ).map { case (start, id, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Repository(loc, id, contents.toContents, descriptives.toContents)
+      Repository(at(start, end), id, contents.toContents, descriptives.toContents)
     }
   }
 

@@ -16,9 +16,9 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
 
   def containedGroup[u: P]: P[ContainedGroup] = {
     P(
-      location ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withMetaData
-    ).map { case (loc, id, group, descriptives) =>
-      ContainedGroup(loc, id, group, descriptives.toContents)
+      Index ~ Keywords.contains ~ identifier ~ as ~ groupRef ~ withMetaData ~ Index
+    ).map { case (start, id, group, descriptives, end) =>
+      ContainedGroup(at(start, end), id, group, descriptives.toContents)
     }
   }
 
@@ -30,11 +30,11 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
 
   def group[u: P]: P[Group] = {
     P(
-      location ~ groupAliases ~ identifier ~/ is ~ open ~
+      Index ~ groupAliases ~ identifier ~/ is ~ open ~
         (undefined(Seq.empty[OccursInGroup]) | groupDefinitions) ~
-        close ~ withMetaData
-    ).map { case (loc, alias, id, contents, descriptives) =>
-      Group(loc, alias, id, contents.toContents, descriptives.toContents)
+        close ~ withMetaData ~ Index
+    ).map { case (start, alias, id, contents, descriptives, end) =>
+      Group(at(start, end), alias, id, contents.toContents, descriptives.toContents)
     }
   }
 
@@ -57,9 +57,10 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
 
   def appOutput[u: P]: P[Output] = {
     P(
-      location ~ outputAliases ~/ identifier ~ presentationAliases ~/
-        (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withMetaData
-    ).map { case (loc, nounAlias, id, verbAlias, putOut, contents, descriptives) =>
+      Index ~ outputAliases ~/ identifier ~ presentationAliases ~/
+        (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withMetaData ~ Index
+    ).map { case (start, nounAlias, id, verbAlias, putOut, contents, descriptives, end) =>
+      val loc = at(start, end)
       putOut match {
         case t: TypeRef =>
           Output(loc, nounAlias, id, verbAlias, t, contents.toContents, descriptives.toContents)
@@ -70,7 +71,7 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
         case x: RiddlValue =>
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
-          error(s"Expected a type reference, constant reference, or literal string, not: $xval")
+          error(loc, s"Expected a type reference, constant reference, or literal string, not: $xval")
           Output(
             loc,
             nounAlias,
@@ -112,9 +113,9 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
 
   def appInput[u: P]: P[Input] = {
     P(
-      location ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withMetaData
-    ).map { case (loc, inputAlias, id, acquisitionAlias, putIn, contents, descriptives) =>
-      Input(loc, inputAlias, id, acquisitionAlias, putIn, contents.toContents, descriptives.toContents)
+      Index ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withMetaData ~ Index
+    ).map { case (start, inputAlias, id, acquisitionAlias, putIn, contents, descriptives, end) =>
+      Input(at(start, end), inputAlias, id, acquisitionAlias, putIn, contents.toContents, descriptives.toContents)
     }
   }
 
@@ -141,10 +142,10 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
 
   def application[u: P]: P[Application] = {
     P(
-      location ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ withMetaData
-    )./ map { case (loc, id, contents, descriptives) =>
+      Index ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ withMetaData ~ Index
+    )./ map { case (start, id, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Application(loc, id, contents.toContents, descriptives.toContents)
+      Application(at(start, end), id, contents.toContents, descriptives.toContents)
     }
   }
 }

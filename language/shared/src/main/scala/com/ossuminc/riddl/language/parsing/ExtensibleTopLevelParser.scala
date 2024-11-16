@@ -61,7 +61,8 @@ trait ExtensibleTopLevelParser(using PlatformContext)
         }
     }
   }
-  def parseRoot: Either[Messages, Root] = doParse[Root](root(_))
+  def parseRoot: Either[Messages, Root] = 
+    doParse[Root](root(_)) 
 
   def parseNebula: Either[Messages, Nebula] = doParse[Nebula](nebula(_))
 

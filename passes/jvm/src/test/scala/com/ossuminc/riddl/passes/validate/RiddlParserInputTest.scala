@@ -39,19 +39,19 @@ class RiddlParserInputTest extends AbstractTestingBasisWithTestData {
       }
     }
 
-    "rangeOf" should {
+    "lineRangeOf" should {
       "convert a Location to a pair " in { (td: TestData) =>
-        val input = RiddlParserInput(
+        val rpi: RiddlParserInput = RiddlParserInput(
           """12345
-                                       |6789
-                                       |0
-                                       |1234
-                                       |56
-                                       |""".stripMargin,
+            |6789
+            |0
+            |1234
+            |56
+            |""".stripMargin,
           td
         )
         Map((1 -> 4) -> (0, 6), (4 -> 3) -> (13, 18)).foreach { case (loc, offset) =>
-          input.rangeOf(At(loc)).mustBe(offset)
+          rpi.lineRangeOf(At(loc,rpi)).mustBe(offset)
         }
 
       }

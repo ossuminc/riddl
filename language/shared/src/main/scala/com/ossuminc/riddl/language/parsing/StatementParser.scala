@@ -17,70 +17,74 @@ private[parsing] trait StatementParser {
   this: ReferenceParser & CommonParser =>
 
   private def arbitraryStatement[u: P]: P[ArbitraryStatement] = {
-    P(location ~ literalString).map(t => ArbitraryStatement.apply.tupled(t))
+    P(Index ~ literalString ~/ Index)./ map { case (start, str, end) => ArbitraryStatement(at(start, end), str) }
   }
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
     P(
-      location ~ Keywords.error ~/ literalString
-    )./.map { tpl => ErrorStatement.apply.tupled(tpl) }
+      Index ~ Keywords.error ~ literalString ~/ Index
+    )./.map { case (start, str, end) => ErrorStatement(at(start, end), str) }
   }
 
   private def theSetStatement[u: P]: P[SetStatement] = {
     P(
-      location ~ Keywords.set ~/ fieldRef ~/ to ~ literalString
-    )./.map { tpl => SetStatement.apply.tupled(tpl) }
+      Index ~ Keywords.set ~/ fieldRef ~ to ~/ literalString ~/ Index
+    )./.map { (start, ref, str, end) => SetStatement(at(start, end), ref, str) }
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
-      location ~ Keywords.send ~/ messageRef ~/ to ~ (outletRef | inletRef)
-    )./.map { t => SendStatement.apply.tupled(t) }
+      Index ~ Keywords.send ~/ messageRef ~/ to ~ (outletRef | inletRef) ~/ Index
+    ).map { case (start, messageRef, portlet, end) => SendStatement(at(start, end), messageRef, portlet) }
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
     P(
-      location ~ Keywords.tell ~/ messageRef ~/ to ~ processorRef
-    )./.map { t => TellStatement.apply.tupled(t) }
+      Index ~ Keywords.tell ~/ messageRef ~/ to ~ processorRef ~/ Index
+    )./.map { (start, msg, proc, end) => TellStatement(at(start, end), msg, proc) }
   }
 
   private def forEachStatement[u: P](set: StatementsSet): P[ForEachStatement] = {
     P(
-      location ~ Keywords.foreach ~/ (fieldRef | inletRef | outletRef) ~ Keywords.do_ ~/
-        pseudoCodeBlock(set) ~ Keywords.end_
-    )./.map {
-      case (loc, ref: FieldRef, statements)  => ForEachStatement(loc, ref, statements.toContents)
-      case (loc, ref: InletRef, statements)  => ForEachStatement(loc, ref, statements.toContents)
-      case (loc, ref: OutletRef, statements) => ForEachStatement(loc, ref, statements.toContents)
-      case (loc, ref: Reference[?], statements) =>
-        error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
-        ForEachStatement(loc, FieldRef(ref.loc, ref.pathId), statements.toContents)
+      Index ~ Keywords.foreach ~/ (fieldRef | inletRef | outletRef) ~ Keywords.do_ ~/
+        pseudoCodeBlock(set) ~ Keywords.end_ ~/ Index
+    )./.map { case (start, ref, statements, end) =>
+      val loc = at(start, end)
+      ref match
+        case fr: FieldRef  => ForEachStatement(loc, fr, statements.toContents)
+        case ir: InletRef  => ForEachStatement(loc, ir, statements.toContents)
+        case or: OutletRef => ForEachStatement(loc, or, statements.toContents)
+        case r: Reference[?] =>
+          error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
+          ForEachStatement(loc, FieldRef(r.loc, r.pathId), statements.toContents)
     }
   }
 
   private def ifThenElseStatement[u: P](set: StatementsSet): P[IfThenElseStatement] = {
     P(
-      location ~ Keywords.`if` ~/ literalString ~ Keywords.`then` ~/ pseudoCodeBlock(set) ~ (
-        Keywords.else_ ~ pseudoCodeBlock(set) ~ Keywords.end_
-      ).?
-    )./.map { case (loc, cond, thens, maybeElses) =>
+      Index ~ Keywords.`if` ~/ literalString ~ Keywords.`then` ~/ pseudoCodeBlock(set) ~ (
+        Keywords.else_ ~ pseudoCodeBlock(set) ~/ Keywords.end_
+      ).? ~ Index
+    )./.map { case (start, cond, thens, maybeElses, end) =>
       val elses = maybeElses.getOrElse(Seq.empty[Statements])
-      IfThenElseStatement(loc, cond, thens.toContents, elses.toContents)
+      IfThenElseStatement(at(start, end), cond, thens.toContents, elses.toContents)
     }
   }
 
   private def callStatement[u: P]: P[CallStatement] = {
-    P(location ~ Keywords.call ~/ functionRef)./.map { tpl => CallStatement.apply.tupled(tpl) }
+    P(Index ~ Keywords.call ~/ functionRef ~/ Index)./.map { case (start, ref, end) =>
+      CallStatement(at(start, end), ref)
+    }
   }
 
   private def stopStatement[u: P]: P[StopStatement] = {
     P(
-      location ~ Keywords.stop
-    )./.map { (loc: At) => StopStatement(loc) }
+      Index ~ Keywords.stop ~/ Index
+    )./.map { case (start, end) => StopStatement(at(start, end)) }
   }
 
   enum StatementsSet:
-    case AllStatements, 
+    case AllStatements,
       AdaptorStatements,
       ApplicationStatements,
       ContextStatements,
@@ -94,49 +98,49 @@ private[parsing] trait StatementParser {
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      location ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ messageRef
-    )./.map { tpl => MorphStatement.apply.tupled(tpl) }
+      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ messageRef ~/ Index
+    )./.map { case (start, eRef, sRef, mRef, end) => MorphStatement(at(start, end), eRef, sRef, mRef) }
   }
 
   private def becomeStatement[u: P]: P[BecomeStatement] = {
     P(
-      location ~ Keywords.become ~/ entityRef ~ to ~ handlerRef
-    )./.map { tpl => BecomeStatement.apply.tupled(tpl) }
+      Index ~ Keywords.become ~/ entityRef ~ to ~ handlerRef ~/ Index
+    )./.map { case (start, eRef, hRef, end) => BecomeStatement(at(start, end), eRef, hRef) }
   }
 
   private def focusStatement[u: P]: P[FocusStatement] = {
-    P(
-      location ~ Keywords.focus ~/ Keywords.on ~ groupRef
-    )./.map { tpl => FocusStatement.apply.tupled(tpl) }
+    P(Index ~ Keywords.focus ~/ Keywords.on ~ groupRef ~~ Index).map { case (start, ref, end) =>
+      FocusStatement(at(start, end), ref)
+    }
   }
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
-    P(
-      location ~ Keywords.reply ~/ `with`.?./ ~ messageRef
-    )./.map { tpl => ReplyStatement.apply.tupled(tpl) }
+    P(Index ~ Keywords.reply ~/ `with`.?./ ~ messageRef ~~ Index).map { case (start, ref, end) =>
+      ReplyStatement(at(start, end), ref)
+    }
   }
 
   private def returnStatement[u: P]: P[ReturnStatement] = {
     P(
-      location ~ Keywords.`return` ~ literalString
-    )./.map(t => ReturnStatement.apply.tupled(t))
+      Index ~ Keywords.`return` ~ literalString ~~ Index
+    ).map { case (start, str, end) => ReturnStatement(at(start, end), str) }
   }
 
   private def readStatement[u: P]: P[ReadStatement] = {
     P(
-      location ~ StringIn("read", "get", "query", "find", "select").! ~ literalString ~
-        from ~ typeRef ~ Keywords.where ~ literalString
-    ).map { case (loc, keyword, what, from, where) =>
-      ReadStatement(loc, keyword, what, from, where)
+      Index ~ StringIn("read", "get", "query", "find", "select").! ~ literalString ~
+        from ~ typeRef ~ Keywords.where ~ literalString ~~ Index
+    ).map { case (start, keyword, what, from, where, end) =>
+      ReadStatement(at(start, end), keyword, what, from, where)
     }
   }
 
   private def writeStatement[u: P]: P[WriteStatement] = {
     P(
-      location ~ StringIn("write", "put", "create", "update", "delete", "remove", "append", "insert", "modify").! ~
-        literalString ~ to ~ typeRef
-    ).map { case (loc, keyword, what, to) =>
-      WriteStatement(loc, keyword, what, to)
+      Index ~ StringIn("write", "put", "create", "update", "delete", "remove", "append", "insert", "modify").! ~
+        literalString ~ to ~ typeRef ~ Index
+    ).map { case (start, keyword, what, to, end) =>
+      WriteStatement(at(start, end), keyword, what, to)
     }
   }
 
@@ -144,11 +148,10 @@ private[parsing] trait StatementParser {
 
   private def codeStatement[u: P]: P[CodeStatement] = {
     P(
-      location ~ backTickElipsis ~ location ~
-        StringIn("scala", "java", "python", "mojo").! ~
-        until3('`', '`', '`')
-    ).map { case (loc1, loc2, lang, contents) =>
-      CodeStatement(loc1, LiteralString(loc2, lang), contents)
+      Index ~ backTickElipsis ~ Index ~ StringIn("scala", "java", "python", "mojo").! ~ Index ~
+        until3('`', '`', '`') ~ Index
+    ).map { case (at1, at2, lang, at3, contents, at4) =>
+      CodeStatement(at(at1, at4), LiteralString(at(at2, at3), lang), contents)
     }
   }
 

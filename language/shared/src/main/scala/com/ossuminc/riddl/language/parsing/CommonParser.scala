@@ -35,8 +35,8 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   def author[u: P]: P[Author] =
     P(
-      location ~ Keywords.author ~/ identifier ~ is ~ open ~
-        (undefined(
+      Index ~ Keywords.author ~/ identifier ~ is ~ open ~
+        ((undefined(
           (
             LiteralString(At(), ""),
             LiteralString(At(), ""),
@@ -48,17 +48,17 @@ private[parsing] trait CommonParser(using io: PlatformContext)
           (Keywords.name ~ is ~ literalString ~ Keywords.email ~ is ~
             literalString ~ (Keywords.organization ~ is ~ literalString).? ~
             (Keywords.title ~ is ~ literalString).? ~
-            (Keywords.url ~ is ~ httpUrl).?)) ~ close ~ withMetaData
-    ).map { case (loc, id, (name, email, org, title, url), descriptives) =>
-      Author(loc, id, name, email, org, title, url, descriptives.toContents)
+            (Keywords.url ~ is ~ httpUrl).?))) ~ close ~ withMetaData ~/ Index
+    ).map { case (start, id, (name, email, org, title, url), descriptives, end) =>
+      Author(at(start, end), id, name, email, org, title, url, descriptives.toContents)
     }
   end author
 
   def importDef[u: P]: P[OccursInDomain] = {
     P(
-      location ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ from ~ literalString
-    ).map { case (loc, id, litStr) =>
-      doImport(loc, id, litStr)
+      Index ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ from ~ literalString ~ Index
+    ).map { case (off1, id, litStr, off2) =>
+      doImport(at(off1, off2), id, litStr)
     }
   }
 
@@ -74,9 +74,9 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
-  def briefDescription[u: P]: P[BriefDescription] = {
-    P(location ~ Keywords.briefly ~ byAs.? ~ literalString).map { case (loc, brief: LiteralString) =>
-      BriefDescription(loc, brief)
+  private def briefDescription[u: P]: P[BriefDescription] = {
+    P(Index ~ Keywords.briefly ~ byAs.? ~ literalString ~~ Index).map { case (off1, brief: LiteralString, off2) =>
+      BriefDescription(at(off1, off2), brief)
     }
   }
 
@@ -90,19 +90,17 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   def description[u: P](implicit ctx: P[?]): P[Description] =
     P(
-      location ~ Keywords.described ~ (
+      Index ~ Keywords.described ~ (
         (byAs ~/ docBlock) |
           (at ~/ httpUrl) |
           (in ~/ Keywords.file ~ literalString)
-      )
+      ) ~ Index
     ).map {
-      case (loc, strings: Seq[LiteralString]) =>
-        BlockDescription(loc, strings)
-      case (loc, url: URL) =>
-        URLDescription(loc, url)
-      case (loc, file: LiteralString) =>
+      case (off1, strings: Seq[LiteralString], off2) => BlockDescription(at(off1, off2), strings)
+      case (off1, url: URL, off2)                    => URLDescription(at(off1, off2), url)
+      case (off1, file: LiteralString, off2) =>
         val url = ctx.input.asInstanceOf[RiddlParserInput].root.resolve(file.s)
-        URLDescription(loc, url)
+        URLDescription(at(off1, off2), url)
     }
 
   def maybeDescription[u: P]: P[Option[Description]] =
@@ -110,17 +108,17 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   private def inlineComment[u: P]: P[InlineComment] = {
     P(
-      location ~ "/*" ~ until('*', '/')
-    ).map { case (loc, comment) =>
+      Index ~ "/*" ~ until('*', '/') ~ Index
+    ).map { case (off1, comment, off2) =>
       val actual = comment.dropRight(2) // we don't want the */ in the comment text
       val lines = actual.split('\n').toList
-      InlineComment(loc, lines)
+      InlineComment(at(off1, off2), lines)
     }
   }
 
   private def endOfLineComment[u: P]: P[LineComment] = {
-    P(location ~ "//" ~ toEndOfLine).map { case (loc, comment) =>
-      LineComment(loc, comment)
+    P(Index ~ "//" ~ toEndOfLine ~~ Index).map { case (off1, comment, off2) =>
+      LineComment(at(off1, off2), comment)
     }
   }
 
@@ -153,20 +151,21 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   }
 
   def identifier[u: P]: P[Identifier] = {
-    P(location ~ anyIdentifier).map { case (loc, value) => Identifier(loc, value) }
+    P(Index ~ anyIdentifier ~~ Index).map { case (off1, value, off2) => Identifier(at(off1, off2), value) }
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(location ~ anyIdentifier ~~ (Punctuation.dot ~~ anyIdentifier).repX(0)).map { case (loc, first, strings) =>
-      PathIdentifier(loc, first +: strings)
+    P(Index ~ anyIdentifier ~~ (Punctuation.dot ~~ anyIdentifier).repX(0) ~~ Index).map {
+      case (off1, first, strings, off2) =>
+        PathIdentifier(at(off1, off2), first +: strings)
     }
   }
 
   def term[u: P]: P[Term] = {
     P(
-      location ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withMetaData
-    )./.map { case (loc, id, definition, descriptives) =>
-      Term(loc, id, definition, descriptives.toContents)
+      Index ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withMetaData ~ Index
+    )./.map { case (off1, id, definition, descriptives, off2) =>
+      Term(at(off1, off2), id, definition, descriptives.toContents)
     }
   }
 
@@ -177,31 +176,31 @@ private[parsing] trait CommonParser(using io: PlatformContext)
     ).!
   }
 
-  def fileAttachment[u: P]: P[FileAttachment] = {
+  private def fileAttachment[u: P]: P[FileAttachment] = {
     P(
-      location ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ in ~ Keywords.file ~ literalString
-    ).map { case (loc, id, mimeType, fileName) =>
-      FileAttachment(loc, id, mimeType, fileName)
+      Index ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ in ~ Keywords.file ~ literalString ~ Index
+    ).map { case (off1, id, mimeType, fileName, off2) =>
+      FileAttachment(at(off1, off2), id, mimeType, fileName)
     }
   }
 
-  def stringAttachment[u: P]: P[StringAttachment] =
+  private def stringAttachment[u: P]: P[StringAttachment] =
     P(
-      location ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ as ~ literalString
-    ).map { case (loc, id, mimeType, value) =>
-      StringAttachment(loc, id, mimeType, value)
+      Index ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ as ~ literalString ~ Index
+    ).map { case (off1, id, mimeType, value, off2) =>
+      StringAttachment(at(off1, off2), id, mimeType, value)
     }
 
-  def ulidAttachment[u:P]: P[ULIDAttachment] =
+  private def ulidAttachment[u: P]: P[ULIDAttachment] =
     P(
-      location ~ Keywords.attachment ~ "ULID" ~ is ~ literalString
-    ).map { case (loc, ulidString) =>
+      Index ~ Keywords.attachment ~ "ULID" ~ is ~ literalString ~ Index
+    ).map { case (start, ulidString, end) =>
       val ulid = ULID.fromString(ulidString.s)
-      ULIDAttachment(loc, ulid)
+      ULIDAttachment(at(start, end), ulid)
     }
   end ulidAttachment
 
-  def metaData[u: P]: P[MetaData] =
+  private def metaData[u: P]: P[MetaData] =
     P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment)
       .asInstanceOf[P[MetaData]]
 
@@ -217,8 +216,8 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   }
 
   def include[u: P, CT <: RiddlValue](parser: P[?] => P[Seq[CT]]): P[Include[CT]] = {
-    P(location ~ Keywords.include ~ literalString)./.map { case (loc: At, str: LiteralString) =>
-      doIncludeParsing[CT](loc, str.s, parser)
+    P(Index ~ Keywords.include ~ literalString ~~ Index)./.map { case (off1, str: LiteralString, off2) =>
+      doIncludeParsing[CT](at(off1, off2), str.s, parser)
     }
   }
 
@@ -227,12 +226,14 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   }
 
   private def portNum[u: P]: P[String] = {
-    P(CharsWhileIn("0-9").rep(min = 1, max = 5)).!.map { (numStr: String) =>
+    P(Index ~~ CharsWhileIn("0-9").rep(min = 1, max = 5).! ~~ Index).map { (i1, numStr: String, i2) =>
       val num = numStr.toInt
-      if num > 0 && num < 65535 then numStr
+      if num > 0 && num < 65535 then 
+        numStr
       else
-        error(s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
+        error(at(i1,i2), s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
         "0"
+      end if  
     }
   }
 
@@ -251,11 +252,11 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   def invariant[u: P]: P[Invariant] = {
     P(
-      Keywords.invariant ~/ location ~ identifier ~ is ~ (
+      Index ~ Keywords.invariant ~ identifier ~/ is ~ (
         undefined(Option.empty[LiteralString]) | literalString.map(Some(_))
-      ) ~ withMetaData
-    ).map { case (loc, id, condition, descriptives) =>
-      Invariant(loc, id, condition, descriptives.toContents)
+      ) ~ withMetaData ~/ Index
+    ).map { case (off1, id, condition, metas, off2) =>
+      Invariant(at(off1, off2), id, condition, metas.toContents)
     }
   }
 
@@ -315,10 +316,9 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   def shownBy[u: P]: P[ShownBy] = {
     P(
-      location ~ Keywords.shown ~ by ~ open ~ httpUrl.rep(1) ~ close
-    ).map { case (loc, urls) =>
-      ShownBy(loc, urls)
+      Index ~ Keywords.shown ~ by ~ open ~ httpUrl.rep(1) ~ close ~ Index
+    ).map { case (off1, urls, off2) =>
+      ShownBy(at(off1, off2), urls)
     }
   }
-
 }

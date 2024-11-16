@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
-import com.ossuminc.riddl.utils.{pc, ec, Await, PathUtils}
+import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils, ec, pc}
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.{Files, Path}
@@ -58,13 +58,10 @@ class CheckMessagesTest extends AbstractValidatingTest {
         val unexpectedMessages = msgSet.diff(expectedMessages).toSeq.sorted
 
         val errMsg = new scala.collection.mutable.StringBuilder()
-        errMsg
-          .append(msgSet.mkString("Got these messages:\n\t", "\n\t", ""))
-        errMsg.append("\nBUT\n")
         if missingMessages.nonEmpty then {
           errMsg.append(
             missingMessages.mkString(
-              "Expected to find the following messages and did not:\n\t",
+              "DID NOT FIND the following expected messages:\n\t",
               "\n\t",
               "\n"
             )
@@ -73,47 +70,50 @@ class CheckMessagesTest extends AbstractValidatingTest {
         if unexpectedMessages.nonEmpty then {
           errMsg.append(
             unexpectedMessages.mkString(
-              "Found the following messages which were not expected: \n\t",
+              "FOUND the following unexpected messages: \n\t",
               "\n\t",
               "\n"
             )
           )
         }
-        fail(errMsg.toString())
+        if missingMessages.isEmpty && unexpectedMessages.isEmpty then succeed
+        else fail(errMsg.toString())
       }
     }
   }
 
   def checkADirectory(dirName: String, testName: String): Unit = {
-    val dir = checkPath.resolve(dirName)
-    val dirContents: List[Path] = Files.list(dir).toScala(List)
-    val checkFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".check"))
-    val riddlFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".riddl"))
+    pc.withOptions(CommonOptions.default.copy(noANSIMessages = true)) { _ =>
+      val dir = checkPath.resolve(dirName)
+      val dirContents: List[Path] = Files.list(dir).toScala(List)
+      val checkFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".check"))
+      val riddlFiles = dirContents.filter(dc => Files.isRegularFile(dc) && dc.toString.endsWith(".riddl"))
 
-    if riddlFiles.isEmpty then {
-      fail(s"No riddl files in directory $dirName.")
-    } else if riddlFiles.length > 1 then {
-      fail(
-        s"Multiple root-level riddl files in directory $dirName not allowed"
-      )
-    } else {
-      assert(riddlFiles.length == 1)
-      val riddlFile = riddlFiles.head
-      import scala.jdk.CollectionConverters.*
-      val checkFileLines = checkFiles.iterator.flatMap { file =>
-        java.nio.file.Files.readAllLines(file).iterator().asScala
-      }
-      val fixedLines = checkFileLines
-        .filterNot { (l: String) => l.isEmpty }
-        .foldLeft(Seq.empty[String]) { (list, next) =>
-          if next.startsWith(" ") then
-            val last = list.last + "\n" + next.drop(1)
-            list.dropRight(1) :+ last
-          else list :+ next
+      if riddlFiles.isEmpty then {
+        fail(s"No riddl files in directory $dirName.")
+      } else if riddlFiles.length > 1 then {
+        fail(
+          s"Multiple root-level riddl files in directory $dirName not allowed"
+        )
+      } else {
+        assert(riddlFiles.length == 1)
+        val riddlFile = riddlFiles.head
+        import scala.jdk.CollectionConverters.*
+        val checkFileLines = checkFiles.iterator.flatMap { file =>
+          java.nio.file.Files.readAllLines(file).iterator().asScala
         }
-        .toSet
+        val fixedLines = checkFileLines
+          .filterNot { (l: String) => l.isEmpty }
+          .foldLeft(Seq.empty[String]) { (list, next) =>
+            if next.startsWith(" ") then
+              val last = list.last + "\n" + next.drop(1)
+              list.dropRight(1) :+ last
+            else list :+ next
+          }
+          .toSet
 
-      runForFile(riddlFile, fixedLines)
+        runForFile(riddlFile, fixedLines)
+      }
     }
   }
 

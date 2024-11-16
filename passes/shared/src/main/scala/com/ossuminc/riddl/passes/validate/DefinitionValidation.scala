@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.utils.pc
@@ -29,7 +30,7 @@ trait DefinitionValidation extends BasicValidation:
           }
           .mkString("", "\n  ", "\n")
         messages.addError(
-          definition.loc,
+          definition.errorLoc,
           s"${definition.identify} has duplicate content names:\n  $details"
         )
       }
@@ -44,17 +45,12 @@ trait DefinitionValidation extends BasicValidation:
       definition.id.nonEmpty | definition.isAnonymous,
       "Definitions may not have empty names",
       Error,
-      definition.loc
+      definition.errorLoc
     )
       .checkIdentifierLength(definition)
-      .check(
-        !definition.isVital || definition.hasAuthorRefs,
-        "Vital definitions should have an author reference",
-        MissingWarning,
-        definition.loc
-      )
     definition match
       case vd: VitalDefinition[?] =>
+        checkMetadata(vd)
         vd.authorRefs.foreach { (authorRef: AuthorRef) =>
           pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Parent] +: parents) match
             case None =>
@@ -89,7 +85,7 @@ trait DefinitionValidation extends BasicValidation:
       container.contents.definitions.nonEmpty || container.isInstanceOf[Field],
       s"${container.identify} in ${parent.identify} should have content",
       MissingWarning,
-      container.loc
+      container.errorLoc
     )
   end checkContents
 
@@ -101,15 +97,15 @@ trait DefinitionValidation extends BasicValidation:
     checkContents(container, parents)
     checkUniqueContent(container)
   }
-  def checkDescriptives(definition: Definition & WithMetaData): Unit =
-    checkDescriptives(definition.identify, definition)
+  def checkMetadata(definition: Definition & WithMetaData): Unit =
+    checkMetadata(definition.identify, definition, definition.errorLoc)
 
-  def checkDescriptives(identity: String, definition: WithMetaData): Unit =
+  def checkMetadata(identity: String, definition: WithMetaData, loc: At): Unit =
     check(
       definition.metadata.nonEmpty,
-      s"Descriptives in $identity should  not be empty",
+      s"Metadata in $identity should not be empty",
       MissingWarning,
-      definition.loc
+      loc
     )
     var hasAuthorRef = false
     var hasDescription = false
@@ -159,7 +155,7 @@ trait DefinitionValidation extends BasicValidation:
         case _: ULIDAttachment   => ()
         case _: Description      => ()
     }
-    check(hasDescription, s"$identity should have a description", MissingWarning, definition.loc)
-    check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, definition.loc)
-  end checkDescriptives
+    check(hasDescription, s"$identity should have a description", MissingWarning, loc)
+    check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, loc)
+  end checkMetadata
 end DefinitionValidation

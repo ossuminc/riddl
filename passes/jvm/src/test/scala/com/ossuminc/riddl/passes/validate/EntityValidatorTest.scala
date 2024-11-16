@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.pc
@@ -33,15 +34,11 @@ class EntityValidatorTest extends AbstractValidatingTest {
           case (entity: Entity, rpi, msgs: Messages) =>
             // info(msgs.format)
             msgs.count(_.kind.isError) mustBe 1
-            // msgs.count(_.kind.isWarning) mustBe 1
-            val numMissing =
-              msgs.count(_.kind.isMissing)
-            numMissing must be(6)
-            entity.options must contain(OptionValue((3, 9, rpi), "finite-state-machine"))
-            entity.options must contain(OptionValue((4, 9, rpi), "message-queue"))
-            entity.options must contain(OptionValue((5, 9, rpi), "aggregate"))
-            entity.options must contain(OptionValue((6, 9, rpi), "transient"))
-            entity.options must contain(OptionValue((7, 9, rpi), "available"))
+            entity.options must contain(OptionValue(At(rpi, 59, 88), "finite-state-machine"))
+            entity.options must contain(OptionValue(At(rpi, 88, 110), "message-queue"))
+            entity.options must contain(OptionValue(At(rpi, 110, 128), "aggregate"))
+            entity.options must contain(OptionValue(At(rpi, 128, 146), "transient"))
+            entity.options must contain(OptionValue(At(rpi, 146, 163), "available"))
         }
       }
     }

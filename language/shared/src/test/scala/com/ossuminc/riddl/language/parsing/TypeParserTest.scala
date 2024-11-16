@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{Field, *}
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
 
@@ -217,7 +218,7 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       )
       parseInContext[Type](input, _.types.last) match {
         case Left(messages)        => fail(messages.format)
-        case Right(typ: Type, rpi) => succeed
+        case Right(_: Type, _) => succeed
       }
     }
   }
@@ -225,130 +226,130 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
     "allow renames of String" in { (td: TestData) =>
       val rpi = RiddlParserInput("type str = String", td)
       val expected =
-        Type((1, 1, rpi), Identifier((1, 6, rpi), "str"), String_((1, 12, rpi)))
+        Type(At(rpi, 0, 17), Identifier(At(rpi, 5, 9), "str"), String_(At(rpi, 11, 17)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow renames of Number" in { (td: TestData) =>
       val rpi = RiddlParserInput("type num = Number", td)
       val expected =
-        Type((1, 1, rpi), Identifier((1, 6, rpi), "num"), Number((1, 12, rpi)))
+        Type(At(rpi, 0, 17), Identifier(At(rpi, 5, 9), "num"), Number(At(rpi, 11, 17)))
       checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Abstract" in { (td: TestData) =>
-      val input = RiddlParserInput("type abs = Abstract", td)
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "abs"), Abstract(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type abs = Abstract", td)
+      val expected = Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "abs"), Abstract(At(rpi, 11, 18)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Boolean" in { (td: TestData) =>
-      val input = RiddlParserInput("type boo = Boolean", td)
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "boo"), Bool(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type boo = Boolean", td)
+      val expected = Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "boo"), Bool(At(rpi, 11, 18)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Current" in { (td: TestData) =>
-      val input = RiddlParserInput("type cur = Current", td)
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "cur"), Current(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type cur = Current", td)
+      val expected = Type(At(rpi, 0, 18), Identifier(At(rpi, 5, 9), "cur"), Current(At(rpi, 11, 18)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Currency(USD)" in { (td: TestData) =>
-      val input = RiddlParserInput("type cur = Currency(USD)", td)
+      val rpi = RiddlParserInput("type cur = Currency(USD)", td)
       val expected =
-        Type(1 -> 1, Identifier(1 -> 6, "cur"), Currency(1 -> 12, "USD"))
-      checkDefinition[Type, Type](input, expected, identity)
+        Type(At(rpi, 0, 24), Identifier(At(rpi, 5, 9), "cur"), Currency(At(rpi, 11, 24), "USD"))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Length" in { (td: TestData) =>
-      val input = RiddlParserInput("type len = Length", td)
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "len"), Length(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type len = Length", td)
+      val expected = Type(At(rpi, 0, 17), Identifier(At(rpi, 5, 9), "len"), Length(At(rpi, 11, 17)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Luminosity" in { (td: TestData) =>
-      val input = RiddlParserInput("type lum = Luminosity", td)
+      val rpi = RiddlParserInput("type lum = Luminosity", td)
       val expected =
-        Type(1 -> 1, Identifier(1 -> 6, "lum"), Luminosity(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+        Type(At(rpi, 0, 21), Identifier(At(rpi, 5, 9), "lum"), Luminosity(At(rpi, 11, 21)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Mass" in { (td: TestData) =>
-      val input = RiddlParserInput("type mas = Mass", td)
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "mas"), Mass(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type mas = Mass", td)
+      val expected = Type(At(rpi, 0, 15), Identifier(At(rpi, 5, 9), "mas"), Mass(At(rpi, 11, 15)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Mole" in { (td: TestData) =>
-      val input = RiddlParserInput("type mol = Mole", td)
-      val expected = Type(1 -> 1, Identifier(1 -> 6, "mol"), Mole(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type mol = Mole", td)
+      val expected = Type(At(rpi, 0, 15), Identifier(At(rpi, 5, 9), "mol"), Mole(At(rpi, 11, 15)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow rename of Temperature" in { (td: TestData) =>
-      val input = RiddlParserInput("type tmp = Temperature", td)
-      val expected =
-        Type(1 -> 1, Identifier(1 -> 6, "tmp"), Temperature(1 -> 12))
-      checkDefinition[Type, Type](input, expected, identity)
+      val rpi = RiddlParserInput("type tmp = Temperature", td)
+      val expected = Type(At(rpi, 0, 22), Identifier(At(rpi, 5, 9), "tmp"), Temperature(At(rpi, 11, 12)))
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow renames of Id(path)" in { (td: TestData) =>
-      val input = RiddlParserInput("type ident = Id(entity foo)", td)
+      val rpi = RiddlParserInput("type ident = Id(entity foo)", td)
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "ident"),
+        At(rpi, 0, 27),
+        Identifier(At(rpi, 5, 11), "ident"),
         UniqueId(
-          1 -> 14,
-          entityPath = PathIdentifier(1 -> 24, Seq("foo"))
+          At(rpi, 13, 27),
+          entityPath = PathIdentifier(At(rpi, 23, 26), Seq("foo"))
         )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
-    "allow renames of 8 literal types" in { (td: TestData) =>
+    "allow renames of 8 literal types" in { (_: TestData) =>
+      val mt = RiddlParserInput.empty
       val cases = Map[String, Type](
         "type dat = Date" ->
-          Type(1 -> 1, Identifier(1 -> 6, "dat"), Date(1 -> 12)),
+          Type(At(mt, 0, 15), Identifier(At(mt, 5, 8), "dat"), Date(At(mt, 11, 15))),
         "type tim = Time" ->
-          Type(1 -> 1, Identifier(1 -> 6, "tim"), Time(1 -> 12)),
+          Type(At(mt, 0, 15), Identifier(At(mt, 5, 9), "tim"), Time(At(mt, 11, 15))),
         "type stamp = TimeStamp" ->
-          Type(1 -> 1, Identifier(1 -> 6, "stamp"), TimeStamp(1 -> 14)),
+          Type(At(mt, 0, 22), Identifier(At(mt, 5, 10), "stamp"), TimeStamp(At(mt, 13, 23))),
         "type url = URL" ->
-          Type(1 -> 1, Identifier(1 -> 6, "url"), URI(1 -> 12)),
+          Type(At(mt, 0, 14), Identifier(At(mt, 5, 8), "url"), URI(At(mt, 11, 14))),
         "type FirstName = URL" ->
-          Type(1 -> 1, Identifier(1 -> 6, "FirstName"), URI(1 -> 18, None))
+          Type(At(mt, 0, 20), Identifier(At(mt, 5, 15), "FirstName"), URI(At(mt, 17, 20)))
       )
       checkDefinitions[Type, Type](cases, identity)
     }
     "allow enumerators" in { (td: TestData) =>
-      val input = RiddlParserInput("type enum = any of { Apple Pear Peach Persimmon }", td)
+      val rpi = RiddlParserInput("type enum = any of { Apple Pear Peach Persimmon }", td)
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "enum"),
+        At(rpi, 0, 49),
+        Identifier(At(rpi, 5, 10), "enum"),
         Enumeration(
-          1 -> 13,
+          At(rpi, 12, 49),
           Contents(
-            Enumerator(1 -> 22, Identifier(1 -> 22, "Apple"), None),
-            Enumerator(1 -> 28, Identifier(1 -> 28, "Pear"), None),
-            Enumerator(1 -> 33, Identifier(1 -> 33, "Peach"), None),
-            Enumerator(1 -> 39, Identifier(1 -> 39, "Persimmon"), None)
+            Enumerator(At(rpi, 21, 27), Identifier(At(rpi, 21, 27), "Apple"), None),
+            Enumerator(At(rpi, 27, 32), Identifier(At(rpi, 27, 32), "Pear"), None),
+            Enumerator(At(rpi, 32, 38), Identifier(At(rpi, 32, 38), "Peach"), None),
+            Enumerator(At(rpi, 38, 48), Identifier(At(rpi, 38, 48), "Persimmon"), None)
           )
         )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow alternation" in { (td: TestData) =>
-      val input = RiddlParserInput("type alt = one of { type enum or type stamp or type url }", td)
+      val rpi = RiddlParserInput("type alt = one of { type enum or type stamp or type url }", td)
       val expected = Type(
-        1 -> 1,
-        Identifier(1 -> 6, "alt"),
+        At(rpi, 0, 57),
+        Identifier(At(rpi, 5, 9), "alt"),
         Alternation(
-          1 -> 12,
+          At(rpi, 11, 57),
           Contents(
             AliasedTypeExpression(
-              1 -> 21,
+              At(rpi, 20, 30),
               "type",
-              PathIdentifier(1 -> 26, Seq("enum"))
+              PathIdentifier(At(rpi, 25, 30), Seq("enum"))
             ),
             AliasedTypeExpression(
-              1 -> 34,
+              At(rpi, 33, 44),
               "type",
-              PathIdentifier(1 -> 39, Seq("stamp"))
+              PathIdentifier(At(rpi, 38, 44), Seq("stamp"))
             ),
-            AliasedTypeExpression(1 -> 48, "type", PathIdentifier(1 -> 53, Seq("url")))
+            AliasedTypeExpression(At(rpi, 47, 56), "type", PathIdentifier(At(rpi, 52, 56), Seq("url")))
           )
         )
       )
-      checkDefinition[Type, Type](input, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow alternation of a lone type reference" in { (td: TestData) =>
       val rpi = RiddlParserInput(
@@ -360,12 +361,12 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         td
       )
       val expected = Alternation(
-        (3, 12, rpi),
+        At(rpi, 46, 66),
         Contents(
           AliasedTypeExpression(
-            (3, 21, rpi),
+            At(rpi, 55, 64),
             "type",
-            PathIdentifier((3, 26, rpi), Seq("Foo"))
+            PathIdentifier(At(rpi, 60, 64), Seq("Foo"))
           )
         )
       )
@@ -377,7 +378,7 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
       }
     }
     "allow aggregation" in { (td: TestData) =>
-      val rip = RiddlParserInput(
+      val rpi = RiddlParserInput(
         """type agg = {
           |  key: Number,
           |  id: Id(entity foo),
@@ -387,68 +388,70 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         td
       )
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "agg"),
+        At(rpi, 0, 70),
+        Identifier(At(rpi, 5, 9), "agg"),
         Aggregation(
-          (1, 12, rip),
+          At(rpi, 11, 70),
           Contents(
             Field(
-              (2, 3, rip),
-              Identifier((2, 3, rip), "key"),
-              Number((2, 8, rip))
+              At(rpi, 15, 26),
+              Identifier(At(rpi, 15, 18), "key"),
+              Number(At(rpi, 20, 26))
             ),
             Field(
-              (3, 3, rip),
-              Identifier((3, 3, rip), "id"),
+              At(rpi, 30, 48),
+              Identifier(At(rpi, 30, 32), "id"),
               UniqueId(
-                (3, 7, rip),
-                PathIdentifier((3, 17, rip), Seq("foo"))
+                At(rpi, 34, 48),
+                PathIdentifier(At(rpi, 44, 47), Seq("foo"))
               )
             ),
             Field(
-              (4, 3, rip),
-              Identifier((4, 3, rip), "time"),
-              TimeStamp((4, 9, rip))
+              At(rpi, 52, 68),
+              Identifier(At(rpi, 52, 56), "time"),
+              TimeStamp(At(rpi, 58, 68))
             )
           )
         )
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow methods in aggregates" in { (td: TestData) =>
-      val rip = RiddlParserInput(
+      val rpi = RiddlParserInput(
         """record agg = {
           |  key: Number,
-          |  calc(key: Number): Number,
+          |  calc(key: Number): Number
           |}
           |""".stripMargin,
         td
       )
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "agg"),
-        Aggregation(
-          (1, 12, rip),
+        At(rpi, 0, 60),
+        Identifier(At(rpi, 7, 10), "agg"),
+        AggregateUseCaseTypeExpression(
+          At(rpi, 13, 60),
+          RecordCase,
           Contents(
             Field(
-              (2, 3, rip),
-              Identifier((2, 3, rip), "key"),
-              Number((2, 8, rip))
+              At(rpi, 17, 28),
+              Identifier(At(rpi, 17, 20), "key"),
+              Number(At(rpi, 22, 28))
             ),
             Method(
-              (3, 3, rip),
-              Identifier((3, 3, rip), "calc"),
-              Number((3, 22, rip)),
-              Seq(MethodArgument((3, 8, rip), "key", Number((3, 13, rip))))
+              At(rpi, 32, 57),
+              Identifier(At(rpi, 32, 36), "calc"),
+              Number(At(rpi, 51, 58)),
+              Seq(MethodArgument(At(rpi, 37, 48), "key", Number(At(rpi, 42, 48))))
             )
           )
         )
       )
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow command, event, query, and result message aggregations" in { (td: TestData) =>
       for mk <- Seq("command", "event", "query", "result") do {
         val prefix = s"type mkt = $mk {"
-        val rip = RiddlParserInput(
+        val rpi = RiddlParserInput(
           prefix +
             """
             |  key: Number,
@@ -458,11 +461,12 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
             |""".stripMargin,
           td
         )
+        val l = mk.length
         val expected = Type(
-          (1, 1, rip),
-          Identifier((1, 6, rip), "mkt"),
+          At(rpi, 0, 71+l),
+          Identifier(At(rpi, 5, 9), "mkt"),
           AggregateUseCaseTypeExpression(
-            (1, 12, rip),
+            At(rpi, 11, 71+l),
             mk match {
               case "command" => CommandCase
               case "event"   => EventCase
@@ -471,139 +475,139 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
             },
             Contents(
               Field(
-                (2, 3, rip),
-                Identifier((2, 3, rip), "key"),
-                Number((2, 8, rip))
+                At(rpi, 16+l, 27+l),
+                Identifier(At(rpi, 16+l, 19+l), "key"),
+                Number(At(rpi, 21+l, 27+l))
               ),
               Field(
-                (3, 3, rip),
-                Identifier((3, 3, rip), "id"),
+                At(rpi, 31+l, 49+l),
+                Identifier(At(rpi, 31+l, 33+l), "id"),
                 UniqueId(
-                  (3, 7, rip),
-                  PathIdentifier((3, 17, rip), Seq("foo"))
+                  At(rpi, 35+l, 49+l),
+                  PathIdentifier(At(rpi, 45+l, 49+l), Seq("foo"))
                 )
               ),
               Field(
-                (4, 3, rip),
-                Identifier((4, 3, rip), "time"),
-                TimeStamp((4, 9, rip))
+                At(rpi, 53+l, 69+l),
+                Identifier(At(rpi, 53+l, 57+l), "time"),
+                TimeStamp(At(rpi, 59+l, 69+l))
               )
             )
           )
         )
-        checkDefinition[Type, Type](rip, expected, identity)
+        checkDefinition[Type, Type](rpi, expected, identity)
       }
     }
     "allow mappings between two types" in { (td: TestData) =>
-      val rip = RiddlParserInput("type m1 = mapping from String to Number", td)
+      val rpi = RiddlParserInput("type m1 = mapping from String to Number", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "m1"),
-        Mapping((1, 11, rip), String_((1, 24, rip)), Number((1, 34, rip)))
+        At(rpi, 0, 39),
+        Identifier(At(rpi, 5, 8), "m1"),
+        Mapping(At(rpi, 10, 39), String_(At(rpi, 23, 30)), Number(At(rpi, 33, 39)))
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow graphs of types" in { (td: TestData) =>
-      val rip = RiddlParserInput("type g1 = graph of String", td)
+      val rpi = RiddlParserInput("type g1 = graph of String", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "g1"),
-        Graph((1, 11, rip), String_((1, 20, rip)))
+        At(rpi, 0, 25),
+        Identifier(At(rpi, 5, 8), "g1"),
+        Graph(At(rpi, 10, 25), String_(At(rpi, 19, 25)))
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow tables of types" in { (td: TestData) =>
-      val rip = RiddlParserInput("type t1 = table of String of [5,10]", td)
+      val rpi = RiddlParserInput("type t1 = table of String of [5,10]", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "t1"),
-        Table((1, 11, rip), String_((1, 20, rip)), Seq(5L, 10L))
+        At(rpi, 0, 35),
+        Identifier(At(rpi, 5, 8), "t1"),
+        Table(At(rpi, 10, 35), String_(At(rpi, 19, 26)), Seq(5L, 10L))
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
     "allow range of values" in { (td: TestData) =>
-      val rip = RiddlParserInput("type r1 = range(21,  42)", td)
+      val rpi = RiddlParserInput("type r1 = range(21,  42)", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "r1"),
-        RangeType((1, 11, rip), 21, 42)
+        At(rpi, 0, 24),
+        Identifier(At(rpi, 5, 8), "r1"),
+        RangeType(At(rpi, 10, 24), 21, 42)
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
 
     "allow one or more in regex style" in { (td: TestData) =>
-      val rip = RiddlParserInput("type oneOrMoreB = agg+", td)
+      val rpi = RiddlParserInput("type oneOrMoreB = agg+", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "oneOrMoreB"),
+        At(rpi, 0, 22),
+        Identifier(At(rpi, 5, 16), "oneOrMoreB"),
         OneOrMore(
-          (1, 19, rip),
+          At(rpi, 18, 22),
           AliasedTypeExpression(
-            (1, 19, rip),
+            At(rpi, 18, 21),
             "type",
-            PathIdentifier((1, 19, rip), Seq("agg"))
+            PathIdentifier(At(rpi, 18, 21), Seq("agg"))
           )
         )
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
 
     "allow zero or more" in { (td: TestData) =>
-      val rip = RiddlParserInput("type zeroOrMore = many optional agg", td)
+      val rpi = RiddlParserInput("type zeroOrMore = many optional agg", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "zeroOrMore"),
+        At(rpi, 0, 35),
+        Identifier(At(rpi, 5, 16), "zeroOrMore"),
         ZeroOrMore(
-          (1, 33, rip),
+          At(rpi, 18, 35),
           AliasedTypeExpression(
-            (1, 33, rip),
+            At(rpi, 32, 35),
             "type",
-            PathIdentifier((1, 33, rip), Seq("agg"))
+            PathIdentifier(At(rpi, 32, 35), Seq("agg"))
           )
         )
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
 
     "allow optionality" in { (td: TestData) =>
-      val rip = RiddlParserInput("type optional = optional agg", td)
+      val rpi = RiddlParserInput("type optional = optional agg", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 6, rip), "optional"),
+        At(rpi, 0, 28),
+        Identifier(At(rpi, 5, 14), "optional"),
         Optional(
-          (1, 26, rip),
+          At(rpi, 16, 28),
           AliasedTypeExpression(
-            (1, 26, rip),
+            At(rpi, 25, 28),
             "type",
-            PathIdentifier((1, 26, rip), Seq("agg"))
+            PathIdentifier(At(rpi, 25, 28), Seq("agg"))
           )
         )
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
 
     "allow messages defined with more natural syntax" in { (td: TestData) =>
-      val rip = RiddlParserInput("command foo is { a: Integer }", td)
+      val rpi = RiddlParserInput("command foo is { a: Integer }", td)
       val expected = Type(
-        (1, 1, rip),
-        Identifier((1, 9, rip), "foo"),
+        At(rpi, 0, 29),
+        Identifier(At(rpi, 8, 12), "foo"),
         AggregateUseCaseTypeExpression(
-          (1, 16, rip),
+          At(rpi, 15, 29),
           CommandCase,
           Contents(
             Field(
-              (1, 18, rip),
-              Identifier((1, 18, rip), "a"),
-              Integer((1, 21, rip))
+              At(rpi, 17, 28),
+              Identifier(At(rpi, 17, 18), "a"),
+              Integer(At(rpi, 20, 28))
             )
           )
         )
       )
-      checkDefinition[Type, Type](rip, expected, identity)
+      checkDefinition[Type, Type](rpi, expected, identity)
     }
 
     "allow complex nested type definitions" in { (td: TestData) =>
-      val rip = RiddlParserInput(
+      val rpi = RiddlParserInput(
         """
           |domain foo is {
           |  type Simple = String
@@ -622,51 +626,51 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
           |""".stripMargin,
         td
       )
-      parseDomainDefinition[Type](rip, _.types.last) match {
+      parseDomainDefinition[Type](rpi, _.types.last) match {
         case Left(errors)          => fail(errors.format)
         case Right((typeDef, rpi)) =>
           // info(typeDef.toString)
           typeDef mustEqual Type(
-            (9, 3, rpi),
-            Identifier((9, 8, rpi), "Complex"),
+            At(rpi, 146, 263),
+            Identifier(At(rpi, 151, 159), "Complex"),
             Aggregation(
-              (9, 19, rpi),
+              At(rpi, 162, 263),
               Contents(
                 Field(
-                  (10, 5, rpi),
-                  Identifier((10, 5, rpi), "a"),
+                  At(rpi, 168, 177),
+                  Identifier(At(rpi, 168, 169), "a"),
                   AliasedTypeExpression(
-                    (10, 8, rpi),
+                    At(rpi, 171, 177),
                     "type",
-                    PathIdentifier((10, 8, rpi), Seq("Simple"))
+                    PathIdentifier(At(rpi, 171, 177), Seq("Simple"))
                   )
                 ),
                 Field(
-                  (11, 5, rpi),
-                  Identifier((11, 5, rpi), "b"),
-                  TimeStamp((11, 8, rpi))
+                  At(rpi, 183, 195),
+                  Identifier(At(rpi, 183, 184), "b"),
+                  TimeStamp(At(rpi, 186, 195))
                 ),
                 Field(
-                  (12, 5, rpi),
-                  Identifier((12, 5, rpi), "c"),
+                  At(rpi, 201, 233),
+                  Identifier(At(rpi, 201, 202), "c"),
                   ZeroOrMore(
-                    (12, 22, rpi),
+                    At(rpi, 204, 233),
                     AliasedTypeExpression(
-                      (12, 22, rpi),
+                      At(rpi, 218, 233),
                       "record",
-                      PathIdentifier((12, 29, rpi), Seq("Compound"))
+                      PathIdentifier(At(rpi, 225, 233), Seq("Compound"))
                     )
                   )
                 ),
                 Field(
-                  (13, 5, rpi),
-                  Identifier((13, 5, rpi), "d"),
+                  At(rpi, 239, 261),
+                  Identifier(At(rpi, 239, 240), "d"),
                   Optional(
-                    (13, 17, rpi),
+                    At(rpi, 242, 261),
                     AliasedTypeExpression(
-                      (13, 17, rpi),
+                      At(rpi, 251, 261),
                       "type",
-                      PathIdentifier((13, 17, rpi), Seq("Choices"))
+                      PathIdentifier(At(rpi, 251, 261), Seq("Choices"))
                     )
                   )
                 )

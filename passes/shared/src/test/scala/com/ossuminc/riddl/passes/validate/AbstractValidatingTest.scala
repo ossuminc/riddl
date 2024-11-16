@@ -69,7 +69,7 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
         val clazz = classTag[D].runtimeClass
-        val root = Root(Contents(model))
+        val root = Root(At(), Contents(model))
         runStandardPasses(root, shouldFailOnErrors) match {
           case Left(messages) =>
             fail(messages.format)
@@ -97,7 +97,7 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
       case Right((model: Domain, _)) =>
-        val root = Root(Contents(model))
+        val root = Root(At(), Contents(model))
         runStandardPasses(root, shouldFailOnErrors) match {
           case Left(errors) => fail(errors.format)
           case Right(ao) =>
@@ -121,7 +121,7 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
           validator(Domain(loc, Identifier(loc, "stand-in")), input, messages)
         }
       case Right((model: Domain, rpi)) =>
-        val root = Root(Contents(model))
+        val root = Root(At(), Contents(model))
         runStandardPasses(root, shouldFailOnErrors) match {
           case Left(errors) =>
             fail(errors.format)

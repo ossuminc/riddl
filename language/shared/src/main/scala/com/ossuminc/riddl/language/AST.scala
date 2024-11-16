@@ -34,7 +34,7 @@ object AST:
     */
   sealed trait RiddlValue:
 
-    /** The location in the parse at which this RiddlValue occurs */
+    /** The point location in the parse at which this RiddlValue occurs */
     def loc: At
 
     /** Provide a string to specify the kind of thing this value is with default derived from class name */
@@ -418,6 +418,8 @@ object AST:
     /** the name/identifier of this value. All definitions have one */
     def id: Identifier
 
+    def errorLoc: At = loc.copy(endOffset = id.loc.endOffset)
+
     final override inline def isIdentified: Boolean = true
 
     /** This one has an identifier so it is only anonymous if that identifier is empty */
@@ -433,7 +435,7 @@ object AST:
     end identify
 
     /** Same as [[identify]] but also adds the value's location via [[loc]] */
-    def identifyWithLoc: String = s"$identify at $loc"
+    def identifyWithLoc: String = s"$identify at ${loc.format}"
   end WithIdentifier
 
   sealed trait WithMetaData extends RiddlValue:
@@ -1004,6 +1006,7 @@ object AST:
     *   The sequence top level definitions contained by this root container
     */
   case class Root(
+    loc: At = At(),
     contents: Contents[RootContents] = Contents.empty[RootContents]
   ) extends BranchDefinition[RootContents]
       with WithModules[RootContents]
@@ -1013,8 +1016,6 @@ object AST:
       with WithIncludes[RootContents]:
 
     override def isRootContainer: Boolean = true
-
-    def loc: At = At.empty
 
     override def id: Identifier = Identifier(loc, "Root")
 
@@ -1028,7 +1029,7 @@ object AST:
   object Root:
 
     /** The value to use for an empty [[Root]] instance */
-    val empty: Root = apply(mutable.ArrayBuffer.empty[RootContents])
+    val empty: Root = apply(At.empty, mutable.ArrayBuffer.empty[RootContents])
   end Root
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// NEBULA
 
@@ -1039,10 +1040,10 @@ object AST:
     *   The nebula of unrelated single definitions
     */
   case class Nebula(
+    loc: At,
     contents: Contents[NebulaContents] = Contents.empty
   ) extends BranchDefinition[NebulaContents]:
     override def isRootContainer: Boolean = false
-    def loc: At = At.empty
 
     override def id: Identifier = Identifier(loc, "Nebula")
 
@@ -1056,7 +1057,7 @@ object AST:
   object Nebula:
 
     /** The value to use for an empty [[Nebula]] instance */
-    val empty: Nebula = Nebula(Contents.empty[NebulaContents])
+    val empty: Nebula = Nebula(At.empty, Contents.empty[NebulaContents])
   end Nebula
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// MODULE

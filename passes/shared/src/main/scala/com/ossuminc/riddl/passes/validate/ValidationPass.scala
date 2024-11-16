@@ -152,7 +152,8 @@ case class ValidationPass(
     }
   }
   private def validateOnClause(onClause: OnClause): Unit =
-    if onClause.statements.isEmpty then messages.add(missing(s"${onClause.identify} should have statements"))
+    if onClause.statements.isEmpty then
+      messages.add(missing(s"${onClause.identify} should have statements", onClause.loc))
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
@@ -165,13 +166,13 @@ case class ValidationPass(
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
           if sends.isEmpty || !sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
             messages.add(
-              missing("Processing for commands should result in sending an event", omc.loc)
+              missing("Processing for commands should result in sending an event", omc.errorLoc)
             )
         case QueryCase =>
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
           if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == ResultCase) then
             messages.add(
-              missing("Processing for queries should result in sending a result", omc.loc)
+              missing("Processing for queries should result in sending a result", omc.errorLoc)
             )
         case _ =>
       }
@@ -262,7 +263,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, t)
-    checkDescriptives(t)
+    checkMetadata(t)
   }
 
   private def validateEnumerator(
@@ -311,7 +312,7 @@ case class ValidationPass(
             m.id.loc
           )
         )
-    checkDescriptives(m)
+    checkMetadata(m)
   }
 
   private def validateInvariant(
@@ -320,7 +321,7 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, i)
     checkNonEmpty(i.condition.toList, "Condition", i, Messages.MissingWarning)
-    checkDescriptives(i)
+    checkMetadata(i)
   }
 
   private def validateInlet(
@@ -389,7 +390,7 @@ case class ValidationPass(
     checkDefinition(parents, ai)
     checkNonEmptyValue(ai.name, "name", ai, required = true)
     checkNonEmptyValue(ai.email, "email", ai, required = true)
-    checkDescriptives(ai)
+    checkMetadata(ai)
   }
 
   private def validateType(
@@ -401,7 +402,7 @@ case class ValidationPass(
       t.id.value.head.isUpper,
       s"${t.identify} should start with a capital letter",
       StyleWarning,
-      t.loc
+      t.errorLoc
     )
     if !t.typEx.isInstanceOf[AggregateTypeExpression] then {
       checkTypeExpression(t.typEx, t, parents)
@@ -413,7 +414,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, c)
-    checkDescriptives(c)
+    checkMetadata(c)
   }
 
   private def validateState(
@@ -421,7 +422,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, s)
-    checkDescriptives(s)
+    checkMetadata(s)
     checkRefAndExamine[Type](s.typ, parents) { (typ: Type) =>
       typ.typEx match {
         case agg: AggregateTypeExpression =>
@@ -441,7 +442,7 @@ case class ValidationPass(
         s.loc
       )
     }
-    checkDescriptives(s)
+    checkMetadata(s)
   }
 
   private def validateFunction(
@@ -449,7 +450,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, f)
-    checkDescriptives(f)
+    checkMetadata(f)
   }
 
   private def validateHandler(
@@ -472,7 +473,7 @@ case class ValidationPass(
     if entity.states.isEmpty && !entity.isEmpty then {
       messages.add(
         Message(
-          entity.loc,
+          entity.errorLoc,
           s"${entity.identify} must define at least one state",
           Messages.MissingWarning
         )
@@ -480,13 +481,13 @@ case class ValidationPass(
     }
     if entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty) then {
       messages.add(
-        Message(entity.loc, s"${entity.identify} has only empty handlers", Messages.MissingWarning)
+        Message(entity.errorLoc, s"${entity.identify} has only empty handlers", Messages.MissingWarning)
       )
     }
     if entity.hasOption("finite-state-machine") && entity.states.sizeIs < 2 then {
       messages.add(
         Message(
-          entity.loc,
+          entity.errorLoc,
           s"${entity.identify} is declared as an fsm, but doesn't have at least two states",
           Messages.Error
         )
@@ -495,7 +496,7 @@ case class ValidationPass(
     if entity.states.nonEmpty && entity.handlers.isEmpty then {
       messages.add(
         Message(
-          entity.loc,
+          entity.errorLoc,
           s"${entity.identify} has ${entity.states.size} state${
               if entity.states.size != 1 then "s"
               else ""
@@ -504,7 +505,7 @@ case class ValidationPass(
         )
       )
     }
-    checkDescriptives(entity)
+    checkMetadata(entity)
   }
 
   private def validateProjector(
@@ -522,15 +523,15 @@ case class ValidationPass(
       },
       s"${projector.identify} lacks a required ${RecordCase.useCase} definition.",
       Messages.Error,
-      projector.loc
+      projector.errorLoc
     )
     check(
       projector.handlers.length == 1,
       s"${projector.identify} must have exactly one Handler but has ${projector.handlers.length}",
       Messages.Error,
-      projector.loc
+      projector.errorLoc
     )
-    checkDescriptives(projector)
+    checkMetadata(projector)
   }
 
   private def validateRepository(
@@ -538,12 +539,12 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, repository)
-    checkDescriptives(repository)
+    checkMetadata(repository)
     checkNonEmpty(
       repository.contents.filter[Schema],
       "schema",
       repository,
-      repository.loc,
+      repository.errorLoc,
       MissingWarning,
       required = false
     )
@@ -561,12 +562,12 @@ case class ValidationPass(
             val message =
               s"${adaptor.identify} may not specify a target context that is " +
                 s"the same as the containing ${c.identify}"
-            messages.addError(adaptor.loc, message)
+            messages.addError(adaptor.errorLoc, message)
           }
         }
-        checkDescriptives(adaptor)
+        checkMetadata(adaptor)
       case None | Some(_) =>
-        messages.addError(adaptor.loc, "Adaptor not contained within Context")
+        messages.addError(adaptor.errorLoc, "Adaptor not contained within Context")
     }
   }
 
@@ -576,7 +577,7 @@ case class ValidationPass(
   ): Unit = {
     addStreamlet(streamlet)
     checkContainer(parents, streamlet)
-    checkDescriptives(streamlet)
+    checkMetadata(streamlet)
   }
 
   private def validateDomain(
@@ -588,9 +589,9 @@ case class ValidationPass(
       domain.domains.isEmpty || domain.domains.size > 2,
       "Singly nested domains do not add value",
       StyleWarning,
-      domain.loc
+      domain.errorLoc
     )
-    checkDescriptives(domain)
+    checkMetadata(domain)
   }
 
   private def validateSaga(
@@ -602,15 +603,15 @@ case class ValidationPass(
       saga.nonEmpty && saga.sagaSteps.size >= 2,
       "Sagas must define at least 2 steps",
       Messages.Error,
-      saga.loc
+      saga.errorLoc
     )
     check(
       saga.nonEmpty && saga.sagaSteps.size >= 2 && saga.sagaSteps.map(_.id.value).allUnique,
       "Saga step names must all be distinct",
       Messages.Error,
-      saga.loc
+      saga.errorLoc
     )
-    checkDescriptives(saga)
+    checkMetadata(saga)
   }
 
   private def validateSagaStep(
@@ -624,9 +625,9 @@ case class ValidationPass(
       s.doStatements.getClass == s.undoStatements.getClass,
       "The primary action and revert action must be the same shape",
       Messages.Error,
-      s.loc
+      s.errorLoc
     )
-    checkDescriptives(s)
+    checkMetadata(s)
   }
 
   private def validateContext(
@@ -634,7 +635,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, c)
-    checkDescriptives(c)
+    checkMetadata(c)
   }
 
   private def validateEpic(
@@ -643,9 +644,9 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, epic)
     if epic.userStory.isEmpty then {
-      messages.addMissing(epic.loc, s"${epic.identify} is missing a user story")
+      messages.addMissing(epic.errorLoc, s"${epic.identify} is missing a user story")
     }
-    checkDescriptives(epic)
+    checkMetadata(epic)
   }
 
   private def validateApplication(
@@ -654,9 +655,9 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, app)
     if app.groups.isEmpty then {
-      messages.addMissing(app.loc, s"${app.identify} should have a group")
+      messages.addMissing(app.errorLoc, s"${app.identify} should have a group")
     }
-    checkDescriptives(app)
+    checkMetadata(app)
   }
 
   private def validateGroup(
@@ -664,7 +665,7 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, grp)
-    checkDescriptives(grp)
+    checkMetadata(grp)
   }
 
   private def validateInput(
@@ -674,7 +675,7 @@ case class ValidationPass(
     val parentsSeq = parents
     checkDefinition(parentsSeq, input)
     checkTypeRef(input.takeIn, parentsSeq)
-    checkDescriptives(input)
+    checkMetadata(input)
   }
 
   private def validateOutput(
@@ -687,7 +688,7 @@ case class ValidationPass(
       case const: ConstantRef => checkRef[Constant](const, parents)
       case str: LiteralString => checkNonEmpty(str.s, "string to put out", output, Messages.Error)
     }
-    checkDescriptives(output)
+    checkMetadata(output)
   }
 
   private def validateContainedGroup(
@@ -696,7 +697,7 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, containedGroup)
     checkRef[Group](containedGroup.group, parents)
-    checkDescriptives(containedGroup)
+    checkMetadata(containedGroup)
   }
 
   private def validateUser(
@@ -710,7 +711,7 @@ case class ValidationPass(
         s"${user.identify} is missing its role kind ('is a')"
       )
     }
-    checkDescriptives(user)
+    checkMetadata(user)
   }
 
   private def validateUseCase(
@@ -773,7 +774,7 @@ case class ValidationPass(
           s"${uc.identify} doesn't define any interactions"
         )
     }
-    checkDescriptives(uc)
+    checkMetadata(uc)
   }
 
   private def validateArbitraryInteraction(
@@ -853,7 +854,7 @@ case class ValidationPass(
 
   private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
     val useCase = parents.head
-    checkDescriptives(useCase.identify, interaction)
+    checkMetadata(useCase.identify, interaction, interaction.loc)
     interaction match {
       case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)

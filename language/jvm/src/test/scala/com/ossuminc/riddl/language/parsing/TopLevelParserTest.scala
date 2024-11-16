@@ -27,12 +27,9 @@ class TopLevelParserTest extends ParsingTest {
   val url: URL = PathUtils.urlFromCwdPath(simpleDomainFile)
   val rpi: RiddlParserInput =
     Await.result(RiddlParserInput.fromURL(url), 10.seconds)
-
-  val simpleDomain: AST.Domain = Domain(
-    At(1, 1, rpi),
-    Identifier(At(1, 8, rpi), "foo")
-  )
-  val simpleDomainResults: AST.Root = Root(Contents(simpleDomain))
+  val location: At = At(1, 1, rpi)
+  val simpleDomain: AST.Domain = Domain(location, Identifier(At(1, 8, rpi), "foo"))
+  val simpleDomainResults: AST.Root = Root(location, Contents(simpleDomain))
 
   "TopLevelParser Companion" should {
     "parse RiddlParserInput" in { (_: TestData) =>
@@ -45,8 +42,7 @@ class TopLevelParserTest extends ParsingTest {
       val source = Source.fromFile(simpleDomainFile.toFile)
       try {
         val result = TopLevelParser.parseInput(rpi)
-        val expected = Root(Contents(simpleDomain))
-        result mustBe Right(expected)
+        result mustBe Right(simpleDomainResults)
       } finally { source.close() }
     }
     "parse empty String" in { (_: TestData) =>

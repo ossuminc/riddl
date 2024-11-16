@@ -16,74 +16,74 @@ private[parsing] trait EpicParser {
 
   private def vagueStep[u: P]: P[VagueInteraction] = {
     P(
-      location ~ is ~ literalString ~ literalString ~ literalString ~/ withMetaData
-    )./.map { case (loc, from, relationship, to, descriptives) =>
-      VagueInteraction(loc, from, relationship, to, descriptives.toContents)
+      Index ~ is ~ literalString ~ literalString ~ literalString ~/ withMetaData ~ Index
+    )./.map { case (start, from, relationship, to, descriptives, end) =>
+      VagueInteraction(at(start, end), from, relationship, to, descriptives.toContents)
     }
   }
 
   private def arbitraryStep[u: P]: P[ArbitraryInteraction] = {
     P(
-      location ~ Keywords.from ~/ anyInteractionRef ~
-        literalString ~ to.? ~ anyInteractionRef ~/ withMetaData
-    )./.map { case (loc, from, ls, to, descriptives) =>
-      ArbitraryInteraction(loc, from, ls, to, descriptives.toContents)
+      Index ~ Keywords.from ~/ anyInteractionRef ~
+        literalString ~ to.? ~ anyInteractionRef ~/ withMetaData ~ Index
+    )./.map { case (start, from, ls, to, descriptives, end) =>
+      ArbitraryInteraction(at(start, end), from, ls, to, descriptives.toContents)
     }
   }
 
   private def sendMessageStep[u: P]: P[SendMessageInteraction] = {
     P(
-      location ~ Keywords.send ~ messageRef ~ from ~ anyInteractionRef ~ to ~ processorRef ~/ withMetaData
-    )./.map { case (loc, message, from, to, descriptives) =>
-      SendMessageInteraction(loc, from, message, to, descriptives.toContents)
+      Index ~ Keywords.send ~ messageRef ~ from ~ anyInteractionRef ~ to ~ processorRef ~/ withMetaData ~ Index
+    )./.map { case (start, message, from, to, descriptives, end) =>
+      SendMessageInteraction(at(start, end), from, message, to, descriptives.toContents)
     }
   }
 
   private def selfProcessingStep[u: P]: P[SelfInteraction] = {
     P(
-      location ~ Keywords.`for` ~ anyInteractionRef ~ is ~ literalString ~/ withMetaData
-    )./.map { case (loc, fromTo, proc, descriptives) =>
-      SelfInteraction(loc, fromTo, proc, descriptives.toContents)
+      Index ~ Keywords.`for` ~ anyInteractionRef ~ is ~ literalString ~/ withMetaData ~ Index
+    )./.map { case (start, fromTo, proc, descriptives, end) =>
+      SelfInteraction(at(start, end), fromTo, proc, descriptives.toContents)
     }
   }
 
   private def focusOnGroupStep[u: P]: P[FocusOnGroupInteraction] = {
     P(
-      location ~ Keywords.focus ~ userRef ~ Keywords.on ~ groupRef ~/ withMetaData
-    )./.map { case (loc, userRef, groupRef, descriptives) =>
-      FocusOnGroupInteraction(loc, userRef, groupRef, descriptives.toContents)
+      Index ~ Keywords.focus ~ userRef ~ Keywords.on ~ groupRef ~/ withMetaData ~ Index
+    )./.map { case (start, userRef, groupRef, descriptives, end) =>
+      FocusOnGroupInteraction(at(start, end), userRef, groupRef, descriptives.toContents)
     }
   }
 
   private def directUserToURL[u: P]: P[DirectUserToURLInteraction] = {
     P(
-      location ~ Keywords.direct ~ userRef ~/ to ~ httpUrl ~/ withMetaData
-    )./.map { case (loc, user, url, descriptives) =>
-      DirectUserToURLInteraction(loc, user, url, descriptives.toContents)
+      Index ~ Keywords.direct ~ userRef ~/ to ~ httpUrl ~/ withMetaData ~ Index
+    )./.map { case (start, user, url, descriptives, end) =>
+      DirectUserToURLInteraction(at(start, end), user, url, descriptives.toContents)
     }
   }
 
   private def showOutputStep[u: P]: P[ShowOutputInteraction] = {
     P(
-      location ~ Keywords.show ~/ outputRef ~ to ~ userRef ~/ withMetaData
-    )./.map { case (loc, from, to, descriptives) =>
-      ShowOutputInteraction(loc, from, LiteralString.empty, to, descriptives.toContents)
+      Index ~ Keywords.show ~/ outputRef ~ to ~ userRef ~/ withMetaData ~ Index
+    )./.map { case (start, from, to, descriptives, end) =>
+      ShowOutputInteraction(at(start, end), from, LiteralString.empty, to, descriptives.toContents)
     }
   }
 
   private def takeInputStep[u: P]: P[TakeInputInteraction] = {
     P(
-      location ~ Keywords.take ~/ inputRef ~ from ~ userRef ~/ withMetaData
-    )./.map { case (loc, input, user, descriptives) =>
-      TakeInputInteraction(loc, from = user, to = input, descriptives.toContents)
+      Index ~ Keywords.take ~/ inputRef ~ from ~ userRef ~/ withMetaData ~ Index
+    )./.map { case (start, input, user, descriptives, end) =>
+      TakeInputInteraction(at(start, end), from = user, to = input, descriptives.toContents)
     }
   }
 
   private def selectInputStep[u: P]: P[SelectInputInteraction] = {
     P(
-      location ~ userRef ~ Keywords.selects ~ inputRef ~/ withMetaData
-    )./.map { case (loc, user, input, descriptives) =>
-      SelectInputInteraction(loc, from = user, to = input, descriptives.toContents)
+      Index ~ userRef ~ Keywords.selects ~ inputRef ~/ withMetaData ~ Index
+    )./.map { case (start, user, input, descriptives, end) =>
+      SelectInputInteraction(at(start, end), from = user, to = input, descriptives.toContents)
     }
   }
 
@@ -96,25 +96,25 @@ private[parsing] trait EpicParser {
 
   private def sequentialInteractions[u: P]: P[SequentialInteractions] = {
     P(
-      location ~ Keywords.sequence ~ open ~ interactions ~ close
-    )./.map { case (loc, interactions) =>
-      SequentialInteractions(loc, interactions.toContents)
+      Index ~ Keywords.sequence ~ open ~ interactions ~ close ~ Index
+    )./.map { case (start, interactions, end) =>
+      SequentialInteractions(at(start, end), interactions.toContents)
     }
   }
 
   private def optionalInteractions[u: P]: P[OptionalInteractions] = {
     P(
-      location ~ Keywords.optional ~ open ~ interactions ~ close
-    )./.map { case (loc, interactions) =>
-      OptionalInteractions(loc, interactions.toContents)
+      Index ~ Keywords.optional ~ open ~ interactions ~ close ~/ Index
+    )./.map { case (start, interactions, end) =>
+      OptionalInteractions(at(start, end), interactions.toContents)
     }
   }
 
   private def parallelInteractions[u: P]: P[ParallelInteractions] = {
     P(
-      location ~ Keywords.parallel ~ open ~ interactions ~ close
-    )./.map { case (loc, interactions) =>
-      ParallelInteractions(loc, interactions.toContents)
+      Index ~ Keywords.parallel ~ open ~ interactions ~ close ~/ Index
+    )./.map { case (start, interactions, end) =>
+      ParallelInteractions(at(start, end), interactions.toContents)
     }
   }
 
@@ -130,20 +130,19 @@ private[parsing] trait EpicParser {
 
   def useCase[u: P]: P[UseCase] = {
     P(
-      location ~ Keywords.case_ ~/ identifier ~ is ~ open ~ userStory ~
+      Index ~ Keywords.case_ ~/ identifier ~ is ~ open ~ userStory ~
         (undefined(Seq.empty[TwoReferenceInteraction]) | interactions) ~
-        close ~ withMetaData
-    ).map { case (loc, id, userStory, contents, descriptives) =>
-      UseCase(loc, id, userStory, contents.toContents, descriptives.toContents)
+        close ~ withMetaData ~/ Index
+    ).map { case (start, id, userStory, contents, descriptives, end) =>
+      UseCase(at(start, end), id, userStory, contents.toContents, descriptives.toContents)
     }
   }
 
   def userStory[u: P]: P[UserStory] = {
     P(
-      location ~ userRef ~ wants ~ to.? ~
-        literalString ~ so ~ that.? ~ literalString
-    ).map { case (loc, user, capability, benefit) =>
-      UserStory(loc, user, capability, benefit)
+      Index ~ userRef ~ wants ~ to.? ~ literalString ~ so ~ that.? ~ literalString ~ Index
+    ).map { case (start, user, capability, benefit, end) =>
+      UserStory(at(start, end), user, capability, benefit)
     }
   }
 
@@ -169,10 +168,10 @@ private[parsing] trait EpicParser {
 
   def epic[u: P]: P[Epic] = {
     P(
-      location ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ withMetaData
-    )./.map { case (loc, id, (userStory, contents), descriptives) =>
+      Index ~ Keywords.epic ~/ identifier ~ is ~ open ~ epicBody ~ close ~ withMetaData ~/ Index
+    )./.map { case (start, id, (userStory, contents), descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Epic(loc, id, userStory, contents.toContents, descriptives.toContents)
+      Epic(at(start, end), id, userStory, contents.toContents, descriptives.toContents)
     }
   }
 }
