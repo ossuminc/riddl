@@ -29,7 +29,7 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
   private val urlSeen: mutable.ListBuffer[URL] = mutable.ListBuffer[URL]()
   def getURLs: Seq[URL] = urlSeen.toSeq
 
-  def parseRule[RESULT <: RiddlValue](
+  protected def parseRule[RESULT](
     rpi: RiddlParserInput,
     rule: P[?] => P[RESULT],
     withVerboseFailures: Boolean = false

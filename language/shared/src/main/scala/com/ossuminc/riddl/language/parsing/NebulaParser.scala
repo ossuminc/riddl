@@ -31,8 +31,7 @@ private[parsing] trait NebulaParser {
         useCase | user
     ).map { (r: RiddlValue) => r.asInstanceOf[NebulaContents] }
 
-  private def nebulaContents[u: P]: P[Seq[NebulaContents]] =
-    P(nebulaContent).rep(0)
+  def nebulaContents[u: P]: P[Seq[NebulaContents]] = P(nebulaContent).rep(0)
 
   def nebula[u: P]: P[Nebula] = {
     P(Start ~ Index ~ Keywords.nebula ~ is ~ open ~ nebulaContents ~ close ~ Index ~ End).map {

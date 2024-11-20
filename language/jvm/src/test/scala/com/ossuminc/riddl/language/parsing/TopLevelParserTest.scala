@@ -77,7 +77,7 @@ class TopLevelParserTest extends ParsingTest {
     "return URLs when asked" in { (td: TestData) =>
       val url: URL = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
       val rpi: RiddlParserInput = Await.result(RiddlParserInput.fromURL(url), 10.seconds)
-      val tlp = TopLevelParser(rpi,false)
+      val tlp = TopLevelParser(rpi, false)
       tlp.parseRootWithURLs match {
         case Left((messages, _)) => fail(messages.format)
         case Right((root, urls)) =>
@@ -97,6 +97,22 @@ class TopLevelParserTest extends ParsingTest {
           messages mustNot be(empty)
           succeed
         case Right((root, urls)) => fail("Test should have yields Left")
+      }
+    }
+    "parse nebulous content" in { (td: TestData) =>
+      val rpi: RiddlParserInput = RiddlParserInput(
+        """constant bar is String = "nothing"
+          |entity foobar is { ??? }
+          |""".stripMargin,
+        td
+      )
+
+      val tlp = TopLevelParser(rpi, false)
+      tlp.parseNebulaContents match {
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(result) =>
+          result.length must be(2)
       }
     }
   }

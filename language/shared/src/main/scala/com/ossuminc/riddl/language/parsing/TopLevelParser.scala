@@ -30,7 +30,8 @@ import scala.scalajs.js.annotation.*
 case class TopLevelParser(
   input: RiddlParserInput,
   withVerboseFailures: Boolean
-)(using io: PlatformContext) extends ExtensibleTopLevelParser
+)(using io: PlatformContext)
+    extends ExtensibleTopLevelParser
 
 @JSExportTopLevel("TopLevelParser$")
 object TopLevelParser {
@@ -77,6 +78,16 @@ object TopLevelParser {
     }
   }
 
+  /** Parse a string directly
+   * 
+   * @param input
+   * The input string to parse
+   * @param withVerboseFailures
+   *   For the utility of RIDDL implementers.
+   * @return
+   *   Left(messages) -> messages indicaitng the error
+   *   Right(root) -> the resulting AST.Root from the parse
+   */
   def parseString(
     input: String,
     withVerboseFailures: Boolean = false
@@ -93,6 +104,26 @@ object TopLevelParser {
     Timer.time(s"parse nebula from ${input.origin}", io.options.showTimes) {
       val tlp = new TopLevelParser(input, withVerboseFailures)
       tlp.parseNebula
+    }
+  }
+
+  /** Parse an arbitrary (nebulous) set of definitions in any order
+   *
+   * @param input
+   * The input to parse
+   * @param withVerboseFailures
+   *   For the utility of RIDDL implementers.
+   * @return
+   *   Left(messages) -> messages indicaitng the error
+   *   Right(contents) -> the list of things that were parsed
+   */
+  def parseNebulaContents(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using io: PlatformContext): Either[Messages, Contents[NebulaContents]] = {
+    Timer.time(s"parse nebula from ${input.origin}", io.options.showTimes) {
+      val tlp = new TopLevelParser(input, withVerboseFailures)
+      tlp.parseNebulaContents
     }
   }
 }

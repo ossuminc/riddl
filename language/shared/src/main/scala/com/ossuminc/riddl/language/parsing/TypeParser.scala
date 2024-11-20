@@ -562,7 +562,7 @@ private[parsing] trait TypeParser {
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
       Index ~ aggregateUseCase ~/ identifier ~
-        (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withMetaData ~ Index
+        (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withMetaData ~/ Index
     )./.map { case (start, useCase, id, ateOrAgg, descriptives, end) =>
       val loc = at(start, end)
       ateOrAgg match {
@@ -592,7 +592,7 @@ private[parsing] trait TypeParser {
   def constant[u: P]: P[Constant] = {
     P(
       Index ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ withMetaData ~ Index
+        Punctuation.equalsSign ~ literalString ~ withMetaData ~/ Index
     ).map { case (start, id, typeEx, litStr, descriptives, end) =>
       Constant(at(start, end), id, typeEx, litStr, descriptives.toContents)
     }

@@ -43,7 +43,32 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   def input: RiddlParserInput
   def withVerboseFailures: Boolean
 
-  private def doParse[E <: Parent: ClassTag](rule: P[?] => P[E]): Either[Messages, E] = {
+  private def doContentsParse[E <: RiddlValue : ClassTag](
+    rule: P[?] => P[Seq[E]]
+  ): Either[Messages, Contents[E]] = {
+    val result = parseRule[Seq[E]](input, rule, withVerboseFailures) {
+      (result: Either[Messages, Seq[E]], input: RiddlParserInput, index: Int) =>
+        result match {
+          case l: Left[Messages, Seq[E]] => l
+          case result @ Right(node: Seq[E]) =>
+            if node.isEmpty then
+              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
+            end if
+            result
+          case _ @Right(wrongNode) =>
+            val expected = classTag[E].runtimeClass
+            val actual = wrongNode.getClass
+            error(At(input, index), s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}")
+            Left(this.messagesAsList)
+        }
+    }
+    result match
+      case l@ Left(messages) => Left(messages) 
+      case Right(contents) => Right(contents.toContents)
+    end match  
+  }
+  
+  private def doParse[E <: Parent : ClassTag](rule: P[?] => P[E]): Either[Messages, E] = {
     parseRule[E](input, rule, withVerboseFailures) {
       (result: Either[Messages, E], input: RiddlParserInput, index: Int) =>
         result match {
@@ -65,6 +90,10 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     doParse[Root](root(_)) 
 
   def parseNebula: Either[Messages, Nebula] = doParse[Nebula](nebula(_))
+
+  def parseNebulaContents: Either[Messages, Contents[NebulaContents]] = {
+    doContentsParse[NebulaContents](nebulaContents(_))
+  }
 
   def parseRootWithURLs: Either[(Messages, Seq[URL]), (Root, Seq[URL])] = {
     doParse[Root](root(_)) match {
