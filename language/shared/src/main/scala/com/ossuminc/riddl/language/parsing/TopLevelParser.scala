@@ -117,6 +117,15 @@ object TopLevelParser {
     }
   }
 
+  /** Parse the input to a list of tokens. This is aimed to making highlighting
+   * in editors quick and simple. The input is not validate for syntactic 
+   * correctness and likely succeeds on most input.
+   * @param input
+   * The input to be parsed
+   * @param withVerboseFailures
+   * Set to true to debug parsing failures. Probably of interest only to
+   * the implementors. The default, false, causes no functional difference.
+   */
   def parseToTokens(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
