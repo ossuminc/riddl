@@ -49,27 +49,69 @@ trait Readability {
   def wants[u: P]: P[Unit] = keyword("wants")
 
   def `with`[u: P]: P[Unit] = keyword("with")
+
+  def anyReadability[u: P]: P[Unit] = {
+    P(
+      StringIn(
+        ReadabilityWords.and,
+        ReadabilityWords.are,
+        ReadabilityWords.as,
+        ReadabilityWords.at,
+        ReadabilityWords.by,
+        ReadabilityWords.colon,
+        ReadabilityWords.equals,
+        ReadabilityWords.`for`,
+        ReadabilityWords.from,
+        ReadabilityWords.in,
+        ReadabilityWords.is,
+        ReadabilityWords.of,
+        ReadabilityWords.so,
+        ReadabilityWords.that,
+        ReadabilityWords.to,
+        ReadabilityWords.wants,
+        ReadabilityWords.with_
+      )
+    )
+  }
 }
 
-object Readability {
+object ReadabilityWords {
+  final val and = "and"
+  final val are = "are"
+  final val as = "as"
+  final val at = "at"
+  final val by = "by"
+  final val `for` = "for"
+  final val from = "from"
+  final val in = "in"
+  final val is = "is"
+  final val colon = ":"
+  final val equals = "="
+  final val of = "of"
+  final val so = "so"
+  final val that = "that"
+  final val to = "to"
+  final val wants = "wants"
+  final val with_ = "with"
+
+  // NOTE: Keep this list in synch with the list in TokenStreamParser
   def allReadability: Seq[String] = Seq(
-    "and",
-    "are",
-    "as",
-    "at",
-    "by",
-    "for",
-    "from",
-    "in",
-    "is",
-    "are",
-    ":",
-    "=",
-    "of",
-    "so",
-    "that",
-    "to",
-    "wants",
-    "with"
+    and,
+    are,
+    as,
+    at,
+    by,
+    `for`,
+    from,
+    in,
+    is,
+    colon,
+    equals,
+    of,
+    so,
+    that,
+    to,
+    wants,
+    with_
   )
 }

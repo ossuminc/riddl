@@ -29,7 +29,7 @@ object PredefTypes {
     StringIn(PredefType.Boolean, PredefType.Integer, PredefType.Whole, PredefType.Natural).!
   )
 
-  def timeTypes[u:P]: P[String] = keywords(
+  def timeTypes[u: P]: P[String] = keywords(
     StringIn(
       PredefType.Duration,
       PredefType.DateTime,
@@ -39,7 +39,7 @@ object PredefTypes {
     ).!
   )
 
-  def otherTypes[u:P]: P[String] = keywords(
+  def otherTypes[u: P]: P[String] = keywords(
     StringIn(
       // order matters in this list, because of common prefixes
       PredefType.Abstract,
@@ -82,6 +82,11 @@ object PredefTypes {
   def UserId[u: P]: P[Unit] = keyword("UserId")
   def UUID[u: P]: P[Unit] = keyword("UUID")
   def Whole[u: P]: P[Unit] = keyword("Whole")
+
+  def anyPredefType[u:P]: P[Unit] =
+    P(realTypes | integerTypes | timeTypes | otherTypes | Abstract | Boolean | Current | Currency | Date | DateTime |
+      Decimal | Duration | Id | Integer | Location | Length | Luminosity | Mass | Mole | Nothing | Natural | Number |
+      Pattern | Range | Real | String_ | Temperature | Time | TimeStamp | Unknown | URL | UserId | UUID | Whole)
 }
 
 object PredefType {
@@ -117,4 +122,40 @@ object PredefType {
   final val UUID = "UUID"
   final val Whole = "Whole"
   final val ZonedDateTime = "ZonedDateTime"
+
+  // NOTE: Keep this list in synch with the one in TokenStreamParser
+  final val allPredefTypes: Seq[String] = Seq(
+    Abstract,
+    Blob,
+    Boolean,
+    Current,
+    Currency,
+    Date,
+    DateTime,
+    Decimal,
+    Duration,
+    Id,
+    Integer,
+    Location,
+    Length,
+    Luminosity,
+    Mass,
+    Mole,
+    Nothing,
+    Natural,
+    Number,
+    Pattern,
+    Range,
+    Real,
+    String,
+    Temperature,
+    Time,
+    TimeStamp,
+    Unknown,
+    URI,
+    UserId,
+    UUID,
+    Whole,
+    ZonedDateTime
+  )
 }

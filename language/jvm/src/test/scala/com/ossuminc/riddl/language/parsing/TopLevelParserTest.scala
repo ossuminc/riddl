@@ -35,9 +35,22 @@ class TopLevelParserTest extends ParsingTest {
     "parse RiddlParserInput" in { (_: TestData) =>
       TopLevelParser.parseInput(rpi) mustBe Right(simpleDomainResults)
     }
+
+    "parse from a URL" in { (_: TestData) =>
+      val url: URL = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val future = TopLevelParser.parseURL(url)
+      Await.result(future, 10.seconds) match
+        case Right(r: Root) =>
+          r.domains.head.id.value must be("Everything")
+        case Left(messages: Messages) =>
+          fail(messages.format)
+      end match
+    }
+
     "parse File" in { (_: TestData) =>
       TopLevelParser.parseInput(rpi) mustBe Right(simpleDomainResults)
     }
+
     "parse String" in { (_: TestData) =>
       val source = Source.fromFile(simpleDomainFile.toFile)
       try {
@@ -45,6 +58,7 @@ class TopLevelParserTest extends ParsingTest {
         result mustBe Right(simpleDomainResults)
       } finally { source.close() }
     }
+
     "parse empty String" in { (_: TestData) =>
       val parser = StringParser("")
       parser.parseRoot match {
@@ -88,6 +102,7 @@ class TopLevelParserTest extends ParsingTest {
           paths must contain("language/jvm/src/test/input/everything_full.riddl")
       }
     }
+
     "return URLs on failure" in { (td: TestData) =>
       val rpi: RiddlParserInput = RiddlParserInput("some source that ain't riddl", td)
       val tlp = TopLevelParser(rpi, false)

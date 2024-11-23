@@ -79,14 +79,15 @@ object TopLevelParser {
   }
 
   /** Parse a string directly
-    *
-    * @param input
-    *   The input string to parse
-    * @param withVerboseFailures
-    *   For the utility of RIDDL implementers.
-    * @return
-    *   Left(messages) -> messages indicaitng the error Right(root) -> the resulting AST.Root from the parse
-    */
+   *
+   * @param input
+   * The input string to parse
+   * @param withVerboseFailures
+   *   For the utility of RIDDL implementers.
+   * @return
+   *   Left(messages) -> messages indicaitng the error
+   *   Right(root) -> the resulting AST.Root from the parse
+   */
   def parseString(
     input: String,
     withVerboseFailures: Boolean = false
@@ -114,5 +115,13 @@ object TopLevelParser {
       val tlp = new TopLevelParser(input, withVerboseFailures)
       tlp.parseNebula
     }
+  }
+
+  def parseToTokens(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using io: PlatformContext): Either[Messages, List[Token]] = {
+    val tlp = new TopLevelParser(input, withVerboseFailures)
+    tlp.parseTokens
   }
 }

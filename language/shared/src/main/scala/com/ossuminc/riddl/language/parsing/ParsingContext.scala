@@ -29,6 +29,26 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
   private val urlSeen: mutable.ListBuffer[URL] = mutable.ListBuffer[URL]()
   def getURLs: Seq[URL] = urlSeen.toSeq
 
+  protected def parse[RESULT](
+    rpi: RiddlParserInput,
+    rule: P[?] => P[RESULT],
+    withVerboseFailures: Boolean = false
+  ): Either[(Messages,Int), (RESULT,Int)] = {
+    try {
+      fastparse.parse[RESULT](rpi, rule, withVerboseFailures) match {
+        case fastparse.Parsed.Success(list, index) =>
+          if messagesNonEmpty then Left(messagesAsList -> index) else Right(list -> index)
+        case failure: fastparse.Parsed.Failure =>
+          makeParseFailureError(failure, rpi)
+          Left(messagesAsList -> failure.index)
+      }
+    } catch {
+      case scala.util.control.NonFatal(exception) =>
+        makeParseFailureError(exception, At.empty)
+        Left(messagesAsList -> 0)
+    }
+  }
+
   protected def parseRule[RESULT](
     rpi: RiddlParserInput,
     rule: P[?] => P[RESULT],
@@ -42,21 +62,12 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
       result
     }
   ): Either[Messages, RESULT] = {
-    try {
-      fastparse.parse[RESULT](rpi, rule(_), withVerboseFailures) match {
-        case Success(root, index) =>
-          if messagesNonEmpty then validate(Left(messagesAsList), rpi, index)
-          else validate(Right(root), rpi, index)
-          end if
-        case failure: Failure =>
-          makeParseFailureError(failure, rpi)
-          validate(Left(messagesAsList), rpi, 0)
-      }
-    } catch {
-      case NonFatal(exception) =>
-        makeParseFailureError(exception, At.empty)
-        validate(Left(messagesAsList), rpi, 0)
-    }
+    parse[RESULT](rpi, rule(_), withVerboseFailures) match
+      case Right((root, index)) =>
+        validate(Right(root), rpi, index)
+      case Left((messages, index)) =>
+        validate(Left(messagesAsList), rpi, index)
+    end match    
   }
 
   def at(offset1: Int, offset2: Int)(implicit context: P[?]): At = {

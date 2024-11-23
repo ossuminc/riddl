@@ -5,6 +5,7 @@
  */
 
 package com.ossuminc.riddl.language.parsing
+import fastparse.*
 
 object Punctuation {
   final val asterisk = "*"
@@ -25,6 +26,7 @@ object Punctuation {
   final val undefinedMark = "???"
   final val verticalBar = "|"
 
+  // NOTE: Keep this link in synch with the list in TokenStreamParser
   def allPunctuation: Seq[String] = Seq(
     asterisk,
     atSign,
@@ -44,4 +46,28 @@ object Punctuation {
     undefinedMark,
     verticalBar
   )
+
+  def anyPunctuation[u: P]: P[Unit] = {
+    P(
+      StringIn(
+        asterisk,
+        atSign,
+        comma,
+        colon,
+        curlyOpen,
+        curlyClose,
+        dot,
+        equalsSign,
+        plus,
+        question,
+        quote,
+        roundOpen,
+        roundClose,
+        squareOpen,
+        squareClose,
+        undefinedMark,
+        verticalBar
+      )
+    )
+  }
 }
