@@ -102,17 +102,32 @@ class TopLevelParserTest extends ParsingTest {
     "parse nebulous content" in { (td: TestData) =>
       val rpi: RiddlParserInput = RiddlParserInput(
         """constant bar is String = "nothing"
+          |type foo is Integer
           |entity foobar is { ??? }
           |""".stripMargin,
         td
       )
 
       val tlp = TopLevelParser(rpi, false)
-      tlp.parseNebulaContents match {
-        case Left(messages) =>
-          fail(messages.format)
-        case Right(result) =>
-          result.length must be(2)
+      tlp.parseNebula match {
+        case Left(messages) => fail(messages.format)
+        case Right(result)  => result.contents.length must be(3)
+      }
+    }
+
+    "parse nebulous content with urls" in { (td: TestData) =>
+      val rpi: RiddlParserInput = RiddlParserInput(
+        """constant bar is String = "nothing"
+          |type foo is Integer
+          |entity foobar is { ??? }
+          |""".stripMargin,
+        td
+      )
+
+      val tlp = TopLevelParser(rpi, false)
+      tlp.parseNebula match {
+        case Left(messages) => fail(messages.format)
+        case Right(result)  => result.contents.length must be(3)
       }
     }
   }

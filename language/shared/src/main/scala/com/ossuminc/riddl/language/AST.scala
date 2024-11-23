@@ -839,11 +839,8 @@ object AST:
   /** Type of definitions that occur in a block of [[Statement]] */
   type Statements = Statement | Comment
 
-  type NebulaContents = Adaptor | Application | Author | Connector | Constant | ContainedGroup | Context | Domain |
-    Entity | Enumerator | Epic | Field | Function | Group | Handler | Inlet | Input | Invariant | Method | Module |
-    OnClause | OnInitializationClause | OnTerminationClause | OnMessageClause | OnOtherClause | Outlet | Output |
-    Projector | Relationship | Repository | Root | Saga | SagaStep | Schema | State | Streamlet | Term | Type |
-    UseCase | User
+  type NebulaContents = Adaptor | Author | Connector | Constant | Context | Domain | Entity | Epic | Function |
+    Invariant | Module | Projector | Relationship | Repository | Saga | Streamlet | Type | User
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
   //////// The Abstract classes for defining Definitions by using the foregoing traits
