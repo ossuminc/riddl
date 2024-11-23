@@ -68,7 +68,7 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
 
-  private def markdownLines[u: P]: P[Seq[LiteralString]] = {
+  def markdownLines[u: P]: P[Seq[LiteralString]] = {
     P(markdownLine.rep(1))
   }
 
@@ -228,12 +228,12 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   private def portNum[u: P]: P[String] = {
     P(Index ~~ CharsWhileIn("0-9").rep(min = 1, max = 5).! ~~ Index).map { (i1, numStr: String, i2) =>
       val num = numStr.toInt
-      if num > 0 && num < 65535 then 
+      if num > 0 && num < 65535 then
         numStr
       else
         error(at(i1,i2), s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
         "0"
-      end if  
+      end if
     }
   }
 

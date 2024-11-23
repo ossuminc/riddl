@@ -3959,6 +3959,22 @@ object AST:
     override def format: String = s"domain ${pathId.format}"
   }
 
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////// TOKENS
+  sealed trait Token {
+    def at: At
+  }
+
+  case class PunctuationTKN(at: At) extends Token
+  case class QuotedStringTKN(at: At) extends Token
+  case class ReadabilityTKN(at: At) extends Token
+  case class PredefinedTKN(at: At) extends Token
+  case class KeywordTKN(at: At) extends Token
+  case class CommentTKN(at: At) extends Token
+  case class LiteralStringTKN(at: At) extends Token
+  case class MarkdownLinesTKN(at: At) extends Token
+  case class IdentifierTKN(at: At) extends Token
+  case class OtherTKN(at: At) extends Token
+
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
   /** Find the authors for some definition
