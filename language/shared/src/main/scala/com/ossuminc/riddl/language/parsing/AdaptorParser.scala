@@ -13,10 +13,7 @@ import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.utils.PlatformContext
 
 /** Parser rules for Adaptors */
-private[parsing] trait AdaptorParser(using io: PlatformContext) {
-  this: ProcessorParser =>
-
-  import scala.concurrent.Future
+private[parsing] trait AdaptorParser(using PlatformContext) { this: ProcessorParser =>
 
   private def adaptorInclude[u: P]: P[Include[AdaptorContents]] = {
     include[u, AdaptorContents](adaptorContents(_))

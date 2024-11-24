@@ -1,9 +1,9 @@
 domain foo {
-  application one is {
+  context one is {
     page top { ??? }
     page middle {
       input empty acquires String is { ??? }
     }
   }
-  application two is { ??? }
+  context two is { ??? }
 }

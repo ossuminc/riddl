@@ -47,15 +47,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
         case Right((domain, _)) => domain mustBe empty
       }
     }
-
-    "parseTopLevelDomain[Application]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { application X is { ??? } }", td)
-      parseTopLevelDomain[Application](input, _.domains.head.applications.head) match {
-        case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe "X"
-      }
-    }
-
+    
     "parseTopLevelDomain[Epic]" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
