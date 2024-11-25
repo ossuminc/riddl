@@ -161,7 +161,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
     }
 
     "allow includes" in { (td: TestData) =>
-      val name = "language/jvm/src/test/input/context/context-with-include.riddl"
+      val name = "language/jvm/src/test/input/referent/referent-with-include.riddl"
       val path = Path.of(name)
       val url = PathUtils.urlFromCwdPath(path)
       val future = RiddlParserInput.fromURL(url).map { rpi =>

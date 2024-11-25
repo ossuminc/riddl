@@ -125,7 +125,7 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right((content, _)) => 
+      case Right((content, _)) =>
         content mustBe expected
     }
   }
@@ -149,7 +149,7 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
     input: RiddlParserInput,
     extract: Context => TO
   ): Either[Messages, (TO, RiddlParserInput)] = {
-    val rpi = RiddlParserInput(s"context foo is {\n${input.data}\n}", "parseInContext")
+    val rpi = RiddlParserInput(s"referent foo is {\n${input.data}\n}", "parseInContext")
     val tp = TestParser(rpi)
     tp.parseContextDefinition[TO](extract)
   }

@@ -102,7 +102,7 @@ class ASTTest extends AbstractTestingBasis {
     At.empty,
     Identifier(At.empty, "adaptor"),
     InboundAdaptor(At.empty),
-    ContextRef(At.empty, PathIdentifier(At.empty, Seq("a", "b", "context")))
+    ContextRef(At.empty, PathIdentifier(At.empty, Seq("a", "b", "referent")))
   )
   val authorRef: AuthorRef =
     AuthorRef(At.empty, PathIdentifier(At.empty, Seq("a", "b", "c")))
@@ -205,7 +205,7 @@ class ASTTest extends AbstractTestingBasis {
       adaptor.loc mustBe At.empty
       adaptor.id.value mustBe "adaptor"
       adaptor.direction mustBe InboundAdaptor(At.empty)
-      adaptor.context.pathId.value mustBe Seq("a", "b", "context")
+      adaptor.referent.pathId.value mustBe Seq("a", "b", "referent")
     }
   }
   "Author" should {

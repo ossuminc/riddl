@@ -61,7 +61,7 @@ trait StreamingValidation extends TypeValidation {
             if outletIsSameContext && inletIsSameContext then {
               val message =
                 s"The persistence option on ${connector.identify} is not needed " +
-                  s"since both ends of the connector connect within the same context"
+                  s"since both ends of the connector connect within the same referent"
               val option = connector.options.find(_.name == "persistent").get
               messages.addWarning(option.loc, message)
             }
@@ -70,7 +70,7 @@ trait StreamingValidation extends TypeValidation {
               val message =
                 s"The persistence option on ${connector.identify} should be " +
                   s"specified because an end of the connector is not connected " +
-                  s"within the same context"
+                  s"within the same referent"
               messages.addWarning(connector.errorLoc, message)
             }
           }

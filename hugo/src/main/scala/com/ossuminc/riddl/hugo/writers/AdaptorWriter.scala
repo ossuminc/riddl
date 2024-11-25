@@ -13,7 +13,7 @@ trait AdaptorWriter { this: MarkdownWriter =>
   def emitAdaptor(adaptor: Adaptor, parents: Parents): Unit = {
     containerHead(adaptor)
     emitVitalDefinitionDetails(adaptor, parents)
-    h2(s"Direction: ${adaptor.direction.format} ${adaptor.context.format}")
+    h2(s"Direction: ${adaptor.direction.format} ${adaptor.referent.format}")
     emitProcessorDetails[AdaptorContents](adaptor, parents)
   }
 }

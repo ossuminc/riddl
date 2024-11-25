@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-/** SagaParser Implements the parsing of saga definitions in context definitions.
+/** SagaParser Implements the parsing of saga definitions in referent definitions.
   */
 private[parsing] trait SagaParser {
   this: ProcessorParser & FunctionParser & StreamingParser & StatementParser =>

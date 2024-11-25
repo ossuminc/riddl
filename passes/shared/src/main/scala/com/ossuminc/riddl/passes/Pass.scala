@@ -378,7 +378,6 @@ trait PassVisitor:
   def openProjector(projector: Projector, parents: Parents): Unit
   def openHandler(handler: Handler, parents: Parents): Unit
   def openOnClause(onClause: OnClause, parents: Parents): Unit
-  def openApplication(application: Application, parents: Parents): Unit
   def openGroup(group: Group, parents: Parents): Unit
   def openOutput(output: Output, parents: Parents): Unit
   def openInput(input: Input, parents: Parents): Unit
@@ -399,7 +398,6 @@ trait PassVisitor:
   def closeProjector(projector: Projector, parents: Parents): Unit
   def closeHandler(handler: Handler, parents: Parents): Unit
   def closeOnClause(onClause: OnClause, parents: Parents): Unit
-  def closeApplication(application: Application, parents: Parents): Unit
   def closeGroup(group: Group, parents: Parents): Unit
   def closeOutput(output: Output, parents: Parents): Unit
   def closeInput(input: Input, parents: Parents): Unit
@@ -460,7 +458,6 @@ abstract class VisitingPass[VT <: PassVisitor](
       case projector: Projector     => visitor.openProjector(projector, parents)
       case handler: Handler         => visitor.openHandler(handler, parents)
       case onClause: OnClause       => visitor.openOnClause(onClause, parents)
-      case application: Application => visitor.openApplication(application, parents)
       case group: Group             => visitor.openGroup(group, parents)
       case output: Output           => visitor.openOutput(output, parents)
       case input: Input             => visitor.openInput(input, parents)
@@ -489,7 +486,6 @@ abstract class VisitingPass[VT <: PassVisitor](
       case projector: Projector     => visitor.closeProjector(projector, parents)
       case handler: Handler         => visitor.closeHandler(handler, parents)
       case onClause: OnClause       => visitor.closeOnClause(onClause, parents)
-      case application: Application => visitor.closeApplication(application, parents)
       case group: Group             => visitor.closeGroup(group, parents)
       case output: Output           => visitor.closeOutput(output, parents)
       case input: Input             => visitor.closeInput(input, parents)

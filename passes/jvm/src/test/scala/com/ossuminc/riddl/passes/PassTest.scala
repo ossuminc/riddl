@@ -168,7 +168,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
     "traverses partial trees" in { td =>
       val input = RiddlParserInput(
         """domain foo is {
-          |  context bar is {
+          |  referent bar is {
           |   /* comment */
           |  } with { term baz is "a character in a play" }
           |}

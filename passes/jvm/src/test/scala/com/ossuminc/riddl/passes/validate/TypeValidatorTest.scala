@@ -102,7 +102,7 @@ class TypeValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """
           |domain foo is {
-          |context TypeTest is { ??? }
+          |referent TypeTest is { ??? }
           |type Order is Id(TypeTest)
           |}
           |""".stripMargin,

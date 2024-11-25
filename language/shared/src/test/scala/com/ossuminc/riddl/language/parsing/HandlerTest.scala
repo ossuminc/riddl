@@ -16,7 +16,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
   "Handlers" should {
     "be allowed in contexts" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """context Foo is {
+        """referent Foo is {
           |  type DoFoo is command { flux: Integer }
           |  type FooDone is event { flux: Integer }
           |  handler FooHandler is {
@@ -49,7 +49,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
     "only one syntax error" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
-          |context Members is {
+          |referent Members is {
           |
           |    type RegisterMember is command {}
           |    type MemberRegistered is event {}
@@ -135,7 +135,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
     }
     "handle statements" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """context Contextual is {
+        """referent Contextual is {
           |  sink foo is {
           |    inlet incoming is event ItemPreInducted
           |  }

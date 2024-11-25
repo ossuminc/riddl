@@ -759,6 +759,8 @@ object AST:
   /** Type of definitions that occur in an [[Output]] */
   type OccursInOutput = Output | TypeRef
 
+  type GroupRelated = Group | Input | Output
+
   /** Type of definitions that occur in an [[Entity]] without [[Include]] */
   private type OccursInEntity = OccursInProcessor | State
 
@@ -911,7 +913,7 @@ object AST:
   end DefinitionStack
 
   /** The kind of thing that can be returned by PathId Resolution Pass optionally providing the referent and its
-    * Parental context, or None
+    * Parental referent, or None
     */
   type Resolution[T <: Definition] = Option[(T, Parents)]
 
@@ -2513,7 +2515,7 @@ object AST:
     def loc: At
   end AdaptorDirection
 
-  /** Represents an [[AdaptorDirection]] that is inbound (towards the bounded context the [[Adaptor]] was defined in)
+  /** Represents an [[AdaptorDirection]] that is inbound (towards the bounded referent the [[Adaptor]] was defined in)
     *
     * @param loc
     *   Location in the source of the adaptor direction
@@ -2523,7 +2525,7 @@ object AST:
     def format: String = "from"
   end InboundAdaptor
 
-  /** Represents an [[AdaptorDirection]] that is outbouand (towards a bounded context that is not the one that defined
+  /** Represents an [[AdaptorDirection]] that is outbouand (towards a bounded referent that is not the one that defined
     * the [[Adaptor]]
     */
   @JSExportTopLevel("OutboundAdaptor")
@@ -2531,9 +2533,9 @@ object AST:
     def format: String = "to"
   end OutboundAdaptor
 
-  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
+  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded referent.
     * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
-    * bounded context. There should be one Adapter for each external Context
+    * bounded referent. There should be one Adapter for each external Context
     *
     * @param loc
     *   Location in the parsing input
@@ -2541,8 +2543,8 @@ object AST:
     *   Name of the adaptor
     * @param direction
     *   An indication of whether this is an inbound or outbound adaptor.
-    * @param context
-    *   A reference to the bounded context from which messages are adapted
+    * @param referent
+    *   A reference to the bounded referent from which messages are adapted
     * @param contents
     *   The definitional contents of this Adaptor
     * @param metadata
@@ -2553,7 +2555,7 @@ object AST:
     loc: At,
     id: Identifier,
     direction: AdaptorDirection,
-    context: ContextRef | GroupRef,
+    referent: ContextRef | GroupRef,
     contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[AdaptorContents]
@@ -2568,7 +2570,7 @@ object AST:
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTION
 
-  /** A function definition which can be part of a bounded context or an entity.
+  /** A function definition which can be part of a bounded referent or an entity.
     *
     * @param loc
     *   The location of the function definition
@@ -2942,7 +2944,7 @@ object AST:
     def format: String = Keyword.projector + " " + id.format
   }
 
-  /** A reference to an context's projector definition
+  /** A reference to an referent's projector definition
     *
     * @param loc
     *   The location of the state reference
@@ -2956,15 +2958,15 @@ object AST:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
 
-  /** A bounded context definition. Bounded contexts provide a definitional boundary on the language used to describe some
+  /** A bounded referent definition. Bounded contexts provide a definitional boundary on the language used to describe some
     * aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a common
     * purpose. Context can be used to house entities, read side projectors, sagas, adaptations to other contexts, apis,
     * and etc.
     *
     * @param loc
-    *   The location of the bounded context definition
+    *   The location of the bounded referent definition
     * @param id
-    *   The name of the context
+    *   The name of the referent
     * @param contents
     *   The definitional content for this Context
     */
@@ -2991,16 +2993,16 @@ object AST:
     lazy val empty: Context = Context(At.empty, Identifier.empty)
   }
 
-  /** A reference to a bounded context
+  /** A reference to a bounded referent
     *
     * @param loc
     *   The location of the reference
     * @param pathId
-    *   The path identifier for the referenced context
+    *   The path identifier for the referenced referent
     */
   @JSExportTopLevel("ContextRef")
   case class ContextRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Context] {
-    override def format: String = s"context ${pathId.format}"
+    override def format: String = s"referent ${pathId.format}"
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// STREAMLET
@@ -3203,7 +3205,7 @@ object AST:
 
   }
 
-  /** A reference to an context's projector definition
+  /** A reference to an referent's projector definition
     *
     * @param loc
     *   The location of the state reference
@@ -4000,7 +4002,7 @@ object AST:
     domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
   }
 
-  /** get all the entities defined in a context even if they are in includes of that domain
+  /** get all the entities defined in a referent even if they are in includes of that domain
     *
     * @param context
     *   The domain to examine for entities

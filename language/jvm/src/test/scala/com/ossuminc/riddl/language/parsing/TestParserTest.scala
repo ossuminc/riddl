@@ -102,7 +102,7 @@ class TestParserTest extends ParsingTest {
       }
     }
     "provide parseContextDefinition(extractor)" in { (td: TestData) =>
-      val raw = """context foo is { type x is Integer }"""
+      val raw = """referent foo is { type x is Integer }"""
       val input = RiddlParserInput(raw, td)
       val tp = TestParser(input)
       tp.parseContextDefinition[Type](_.types.head) match {

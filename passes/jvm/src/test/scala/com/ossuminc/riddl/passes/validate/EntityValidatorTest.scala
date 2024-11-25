@@ -111,7 +111,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """
           |domain foo is {
-          |context bar is {
+          |referent bar is {
           |  entity Hamburger  is {
           |    option aggregate option transient
           |    record fields is { field: SomeType }
@@ -136,7 +136,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
     "produce correct field references" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
-          |context bar is {
+          |referent bar is {
           |  type DoIt = command { ??? }
           |  event Message is { a: Integer }
           |

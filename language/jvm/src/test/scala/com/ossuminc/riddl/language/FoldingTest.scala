@@ -17,7 +17,7 @@ class FoldingTest extends AbstractParsingTest {
 
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
-      |  context one is {
+      |  referent one is {
       |    connector a is from outlet foo to inlet bar
       |    flow b is {
       |      inlet b_in is String
@@ -27,7 +27,7 @@ class FoldingTest extends AbstractParsingTest {
       |    term whomprat is { "a 2m long rat on Tatooine" }
       |  }
       |  // foo
-      |  context two is {
+      |  referent two is {
       |    function foo is {
       |       requires { a: Integer, b: String }
       |       returns { ??? }
@@ -46,7 +46,7 @@ class FoldingTest extends AbstractParsingTest {
       |      function one is { ??? }
       |      invariant one is ???
       |    }
-      |    adaptor one to context over.consumption is { ??? }
+      |    adaptor one to referent over.consumption is { ??? }
       |  } with {
       |    term ForcePush is { "an ability of the Jedi" }
       |  }

@@ -637,7 +637,7 @@ object Keyword {
   final val constant = "constant"
   final val container = "container"
   final val contains = "contains"
-  final val context = "context"
+  final val context = "referent"
   final val create = "create"
   final val described = "described"
   final val description = "description"

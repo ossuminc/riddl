@@ -24,7 +24,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
         """domain uno {
         | type Typ1 = Integer
         | type Typ2 = Real
-        | context a {
+        | referent a {
         |  flow foo is {
         |   inlet in is type uno.Typ1
         |   outlet out is type uno.Typ2
@@ -51,7 +51,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain solo {
           | type T = Integer
-          | context a {
+          | referent a {
           |  merge confluence is {
           |    inlet one is type T
           |    inlet two is type T
@@ -77,7 +77,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain solo {
           | type T = Integer
-          | context a is {
+          | referent a is {
           |  source from is {
           |    outlet out is type T
           |  }
@@ -99,13 +99,13 @@ class StreamValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain uno {
           | type T = Integer
-          | context a {
+          | referent a {
           |  source from is { outlet out is type T }
           |  connector c1 {
           |    from outlet a.from.out to inlet uno.b.to.in
           |  }
           | }
-          | context b {
+          | referent b {
           |   sink to  is { inlet in is type T }
           | }
           |} """.stripMargin,
@@ -127,7 +127,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
         val input = RiddlParserInput(
           """domain uno {
             | type T = Integer
-            | context a {
+            | referent a {
             |  flow through is {
             |    inlet in is type T
             |    outlet out is type T
@@ -154,7 +154,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
       }
     }
 
-    def pid(name: String): PathIdentifier = PathIdentifier(At(), Seq("domain", "context", name))
+    def pid(name: String): PathIdentifier = PathIdentifier(At(), Seq("domain", "referent", name))
 
     def inlet(name: String, pidName: String): Inlet =
       Inlet(At(), Identifier(At(), name), TypeRef(At(), "type", pid(pidName)))
@@ -172,7 +172,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
             Contents(
               Context(
                 At(),
-                Identifier(At(), "context"),
+                Identifier(At(), "referent"),
                 Contents(
                   Type(At(), Identifier(At(), "Int"), Integer(At()))
                 ) ++ streamlets

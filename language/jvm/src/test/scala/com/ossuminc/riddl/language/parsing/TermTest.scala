@@ -17,7 +17,7 @@ class TermTest extends ParsingTest {
     "be accepted in domain" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {
-          |  context bar is {
+          |  referent bar is {
           |    entity foo is { ??? }
           |  }
           |} with {

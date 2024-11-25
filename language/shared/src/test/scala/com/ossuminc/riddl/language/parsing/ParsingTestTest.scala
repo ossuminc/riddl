@@ -47,7 +47,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
         case Right((domain, _)) => domain mustBe empty
       }
     }
-    
+
     "parseTopLevelDomain[Epic]" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
@@ -73,7 +73,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Context]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context X is { ??? } }", td)
+      val input = RiddlParserInput("domain foo is { referent X is { ??? } }", td)
       parseTopLevelDomain[Context](input, _.domains.head.contexts.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -81,7 +81,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Entity]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context C is { entity X is { ??? } } }", td)
+      val input = RiddlParserInput("domain foo is { referent C is { entity X is { ??? } } }", td)
       parseTopLevelDomain[Entity](input, _.domains.head.contexts.head.entities.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -89,7 +89,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Adaptor]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context C is { adaptor X to context C is { ??? } } }", td)
+      val input = RiddlParserInput("domain foo is { referent C is { adaptor X to referent C is { ??? } } }", td)
       parseTopLevelDomain[Adaptor](input, _.domains.head.contexts.head.adaptors.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -97,7 +97,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Function]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context C is { function X is { ??? } } }", td)
+      val input = RiddlParserInput("domain foo is { referent C is { function X is { ??? } } }", td)
       parseTopLevelDomain[Function](input, _.domains.head.contexts.head.functions.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -105,7 +105,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Saga]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context C is { saga X is { ??? } } }", td)
+      val input = RiddlParserInput("domain foo is { referent C is { saga X is { ??? } } }", td)
       parseTopLevelDomain[Saga](input, _.domains.head.contexts.head.sagas.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((typ, _)) => typ.id.value mustBe "X"
@@ -113,7 +113,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Processor]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context C is { source X is { ??? } } }", td)
+      val input = RiddlParserInput("domain foo is { referent C is { source X is { ??? } } }", td)
       parseTopLevelDomain[Streamlet](input, _.domains.head.contexts.head.streamlets.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((src, _)) => src.id.value mustBe "X"
@@ -121,7 +121,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
 
     "parseTopLevelDomain[Projector]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { context C is { projector X is { ??? } } }", td)
+      val input = RiddlParserInput("domain foo is { referent C is { projector X is { ??? } } }", td)
       parseTopLevelDomain[Projector](input, _.domains.head.contexts.head.projectors.head) match {
         case Left(messages)  => fail(messages.format)
         case Right((src, _)) => src.id.value mustBe "X"
@@ -171,7 +171,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
     "parseInContext[Term]" in { (td: TestData) =>
       val input = RiddlParserInput(
-        "context foo { ??? } with { term X is \"foo\" with { briefly as \"X\" } }",
+        "referent foo { ??? } with { term X is \"foo\" with { briefly as \"X\" } }",
         td
       )
       parseContextDefinition(input, identity) match {

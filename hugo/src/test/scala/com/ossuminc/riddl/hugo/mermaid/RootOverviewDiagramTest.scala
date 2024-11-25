@@ -21,7 +21,7 @@ class RootOverviewDiagramTest extends AbstractRunPassTest {
 
   "RootOverviewDiagram" should {
     "generate a simple diagram correctly" in { (td:TestData) =>
-      val url = URL.fromCwdPath("hugo/src/test/input/context-relationships.riddl")
+      val url = URL.fromCwdPath("hugo/src/test/input/referent-relationships.riddl")
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         val result = runPassesWith(rpi, DiagramsPass.creator())
         val diagram = RootOverviewDiagram(result.root)

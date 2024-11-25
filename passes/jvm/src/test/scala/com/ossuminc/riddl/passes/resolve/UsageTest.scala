@@ -25,7 +25,7 @@ class UsageTest extends ParsingTest {
         """
           |domain D is {
           |  type T is Number
-          |  context C is {
+          |  referent C is {
           |    command DoIt is { ref: Id(C.E), f1: C.T }
           |    type T is D.T
           |    entity E is {
@@ -35,7 +35,7 @@ class UsageTest extends ParsingTest {
           |      }
           |      state S of E.SFields
           |      handler H is {
-          |        on command C.DoIt from di: context C{
+          |        on command C.DoIt from di: referent C{
           |          set field S.f2 to "field di.f1"
           |        }
           |      }
@@ -86,7 +86,7 @@ class UsageTest extends ParsingTest {
     "unused entities generate a warning" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {
-          |  context Bar is {
+          |  referent Bar is {
           |    command ACommand is { ??? } with { described as "AC" }
           |    entity fooBar is {
           |      record fields is { field: Number }

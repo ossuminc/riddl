@@ -17,7 +17,7 @@ abstract class RepositoryTest(using PlatformContext) extends AbstractParsingTest
     "have a schema" in { (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
-          |  context ignore {
+          |  referent ignore {
           |    repository storage is {
           |      record Person is { name: String }
           |      schema structure is flat
@@ -46,7 +46,7 @@ abstract class RepositoryTest(using PlatformContext) extends AbstractParsingTest
     "handles data statements" in { (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
-          |  context ignore {
+          |  referent ignore {
           |   repository store_it is {
           |     command PutIt { field: Integer }
           |     record Foo { data: String }

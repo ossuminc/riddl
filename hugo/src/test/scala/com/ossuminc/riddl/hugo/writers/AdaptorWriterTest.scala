@@ -61,7 +61,7 @@ class AdaptorWriterTest extends WriterTest {
                 |## *RiddlOptions*
                 |* option css("background: blue")
                 |
-                |## *Direction: from context Two*
+                |## *Direction: from referent Two*
                 |
                 |### _Handlers_
                 |
@@ -79,7 +79,7 @@ class AdaptorWriterTest extends WriterTest {
                 |####  On event Adaptors.Two.DidIt
                 |```
                 |"convert Two.DidIt to One.TwoIsDone"
-                |tell command Adaptors.One.TwoIsDone to context One
+                |tell command Adaptors.One.TwoIsDone to referent One
                 |```
                 |""".stripMargin
 

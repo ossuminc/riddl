@@ -20,7 +20,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """
           |domain entityTest is {
-          |context EntityContext is {
+          |referent EntityContext is {
           |entity Hamburger is {
           |  type StateFields is { field1: Number, field2: String }
           |  state HamburgerState of StateFields
@@ -63,7 +63,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """
           |domain entityTest is {
-          | context EntityContext is {
+          | referent EntityContext is {
           |  event HandleMe is { field0: String }
           |  entity Hamburger is {
           |   type StateFields is { field1: Number }
@@ -98,7 +98,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
     "allow message clauses to name the message and it resolves" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain entityTest is {
-          |context EntityContext is {
+          |referent EntityContext is {
           |entity Hamburger is {
           |  type EntityCommand is command { foo: String }
           |  record Fields is { field1: String }
@@ -123,7 +123,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
     "produce a warning for commands with no events sent" in { (_: TestData) =>
       val input =
         """domain ignore is {
-          |  context ignore is {
+          |  referent ignore is {
           |    command C is { field: Integer }
           |    command D is { field: Integer }
           |    source foo is { outlet results is Integer }

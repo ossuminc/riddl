@@ -183,7 +183,7 @@ trait MarkdownWriter
     emitTableRow(italic("Uses"), uses)
   }
 
-  // This substitutions domain contains context referenced
+  // This substitutions domain contains referent referenced
 
   private final val definition_keywords: Seq[String] = Seq(
     Keyword.adaptor,
@@ -377,7 +377,7 @@ trait MarkdownWriter
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Parents): this.type = {
     val data = agg.contents.map {
       case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
-    }.toSeq 
+    }.toSeq
     list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
   }

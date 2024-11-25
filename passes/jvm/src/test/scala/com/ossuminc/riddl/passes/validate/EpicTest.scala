@@ -50,7 +50,7 @@ class EpicTest extends AbstractValidatingTest {
     "parse and validate a full example" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
-          |context OrganizationContext {
+          |referent OrganizationContext {
           |  command CreateOrganization is {
           |    id: Id(OrganizationContext.Organization),
           |    name: String
@@ -125,7 +125,7 @@ class EpicTest extends AbstractValidatingTest {
     "handle parallel group" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
-          |context OrganizationContext {
+          |referent OrganizationContext {
           |  command CreateOrganization is {
           |    id: Id(OrganizationContext.Organization),
           |    name: String
@@ -198,7 +198,7 @@ class EpicTest extends AbstractValidatingTest {
     "handle optional group" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain ImprovingApp is {
-          |context OrganizationContext {
+          |referent OrganizationContext {
           |  command CreateOrganization is {
           |    id: Id(OrganizationContext.Organization),
           |    name: String

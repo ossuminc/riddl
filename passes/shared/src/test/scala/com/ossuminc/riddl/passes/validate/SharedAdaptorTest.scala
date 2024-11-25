@@ -16,7 +16,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
   "Adaptors" should {
     "handle undefined body" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """adaptor PaymentAdapter from context Foo is {
+        """adaptor PaymentAdapter from referent Foo is {
           |  ???
           |}
           |""".stripMargin,
@@ -33,10 +33,10 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
     "allow message actions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain ignore is {
-          |  context Target is {???}
-          |  context Foo is {
+          |  referent Target is {???}
+          |  referent Foo is {
           |    type ItHappened = event { abc: String } with { described as "abc" }
-          |    adaptor PaymentAdapter to context Target is {
+          |    adaptor PaymentAdapter to referent Target is {
           |      handler sendAMessage is {
           |        on event ItHappened {
           |          error "foo"
@@ -62,8 +62,8 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
     "allow wrapper adaptations" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain ignore is {
-          | context Target is {???}
-          | context Foo is {
+          | referent Target is {???}
+          | referent Foo is {
           |  type ItWillHappen = command { abc: String } with { described as "abc" }
           |  command  LetsDoIt is { bcd: String with { described as "abc" } } with { described as "?" }
           |
@@ -74,7 +74,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           |    from outlet Foo.PaymentAdapter.foo.forMyEntity
           |    to inlet Foo.MyEntity.phum.commands
           |  }
-          |  adaptor PaymentAdapter to context Target is {
+          |  adaptor PaymentAdapter to referent Target is {
           |    source foo is { outlet forMyEntity is command LetsDoIt }
           |    handler sendAMessage is {
           |      on command ItWillHappen  {
