@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{pc, Await, PlatformContext, URL}
+import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 
@@ -79,7 +79,7 @@ object RiddlParserInput {
 /** This class provides the loaded data for fastparse to parse. It is the same as fastparse.IndexedParserInput but adds
   * support for file locations with [[At]]. The class is abstract because
   */
-abstract class RiddlParserInput extends ParserInput {
+abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
 
   /** The data that will be parsed by fastparse */
   def data: String
@@ -201,6 +201,8 @@ abstract class RiddlParserInput extends ParserInput {
     end if
   }
 }
+
+import com.ossuminc.riddl.utils.pc
 
 @JSExportTopLevel("EmptyParserInput")
 case object EmptyParserInput extends RiddlParserInput {
