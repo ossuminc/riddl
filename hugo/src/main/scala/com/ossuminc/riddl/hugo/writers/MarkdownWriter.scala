@@ -12,13 +12,13 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
 import com.ossuminc.riddl.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.parsing.Keywords.{domain, *}
-import com.ossuminc.riddl.utils.TextFileWriter
+import com.ossuminc.riddl.utils.{PlatformContext, TextFileWriter}
 
 import scala.annotation.unused
 import scala.collection.immutable.Seq
 
 /** Base */
-trait MarkdownWriter
+trait MarkdownWriter(using pc: PlatformContext)
     extends MarkdownBasics
     with AdaptorWriter
     with ApplicationWriter

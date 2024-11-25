@@ -205,7 +205,7 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
 import com.ossuminc.riddl.utils.pc
 
 @JSExportTopLevel("EmptyParserInput")
-case object EmptyParserInput extends RiddlParserInput {
+case object EmptyParserInput extends RiddlParserInput() {
   override def origin: String = "empty"
   override def root: URL = URL.empty
   override def offsetOf(line: Int): Int = { line * 80 }

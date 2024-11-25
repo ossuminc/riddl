@@ -11,10 +11,8 @@ import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.commands.Commands
-import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.command.Command
+import com.ossuminc.riddl.utils.PlatformContext
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -47,7 +45,7 @@ object OnChangeCommand {
   }
 }
 
-class OnChangeCommand(using io: PlatformContext) extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
+class OnChangeCommand(using pc: PlatformContext) extends Command[OnChangeCommand.Options](OnChangeCommand.cmdName) {
   import OnChangeCommand.Options
 
   override def getOptionsParser: (OParser[Unit, Options], Options) = {

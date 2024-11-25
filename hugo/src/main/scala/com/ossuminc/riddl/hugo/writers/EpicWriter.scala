@@ -6,11 +6,12 @@
 
 package com.ossuminc.riddl.hugo.writers
 
-import com.ossuminc.riddl.language.AST.{Definition, Epic, UseCase, User, UserStory, Parents}
+import com.ossuminc.riddl.language.AST.{Definition, Epic, Parents, UseCase, User, UserStory}
 import com.ossuminc.riddl.diagrams.mermaid.UseCaseDiagram
 import com.ossuminc.riddl.passes.diagrams.{DiagramsPass, DiagramsPassOutput, UseCaseDiagramData}
+import com.ossuminc.riddl.utils.PlatformContext
 
-trait EpicWriter { this: MarkdownWriter =>
+trait EpicWriter(using pc: PlatformContext) { this: MarkdownWriter =>
 
   def emitEpic(epic: Epic, parents: Parents): Unit = {
     containerHead(epic)

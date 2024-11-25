@@ -9,11 +9,11 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
 
-trait StreamingValidation extends TypeValidation {
+trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
 
   def addInlet(inlet: Inlet): Unit = inlets.addOne(inlet)
   def addOutlet(outlet: Outlet): Unit = outlets.addOne(outlet)

@@ -10,11 +10,10 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
-import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.PlatformContext
 
 /** A Trait that defines typical Validation checkers for validating definitions */
-trait DefinitionValidation extends BasicValidation:
-
+trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   def symbols: SymbolsOutput
 
   private def checkUniqueContent(definition: Parent): Unit = {

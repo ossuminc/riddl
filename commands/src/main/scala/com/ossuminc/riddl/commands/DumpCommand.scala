@@ -6,14 +6,13 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.Command
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformContext, StringHelpers, URL}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{Await, PlatformContext, StringHelpers}
 
 import java.nio.file.Path
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 object DumpCommand {
@@ -22,7 +21,7 @@ object DumpCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class DumpCommand(using io: PlatformContext) extends InputFileCommand(DumpCommand.cmdName) {
+class DumpCommand(using pc: PlatformContext) extends InputFileCommand(DumpCommand.cmdName) {
   import InputFileCommand.Options
 
   override def run(
@@ -30,10 +29,11 @@ class DumpCommand(using io: PlatformContext) extends InputFileCommand(DumpComman
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
+      implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
         Riddl.parseAndValidate(rpi).map { result =>
-          io.log.info(s"AST of $inputFile is:")
-          io.log.info(StringHelpers.toPrettyString(result, 1, None))
+          pc.log.info(s"AST of $inputFile is:")
+          pc.log.info(StringHelpers.toPrettyString(result, 1, None))
           result
         }
       }

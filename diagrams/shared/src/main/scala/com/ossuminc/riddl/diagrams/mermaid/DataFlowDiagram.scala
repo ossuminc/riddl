@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
-import com.ossuminc.riddl.utils.FileBuilder
+import com.ossuminc.riddl.utils.{FileBuilder, PlatformContext}
 
 import scala.scalajs.js.annotation.*
 
@@ -28,7 +28,7 @@ import scala.scalajs.js.annotation.*
   *   The PassesResult from running the standard passes to obtain all the collected ideas.
   */
 @JSExportTopLevel("DataFlowDiagram")
-case class DataFlowDiagram(pr: PassesResult) extends FileBuilder {
+case class DataFlowDiagram(pr: PassesResult)(using pc: PlatformContext) extends FileBuilder {
 
   require(pr.hasOutputOf(SymbolsPass.name))
   require(pr.hasOutputOf(ResolutionPass.name))

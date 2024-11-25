@@ -9,9 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{PlatformContext, Logger}
-import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.utils.CommonOptions
+import com.ossuminc.riddl.utils.PlatformContext
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser

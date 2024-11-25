@@ -12,13 +12,13 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
-import com.ossuminc.riddl.utils.pc
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.reflect.{ClassTag, classTag}
 import scala.util.matching.Regex
 
 /** Validation infrastructure needed for all kinds of definition validation */
-trait BasicValidation {
+trait BasicValidation(using pc: PlatformContext) {
 
   def symbols: SymbolsOutput
   def resolution: ResolutionOutput
@@ -128,14 +128,14 @@ trait BasicValidation {
                 messages.addError(
                   ref.pathId.loc,
                   s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${AST
-                      .errorDescription(te)} type " +
-                    s"instead"
+                      .errorDescription(te)} type " + s"instead"
                 )
             }
           case _ =>
             messages.addError(
               ref.pathId.loc,
-              s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead"
+              s"${ref.identify} was expected to be one of these types; ${
+                kinds.mkString(",")}, but is ${article(definition.kind)} instead"
             )
         }
       }

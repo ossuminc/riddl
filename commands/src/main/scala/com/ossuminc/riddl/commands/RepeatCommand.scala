@@ -9,9 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.commands.Commands
-import com.ossuminc.riddl.utils.{PlatformContext, Interrupt, Logger}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{PlatformContext, Interrupt}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -42,7 +40,7 @@ object RepeatCommand {
   }
 }
 
-class RepeatCommand(using io: PlatformContext) extends Command[RepeatCommand.Options](RepeatCommand.cmdName) {
+class RepeatCommand(using pc: PlatformContext) extends Command[RepeatCommand.Options](RepeatCommand.cmdName) {
   import RepeatCommand.Options
 
   /** Provide a scopt OParser for the commands options type, OPT
@@ -183,8 +181,8 @@ class RepeatCommand(using io: PlatformContext) extends Command[RepeatCommand.Opt
             shouldContinue = false
           } else {
             i += 1
-            if io.options.verbose then {
-              io.log.info(s"Waiting for $refresh, cycle # $i of $maxCycles")
+            if pc.options.verbose then {
+              pc.log.info(s"Waiting for $refresh, cycle # $i of $maxCycles")
             }
             Thread.sleep(sleepTime)
           }

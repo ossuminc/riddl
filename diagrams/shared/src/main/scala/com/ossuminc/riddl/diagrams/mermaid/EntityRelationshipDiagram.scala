@@ -8,11 +8,12 @@ package com.ossuminc.riddl.diagrams.mermaid
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.ReferenceMap
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.scalajs.js.annotation.*
 
 @JSExportTopLevel("EntityRelationshipDiagram")
-class EntityRelationshipDiagram(refMap: ReferenceMap) {
+class EntityRelationshipDiagram(refMap: ReferenceMap)(using pc: PlatformContext) {
 
   private def makeTypeName(
     pid: PathIdentifier,
