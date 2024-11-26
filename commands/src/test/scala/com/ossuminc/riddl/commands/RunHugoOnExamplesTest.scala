@@ -34,7 +34,7 @@ class RunHugoOnExamplesTest extends RunCommandOnExamplesTest {
     @unused commandName: String,
     @unused caseName: String,
     @unused passesResult: PassesResult,
-    @unused tempDir: Path
+    tempDir: Path
   ): Assertion = {
     info(s"Hugo output in ${tempDir.toString}")
     val themes = tempDir.resolve("themes").resolve("hugo-geekdoc")

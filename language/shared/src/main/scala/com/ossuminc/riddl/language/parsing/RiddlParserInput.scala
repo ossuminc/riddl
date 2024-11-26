@@ -173,23 +173,26 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
   def annotateErrorLine(index: At): String = {
     require(index.source == this)
     if this.data.length > 0 && this.nonEmpty then
-      require(index.offset >= 0 && index.offset <= data.length,
-        s"${index.offset}>=0 && ${index.offset} <= ${data.length}")
-      require(index.endOffset >= 0 && index.endOffset <= data.length,
-        s"${index.endOffset} >= 0 && ${index.endOffset} <= ${data.length}")
+      require(
+        index.offset >= 0 && index.offset <= data.length,
+        s"${index.offset}>=0 && ${index.offset} <= ${data.length}"
+      )
+      require(
+        index.endOffset >= 0 && index.endOffset <= data.length,
+        s"${index.endOffset} >= 0 && ${index.endOffset} <= ${data.length}"
+      )
       val (start, end) = lineRangeOf(index)
-      require( start <= index.offset, s"fail: $start <= ${index.offset}")
-      require( end >= index.endOffset, s"fail: $end >= ${index.endOffset}")
+      require(start <= index.offset, s"fail: $start <= ${index.offset}")
+      require(end >= index.endOffset, s"fail: $end >= ${index.endOffset}")
       val quoted = slice(start, end)
       if quoted.isEmpty then ""
       else {
-        if pc.options.noANSIMessages then
-          quoted
+        if pc.options.noANSIMessages then quoted
         else
           val prefixStart = offsetOf(lineOf(start))
           val prefixEnd = Math.max(0, index.offset)
           val errorStart = index.offset
-          val errorEnd = Math.min(Math.min(index.endOffset,end),data.length)
+          val errorEnd = Math.min(Math.min(index.endOffset, end), data.length)
           val suffixStart = Math.min(errorEnd, index.source.length)
           val suffixEnd = Math.max(suffixStart, Math.min(endOfLineFrom(end), index.source.length))
           val prefix = data.substring(prefixStart, prefixEnd)
@@ -218,4 +221,8 @@ protected[parsing] case class StringParserInput(
   data: String,
   root: URL = URL.empty,
   override val purpose: String = ""
-) extends RiddlParserInput
+) extends RiddlParserInput {
+  override def toString: String = {
+    super.toString ++ s", data: ${data.length} chars, root: $root"
+  }
+}
