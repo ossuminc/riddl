@@ -22,6 +22,7 @@ abstract class TokenStreamParserTest(using pc: PlatformContext) extends Abstract
         """module foo is {
           |   // this is a comment
           |   domain blah is { ??? }
+          |   invariant bar is "condition"
           |}
           |""".stripMargin,
         td
@@ -45,7 +46,11 @@ abstract class TokenStreamParserTest(using pc: PlatformContext) extends Abstract
             AST.PunctuationTKN(At(rpi, 58, 59)),
             AST.PunctuationTKN(At(rpi, 60, 63)),
             AST.PunctuationTKN(At(rpi, 64, 65)),
-            AST.PunctuationTKN(At(rpi, 66, 67))
+            AST.KeywordTKN(At(rpi, 69, 78)),
+            AST.IdentifierTKN(At(rpi, 79, 82)),
+            AST.ReadabilityTKN(At(rpi, 83, 85)),
+            AST.QuotedStringTKN(At(rpi, 86, 97)),
+            AST.PunctuationTKN(At(rpi, 98, 99))
           )
           tokens must be(expected)
     }
@@ -64,6 +69,6 @@ abstract class TokenStreamParserTest(using pc: PlatformContext) extends Abstract
           tokens
       end match
     }
-    Await.result(future,3)
+    Await.result(future, 3)
   }
 }

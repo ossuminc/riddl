@@ -44,11 +44,7 @@ trait TokenStreamParser extends CommonParser with Readability {
   def commentToken[u: P]: P[CommentTKN] = {
     P(comment)./.map { case comment: Comment => CommentTKN(comment.loc) }
   }
-
-  def literalStringToken[u: P]: P[LiteralStringTKN] = {
-    P(literalString)./.map { case litStr: LiteralString => LiteralStringTKN(litStr.loc) }
-  }
-
+  
   def markdownLinesToken[u: P]: P[MarkdownLinesTKN] = {
     P(markdownLines)./.map { case mdl: Seq[LiteralString] =>
       require(mdl.nonEmpty, "markdownLines return empty list of lines")
@@ -70,13 +66,12 @@ trait TokenStreamParser extends CommonParser with Readability {
     P(
       keywordToken |
         readabilityToken |
-        punctuationToken |
         quotedStringToken |
         predefinedToken |
         identifierToken |
         commentToken |
         markdownLinesToken |
-        literalStringToken |
+        punctuationToken |
         otherToken
     )./
   }
