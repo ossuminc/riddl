@@ -36,8 +36,6 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
     diagramsJS,
     riddlLib,
     riddlLibJS,
-    command,
-    hugo,
     commands,
     riddlc,
     docsite,
@@ -200,7 +198,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
 
-lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM)
+lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JVM, JS)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
   .configure(With.scala3, With.publishing)
   .settings(
@@ -209,71 +207,30 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
 
-val Command = config("command")
-lazy val command = Module("command", "riddl-command")
-  .configure(With.typical, With.coverage(30), With.MiMa("0.52.1"))
-  .configure(With.publishing, With.headerLicense("Apache-2.0"))
-  .settings(
-    coverageExcludedPackages := "<empty>;$anon",
-    description := "Command infrastructure needed to define a command",
-    Test / parallelExecution := false,
-    libraryDependencies ++= Seq(
-      Dep.scopt,
-      Dep.pureconfig,
-      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-    ) ++ Dep.testing
-  )
-  .dependsOn(pDep(utils), pDep(language), passes)
-
-def testDep(project: Project): ClasspathDependency = project % "compile->compile;compile->test;test->test"
-
-val Hugo = config("hugo")
-lazy val hugo = Module("hugo", "riddl-hugo")
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
-  .configure(With.coverage(65))
-  .configure(With.MiMa("0.52.1"))
-  .settings(
-    coverageExcludedFiles := """<empty>;$anon""",
-    scalacOptions += "-explain-cyclic",
-    description := "Implementation for the RIDDL hugo command, a website generator",
-    libraryDependencies ++= Dep.testing ++ Seq(
-      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-    )
-  )
-  .dependsOn(utils, pDep(language), pDep(passes), diagrams, pDep(command))
-
 val Commands = config("commands")
-lazy val commands: Project = Module("commands", "riddl-commands")
+lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM)
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
-  .configure(With.coverage(50))
-  .configure(With.MiMa("0.52.1"))
   .settings(
-    coverageExcludedFiles := """<empty>;$anon""",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
-    description := "RIDDL Command Infrastructure and basic command definitions",
+    description := "RIDDL Command Infrastructure and command definitions",
     libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing ++ Seq(
       "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
     )
   )
-  .dependsOn(
-    pDep(utils),
-    pDep(language),
-    pDep(passes),
-    command,
-    hugo
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmSettings(
+    coverageExcludedFiles := """<empty>;$anon"""
   )
+val commands: Project = commands_cp.jvm
 
 val Riddlc = config("riddlc")
 lazy val riddlc: Project = Program("riddlc", "riddlc")
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50.0))
   .configure(With.noMiMa)
-  .dependsOn(
-    utils,
-    language,
-    testDep(passes),
-    testDep(commands)
-  )
+  .dependsOn(pDep(utils), pDep(language), pDep(passes), pDep(commands))
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
@@ -295,8 +252,6 @@ lazy val docProjects = List(
   (language, Language),
   (passes, Passes),
   (diagrams, Diagrams),
-  (command, Command),
-  (hugo, Hugo),
   (commands, Commands),
   (riddlc, Riddlc)
 )
@@ -312,7 +267,7 @@ lazy val docsite = DocSite(
   dirName = "doc",
   apiOutput = file("src") / "main" / "hugo" / "static" / "apidoc",
   baseURL = Some("https://riddl.tech/apidoc"),
-  inclusions = Seq(utils, language, passes, diagrams, command, hugo, commands),
+  inclusions = Seq(utils, language, passes, diagrams, commands),
   logoPath = Some("doc/src/main/hugo/static/images/RIDDL-Logo-128x128.png")
 )
   .settings(
@@ -321,7 +276,7 @@ lazy val docsite = DocSite(
     libraryDependencies ++= Dep.testing
   )
   .configure(With.noMiMa)
-  .dependsOn(utils, language, passes, diagrams, command, hugo, commands)
+  .dependsOn(utils, language, passes, diagrams, commands)
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.build_info, With.scala2, With.noMiMa, With.publishing)

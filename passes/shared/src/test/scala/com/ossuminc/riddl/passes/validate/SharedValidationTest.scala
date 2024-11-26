@@ -48,7 +48,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
       val root = Root(At(), Contents(domain))
       val outputs = PassesOutput()
       val output = Pass.runSymbols(PassInput(root), outputs)
-      output.parentOf(aType) mustBe Some(domain)
+      output.parentOf(aType) must be(Some(domain))
     }
     "not find the parent of a non-existent child" in { (td: TestData) =>
       val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
@@ -56,7 +56,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
       val root = Root(At(), Contents(domain))
       val outputs = PassesOutput()
       val output = Pass.runSymbols(PassInput(root), outputs)
-      output.parentOf(aType) mustBe None
+      output.parentOf(aType) must be(None)
     }
   }
 
