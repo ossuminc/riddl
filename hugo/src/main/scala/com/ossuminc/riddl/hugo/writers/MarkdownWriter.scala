@@ -21,7 +21,6 @@ import scala.collection.immutable.Seq
 trait MarkdownWriter
     extends MarkdownBasics
     with AdaptorWriter
-    with ApplicationWriter
     with ContextWriter
     with DomainWriter
     with EntityWriter
@@ -49,11 +48,6 @@ trait MarkdownWriter
     val spaces = " ".repeat(indent)
     p(s"$spaces* [${domain.identify}]($link)")
     for { nestedDomain <- AST.getDomains(domain).sortBy(_.id.value) } do makeDomainIndex(nestedDomain, indent + 2)
-    for { application <- AST.getApplications(domain).sortBy(_.id.value) } do {
-      val link = generator.makeDocLink(application)
-      val spaces = " ".repeat(indent + 2)
-      p(s"$spaces* [${application.identify}]($link)")
-    }
     for { epic <- AST.getEpics(domain).sortBy(_.id.value) } do {
       val link = generator.makeDocLink(epic)
       val spaces = " ".repeat(indent + 2)
@@ -187,7 +181,6 @@ trait MarkdownWriter
 
   private final val definition_keywords: Seq[String] = Seq(
     Keyword.adaptor,
-    Keyword.application,
     Keyword.author,
     Keyword.case_,
     Keyword.command,

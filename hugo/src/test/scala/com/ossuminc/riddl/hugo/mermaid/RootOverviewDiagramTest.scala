@@ -53,10 +53,6 @@ class RootOverviewDiagramTest extends AbstractRunPassTest {
             |    D((fa:fa-house<br/>Context 'D'))
             |    bar-->|contains|D((fa:fa-house<br/>Context 'D'))
             |  end
-            |  subgraph 'bar-Applications'
-            |    direction TB
-            |    bar((Domain 'bar'))
-            |  end
             |  subgraph 'bar-Epics'
             |    direction TB
             |    bar((Domain 'bar'))
@@ -78,10 +74,6 @@ class RootOverviewDiagramTest extends AbstractRunPassTest {
             |    foo-->|contains|A((fa:fa-house<br/>Context 'A'))
             |    foo-->|contains|B((fa:fa-house<br/>Context 'B'))
             |    foo-->|contains|C((fa:fa-house<br/>Context 'C'))
-            |  end
-            |  subgraph 'foo-Applications'
-            |    direction TB
-            |    foo((Domain 'foo'))
             |  end
             |  subgraph 'foo-Epics'
             |    direction TB

@@ -138,7 +138,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
         case None => fail("There should be a domain")
       }
     }
-    "have terms and author refs in applications" in { (_: TestData) =>
+    "have terms and author refs in contexts" in { (_: TestData) =>
       sharedRoot.domains.headOption match {
         case Some(domain) =>
           val apps = domain.contents.filter[Context]

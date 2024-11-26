@@ -1,5 +1,5 @@
 domain Foo {
-  application Bar {
+  context Bar {
     type PricingPageString is String(,30)
     page PricingPage {
       output PricingPageText shows PricingPageString

@@ -14,7 +14,6 @@ import com.ossuminc.riddl.language.parsing.Keyword.{
   all,
   any,
   append,
-  application,
   attachment,
   author,
   become,
@@ -204,8 +203,6 @@ object Keywords {
   def any[u: P]: P[Unit] = keyword(Keyword.any)
 
   def append[u: P]: P[Unit] = keyword(Keyword.append)
-
-  def application[u: P]: P[Unit] = keyword(Keyword.application)
 
   def attachment[u: P]: P[Unit] = keyword(Keyword.attachment)
 
@@ -479,7 +476,6 @@ object Keywords {
         Keyword.all,
         Keyword.any,
         Keyword.append,
-        Keyword.application,
         Keyword.attachment,
         Keyword.author,
         Keyword.become,
@@ -619,7 +615,6 @@ object Keyword {
   final val all = "all"
   final val any = "any"
   final val append = "append"
-  final val application = "application"
   final val attachment = "attachment"
   final val author = "author"
   final val become = "become"
@@ -760,7 +755,6 @@ object Keyword {
     all,
     any,
     append,
-    application,
     attachment,
     author,
     become,

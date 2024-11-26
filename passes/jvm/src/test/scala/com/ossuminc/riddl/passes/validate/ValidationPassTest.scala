@@ -70,7 +70,7 @@ class ValidationPassTest extends AbstractValidatingTest {
       incls.head.contents.head.getClass mustBe classOf[Context]
       incls(1).contents.head.getClass mustBe classOf[Context]
     }
-    "have terms and author refs in applications" in { (td: TestData) =>
+    "have terms and author refs in contexts" in { (td: TestData) =>
       val includes = sharedRoot.domains.head.includes
       includes mustNot be(empty)
       val apps = includes.head.contents.filter[Context]
