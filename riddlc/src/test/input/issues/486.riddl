@@ -1,5 +1,5 @@
 domain test {
-  application ksoTemplateApp {
+  context ksoTemplateApp {
   type ProductOfferingText is String(3,80)
     page PricingPage { output PricingPageText showsksoTemplateApp.ProductOfferingText } described as {
         | The line above should not compile. First, there should be a space between shows and ksoTemplateApp.

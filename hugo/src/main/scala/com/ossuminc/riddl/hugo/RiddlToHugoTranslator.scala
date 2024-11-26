@@ -11,7 +11,6 @@ import com.ossuminc.riddl.language.AST.*
 trait RiddlToHugoTranslator {
 
   def writeAdaptor(adaptor: Adaptor): Unit
-  def writeApplication(application: Application): Unit
   def writeContext(context: Context): Unit
   def writeDomain(domain: Domain): Unit
   def writeEntity(entity: Entity): Unit

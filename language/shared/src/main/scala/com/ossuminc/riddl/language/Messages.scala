@@ -120,7 +120,7 @@ object Messages {
     * @param kind
     *   The kind of message as one of the case objects of [[KindOfMessage]]
     * @param context
-    *   Additional context that indicates the conditions that produced the message
+    *   Additional referent that indicates the conditions that produced the message
     */
   @JSExportTopLevel("Message")
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")

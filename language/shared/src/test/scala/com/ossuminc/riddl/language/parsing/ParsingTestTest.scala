@@ -48,14 +48,6 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
       }
     }
 
-    "parseTopLevelDomain[Application]" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { application X is { ??? } }", td)
-      parseTopLevelDomain[Application](input, _.domains.head.applications.head) match {
-        case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value mustBe "X"
-      }
-    }
-
     "parseTopLevelDomain[Epic]" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
@@ -170,7 +162,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
         case Right((typ, _)) => typ.id.value must be("X")
       }
     }
-    "parseDefinition[Function]" in { (td: TestData) =>
+    "parseDefinition[Function]" in { (_: TestData) =>
       parseDefinition[Function]("function foo { ??? }") match {
         case Left(messages)  => fail(messages.format)
         case Right((fun, _)) => fun.id.value must be("foo")

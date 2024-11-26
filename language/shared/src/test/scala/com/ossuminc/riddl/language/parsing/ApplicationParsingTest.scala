@@ -18,7 +18,7 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
       val input = RiddlParserInput(
         """
           |domain foo {
-          |application foo2 {
+          |context foo2 {
           |  group g1 is { ??? }
           |  group g2 is {
           |    group g3 is { ??? }
@@ -40,7 +40,7 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
       val input = RiddlParserInput(
         """
           |domain foo {
-          |application foo2 {
+          |context foo2 {
           |  command GoHome {???} with { briefly as "Directive to focus on going to the home page" }
           |  handler foo3 is {
           |    on command GoHome {
@@ -60,18 +60,26 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
       }
     }
     "supports 'shown by' in groups" in { (td: TestData) =>
+      // FIXME: Enable "shown by" processing for a group
       val input = RiddlParserInput(
         """
           |domain foo {
-          |  application ignore {
-          |    group Mickey shown by https://pngimg.com/uploads/mickey_mouse/mickey_mouse_PNG54.png is {
+          |  context ignore {
+          |    /* group Micky shown by https://pngimg.com/uploads/mickey_mouse/mickey_mouse_PNG54.png is ... */
+          |    group Mickey  is {
           |      ???
           |    }
           |  }
           |}
           |""".stripMargin,
-      td
+        td
       )
+      parseDefinition[Domain](input) match
+        case Left(messages: Messages) =>
+          fail(messages.format)
+        case Right((dom: Domain, _)) =>
+          succeed
+      end match
     }
   }
 }

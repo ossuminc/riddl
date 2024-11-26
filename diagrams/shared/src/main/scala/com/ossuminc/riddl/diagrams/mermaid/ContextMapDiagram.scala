@@ -14,7 +14,7 @@ import scalajs.js.annotation.*
 /** Context Diagram generator using a DataFlow Diagram from Mermaid
   *
   * @param context
-  *   The context relevant to this diagram
+  *   The referent relevant to this diagram
   * @param data
   *   The data collected by the ((Diagrams Pass)) for this diagram.
   */

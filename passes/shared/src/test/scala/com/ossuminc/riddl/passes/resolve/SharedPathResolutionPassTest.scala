@@ -434,7 +434,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
     "groups contain groups" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain foo {
-          |  application app {
+          |  context app {
           |    group contained { ??? }
           |    group container { contains member as group contained }
           |  }
@@ -443,7 +443,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
         td
       )
       parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
-        val app: Application = pi.root.domains.head.applications.head
+        val app: Context = pi.root.domains.head.contexts.head
         val contained: Group = app.groups.head
         po.refMap.definitionOf[Group]("contained") match
           case Some(group: Group) =>

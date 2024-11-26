@@ -1,4 +1,4 @@
-application dosomething is { ??? } with {
+context dosomething is { ??? } with {
   by author Reid
   term term is "Terminal"
 }

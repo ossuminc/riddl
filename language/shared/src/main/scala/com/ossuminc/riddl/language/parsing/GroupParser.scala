@@ -7,12 +7,10 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.utils.PlatformContext
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-private[parsing] trait ApplicationParser(using PlatformContext) {
-  this: ProcessorParser & StreamingParser & CommonParser =>
+private[parsing] trait GroupParser extends CommonParser :
 
   def containedGroup[u: P]: P[ContainedGroup] = {
     P(
@@ -24,7 +22,7 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
 
   private def groupDefinitions[u: P]: P[Seq[OccursInGroup]] = {
     P(
-      group | containedGroup | shownBy | appOutput | appInput | comment
+      group | containedGroup | shownBy | groupOutput | groupInput | comment
     ).asInstanceOf[P[OccursInGroup]].rep(1)
   }
 
@@ -48,14 +46,14 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
 
   private def outputDefinitions[u: P]: P[Seq[OccursInOutput]] = {
     P(
-      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (appOutput | typeRef).rep(1)) ~ close
+      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (groupOutput | typeRef).rep(1)) ~ close
     ).?.map {
       case Some(definitions: Seq[OccursInOutput]) => definitions
       case None                                   => Seq.empty[OccursInOutput]
     }
   }
 
-  def appOutput[u: P]: P[Output] = {
+  private def groupOutput[u: P]: P[Output] = {
     P(
       Index ~ outputAliases ~/ identifier ~ presentationAliases ~/
         (literalString | constantRef | typeRef) ~/ outputDefinitions ~ withMetaData ~ Index
@@ -88,7 +86,7 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
   private def inputDefinitions[uP: P]: P[Seq[OccursInInput]] = {
     P(
       is ~ open ~
-        (undefined(Seq.empty[OccursInInput]) | appInput.rep(1))
+        (undefined(Seq.empty[OccursInInput]) | groupInput.rep(1))
         ~ close
     ).?.map {
       case Some(definitions) => definitions
@@ -111,41 +109,11 @@ private[parsing] trait ApplicationParser(using PlatformContext) {
     ).!
   }
 
-  def appInput[u: P]: P[Input] = {
+  private def groupInput[u: P]: P[Input] = {
     P(
       Index ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withMetaData ~ Index
     ).map { case (start, inputAlias, id, acquisitionAlias, putIn, contents, descriptives, end) =>
       Input(at(start, end), inputAlias, id, acquisitionAlias, putIn, contents.toContents, descriptives.toContents)
     }
   }
-
-  private def applicationDefinition[u: P]: P[ApplicationContents] = {
-    P(processorDefinitionContents(StatementsSet.ApplicationStatements) | group | applicationInclude)
-      .asInstanceOf[P[ApplicationContents]]
-  }
-
-  private def applicationDefinitions[u: P]: P[Seq[ApplicationContents]] = {
-    P(applicationDefinition.rep(0, comments))
-  }
-
-  private def applicationInclude[u: P]: P[Include[ApplicationContents]] = {
-    include[u, ApplicationContents](applicationDefinitions(_))
-  }
-
-  private def emptyApplication[u: P]: P[Seq[ApplicationContents]] = {
-    undefined(Seq.empty[ApplicationContents])
-  }
-
-  private def applicationBody[u: P]: P[Seq[ApplicationContents]] = {
-    emptyApplication | applicationDefinitions
-  }
-
-  def application[u: P]: P[Application] = {
-    P(
-      Index ~ Keywords.application ~/ identifier ~ is ~ open ~ applicationBody ~ close ~ withMetaData ~ Index
-    )./ map { case (start, id, contents, descriptives, end) =>
-      checkForDuplicateIncludes(contents)
-      Application(at(start, end), id, contents.toContents, descriptives.toContents)
-    }
-  }
-}
+end GroupParser

@@ -12,7 +12,7 @@ class KeywordsTest extends AbstractTestingBasis {
 
   "Keyword" should {
     "produce all keywords" in {
-      Keyword.allKeywords.size must be(139)
+      Keyword.allKeywords.size must be(138)
     }
   }
 

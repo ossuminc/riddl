@@ -70,7 +70,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |domain full is {
           |  user Doer is "that which does"
           |  type Something is Abstract
-          |  application dosomething is { ??? } with {
+          |  context dosomething is { ??? } with {
           |    by author Reid
           |    term term is "Terminal"
           |  }
@@ -133,18 +133,18 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
       sharedRoot.domains.headOption match {
         case Some(domain) =>
           domain.contents mustNot be(empty)
-          domain.contents.find("dosomething").getOrElse(None).getClass mustBe classOf[Application]
+          domain.contents.find("dosomething").getOrElse(None).getClass mustBe classOf[Context]
           domain.contents(3).getClass mustBe classOf[Context]
         case None => fail("There should be a domain")
       }
     }
-    "have terms and author refs in applications" in { (_: TestData) =>
+    "have terms and author refs in contexts" in { (_: TestData) =>
       sharedRoot.domains.headOption match {
         case Some(domain) =>
-          val apps = domain.contents.filter[Application]
+          val apps = domain.contents.filter[Context]
           apps mustNot be(empty)
-          apps.head mustBe a[Application]
-          val app: Application = apps.head
+          apps.head mustBe a[Context]
+          val app: Context = apps.head
           app.terms mustNot be(empty)
           app.hasAuthors mustBe false
           app.hasAuthorRefs mustBe true

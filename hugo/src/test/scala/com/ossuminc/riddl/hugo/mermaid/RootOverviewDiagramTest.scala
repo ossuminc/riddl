@@ -20,7 +20,7 @@ import scala.concurrent.duration.DurationInt
 class RootOverviewDiagramTest extends AbstractRunPassTest {
 
   "RootOverviewDiagram" should {
-    "generate a simple diagram correctly" in { (td:TestData) =>
+    "generate a simple diagram correctly" in { (_:TestData) =>
       val url = URL.fromCwdPath("hugo/src/test/input/context-relationships.riddl")
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         val result = runPassesWith(rpi, DiagramsPass.creator())
@@ -53,10 +53,6 @@ class RootOverviewDiagramTest extends AbstractRunPassTest {
             |    D((fa:fa-house<br/>Context 'D'))
             |    bar-->|contains|D((fa:fa-house<br/>Context 'D'))
             |  end
-            |  subgraph 'bar-Applications'
-            |    direction TB
-            |    bar((Domain 'bar'))
-            |  end
             |  subgraph 'bar-Epics'
             |    direction TB
             |    bar((Domain 'bar'))
@@ -78,10 +74,6 @@ class RootOverviewDiagramTest extends AbstractRunPassTest {
             |    foo-->|contains|A((fa:fa-house<br/>Context 'A'))
             |    foo-->|contains|B((fa:fa-house<br/>Context 'B'))
             |    foo-->|contains|C((fa:fa-house<br/>Context 'C'))
-            |  end
-            |  subgraph 'foo-Applications'
-            |    direction TB
-            |    foo((Domain 'foo'))
             |  end
             |  subgraph 'foo-Epics'
             |    direction TB

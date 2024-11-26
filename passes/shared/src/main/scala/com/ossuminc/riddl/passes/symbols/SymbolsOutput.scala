@@ -56,7 +56,7 @@ case class SymbolsOutput(
   }
 
   /**
-    * Find the bounded context in which a give named value is defined
+    * Find the bounded referent in which a give named value is defined
     * @param definition
     * The [[com.ossuminc.riddl.language.AST.Definition]] whose [[com.ossuminc.riddl.language.AST.Context]] should be
     * determined

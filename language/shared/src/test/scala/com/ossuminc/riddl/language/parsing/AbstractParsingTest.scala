@@ -125,7 +125,7 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right((content, _)) => 
+      case Right((content, _)) =>
         content mustBe expected
     }
   }

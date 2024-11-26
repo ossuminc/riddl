@@ -1,5 +1,5 @@
 domain foo {
-  application foo2 {
+  context foo2 {
     constant ThingToDisplay is string = "A displayed thing"
     type Foo is record { ??? }
     page target is {

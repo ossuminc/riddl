@@ -128,7 +128,6 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
       .map { (vd: Definition) =>
         vd match {
           case a: Adaptor     => handlerStatements(a.handlers)
-          case a: Application => handlerStatements(a.handlers)
           case c: Context     => handlerStatements(c.handlers)
           case e: Entity      => handlerStatements(e.handlers)
           case p: Projector   => handlerStatements(p.handlers)
@@ -283,9 +282,6 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
           + 1 // Inlets
           + 1 // Outlets
         p match {
-          case _: Application =>
-            specsForProcessor
-              + 1 // Groups
           case _: Adaptor =>
             specsForProcessor
               + 1 // direction
@@ -375,9 +371,6 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
       case p: Processor[?] =>
         val countForProcessor = processorCount(p)
         p match {
-          case a: Application =>
-            countForProcessor
-              + { if a.groups.nonEmpty then 1 else 0 }
           case a: Adaptor =>
             countForProcessor
               + 1 // direction (required)
@@ -391,6 +384,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
               + { if c.projectors.nonEmpty then 1 else 0 }
               + { if c.repositories.nonEmpty then 1 else 0 }
               + { if c.connectors.nonEmpty then 1 else 0 }
+              + { if c.groups.nonEmpty then 1 else 0 }
           case e: Entity =>
             countForProcessor
               + { if e.states.nonEmpty then 1 else 0 }
@@ -410,7 +404,6 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
           + { if d.users.nonEmpty then 1 else 0 }
           + { if d.epics.nonEmpty then 1 else 0 }
           + { if d.sagas.nonEmpty then 1 else 0 }
-          + { if d.applications.nonEmpty then 1 else 0 }
           + 0 // recursive domains not included
       case e: Epic =>
         definitionCount(e)

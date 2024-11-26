@@ -18,9 +18,9 @@ import fastparse.MultiLineWhitespace.*
   * }}}
   */
 private[parsing] trait NebulaParser {
-  this: ProcessorParser & DomainParser & AdaptorParser & ApplicationParser & ContextParser & EntityParser & EpicParser &
-    FunctionParser & HandlerParser & ModuleParser & ProjectorParser & RepositoryParser & RootParser & SagaParser &
-    StreamingParser & TypeParser & Readability & CommonParser =>
+  this: ProcessorParser & DomainParser & AdaptorParser & ContextParser & EntityParser & EpicParser & FunctionParser &
+    HandlerParser & ModuleParser & ProjectorParser & RepositoryParser & RootParser & SagaParser & StreamingParser &
+    TypeParser & Readability & CommonParser =>
 
   private def nebulaContent[u: P]: P[NebulaContents] =
     P(

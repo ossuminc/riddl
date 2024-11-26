@@ -50,7 +50,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(" ")
         .add(adaptor.direction.format)
         .add(" ")
-        .add(adaptor.context.format)
+        .add(adaptor.referent.format)
         .add(" is { ")
       if adaptor.isEmpty then rfe.emitUndefined().add(" }").nl
       else rfe.nl.incr
@@ -115,10 +115,6 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def openOnClause(onClause: OnClause, parents: Parents): Unit = open(onClause)
 
   def closeOnClause(onClause: OnClause, parents: Parents): Unit = close(onClause)
-
-  def openApplication(application: Application, parents: Parents): Unit = open(application)
-
-  def closeApplication(application: Application, parents: Parents): Unit = close(application)
 
   def openGroup(group: Group, parents: Parents): Unit = open(group)
 
@@ -389,7 +385,6 @@ end PrettifyVisitor
 def keyword(definition: Definition): String =
   definition match
     case _: Adaptor     => Keyword.adaptor
-    case _: Application => Keyword.application
     case _: UseCase     => Keyword.case_
     case _: Context     => Keyword.context
     case _: Connector   => Keyword.connector

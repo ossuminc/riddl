@@ -13,7 +13,7 @@ import fastparse.MultiLineWhitespace.*
 /** Parsing rules for Context definitions */
 private[parsing] trait ContextParser {
   this: ProcessorParser & AdaptorParser & EntityParser & ProjectorParser & RepositoryParser & SagaParser &
-    StreamingParser =>
+    StreamingParser & GroupParser =>
 
   private def contextInclude[u: P]: P[Include[ContextContents]] = {
     include[u, ContextContents](contextDefinitions(_))
@@ -22,7 +22,7 @@ private[parsing] trait ContextParser {
   private def contextDefinition[u: P]: P[ContextContents] = {
     P(
       processorDefinitionContents(StatementsSet.ContextStatements) |
-        entity | adaptor | saga | streamlet | projector | repository | connector | contextInclude | comment
+        entity | adaptor | group | saga | streamlet | projector | repository | connector | contextInclude | comment
     ).asInstanceOf[P[ContextContents]]
   }
 
