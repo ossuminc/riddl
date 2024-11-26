@@ -51,8 +51,8 @@ jobs:
       run: |
         sbt -v clean coverage \
           utils/Test/compile language/Test/compile passes/Test/compile diagrams/Test/compile \
-          command/Test/compile hugo/Test/compile commands/Test/compile riddlc/Test/compile \
-          utils/test language/test passes/test diagrams/test command/test hugo/test commands/test riddlc/test \
+          commands/Test/compile riddlc/Test/compile \
+          utils/test language/test passes/test diagrams/test commands/test riddlc/test \
           coverageAggregate coveralls
 
     - name: Coverage Results Collection
