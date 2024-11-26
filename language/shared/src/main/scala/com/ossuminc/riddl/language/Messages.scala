@@ -10,7 +10,6 @@ import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{CommonOptions, ExceptionUtils, Logger, PlatformContext}
 
 import scala.collection.mutable
-import scala.io.AnsiColor.*
 import scala.scalajs.js.annotation.*
 
 /** This module handles everything needed to deal with the message output of the `riddlc` compiler */
