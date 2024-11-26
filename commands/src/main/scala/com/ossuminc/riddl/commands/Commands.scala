@@ -210,24 +210,24 @@ object Commands:
         Left(List(severe("Exception Thrown:", exception, At.empty)))
   end runMainForTest
 
-  def runMain(args: Array[String])(using io: PlatformContext): Int =
+  def runMain(args: Array[String])(using pc: PlatformContext): Int =
     try
       
       val (common, remaining) = CommonOptionsHelper.parseCommonOptions(args)
       common match
         case Some(commonOptions) =>
-          io.withOptions[Int](commonOptions) { _ => 
+          pc.withOptions[Int](commonOptions) { _ => 
             handleCommandRun(remaining) 
           }
         case None =>
           // arguments are bad, error message will have been displayed
-          io.log.info("Option parsing failed, terminating.")
+          pc.log.info("Option parsing failed, terminating.")
           1
       end match
       
     catch
       case NonFatal(exception) =>
-        io.log.severe("Exception Thrown:", exception)
+        pc.log.severe("Exception Thrown:", exception)
         SevereError.severity + 1
   end runMain
 

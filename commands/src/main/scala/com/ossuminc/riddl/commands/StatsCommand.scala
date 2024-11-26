@@ -10,13 +10,11 @@ import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.utils.{Logger, PlatformContext}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.PlatformContext
 import scopt.OParser
 import pureconfig.{ConfigCursor, ConfigReader}
 
-import java.io.{File, PrintStream}
-import java.nio.charset.Charset
+import java.io.File
 import java.nio.file.Path
 import com.ossuminc.riddl.command.{PassCommand, PassCommandOptions}
 import com.ossuminc.riddl.passes.stats.{KindStats, StatsOutput, StatsPass}
@@ -37,7 +35,7 @@ object StatsCommand {
 }
 
 /** Stats Command */
-class StatsCommand(using io: PlatformContext) extends PassCommand[StatsCommand.Options]("stats") {
+class StatsCommand(using pc: PlatformContext) extends PassCommand[StatsCommand.Options]("stats") {
   import StatsCommand.Options
 
   // Members declared in com.ossuminc.riddl.commands.CommandPlugin
@@ -85,13 +83,13 @@ class StatsCommand(using io: PlatformContext) extends PassCommand[StatsCommand.O
   private def logStats(stats: StatsOutput): Unit = {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
     val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
-    io.log.info(s)
+    pc.log.info(s)
     for {
       key <- stats.categories.keys.toSeq.sorted
       v <- stats.categories.get(key)
     } do {
       val p_of_all = v.percent_of_all(totalStats.count)
-      io.log.info(
+      pc.log.info(
         f"$key%15s ${v.count}%5d ${v.numEmpty}%5d $p_of_all%8.2f ${v.percent_documented}12.2f ${v.completeness}%12.2f ${v.complexity}%10.2f ${v.averageContainment}%11.2f\n"
       )
     }
@@ -107,7 +105,7 @@ class StatsCommand(using io: PlatformContext) extends PassCommand[StatsCommand.O
       case Right(passesResult) =>
         passesResult.outputOf[StatsOutput](StatsPass.name) match
           case Some(stats) => logStats(stats)
-          case None        => io.log.warn("Statistics not available.")
+          case None        => pc.log.warn("Statistics not available.")
     result
   }
 

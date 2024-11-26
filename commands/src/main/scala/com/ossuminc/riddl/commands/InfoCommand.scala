@@ -9,8 +9,7 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Logger, RiddlBuildInfo}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{PlatformContext, RiddlBuildInfo}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -24,7 +23,7 @@ object InfoCommand {
       extends CommandOptions
 }
 
-class InfoCommand(using io: PlatformContext) extends Command[InfoCommand.Options]("info") {
+class InfoCommand(using pc: PlatformContext) extends Command[InfoCommand.Options]("info") {
   import InfoCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -46,19 +45,19 @@ class InfoCommand(using io: PlatformContext) extends Command[InfoCommand.Options
     options: InfoCommand.Options,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    io.log.info("About riddlc:")
-    io.log.info(s"           name: riddlc")
-    io.log.info(s"        version: ${RiddlBuildInfo.version}")
-    io.log.info(s"  documentation: https://riddl.tech")
-    io.log.info(s"      copyright: ${RiddlBuildInfo.copyright}")
-    io.log.info(s"       built at: ${RiddlBuildInfo.builtAtString}")
-    io.log.info(s"       licenses: ${RiddlBuildInfo.licenses}")
-    io.log.info(s"   organization: ${RiddlBuildInfo.organizationName}")
-    io.log.info(s"  scala version: ${RiddlBuildInfo.scalaVersion}")
-    io.log.info(s"    sbt version: ${RiddlBuildInfo.sbtVersion}")
-    io.log.info(s"       jvm name: ${System.getProperty("java.vm.name")}")
-    io.log.info(s"    jvm version: ${System.getProperty("java.runtime.version")}")
-    io.log.info(s"  operating sys: ${System.getProperty("os.name")}")
+    pc.log.info("About riddlc:")
+    pc.log.info(s"           name: riddlc")
+    pc.log.info(s"        version: ${RiddlBuildInfo.version}")
+    pc.log.info(s"  documentation: https://riddl.tech")
+    pc.log.info(s"      copyright: ${RiddlBuildInfo.copyright}")
+    pc.log.info(s"       built at: ${RiddlBuildInfo.builtAtString}")
+    pc.log.info(s"       licenses: ${RiddlBuildInfo.licenses}")
+    pc.log.info(s"   organization: ${RiddlBuildInfo.organizationName}")
+    pc.log.info(s"  scala version: ${RiddlBuildInfo.scalaVersion}")
+    pc.log.info(s"    sbt version: ${RiddlBuildInfo.sbtVersion}")
+    pc.log.info(s"       jvm name: ${System.getProperty("java.vm.name")}")
+    pc.log.info(s"    jvm version: ${System.getProperty("java.runtime.version")}")
+    pc.log.info(s"  operating sys: ${System.getProperty("os.name")}")
     Right(PassesResult())
   }
 }

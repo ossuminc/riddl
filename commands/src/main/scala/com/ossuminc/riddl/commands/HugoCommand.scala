@@ -8,20 +8,13 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.passes.Pass.standardPasses
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassCreators, PassesOutput, PassesResult}
 import com.ossuminc.riddl.hugo.HugoPass
 import com.ossuminc.riddl.hugo.themes.{DotdockWriter, GeekDocWriter}
-import com.ossuminc.riddl.passes.translate.TranslatingOptions
 import com.ossuminc.riddl.command.CommandOptions
 import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.commands.Commands
 import com.ossuminc.riddl.command.PassCommand
-import com.ossuminc.riddl.passes.diagrams.DiagramsPass
-import com.ossuminc.riddl.passes.stats.StatsPass
-import com.ossuminc.riddl.utils.{Await,CommonOptions, Logger, PlatformContext}
-import com.ossuminc.riddl.utils.{pc, ec}
-
+import com.ossuminc.riddl.passes.PassCreators
+import com.ossuminc.riddl.utils.PlatformContext
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
 import scopt.OParser
@@ -29,9 +22,8 @@ import scopt.OParser
 import java.net.URL
 import java.nio.file.Path
 import scala.annotation.unused
-import scala.concurrent.duration.DurationInt
 
-class HugoCommand(using io: PlatformContext) extends PassCommand[HugoPass.Options]("hugo") {
+class HugoCommand(using pc: PlatformContext) extends PassCommand[HugoPass.Options]("hugo") {
 
   import HugoPass.Options
 

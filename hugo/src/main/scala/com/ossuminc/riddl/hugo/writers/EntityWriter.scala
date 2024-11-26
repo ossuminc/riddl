@@ -8,10 +8,11 @@ package com.ossuminc.riddl.hugo.writers
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.diagrams.mermaid.EntityRelationshipDiagram
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.annotation.unused
 
-trait EntityWriter { this: MarkdownWriter =>
+trait EntityWriter(using pc: PlatformContext) { this: MarkdownWriter =>
 
   private def emitState(
     state: State,

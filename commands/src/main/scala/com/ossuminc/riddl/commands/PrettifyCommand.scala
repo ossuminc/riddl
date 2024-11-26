@@ -7,14 +7,12 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.{At, Messages}
-import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.{PassCreators, PassInput, PassOptions, PassesOutput, PassesResult}
-import com.ossuminc.riddl.utils.{ExceptionUtils, Logger, PlatformContext}
+import com.ossuminc.riddl.utils.{ExceptionUtils, PlatformContext}
 import com.ossuminc.riddl.command.{CommandOptions, PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
-import com.ossuminc.riddl.utils.{pc, ec}
 
 import pureconfig.ConfigCursor
 import pureconfig.ConfigReader
@@ -38,7 +36,7 @@ object PrettifyCommand {
 }
 
 /** A command to Prettify RIDDL Source */
-class PrettifyCommand(using io: PlatformContext)
+class PrettifyCommand(using pc: PlatformContext)
     extends TranslationCommand[PrettifyCommand.Options](PrettifyCommand.cmdName) {
 
   import PrettifyCommand.Options
@@ -121,7 +119,7 @@ class PrettifyCommand(using io: PlatformContext)
   private def writeOutput(
     output: PrettifyOutput,
     originalOptions: Options,
-    dirOverrides: Option[Path],
+    dirOverrides: Option[Path]
   )(using io: PlatformContext): Unit =
     try {
       val dir = originalOptions.outputDir

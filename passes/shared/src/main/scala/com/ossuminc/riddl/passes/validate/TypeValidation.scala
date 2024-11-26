@@ -8,13 +8,12 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.utils.{pc, ec}
-
+import com.ossuminc.riddl.utils.PlatformContext
 
 import java.util.regex.PatternSyntaxException
 
 /** Unit Tests For TypeValidationState */
-trait TypeValidation extends DefinitionValidation {
+trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
 
   def areSameType(typ1: Option[Type], typ2: Option[Type]): Boolean = {
     val result = for {
@@ -156,7 +155,7 @@ trait TypeValidation extends DefinitionValidation {
       case _: Mapping | _: Sequence | _: Set | _: IntegerTypeExpression => // these are okay
       case _: Cardinality =>
         messages.addError(replica.loc, s"Replica type expressions may not have cardinality")
-      case t: TypeExpression =>
+      case _: TypeExpression =>
         messages.addError(replica.loc, s"Type expression in Replica is not a replicable type")
     }
   }

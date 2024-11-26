@@ -9,10 +9,10 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.{PassesResult, Riddl}
-import com.ossuminc.riddl.utils.{Await, CommonOptions, Logger, PlatformContext, StringHelpers, URL}
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{Await, PlatformContext}
 
 import java.nio.file.Path
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 object FlattenCommand {
@@ -21,7 +21,7 @@ object FlattenCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class FlattenCommand(using io: PlatformContext) extends InputFileCommand(DumpCommand.cmdName) {
+class FlattenCommand(using pc: PlatformContext) extends InputFileCommand(DumpCommand.cmdName) {
   import InputFileCommand.Options
 
   override def run(
@@ -29,6 +29,7 @@ class FlattenCommand(using io: PlatformContext) extends InputFileCommand(DumpCom
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
     options.withInputFile { (inputFile: Path) =>
+      implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
         Riddl.parseAndValidate(rpi).map { result =>
           // TODO: output the model to System.out without spacing and with a line break only after every Definition
