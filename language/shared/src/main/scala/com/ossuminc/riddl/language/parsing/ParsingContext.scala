@@ -67,7 +67,7 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
         validate(Right(root), rpi, index)
       case Left((messages, index)) =>
         validate(Left(messagesAsList), rpi, index)
-    end match    
+    end match
   }
 
   def at(offset1: Int, offset2: Int)(implicit context: P[?]): At = {
