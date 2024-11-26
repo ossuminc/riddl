@@ -160,9 +160,9 @@ class MarkdownWriterTest extends HugoTestBase {
     "substitute PathId references" in { (td:TestData) =>
       val input: String =
         """domain substitutions {
-          |  referent referenced is { ??? }
+          |  context referenced is { ??? }
           |} with { description as {
-          | | This substitutions domain contains referent substitutions.referenced
+          | | This substitutions domain contains context substitutions.referenced
           | | which maps to https://www.merriam-webster.com/
           |} }
           |""".stripMargin

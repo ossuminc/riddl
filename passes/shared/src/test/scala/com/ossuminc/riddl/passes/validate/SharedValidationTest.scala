@@ -75,13 +75,13 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    term term is "Terminal"
           |  }
           |
-          |  referent other  is {
+          |  context other  is {
           |    ???
           |  } with {
           |    by author Reid
           |  }
-          |  referent referent is {
-          |    adaptor adaptor from referent other is { ??? }
+          |  context context is {
+          |    adaptor adaptor from context other is { ??? }
           |    function function is { ??? }
           |    event event is { at: TimeStamp }
           |    handler handler is {

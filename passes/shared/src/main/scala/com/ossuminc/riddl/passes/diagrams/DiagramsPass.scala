@@ -33,7 +33,7 @@ case class UseCaseDiagramData(
   interactions: Seq[Interaction]
 )
 
-type ContextRelationship = (Context|Group, String)
+type ContextRelationship = (Context, String)
 
 /** The information needed to generate a Context Diagram showing the relationships between bounded contexts
   *
@@ -278,7 +278,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
         if foreignContext != context then
           definition match {
             case a: Adaptor =>
-              refMap.definitionOf[Context | Group](a.referent, a) match {
+              refMap.definitionOf[Context](a.referent, a) match {
                 case Some(foreignContext) =>
                   if foreignContext != context then Some(foreignContext -> s"Adaptation ${a.direction.format}")
                   else None

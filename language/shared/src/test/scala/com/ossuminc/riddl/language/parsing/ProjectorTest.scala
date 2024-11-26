@@ -16,7 +16,7 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
   "Projector" should {
     "use a Repository" in { (td:TestData) =>
       val rpi = RiddlParserInput("""domain ignore {
-        |  referent ignore {
+        |  context ignore {
         |    repository storage is {
         |       ???
         |    }
@@ -40,7 +40,7 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
     "does not use data statements" in { (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
-          |  referent ignore {
+          |  context ignore {
           |   projector transform is {
           |     command PutIt { field: Integer }
           |     record Foo { data: String }
@@ -65,7 +65,7 @@ abstract class ProjectorTest(using PlatformContext) extends AbstractParsingTest 
     "can have a relationship with a repository" in {  (td:TestData) =>
       val rpi = RiddlParserInput(
         """domain ignore {
-          |  referent ignore {
+          |  context ignore {
           |    repository storage is {
           |       ???
           |    }

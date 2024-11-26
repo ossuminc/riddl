@@ -19,7 +19,7 @@ class OptionsValidationTest extends AbstractValidatingTest {
 
       val input: String =
         """domain ignore {
-          |  referent invalid {
+          |  context invalid {
           |    option css("fill:#333", "color:white")
           |    type JustHereToConformToSyntax = String
           |  }

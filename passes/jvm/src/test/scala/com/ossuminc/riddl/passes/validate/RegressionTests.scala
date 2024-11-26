@@ -154,7 +154,7 @@ class RegressionTests extends AbstractValidatingTest {
     "357: Nested fields in State constructors do not compile" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain Example is {
-          |   referent ExampleContext is {
+          |   context ExampleContext is {
           |     type Info {
           |       name: String
           |     }
@@ -195,13 +195,13 @@ class RegressionTests extends AbstractValidatingTest {
     "359: empty names in error message" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain Example is {
-          |  referent ErrorsToDemonstrateClutter{
+          |  context ErrorsToDemonstrateClutter{
           |    type IntentionalErrors {
           |      garbage: Blah,
           |      moreGarbage: BlahBlah
           |    }
           |  }
-          |  referent ExampleContext is {
+          |  context ExampleContext is {
           |    type Foo {
           |       name: String
           |     }
@@ -210,7 +210,7 @@ class RegressionTests extends AbstractValidatingTest {
           |      number: Integer
           |    }
           |  }
-          |  referent WarningsToDemonstrateClutter{
+          |  context WarningsToDemonstrateClutter{
           |    type Bar is { ??? }
           |    source UnusedWarningSource is {
           |      outlet Unused is type Bar

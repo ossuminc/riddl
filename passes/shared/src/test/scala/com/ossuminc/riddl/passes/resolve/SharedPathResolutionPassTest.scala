@@ -112,7 +112,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
     "resolve entity field" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain A {
-          |  referent D {
+          |  context D {
           |    type DSimple = Number
           |    entity E {
           |      record fields is { a : D.DSimple }
@@ -137,7 +137,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |  type Middle = { b: Bottom }
           |  type Top = { m: Middle }
           |
-          |  referent C {
+          |  context C {
           |    function foo {
           |      requires: { t: D.Top }
           |      returns: { a: String }
@@ -161,7 +161,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |  type Middle = { b: D.Bottom }
           |  type Top = { m: D.Middle }
           |
-          |  referent C {
+          |  context C {
           |    function foo {
           |      requires: { t: D.Top }
           |      returns: { a: String }
@@ -183,13 +183,13 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |domain A {
           |  type Top = String
           |  domain B {
-          |    referent C {
+          |    context C {
           |      type Simple = String
           |    }
-          |    type Simple = C.Simple // relative to referent
+          |    type Simple = C.Simple // relative to context
           |    type BSimple = A.B.C.Simple // full path
           |    type CSimple = B.C.Simple // partial path
-          |    referent D {
+          |    context D {
           |      type ATop = A.Top
           |      type DSimple = D.E.ESimple // partial path
           |      entity E {
@@ -228,11 +228,11 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
       val input = RiddlParserInput(
         """domain A {
           |  domain B {
-          |    referent C {
+          |    context C {
           |      type Simple = String(,30)
           |    }
           |    type BSimple = A.B.C.Simple // full path starts from root
-          |    referent D {
+          |    context D {
           |      type DSimple = D.E.ESimple // partial path
           |      entity E {
           |        type ESimple = B.C.Simple // E->D->B->C->Simple
@@ -253,7 +253,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |  type T is { tp: A.TPrime } // Refers to T.TPrime
           |  type TPrime is { t: A.T } // Refers to A.T cyclically
           |  command DoIt is { ??? }
-          |  referent C {
+          |  context C {
           |    entity E {
           |      record fields is {
           |        f: A.TPrime
@@ -280,7 +280,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
     "resolve simple path directly" in { td =>
       val input = RiddlParserInput(
         """domain D {
-          |  referent C {
+          |  context C {
           |    command DoIt is { value: Number }
           |    type Info is { g: C.DoIt }
           |    entity E is {
@@ -355,7 +355,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           |  type CustomerId is Id(ReactiveBBQ.Customer.Customer) explained as {
           |    "Unique identifier for a customer"
           |  }
-          |  referent Customer is {
+          |  context Customer is {
           |    entity Customer is { ??? }
           |  }
           |}
@@ -386,7 +386,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
     "resolve references in morph action" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain Ignore is {
-          |  referent Ignore2 is {
+          |  context Ignore2 is {
           |    entity OfInterest is {
           |      command MorphIt is { ??? }
           |      record Data is { field: Integer }
@@ -415,7 +415,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
     "resolve a path identifier" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain d is {
-          |  referent c is {
+          |  context c is {
           |    entity e is {
           |      state s of record c.eState
           |      handler h is {

@@ -63,8 +63,8 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
       val rpi = RiddlParserInput(sourceInput, td)
       checkDefinition[Streamlet, Streamlet](rpi, sourceExpected(rpi), identity)
     }
-    "recognize a source processor in a referent" in { (td: TestData) =>
-      val input = s"referent foo is { $sourceInput }"
+    "recognize a source processor in a context" in { (td: TestData) =>
+      val input = s"context foo is { $sourceInput }"
       val rpi = RiddlParserInput(input, td)
       val expected = Context(
         (1, 1, rpi),
@@ -74,11 +74,11 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
       checkDefinition[Context, Context](rpi, expected, identity)
     }
 
-    "recognize a streaming referent" in { (td: TestData) =>
+    "recognize a streaming context" in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """
           |domain AnyDomain is {
-          |referent SensorMaintenance is {
+          |context SensorMaintenance is {
           |  command Forecast is { ??? }
           |  command Temperature is { ??? }
           |  source GetWeatherForecast is {

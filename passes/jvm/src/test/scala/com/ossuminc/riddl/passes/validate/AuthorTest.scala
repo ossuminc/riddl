@@ -33,7 +33,7 @@ class AuthorTest extends AbstractValidatingTest {
       }
     }
     "not supported in contexts" in { (td: TestData) =>
-      val input = RiddlParserInput("""domain foo is { referent bar is { author FooBar is { ??? } } }""".stripMargin, td)
+      val input = RiddlParserInput("""domain foo is { context bar is { author FooBar is { ??? } } }""".stripMargin, td)
       parseDomainDefinition(input, identity) match {
         case Left(msgs) =>
           msgs.isOnlyIgnorable must be(false)
@@ -83,7 +83,7 @@ class AuthorTest extends AbstractValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  referent Bar is { ??? } with { by author Reid }
+          |  context Bar is { ??? } with { by author Reid }
           |}
           |""".stripMargin,
         td
@@ -131,7 +131,7 @@ class AuthorTest extends AbstractValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  referent Bar  is {
+          |  context Bar  is {
           |    entity Bar is { ??? } with { by author Reid  }
           |  } with {
           |    by author Reid
@@ -152,7 +152,7 @@ class AuthorTest extends AbstractValidatingTest {
         |    name: "Reid Spencer"
         |    email: "reid@ossum.biz"
         |  }
-        |  referent Bar {
+        |  context Bar {
         |    function FooBar is { ??? } with {
         |      by author Reid
         |    }
@@ -173,7 +173,7 @@ class AuthorTest extends AbstractValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  referent Bar is {
+          |  context Bar is {
           |    repository FooBar  is { ??? } with { by author Reid }
           |  }
           |}

@@ -558,7 +558,7 @@ case class ValidationPass(
         resolvePath(adaptor.referent.pathId, parents).map { (target: Context) =>
           if target == c then {
             val message =
-              s"${adaptor.identify} may not specify a target referent that is " +
+              s"${adaptor.identify} may not specify a target context that is " +
                 s"the same as the containing ${c.identify}"
             messages.addError(adaptor.errorLoc, message)
           }

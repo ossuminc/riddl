@@ -267,7 +267,7 @@ trait BasicValidation {
                 style(
                   s"Path Identifier $formatted at ${ref.loc} references ${definition.identify} in " +
                     s"${definitionContext.identify} but occurs in ${container.identify} in ${containerContext.identify}." +
-                    " Cross-referent references are ill-advised as they lead to model confusion and violate " +
+                    " Cross-context references are ill-advised as they lead to model confusion and violate " +
                     "the 'bounded' aspect of bounded contexts",
                   ref.loc.extend(formatted.length)
                 )

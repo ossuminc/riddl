@@ -167,7 +167,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
     "include Code Statement" in { (td:TestData) =>
       val input = RiddlParserInput(
         """domain CodeStatements is {
-          |  referent CodeStatements is {
+          |  context CodeStatements is {
           |    handler h is {
           |      on init {
           |        ```scala

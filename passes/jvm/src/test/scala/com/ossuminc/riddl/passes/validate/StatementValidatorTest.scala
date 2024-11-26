@@ -18,22 +18,22 @@ import org.scalatest.TestData
 class StatementValidatorTest extends AbstractValidatingTest {
 
   "Statement Validation" must {
-    "identify cross-referent references" in { (td: TestData) =>
+    "identify cross-context references" in { (td: TestData) =>
       val input =
         """domain test {
-          |  referent one {
+          |  context one {
           |    command fee { ??? }
           |    handler oneH is {
           |      on command fee {
-          |        tell command two.pho to referent test.two
+          |        tell command two.pho to context test.two
           |      }
           |    }
           |  }
-          |  referent two {
+          |  context two {
           |    command pho { ??? }
           |    handler twoH is {
           |      on command pho {
-          |        tell command one.fee to referent test.one
+          |        tell command one.fee to context test.one
           |      }
           |    }
           |  }
@@ -48,7 +48,7 @@ class StatementValidatorTest extends AbstractValidatingTest {
           warnings.isEmpty mustBe false
           messages.exists { (msg: Messages.Message) =>
             msg.kind == StyleWarning &&
-            msg.message.contains("Cross-referent references are ill-advised")
+            msg.message.contains("Cross-context references are ill-advised")
           } must be(true)
       }
 

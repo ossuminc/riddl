@@ -16,7 +16,7 @@ class FinderTest extends AbstractParsingTest {
 
   val input: RiddlParserInput = RiddlParserInput(
     """domain one is {
-      |  referent one is {
+      |  context one is {
       |    connector a is from outlet foo to inlet bar
       |    flow b is {
       |      inlet b_in is String
@@ -25,8 +25,8 @@ class FinderTest extends AbstractParsingTest {
       |  } with {
       |    term whomprat is { "a 2m long rat on Tatooine" }
       |  }
-      |  // referent one is { ??? }
-      |  referent two is {
+      |  // context one is { ??? }
+      |  context two is {
       |    function foo is {
       |       requires { a: Integer, b: String }
       |       returns { ??? }
@@ -45,7 +45,7 @@ class FinderTest extends AbstractParsingTest {
       |      function one is { ??? }
       |      invariant one is ???
       |    }
-      |    adaptor one to referent over.consumption is { ??? }
+      |    adaptor one to context over.consumption is { ??? }
       |  } with {
       |    term ForcePush is { "an ability of the Jedi" }
       |  }

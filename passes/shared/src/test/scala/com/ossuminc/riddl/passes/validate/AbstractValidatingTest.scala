@@ -63,7 +63,7 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
     input: String,
     shouldFailOnErrors: Boolean = true
   )(validator: (D, RiddlParserInput, Messages) => Assertion): Seq[Assertion] = {
-    val parseString = "domain foo is { referent bar is {\n " + input + "}}\n"
+    val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     val rpi = RiddlParserInput(parseString, "test")
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)
@@ -92,7 +92,7 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
   )(
     validator: (Context, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
-    val parseString = "domain foo is { referent bar is {\n " + input + "}}\n"
+    val parseString = "domain foo is { context bar is {\n " + input + "}}\n"
     val rpi = RiddlParserInput(parseString, "test")
     parseDefinition[Domain](rpi) match {
       case Left(errors) => fail(errors.format)

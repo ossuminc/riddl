@@ -53,7 +53,7 @@ class ReferenceMapTest extends AbstractValidatingTest {
     }
 
     "inserts a value and finds it" in { _ =>
-      val context: Context = Context(At(), Identifier(At(), "referent"))
+      val context: Context = Context(At(), Identifier(At(), "context"))
       val parent: Parent = Domain(At(), Identifier(At(), "domain"))
       val pid = PathIdentifier(At(), Seq("wrong-name"))
       refMap.add[Context](pid, parent, context)

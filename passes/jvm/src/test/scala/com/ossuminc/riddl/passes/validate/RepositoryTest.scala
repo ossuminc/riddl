@@ -20,7 +20,7 @@ class RepositoryTest extends AbstractValidatingTest {
     "handle a basic definition" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
-          |  referent bar is {
+          |  context bar is {
           |    source itin is { outlet hereyougo is bar.fubar.Reply }
           |    repository fubar is {
           |      query GetOne is { how: String }
@@ -53,7 +53,7 @@ class RepositoryTest extends AbstractValidatingTest {
               msgs.isOnlyWarnings
               succeed
             case _ =>
-              fail("Did not parse a referent!")
+              fail("Did not parse a context!")
           }
         }
       }

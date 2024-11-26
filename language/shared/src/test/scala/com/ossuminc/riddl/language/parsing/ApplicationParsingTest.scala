@@ -18,7 +18,7 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
       val input = RiddlParserInput(
         """
           |domain foo {
-          |referent foo2 {
+          |context foo2 {
           |  group g1 is { ??? }
           |  group g2 is {
           |    group g3 is { ??? }
@@ -40,7 +40,7 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
       val input = RiddlParserInput(
         """
           |domain foo {
-          |referent foo2 {
+          |context foo2 {
           |  command GoHome {???} with { briefly as "Directive to focus on going to the home page" }
           |  handler foo3 is {
           |    on command GoHome {
@@ -64,7 +64,7 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
       val input = RiddlParserInput(
         """
           |domain foo {
-          |  referent ignore {
+          |  context ignore {
           |    /* group Micky shown by https://pngimg.com/uploads/mickey_mouse/mickey_mouse_PNG54.png is ... */
           |    group Mickey  is {
           |      ???

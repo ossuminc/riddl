@@ -55,7 +55,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          if errors.head.message.startsWith("Expected one of (") && errors.head.message.contains("referent") then succeed
+          if errors.head.message.startsWith("Expected one of (") && errors.head.message.contains("context") then succeed
           else fail(errors.format)
         case Right(_) => fail("Missing closing brace should make an error")
       }
@@ -115,10 +115,10 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       val input = RiddlParserInput(
         """domain one is { ??? }
           |domain two is {
-          |  referent one is {
+          |  context one is {
           |    router b is { ??? }
           |  }
-          |  referent two is {
+          |  context two is {
           |    function foo is { ??? }
           |    entity one is { ??? }
           |    entity two is {
@@ -128,7 +128,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           |      function one is { ??? }
           |      invariant one is "???"
           |    }
-          |    adaptor one from referent over.consumption is { ??? }
+          |    adaptor one from context over.consumption is { ??? }
           |  } with {
           |   term expialidocious is "supercalifragilistic" with { ??? }
           |  }
@@ -145,8 +145,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           succeed
       }
     }
-    "allow referent definitions in domains" in { (td: TestData) =>
-      val input = RiddlParserInput("domain foo is { referent bar is { ??? } }", td)
+    "allow context definitions in domains" in { (td: TestData) =>
+      val input = RiddlParserInput("domain foo is { context bar is { ??? } }", td)
       parseDomainDefinition[Context](input, _.contexts.head) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -156,9 +156,9 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
             Context(At(rpi, 16, 39), id = Identifier(At(rpi, 24, 28), "bar"))
       }
     }
-    "allow options on referent definitions" in { (td: TestData) =>
+    "allow options on context definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """referent bar is {
+        """context bar is {
           |  option service
           |  option wrapper
           |  option gateway
@@ -273,7 +273,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       }
     }
     "allow adaptor definitions" in { (td: TestData) =>
-      val input = RiddlParserInput("adaptor fuzz from referent foo.bar is { ??? }", td)
+      val input = RiddlParserInput("adaptor fuzz from context foo.bar is { ??? }", td)
       parseDefinition[Adaptor](input) match {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
@@ -341,7 +341,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
     "support Replica types in Contexts" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo {
-          |  referent bar is {
+          |  context bar is {
           |    type crdt is replica of Integer
           |  }
           |}

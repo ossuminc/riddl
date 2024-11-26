@@ -2555,7 +2555,7 @@ object AST:
     loc: At,
     id: Identifier,
     direction: AdaptorDirection,
-    referent: ContextRef | GroupRef,
+    referent: ContextRef,
     contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[AdaptorContents]
@@ -3002,7 +3002,7 @@ object AST:
     */
   @JSExportTopLevel("ContextRef")
   case class ContextRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Context] {
-    override def format: String = s"referent ${pathId.format}"
+    override def format: String = s"context ${pathId.format}"
   }
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// STREAMLET
