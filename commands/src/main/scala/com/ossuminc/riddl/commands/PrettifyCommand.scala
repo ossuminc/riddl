@@ -26,7 +26,7 @@ object PrettifyCommand {
 
   case class Options(
     inputFile: Option[Path] = None,
-    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.pc.tmpdir"))),
+    outputDir: Option[Path] = Some(Path.of(System.getProperty("java.io.tmpdir"))),
     projectName: Option[String] = None,
     singleFile: Boolean = true
   ) extends TranslationCommand.Options
@@ -119,7 +119,7 @@ class PrettifyCommand(using pc: PlatformContext)
   private def writeOutput(
     output: PrettifyOutput,
     originalOptions: Options,
-    dirOverrides: Option[Path],
+    dirOverrides: Option[Path]
   )(using io: PlatformContext): Unit =
     try {
       val dir = originalOptions.outputDir
