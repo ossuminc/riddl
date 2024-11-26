@@ -67,15 +67,15 @@ class ValidationPassTest extends AbstractValidatingTest {
       val incls = sharedRoot.domains.head.includes
       incls mustNot be(empty)
       incls.head.contents mustNot be(empty)
-      incls.head.contents.head.getClass mustBe classOf[Application]
+      incls.head.contents.head.getClass mustBe classOf[Context]
       incls(1).contents.head.getClass mustBe classOf[Context]
     }
-    "have terms and author refs in applications" in { (td: TestData) =>
+    "have terms and author refs in contexts" in { (td: TestData) =>
       val includes = sharedRoot.domains.head.includes
       includes mustNot be(empty)
-      val apps = includes.head.contents.filter[Application]
+      val apps = includes.head.contents.filter[Context]
       apps mustNot be(empty)
-      apps.head mustBe a[Application]
+      apps.head mustBe a[Context]
       val app = apps.head
       app.terms mustNot be(empty)
       app.hasAuthors mustBe false

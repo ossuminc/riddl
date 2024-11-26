@@ -152,12 +152,6 @@ private[parsing] trait ReferenceParser {
     }
   }
 
-  private def applicationRef[u: P]: P[ApplicationRef] = {
-    P(Index ~ Keywords.application ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
-      ApplicationRef(at(start, end), pid)
-    }
-  }
-
   def outputRef[u: P]: P[OutputRef] = {
     P(Index ~ outputAliases ~ pathIdentifier ~~ Index )
       .map { case (start, keyword, pid, end) => OutputRef(at(start, end), keyword, pid) }
@@ -181,7 +175,7 @@ private[parsing] trait ReferenceParser {
 
   def processorRef[u: P]: P[ProcessorRef[Processor[?]]] = {
     P(
-      adaptorRef | applicationRef | contextRef | entityRef | projectorRef |
+      adaptorRef | contextRef | entityRef | projectorRef |
         repositoryRef | streamletRef
     )
   }

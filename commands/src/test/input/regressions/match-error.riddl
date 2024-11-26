@@ -11,7 +11,7 @@ domain PersonalBanking is {
   }
 
   domain PersonalBankingApp is {
-    application Test is {
+    context Test is {
         option is technology("react.js")
         result Title is { value: String }
         command Name is { value: String }

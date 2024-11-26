@@ -2,7 +2,7 @@ domain ksoTemplateAppDomain {
 
   type EmailAddress = String(1,255)
 
-  application ksoTemplateApp {
+  context ksoTemplateApp {
     type FirstName: String(2,64)
     type LastName: String(2,64)
     type Password: String(8,128)

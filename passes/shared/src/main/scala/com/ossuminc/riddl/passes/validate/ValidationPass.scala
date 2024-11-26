@@ -134,8 +134,6 @@ case class ValidationPass(
         validateEpic(s, parentsAsSeq)
       case uc: UseCase =>
         validateUseCase(uc, parentsAsSeq)
-      case a: Application =>
-        validateApplication(a, parentsAsSeq)
       case grp: Group =>
         validateGroup(grp, parentsAsSeq)
       case in: Input =>
@@ -557,7 +555,7 @@ case class ValidationPass(
     parents.headOption match {
       case Some(c: Context) =>
         checkContainer(parents, adaptor)
-        resolvePath(adaptor.context.pathId, parents).map { (target: Context) =>
+        resolvePath(adaptor.referent.pathId, parents).map { (target: Context) =>
           if target == c then {
             val message =
               s"${adaptor.identify} may not specify a target context that is " +
@@ -648,18 +646,7 @@ case class ValidationPass(
     }
     checkMetadata(epic)
   }
-
-  private def validateApplication(
-    app: Application,
-    parents: Parents
-  ): Unit = {
-    checkContainer(parents, app)
-    if app.groups.isEmpty then {
-      messages.addMissing(app.errorLoc, s"${app.identify} should have a group")
-    }
-    checkMetadata(app)
-  }
-
+  
   private def validateGroup(
     grp: Group,
     parents: Parents
@@ -785,7 +772,7 @@ case class ValidationPass(
     val maybeMessage: Option[Message] = origin match {
       case Some(o) if o.isVital =>
         destination match {
-          case Some(d) if d.isInstanceOf[ApplicationRelated] =>
+          case Some(d) if d.isInstanceOf[GroupRelated] =>
             d match {
               case output @ Output(loc, _, _, _, putOut, _, _) =>
                 putOut match {
@@ -818,7 +805,7 @@ case class ValidationPass(
             }
           case _ => None
         }
-      case Some(o) if o.isInstanceOf[ApplicationRelated] =>
+      case Some(o) if o.isInstanceOf[GroupRelated] =>
         destination match {
           case Some(d) if d.isVital =>
             o match {

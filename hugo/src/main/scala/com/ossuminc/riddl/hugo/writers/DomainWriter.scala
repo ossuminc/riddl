@@ -22,7 +22,6 @@ trait DomainWriter { this: MarkdownWriter =>
     emitAuthorInfo(domain.authors)
     definitionToc("Subdomains", domain.domains)
     definitionToc("Contexts", domain.contexts)
-    definitionToc("Applications", domain.applications)
     definitionToc("Epics", domain.epics)
   }
 

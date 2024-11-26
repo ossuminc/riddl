@@ -177,7 +177,6 @@ case class HugoPass(
 
         container match { // match the processors
           case a: Adaptor     => mkd.emitAdaptor(a, stack)
-          case a: Application => mkd.emitApplication(a, stack)
           case c: Context     => mkd.emitContext(c, stack)
           case d: Domain =>
             mkd.emitDomain(d, stack)

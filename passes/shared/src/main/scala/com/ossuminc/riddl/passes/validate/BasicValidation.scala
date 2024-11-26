@@ -262,7 +262,7 @@ trait BasicValidation(using pc: PlatformContext) {
         symbols.contextOf(container) match {
           case Some(containerContext) =>
             if definitionContext != containerContext then
-              val formatted = ref.format 
+              val formatted = ref.format
               messages.add(
                 style(
                   s"Path Identifier $formatted at ${ref.loc} references ${definition.identify} in " +

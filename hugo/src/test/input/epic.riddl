@@ -2,7 +2,7 @@ domain ignore {
 
   user UseIt is "for testing"
 
-  application a1sauce {
+  context a1sauce {
     command edit is { ??? }
     command cut is { ??? }
     command copy is { ??? }

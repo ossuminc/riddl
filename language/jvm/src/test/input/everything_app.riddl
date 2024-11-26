@@ -1,8 +1,7 @@
-application Whatever is {
+context Whatever is {
   record Identity is { name: String, id: UUID, age: Integer }
   group AcquireIdentity is {
     form Identity takes record Whatever.Identity
   }
-  handler DoIt is {
-  }
+  handler DoIt is { ??? }
 }

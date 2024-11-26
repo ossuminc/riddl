@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
+import com.ossuminc.riddl.utils.{pc, Await, PlatformContext, URL}
 import fastparse.ParserInput
 import fastparse.internal.Util
 

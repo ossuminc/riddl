@@ -24,12 +24,12 @@ import scala.scalajs.js.annotation.*
 trait ExtensibleTopLevelParser(using PlatformContext)
     extends ProcessorParser,
       AdaptorParser,
-      ApplicationParser,
       ContextParser,
       DomainParser,
       EntityParser,
       EpicParser,
       FunctionParser,
+      GroupParser,
       ModuleParser,
       NebulaParser,
       ProjectorParser,
@@ -95,12 +95,12 @@ trait ExtensibleTopLevelParser(using PlatformContext)
       case x if x == classOf[Author]         => author(_)
       case x if x == classOf[Connector]      => connector(_)
       case x if x == classOf[Constant]       => constant(_)
-      case x if x == classOf[ContainedGroup] => containedGroup(_)
       case x if x == classOf[Context]        => context(_)
       case x if x == classOf[Domain]         => domain(_)
       case x if x == classOf[Entity]         => entity(_)
       case x if x == classOf[Epic]           => epic(_)
       case x if x == classOf[Function]       => function(_)
+      case x if x == classOf[Group]          => group(_)
       case x if x == classOf[Invariant]      => invariant(_)
       case x if x == classOf[Module]         => module(_)
       case x if x == classOf[Nebula]         => nebula(_)
@@ -121,13 +121,13 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   }
 
   /** Parse the input expecting the contents of a Root node
-    * @returns
+    * @return
     *   Either the failure error messages or the Root parsed
     */
   def parseRoot: Either[Messages, Root] = doParse[Root](root(_))
 
   /** Parse the input expecting the contents of a Root node but also return the list of files that were read
-    * @returns
+    * @return
     *   Either the failure messages and a list of files or the Root that was parsed and the list of files parsed.
     */
   def parseRootWithURLs: Either[(Messages, Seq[URL]), (Root, Seq[URL])] = {
@@ -139,14 +139,14 @@ trait ExtensibleTopLevelParser(using PlatformContext)
 
   /** Parse the input expecting main definitions in any order, a nebula. Each definition must be syntactically correct
     * but the top level definitions do not require the hierarchical structure of parsing for Root contents.
-    * @returns
+    * @return
     *   Either the failure messages or the Nebula of definitions
     */
   def parseNebula: Either[Messages, Nebula] = doParse[Nebula](nebula(_))
 
   /** Parse the input expecting definitions in any order, a nebula. Each definition must be syntactically correct but
     * the top level definitions do not require the hierarchical structure of parsing for Root contents.
-    * @returns
+    * @return
     *   Either the failure messages with the list of parsed URL or the Nebula of definitions with the list of parsed
     *   URLs
     */

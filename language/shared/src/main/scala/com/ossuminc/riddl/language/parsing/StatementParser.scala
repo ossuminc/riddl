@@ -86,7 +86,6 @@ private[parsing] trait StatementParser {
   enum StatementsSet:
     case AllStatements,
       AdaptorStatements,
-      ApplicationStatements,
       ContextStatements,
       EntityStatements,
       FunctionStatements,
@@ -165,8 +164,7 @@ private[parsing] trait StatementParser {
   def statement[u: P](set: StatementsSet): P[Statements] = {
     set match {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
-      case StatementsSet.ApplicationStatements => anyDefStatements(set) | focusStatement
-      case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
+      case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement | focusStatement
       case StatementsSet.EntityStatements =>
         anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
       case StatementsSet.FunctionStatements  => anyDefStatements(set) | returnStatement
