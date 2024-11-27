@@ -15,9 +15,8 @@ abstract class NebulaTest(using PlatformContext) extends AbstractParsingTest {
     "be accepted at root scope" in { (td: TestData) =>
       val input = RiddlParserInput(
         """
-          |nebula is {
           | domain blah is { ??? }
-          |}
+          | entity foo is { ??? }
           |""".stripMargin, td
       )
       parseNebula(input) match

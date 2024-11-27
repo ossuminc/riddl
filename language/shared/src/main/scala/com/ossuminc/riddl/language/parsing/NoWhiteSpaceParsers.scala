@@ -11,7 +11,7 @@ import fastparse.*
 import fastparse.NoWhitespace.*
 
 /** Parser rules that should not collect white space */
-private[parsing] trait NoWhiteSpaceParsers { 
+private[parsing] trait NoWhiteSpaceParsers {
   this: ParsingContext =>
 
   def toEndOfLine[u: P]: P[String] = {
@@ -68,8 +68,8 @@ private[parsing] trait NoWhiteSpaceParsers {
 
   def markdownLine[u: P]: P[LiteralString] = {
     P(
-      location ~ Punctuation.verticalBar ~~ toEndOfLine
-    ).map(tpl => LiteralString.apply.tupled(tpl))
+      Index ~ Punctuation.verticalBar ~~ toEndOfLine ~/ Index
+    ).map { case (start, line, end) => LiteralString(at(start, end), line) }
   }
 
   // \\	The backslash character
@@ -91,7 +91,7 @@ private[parsing] trait NoWhiteSpaceParsers {
   private final val zero: String = "0"
 
   private def hexDigit[u: P]: P[String] = CharIn("0-9a-fA-F").!./
-  private def hexEscape[u: P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min = 2, max=8,sep="")).!./
+  private def hexEscape[u: P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min = 2, max = 8, sep = "")).!./
   private def unicodeEscape[u: P]: P[Unit] = P(backslash ~ "u" ~ hexDigit.rep(min = 4, max = 4, sep = "")).!./
 
   private final val escape_chars = "\\\\\\\"aefnrt"
@@ -104,8 +104,7 @@ private[parsing] trait NoWhiteSpaceParsers {
 
   def literalString[u: P]: P[LiteralString] = {
     P(
-      location ~ Punctuation.quote ~/ (strChars | escape).rep.! ~
-        Punctuation.quote
+      Index ~ Punctuation.quote ~/ (strChars | escape).rep.! ~ Punctuation.quote ~ Index
     )
-  }.map { tpl => LiteralString.apply.tupled(tpl) }
+  }.map { case (off1, litStr, off2) => LiteralString(at(off1, off2), litStr) }
 }

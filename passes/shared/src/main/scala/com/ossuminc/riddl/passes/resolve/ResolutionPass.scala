@@ -115,7 +115,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case c: Constant =>
         associateUsage(c, resolveTypeExpression(c, c.typeEx, parents))
       case a: Adaptor =>
-        associateUsage(a, resolveARef[Context](a.context, parents))
+        associateUsage(a, resolveARef[Context | Group](a.referent, parents))
         resolveAuthorRefs(a, parents)
       case s: Streamlet =>
         resolveAuthorRefs(s, parents)
@@ -128,8 +128,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveAuthorRefs(s, parents)
       case d: Domain =>
         resolveAuthorRefs(d, parents)
-      case a: Application =>
-        resolveAuthorRefs(a, parents)
       case c: Context =>
         resolveAuthorRefs(c, parents)
       case e: Epic =>

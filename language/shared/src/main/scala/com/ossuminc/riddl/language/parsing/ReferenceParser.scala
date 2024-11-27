@@ -14,33 +14,39 @@ private[parsing] trait ReferenceParser {
   this: CommonParser =>
 
   private def adaptorRef[u: P]: P[AdaptorRef] = {
-    P(location ~ Keywords.adaptor ~ pathIdentifier)
-      .map(tpl => AdaptorRef.apply.tupled(tpl))
+    P(Index ~ Keywords.adaptor ~ pathIdentifier ~/ Index).map { case (start, pid, end) =>
+      AdaptorRef(at(start, end), pid)
+    }
   }
 
   private def commandRef[u: P]: P[CommandRef] = {
-    P(location ~ Keywords.command ~ pathIdentifier)
-      .map(tpl => CommandRef.apply.tupled(tpl))
+    P(Index ~ Keywords.command ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      CommandRef(at(start, end), pid)
+    }
   }
 
   private def eventRef[u: P]: P[EventRef] = {
-    P(location ~ Keywords.event ~ pathIdentifier)
-      .map(tpl => EventRef.apply.tupled(tpl))
+    P(Index ~ Keywords.event ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      EventRef(at(start, end), pid)
+    }
   }
 
   private def queryRef[u: P]: P[QueryRef] = {
-    P(location ~ Keywords.query ~ pathIdentifier)
-      .map(tpl => QueryRef.apply.tupled(tpl))
+    P(Index ~ Keywords.query ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      QueryRef(at(start, end), pid)
+    }
   }
 
   private def resultRef[u: P]: P[ResultRef] = {
-    P(location ~ Keywords.result ~ pathIdentifier)
-      .map(tpl => ResultRef.apply.tupled(tpl))
+    P(Index ~ Keywords.result ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      ResultRef(at(start, end), pid)
+    }
   }
 
   private def recordRef[u: P]: P[RecordRef] = {
-    P(location ~ Keywords.record ~ pathIdentifier)
-      .map(tpl => RecordRef.apply.tupled(tpl))
+    P(Index ~ Keywords.record ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      RecordRef(at(start, end), pid)
+    }
   }
 
   def messageRef[u: P]: P[MessageRef] = {
@@ -48,119 +54,128 @@ private[parsing] trait ReferenceParser {
   }
 
   def entityRef[u: P]: P[EntityRef] = {
-    P(location ~ Keywords.entity ~ pathIdentifier)
-      .map(tpl => EntityRef.apply.tupled(tpl))
+    P(Index ~ Keywords.entity ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      EntityRef(at(start, end), pid)
+    }
   }
 
   def functionRef[u: P]: P[FunctionRef] = {
-    P(location ~ Keywords.function ~ pathIdentifier)
-      .map(tpl => FunctionRef.apply.tupled(tpl))
+    P(Index ~ Keywords.function ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      FunctionRef(at(start, end), pid)
+    }
   }
 
   def handlerRef[u: P]: P[HandlerRef] = {
-    P(location ~ Keywords.handler ~ pathIdentifier)
-      .map(tpl => HandlerRef.apply.tupled(tpl))
+    P(Index ~ Keywords.handler ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      HandlerRef(at(start, end), pid)
+    }
   }
 
   def stateRef[u: P]: P[StateRef] = {
-    P(location ~ Keywords.state ~ pathIdentifier)
-      .map(tpl => StateRef.apply.tupled(tpl))
+    P(Index ~ Keywords.state ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      StateRef(at(start, end), pid)
+    }
   }
 
   def typeRef[u: P]: P[TypeRef] = {
     P(
-      location ~ Keywords.typeKeywords.? ~ pathIdentifier
+      Index ~ Keywords.typeKeywords.? ~ pathIdentifier ~ Index
     ).map {
-      case (loc, Some(key), pid) => TypeRef(loc, key, pid)
-      case (loc, None, pid)      => TypeRef(loc, "type", pid)
+      case (start, Some(key), pid, end) => TypeRef(at(start, end), key, pid)
+      case (start, None, pid, end)      => TypeRef(at(start, end), "type", pid)
     }
   }
 
   def fieldRef[u: P]: P[FieldRef] = {
-    P(location ~ Keywords.field ~ pathIdentifier)
-      .map(tpl => FieldRef.apply.tupled(tpl))
+    P( Index ~ Keywords.field ~ pathIdentifier ~/ Index).map { case (start, pid, end) =>
+      FieldRef(at(start, end), pid)
+    }
   }
 
   def constantRef[u: P]: P[ConstantRef] = {
-    P(location ~ Keywords.constant ~ pathIdentifier)
-      .map(tpl => ConstantRef.apply.tupled(tpl))
+    P(Index ~ Keywords.constant ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      ConstantRef(at(start, end), pid)
+    }
   }
 
   def contextRef[u: P]: P[ContextRef] = {
-    P(location ~ Keywords.context ~ pathIdentifier)
-      .map(tpl => ContextRef.apply.tupled(tpl))
+    P(Index ~ Keywords.context ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      ContextRef(at(start, end), pid)
+    }
   }
 
   def outletRef[u: P]: P[OutletRef] = {
-    P(location ~ Keywords.outlet ~ pathIdentifier)
-      .map(tpl => OutletRef.apply.tupled(tpl))
+    P(Index ~ Keywords.outlet ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      OutletRef(at(start, end), pid)
+    }
   }
 
   def inletRef[u: P]: P[InletRef] = {
-    P(location ~ Keywords.inlet ~ pathIdentifier)
-      .map(tpl => InletRef.apply.tupled(tpl))
+    P(Index ~ Keywords.inlet ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      InletRef(at(start, end), pid)
+    }
   }
 
   private def streamletRef[u: P]: P[StreamletRef] = {
-    P(
-      location ~ Keywords.streamlets ~ pathIdentifier
-    ).map(tpl => StreamletRef.apply.tupled(tpl))
+    P(Index ~ Keywords.streamlets ~ pathIdentifier ~~ Index ).map { case (start, streamlets, pid, end) =>
+      StreamletRef(at(start, end), streamlets, pid)
+    }
   }
 
   private def projectorRef[u: P]: P[ProjectorRef] = {
-    P(location ~ Keywords.projector ~ pathIdentifier)
-      .map(tpl => ProjectorRef.apply.tupled(tpl))
+    P(Index ~ Keywords.projector ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      ProjectorRef(at(start, end), pid)
+    }
   }
 
   def repositoryRef[u: P]: P[RepositoryRef] = {
-    P(location ~ Keywords.repository ~ pathIdentifier)
-      .map(tpl => RepositoryRef.apply.tupled(tpl))
+    P(Index ~ Keywords.repository ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      RepositoryRef(at(start, end), pid)
+    }
   }
 
-  private def sagaRef[u: P]: P[SagaRef] = {
-    P(location ~ Keywords.saga ~ pathIdentifier)
-      .map(tpl => SagaRef.apply.tupled(tpl))
+  def sagaRef[u: P]: P[SagaRef] = {
+    P(Index ~ Keywords.saga ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      SagaRef(at(start, end), pid)
+    }
   }
 
   def epicRef[u: P]: P[EpicRef] = {
-    P(location ~ Keywords.epic ~ pathIdentifier)
-      .map(tpl => EpicRef.apply.tupled(tpl))
+    P(Index ~ Keywords.epic ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      EpicRef(at(start, end), pid)
+    }
   }
 
   def userRef[u: P]: P[UserRef] = {
-    P(location ~ Keywords.user ~ pathIdentifier)
-      .map(tpl => UserRef.apply.tupled(tpl))
-  }
-
-  private def applicationRef[u: P]: P[ApplicationRef] = {
-    P(location ~ Keywords.application ~ pathIdentifier)
-      .map(tpl => ApplicationRef.apply.tupled(tpl))
+    P(Index ~ Keywords.user ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      UserRef(at(start, end), pid)
+    }
   }
 
   def outputRef[u: P]: P[OutputRef] = {
-    P(location ~ outputAliases ~ pathIdentifier)
-      .map { case (loc, keyword, pid) => OutputRef(loc, keyword, pid) }
+    P(Index ~ outputAliases ~ pathIdentifier ~~ Index )
+      .map { case (start, keyword, pid, end) => OutputRef(at(start, end), keyword, pid) }
   }
 
   def inputRef[u: P]: P[InputRef] = {
-    P(location ~ inputAliases ~ pathIdentifier)
-      .map { case (loc, keyword, pid) => InputRef(loc, keyword, pid) }
+    P(Index ~ inputAliases ~ pathIdentifier ~~ Index )
+      .map { case (start, keyword, pid, end) => InputRef(at(start, end), keyword, pid) }
   }
 
   def groupRef[u: P]: P[GroupRef] = {
-    P(location ~ groupAliases ~ pathIdentifier)
-      .map { case (loc, keyword, pid) => GroupRef(loc, keyword, pid) }
+    P(Index ~ groupAliases ~ pathIdentifier ~~ Index )
+      .map { case (start, keyword, pid, end) => GroupRef(at(start, end), keyword, pid) }
   }
 
   def authorRef[u: P]: P[AuthorRef] = {
-    P(
-      location ~ by ~ Keywords.author ~ pathIdentifier
-    ).map(tpl => AuthorRef.apply.tupled(tpl))
+    P(Index ~ by ~ Keywords.author ~ pathIdentifier ~~ Index ).map { case (start, pid, end) =>
+      AuthorRef(at(start, end), pid)
+    }
   }
 
   def processorRef[u: P]: P[ProcessorRef[Processor[?]]] = {
     P(
-      adaptorRef | applicationRef | contextRef | entityRef | projectorRef |
+      adaptorRef | contextRef | entityRef | projectorRef |
         repositoryRef | streamletRef
     )
   }

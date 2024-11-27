@@ -11,25 +11,27 @@ import com.ossuminc.riddl.language.{AST, At}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
+import scala.collection
+
 /** Parsing rules for Type definitions */
 private[parsing] trait TypeParser {
   this: CommonParser =>
 
   private def entityReferenceType[u: P]: P[EntityReferenceTypeExpression] = {
     P(
-      location ~ Keywords.reference ~ to.? ~/
-        maybe(Keyword.entity) ~/ pathIdentifier
-    ).map { tpl => EntityReferenceTypeExpression.apply.tupled(tpl) }
+      Index ~ Keywords.reference ~ to.? ~/
+        maybe(Keyword.entity) ~/ pathIdentifier ~/ Index
+    ).map { case (start, pid, end) => EntityReferenceTypeExpression(at(start, end), pid) }
   }
 
   private def stringType[u: P]: P[String_] = {
     P(
-      location ~ PredefTypes.String_ ~/
+      Index ~ PredefTypes.String_ ~/
         (Punctuation.roundOpen ~ integer.? ~ Punctuation.comma ~ integer.? ~
-          Punctuation.roundClose).?
+          Punctuation.roundClose).? ~ Index
     ).map {
-      case (loc, Some((min, max))) => String_(loc, min, max)
-      case (loc, None)             => String_(loc, None, None)
+      case (start, Some((min, max)), end) => String_(at(start, end), min, max)
+      case (start, None, end)             => String_(at(start, end), None, None)
     }
   }
 
@@ -207,74 +209,86 @@ private[parsing] trait TypeParser {
 
   private def currencyType[u: P]: P[Currency] = {
     P(
-      location ~ PredefTypes.Currency ~/
-        (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose)
-    ).map { tpl => Currency.apply.tupled(tpl) }
+      Index ~ PredefTypes.Currency ~/
+        (Punctuation.roundOpen ~ isoCountryCode ~ Punctuation.roundClose) ~ Index
+    ).map { case (start, cc, end) => Currency(at(start, end), cc) }
   }
 
   private def urlType[u: P]: P[URI] = {
     P(
-      location ~ PredefTypes.URL ~/
-        (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).?
-    ).map { tpl => URI.apply.tupled(tpl) }
+      Index ~ PredefTypes.URL ~/
+        (Punctuation.roundOpen ~ literalString ~ Punctuation.roundClose).? ~ Index
+    ).map {
+      case (start, Some(str), end) => URI(at(start, end), Some(str))
+      case (start, None, end)      => URI(at(start, end), None)
+    }
   }
 
   private def integerPredefTypes[u: P]: P[IntegerTypeExpression] = {
     P(
-      location ~ PredefTypes.integerTypes | rangeType
-    ).map {
-      case (at, PredefType.Boolean) => AST.Bool(at)
-      case (at, PredefType.Integer) => AST.Integer(at)
-      case (at, PredefType.Natural) => AST.Natural(at)
-      case (at, PredefType.Whole)   => AST.Whole(at)
-      case (at, _: String) =>
-        assert(true) // shouldn't happen
-        AST.Integer(at)
-      case range: RangeType => range
+      Index ~ PredefTypes.integerTypes ~ Index
+    ).map { case (start, typ, end) =>
+      val loc = at(start, end)
+      typ match
+        case PredefType.Boolean => AST.Bool(loc)
+        case PredefType.Integer => AST.Integer(loc)
+        case PredefType.Natural => AST.Natural(loc)
+        case PredefType.Whole   => AST.Whole(loc)
+      end match
     }
   }
 
   private def realPredefTypes[u: P]: P[RealTypeExpression] = {
     P(
-      location ~ PredefTypes.realTypes
-    ).map {
-      case (at: At, PredefType.Current)     => Current(at)
-      case (at: At, PredefType.Length)      => Length(at)
-      case (at: At, PredefType.Luminosity)  => Luminosity(at)
-      case (at: At, PredefType.Mass)        => Mass(at)
-      case (at: At, PredefType.Mole)        => Mole(at)
-      case (at: At, PredefType.Number)      => Number(at)
-      case (at: At, PredefType.Real)        => Real(at)
-      case (at: At, PredefType.Temperature) => Temperature(at)
+      Index ~ PredefTypes.realTypes ~ Index
+    ).map { case (start, typ, end) =>
+      val loc: At = at(start, end)
+      typ match {
+        case PredefType.Current     => Current(loc)
+        case PredefType.Length      => Length(loc)
+        case PredefType.Luminosity  => Luminosity(loc)
+        case PredefType.Mass        => Mass(loc)
+        case PredefType.Mole        => Mole(loc)
+        case PredefType.Number      => Number(loc)
+        case PredefType.Real        => Real(loc)
+        case PredefType.Temperature => Temperature(loc)
+
+      }
     }
   }
 
   private def timePredefTypes[u: P]: P[TypeExpression] = {
     P(
-      location ~ PredefTypes.timeTypes
-    ).map {
-      case (at: At, PredefType.Duration) => Duration(at)
-      case (at, PredefType.DateTime)     => DateTime(at)
-      case (at, PredefType.Date)         => Date(at)
-      case (at, PredefType.TimeStamp)    => TimeStamp(at)
-      case (at, PredefType.Time)         => Time(at)
+      Index ~ PredefTypes.timeTypes ~ Index
+    ).map { case (start, timeType, end) =>
+      val loc = at(start, end)
+      timeType match
+        case PredefType.Duration  => Duration(loc)
+        case PredefType.DateTime  => DateTime(loc)
+        case PredefType.Date      => Date(loc)
+        case PredefType.TimeStamp => TimeStamp(loc)
+        case PredefType.Time      => Time(loc)
+      end match
     }
   }
 
   private def otherPredefTypes[u: P]: P[TypeExpression] = {
     P(
-      location ~ PredefTypes.otherTypes
-    ).map {
-      case (at, PredefType.Abstract) => AST.Abstract(at)
-      case (at, PredefType.Location) => AST.Location(at)
-      case (at, PredefType.Nothing)  => AST.Nothing(at)
-      case (at, PredefType.Natural)  => AST.Natural(at)
-      case (at, PredefType.Number)   => AST.Number(at)
-      case (at, PredefType.UUID)     => AST.UUID(at)
-      case (at, PredefType.UserId)   => AST.UserId(at)
-      case (at, _) =>
-        error("Unrecognized predefined type")
-        AST.Abstract(at)
+      Index ~ PredefTypes.otherTypes ~ Index
+    ).map { case (start, otherType, end) =>
+      val loc = at(start, end)
+      otherType match
+        case PredefType.Abstract => AST.Abstract(loc)
+        case PredefType.Location => AST.Location(loc)
+        case PredefType.Nothing  => AST.Nothing(loc)
+        case PredefType.Natural  => AST.Natural(loc)
+        case PredefType.Number   => AST.Number(loc)
+        case PredefType.UUID     => AST.UUID(loc)
+        case PredefType.UserId   => AST.UserId(loc)
+        case _ =>
+          error(loc, "Unrecognized predefined type")
+          AST.Abstract(loc)
+      end match
     }
   }
 
@@ -287,25 +301,25 @@ private[parsing] trait TypeParser {
 
   private def decimalType[u: P]: P[Decimal] = {
     P(
-      location ~ PredefType.Decimal ~/ Punctuation.roundOpen ~
+      Index ~ PredefType.Decimal ~/ Punctuation.roundOpen ~
         integer ~ Punctuation.comma ~ integer ~
-        Punctuation.roundClose
-    )./.map(tpl => Decimal.apply.tupled(tpl))
+        Punctuation.roundClose ~/ Index
+    ).map { case (start, whole, fractional, end) => Decimal(at(start, end), whole, fractional) }
   }
 
   private def patternType[u: P]: P[Pattern] = {
     P(
-      location ~ PredefType.Pattern ~/ Punctuation.roundOpen ~
+      Index ~ PredefType.Pattern ~/ Punctuation.roundOpen ~
         (literalStrings |
           Punctuation.undefinedMark.!.map(_ => Seq.empty[LiteralString])) ~
-        Punctuation.roundClose./
-    ).map(tpl => Pattern.apply.tupled(tpl))
+        Punctuation.roundClose ~/ Index
+    ).map { case (start, pattern, end) => Pattern(at(start, end), pattern) }
   }
 
   private def uniqueIdType[u: P]: P[UniqueId] = {
-    (location ~ PredefType.Id ~ Punctuation.roundOpen ~/
-      maybe(Keyword.entity) ~ pathIdentifier ~ Punctuation.roundClose./) map { case (loc, pid) =>
-      UniqueId(loc, pid)
+    (Index ~ PredefType.Id ~ Punctuation.roundOpen ~/
+      maybe(Keyword.entity) ~ pathIdentifier ~ Punctuation.roundClose ~/ Index) map { case (start, pid, end) =>
+      UniqueId(at(start, end), pid)
     }
   }
 
@@ -314,8 +328,8 @@ private[parsing] trait TypeParser {
   }
 
   def enumerator[u: P]: P[Enumerator] = {
-    P(location ~ identifier ~ enumValue).map { tpl =>
-      Enumerator.apply.tupled(tpl)
+    P(Index ~ identifier ~ enumValue ~~ Index).map { case (start, id, value, end) =>
+      Enumerator(at(start, end), id, value)
     }
   }
 
@@ -326,28 +340,28 @@ private[parsing] trait TypeParser {
 
   def enumeration[u: P]: P[Enumeration] = {
     P(
-      location ~ Keywords.any ~ of.? ~/ open ~/ enumerators ~ close
-    )./.map { case (loc, enums) => Enumeration(loc, enums.toContents) }
+      Index ~ Keywords.any ~ of.? ~/ open ~/ enumerators ~ close ~/ Index
+    ).map { case (start, enums, end) => Enumeration(at(start, end), enums.toContents) }
   }
 
   private def alternation[u: P]: P[Alternation] = {
     P(
-      location ~ Keywords.one ~ of.? ~/ open ~
+      Index ~ Keywords.one ~ of.? ~/ open ~
         (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
-          aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close
-    )./.map { case (loc, contents) =>
-      Alternation(loc, contents.toContents)
+          aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close ~/ Index
+    ).map { case (start, contents, end) =>
+      Alternation(at(start, end), contents.toContents)
     }
   }
 
   private def aliasedTypeExpression[u: P]: P[AliasedTypeExpression] = {
     P(
-      location ~ Keywords.typeKeywords.? ~ pathIdentifier
-    )./.map {
-      case (loc, Some(key), pid) =>
-        AliasedTypeExpression(loc, key, pid)
-      case (loc, None, pid) =>
-        AliasedTypeExpression(loc, "type", pid)
+      Index ~ Keywords.typeKeywords.? ~ pathIdentifier ~ Index
+    ).map {
+      case (start, Some(key), pid, end) =>
+        AliasedTypeExpression(at(start, end), key, pid)
+      case (start, None, pid, end) =>
+        AliasedTypeExpression(at(start, end), "type", pid)
     }
   }
 
@@ -363,26 +377,26 @@ private[parsing] trait TypeParser {
 
   def field[u: P]: P[Field] = {
     P(
-      location ~ identifier ~ is ~ fieldTypeExpression ~ withMetaData
-    ).map { case(loc, id, typeEx, descriptives) =>
-      Field(loc, id, typeEx, descriptives.toContents)
+      Index ~ identifier ~ is ~ fieldTypeExpression ~ withMetaData ~ Index
+    ).map { case (start, id, typeEx, descriptives, end) =>
+      Field(at(start, end), id, typeEx, descriptives.toContents)
     }
   }
 
   def arguments[u: P]: P[Seq[MethodArgument]] = {
     P(
       (
-        location ~ identifier.map(_.value) ~ Punctuation.colon ~ fieldTypeExpression
-      ).map(tpl => MethodArgument.apply.tupled(tpl))
+        Index ~ identifier.map(_.value) ~ Punctuation.colon ~ fieldTypeExpression ~~ Index
+      ).map { case (start, id, typeEx, end) => MethodArgument(at(start, end), id, typeEx) }
     ).rep(min = 0, Punctuation.comma)
   }
 
   def method[u: P]: P[Method] = {
     P(
-      location ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
-        is ~ fieldTypeExpression ~ withMetaData
-    ).map { case (loc, id, args, typeExp, descriptives) =>
-      Method.apply(loc, id, typeExp, args, descriptives.toContents)
+      Index ~ identifier ~ Punctuation.roundOpen ~ arguments ~ Punctuation.roundClose ~
+        is ~ fieldTypeExpression ~ withMetaData ~~ Index
+    ).map { case (start, id, args, typeExp, descriptives, end) =>
+      Method.apply(at(start, end), id, typeExp, args, descriptives.toContents)
     }
   }
 
@@ -397,8 +411,8 @@ private[parsing] trait TypeParser {
   }
 
   def aggregation[u: P]: P[Aggregation] = {
-    P(location ~ open ~ aggregateDefinitions ~ close).map { case (loc, contents) =>
-      Aggregation(loc, contents.toContents)
+    P(Index ~ open ~ aggregateDefinitions ~ close ~/ Index).map { case (start, contents, end) =>
+      Aggregation(at(start, end), contents.toContents)
     }
   }
 
@@ -426,8 +440,8 @@ private[parsing] trait TypeParser {
   }
 
   private def aggregateUseCaseTypeExpression[u: P]: P[AggregateUseCaseTypeExpression] = {
-    P(location ~ aggregateUseCase ~ aggregation).map { case (loc, mk, agg) =>
-      makeAggregateUseCaseType(loc, mk, agg)
+    P(Index ~ aggregateUseCase ~ aggregation ~~ Index).map { case (start, mk, agg, end) =>
+      makeAggregateUseCaseType(at(start, end), mk, agg)
     }
   }
 
@@ -438,9 +452,8 @@ private[parsing] trait TypeParser {
     */
   private def mappingFromTo[u: P]: P[Mapping] = {
     P(
-      location ~ Keywords.mapping ~ from ~/ typeExpression ~
-        to ~ typeExpression
-    ).map(tpl => Mapping.apply.tupled(tpl))
+      Index ~ Keywords.mapping ~ from ~/ typeExpression ~ to ~ typeExpression ~/ Index
+    ).map { case (start, from, to, end) => Mapping(at(start, end), from, to) }
   }
 
   /** Parses sets, i.e.
@@ -450,8 +463,8 @@ private[parsing] trait TypeParser {
     */
   private def aSetType[u: P]: P[Set] = {
     P(
-      location ~ Keywords.set ~ of ~ typeExpression
-    )./.map { tpl => Set.apply.tupled(tpl) }
+      Index ~ Keywords.set ~ of ~ typeExpression ~/ Index
+    ).map { (start, typeEx, end) => Set(at(start, end), typeEx) }
   }
 
   /** Parses sequences, i.e.
@@ -461,27 +474,29 @@ private[parsing] trait TypeParser {
     */
   private def sequenceType[u: P]: P[Sequence] = {
     P(
-      location ~ Keywords.sequence ~ of ~ typeExpression
-    )./.map { tpl => Sequence.apply.tupled(tpl) }
+      Index ~ Keywords.sequence ~ of ~ typeExpression ~ Index
+    )./.map { case (start, typeEx, end) => Sequence(at(start, end), typeEx) }
   }
 
   /** Parses graphs whose nodes can be any type */
   private def graphType[u: P]: P[Graph] = {
-    P(location ~ Keywords.graph ~ of ~ typeExpression)./.map { tpl => Graph.apply.tupled(tpl) }
+    P(Index ~ Keywords.graph ~ of ~ typeExpression ~/ Index).map { case (start, typeEx, end) =>
+      Graph(at(start, end), typeEx)
+    }
   }
 
   /** Parses tables of at least one dimension of cells of an arbitrary type */
   private def tableType[u: P]: P[Table] = {
     P(
-      location ~ Keywords.table ~ of ~ typeExpression ~ of ~ Punctuation.squareOpen ~
-        integer.rep(1, ",") ~ Punctuation.squareClose
-    )./.map { tpl => Table.apply.tupled(tpl) }
+      Index ~ Keywords.table ~ of ~ typeExpression ~ of ~ Punctuation.squareOpen ~
+        integer.rep(1, ",") ~ Punctuation.squareClose ~/ Index
+    ).map { case (start, typeEx, dimensions, end) => Table(at(start, end), typeEx, dimensions) }
   }
 
   private def replicaType[x: P]: P[Replica] = {
     P(
-      location ~ Keywords.replica ~ of ~ replicaTypeExpression
-    ).map { tpl => Replica.apply.tupled(tpl) }
+      Index ~ Keywords.replica ~ of ~ replicaTypeExpression ~ Index
+    ).map { case (start, typeEx, end) => Replica(at(start, end), typeEx) }
   }
 
   private def replicaTypeExpression[u: P]: P[TypeExpression] = {
@@ -495,32 +510,33 @@ private[parsing] trait TypeParser {
     */
   private def rangeType[u: P]: P[RangeType] = {
     P(
-      location ~ Keywords.range ~ Punctuation.roundOpen ~/
+      Index ~ Keywords.range ~ Punctuation.roundOpen ~/
         integer.?.map(_.getOrElse(0L)) ~ Punctuation.comma ~
-        integer.?.map(_.getOrElse(Long.MaxValue)) ~ Punctuation.roundClose./
-    ).map { tpl => RangeType.apply.tupled(tpl) }
+        integer.?.map(_.getOrElse(Long.MaxValue)) ~ Punctuation.roundClose ~/ Index
+    ).map { case (start, min, max, end) => RangeType(at(start, end), min, max) }
   }
 
   private def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
     P(
-      Keywords.many.!.? ~ Keywords.optional.!.? ~ location ~ p ~ StringIn(
-        Punctuation.question,
-        Punctuation.asterisk,
-        Punctuation.plus
-      ).!.?
+      Index ~
+        Keywords.many.!.? ~ Keywords.optional.!.? ~ p ~ StringIn(
+          Punctuation.question,
+          Punctuation.asterisk,
+          Punctuation.plus
+        ).!.? ~/ Index
     ).map {
-      case (None, None, loc, typ, Some("?"))                     => Optional(loc, typ)
-      case (None, None, loc, typ, Some("+"))                     => OneOrMore(loc, typ)
-      case (None, None, loc, typ, Some("*"))                     => ZeroOrMore(loc, typ)
-      case (Some("many"), None, loc, typ, None)                  => OneOrMore(loc, typ)
-      case (None, Some("optional"), loc, typ, None)              => Optional(loc, typ)
-      case (Some("many"), Some("optional"), loc, typ, None)      => ZeroOrMore(loc, typ)
-      case (None, Some("optional"), loc, typ, Some("?"))         => Optional(loc, typ)
-      case (Some("many"), None, loc, typ, Some("+"))             => OneOrMore(loc, typ)
-      case (Some("many"), Some("optional"), loc, typ, Some("*")) => ZeroOrMore(loc, typ)
-      case (None, None, _, typ, None)                            => typ
-      case (_, _, loc, typ, _) =>
-        error(loc, s"Cannot determine cardinality for $typ")
+      case (start, None, None, typ, Some("?"), end)                     => Optional(at(start, end), typ)
+      case (start, None, None, typ, Some("+"), end)                     => OneOrMore(at(start, end), typ)
+      case (start, None, None, typ, Some("*"), end)                     => ZeroOrMore(at(start, end), typ)
+      case (start, Some("many"), None, typ, None, end)                  => OneOrMore(at(start, end), typ)
+      case (start, None, Some("optional"), typ, None, end)              => Optional(at(start, end), typ)
+      case (start, Some("many"), Some("optional"), typ, None, end)      => ZeroOrMore(at(start, end), typ)
+      case (start, None, Some("optional"), typ, Some("?"), end)         => Optional(at(start, end), typ)
+      case (start, Some("many"), None, typ, Some("+"), end)             => OneOrMore(at(start, end), typ)
+      case (start, Some("many"), Some("optional"), typ, Some("*"), end) => ZeroOrMore(at(start, end), typ)
+      case (_, None, None, typ, None, _)                                => typ
+      case (start, _, _, typ, _, end) =>
+        error(at(start, end), s"Cannot determine cardinality for $typ")
         typ
     }
   }
@@ -537,17 +553,18 @@ private[parsing] trait TypeParser {
 
   private def scalaAggregateDefinition[u: P]: P[Aggregation] = {
     P(
-      location ~ Punctuation.roundOpen ~ field.rep(0, ",") ~ Punctuation.roundClose
-    ).map { case (location, fields) =>
-      Aggregation(location, fields.toContents)
+      Index ~ Punctuation.roundOpen ~ field.rep(0, ",") ~ Punctuation.roundClose ~/ Index
+    ).map { case (start, fields, end) =>
+      Aggregation(at(start, end), fields.toContents)
     }
   }
 
   private def defOfTypeKindType[u: P]: P[Type] = {
     P(
-      location ~ aggregateUseCase ~/ identifier ~
-        (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withMetaData
-    )./.map { case (loc, useCase, id, ateOrAgg, descriptives) =>
+      Index ~ aggregateUseCase ~/ identifier ~
+        (scalaAggregateDefinition | (is ~ (aliasedTypeExpression | aggregation))) ~ withMetaData ~/ Index
+    )./.map { case (start, useCase, id, ateOrAgg, descriptives, end) =>
+      val loc = at(start, end)
       ateOrAgg match {
         case agg: Aggregation =>
           val mt = AggregateUseCaseTypeExpression(agg.loc, useCase, agg.contents)
@@ -564,9 +581,9 @@ private[parsing] trait TypeParser {
 
   private def defOfType[u: P]: P[Type] = {
     P(
-      location ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ withMetaData
-    )./.map { case (loc, id, typ, descriptives) =>
-      Type(loc, id, typ, descriptives.toContents)
+      Index ~ Keywords.`type` ~/ identifier ~ is ~ typeExpression ~ withMetaData ~/ Index
+    )./.map { case (start, id, typ, descriptives, end) =>
+      Type(at(start, end), id, typ, descriptives.toContents)
     }
   }
 
@@ -574,10 +591,10 @@ private[parsing] trait TypeParser {
 
   def constant[u: P]: P[Constant] = {
     P(
-      location ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
-        Punctuation.equalsSign ~ literalString ~ withMetaData
-    ).map { case (loc, id, typeEx, litStr, descriptives) =>
-      Constant(loc, id, typeEx, litStr, descriptives.toContents)
+      Index ~ Keywords.constant ~ identifier ~ is ~ typeExpression ~
+        Punctuation.equalsSign ~ literalString ~ withMetaData ~/ Index
+    ).map { case (start, id, typeEx, litStr, descriptives, end) =>
+      Constant(at(start, end), id, typeEx, litStr, descriptives.toContents)
     }
   }
 }

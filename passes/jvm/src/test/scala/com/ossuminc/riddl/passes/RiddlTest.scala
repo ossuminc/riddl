@@ -32,7 +32,7 @@ class RiddlTest extends AbstractTestingBasis {
             domains.size mustBe 1
             val domain = domains.head
             val contexts = AST.getContexts(domain)
-            contexts.size mustBe 2
+            contexts.size mustBe 3
             AST.getDomains(domain) mustBe empty
 
       }

@@ -5,7 +5,7 @@ domain example is {
   }
   record Create { name: String }
   user Admin is "fickle"
-  application App is {
+  context App is {
     page NewTenantPage {
       input NameEntry acquires record example.Create
       button Create acquires record example.Create

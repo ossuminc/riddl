@@ -58,14 +58,14 @@ class AuthorTest extends AbstractValidatingTest {
         }
       }
     }
-    "referenced from Application" in { (td: TestData) =>
+    "referenced from a Context" in { (td: TestData) =>
       val input = RiddlParserInput(
         """author Reid is {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
           |domain Foo is {
-          |  application Bar  is { ??? } with { by author Reid }
+          |  context Bar  is { ??? } with { by author Reid }
           |}
           |""".stripMargin,
         td

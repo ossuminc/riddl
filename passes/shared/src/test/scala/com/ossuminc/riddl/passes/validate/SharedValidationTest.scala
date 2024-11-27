@@ -11,25 +11,28 @@ import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, StringParserInput}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
-import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.utils.{PlatformContext, pc, CommonOptions}
+
+import scala.io.AnsiColor.{BOLD, RESET}
 import org.scalatest.TestData
 
 abstract class SharedValidationTest(using PlatformContext) extends AbstractParsingTest {
 
   "ValidationMessage#format" should {
-    "produce a correct string" in { (td:TestData) =>
-      val at = At(1, 2, RiddlParserInput("abcdefg",td))
-      val msg =
-        Message(at, "the_message", Warning)
-      val content = msg.format
-      val expected =
-        """empty(1:2):
-          |the_message:
-          |abcdefg
-          | ^""".stripMargin
-      content mustBe expected
+    "produce a correct string" in { (td: TestData) =>
+      val rpi = RiddlParserInput("abcdefg", td)
+      val at = At(rpi, 0, 6)
+      val msg = Message(at, "the_message", Warning)
+      pc.withOptions[org.scalatest.Assertion](CommonOptions.default.copy(noANSIMessages = true)) { _ =>
+        val content = msg.format
+        val expected =
+          s"""empty(1:1->7):
+            |the_message:
+            |abcdefg""".stripMargin
+        content must be(expected)
+      }
     }
-    "compare based on locations" in { (td:TestData) =>
+    "compare based on locations" in { (td: TestData) =>
       val rpi = RiddlParserInput("the_source", td)
       val v1 = Message(At(1, 2, rpi), "the_message", Warning)
       val v2 = Message(At(2, 3, rpi), "the_message", Warning)
@@ -39,35 +42,35 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
   }
 
   "SymbolsOutput.parentOf" should {
-    "find the parent of an existent child" in { (td:TestData) =>
+    "find the parent of an existent child" in { (td: TestData) =>
       val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
       val domain = Domain(At(), Identifier(At(), "foo"), Contents(aType))
-      val root = Root(Contents(domain))
+      val root = Root(At(), Contents(domain))
       val outputs = PassesOutput()
       val output = Pass.runSymbols(PassInput(root), outputs)
-      output.parentOf(aType) mustBe Some(domain)
+      output.parentOf(aType) must be(Some(domain))
     }
-    "not find the parent of a non-existent child" in { (td:TestData) =>
+    "not find the parent of a non-existent child" in { (td: TestData) =>
       val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
       val domain = Domain(At(), Identifier(At(), "foo"))
-      val root = Root(Contents(domain))
+      val root = Root(At(), Contents(domain))
       val outputs = PassesOutput()
       val output = Pass.runSymbols(PassInput(root), outputs)
-      output.parentOf(aType) mustBe None
+      output.parentOf(aType) must be(None)
     }
   }
 
   "Validate All Things" must {
     var sharedRoot: Root = Root.empty
 
-    "parse and Validate correctly" in { (td:TestData) =>
+    "parse and Validate correctly" in { (td: TestData) =>
       val input =
         """author Reid is { name: "Reid Spencer" email: "reid@ossum.biz" }
           |
           |domain full is {
           |  user Doer is "that which does"
           |  type Something is Abstract
-          |  application dosomething is { ??? } with {
+          |  context dosomething is { ??? } with {
           |    by author Reid
           |    term term is "Terminal"
           |  }
@@ -126,23 +129,22 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           succeed
       }
     }
-    "handle includes" in { (_:TestData) =>
-
+    "handle includes" in { (_: TestData) =>
       sharedRoot.domains.headOption match {
         case Some(domain) =>
           domain.contents mustNot be(empty)
-          domain.contents.find("dosomething").getOrElse(None).getClass mustBe classOf[Application]
+          domain.contents.find("dosomething").getOrElse(None).getClass mustBe classOf[Context]
           domain.contents(3).getClass mustBe classOf[Context]
         case None => fail("There should be a domain")
       }
     }
-    "have terms and author refs in applications" in { (_:TestData) =>
+    "have terms and author refs in contexts" in { (_: TestData) =>
       sharedRoot.domains.headOption match {
         case Some(domain) =>
-          val apps = domain.contents.filter[Application]
+          val apps = domain.contents.filter[Context]
           apps mustNot be(empty)
-          apps.head mustBe a[Application]
-          val app: Application = apps.head
+          apps.head mustBe a[Context]
+          val app: Context = apps.head
           app.terms mustNot be(empty)
           app.hasAuthors mustBe false
           app.hasAuthorRefs mustBe true

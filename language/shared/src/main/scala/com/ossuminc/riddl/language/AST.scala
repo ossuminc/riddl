@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.Contents.unapply
-import com.ossuminc.riddl.utils.{URL, PlatformContext, Await}
+import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
@@ -34,7 +34,7 @@ object AST:
     */
   sealed trait RiddlValue:
 
-    /** The location in the parse at which this RiddlValue occurs */
+    /** The point location in the parse at which this RiddlValue occurs */
     def loc: At
 
     /** Provide a string to specify the kind of thing this value is with default derived from class name */
@@ -418,6 +418,8 @@ object AST:
     /** the name/identifier of this value. All definitions have one */
     def id: Identifier
 
+    def errorLoc: At = loc.copy(endOffset = id.loc.endOffset)
+
     final override inline def isIdentified: Boolean = true
 
     /** This one has an identifier so it is only anonymous if that identifier is empty */
@@ -433,7 +435,7 @@ object AST:
     end identify
 
     /** Same as [[identify]] but also adds the value's location via [[loc]] */
-    def identifyWithLoc: String = s"$identify at $loc"
+    def identifyWithLoc: String = s"$identify at ${loc.format}"
   end WithIdentifier
 
   sealed trait WithMetaData extends RiddlValue:
@@ -621,13 +623,6 @@ object AST:
     def epics: Seq[Epic] = contents.filter[Epic]
   end WithEpics
 
-  /** Base trait to use in any [[Definition]] that can define [[Application]]s */
-  sealed trait WithApplications[CV <: ContentValues] extends Container[CV]:
-
-    /** A lazily constructed [[Seq]] of [[Application]] filtered from the contents */
-    def applications: Seq[Application] = contents.filter[Application]
-  end WithApplications
-
   /** Base trait to use in any [[Definition]] that can define [[Domain]]s */
   sealed trait WithDomains[CV <: ContentValues] extends Container[CV]:
 
@@ -744,18 +739,16 @@ object AST:
     Streamlet | Connector | Relationship
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
-  type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Application | Epic | Saga
+  type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga
 
   /** Type of definitions that occur in a [[Domain]] with [[Include]] */
   type DomainContents = OccursInDomain | Include[OccursInDomain]
 
-  /** Type of definitions that occur in a [[Application]] without [[Include]] */
-  private type OccursInApplication = OccursInProcessor | Group
+  /** Type of definitions that occur in a [[Context]] without [[Include]] */
+  type OccursInContext = OccursInProcessor | Entity | Adaptor | Group | Saga | Projector | Repository
 
-  /** Type of definitions that occur in an [[Application]] with [[Include]] */
-  type ApplicationContents = OccursInApplication | Include[OccursInApplication]
-
-  type ApplicationRelated = Application | Group | Input | Output
+  /** Type of definitions that occur in a [[Context]] with [[Include]] */
+  type ContextContents = OccursInContext | Include[OccursInContext]
 
   /** Type of definitions that occur in a [[Group]] */
   type OccursInGroup = Group | ContainedGroup | Input | Output
@@ -766,11 +759,7 @@ object AST:
   /** Type of definitions that occur in an [[Output]] */
   type OccursInOutput = Output | TypeRef
 
-  /** Type of definitions that occur in a [[Context]] without [[Include]] */
-  type OccursInContext = OccursInProcessor | Entity | Adaptor | Saga | Projector | Repository
-
-  /** Type of definitions that occur in a [[Context]] with [[Include]] */
-  type ContextContents = OccursInContext | Include[OccursInContext]
+  type GroupRelated = Group | Input | Output
 
   /** Type of definitions that occur in an [[Entity]] without [[Include]] */
   private type OccursInEntity = OccursInProcessor | State
@@ -785,7 +774,7 @@ object AST:
   private type OccursInAdaptor = OccursInProcessor
 
   /** Type of definitions that occur in an [[Adaptor]] with [[Include]] */
-  type AdaptorContents = OccursInProcessor | Include[OccursInAdaptor]
+  type AdaptorContents = OccursInAdaptor | Include[OccursInAdaptor]
 
   /** Type of definitions that occur in a [[Saga]] without [[Include]] */
   private type OccursInSaga = OccursInVitalDefinition | SagaStep
@@ -837,11 +826,8 @@ object AST:
   /** Type of definitions that occur in a block of [[Statement]] */
   type Statements = Statement | Comment
 
-  type NebulaContents = Adaptor | Application | Author | Connector | Constant | ContainedGroup | Context | Domain |
-    Entity | Enumerator | Epic | Field | Function | Group | Handler | Inlet | Input | Invariant | Method | Module |
-    OnClause | OnInitializationClause | OnTerminationClause | OnMessageClause | OnOtherClause | Outlet | Output |
-    Projector | Relationship | Repository | Root | Saga | SagaStep | Schema | State | Streamlet | Term | Type |
-    UseCase | User
+  type NebulaContents = Adaptor | Author | Connector | Constant | Context | Domain | Entity | Epic | Function |
+    Invariant | Module | Projector | Relationship | Repository | Saga | Streamlet | Type | User
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////// DEFINITIONS
   //////// The Abstract classes for defining Definitions by using the foregoing traits
@@ -927,7 +913,7 @@ object AST:
   end DefinitionStack
 
   /** The kind of thing that can be returned by PathId Resolution Pass optionally providing the referent and its
-    * Parental context, or None
+    * Parental referent, or None
     */
   type Resolution[T <: Definition] = Option[(T, Parents)]
 
@@ -1004,6 +990,7 @@ object AST:
     *   The sequence top level definitions contained by this root container
     */
   case class Root(
+    loc: At = At(),
     contents: Contents[RootContents] = Contents.empty[RootContents]
   ) extends BranchDefinition[RootContents]
       with WithModules[RootContents]
@@ -1013,8 +1000,6 @@ object AST:
       with WithIncludes[RootContents]:
 
     override def isRootContainer: Boolean = true
-
-    def loc: At = At.empty
 
     override def id: Identifier = Identifier(loc, "Root")
 
@@ -1028,7 +1013,7 @@ object AST:
   object Root:
 
     /** The value to use for an empty [[Root]] instance */
-    val empty: Root = apply(mutable.ArrayBuffer.empty[RootContents])
+    val empty: Root = apply(At.empty, mutable.ArrayBuffer.empty[RootContents])
   end Root
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// NEBULA
 
@@ -1039,10 +1024,10 @@ object AST:
     *   The nebula of unrelated single definitions
     */
   case class Nebula(
+    loc: At,
     contents: Contents[NebulaContents] = Contents.empty
   ) extends BranchDefinition[NebulaContents]:
     override def isRootContainer: Boolean = false
-    def loc: At = At.empty
 
     override def id: Identifier = Identifier(loc, "Nebula")
 
@@ -1056,7 +1041,7 @@ object AST:
   object Nebula:
 
     /** The value to use for an empty [[Nebula]] instance */
-    val empty: Nebula = Nebula(Contents.empty[NebulaContents])
+    val empty: Nebula = Nebula(At.empty, Contents.empty[NebulaContents])
   end Nebula
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// MODULE
@@ -1196,9 +1181,10 @@ object AST:
     cardinality: RelationshipCardinality,
     label: Option[LiteralString] = None,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition {
+  ) extends LeafDefinition:
     def format: String = Keyword.relationship + " " + id.format + " to " + withProcessor.format
-  }
+  end Relationship
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// TYPES
 
   /** Base trait of an expression that defines a type
@@ -1247,17 +1233,17 @@ object AST:
     *   The path identifier to the aliased type
     */
   @JSExportTopLevel("AliasedTypeExpression")
-  case class AliasedTypeExpression(loc: At, keyword: String, pathId: PathIdentifier) extends TypeExpression {
+  case class AliasedTypeExpression(loc: At, keyword: String, pathId: PathIdentifier) extends TypeExpression:
     override def format: String = s"$keyword ${pathId.format}"
-  }
+  end AliasedTypeExpression
 
   /** Base of an enumeration for the four kinds of message types */
-  sealed trait AggregateUseCase {
+  sealed trait AggregateUseCase:
     override def toString: String = useCase
 
     /** The textual name of the usecase, for subclasses to define */
     def useCase: String
-  }
+  end AggregateUseCase
 
   /** An enumerator value to distinguish command aggregates */
   @JSExportTopLevel("CommandCase")
@@ -1296,12 +1282,12 @@ object AST:
   }
 
   /** Base trait of the cardinality for type expressions */
-  sealed trait Cardinality extends TypeExpression {
+  sealed trait Cardinality extends TypeExpression:
 
     /** The [[TypeExpression]] that this cardinality expression modified */
     def typeExp: TypeExpression
     final override def hasCardinality: Boolean = true
-  }
+  end Cardinality
 
   /** A cardinality type expression that indicates another type expression as being optional; that is with a cardinality
     * of 0 or 1.
@@ -1312,9 +1298,9 @@ object AST:
     *   The type expression that is indicated as optional
     */
   @JSExportTopLevel("Optional")
-  case class Optional(loc: At, typeExp: TypeExpression) extends Cardinality {
+  case class Optional(loc: At, typeExp: TypeExpression) extends Cardinality:
     override def format: String = s"${typeExp.format}?"
-  }
+  end Optional
 
   /** A cardinality type expression that indicates another type expression as having zero or more instances.
     *
@@ -1324,9 +1310,9 @@ object AST:
     *   The type expression that is indicated with a cardinality of zero or more.
     */
   @JSExportTopLevel("ZeroOrMore")
-  case class ZeroOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
+  case class ZeroOrMore(loc: At, typeExp: TypeExpression) extends Cardinality:
     override def format: String = s"${typeExp.format}*"
-  }
+  end ZeroOrMore
 
   /** A cardinality type expression that indicates another type expression as having one or more instances.
     *
@@ -1336,9 +1322,9 @@ object AST:
     *   The type expression that is indicated with a cardinality of one or more.
     */
   @JSExportTopLevel("OneOrMore")
-  case class OneOrMore(loc: At, typeExp: TypeExpression) extends Cardinality {
+  case class OneOrMore(loc: At, typeExp: TypeExpression) extends Cardinality:
     override def format: String = s"${typeExp.format}+"
-  }
+  end OneOrMore
 
   /** A cardinality type expression that indicates another type expression as having a specific range of instances
     *
@@ -1357,9 +1343,9 @@ object AST:
     typeExp: TypeExpression,
     min: Long,
     max: Long
-  ) extends Cardinality {
+  ) extends Cardinality:
     override def format: String = s"${typeExp.format}{$min,$max}"
-  }
+  end SpecificRange
 
   /** Represents one variant among (one or) many variants that comprise an [[Enumeration]]
     *
@@ -1373,9 +1359,9 @@ object AST:
     loc: At,
     id: Identifier,
     enumVal: Option[Long] = None
-  ) extends Definition {
+  ) extends Definition:
     override def format: String = id.format + enumVal.map(x => s"($x)").getOrElse("")
-  }
+  end Enumerator
 
   /** A type expression that defines its range of possible values as being one value from a set of enumerated values.
     *
@@ -1385,12 +1371,11 @@ object AST:
     *   The set of enumerators from which the value of this enumeration may be chosen.
     */
   @JSExportTopLevel("Enumeration")
-  case class Enumeration(loc: At, enumerators: Contents[Enumerator]) extends IntegerTypeExpression {
+  case class Enumeration(loc: At, enumerators: Contents[Enumerator]) extends IntegerTypeExpression:
     override def format: String = "{ " + enumerators
       .map(_.format)
       .mkString(",") + " }"
-
-  }
+  end Enumeration
 
   /** A type expression that that defines its range of possible values as being any one of the possible values from a
     * set of other type expressions.
@@ -1401,10 +1386,10 @@ object AST:
     *   The set of type expressions from which the value for this alternation may be chosen
     */
   @JSExportTopLevel("Alternation")
-  case class Alternation(loc: At, of: Contents[AliasedTypeExpression]) extends TypeExpression {
+  case class Alternation(loc: At, of: Contents[AliasedTypeExpression]) extends TypeExpression:
     override def format: String =
       s"one of { ${of.map(_.format).mkString(", ")} }"
-  }
+  end Alternation
 
   /** A type expression for a sequence of some other type expression
     *
@@ -1414,9 +1399,9 @@ object AST:
     *   The type expression of the sequence's elements
     */
   @JSExportTopLevel("Sequence")
-  case class Sequence(loc: At, of: TypeExpression) extends TypeExpression {
+  case class Sequence(loc: At, of: TypeExpression) extends TypeExpression:
     override def format: String = s"sequence of ${of.format}"
-  }
+  end Sequence
 
   /** A type expressions that defines a mapping from a key to a value. The value of a Mapping is the set of mapped key
     * -> value pairs, based on which keys have been provided values.
@@ -1429,9 +1414,9 @@ object AST:
     *   The type expression for the values of the mapping
     */
   @JSExportTopLevel("Mapping")
-  case class Mapping(loc: At, from: TypeExpression, to: TypeExpression) extends TypeExpression {
+  case class Mapping(loc: At, from: TypeExpression, to: TypeExpression) extends TypeExpression:
     override def format: String = s"mapping from ${from.format} to ${to.format}"
-  }
+  end Mapping
 
   /** A mathematical set of some other type of value
     *
@@ -1441,11 +1426,11 @@ object AST:
     *   The type of the elements of the set.
     */
   @JSExportTopLevel("Set")
-  case class Set(loc: At, of: TypeExpression) extends TypeExpression {
+  case class Set(loc: At, of: TypeExpression) extends TypeExpression:
 
     /** Format the node to a string */
     override def format: String = s"set of ${of.format}"
-  }
+  end Set
 
   /** A graph of homogenous nodes. This implies the nodes are augmented with additional data to support navigation in
     * the graph but that detail is left to the implementation of the model.
@@ -1456,11 +1441,11 @@ object AST:
     *   The type of the elements of the graph
     */
   @JSExportTopLevel("Graph")
-  case class Graph(loc: At, of: TypeExpression) extends TypeExpression {
+  case class Graph(loc: At, of: TypeExpression) extends TypeExpression:
 
     /** Format the node to a string */
     override def format: String = s"graph of ${of.format}"
-  }
+  end Graph
 
   /** A vector, table, or array of homogeneous cells.
     *
@@ -1472,9 +1457,9 @@ object AST:
     *   The size of the dimensions of the table. There can be as many dimensions as needed.
     */
   @JSExportTopLevel("Table")
-  case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression {
+  case class Table(loc: At, of: TypeExpression, dimensions: Seq[Long]) extends TypeExpression:
     override def format: String = s"table of ${of.format}(${dimensions.mkString(",")})"
-  }
+  end Table
 
   /** A value that is replicated across nodes in a cluster. Usage requirements placement in a definition such as
     * [[Context]] or [[Entity]] that supports the `clustered` value for the `kind` option.
@@ -1486,16 +1471,16 @@ object AST:
     *   Replicated Data Type, the kind of type expression for `of` is restricted to numeric, set, and map types
     */
   @JSExportTopLevel("Replica")
-  case class Replica(loc: At, of: TypeExpression) extends TypeExpression {
+  case class Replica(loc: At, of: TypeExpression) extends TypeExpression:
     override def format: String = s"replica of ${of.format}"
-  }
+  end Replica
 
   /** The base trait of values of an aggregate type to provide the required `typeEx` field to give the
     * [[TypeExpression]] for that value of the aggregate
     */
-  sealed trait AggregateValue extends LeafDefinition {
+  sealed trait AggregateValue extends LeafDefinition:
     def typeEx: TypeExpression
-  }
+  end AggregateValue
 
   /** A definition that is a field of an aggregation type expressions. Fields associate an identifier with a type
     * expression.
@@ -1517,9 +1502,9 @@ object AST:
     id: Identifier,
     typeEx: TypeExpression,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends AggregateValue {
+  ) extends AggregateValue:
     override def format: String = s"${id.format}: ${typeEx.format}"
-  }
+  end Field
 
   /** An argument of a method value for an aggregate
     *
@@ -1535,9 +1520,9 @@ object AST:
     loc: At,
     name: String,
     typeEx: TypeExpression
-  ) extends RiddlValue {
+  ) extends RiddlValue:
     def format: String = s"$name: ${typeEx.format}"
-  }
+  end MethodArgument
 
   /** A leaf definition that is a callable method (function) of an aggregate type expression. Methods associate an
     * identifier with a computed [[TypeExpression]].
@@ -1560,9 +1545,9 @@ object AST:
     typeEx: TypeExpression,
     args: Seq[MethodArgument] = Seq.empty[MethodArgument],
     metadata: Contents[MetaData] = Contents.empty
-  ) extends AggregateValue {
+  ) extends AggregateValue:
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
-  }
+  end Method
 
   /** A type expression that contains an aggregation of fields (named values) or methods (named functions)
     *
@@ -1571,7 +1556,7 @@ object AST:
   sealed trait AggregateTypeExpression(contents: Contents[AggregateContents])
       extends Container[AggregateContents]
       with TypeExpression
-      with WithComments[AggregateContents] {
+      with WithComments[AggregateContents]:
 
     /** The list of aggregated [[Field]] */
     def fields: Seq[Field] = contents.filter[Field]
@@ -1579,8 +1564,8 @@ object AST:
     /** Thelist of aggregated [[Method]] */
     def methods: Seq[Method] = contents.filter[Method]
     override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
-    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
-      other match {
+    override def isAssignmentCompatible(other: TypeExpression): Boolean =
+      other match
         case oate: AggregateTypeExpression =>
           val validity: Seq[Boolean] = for
             ofield: AggregateValue <- oate.contents.filter[AggregateValue].toSeq
@@ -1594,9 +1579,9 @@ object AST:
           (validity.size == oate.contents.size) && validity.forall(_ == true)
         case _ =>
           super.isAssignmentCompatible(other)
-      }
-    }
-  }
+      end match
+    end isAssignmentCompatible
+  end AggregateTypeExpression
 
   /** A type expression that takes a set of named fields as its value.
     *
@@ -1613,11 +1598,12 @@ object AST:
 
   @JSExportTopLevel("Aggregation$")
   /** Companion object for [[Aggregation]] to provide the empty value */
-  object Aggregation {
+  object Aggregation:
 
     /** The empty value for an [[Aggregation]] */
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
-  }
+  end Aggregation
+
 
   /** A type expression for an aggregation that is marked as being one of the use cases. This is used for messages,
     * records, and other aggregate types that need to have their purpose distinguished.
@@ -1634,11 +1620,9 @@ object AST:
     loc: At,
     usecase: AggregateUseCase,
     contents: Contents[AggregateContents] = Contents.empty[AggregateContents]
-  ) extends AggregateTypeExpression(contents) {
-    override def format: String = {
-      usecase.useCase.toLowerCase() + " " + super.format
-    }
-  }
+  ) extends AggregateTypeExpression(contents):
+    override def format: String = usecase.useCase.toLowerCase() + " " + super.format
+  end AggregateUseCaseTypeExpression
 
   /** A type expression whose value is a reference to an instance of an entity.
     *
@@ -1648,25 +1632,25 @@ object AST:
     *   The type of entity referenced by this type expression.
     */
   @JSExportTopLevel("EntityReferenceTypeExpression")
-  case class EntityReferenceTypeExpression(loc: At, entity: PathIdentifier) extends TypeExpression {
+  case class EntityReferenceTypeExpression(loc: At, entity: PathIdentifier) extends TypeExpression:
     override def format: String = s"entity ${entity.format}"
-  }
+  end EntityReferenceTypeExpression
 
   /** Base class of all pre-defined type expressions
     */
-  abstract class PredefinedType extends TypeExpression {
+  abstract class PredefinedType extends TypeExpression:
     override def isEmpty: Boolean = true
 
     def loc: At
 
     override def format: String = kind
-  }
+  end PredefinedType
 
   @JSExportTopLevel("PredefinedType")
-  object PredefinedType {
+  object PredefinedType:
     final def unapply(preType: PredefinedType): Option[String] =
       Option(preType.kind)
-  }
+  end PredefinedType
 
   /** A type expression that defines a string value constrained by a Java Regular Expression
     *
@@ -1679,14 +1663,14 @@ object AST:
     *   https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html
     */
   @JSExportTopLevel("Pattern")
-  case class Pattern(loc: At, pattern: Seq[LiteralString]) extends PredefinedType {
+  case class Pattern(loc: At, pattern: Seq[LiteralString]) extends PredefinedType:
     override def format: String =
       s"$kind(${pattern.map(_.format).mkString(", ")})"
 
-    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+    override def isAssignmentCompatible(other: TypeExpression): Boolean =
       super.isAssignmentCompatible(other) || other.isInstanceOf[String_]
-    }
-  }
+    end isAssignmentCompatible
+  end Pattern
 
   /** A type expression for values of arbitrary string type, possibly bounded by length.
     *
@@ -2527,31 +2511,31 @@ object AST:
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
   /** A trait that is the base trait of Adaptor directions */
-  sealed trait AdaptorDirection extends RiddlValue {
+  sealed trait AdaptorDirection extends RiddlValue:
     def loc: At
-  }
+  end AdaptorDirection
 
-  /** Represents an [[AdaptorDirection]] that is inbound (towards the bounded context the [[Adaptor]] was defined in)
+  /** Represents an [[AdaptorDirection]] that is inbound (towards the bounded referent the [[Adaptor]] was defined in)
     *
     * @param loc
     *   Location in the source of the adaptor direction
     */
   @JSExportTopLevel("InboundAdaptor")
-  case class InboundAdaptor(loc: At) extends AdaptorDirection {
+  case class InboundAdaptor(loc: At) extends AdaptorDirection:
     def format: String = "from"
-  }
+  end InboundAdaptor
 
-  /** Represents an [[AdaptorDirection]] that is outbouand (towards a bounded context that is not the one that defined
+  /** Represents an [[AdaptorDirection]] that is outbouand (towards a bounded referent that is not the one that defined
     * the [[Adaptor]]
     */
   @JSExportTopLevel("OutboundAdaptor")
-  case class OutboundAdaptor(loc: At) extends AdaptorDirection {
+  case class OutboundAdaptor(loc: At) extends AdaptorDirection:
     def format: String = "to"
-  }
+  end OutboundAdaptor
 
-  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded context.
+  /** Definition of an Adaptor. Adaptors are defined in Contexts to convert messages from another bounded referent.
     * Adaptors translate incoming messages into corresponding messages using the ubiquitous language of the defining
-    * bounded context. There should be one Adapter for each external Context
+    * bounded referent. There should be one Adapter for each external Context
     *
     * @param loc
     *   Location in the parsing input
@@ -2559,8 +2543,8 @@ object AST:
     *   Name of the adaptor
     * @param direction
     *   An indication of whether this is an inbound or outbound adaptor.
-    * @param context
-    *   A reference to the bounded context from which messages are adapted
+    * @param referent
+    *   A reference to the bounded referent from which messages are adapted
     * @param contents
     *   The definitional contents of this Adaptor
     * @param metadata
@@ -2571,13 +2555,13 @@ object AST:
     loc: At,
     id: Identifier,
     direction: AdaptorDirection,
-    context: ContextRef,
+    referent: ContextRef,
     contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends Processor[AdaptorContents]
-      with WithOptions[AdaptorContents] {
+      with WithOptions[AdaptorContents]:
     def format: String = Keyword.adaptor + " " + id.format
-  }
+  end Adaptor
 
   @JSExportTopLevel("AdaptorRef")
   case class AdaptorRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Adaptor] {
@@ -2586,7 +2570,7 @@ object AST:
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTION
 
-  /** A function definition which can be part of a bounded context or an entity.
+  /** A function definition which can be part of a bounded referent or an entity.
     *
     * @param loc
     *   The location of the function definition
@@ -2630,8 +2614,8 @@ object AST:
     override def format: String = Keyword.function + " " + pathId.format
   }
 
-  /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional
-    * expressions that must be true at all times in the lifecycle of an entity.
+  /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional expressions
+    * that must be true at all times in the lifecycle of an entity.
     *
     * @param loc
     *   The location of the invariant definition
@@ -2659,8 +2643,8 @@ object AST:
     */
   sealed trait OnClause extends BranchDefinition[Statements] with WithStatements[Statements] with WithMetaData
 
-  /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
-    * corresponds to the "other" case of an [[Handler]].
+  /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause corresponds
+    * to the "other" case of an [[Handler]].
     *
     * @param loc
     *   THe location of the "on other" clause
@@ -2700,8 +2684,8 @@ object AST:
     override def format: String = ""
   }
 
-  /** Defines the actions to be taken when a particular message is received by an entity. [[OnMessageClause]]s are used
-    * in the definition of a [[Handler]] with one for each kind of message that handler deals with.
+  /** Defines the actions to be taken when a particular message is received by an entity. [[OnMessageClause]]s are used in
+    * the definition of a [[Handler]] with one for each kind of message that handler deals with.
     *
     * @param loc
     *   The location of the "on" clause
@@ -2755,8 +2739,7 @@ object AST:
     * @param id
     *   The name of the handler.
     * @param contents
-    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received
-    *   messages.
+    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received messages.
     */
   @JSExportTopLevel("Handler")
   case class Handler(
@@ -2787,9 +2770,9 @@ object AST:
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// STATE
 
-  /** Represents a state of an entity. A State defines the shape of the entity's state when it is active. The
-    * MorphAction can cause the active state of an entity to change. Consequently the state of an entity can change its
-    * value (mutable) and they shape of that value.
+  /** Represents a state of an entity. A State defines the shape of the entity's state when it is active. The MorphAction
+    * can cause the active state of an entity to change. Consequently the state of an entity can change its value
+    * (mutable) and they shape of that value.
     *
     * @param loc
     *   The location of the state definition
@@ -2894,9 +2877,9 @@ object AST:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   end Schema
 
-  /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
-    * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
-    * There is no specific technology implied other than the retention and retrieval of information. You should think of
+  /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a later
+    * time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented. There is
+    * no specific technology implied other than the retention and retrieval of information. You should think of
     * repositories more like a message-oriented version of the Java Repository Pattern than any particular kind
     * ofdatabase.
     *
@@ -2934,9 +2917,9 @@ object AST:
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// PROJECTOR
 
-  /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view.
-    * The concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data
-    * into a specific record type, and support querying that data arbitrarily.
+  /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view. The
+    * concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data into a
+    * specific record type, and support querying that data arbitrarily.
     *
     * @see
     *   https://en.wikipedia.org/wiki/View_(SQL)).
@@ -2961,7 +2944,7 @@ object AST:
     def format: String = Keyword.projector + " " + id.format
   }
 
-  /** A reference to an context's projector definition
+  /** A reference to an referent's projector definition
     *
     * @param loc
     *   The location of the state reference
@@ -2975,15 +2958,15 @@ object AST:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
 
-  /** A bounded context definition. Bounded contexts provide a definitional boundary on the language used to describe
-    * some aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a
-    * common purpose. Context can be used to house entities, read side projectors, sagas, adaptations to other contexts,
-    * apis, and etc.
+  /** A bounded referent definition. Bounded contexts provide a definitional boundary on the language used to describe some
+    * aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a common
+    * purpose. Context can be used to house entities, read side projectors, sagas, adaptations to other contexts, apis,
+    * and etc.
     *
     * @param loc
-    *   The location of the bounded context definition
+    *   The location of the bounded referent definition
     * @param id
-    *   The name of the context
+    *   The name of the referent
     * @param contents
     *   The definitional content for this Context
     */
@@ -3000,7 +2983,8 @@ object AST:
       with WithStreamlets[ContextContents]
       with WithConnectors[ContextContents]
       with WithAdaptors[ContextContents]
-      with WithSagas[ContextContents] {
+      with WithSagas[ContextContents]
+      with WithGroups[ContextContents] {
     def format: String = Keyword.context + " " + id.format
   }
 
@@ -3009,12 +2993,12 @@ object AST:
     lazy val empty: Context = Context(At.empty, Identifier.empty)
   }
 
-  /** A reference to a bounded context
+  /** A reference to a bounded referent
     *
     * @param loc
     *   The location of the reference
     * @param pathId
-    *   The path identifier for the referenced context
+    *   The path identifier for the referenced referent
     */
   @JSExportTopLevel("ContextRef")
   case class ContextRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Context] {
@@ -3221,7 +3205,7 @@ object AST:
 
   }
 
-  /** A reference to an context's projector definition
+  /** A reference to an referent's projector definition
     *
     * @param loc
     *   The location of the state reference
@@ -3296,8 +3280,8 @@ object AST:
     def format: String = s"step ${id.format}"
   }
 
-  /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define
-    * a computing action based on a variety of related commands that must all succeed atomically or have their effects
+  /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define a
+    * computing action based on a variety of related commands that must all succeed atomically or have their effects
     * undone.
     *
     * @param loc
@@ -3738,7 +3722,7 @@ object AST:
     def format: String = s"epic ${pathId.format}"
   }
 
-  ///////////////////////////////////////////////////////////////////////////////////////////////////////// APPLICATION
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////// GROUP
 
   /** A group of GroupDefinition that can be treated as a whole. For example, a form, a button group, etc.
     * @param loc
@@ -3761,12 +3745,12 @@ object AST:
       with WithShownBy[OccursInGroup]
       with WithInputs[OccursInGroup]
       with WithOutputs[OccursInGroup]
-      with WithMetaData {
+      with WithMetaData:
     override def identify: String = s"$alias ${id.value}"
 
     /** Format the node to a string */
     override def format: String = s"group ${id.value}"
-  }
+  end Group
 
   /** A Reference to a Group
     *
@@ -3778,9 +3762,9 @@ object AST:
     *   The path to the referenced group
     */
   @JSExportTopLevel("GroupRef")
-  case class GroupRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Group] {
+  case class GroupRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Group]:
     def format: String = s"$keyword ${pathId.format}"
-  }
+  end GroupRef
 
   /** A Group contained within a group
     *
@@ -3797,9 +3781,9 @@ object AST:
     id: Identifier,
     group: GroupRef,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition {
+  ) extends LeafDefinition:
     def format: String = s"contains ${id.format} as ${group.format}"
-  }
+  end ContainedGroup
 
   /** A UI Element that presents some information to the user
     *
@@ -3823,13 +3807,13 @@ object AST:
     metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends BranchDefinition[OccursInOutput]
       with WithOutputs[OccursInOutput]
-      with WithMetaData {
+      with WithMetaData:
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 
     /** Format the node to a string */
     override def format: String = s"$kind ${id.value} $verbAlias ${putOut.format}"
-  }
+  end Output
 
   /** A reference to an Output using a path identifier
     *
@@ -3839,9 +3823,9 @@ object AST:
     *   The path identifier that refers to the View
     */
   @JSExportTopLevel("OutputRef")
-  case class OutputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Output] {
+  case class OutputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Output]:
     def format: String = s"$keyword ${pathId.format}"
-  }
+  end OutputRef
 
   /** An Input is a UI Element to allow the user to provide some data to the application. It is analogous to a form in
     * HTML
@@ -3864,7 +3848,7 @@ object AST:
     metadata: Contents[MetaData] = Contents.empty[MetaData]
   ) extends BranchDefinition[OccursInInput]
       with WithInputs[OccursInInput]
-      with WithMetaData {
+      with WithMetaData:
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 
@@ -3872,7 +3856,7 @@ object AST:
     override def format: String = {
       s"$kind $verbAlias ${takeIn.format}"
     }
-  }
+  end Input
 
   /** A reference to an Input using a path identifier
     *
@@ -3882,47 +3866,15 @@ object AST:
     *   The path identifier that refers to the Give
     */
   @JSExportTopLevel("InputRef")
-  case class InputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Input] {
+  case class InputRef(loc: At, keyword: String, pathId: PathIdentifier) extends Reference[Input]:
     def format: String = s"$keyword ${pathId.format}"
-  }
-
-  /** An application from which a person, robot, or other active agent (the user) will obtain information, or to which
-    * that user will provided information.
-    * @param loc
-    *   The location of the application in the source
-    * @param id
-    *   The unique identifier for the application
-    * @param contents
-    *   The definitional content for this Context
-    */
-  @JSExportTopLevel("Application")
-  case class Application(
-    loc: At,
-    id: Identifier,
-    contents: Contents[ApplicationContents] = Contents.empty[ApplicationContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
-  ) extends Processor[ApplicationContents]
-      with WithGroups[ApplicationContents] {
-    override def format: String = Keyword.application + " " + id.format
-  }
-
-  /** A reference to an Application using a path identifier
-    *
-    * @param loc
-    *   THe location of the ApplicationRef in the source code
-    * @param pathId
-    *   The path identifier that refers to the Application
-    */
-  @JSExportTopLevel("ApplicationRef")
-  case class ApplicationRef(loc: At, pathId: PathIdentifier) extends ProcessorRef[Application] {
-    def format: String = Keyword.application + " " + pathId.format
-  }
+  end InputRef
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// DOMAIN
 
   /** The definition of a domain. Domains are the highest building block in RIDDL and may be nested inside each other to
-    * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies
-    * and ontologies may be modelled with domains too.
+    * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies and
+    * ontologies may be modelled with domains too.
     *
     * @param loc
     *   The location of the domain definition
@@ -3942,7 +3894,6 @@ object AST:
       with WithAuthors[DomainContents]
       with WithContexts[DomainContents]
       with WithUsers[DomainContents]
-      with WithApplications[DomainContents]
       with WithEpics[DomainContents]
       with WithSagas[DomainContents]
       with WithDomains[DomainContents] {
@@ -3960,6 +3911,22 @@ object AST:
   case class DomainRef(loc: At, pathId: PathIdentifier) extends Reference[Domain] {
     override def format: String = s"domain ${pathId.format}"
   }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////// TOKENS
+  sealed trait Token:
+    def at: At
+  end Token
+
+  case class PunctuationTKN(at: At) extends Token
+  case class QuotedStringTKN(at: At) extends Token
+  case class ReadabilityTKN(at: At) extends Token
+  case class PredefinedTKN(at: At) extends Token
+  case class KeywordTKN(at: At) extends Token
+  case class CommentTKN(at: At) extends Token
+  case class LiteralStringTKN(at: At) extends Token
+  case class MarkdownLinesTKN(at: At) extends Token
+  case class IdentifierTKN(at: At) extends Token
+  case class OtherTKN(at: At) extends Token
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
@@ -4023,17 +3990,6 @@ object AST:
     domain.contexts ++ domain.includes.flatMap(_.contents.filter[Context])
   }
 
-  /** Get all the applications defined in a domain even if they are in includes of that domain
-    * @param domain
-    *   The domain whose applications should be returned
-    * @return
-    *   A Seq of [[AST.Application]] expressed as a [[AST.Contents]] extension
-    */
-  @JSExport
-  def getApplications(domain: Domain): Seq[Application] = {
-    domain.applications ++ domain.includes.flatMap(_.contents.filter[Application])
-  }
-
   /** get all the epics defined in a domain even if they are in includes of that domain
     *
     * @param domain
@@ -4046,7 +4002,7 @@ object AST:
     domain.epics ++ domain.includes.flatMap(_.contents.filter[Epic])
   }
 
-  /** get all the entities defined in a context even if they are in includes of that domain
+  /** get all the entities defined in a referent even if they are in includes of that domain
     *
     * @param context
     *   The domain to examine for entities

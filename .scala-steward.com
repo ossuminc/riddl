@@ -6,7 +6,8 @@ dependencyOverrides = [
 
 updates.ignore = [
   { groupId = "org.scoverage", artifactId = "sbt-scoverage" }
-  { groupId = "org.scala-lang", artifactId = "scala-library" }
+  { groupId = "org.scala-lang", artifactId = "scala-library" },
+  { groupId = "org.scala-sbt" }
 ]
 
 dependencyOverrides = [{

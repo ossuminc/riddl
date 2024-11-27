@@ -106,12 +106,6 @@ class ASTTest extends AbstractTestingBasis {
   )
   val authorRef: AuthorRef =
     AuthorRef(At.empty, PathIdentifier(At.empty, Seq("a", "b", "c")))
-  val application: Application = Application(
-    At.empty,
-    Identifier(At.empty, "application"),
-    contents = Contents.empty,
-    metadata = Contents(authorRef)
-  )
   val author: Author = Author(
     At.empty,
     Identifier(At(), "Reid"),
@@ -204,21 +198,14 @@ class ASTTest extends AbstractTestingBasis {
   }
   val domain: AST.Domain =
     Domain(At(), Identifier(At(), "test"), contents = Contents(author))
-  val context: AST.Context = Context(At(), Identifier(At(), "test"), Contents(relationship))
+  val context: AST.Context = Context(At(), Identifier(At(), "test"), Contents(relationship), Contents(authorRef))
 
   "Adaptor" should {
     "pass simple tests" in {
       adaptor.loc mustBe At.empty
       adaptor.id.value mustBe "adaptor"
       adaptor.direction mustBe InboundAdaptor(At.empty)
-      adaptor.context.pathId.value mustBe Seq("a", "b", "context")
-    }
-  }
-  "Application" should {
-    "have a test" in {
-      application.loc mustBe At.empty
-      application.id.value mustBe "application"
-      application.authorRefs mustBe Seq(authorRef)
+      adaptor.referent.pathId.value mustBe Seq("a", "b", "context")
     }
   }
   "Author" should {
@@ -232,7 +219,7 @@ class ASTTest extends AbstractTestingBasis {
   }
   "AST.findAuthors" should {
     "find authors" in {
-      val authors = AST.findAuthors(application, domain.contents.asInstanceOf[Contents[RiddlValue]])
+      val authors = AST.findAuthors(context, domain.contents.asInstanceOf[Contents[RiddlValue]])
       authors mustBe Seq(authorRef)
     }
   }
@@ -361,14 +348,14 @@ class ASTTest extends AbstractTestingBasis {
   "Repository" should { "have a test" in { pending } }
 
   "Root(Nil)" should {
-    "be at location 0,0" in { Root(Contents.empty).loc must be(At.empty) }
-    "have 'Root' id" in { Root(Contents.empty).identify must be("Root") }
-    "have no modules" in { Root(Contents.empty).modules must be(empty) }
-    "have no domains" in { Root(Contents.empty).domains must be(empty) }
-    "have no comments" in { Root(Contents.empty).comments must be(empty) }
-    "have no authors" in { Root(Contents.empty).authors must be(empty) }
+    "be at location 0,0" in { Root(At.empty, Contents.empty).loc must be(At.empty) }
+    "have 'Root' id" in { Root(At.empty, Contents.empty).identify must be("Root") }
+    "have no modules" in { Root(At.empty, Contents.empty).modules must be(empty) }
+    "have no domains" in { Root(At.empty, Contents.empty).domains must be(empty) }
+    "have no comments" in { Root(At.empty, Contents.empty).comments must be(empty) }
+    "have no authors" in { Root(At.empty, Contents.empty).authors must be(empty) }
     "identify as root container" in {
-      Root(Contents.empty).isRootContainer mustBe true
+      Root(At.empty, Contents.empty).isRootContainer mustBe true
     }
   }
 

@@ -68,7 +68,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           content mustBe
-            Domain((1, 1, rpi), Identifier((1, 8, rpi), "foo-fah|roo"))
+            Domain(At(rpi, 0, 31), Identifier(At(rpi, 7, 21), "foo-fah|roo"))
       }
     }
     "allow nested domains" in { (td: TestData) =>
@@ -153,7 +153,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           content mustBe
-            Context((1, 17, rpi), id = Identifier((1, 25, rpi), "bar"))
+            Context(At(rpi, 16, 39), id = Identifier(At(rpi, 24, 28), "bar"))
       }
     }
     "allow options on context definitions" in { (td: TestData) =>
@@ -173,12 +173,12 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
         case Right((content, rpi)) =>
           content must be(
             Context(
-              (1, 1, rpi),
-              Identifier((1, 9, rpi), "bar"),
+              At(rpi, 0, 70),
+              Identifier(At(rpi, 8, 12), "bar"),
               Contents(
-                OptionValue((2, 10, rpi), "service", Seq.empty),
-                OptionValue((3, 10, rpi), "wrapper", Seq.empty),
-                OptionValue((4, 10, rpi), "gateway", Seq.empty)
+                OptionValue(At(rpi, 19, 36), "service", Seq.empty),
+                OptionValue(At(rpi, 36, 53), "wrapper", Seq.empty),
+                OptionValue(At(rpi, 53, 68), "gateway", Seq.empty)
               )
             )
           )
@@ -197,47 +197,19 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           val expected = Type(
-            (2, 1, rpi),
-            Identifier((2, 6, rpi), "Vikings"),
+            At(rpi, 17, 96),
+            Identifier(At(rpi, 22, 30), "Vikings"),
             Enumeration(
-              (2, 16, rpi),
+              At(rpi, 32, 96),
               Contents(
-                Enumerator(
-                  (3, 3, rpi),
-                  Identifier((3, 3, rpi), "Ragnar"),
-                  None
-                ),
-                Enumerator(
-                  (3, 10, rpi),
-                  Identifier((3, 10, rpi), "Lagertha"),
-                  None
-                ),
-                Enumerator(
-                  (3, 19, rpi),
-                  Identifier((3, 19, rpi), "Bjorn"),
-                  None
-                ),
-                Enumerator(
-                  (3, 25, rpi),
-                  Identifier((3, 25, rpi), "Floki"),
-                  None
-                ),
-                Enumerator(
-                  (3, 31, rpi),
-                  Identifier((3, 31, rpi), "Rollo"),
-                  None
-                ),
-                Enumerator(
-                  (3, 37, rpi),
-                  Identifier((3, 37, rpi), "Ivar"),
-                  None
-                ),
-                Enumerator(
-                  (3, 42, rpi),
-                  Identifier((3, 42, rpi), "Aslaug"),
-                  None
-                ),
-                Enumerator((3, 49, rpi), Identifier((3, 49, rpi), "Ubbe"), None)
+                Enumerator(At(rpi, 43, 50), Identifier(At(rpi, 43, 50), "Ragnar"), None),
+                Enumerator(At(rpi, 50, 59), Identifier(At(rpi, 50, 59), "Lagertha"), None),
+                Enumerator(At(rpi, 59, 65), Identifier(At(rpi, 59, 65), "Bjorn"), None),
+                Enumerator(At(rpi, 65, 71), Identifier(At(rpi, 65, 71), "Floki"), None),
+                Enumerator(At(rpi, 71, 77), Identifier(At(rpi, 71, 77), "Rollo"), None),
+                Enumerator(At(rpi, 77, 82), Identifier(At(rpi, 77, 82), "Ivar"), None),
+                Enumerator(At(rpi, 82, 89), Identifier(At(rpi, 82, 89), "Aslaug"), None),
+                Enumerator(At(rpi, 89, 94), Identifier(At(rpi, 89, 94), "Ubbe"), None)
               )
             )
           )
@@ -252,9 +224,9 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           content mustBe Invariant(
-            (1, 11, rpi),
-            Identifier((1, 11, rpi), "large"),
-            Option(LiteralString((1, 20, rpi), "x is greater or equal to 10"))
+            At(rpi, 0, 49),
+            Identifier(At(rpi, 10, 16), "large"),
+            Option(LiteralString(At(rpi, 19, 48), "x is greater or equal to 10"))
           )
       }
     }
@@ -276,25 +248,25 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           val expected = Entity(
-            (1, 1, rpi),
-            Identifier((1, 8, rpi), "Hamburger"),
+            At(rpi, 0, 161),
+            Identifier(At(rpi, 7, 17), "Hamburger"),
             Contents(
-              OptionValue((2, 10, rpi), "transient", Seq.empty),
-              OptionValue((3, 10, rpi), "aggregate", Seq.empty),
+              OptionValue(At(rpi, 24, 43), "transient", Seq.empty),
+              OptionValue(At(rpi, 43, 62), "aggregate", Seq.empty),
               Type(
-                (4, 3, rpi),
-                Identifier((4, 8, rpi), "Foo"),
+                At(rpi, 62, 90),
+                Identifier(At(rpi, 67, 71), "Foo"),
                 Aggregation(
-                  (4, 15, rpi),
-                  Contents(Field((4, 17, rpi), Identifier((4, 17, rpi), "x"), String_((4, 20, rpi))))
+                  At(rpi, 74, 90),
+                  Contents(Field(At(rpi, 76, 86), Identifier(At(rpi, 76, 77), "x"), String_(At(rpi, 79, 86))))
                 )
               ),
               State(
-                (5, 3, rpi),
-                Identifier((5, 9, rpi), "BurgerState"),
-                TypeRef((5, 24, rpi), "type", PathIdentifier((5, 29, rpi), List("BurgerStruct")))
+                At(rpi, 90, 131),
+                Identifier(At(rpi, 96, 108), "BurgerState"),
+                TypeRef(At(rpi, 111, 131), "type", PathIdentifier(At(rpi, 116, 131), List("BurgerStruct")))
               ),
-              Handler((6, 11, rpi), Identifier((6, 11, rpi), "BurgerHandler"))
+              Handler(At(rpi, 131, 159), Identifier(At(rpi, 139, 153), "BurgerHandler"))
             )
           )
           content mustBe expected
@@ -308,12 +280,12 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           content mustBe Adaptor(
-            (1, 1, rpi),
-            Identifier((1, 9, rpi), "fuzz"),
-            InboundAdaptor((1, 14, rpi)),
+            At(rpi, 0, 44),
+            Identifier(At(rpi, 8, 13), "fuzz"),
+            InboundAdaptor(At(rpi, 13, 18)),
             ContextRef(
-              (1, 19, rpi),
-              PathIdentifier((1, 27, rpi), Seq("foo", "bar"))
+              At(rpi, 18, 34),
+              PathIdentifier(At(rpi, 26, 34), Seq("foo", "bar"))
             ),
             Contents.empty
           )
@@ -335,8 +307,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((function, _)) =>
-          inside(function) {
+        case Right((function: Function, _)) =>
+          function match
             case Function(
                   _,
                   Identifier(_, "foo"),
@@ -345,15 +317,14 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                   _,
                   _
                 ) =>
-              firstAggrContents must be(
-                Contents(Field(At(3, 14, rpi), Identifier(At(3, 14, rpi), "b"), Bool(At(3, 18, rpi)), Contents.empty))
-              )
-              secondAggrContents must be(
-                Contents(
-                  Field(At(4, 13, rpi), Identifier(At(4, 13, rpi), "i"), Integer(At(4, 17, rpi)), Contents.empty)
-                )
-              )
-          }
+              val firstExpected =
+                Field(At(rpi, 32, 43), Identifier(At(rpi, 32, 34), "b"), Bool(At(rpi, 36, 43)), Contents.empty)
+              firstAggrContents.head must be(firstExpected)
+              val secondExpected =
+                Field(At(rpi, 57, 68), Identifier(At(rpi, 57, 59), "i"), Integer(At(rpi, 61, 68)), Contents.empty)
+              secondAggrContents.head must be(secondExpected)
+          end match
+
       }
     }
     "handle a comment" in { (td: TestData) =>
@@ -381,7 +352,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
         case Left(errors) => fail(errors.format)
         case Right((domain, rpi)) =>
           val typ = domain.contexts.head.types.head
-          typ.typEx mustBe Replica((3, 18, rpi), Integer((3, 29, rpi)))
+          typ.typEx mustBe Replica(At(rpi, 49, 70), Integer(At(rpi, 60, 70)))
       }
     }
     "parse from a complex file" in { (td: TestData) =>
@@ -407,12 +378,12 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
              */
             root.contents.startsWith(
               Seq(
-                LineComment((1, 1, rpi), "Top Level Author"),
+                LineComment(At(rpi, 0, 20), "Top Level Author"),
                 Author(
-                  (2, 1, rpi),
-                  Identifier((2, 8, rpi), "Reid"),
-                  LiteralString((2, 23, rpi), "Reid"),
-                  LiteralString((2, 37, rpi), "reid@ossum.biz")
+                  At(rpi, 20, 77),
+                  Identifier(At(rpi, 27, 32), "Reid"),
+                  LiteralString(At(rpi, 43, 49), "Reid"),
+                  LiteralString(At(rpi, 57, 73), "reid@ossum.biz")
                 )
               )
             )

@@ -18,23 +18,23 @@ import fastparse.MultiLineWhitespace.*
   * }}}
   */
 private[parsing] trait NebulaParser {
-  this: ProcessorParser & DomainParser & AdaptorParser & ApplicationParser & ContextParser & EntityParser &
-    EpicParser & FunctionParser & HandlerParser & ModuleParser & ProjectorParser & RepositoryParser &
-    RootParser & SagaParser & StreamingParser & TypeParser & Readability & CommonParser =>
+  this: ProcessorParser & DomainParser & AdaptorParser & ContextParser & EntityParser & EpicParser & FunctionParser &
+    HandlerParser & ModuleParser & ProjectorParser & RepositoryParser & RootParser & SagaParser & StreamingParser &
+    TypeParser & Readability & CommonParser =>
 
-  private def nebulaContent[u:P]: P[NebulaContents] =
-    P(adaptor | application | author | connector | constant | containedGroup | context | domain |
-      entity | enumerator | epic | field | function | group | handler(StatementsSet.AllStatements) |
-      inlet | appInput | invariant | method | module | onClause(StatementsSet.AllStatements)  | outlet | appOutput |
-      projector | relationship | repository | root | saga | sagaStep | schema | state | streamlet | term | typeDef |
-      useCase | user).map { (r: RiddlValue) => r.asInstanceOf[NebulaContents] }
+  private def nebulaContent[u: P]: P[NebulaContents] =
+    P(
+      adaptor | author | connector | constant | context | domain | entity | epic | function |
+        invariant | module | projector | relationship | repository | saga | streamlet | typeDef | user
+    ).map { (r: RiddlValue) => r.asInstanceOf[NebulaContents] }
 
-  private def nebulaContents[u:P]: P[Seq[NebulaContents]] =
-    P(nebulaContent).rep(0)
+  private def nebulaContents[u: P]: P[Seq[NebulaContents]] = P(nebulaContent).rep(0)
 
   def nebula[u: P]: P[Nebula] = {
-    P(Start ~ Keywords.nebula ~ is ~ open ~ nebulaContents ~ close ~ End).map {
-      (contents: Seq[NebulaContents]) => Nebula(contents.toContents)
+    P(
+      Start ~ Index ~ nebulaContents ~ Index ~ End
+    ).map { case (start: Int, contents: Seq[NebulaContents], end: Int) =>
+      Nebula(at(start, end), contents.toContents)
     }
   }
 }

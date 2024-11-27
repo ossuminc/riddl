@@ -19,9 +19,9 @@ import org.scalatest.TestData
 class StreamValidatorTest extends AbstractValidatingTest {
 
   "StreamValidator" must {
-    "error on connector type mismatch" in { (td:TestData) =>
+    "error on connector type mismatch" in { (td: TestData) =>
       val input = RiddlParserInput(
-      """domain uno {
+        """domain uno {
         | type Typ1 = Integer
         | type Typ2 = Real
         | context a {
@@ -31,22 +31,23 @@ class StreamValidatorTest extends AbstractValidatingTest {
         |  }
         |  connector c1 is { from outlet a.foo.out to inlet a.foo.in }
         | }
-        |} """.stripMargin,td)
+        |} """.stripMargin,
+        td
+      )
       pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
-        parseAndValidateDomain(input, shouldFailOnErrors = false) {
-          case (domain, _, messages) =>
-            domain.isEmpty must be(false)
-            messages.isEmpty must be(false)
-            messages.hasErrors must be(true)
-            val errors = messages.justErrors
-            info(errors.format)
-            errors.exists { (msg: Messages.Message) =>
-              msg.message.startsWith("Type mismatch in Connector 'c1':")
-            } must be(true)
+        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
+          domain.isEmpty must be(false)
+          messages.isEmpty must be(false)
+          messages.hasErrors must be(true)
+          val errors = messages.justErrors
+          info(errors.format)
+          errors.exists { (msg: Messages.Message) =>
+            msg.message.startsWith("Type mismatch in Connector 'c1':")
+          } must be(true)
         }
       }
     }
-    "error on unattached inlets" in { (td:TestData) =>
+    "error on unattached inlets" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain solo {
           | type T = Integer
@@ -60,7 +61,9 @@ class StreamValidatorTest extends AbstractValidatingTest {
           |    from outlet a.confluence.out to inlet a.confluence.two
           |  }
           | }
-          |} """.stripMargin,td)
+          |} """.stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
@@ -70,7 +73,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
         ) mustBe true
       }
     }
-    "error on unattached outlets" in { (td:TestData) =>
+    "error on unattached outlets" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain solo {
           | type T = Integer
@@ -79,7 +82,9 @@ class StreamValidatorTest extends AbstractValidatingTest {
           |    outlet out is type T
           |  }
           | }
-          |} """.stripMargin,td)
+          |} """.stripMargin,
+        td
+      )
       parseAndValidateDomain(input, shouldFailOnErrors = true) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
@@ -90,7 +95,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
       }
     }
 
-    "warn about needed persistence option" in { (td:TestData) =>
+    "warn about needed persistence option" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain uno {
           | type T = Integer
@@ -103,7 +108,9 @@ class StreamValidatorTest extends AbstractValidatingTest {
           | context b {
           |   sink to  is { inlet in is type T }
           | }
-          |} """.stripMargin,td)
+          |} """.stripMargin,
+        td
+      )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (domain, _, messages) =>
         domain.isEmpty mustBe false
         messages.isEmpty mustBe false
@@ -115,30 +122,35 @@ class StreamValidatorTest extends AbstractValidatingTest {
         ) mustBe true
       }
     }
-    "warn about useless persistence option" in { (td:TestData) =>
-      val input = RiddlParserInput(
-        """domain uno {
-          | type T = Integer
-          | context a {
-          |  flow through is {
-          |    inlet in is type T
-          |    outlet out is type T
-          |  }
-          |  connector c1 {
-          |    from outlet a.through.out to inlet uno.a.through.in
-          |    option persistent
-          |  }
-          | }
-          |} """.stripMargin,td)
-      parseAndValidateDomain(input) { case (domain, _, messages) =>
-        domain.isEmpty mustBe false
-        domain.contents.size mustBe 2
-        messages.isEmpty mustBe false
-        messages.hasErrors mustBe false
-        messages.filter(_.message.contains("is not needed since both ends")) mustNot be(empty)
-        messages.exists(
-          _.message.startsWith("The persistence option on Connector 'c1'")
-        ) mustBe true
+    "warn about useless persistence option" in { (td: TestData) =>
+      pc.withOptions(CommonOptions.default) { _ =>
+        val input = RiddlParserInput(
+          """domain uno {
+            | type T = Integer
+            | context a {
+            |  flow through is {
+            |    inlet in is type T
+            |    outlet out is type T
+            |  }
+            |  connector c1 {
+            |    from outlet a.through.out to inlet uno.a.through.in
+            |    option persistent
+            |  }
+            | }
+            |} """.stripMargin,
+          td
+        )
+        parseAndValidateDomain(input) { case (domain, _, messages) =>
+          domain.isEmpty must be(false)
+          domain.contents.size must be(2)
+          messages.isEmpty must be(false)
+          messages.hasErrors must be(false)
+          messages.filter(_.message.contains("is not needed since both end")) match
+            case List(message) =>
+              message.message must include("The persistence option on Connector 'c1' is not")
+              succeed
+            case Nil => fail("Missing message")
+        }
       }
     }
 
@@ -152,6 +164,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
 
     def root(streamlets: Seq[Streamlet]): Root = {
       Root(
+        At(),
         Contents(
           Domain(
             At(),
@@ -175,8 +188,12 @@ class StreamValidatorTest extends AbstractValidatingTest {
         Riddl.validate(
           root(
             Seq(
-              Streamlet(At(), Identifier(At(), "source"), Source(At()),
-                Contents(inlet("in1", "int"), inlet("in2", "int")))
+              Streamlet(
+                At(),
+                Identifier(At(), "source"),
+                Source(At()),
+                Contents(inlet("in1", "int"), inlet("in2", "int"))
+              )
             )
           )
         )

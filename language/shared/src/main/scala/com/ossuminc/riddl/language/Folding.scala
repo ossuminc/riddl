@@ -17,12 +17,12 @@ object Folding {
 
   /** Folding with state from an element of type V
     *
-    * @param parent
-    *   The parent node of CV which must be its direct container
-    * @param child
-    *   The node to fold through
-    * @param state
-    *   Initial value of arbitrary type `S`` that can be used to fold the nodes into and provides the result type
+    * @param container
+    *   The container node of CV which must be its direct container
+    * @param empty
+    *   The initial empty state of the result. this is a "fold" after all :)
+   * @foldIt
+   *    The function that folds eacy entry in `container`
     * @param f
     *   The folding function which takes 3 arguments and returns an `S` (list the initial `state`)
     * @tparam S

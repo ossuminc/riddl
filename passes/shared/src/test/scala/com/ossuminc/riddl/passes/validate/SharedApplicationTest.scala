@@ -17,7 +17,7 @@ trait SharedApplicationTest extends AbstractValidatingTest {
     "parse a simple case " in { (td: TestData) =>
       val rpi = RiddlParserInput(
         """domain foo is {
-          |  application Test is {
+          |  context Test is {
           |    option is technology("react.js")
           |    result Title { content: String }
           |    command Name { content: String }
@@ -42,9 +42,9 @@ trait SharedApplicationTest extends AbstractValidatingTest {
               _: RiddlParserInput,
               messages: Messages.Messages
             ) =>
-          domain.applications mustNot be(empty)
-          domain.applications.head.types.size mustBe (2)
-          val group = domain.applications.head.groups.head
+          domain.contexts mustNot be(empty)
+          domain.contexts.head.types.size mustBe (2)
+          val group = domain.contexts.head.groups.head
           val outputs: Seq[Output] = group.contents.filter[Output]
           outputs must not be (empty)
           outputs.head.brief must be(empty)

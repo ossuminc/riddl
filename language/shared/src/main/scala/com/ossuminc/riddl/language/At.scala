@@ -16,39 +16,78 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * @param source
   *   The [[parsing.RiddlParserInput]] instance from which the location as derived
   * @param offset
-  *   The offset in that file/stream the defines the location
+  *   The offset in the `source` that defines the starting location
+  * @param endOffset
+  *   The offset in the `source` that defines the end of the location
   */
 @JSExportTopLevel("At")
-case class At(source: RiddlParserInput, offset: Int = 0) extends Ordered[At] {
+case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) extends Ordered[At] {
+
+  require(
+    offset <= endOffset,
+    s"Location must have a non-negative length. offset=$offset, endOffset=$endOffset, length=$length"
+  )
+
+  def length: Int = endOffset - offset
 
   import scala.scalajs.js.annotation.JSExport
 
   @JSExport
-  def isEmpty: Boolean = offset == 0 && source == RiddlParserInput.empty
+  def isEmpty: Boolean = offset == 0 && endOffset == 0 && source == RiddlParserInput.empty
 
   @JSExport
-  lazy val line: Int = source.lineOf(offset) + 1
+  @inline def line: Int = source.lineOf(offset) + 1
 
   @JSExport
-  lazy val col: Int = offset - source.offsetOf(line - 1) + 1
+  @inline def endLine: Int = source.lineOf(endOffset) + 1
+
+  @JSExport
+  @inline def col: Int = offset - source.offsetOf(line - 1) + 1
 
   @JSExport
   @inline override def toString: String = { source.origin + toShort }
 
   @JSExport
-  @inline def toShort: String = { s"($line:$col)" }
+  @inline def toShort: String = { s"($offset->$endOffset)" }
+
+  @JSExport
+  @inline def toLong: String = {
+    val sLine = line
+    val eLine = endLine
+    val endCol = endOffset - source.offsetOf(endLine - 1) + 1
+    if sLine == eLine then s"($sLine:$col->$endCol)"
+    else s"($sLine:$col->$eLine:$endCol)"
+  }
+
+  @JSExport
+  @inline def format: String = { source.origin + toLong }
 
   @JSExport
   override def compare(that: At): Int = {
     val thisRoot = this.source.root.toExternalForm
     val thatRoot = that.source.root.toExternalForm
-    if thisRoot == thatRoot then { this.offset - that.offset }
-    else { thisRoot.compare(thatRoot) }
+    if thisRoot == thatRoot then this.offset - that.offset
+    else thisRoot.compare(thatRoot)
   }
 
   @targetName("plus")
   @JSExport
-  def +(int: Int): At = At(source, offset + int)
+  def +(int: Int): At = At(source, offset + int, endOffset + int)
+
+  /** Extend the length of this At
+    *
+    * @param extent
+    *   The amount by which the length is extended.
+    * @return
+    *   A copy of this At with the extended length
+    */
+  @JSExport
+  def extend(extent: Int): At = this.copy(endOffset = endOffset + extent)
+
+  @JSExport
+  def atEnd: At =
+    if endOffset > 0 then this.copy(offset = endOffset - 1, endOffset = endOffset)
+    else this.copy(offset = 0, endOffset = 0)
 
   @JSExport
   override def equals(obj: Any): Boolean = {
@@ -68,17 +107,20 @@ object At {
 
   @JSExport("emptyConst") val empty: At = At(RiddlParserInput.empty)
   @JSExport def empty(input: RiddlParserInput): At = { At(input) }
-  @JSExport final val defaultSourceName = RiddlParserInput.empty.origin
+
+  def range(from: At, to: At): At = {
+    require(from.source == to.source)
+    require(from.offset <= to.offset)
+    from.copy(endOffset = to.endOffset)
+  }
 
   /** Empty constructor for [[At]] */
-  implicit def apply(): At = { At(RiddlParserInput.empty) }
-
-  /** Empty constructor at start of a line for the empty [[At]] */
-  implicit def apply(line: Int): At = { At(RiddlParserInput.empty, line) }
+  implicit def apply(): At = { At.empty }
 
   /** Start of line constructor for a specific [[At]] */
   implicit def apply(line: Int, src: RiddlParserInput): At = {
-    src.location(src.offsetOf(line))
+    val (start, end) = src.rangeOf(line)
+    src.at(start, end)
   }
 
   /** (line, col) constructor of [[At]] for the empty [[parsing.RiddlParserInput]] */

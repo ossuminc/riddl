@@ -15,7 +15,7 @@ import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, CommonOptions
 import fastparse.*
 
 import scala.annotation.unused
-import scala.concurrent.duration.DurationInt
+
 import scala.reflect.*
 
 /** A helper class for testing the parser */
@@ -23,7 +23,7 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
 
   case class StringParser(content: String, testCase: String = "unknown test case") extends ExtensibleTopLevelParser():
     val input: RiddlParserInput = RiddlParserInput(content, testCase)
-    val withVerboseFailures: Boolean = true 
+    val withVerboseFailures: Boolean = true
   end StringParser
 
   def parse[T <: RiddlValue, U <: RiddlValue](
@@ -125,7 +125,8 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
       case Left(errors) =>
         val msg = errors.map(_.format).mkString
         fail(msg)
-      case Right((content, _)) => content mustBe expected
+      case Right((content, _)) =>
+        content mustBe expected
     }
   }
 

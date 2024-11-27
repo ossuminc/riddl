@@ -14,7 +14,7 @@ import scalajs.js.annotation.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-trait RootParser {this: ModuleParser & CommonParser & ParsingContext =>
+trait RootParser { this: ModuleParser & CommonParser & ParsingContext =>
 
   private def rootInclude[u: P]: P[Include[RootContents]] = {
     include[u, RootContents](rootContents(_))
@@ -28,6 +28,8 @@ trait RootParser {this: ModuleParser & CommonParser & ParsingContext =>
     P(rootContent).rep(1)
 
   def root[u: P]: P[Root] = {
-    P(Start ~ rootContents ~ End).map { (contents: Seq[RootContents]) => Root(contents.toContents) }
+    P(Start ~ Index ~ rootContents ~ Index ~ End).map { case (start, contents: Seq[RootContents], end) =>
+      Root(at(start, end), contents.toContents)
+    }
   }
 }

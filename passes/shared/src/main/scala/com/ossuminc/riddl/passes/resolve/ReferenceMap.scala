@@ -8,8 +8,7 @@ package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.StringHelpers
-import com.ossuminc.riddl.utils.{pc,ec}
+import com.ossuminc.riddl.utils.{PlatformContext, StringHelpers}
 
 import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
@@ -53,7 +52,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
     map.update(key, definition)
   }
 
-  def definitionOf[T <: Definition: ClassTag](pathId: PathIdentifier): Option[T] = {
+  def definitionOf[T <: Definition: ClassTag](pathId: PathIdentifier)(using PlatformContext): Option[T] = {
     definitionOf[T](pathId.format)
   }
 
@@ -66,7 +65,7 @@ case class ReferenceMap(messages: Messages.Accumulator) {
         if definition.getClass == klass then Some(definition.asInstanceOf[T]) else Option.empty[T]
   }
 
-  def definitionOf[T <: Definition: ClassTag](pid: PathIdentifier, parent: Definition): Option[T] = {
+  def definitionOf[T <: Definition: ClassTag](pid: PathIdentifier, parent: Definition)(using PlatformContext): Option[T] = {
     val key = Key(pid.format, parent)
     val value = map.get(key)
     value match
@@ -80,11 +79,11 @@ case class ReferenceMap(messages: Messages.Accumulator) {
         None
   }
 
-  def definitionOf[T <: Definition: ClassTag](ref: Reference[T], parent: Parent): Option[T] = {
+  def definitionOf[T <: Definition: ClassTag](ref: Reference[T], parent: Parent)(using PlatformContext): Option[T] = {
     definitionOf[T](ref.pathId, parent)
   }
 }
 
 object ReferenceMap {
-  val empty: ReferenceMap = ReferenceMap(Messages.Accumulator.empty)
+  def empty: ReferenceMap = ReferenceMap(Messages.Accumulator.empty)
 }

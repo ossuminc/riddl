@@ -18,13 +18,8 @@ private[parsing] trait ProjectorParser {
     include[u, ProjectorContents](projectorDefinitions(_))
   }
 
-  private def updates[u: P]: P[RepositoryRef] = {
-    P(
-      location ~ Keywords.updates ~ repositoryRef
-    ).map { case (_, ref) =>
-      ref
-    }
-  }
+  private def updates[u: P]: P[RepositoryRef] =
+    P( Keywords.updates ~ repositoryRef )
 
   private def projectorDefinitions[u: P]: P[Seq[ProjectorContents]] = {
     P(
@@ -49,10 +44,10 @@ private[parsing] trait ProjectorParser {
     */
   def projector[u: P]: P[Projector] = {
     P(
-      location ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ withMetaData
-    )./.map { case (loc, id, contents, descriptives) =>
+      Index ~ Keywords.projector ~/ identifier ~ is ~ open ~ projectorBody ~ close ~ withMetaData ~ Index
+    )./.map { case (start, id, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Projector(loc, id, contents.toContents, descriptives.toContents)
+      Projector(at(start,end), id, contents.toContents, descriptives.toContents)
     }
   }
 }

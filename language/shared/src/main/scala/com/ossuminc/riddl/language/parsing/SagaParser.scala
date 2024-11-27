@@ -10,17 +10,17 @@ import com.ossuminc.riddl.language.AST.*
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-/** SagaParser Implements the parsing of saga definitions in context definitions.
+/** SagaParser Implements the parsing of saga definitions in referent definitions.
   */
 private[parsing] trait SagaParser {
   this: ProcessorParser & FunctionParser & StreamingParser & StatementParser =>
 
   def sagaStep[u: P]: P[SagaStep] = {
     P(
-      location ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
-        Keywords.reverted ~ by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~ withMetaData
-    )./.map { case (loc, id, doStatements, undoStatements, descriptives) =>
-      SagaStep(loc, id, doStatements.toContents, undoStatements.toContents, descriptives.toContents)
+      Index ~ Keywords.step ~/ identifier ~ is ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~
+        Keywords.reverted ~ by.? ~ pseudoCodeBlock(StatementsSet.SagaStatements) ~ withMetaData ~ Index
+    )./.map { case (start, id, doStatements, undoStatements, descriptives, end) =>
+      SagaStep(at(start, end), id, doStatements.toContents, undoStatements.toContents, descriptives.toContents)
     }
   }
 
@@ -49,10 +49,10 @@ private[parsing] trait SagaParser {
 
   def saga[u: P]: P[Saga] = {
     P(
-      location ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ withMetaData
-    ).map { case (location, identifier, (input, output, contents), descriptives) =>
+      Index ~ Keywords.saga ~ identifier ~ is ~ open ~ sagaBody ~ close ~ withMetaData ~ Index
+    ).map { case (start, identifier, (input, output, contents), descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Saga(location, identifier, input, output, contents.toContents, descriptives.toContents)
+      Saga(at(start,end), identifier, input, output, contents.toContents, descriptives.toContents)
     }
   }
 }

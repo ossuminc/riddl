@@ -51,14 +51,11 @@ class RootOverviewDiagram(root: Root) extends FlowchartDiagramGenerator("Root Ov
 
   def emitDomainSubgraph(domain: Domain): Unit = {
     val contexts = AST.getContexts(domain)
-    val applications = AST.getApplications(domain)
     val epics = AST.getEpics(domain)
-    val nodes: Seq[VitalDefinition[?]] = contexts ++ applications ++ epics
+    val nodes: Seq[VitalDefinition[?]] = contexts ++ epics
     emitClassDefs(nodes)
     val contextRelationships = contexts.zip(Seq.fill[String](contexts.size)("contains"))
     emitSubgraph(name(domain, "Contexts"), domain.id.value, domain +: contexts, contextRelationships)
-    val applicationRelationships = applications.zip(Seq.fill[String](applications.size)("contains"))
-    emitSubgraph(name(domain, "Applications"), domain.id.value, domain +: applications, applicationRelationships)
     val epicRelationships = epics.zip(Seq.fill[String](epics.size)("contains"))
     emitSubgraph(name(domain, "Epics"), domain.id.value, domain +: epics, epicRelationships)
     emitClassAssignments(nodes)

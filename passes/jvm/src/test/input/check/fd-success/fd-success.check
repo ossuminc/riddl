@@ -1,16 +1,9 @@
-passes/jvm/src/test/input/check/fd-success/fd-success.riddl(1:1):
+passes/jvm/src/test/input/check/fd-success/fd-success.riddl(1:1->11):
  Domain 'foo' in Root should have content:
  domain foo is { ??? } with { explained in file "bar.md" }
- ^
-passes/jvm/src/test/input/check/fd-success/fd-success.riddl(1:1):
- Vital definitions should have an author reference:
- domain foo is { ??? } with { explained in file "bar.md" }
- ^
-passes/jvm/src/test/input/check/fd-success/fd-success.riddl(1:8):
- Models without any streaming data will exhibit minimal effect:
- domain foo is { ??? } with { explained in file "bar.md" }
-        ^
-passes/jvm/src/test/input/check/fd-success/fd-success.riddl(1:1):
+passes/jvm/src/test/input/check/fd-success/fd-success.riddl(1:1->11):
  Domain 'foo' should have an author reference:
  domain foo is { ??? } with { explained in file "bar.md" }
- ^
+passes/jvm/src/test/input/check/fd-success/fd-success.riddl(1:57->2:1):
+ Models without any streaming data will exhibit minimal effect:
+ domain foo is { ??? } with { explained in file "bar.md" }

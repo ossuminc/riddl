@@ -29,35 +29,52 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
   private val urlSeen: mutable.ListBuffer[URL] = mutable.ListBuffer[URL]()
   def getURLs: Seq[URL] = urlSeen.toSeq
 
-  def parseRule[RESULT <: RiddlValue](
+  protected def parse[RESULT](
     rpi: RiddlParserInput,
     rule: P[?] => P[RESULT],
     withVerboseFailures: Boolean = false
-  )(validate: (result: Either[Messages, RESULT], input: RiddlParserInput, index: Int) => Either[Messages, RESULT] = {
-    (result: Either[Messages, RESULT], _: RiddlParserInput, _: Int) => result
-  }): Either[Messages, RESULT] = {
+  ): Either[(Messages,Int), (RESULT,Int)] = {
     try {
-      fastparse.parse[RESULT](rpi, rule(_), withVerboseFailures) match {
-        case Success(root, index) =>
-          if messagesNonEmpty then validate(Left(messagesAsList), rpi, index)
-          else validate(Right(root), rpi, index)
-          end if
-        case failure: Failure =>
+      fastparse.parse[RESULT](rpi, rule, withVerboseFailures) match {
+        case fastparse.Parsed.Success(list, index) =>
+          if messagesNonEmpty then Left(messagesAsList -> index) else Right(list -> index)
+        case failure: fastparse.Parsed.Failure =>
           makeParseFailureError(failure, rpi)
-          validate(Left(messagesAsList), rpi, 0)
+          Left(messagesAsList -> failure.index)
       }
     } catch {
-      case NonFatal(exception) =>
+      case scala.util.control.NonFatal(exception) =>
         makeParseFailureError(exception, At.empty)
-        validate(Left(messagesAsList), rpi, 0)
+        Left(messagesAsList -> 0)
     }
   }
 
-  def location[u: P](implicit ctx: P[?]): P[At] = {
+  protected def parseRule[RESULT](
+    rpi: RiddlParserInput,
+    rule: P[?] => P[RESULT],
+    withVerboseFailures: Boolean = false
+  )(
+    validate: (
+      result: Either[Messages, RESULT] @unused,
+      input: RiddlParserInput @unused,
+      index: Int @unused
+    ) => Either[Messages, RESULT] = { (result: Either[Messages, RESULT], _: RiddlParserInput, _: Int) =>
+      result
+    }
+  ): Either[Messages, RESULT] = {
+    parse[RESULT](rpi, rule(_), withVerboseFailures) match
+      case Right((root, index)) =>
+        validate(Right(root), rpi, index)
+      case Left((messages, index)) =>
+        validate(Left(messagesAsList), rpi, index)
+    end match
+  }
+
+  def at(offset1: Int, offset2: Int)(implicit context: P[?]): At = {
     // NOTE: This isn't strictly kosher because of the cast but as long as we
     // NOTE: always use a RiddlParserInput, should be safe enough. This is
     // NOTE: required because of includes and concurrent parsing
-    P(Index.map(idx => ctx.input.asInstanceOf[RiddlParserInput].location(idx)))
+    context.input.asInstanceOf[RiddlParserInput].at(offset1, offset2)
   }
 
   def doImport(

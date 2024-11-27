@@ -72,7 +72,7 @@ class EpicTest extends AbstractValidatingTest {
           |  }
           |} with { explained as "nada" }
           |
-          |application Improving_app is {
+          |context Improving_app is {
           |  group OrganizationPage is {
           |    input accept acquires command ImprovingApp.OrganizationContext.CreateOrganization
           |    output show presents result ImprovingApp.OrganizationContext.OrganizationInfo
@@ -146,7 +146,7 @@ class EpicTest extends AbstractValidatingTest {
           |  }
           |} with { described as "nada" }
           |
-          |application Improving_app is {
+          |context Improving_app is {
           |  group OrganizationPage is {
           |    input accept acquires command ImprovingApp.OrganizationContext.CreateOrganization
           |    output show presents result ImprovingApp.OrganizationContext.OrganizationInfo
@@ -221,7 +221,7 @@ class EpicTest extends AbstractValidatingTest {
           |  described as "nada"
           |}
           |
-          |application Improving_app is {
+          |context Improving_app is {
           |  group OrganizationPage is {
           |    input accept acquires command ImprovingApp.OrganizationContext.CreateOrganization
           |    output show presents result ImprovingApp.OrganizationContext.OrganizationInfo

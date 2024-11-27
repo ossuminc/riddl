@@ -12,19 +12,19 @@ class KeywordsTest extends AbstractTestingBasis {
 
   "Keyword" should {
     "produce all keywords" in {
-      Keyword.allKeywords.size must be(139)
+      Keyword.allKeywords.size must be(138)
     }
   }
-  
+
   "Punctuation" should {
     "produce all punctuation marks" in {
       Punctuation.allPunctuation.size must be (17)
     }
   }
-  
+
   "Readability" should {
     "produce all readability words" in {
-      Readability.allReadability.size must be(18)
+      ReadabilityWords.allReadability.size must be(17)
     }
   }
 }

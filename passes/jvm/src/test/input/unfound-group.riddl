@@ -1,5 +1,5 @@
 domain ignore {
-  application ignore {
+  context ignore {
     command GotoPricingPage is {???}
     command GotoCustomerDashboard is {???}
     command GotoOrderDashboard is {???}

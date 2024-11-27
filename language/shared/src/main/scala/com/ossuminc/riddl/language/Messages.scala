@@ -6,10 +6,10 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{CommonOptions, ExceptionUtils, Logger, PlatformContext}
 
 import scala.collection.mutable
-import scala.io.AnsiColor.*
 import scala.scalajs.js.annotation.*
 
 /** This module handles everything needed to deal with the message output of the `riddlc` compiler */
@@ -120,12 +120,11 @@ object Messages {
     * @param kind
     *   The kind of message as one of the case objects of [[KindOfMessage]]
     * @param context
-    *   Additional context that indicates the conditions that produced the message
+    *   Additional referent that indicates the conditions that produced the message
     */
   @JSExportTopLevel("Message")
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
-
     def isInfo: Boolean = kind.isInfo
     def isMissing: Boolean = kind.isMissing
     def isWarning: Boolean = kind.isWarning
@@ -145,10 +144,10 @@ object Messages {
       val ctxt = if context.nonEmpty then {
         s"${nl}Context: $context"
       } else ""
-      val location = loc.toString
-      val errorLine = loc.source.annotateErrorLine(loc).dropRight(1)
+      val location = loc.format
+      val errorLine = loc.source.annotateErrorLine(loc)
       if loc.isEmpty || errorLine.isEmpty then {
-        s"$location$message$ctxt"
+        s"$location:$nl$message$ctxt"
       } else {
         s"$location:$nl$message:$nl$errorLine$ctxt"
       }
