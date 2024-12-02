@@ -1,4 +1,0 @@
-domain test is {
-    type aType is { i: Integer }
-    type foo is any of { A(320),  B(737) }
-}

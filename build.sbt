@@ -25,23 +25,23 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
   .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
   .aggregate(
     utils,
-    utilsJS,
     utilsNative,
+    utilsJS,
     language,
+    languageNative,
     languageJS,
-    languageNative,
     passes,
+    passesNative,
     passesJS,
-    languageNative,
     testkit,
-    testkitJS,
     testkitNative,
+    testkitJS,
     diagrams,
-    diagramsJS,
     diagramsNative,
+    diagramsJS,
     riddlLib,
-    riddlLibJS,
     riddlLibNative,
+    riddlLibJS,
     commands,
     commandsNative,
     riddlc,
@@ -49,6 +49,7 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
     docsite,
     plugin
   )
+
 
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
@@ -95,7 +96,8 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       .native(
         lto = "none",
         targetTriple = "arm64-apple-darwin23.6.0",
-        ld64Path = "/opt/homebrew/Cellar/lld/19.1.4/bin/ld64.lld"
+        ld64Path = "/opt/homebrew/Cellar/lld/19.1.4/bin/ld64.lld",
+        verbose = false
       )
   )
   .nativeSettings(
@@ -151,7 +153,8 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
       .native(
         lto = "none",
         targetTriple = "arm64-apple-darwin23.6.0",
-        ld64Path = "/opt/homebrew/bin/ld64.lld"
+        ld64Path = "/opt/homebrew/bin/ld64.lld",
+        verbose = false
       )
   )
   .nativeConfigure(With.noMiMa)

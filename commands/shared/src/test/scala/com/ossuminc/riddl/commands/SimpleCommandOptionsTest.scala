@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{JVMPlatformContext, PlatformContext, SysLogger}
+import com.ossuminc.riddl.utils.{PlatformContext, SysLogger, pc}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -15,7 +15,7 @@ import java.nio.file.Path
 class SimpleCommandOptionsTest extends AnyWordSpec with Matchers {
 
   val confFile = "riddlc/src/test/input/cmdoptions.conf"
-  given io: PlatformContext = JVMPlatformContext()
+  given io: PlatformContext = pc
 
   "OptionsReading" should {
     "read About command options" in {

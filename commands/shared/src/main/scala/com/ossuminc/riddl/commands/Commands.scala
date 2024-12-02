@@ -38,7 +38,6 @@ object Commands:
       case "flatten"  => Right(FlattenCommand())
       case "from"     => Right(FromCommand())
       case "help"     => Right(HelpCommand())
-      case "hugo"     => Right(HugoCommand())
       case "info"     => Right(InfoCommand())
       case "onchange" => Right(OnChangeCommand())
       case "parse"    => Right(ParseCommand())
@@ -71,7 +70,7 @@ object Commands:
   )(using io: PlatformContext): Either[Messages, PassesResult] =
     require(args.nonEmpty, "Empty argument list provided")
     val name = args.head
-    val result = loadCommandNamed(name).flatMap { cmd =>
+    val result = CommandLoader.loadCommandNamed(name).flatMap { cmd =>
       cmd.run(args)
     }
     if io.options.verbose then
@@ -88,7 +87,7 @@ object Commands:
   )(using io: PlatformContext): Either[Messages, PassesResult] =
     if io.options.verbose then io.log.info(s"About to run $name with options from $optionsPath")
     end if
-    loadCommandNamed(name).flatMap { cmd =>
+    CommandLoader.loadCommandNamed(name).flatMap { cmd =>
       cmd.loadOptionsFrom(optionsPath).flatMap { opts =>
         cmd.run(opts, outputDirOverride) match
           case Left(errors) =>
@@ -234,7 +233,7 @@ object Commands:
     args: Array[String]
   )(using io: PlatformContext): Either[Messages, CommandOptions] =
     require(args.nonEmpty)
-    val result = loadCommandNamed(args.head)
+    val result = CommandLoader.loadCommandNamed(args.head)
     result match
       case Right(cmd) =>
         cmd.parseOptions(args) match {

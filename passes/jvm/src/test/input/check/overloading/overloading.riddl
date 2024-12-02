@@ -1,7 +1,0 @@
-domain ignore = {
-  type Locale is String
-  type Keyboard is {locale: Locale}
-  type Device is any of { Keyboard, Mouse, Monitor}
-} with {
-  explained as "ignored"
-}

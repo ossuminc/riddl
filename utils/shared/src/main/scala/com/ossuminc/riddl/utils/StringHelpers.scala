@@ -10,13 +10,17 @@ import scala.scalajs.js.annotation._
 
 @JSExportTopLevel("StringHelpers")
 object StringHelpers {
-  
+
   extension (s: String)
     def dropUntil(f: Char => Boolean): String =
       s.indexWhere(f) match {
         case i: Int if i < 0 => ""
         case i: Int => s.drop(i)
       }
+    def dropRightWhile(f: Char => Boolean): String =
+      var result = s
+      while f(result.last) do result = result.dropRight(1)
+      result
 
   def toPrettyString(
     obj: Any,

@@ -28,7 +28,7 @@ class OptionsReadingTest extends AbstractTestingBasis {
           opts.showMissingWarnings mustBe false
         case Left(messages) => fail(messages.format)
       }
-      Commands.loadCommandNamed("repeat") match {
+      CommandLoader.loadCommandNamed("repeat") match {
         case Right(cmd) =>
           cmd.loadOptionsFrom(optionFile) match {
             case Left(errors) => fail(errors.format)

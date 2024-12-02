@@ -1,6 +1,0 @@
-domain Test is {
-  type Abc is { i is Integer } with { described as { "description" } }
-  type Foo is mapping from String to Abc with { described as { "description" } }
-} with {
-  described as "description"
-}

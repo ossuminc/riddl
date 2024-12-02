@@ -20,27 +20,6 @@ import java.nio.file.Path
 object HelpCommand {
   case class Options(command: String = "help", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
       extends CommandOptions
-
-  private def commandOptionsParser(using io: PlatformContext): OParser[Unit, ?] = {
-    val optionParsers = Seq(
-      AboutCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      FlattenCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      FromCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      HelpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      HugoCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      InfoCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      OnChangeCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      ParseCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      PrettifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      RepeatCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      StatsCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      ValidateCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      VersionCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]]
-    )
-    OParser.sequence[Unit, CommandOptions](optionParsers.head, optionParsers.tail*)
-  }
-
 }
 
 class HelpCommand(using io: PlatformContext) extends Command[HelpCommand.Options]("help") {
@@ -67,7 +46,7 @@ class HelpCommand(using io: PlatformContext) extends Command[HelpCommand.Options
     if io.options.verbose || !io.options.quiet then {
       val usage: String = {
         val common = OParser.usage(CommonOptionsHelper.commonOptionsParser, OneColumn)
-        val commands = OParser.usage(HelpCommand.commandOptionsParser, OneColumn)
+        val commands = OParser.usage(CommandLoader.commandOptionsParser, OneColumn)
         val improved_commands = commands
           .split(System.lineSeparator())
           .flatMap { line =>

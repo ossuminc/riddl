@@ -6,6 +6,8 @@
 
 package com.ossuminc.riddl.utils
 
+import com.ossuminc.riddl.utils.StringHelpers.* 
+
 import scala.annotation.unused
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -15,7 +17,8 @@ import scala.scalajs.js.annotation._
 @JSExportTopLevel("Logger")
 object Logging {
   sealed trait Lvl {
-    override def toString: String = this.getClass.getSimpleName.dropRight(1).toLowerCase
+    override def toString: String = 
+      this.getClass.getSimpleName.toLowerCase.dropRightWhile(_ == '$')
   }
 
   case object Severe extends Lvl

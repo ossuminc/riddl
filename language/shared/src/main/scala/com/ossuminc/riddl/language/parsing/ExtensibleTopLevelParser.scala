@@ -70,7 +70,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   }
 
   private def doParse[E <: Parent: ClassTag](rule: P[?] => P[E]): Either[Messages, E] = {
-    parseRule[E](input, rule, withVerboseFailures) {
+     parseRule[E](input, rule, withVerboseFailures) {
       (result: Either[Messages, E], input: RiddlParserInput, index: Int) =>
         result match {
           case l: Left[Messages, E] => l

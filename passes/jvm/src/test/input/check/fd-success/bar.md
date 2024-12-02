@@ -1,1 +1,0 @@
-Just the description for bar, from a file.
