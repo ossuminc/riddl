@@ -1,5 +1,5 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
-import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
+import com.ossuminc.sbt.OssumIncPlugin
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import de.heikoseeberger.sbtheader.License.ALv2
 import de.heikoseeberger.sbtheader.LicenseStyle.SpdxSyntax
@@ -10,7 +10,7 @@ import sbtcrossproject.{CrossClasspathDependency, CrossProject}
 import sbttastymima.TastyMiMaPlugin.autoImport.*
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-(Global / excludeLintKeys) ++= Set(mainClass)
+(Global / excludeLintKeys) ++= Set(mainClass, maintainer)
 
 enablePlugins(OssumIncPlugin)
 
@@ -43,7 +43,9 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
     riddlLibJS,
     riddlLibNative,
     commands,
+    commandsNative,
     riddlc,
+    riddlcNative,
     docsite,
     plugin
   )
@@ -84,7 +86,8 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalacheck" %%% "scalacheck" % V.scalacheck % Test
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
   .nativeConfigure(
@@ -92,13 +95,15 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       .native(
         lto = "none",
         targetTriple = "arm64-apple-darwin23.6.0",
-        ld64Path = "/opt/homebrew/Cellar/lld/19.1.2/bin/ld64.lld"
+        ld64Path = "/opt/homebrew/Cellar/lld/19.1.4/bin/ld64.lld"
       )
   )
   .nativeSettings(
     libraryDependencies ++= Seq(
       "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
-      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0"
+      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
 lazy val utils = utils_cp.jvm
@@ -210,11 +215,13 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
   .jvmSettings(
     libraryDependencies ++= Seq(
       "org.scalactic" %% "scalactic" % V.scalatest,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      "org.scalatest" %% "scalatest" % V.scalatest
     )
   )
+  .jvmConfigure(With.MiMa("0.52.1"))
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.publishing)
+  .jsConfigure(With.noMiMa)
   .jsSettings(
     // scalacOptions ++= Seq("-rewrite", "-source", "3.4-migration"),
     libraryDependencies ++= Seq(
@@ -222,6 +229,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
       "org.scalatest" %%% "scalatest" % V.scalatest
     )
   )
+  .nativeConfigure(With.noMiMa)
   .nativeConfigure(
     With
       .native(
@@ -230,8 +238,13 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
         ld64Path = "/opt/homebrew/bin/ld64.lld"
       )
   )
-  .nativeConfigure(With.noMiMa)
-  .nativeSettings(evictionErrorLevel := sbt.util.Level.Warn)
+  .nativeSettings(
+    evictionErrorLevel := sbt.util.Level.Warn,
+    libraryDependencies ++= Seq(
+      "org.scalactic" %%% "scalactic" % V.scalatest,
+      "org.scalatest" %%% "scalatest" % V.scalatest
+    )
+  )
 val testkit = testkit_cp.jvm
 val testkitJS = testkit_cp.js
 val testkitNative = testkit_cp.native
@@ -269,12 +282,28 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   .settings(
     description := "Bundling of essential RIDDL libraries"
   )
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmSettings(
+    coverageExcludedFiles := """<empty>;$anon"""
+  )
+  .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.noMiMa)
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/bin/ld64.lld"
+      )
+  )
+  .nativeConfigure(With.noMiMa)
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
 val riddlLibNative = riddlLib_cp.native
 
 val Commands = config("commands")
-lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM)
+lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
@@ -289,29 +318,53 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/bin/ld64.lld"
+      )
+  )
+  .nativeConfigure(With.noMiMa)
 val commands: Project = commands_cp.jvm
+val commandsNative = riddlLib_cp.native
 
 val Riddlc = config("riddlc")
-lazy val riddlc: Project = Program("riddlc", "riddlc")
+lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50.0))
   .configure(With.noMiMa)
-  .dependsOn(pDep(utils), pDep(language), pDep(passes), pDep(commands))
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(commands_cp))
   .settings(
     coverageExcludedFiles := """<empty>;$anon""",
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     maintainer := "reid@ossuminc.com",
     mainClass := Option("com.ossuminc.riddl.RIDDLC"),
-    graalVMNativeImageOptions ++= Seq(
-      "--verbose",
-      "--no-fallback",
-      "--native-image-info",
-      "--enable-url-protocols=https,http",
-      "-H:ResourceConfigurationFiles=../../src/native-image.resources"
-    ),
+    // graalVMNativeImageOptions ++= Seq(
+    //   "--verbose",
+    //   "--no-fallback",
+    //   "--native-image-info",
+    //   "--enable-url-protocols=https,http",
+    //   "-H:ResourceConfigurationFiles=../../src/native-image.resources"
+    // ),
     libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
   )
+  .jvmConfigure(With.coverage(50))
+  .jvmSettings(
+    coverageExcludedFiles := """<empty>;$anon"""
+  )
+  .nativeConfigure(
+    With
+      .native(
+        lto = "none",
+        targetTriple = "arm64-apple-darwin23.6.0",
+        ld64Path = "/opt/homebrew/bin/ld64.lld"
+      )
+  )
+val riddlc = riddlc_cp.jvm
+val riddlcNative = riddlc_cp.native
 
 lazy val docProjects = List(
   (utils, Utils),
