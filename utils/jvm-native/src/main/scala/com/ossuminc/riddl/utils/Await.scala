@@ -7,8 +7,8 @@
 package com.ossuminc.riddl.utils
 
 import scala.concurrent.Awaitable
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration.SECONDS
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
+
 
 object Await {
 

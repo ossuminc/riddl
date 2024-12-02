@@ -6,6 +6,12 @@
 
 package com.ossuminc.riddl
 
+/*
+ * Copyright 2019 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import scala.concurrent.ExecutionContext
 
 package object utils {

@@ -6,6 +6,8 @@
 
 package com.ossuminc.riddl.utils
 
+import java.io.FileNotFoundException
+import java.net.URLConnection
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, StandardOpenOption}
 import scala.scalajs.js.annotation.JSExportTopLevel
@@ -30,22 +32,21 @@ class NativePlatformContext extends PlatformContext {
     require(url.isValid, "Cannot load from an invalid URL")
     val source: Source = {
       import scala.io.Codec
-      url.scheme match {
-        case file: String if file == URL.fileScheme =>
-          import java.io.FileNotFoundException
-          import java.nio.file.{Files, Path}
-          val path: Path =
-            if url.basis.nonEmpty && url.path.nonEmpty then Path.of("/" + url.basis + "/" + url.path)
-            else if url.basis.isEmpty && url.path.nonEmpty then Path.of(url.path)
-            else if url.basis.nonEmpty && url.path.isEmpty then Path.of("/" + url.basis)
-            else throw new IllegalStateException("URL is invalid!")
-            end if
-          if Files.exists(path) then Source.fromFile(path.toFile)(Codec.UTF8)
-          else throw FileNotFoundException(s"While loading $path")
-        case _ =>
-          val jurl = java.net.URI(url.toExternalForm).toURL
-          Source.fromURL(jurl)(Codec.UTF8)
-      }
+      if url.isFileScheme then
+        import java.io.FileNotFoundException
+        import java.nio.file.{Files, Path}
+        val path: Path = Path.of(url.toFullPathString)
+        if Files.exists(path) then
+          Source.fromFile(path.toFile)(Codec.UTF8)
+        else
+          throw FileNotFoundException(s"While loading $path")
+      else if url.isHttpScheme then
+        require(url.isValid, s"Cannot load an invalid URL: $url")
+        val uri = java.net.URI.create(url.toExternalForm)
+        Source.fromURI(uri)(Codec.UTF8)
+      else
+        throw IllegalArgumentException(s"Invalid scheme type: ${url.scheme}")
+      end if
     }
     implicit val ec: ExecutionContext = this.ec
     Future {

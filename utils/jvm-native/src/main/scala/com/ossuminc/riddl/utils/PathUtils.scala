@@ -10,6 +10,7 @@ import java.io.{File, InputStream}
 import java.net.URL as JNURL
 import java.nio.file.{Files, Path, StandardCopyOption}
 import scala.jdk.Accumulator
+import java.nio.file.{Files, Path, StandardCopyOption}
 import scala.jdk.StreamConverters.StreamHasToScala
 
 object PathUtils {
