@@ -79,6 +79,7 @@ trait Logger(using pc: PlatformContext) {
       val tail = lines.tail.mkString(nl)
       if tail.nonEmpty then head + s"$nl$prefix$tail$RESET"
       else head
+    end if
   }
 
   protected def write(level: Lvl, @unused s: String): Unit
