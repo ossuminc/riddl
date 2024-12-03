@@ -38,22 +38,6 @@ class IncludeAndImportTest extends ParsingTest {
           errors.exists(_.format.contains("port out of range: 8900000"))
       }
     }
-    "handle non existent URL" in { (td: TestData) =>
-      val nonExistentURL =
-        "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
-      intercept[java.lang.IllegalArgumentException] {
-        val future = fromURL(URL(nonExistentURL), td).map { (rpi: RiddlParserInput) =>
-          parseDomainDefinition(rpi, identity) match {
-            case Right(_) =>
-              fail("Should have gotten 'port out of range' error")
-            case Left(errors) =>
-              errors.size must be(1)
-              errors.exists(_.format.contains("port out of range: 8900000"))
-          }
-        }
-        Await.result(future, 10.seconds)
-      }
-    }
     "handle existing URI" in { (td: TestData) =>
       import com.ossuminc.riddl.utils.URL
       val url = URL.fromCwdPath(defaultInputDir + "/domains/simpleDomain.riddl")

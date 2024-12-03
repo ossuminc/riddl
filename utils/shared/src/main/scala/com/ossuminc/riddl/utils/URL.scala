@@ -95,8 +95,8 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
 @JSExportTopLevel("URL$")
 object URL {
   final val fileScheme = "file"
-  private val httpScheme = "http"
-  private val httpsScheme = "https"
+  final val httpScheme = "http"
+  final val httpsScheme = "https"
   private val namePattern = """[A-Za-z0-9_:.+-]*""".r
   private val authorityPattern = s"""(?<authority>(($namePattern@)?$namePattern(:[0-9]{1,5})?))""".r
   private val pathPattern = """(?<path>[A-Za-z0-9_:.+-][A-Za-z0-9_:.+/-]*)""".r

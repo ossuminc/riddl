@@ -19,7 +19,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import scala.concurrent.ExecutionContext
 import scala.util.control.NonFatal
 
-class FastParseTest(using PlatformContext) extends ParsingContext with AbstractTestingBasisWithTestData {
+abstract class FastParseTest(using PlatformContext) extends ParsingContext with AbstractTestingBasisWithTestData {
 
   def validateResult[RESULT](result: Either[Messages, RESULT], input: RiddlParserInput, index: Int): RESULT = {
     result match {
