@@ -18,7 +18,7 @@ import org.scalatest.TestData
 
 class DiagramsPassTest extends SharedDiagramsPassTest {
   "generate diagrams output" in { (td: TestData) =>
-    val url = URL.fromCwdPath("language/jvm/src/test/input/everything.riddl")
+    val url = URL.fromCwdPath("language/input/everything.riddl")
     val future = RiddlParserInput.fromURL(url, td).map { rpi =>
       parseValidateAndThen(rpi) {
         (passesResult: PassesResult, root: Root, rpi: RiddlParserInput, messages: Messages.Messages) =>

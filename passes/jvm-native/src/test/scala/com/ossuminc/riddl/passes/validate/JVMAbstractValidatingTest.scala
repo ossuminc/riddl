@@ -20,7 +20,7 @@ import scala.concurrent.duration.DurationInt
 
 class JVMAbstractValidatingTest extends AbstractValidatingTest {
 
-  val passesTestCase = "passes/jvm/src/test/input/"
+  val passesTestCase = "passes/input/"
 
   def parseAndValidateTestInput(
     label: String,

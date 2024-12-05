@@ -24,7 +24,7 @@ class PathResolutionTest extends SharedResolvingTest {
 
   "PathResolution" must {
     "resolve language / rbbq.riddl" in { (td: TestData) =>
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/domains/rbbq.riddl"))
       val future = RiddlParserInput.fromURL(url, td).map { input =>
         parseAndResolve(input) { (_, _) => succeed }
       }
@@ -56,7 +56,7 @@ class PathResolutionTest extends SharedResolvingTest {
 
       def onFailure(messages: Messages): Assertion = fail(messages.justErrors.format)
 
-      val url = PathUtils.urlFromCwdPath(Path.of("passes/jvm/src/test/input/rbbq.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("passes/input/rbbq.riddl"))
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         parseAndResolve(rpi)(onSuccess)(onFailure)
       }
@@ -102,7 +102,7 @@ class PathResolutionTest extends SharedResolvingTest {
 
       def onFailure(messages: Messages): Assertion = fail(messages.justErrors.format)
 
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/dokn.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/dokn.riddl"))
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         parseAndResolve(rpi)(onSuccess)(onFailure)
       }

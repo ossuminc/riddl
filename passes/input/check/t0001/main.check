@@ -1,0 +1,13 @@
+passes/input/check/t0001/main.riddl(1:1->11):
+ Domain 'foo' in Root should have content:
+ domain foo is {
+passes/input/check/t0001/main.riddl(1:1->11):
+ Domain 'foo' should have an author reference:
+ domain foo is {
+passes/input/check/t0001/main.riddl(4:3->5:1):
+ For Domain 'foo', description at passes/input/check/t0001/main.riddl(33->49) is declared but empty:
+   described as ""
+ }
+passes/input/check/t0001/main.riddl(5:1->6:1):
+ Models without any streaming data will exhibit minimal effect:
+ }

@@ -23,7 +23,7 @@ import scala.concurrent.duration.DurationInt
 class ReferenceMapTest extends AbstractValidatingTest {
 
   protected def create: Future[PassesResult] = {
-    val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+    val url = PathUtils.urlFromCwdPath(Path.of("language/input/everything.riddl"))
     RiddlParserInput.fromURL(url).map { rpi =>
       simpleParseAndValidate(rpi) match {
         case Left(messages) => fail(messages.format)

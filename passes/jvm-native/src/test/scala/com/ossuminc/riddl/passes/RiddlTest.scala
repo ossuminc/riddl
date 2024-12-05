@@ -17,7 +17,7 @@ import scala.concurrent.duration.DurationInt
 
 class RiddlTest extends AbstractTestingBasis {
 
-  val testPath = "language/jvm/src/test/input/everything.riddl"
+  val testPath = "language/input/everything.riddl"
   val url = PathUtils.urlFromCwdPath(Path.of(testPath))
 
   "Riddl" must {

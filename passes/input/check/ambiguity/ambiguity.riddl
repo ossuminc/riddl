@@ -1,0 +1,10 @@
+domain Inventory is {
+  context ProductInventory is {
+    entity Product is {???}
+  }
+  context Vendor is {
+    entity Product is {???}
+  }
+
+  type Alias = Id(Product)
+}

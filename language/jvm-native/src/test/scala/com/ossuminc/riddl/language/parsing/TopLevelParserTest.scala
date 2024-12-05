@@ -22,7 +22,7 @@ class TopLevelParserTest extends ParsingTest {
 
   val origin = "simpleDomain.riddl"
 
-  val testInput = "language/jvm-native/src/test/input"
+  val testInput = "language/input"
 
   val simpleDomainFile: Path = Path.of(testInput + s"/domains/$origin")
   val url: URL = PathUtils.urlFromCwdPath(simpleDomainFile)

@@ -50,7 +50,6 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
     plugin
   )
 
-
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
@@ -159,8 +158,12 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   )
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
-    libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
-    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "fastparse" % V.fastparse,
+      "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid,
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test
+    )
   )
 
 lazy val language = language_cp.jvm.dependsOn(utils)
@@ -359,12 +362,11 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
     coverageExcludedFiles := """<empty>;$anon"""
   )
   .nativeConfigure(
-    With
-      .native(
-        lto = "none",
-        targetTriple = "arm64-apple-darwin23.6.0",
-        ld64Path = "/opt/homebrew/bin/ld64.lld"
-      )
+    With.native(
+      mode = "full",
+      buildTarget = "application",
+      lto = "none"
+    )
   )
 val riddlc = riddlc_cp.jvm
 val riddlcNative = riddlc_cp.native

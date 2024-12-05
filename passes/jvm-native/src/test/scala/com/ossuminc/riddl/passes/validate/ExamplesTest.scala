@@ -16,7 +16,7 @@ import java.nio.file.Path
 /** Unit Tests For ExamplesTest */
 class ExamplesTest extends JVMAbstractValidatingTest {
 
-  val dir = "language/jvm/src/test/input/"
+  val dir = "language/input/"
 
   def doOne(fileName: String): Assertion = {
     pc.withOptions(CommonOptions.noWarnings.copy(showTimes = true)) { _ =>

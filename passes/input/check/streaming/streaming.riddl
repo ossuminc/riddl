@@ -1,0 +1,38 @@
+domain AnyDomain is {
+context SensorMaintenance is {
+  type Temperature is Real    type Forecast is any of { Rainy, Cloudy, Sunny }
+  source GetWeatherForecast is {
+    outlet WeatherSink is type Forecast
+  } with {
+     described by "This is a source for Forecast data"
+  }
+
+  flow GetCurrentTemperature is {
+    inlet WeatherSource is type Forecast
+    outlet OutTemp is type Temperature
+  } with {
+    explained as "This is a Flow for the current temperature, when it changes"
+  }
+
+  sink AttenuateSensor is {
+    inlet InTemp is type Temperature
+  } with {
+    explained as "This is a Sink for making sensor adjustments based on temperature"
+  }
+
+  connector WeatherForecast is {
+    from outlet SensorMaintenance.GetWeatherForecast.WeatherSink
+    to inlet SensorMaintenance.GetCurrentTemperature.WeatherSource
+  } with { explained as "Carries changes in the current weather forecast" }
+
+  connector TemperatureChanges is {
+    from outlet SensorMaintenance.GetCurrentTemperature.OutTemp
+    to inlet SensorMaintenance.AttenuateSensor.InTemp
+  } with { explained as "Carries changes in the current temperature" }
+
+} with {
+  explained as "A complete plant definition for temperature based sensor attenuation."
+}
+} with {
+  explained as "Plants can only be specified in a domain definition"
+}

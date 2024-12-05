@@ -92,7 +92,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
     }
 
     "runValidation works" in { td =>
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/everything.riddl"))
       implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromURL(url, td).map { rpi =>
         Riddl.parse(rpi) match
@@ -108,7 +108,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
     }
 
     "runThesePasses catches exceptions" in { td =>
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/everything.riddl"))
       implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromURL(url, td).map { rpi =>
         Riddl.parse(rpi) match
@@ -148,7 +148,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
 
   "HierarchyPass" must {
     "traverses all kinds of nodes" in { td =>
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/everything.riddl"))
       val future = RiddlParserInput.fromURL(url, td).map { rpi =>
         Riddl.parseAndValidate(rpi) match
           case Left(messages) => fail(messages.justErrors.format)

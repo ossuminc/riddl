@@ -53,7 +53,7 @@ trait ParsingTest extends AbstractParsingTest {
     Await.result(future, 10.seconds)
   }
 
-  val defaultInputDir = "language/jvm-native/src/test/input"
+  val defaultInputDir = "language/input"
 
   def checkFile(
     @unused label: String,

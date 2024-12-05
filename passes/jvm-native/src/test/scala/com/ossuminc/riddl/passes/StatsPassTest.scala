@@ -48,7 +48,7 @@ class StatsPassTest extends AbstractValidatingTest {
 
   "StatsPass" must {
     "generate statistics" in { (td: TestData) =>
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/everything.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/everything.riddl"))
       val future = RiddlParserInput.fromURL(url, td).map { rpi =>
         parseValidateAndThen(rpi) {
           (pr: PassesResult, root: AST.Root, rpi: RiddlParserInput, messages: Messages.Messages) =>

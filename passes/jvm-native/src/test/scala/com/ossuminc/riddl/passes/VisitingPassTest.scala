@@ -20,7 +20,7 @@ class VisitingPassTest extends ParsingTest {
 
   "VisitingPass" must {
     "descend cleanly" in { _ =>
-      val path: Path = Path.of("language/jvm/src/test/input/everything.riddl")
+      val path: Path = Path.of("language/input/everything.riddl")
       parsePath(path) match
         case Left(msgs)  => fail(msgs.justErrors.format)
         case Right(root) =>

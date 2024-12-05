@@ -57,7 +57,7 @@ abstract class TokenStreamParserTest(using pc: PlatformContext) extends Abstract
   }
   "handle full document" in { (td: TestData) =>
     implicit val ec: ExecutionContext = pc.ec
-    val url = URL.fromCwdPath("language/jvm-native/src/test/input/everything.riddl")
+    val url = URL.fromCwdPath("language/input/everything.riddl")
     val future = RiddlParserInput.fromURL(url, td).map { rpi =>
       val result = Timer.time("Token Collection: full document") {
         TopLevelParser.parseToTokens(rpi)

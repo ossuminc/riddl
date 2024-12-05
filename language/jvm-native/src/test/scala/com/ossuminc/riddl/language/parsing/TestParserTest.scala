@@ -18,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 class TestParserTest extends ParsingTest {
 
   "TestParser" should {
-    val path = Path.of("language/jvm-native/src/test/input/everything.riddl")
+    val path = Path.of("language/input/everything.riddl")
     val url = PathUtils.urlFromCwdPath(path)
     val future = RiddlParserInput.fromURL(url)
     val input = Await.result(future, 10.seconds)

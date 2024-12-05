@@ -25,7 +25,7 @@ import scala.concurrent.duration.DurationInt
   */
 class CheckMessagesTest extends AbstractValidatingTest {
 
-  val checkPathStr = "passes/jvm/src/test/input/check"
+  val checkPathStr = "passes/input/check"
   val checkPath: Path = Path.of(checkPathStr)
   if !Files.isDirectory(checkPath) then {
     fail(s"Path of pos test cases must exist and be a directory, not a file.")

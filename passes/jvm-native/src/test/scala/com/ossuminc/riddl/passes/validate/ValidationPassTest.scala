@@ -22,7 +22,7 @@ class ValidationPassTest extends AbstractValidatingTest {
   // Turn off bombastic minor warnings
   "ValidationPass" should {
     "parse and validate rbbq.riddl" in { (td: TestData) =>
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm/src/test/input/domains/rbbq.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/domains/rbbq.riddl"))
       val input = RiddlParserInput.fromURL(url, td).map { rpi =>
         pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
           parseAndValidateAggregate(rpi) { (vo: PassesResult) =>
@@ -46,7 +46,7 @@ class ValidationPassTest extends AbstractValidatingTest {
     var sharedRoot: Root = Root.empty
 
     "parse correctly" in { (td: TestData) =>
-      val rootFile = "language/jvm/src/test/input/full/domain.riddl"
+      val rootFile = "language/input/full/domain.riddl"
       val url = PathUtils.urlFromCwdPath(Path.of(rootFile))
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         val parseResult = parseTopLevelDomains(rpi)

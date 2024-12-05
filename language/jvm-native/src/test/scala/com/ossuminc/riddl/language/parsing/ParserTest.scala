@@ -355,7 +355,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       }
     }
     "parse from a complex file" in { (td: TestData) =>
-      val url = PathUtils.urlFromCwdPath(Path.of("language/jvm-native/src/test/input/everything.riddl"))
+      val url = PathUtils.urlFromCwdPath(Path.of("language/input/everything.riddl"))
       val future = RiddlParserInput.fromURL(url, td).map { rpi =>
         parseTopLevelDomains(rpi) match {
           case Left(errors) =>

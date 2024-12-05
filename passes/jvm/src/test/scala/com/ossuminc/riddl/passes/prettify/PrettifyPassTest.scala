@@ -28,7 +28,7 @@ abstract class PrettifyPassTest extends RiddlFilesTestBase {
   def runPrettify(source: RiddlParserInput, run: String): String = {
     val passes = standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
-        val options = PrettifyPass.Options(flatten=true)
+        val options = PrettifyPass.Options(flatten = true)
         PrettifyPass(input, outputs, options)
       }
     )
@@ -69,32 +69,32 @@ abstract class PrettifyPassTest extends RiddlFilesTestBase {
 
   "PrettifyPass" should {
     "check domains" in { (_: TestData) =>
-      processADirectory("passes/jvm/src/test/input/domains")
+      processADirectory("passes/input/domains")
     }
     "check enumerations" in { (_: TestData) =>
-      processADirectory("passes/jvm/src/test/input/enumerations")
+      processADirectory("passes/input/enumerations")
     }
     "check mappings" in { (_: TestData) =>
-      processADirectory("passes/jvm/src/test/input/mappings")
+      processADirectory("passes/input/mappings")
     }
     "check ranges" in { (_: TestData) =>
-      processADirectory("passes/jvm/src/test/input/ranges")
+      processADirectory("passes/input/ranges")
     }
     "check everything.riddl" in { (_: TestData) =>
-      processAFile("language/jvm/src/test/input/everything.riddl")
+      processAFile("language/input/everything.riddl")
     }
     "check petstore.riddl" in { (_: TestData) =>
-      processAFile("language/jvm/src/test/input/petstore.riddl")
+      processAFile("language/input/petstore.riddl")
     }
     "check rbbq.riddl" in { (_: TestData) =>
-      processAFile("language/jvm/src/test/input/rbbq.riddl")
+      processAFile("language/input/rbbq.riddl")
       println("done")
     }
   }
 
   "PrettifyOutput" must {
     "construct" in { _ =>
-      val ps = PrettifyState(flatten=true)
+      val ps = PrettifyState(flatten = true)
       ps.numFiles must be(1)
       val po = PrettifyOutput(Root.empty, Messages.empty, ps)
       po.messages must be(empty)
