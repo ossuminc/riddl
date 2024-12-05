@@ -40,7 +40,7 @@ class CommandTest extends AbstractTestingBasis {
     "get options from config file" in {
       val cmd = ASimpleTestCommand()
       val reader = cmd.getConfigReader
-      val path: Path = Path.of("commands/shared/src/test/input/test.conf")
+      val path: Path = Path.of("commands/input/test.conf")
       ConfigSource
         .file(path.toFile)
         .load[ASimpleTestCommand.Options](reader) match {
@@ -60,7 +60,7 @@ class CommandTest extends AbstractTestingBasis {
         "--suppress-style-warnings",
         "--suppress-missing-warnings",
         "parse",
-        "commands/shared/src/test/input/foo.riddl", // wrong file!
+        "commands/input/foo.riddl", // wrong file!
         "hugo"
       )
       val rc = Commands.runMain(args)
@@ -73,7 +73,7 @@ class CommandTest extends AbstractTestingBasis {
         "--suppress-style-warnings",
         "--suppress-missing-warnings",
         "test",
-        "commands/shared/src/test/input/repeat-options.conf",
+        "commands/input/repeat-options.conf",
         "flumox" // unknown command
       )
       val rc = Commands.runMain(args)

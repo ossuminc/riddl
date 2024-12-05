@@ -14,7 +14,7 @@ import java.nio.file.Path
 
 class SimpleCommandOptionsTest extends AnyWordSpec with Matchers {
 
-  val confFile = "riddlc/src/test/input/cmdoptions.conf"
+  val confFile = "riddlc/input/cmdoptions.conf"
   given io: PlatformContext = pc
 
   "OptionsReading" should {

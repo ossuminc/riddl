@@ -15,7 +15,7 @@ import java.nio.file.{Files, Path}
 class TreeCopyFileVisitorTest extends AnyWordSpec with Matchers {
 
   "TreeCopyFileVisitor" must {
-    val source = Path.of("commands/shared/src/test/input")
+    val source = Path.of("commands/input")
     val target: Path = Files.createTempDirectory("TCFV-test")
     val visitor = TreeCopyFileVisitor(source, target)
 

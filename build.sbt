@@ -315,9 +315,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
   .settings(
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "RIDDL Command Infrastructure and command definitions",
-    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing ++ Seq(
-      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
-    )
+    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing
   )
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa("0.52.1"))
@@ -327,6 +325,9 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
   .nativeConfigure(
     With
       .native(
+        mode = "full",
+        buildTarget = "library",
+        gc = "boehm",
         lto = "none",
         targetTriple = "arm64-apple-darwin23.6.0",
         ld64Path = "/opt/homebrew/bin/ld64.lld"

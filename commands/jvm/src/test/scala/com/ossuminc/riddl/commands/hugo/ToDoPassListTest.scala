@@ -14,7 +14,7 @@ import org.scalatest.TestData
 
 class ToDoPassListTest extends JVMAbstractValidatingTest {
 
-  val dir = "commands/shared/src/test/input/"
+  val dir = "commands/input/"
 
   "ToDoListPass" must {
     "generate ToDoItems" in { (td: TestData) =>

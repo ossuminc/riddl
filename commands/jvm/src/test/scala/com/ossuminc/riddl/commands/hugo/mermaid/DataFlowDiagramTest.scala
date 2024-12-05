@@ -20,7 +20,7 @@ import scala.concurrent.duration.DurationInt
 class DataFlowDiagramTest extends JVMAbstractValidatingTest {
   "DataFlowDiagram" should {
     "generate a simple diagram correctly" in { (td: TestData) =>
-      val url = URL.fromCwdPath("language/jvm/src/test/input/everything.riddl")
+      val url = URL.fromCwdPath("language/input/everything.riddl")
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         simpleParseAndValidate(rpi) match {
           case Left(messages) => fail(messages.justErrors.format)

@@ -11,9 +11,9 @@ import com.ossuminc.riddl.commands.CommandTestBase
 import java.nio.file.Path
 
 /** Unit Tests For StatsCommandTest */
-class StatsCommandTest extends CommandTestBase("commands/shared/src/test/input") {
+class StatsCommandTest extends CommandTestBase("commands/input") {
 
-  val inputFile = "commands/shared/src/test/input/rbbq.riddl"
+  val inputFile = "commands/input/rbbq.riddl"
 
   "StatsCommand" should {
     "run correctly" in {

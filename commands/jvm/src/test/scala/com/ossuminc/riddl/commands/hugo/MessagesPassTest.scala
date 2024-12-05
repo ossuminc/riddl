@@ -14,7 +14,7 @@ import org.scalatest.TestData
 
 class MessagesPassTest extends JVMAbstractValidatingTest {
 
-  val dir = "language/jvm/src/test/input/"
+  val dir = "language/input/"
 
   "MessagesPass" must {
     "generate MessageInfo" in { (td: TestData) =>

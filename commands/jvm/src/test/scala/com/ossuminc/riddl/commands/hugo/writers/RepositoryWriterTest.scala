@@ -18,7 +18,7 @@ class RepositoryWriterTest extends WriterTest {
 
   "RepositoryWriter" must {
     "handle a repository" in {
-      val url = URL.fromCwdPath("commands/shared/src/test/input/repository.riddl")
+      val url = URL.fromCwdPath("commands/input/repository.riddl")
       val future = RiddlParserInput.fromURL(url).map { rpi =>
         validateRoot(rpi) { case passesResult: PassesResult =>
           val mkd = makeMDW(output, PassesResult.empty)
@@ -46,7 +46,7 @@ class RepositoryWriterTest extends WriterTest {
               || _Briefly_ | No brief description. |
               || _Authors_ |  |
               || _Definition Path_ | Root.Repository.One.Repo |
-              || _View Source Link_ | [commands/shared/src/test/input/repository.riddl(46->85)]() |
+              || _View Source Link_ | [commands/input/repository.riddl(46->85)]() |
               || _Used By_ | None |
               || _Uses_ | None |
               |

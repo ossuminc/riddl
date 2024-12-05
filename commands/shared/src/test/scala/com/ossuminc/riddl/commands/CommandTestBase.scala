@@ -16,7 +16,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.nio.file.Path
 
 /** Unit Tests For CommandTestBase */
-trait CommandTestBase(val inputDir: String = "commands/shared/src/test/input/") extends AnyWordSpec with Matchers {
+trait CommandTestBase(val inputDir: String = "commands/input/") extends AnyWordSpec with Matchers {
 
   val confFile = s"$inputDir/cmdoptions.conf"
 

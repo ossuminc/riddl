@@ -14,7 +14,7 @@ import org.scalatest.TestData
 
 class GlossaryPassTest extends JVMAbstractValidatingTest {
 
-  val dir = "language/jvm/src/test/input/"
+  val dir = "language/input/"
 
   "GlossaryPass" must {
     "product glossary entries" in { (_: TestData) =>

@@ -13,7 +13,7 @@ import org.scalatest.TestData
 /** Unit Tests For RegressionTests */
 class RegressionTests extends ParsingTest {
 
-  val regressionsFolder = "commands/shared/src/test/input/regressions/"
+  val regressionsFolder = "commands/input/regressions/"
   val output = "commands/shared/target/regressions/"
 
   "Regressions" should {

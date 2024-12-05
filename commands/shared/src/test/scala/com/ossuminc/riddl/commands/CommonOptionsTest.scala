@@ -157,7 +157,7 @@ class CommonOptionsTest extends AbstractTestingBasis {
     }
 
     "options at top level do not override in common object" in {
-      val optionFile = Path.of("riddlc/src/test/input/common-overrides.conf")
+      val optionFile = Path.of("riddlc/input/common-overrides.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Left(messages) => fail(messages.format)
         case Right(opts) =>
@@ -182,7 +182,7 @@ class CommonOptionsTest extends AbstractTestingBasis {
     }
 
     "load message related common options from a file" in {
-      val optionFile = Path.of("commands/shared/src/test/input/message-options.conf")
+      val optionFile = Path.of("commands/input/message-options.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Right(opts: CommonOptions) =>
           opts.showTimes mustBe true

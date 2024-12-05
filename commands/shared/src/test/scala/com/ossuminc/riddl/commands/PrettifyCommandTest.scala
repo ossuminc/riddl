@@ -17,7 +17,7 @@ class PrettifyCommandTest extends RunCommandSpecBase {
       val options = Seq(
         "prettify",
         "-s", "true",
-        "language/jvm/src/test/input/everything.riddl",
+        "language/input/everything.riddl",
         "-o",
         "commands/target/test/"
       )
@@ -26,7 +26,7 @@ class PrettifyCommandTest extends RunCommandSpecBase {
     }
     "load prettify options" in {
       val cmd = new PrettifyCommand
-      val conf = Path.of("commands/shared/src/test/input/prettify.conf")
+      val conf = Path.of("commands/input/prettify.conf")
       val expected = PrettifyCommand.Options(
         inputFile = Some(Path.of("nada.riddl")),
         outputDir = Some(Path.of("commands/target/prettify/")),

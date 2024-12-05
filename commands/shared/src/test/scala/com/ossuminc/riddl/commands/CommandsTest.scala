@@ -6,11 +6,11 @@
 
 package com.ossuminc.riddl.commands
 
-class CommandsTest extends CommandTestBase("commands/shared/src/test/input/") {
+class CommandsTest extends CommandTestBase("commands/input/") {
 
-  val inputFile = "language/jvm/src/test/input/rbbq.riddl"
-  val hugoConfig = "commands/shared/src/test/input/hugo.conf"
-  val validateConfig = "commands/shared/src/test/input/validate.conf"
+  val inputFile = "language/input/rbbq.riddl"
+  val hugoConfig = "commands/input/hugo.conf"
+  val validateConfig = "commands/input/validate.conf"
 
   "Commands" should {
     "handle dump" in {
@@ -42,7 +42,7 @@ class CommandsTest extends CommandTestBase("commands/shared/src/test/input/") {
         "--suppress-style-warnings",
         "--suppress-missing-warnings",
         "from",
-        "commands/shared/src/test/input/repeat-options.conf",
+        "commands/input/repeat-options.conf",
         "flumox" // unknown command
       )
       val rc = Commands.runMain(args)
