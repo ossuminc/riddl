@@ -39,7 +39,7 @@ jobs:
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
-    - name: Build, Run Test
+    - name: Build, Test, Package
       env:
         JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
         JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
