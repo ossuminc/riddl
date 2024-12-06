@@ -7,14 +7,14 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.commands.RunCommandSpecBase
-import org.scalatest.Assertion
 import com.ossuminc.riddl.utils.pc
+import org.scalatest.Assertion
 
 class RiddlcCommandsTest extends RunCommandSpecBase {
 
-  val inputFile = "commands/src/test/input/rbbq.riddl"
-  val hugoConfig = "commands/src/test/input/hugo.conf"
-  val validateConfig = "commands/src/test/input/validate.conf"
+  val inputFile = "commands/input/rbbq.riddl"
+  val hugoConfig = "commands/input/hugo.conf"
+  val validateConfig = "commands/input/validate.conf"
   val outputDir: String => String =
     (name: String) => s"riddlc/target/test/$name"
 

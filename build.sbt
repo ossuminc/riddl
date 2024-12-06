@@ -272,6 +272,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
   .jvmConfigure(With.MiMa("0.52.1"))
   .jvmSettings(
     libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig),
+    libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
     coverageExcludedFiles := """<empty>;$anon"""
   )
   .nativeConfigure(With.native())
@@ -294,7 +295,7 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
   .settings(
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     maintainer := "reid@ossuminc.com",
-    mainClass := Option("com.ossuminc.riddl.RIDDLC"),
+    mainClass := Option("com.ossuminc.riddl.RIDDLC")
     // graalVMNativeImageOptions ++= Seq(
     //   "--verbose",
     //   "--no-fallback",
@@ -304,12 +305,20 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
     // ),
   )
   .jvmConfigure(With.coverage(50))
+  .jvmConfigure(
+    With.packagingUniversal(
+      maintainerEmail = "reid@ossuminc.com",
+      pkgName = "riddlc",
+      pkgSummary = "Compiler for RIDDL language, Universal packaging",
+      pkgDescription = ""
+    )
+  )
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     libraryDependencies ++= Seq(Dep.sconfig)
   )
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(mode = "full", buildTarget = "application"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies += "org.ekrich" %%% "sconfig" % V.sconfig

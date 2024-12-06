@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.parsing.ParsingTest
-import com.ossuminc.riddl.utils.{ec, pc}
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
 /** Unit Tests For RegressionTests */

@@ -15,8 +15,8 @@ import org.ekrich.config.*
 import scopt.*
 
 import java.nio.file.Path
-import java.time.Instant
-import java.time.temporal.{ChronoField, TemporalField}
+import java.time.{Clock, ZoneId}
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
@@ -25,7 +25,7 @@ import scala.util.control.NonFatal
 /** Handle processing of Language module's CommonOptions */
 object CommonOptionsHelper:
 
-  private def year: Int = Instant.now().getLong(ChronoField.YEAR).toInt
+  private def year: Int = Clock.systemUTC().instant().atZone(ZoneId.systemDefault()).getYear
   private val start: String = RiddlBuildInfo.startYear
   val blurb: String =
     s"""RIDDL Compiler © $start-$year Ossum Inc. All rights reserved."
