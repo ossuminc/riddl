@@ -46,7 +46,7 @@ class SimpleCommandOptionsTest extends AnyWordSpec with Matchers {
       val cmd = new VersionCommand
       cmd.loadOptionsFrom(Path.of(confFile)) match {
         case Left(errors)   => fail(errors.format)
-        case Right(options) => options must be(VersionCommand.Options())
+        case Right(options) => options must be(VersionCommand.Options("version"))
       }
     }
   }

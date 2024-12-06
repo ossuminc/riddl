@@ -12,22 +12,22 @@ import com.ossuminc.riddl.language.Messages.errors
 import com.ossuminc.riddl.language.Messages.severes
 import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.passes.PassesResult
-import pureconfig.ConfigReader
-import pureconfig.ConfigSource
 import scopt.OParser
 import scopt.OParserBuilder
+import org.ekrich.config.*
 
 import java.io.File
 import java.nio.file.Path
 import scala.annotation.unused
 import scala.reflect.ClassTag
+import scala.util.control.NonFatal
 
 /** The service interface for Riddlc command plugins */
-trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io: PlatformContext):
+trait Command[OPT <: CommandOptions: ClassTag](val commandName: String)(using io: PlatformContext):
 
   // private val optionsClass : Class[?] = classTag[OPT].runtimeClass
 
-  /** Provide an scopt OParser for the commands options type, OPT
+  /** Provide a scopt OParser for the commands options type, OPT
     * @return
     *   A pair: the OParser and the default values for OPT
     */
@@ -47,7 +47,7 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
     * @return
     *   A pureconfig.ConfigReader[OPT] that knows how to read OPT
     */
-  def getConfigReader: ConfigReader[OPT]
+  def interpretConfig(config: Config): OPT
 
   def loadOptionsFrom(
     configFile: Path
@@ -55,21 +55,22 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
     if io.options.verbose then {
       io.log.info(s"Reading command options from: $configFile")
     }
-    ConfigSource.file(configFile).load[OPT](getConfigReader) match {
-      case Right(value) =>
-        if io.options.verbose then {
-          io.log.info(s"Read command options from $configFile")
-        }
-        if io.options.debug then {
-          println(StringHelpers.toPrettyString(value, 1))
-        }
-        Right(value)
-      case Left(fails) =>
-        Left(
-          errors(
-            s"Errors while reading $configFile:\n" + fails.prettyPrint(1)
-          )
-        )
+    val options: ConfigParseOptions = ConfigParseOptions.defaults
+      .setAllowMissing(true)
+      .setOriginDescription(configFile.getFileName.toString)
+    try {
+      val config = ConfigFactory.parseFile(configFile.toFile, options)
+      if io.options.verbose then {
+        io.log.info(s"Read command options from $configFile")
+      }
+      val opt = interpretConfig(config)
+      if io.options.debug then {
+        println(StringHelpers.toPrettyString(opt, 1))
+      }
+      Right(opt)
+    } catch {
+      case NonFatal(xcptn) =>
+        Left(errors(s"Errors while reading $configFile:\n" + xcptn.getMessage))
     }
   }
 
@@ -87,7 +88,7 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
   ): Either[Messages, PassesResult] =
     Left(
       severes(
-        s"""In command '$pluginName':
+        s"""In command '$commandName':
          |the CommandPlugin.run(OPT,CommonOptions,Logger) method was not overridden""".stripMargin
       )
     )
@@ -106,7 +107,7 @@ trait Command[OPT <: CommandOptions: ClassTag](val pluginName: String)(using io:
           run(opts, outputDirOverride)
         }
         result
-      case None => Left(errors(s"Failed to parse $pluginName options"))
+      case None => Left(errors(s"Failed to parse $commandName options"))
     end match
   end run
 

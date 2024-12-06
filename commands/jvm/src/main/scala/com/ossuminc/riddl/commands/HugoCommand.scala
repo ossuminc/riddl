@@ -6,7 +6,6 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.command.{CommandOptions, PassCommand}
 import com.ossuminc.riddl.commands.hugo.HugoPass
 import com.ossuminc.riddl.commands.hugo.themes.{DotdockWriter, GeekDocWriter}
@@ -14,12 +13,17 @@ import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassCreators
 import com.ossuminc.riddl.utils.PlatformContext
-import pureconfig.{ConfigCursor, ConfigReader}
+import com.ossuminc.riddl.utils.StringHelpers.*
+import org.ekrich.config.*
+import org.ekrich.config.impl.ConfigString
 import scopt.OParser
+import sourcecode.Text.generate
 
 import java.net.URL
 import java.nio.file.Path
 import scala.annotation.unused
+import scala.collection.mutable 
+import scala.jdk.CollectionConverters.MapHasAsScala
 
 class HugoCommand(using pc: PlatformContext) extends PassCommand[HugoPass.Options]("hugo") {
 
@@ -108,99 +112,77 @@ class HugoCommand(using pc: PlatformContext) extends PassCommand[HugoPass.Option
       ) -> HugoPass.Options()
   }
 
-  override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
-    for
-      topCur <- cur.asObjectCursor
-      topRes <- topCur.atKey(pluginName)
-      objCur <- topRes.asObjectCursor
-      inputPathRes <- objCur.atKey("input-file")
-      inputPath <- inputPathRes.asString
-      outputPathRes <- objCur.atKey("output-dir")
-      outputPath <- outputPathRes.asString
-      eraseOutput <- optional(objCur, "erase-output", false) { cc => cc.asBoolean }
-      projectName <- optional(objCur, "project-name", "No Project Name") { cur => cur.asString }
-      hugoThemeName <- optional(objCur, "hugo-theme-name", "GeekDoc") { cur => cur.asString }
-      enterpriseName <- optional(objCur, "enterprise-name", "No Enterprise Name") { cur => cur.asString }
-      siteTitle <- optional(objCur, "site-title", "No Site Title") { cur => cur.asString }
-      siteDescription <- optional(objCur, "site-description", "No Site Description") { cur => cur.asString }
-      siteLogoPath <- optional(objCur, "site-logo-path", "static/somewhere") { cc => cc.asString }
-      siteLogoURL <- optional(objCur, "site-logo-url", Option.empty[String]) { cc => cc.asString.map(Option[String]) }
-      baseURL <- optional(objCur, "base-url", Option.empty[String]) { cc =>
-        cc.asString.map(Option[String])
-      }
-      themesMap <- optional(objCur, "themes", Map.empty[String, ConfigCursor]) { cc =>
-        cc.asMap
-      }
-      sourceURL <- optional(objCur, "source-url", Option.empty[String]) { cc =>
-        cc.asString.map(Option[String])
-      }
-      viewPath <- optional(objCur, "view-path", "blob/main/src/main/riddl") { cc =>
-        cc.asString
-      }
-      editPath <- optional(objCur, "edit-path", "edit/main/src/main/riddl") { cc =>
-        cc.asString
-      }
-      withGlossary <- optional(objCur, "with-glossary", true) { cc =>
-        cc.asBoolean
-      }
-      withToDoList <- optional(objCur, "with-todo-list", true) { cc =>
-        cc.asBoolean
-      }
-      withStatistics <- optional(objCur, "with-statistics", true) { cc =>
-        cc.asBoolean
-      }
-      withGraphicalTOC <- optional(objCur, "with-graphical-toc", false) { cc =>
-        cc.asBoolean
-      }
-    yield {
-      def handleURL(url: Option[String]): Option[URL] =
-        url match {
-          case None                 => Option.empty[URL]
-          case Some(u) if u.isEmpty => Option.empty[URL]
-          case Some(u)              => Option(java.net.URI(u).toURL)
-        }
+  override def interpretConfig(config: Config): Options =
+    val obj = config.getObject(commandName).toConfig
+    val inputFile = Path.of(obj.getString("input-file"))
+    val outputDir = Path.of(obj.getString("output-dir"))
+    val eraseOutput= if obj.hasPath("erase-output") then obj.getBoolean("erase-output") else false
+    val projectName = if obj.hasPath("project-name") then obj.getString("project-name") else "No Project Name"
+    val hugoThemeName = if obj.hasPath("hugo-theme-name") then obj.getString("hugo-theme-name") else "GeekDoc"
+    val enterpriseName =
+      if obj.hasPath("enterprise-name") then obj.getString("enterprise-name") else "No Enterprise Name"
+    val siteTitle = if obj.hasPath("site-title") then obj.getString("site-title") else "No Site Title"
+    val siteDescription =
+      if obj.hasPath("site-description") then obj.getString("site-description") else "No Site Description"
+    val siteLogoPath = if obj.hasPath("site-logo-path") then obj.getString("site-logo-path") else "static/somewhere"
+    val siteLogoURL =
+      if obj.hasPath("site-logo-url") then Some(obj.getString("site-logo-url")) else None
+    val baseURL = if obj.hasPath("base-url") then Some(obj.getString("base-url")) else None
+    val themesMap: mutable.Map[String,Object] = 
+      if obj.hasPath("themes") then obj.getObject("themes").unwrapped.asScala else mutable.Map.empty[String,Object]
+    val sourceURL = if obj.hasPath("source-url") then Some(obj.getString("source-url")) else None
+    val viewPath =
+      if obj.hasPath("view-path") then Some(obj.getString("view-path")) else Some("blob/main/src/main/riddl")
+    val editPath =
+     if obj.hasPath("edit-path") then Some(obj.getString("edit-path")) else Some("edit/main/src/main/riddl")
+    val withGlossary = if obj.hasPath("with-glossary") then obj.getBoolean("with-glossary") else true
+    val withToDoList = if obj.hasPath("with-todo-list") then obj.getBoolean("with-todo-list") else true
+    val withStatistics = if obj.hasPath("with-statistics") then obj.getBoolean("with-statistics") else true
+    val withGraphicalTOC = if obj.hasPath("with-graphical-toc") then obj.getBoolean("with-graphical-toc") else true
+    def handleURL(url: Option[String]): Option[URL] =
+      url match
+        case None                 => Option.empty[URL]
+        case Some(u) if u.isEmpty => Option.empty[URL]
+        case Some(u)              => Option(java.net.URI(u).toURL)
+      end match
+    end handleURL
 
-      val themes: Seq[(String, Option[java.net.URL])] = {
-        if themesMap.isEmpty then {
-          Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url))
-        } else {
-          val themesEither = themesMap.toSeq.map(x => x._1 -> x._2.asString)
-          themesEither.map { case (name, maybeUrl) =>
-            name -> {
-              maybeUrl match {
-                case Right(s) => handleURL(Option(s))
-                case Left(x) =>
-                  val errs = x.prettyPrint(1)
-                  require(false, errs)
-                  None
-              }
-            }
-          }
+    val themes: Seq[(String, Option[java.net.URL])] =
+      if themesMap.isEmpty then
+        Seq("hugo-geekdoc" -> Option(HugoPass.geekDoc_url))
+      else
+        val themesEither = themesMap.toSeq.map(x => x._1 -> x._2)
+        themesEither.map { (name: String, maybeUrl: Object) =>
+            maybeUrl match
+              case s: String => name -> handleURL(Option(s))
+              case _ => name -> None
+            end match
         }
-      }
-      HugoPass.Options(
-        Option(Path.of(inputPath)),
-        Option(Path.of(outputPath)),
-        Option(projectName),
-        Option(hugoThemeName),
-        Option(enterpriseName),
-        eraseOutput,
-        Option(siteTitle),
-        Option(siteDescription),
-        Option(siteLogoPath),
-        handleURL(siteLogoURL),
-        handleURL(baseURL),
-        themes,
-        handleURL(sourceURL),
-        Option(editPath),
-        Option(viewPath),
-        withGlossary,
-        withToDoList,
-        withGraphicalTOC,
-        withStatistics
-      )
-    }
-  }
+      end if
+    end themes
+
+    HugoPass.Options(
+      Option(inputFile),
+      Option(outputDir),
+      Option(projectName),
+      Option(hugoThemeName),
+      Option(enterpriseName),
+      eraseOutput,
+      Option(siteTitle),
+      Option(siteDescription),
+      Option(siteLogoPath),
+      handleURL(siteLogoURL),
+      handleURL(baseURL),
+      themes,
+      handleURL(sourceURL),
+      editPath,
+      viewPath,
+      withGlossary,
+      withToDoList,
+      withGraphicalTOC,
+      withStatistics
+   )
+   end interpretConfig
 
   def overrideOptions(options: Options, newOutputDir: Path): Options = {
     options.copy(outputDir = Some(newOutputDir))

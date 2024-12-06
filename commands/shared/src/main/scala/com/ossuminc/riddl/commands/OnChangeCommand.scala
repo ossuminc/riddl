@@ -7,18 +7,17 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.language.Messages.{Messages, errors}
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.PlatformContext
-import pureconfig.{ConfigCursor, ConfigReader}
-import pureconfig.error.CannotParse
+import org.ekrich.config.*
 import scopt.OParser
 
 import java.io.File
 import java.nio.file.{Files, Path}
 import java.nio.file.attribute.FileTime
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
 object OnChangeCommand {
@@ -94,62 +93,19 @@ class OnChangeCommand(using pc: PlatformContext) extends Command[OnChangeCommand
     ) -> Options()
   }
 
-  override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
-    {
-      for
-        topCur <- cur.asObjectCursor
-        topRes <- topCur.atKey(OnChangeCommand.cmdName)
-        objCur <- topRes.asObjectCursor
-        configFileRes <- objCur.atKey("config-file")
-        configFile <- configFileRes.asString.flatMap { inputPath =>
-          if inputPath.isEmpty then {
-            ConfigReader.Result.fail[String](
-              CannotParse("'config-file' requires a non-empty value", None)
-            )
-          } else Right(inputPath)
-        }
-        watchDirRes <- objCur.atKey("watch-directory")
-        watchDir <- watchDirRes.asString.flatMap { watchDir =>
-          if watchDir.isEmpty then {
-            ConfigReader.Result.fail[String](
-              CannotParse("'watch-directory' requires a non-empty value", None)
-            )
-          } else Right(watchDir)
-        }
-        targetCommandRes <- objCur.atKey("target-command")
-        targetCmd <- targetCommandRes.asString.flatMap { targetCmd =>
-          if targetCmd.isEmpty then {
-            ConfigReader.Result.fail[String](
-              CannotParse("'target-command' requires a non-empty value", None)
-            )
-          } else Right(targetCmd)
-        }
-        refreshRate <- optional(objCur, "refresh-rate", "10s")(_.asString).flatMap { rr =>
-          val dur = Duration.create(rr)
-          if dur.isFinite then { Right(dur.asInstanceOf[FiniteDuration]) }
-          else {
-            ConfigReader.Result.fail[FiniteDuration](
-              CannotParse(
-                s"'refresh-rate' must be a finite duration, not $rr",
-                None
-              )
-            )
-          }
-        }
-        maxCycles <- optional(objCur, "max-cycles", OnChangeCommand.defaultMaxLoops)(_.asInt)
-        interactive <- optional(objCur, "interactive", true)(_.asBoolean)
-      yield {
-        OnChangeCommand.Options(
-          configFile = Path.of(configFile),
-          watchDirectory = Path.of(watchDir),
-          targetCommand = targetCmd,
-          refreshRate = refreshRate,
-          maxCycles = maxCycles,
-          interactive = interactive
-        )
-      }
-    }
-  }
+  override def interpretConfig(config: Config): Options =
+    val obj = config.getObject(commandName).toConfig
+    val configFile = obj.getString("config-file")
+    require(configFile.nonEmpty, "'config-file' requires a non-empty value")
+    val watchDirectory = obj.getString("watch-directory")
+    require(watchDirectory.nonEmpty, "'watch-directory' requires a non-empty value")
+    val targetCommand = obj.getString("target-command")
+    require(targetCommand.nonEmpty, "'target-command' requires a non-empty value")
+    val refreshRate: FiniteDuration =
+      FiniteDuration(obj.getDuration("refresh-rate", TimeUnit.SECONDS), TimeUnit.SECONDS)
+    val maxCycles = obj.getInt("max_cycles")  
+    OnChangeCommand.Options(Path.of(configFile), Path.of(watchDirectory), targetCommand, refreshRate, maxCycles)
+  end interpretConfig
 
   override def replaceInputFile(
     opts: Options,
@@ -169,8 +125,8 @@ class OnChangeCommand(using pc: PlatformContext) extends Command[OnChangeCommand
     *
     * @param options
     *   The command specific options
-    * @param commonOptions
-    *   The options common to all commands
+    * @param outputDirOverride
+    *   The value of an override for the outputDir option
     * @return
     *   Either a set of Messages on error or a Unit on success
     */

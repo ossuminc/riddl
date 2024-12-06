@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, ec, pc}
-import pureconfig.*
+import org.ekrich.config.*
 import scopt.*
 
 import java.nio.file.Path
@@ -39,14 +39,14 @@ class CommandTest extends AbstractTestingBasis {
     }
     "get options from config file" in {
       val cmd = ASimpleTestCommand()
-      val reader = cmd.getConfigReader
       val path: Path = Path.of("commands/input/test.conf")
-      ConfigSource
-        .file(path.toFile)
-        .load[ASimpleTestCommand.Options](reader) match {
-        case Right(loadedOptions) => loadedOptions.arg1 mustBe "Success!"
-        case Left(failures)       => fail(failures.prettyPrint())
-      }
+      val options: ConfigParseOptions = 
+        ConfigParseOptions.defaults
+          .setAllowMissing(true)
+           .setOriginDescription(path.getFileName.toString)
+      val config = ConfigFactory.parseFile(path.toFile, options)
+      val loadedOptions = cmd.interpretConfig(config) 
+      loadedOptions.arg1 mustBe "Success!"
     }
 
     "run a command" in {

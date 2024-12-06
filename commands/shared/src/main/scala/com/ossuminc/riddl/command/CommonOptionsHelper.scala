@@ -6,25 +6,26 @@
 
 package com.ossuminc.riddl.command
 
-import com.ossuminc.riddl.command.CommandOptions.optional
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.utils.CommonOptions
-import com.ossuminc.riddl.utils.StringHelpers.toPrettyString
+import com.ossuminc.riddl.utils.{CommonOptions, pc}
+import com.ossuminc.riddl.utils.StringHelpers
 import com.ossuminc.riddl.utils.{PlatformContext, RiddlBuildInfo, SysLogger}
-import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
-import pureconfig.error.ConfigReaderFailures
+import org.ekrich.config.*
 import scopt.*
 
-import java.io.File
 import java.nio.file.Path
-import java.util.Calendar
+import java.time.Instant
+import java.time.temporal.{ChronoField, TemporalField}
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
+import scala.util.control.NonFatal
+
 
 /** Handle processing of Language module's CommonOptions */
-object CommonOptionsHelper {
+object CommonOptionsHelper:
 
-  private def year: Int = Calendar.getInstance().get(Calendar.YEAR)
+  private def year: Int = Instant.now().getLong(ChronoField.YEAR).toInt
   private val start: String = RiddlBuildInfo.startYear
   val blurb: String =
     s"""RIDDL Compiler © $start-$year Ossum Inc. All rights reserved."
@@ -194,112 +195,120 @@ object CommonOptionsHelper {
 
   private def noBool = Option.empty[Boolean]
 
-  implicit val commonOptionsReader: ConfigReader[CommonOptions] = { (cur: ConfigCursor) =>
-    {
-      val default = CommonOptions()
-      for
-        topCur <- cur.asObjectCursor
-        topRes <- topCur.atKey("common")
-        objCur <- topRes.asObjectCursor
-        showTimes <- optional(objCur, "show-times", default.showTimes)(c => c.asBoolean)
-        showIncludeTimes <- optional(objCur, "show-include-times", default.showIncludeTimes)(c => c.asBoolean)
-        verbose <- optional(objCur, "verbose", default.verbose)(cc => cc.asBoolean)
-        dryRun <- optional(objCur, "dry-run", default.dryRun)(cc => cc.asBoolean)
-        quiet <- optional(objCur, "quiet", default.quiet)(cc => cc.asBoolean)
-        debug <- optional(objCur, "debug", default.debug)(cc => cc.asBoolean)
-        noANSIMessages <- optional(objCur, "no-ansi-messages", default.noANSIMessages)(cc => cc.asBoolean)
-        sortMessages <- optional(objCur, "sort-messages-by-location", default.sortMessagesByLocation)(cc =>
-          cc.asBoolean
-        )
-        groupMessagesByKind <- optional(objCur, "group-messages-by-kind", default.groupMessagesByKind)(cc =>
-          cc.asBoolean
-        )
-        suppressWarnings <- optional(objCur, "suppress-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        suppressStyleWarnings <- optional(objCur, "suppress-style-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        suppressMissingWarnings <- optional(objCur, "suppress-missing-warnings", noBool)(cc =>
-          cc.asBoolean.map(Option(_))
-        )
-        suppressUsageWarnings <- optional(objCur, "suppress-usage-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        suppressInfoMessages <- optional(objCur, "suppress-info-messages", noBool)(cc => cc.asBoolean.map(Option(_)))
-        hideWarnings <- optional(objCur, "hide-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        hideStyleWarnings <- optional(objCur, "hide-style-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        hideMissingWarnings <- optional(objCur, "hide-missing-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        hideUsageWarnings <- optional(objCur, "hide-usage-warnings", noBool)(cc => cc.asBoolean.map(Option(_)))
-        hideInfoMessages <- optional(objCur, "hide-info-messages", noBool)(cc => cc.asBoolean.map(Option(_)))
-        showWarnings <- optional[Boolean](objCur, "show-warnings", default.showWarnings)(cc => cc.asBoolean)
-        showStyleWarnings <- optional[Boolean](objCur, "show-style-warnings", default.showStyleWarnings)(cc =>
-          cc.asBoolean
-        )
-        showMissingWarnings <- optional[Boolean](objCur, "show-missing-warnings", default.showMissingWarnings)(cc =>
-          cc.asBoolean
-        )
-        showUsageWarnings <- optional[Boolean](objCur, "show-usage-warnings", default.showUsageWarnings)(cc =>
-          cc.asBoolean
-        )
-        showInfoMessages <- optional[Boolean](objCur, "show-info-messages", default.showInfoMessages)(cc =>
-          cc.asBoolean
-        )
-        pluginsDir <- optional(objCur, "plugins-dir", Option.empty[Path])(cc =>
-          cc.asString.map(f => Option(Path.of(f)))
-        )
-        maxParallel <- optional[Int](objCur, "max-parallel-parsing", default.maxParallelParsing)(cc => cc.asInt)
-        maxIncludeWait <- optional[Long](objCur, "max-include-wait", default.maxIncludeWait.toSeconds)(cc => cc.asLong)
-        warnsAreFatal <- optional(objCur, "warnings-are-fatal", default.warningsAreFatal)(cc => cc.asBoolean)
-      yield {
-        val shouldShowWarnings = suppressWarnings
-          .map(!_)
-          .getOrElse(hideWarnings.map(!_).getOrElse(showWarnings))
-        val shouldShowMissing = suppressMissingWarnings
-          .map(!_)
-          .getOrElse(hideMissingWarnings.map(!_).getOrElse(showMissingWarnings))
-        val shouldShowStyle = suppressStyleWarnings
-          .map(!_)
-          .getOrElse(hideStyleWarnings.map(!_).getOrElse(showStyleWarnings))
-        val shouldShowUsage = suppressUsageWarnings
-          .map(!_)
-          .getOrElse(hideUsageWarnings.map(!_).getOrElse(showUsageWarnings))
-        val shouldShowInfos = suppressInfoMessages
-          .map(!_)
-          .getOrElse(hideInfoMessages.map(!_).getOrElse(showInfoMessages))
-        CommonOptions(
-          showTimes,
-          showIncludeTimes,
-          verbose,
-          dryRun,
-          quiet,
-          shouldShowWarnings,
-          shouldShowMissing,
-          shouldShowStyle,
-          shouldShowUsage,
-          shouldShowInfos,
-          debug,
-          sortMessagesByLocation = sortMessages,
-          groupMessagesByKind = groupMessagesByKind,
-          noANSIMessages = noANSIMessages,
-          maxParallelParsing = maxParallel,
-          maxIncludeWait = FiniteDuration(maxIncludeWait, "seconds"),
-          warningsAreFatal = warnsAreFatal
-        )
-      }
-    }
-  }
+  private def commonOptionsReader(config: Config): CommonOptions =
+    val default = CommonOptions()
+    val obj = config.getObject("common").toConfig
+    val showTimes = if obj.hasPath("show-times") then obj.getBoolean("show-times") else default.showTimes
+    val showIncludeTimes =
+      if obj.hasPath("show-include-times") then obj.getBoolean("show-include-times") else default.showIncludeTimes
+    val verbose = if obj.hasPath("verbose") then obj.getBoolean("verbose") else default.verbose
+    val dryRun = if obj.hasPath("dry-run") then obj.getBoolean("dry-run") else default.dryRun
+    val quiet = if obj.hasPath("quiet") then obj.getBoolean("quiet") else default.quiet
+    val debug = if obj.hasPath("debug") then obj.getBoolean("debug") else default.debug
+    val noANSIMessages =
+      if obj.hasPath("no-ansi-messages") then obj.getBoolean("no-ansi-messages") else default.noANSIMessages
+    val sortMessagesByLocation =
+      if obj.hasPath("sort-messages-by-location") then
+        obj.getBoolean("sort-messages-by-location")
+      else default.sortMessagesByLocation
+    val groupMessagesByKind =
+      if obj.hasPath("group-messages-by-kind") then
+        obj.getBoolean("group-messages-by-kind")
+      else
+        default.groupMessagesByKind
+    val suppressWarnings = if obj.hasPath("suppress-warnings") then Some(obj.getBoolean("suppress-warnings")) else None
+    val suppressStyleWarnings =
+      if obj.hasPath("suppress-style-warnings") then Some(obj.getBoolean("suppress-style-warnings")) else None
+    val suppressMissingWarnings =
+      if obj.hasPath("suppress-missing-warnings") then Some(obj.getBoolean("suppress-missing-warnings")) else None
+    val suppressUsageWarnings =
+      if obj.hasPath("suppress-usage-warnings") then Some(obj.getBoolean("suppress-usage-warnings")) else None
+    val suppressInfoMessages =
+      if obj.hasPath("suppress-info-messages") then Some(obj.getBoolean("suppress-info-messages")) else None
+    val hideWarnings = if obj.hasPath("hide-warnings") then Some(obj.getBoolean("hide-warnings")) else None
+    val hideStyleWarnings =
+      if obj.hasPath("hide-style-warnings") then Some(obj.getBoolean("hide-style-warnings")) else None
+    val hideMissingWarnings =
+      if obj.hasPath("hide-missing-warnings") then Some(obj.getBoolean("hide-missing-warnings")) else None
+    val hideUsageWarnings =
+      if obj.hasPath("hide-usage-warnings") then Some(obj.getBoolean("hide-usage-warnings")) else None
+    val hideInfoMessages =
+      if obj.hasPath("hide-info-messages") then Some(obj.getBoolean("hide-info-messages")) else None
+    val showWarnings =
+      if obj.hasPath("show-warnings") then obj.getBoolean("show-warnings") else default.showWarnings
+    val showStyleWarnings =
+      if obj.hasPath("show-style-warnings") then obj.getBoolean("show-style-warnings") else default.showStyleWarnings
+    val showMissingWarnings =
+      if obj.hasPath("show-missing-warnings") then obj.getBoolean("show-missing-warnings")
+      else default.showMissingWarnings
+    val showUsageWarnings =
+      if obj.hasPath("show-usage-warnings") then obj.getBoolean("show-usage-warnings") else default.showUsageWarnings
+    val showInfoMessages =
+      if obj.hasPath("show-info-messages") then obj.getBoolean("show-info-messages") else default.showInfoMessages
+    val maxParallelParsing =
+      if obj.hasPath("max-parallel-parsing") then obj.getInt("max-parallel-parsing") else default.maxParallelParsing
+    val maxIncludeWait =
+      if obj.hasPath("max-include-wait") then
+        val duration = obj.getDuration("max-include-wait")
+        val seconds = duration.toMillis
+        FiniteDuration(seconds,TimeUnit.MILLISECONDS)
+      else default.maxIncludeWait
+    val warningsAreFatal =
+      if obj.hasPath("warnings-are-fatal") then obj.getBoolean("warnings-are-fatal") else default.warningsAreFatal
 
-  final def loadCommonOptions(
-    path: Path
-  ): Either[Messages, CommonOptions] = {
-    ConfigSource.file(path.toFile).load[CommonOptions] match {
-      case Right(options) =>
-        if options.debug then {
-          println(toPrettyString(options, 1, Some("Loaded common options:")))
-        }
-        Right(options)
-      case Left(failures) =>
+    val shouldShowWarnings =
+      suppressWarnings.map(!_).getOrElse(hideWarnings.map(!_).getOrElse(showWarnings))
+    val shouldShowMissing =
+      suppressMissingWarnings.map(!_).getOrElse(hideMissingWarnings.map(!_).getOrElse(showMissingWarnings))
+    val shouldShowStyle =
+      suppressStyleWarnings.map(!_).getOrElse(hideStyleWarnings.map(!_).getOrElse(showStyleWarnings))
+    val shouldShowUsage =
+      suppressUsageWarnings.map(!_).getOrElse(hideUsageWarnings.map(!_).getOrElse(showUsageWarnings))
+    val shouldShowInfos =
+      suppressInfoMessages.map(!_).getOrElse(hideInfoMessages.map(!_).getOrElse(showInfoMessages))
+    CommonOptions(
+      showTimes,
+      showIncludeTimes,
+      verbose,
+      dryRun,
+      quiet,
+      shouldShowWarnings,
+      shouldShowMissing,
+      shouldShowStyle,
+      shouldShowUsage,
+      shouldShowInfos,
+      debug,
+      sortMessagesByLocation,
+      groupMessagesByKind,
+      noANSIMessages,
+      maxParallelParsing,
+      maxIncludeWait,
+      warningsAreFatal
+    )
+  end commonOptionsReader
+
+  def loadCommonOptions(configFile: Path)(using pc: PlatformContext): Either[Messages, CommonOptions] =
+    val options: ConfigParseOptions = ConfigParseOptions.defaults
+      .setAllowMissing(true)
+      .setOriginDescription(configFile.getFileName.toString)
+    try {
+      val config = ConfigFactory.parseFile(configFile.toFile, options)
+      if pc.options.verbose then {
+        pc.log.info(s"Read command options from $configFile")
+      }
+      val opt = commonOptionsReader(config)
+      if pc.options.debug then {
+        println(StringHelpers.toPrettyString(options, 1, Some("Loaded common options:")))
+      }
+      Right(opt)
+    } catch {
+      case NonFatal(xcptn) =>
         Left(
-          errors(
-            s"Failed to load options from $path because:\n" +
-              failures.prettyPrint(1)
+          errors(s"Failed to load options from $configFile because:\n" +
+            xcptn.getClass.getSimpleName + ": " + xcptn.getMessage
           )
         )
     }
-  }
-}
+  end loadCommonOptions
+end CommonOptionsHelper
+
