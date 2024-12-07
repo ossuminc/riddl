@@ -1,0 +1,49 @@
+name: Scala Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: sbt
+
+      - name: Set Up SBT
+        uses: sbt/setup-sbt@v1
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: '0.112.0'
+          extended: true
+
+      - name: Coursier Caching
+        uses: coursier/cache-action@v6
+
+      - name: Coverage For JVM projects only
+        run: |
+          sbt -v clean coverage \
+            utils/Test/compile language/Test/compile passes/Test/compile diagrams/Test/compile \
+            commands/Test/compile riddlc/Test/compile \
+            utils/test language/test passes/test diagrams/test commands/test riddlc/test \
+            coverageAggregate coveralls
+
+      - name: Coverage Results Collection
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: |
+            - **/jvm/target/scala-3.4.3/scoverage-report/scoverage.xml
+            - **/target/scala-3.4.3/scoverage-report/scoverage.xml
+            - target/scala-3.4.3/scoverage-report/scoverage.xml
