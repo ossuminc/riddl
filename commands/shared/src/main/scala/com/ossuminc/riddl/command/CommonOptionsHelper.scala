@@ -16,7 +16,6 @@ import scopt.*
 
 import java.nio.file.Path
 import java.time.{Clock, ZoneId}
-import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
