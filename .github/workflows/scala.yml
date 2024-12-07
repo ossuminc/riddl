@@ -30,7 +30,7 @@ jobs:
       with:
         version: "18.1.8"
     - name: Set PATH for Clang
-      run: echo "export PATH=\$PATH:${{env.LLVM_PATH}}" >> $GITHUB_ENV
+      run: echo "export PATH=\$PATH:${{env.LLVM_PATH}}/bin" >> $GITHUB_ENV
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
