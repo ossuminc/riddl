@@ -31,8 +31,10 @@ jobs:
 
     - name: Check Clang Okayness
       run: |
-        which clang
-        clang --version
+        echo CLANG: `which clang`
+        echo LD64.LLD: `which ld64.lld`
+        echo LLD: `which lld`
+        clang --version      
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
