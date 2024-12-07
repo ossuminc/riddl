@@ -28,7 +28,9 @@ jobs:
     - name: Setup LLVM & Clang
       uses: KyleMayes/install-llvm-action@v2
       with:
-        version: "10.0"
+        version: "19"
+    - name: Set PATH for Clang
+      run: echo "export PATH=\$PATH:${{env.LLVM_PATH}}" >> $GITHUB_ENV
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
@@ -42,12 +44,19 @@ jobs:
     - name: Build, Test, Package
       env:
         JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
-        JVM_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
         RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
       run: |
         sbt -v clean Test/compile test "project riddlc" Universal/packageBin \
           "project riddlcNative" nativeLink
         # Disable until 1.0: mimaReportBinaryIssues tastyMiMaReportIssues
+
+    - name: Release Artifacts Collection
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-artifacts-collection
+        path: |
+          - riddlc/native/target/scala-3.4.3/riddlc
+          - riddlc/jvm/target/scala-3.4.3/universal/riddlc.zip
 
     - name: Test sbt-riddl plugin
       env:
