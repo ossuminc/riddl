@@ -45,7 +45,6 @@ jobs:
 
     - name: Build, Test, Package
       env:
-        JAVA_OPTS: -Xms5120M -Xmx5120M -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
         RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
       run: |
         sbt -v clean Test/compile test "project riddlc" Universal/packageBin \

@@ -1,4 +1,6 @@
--Xms512M
--Xmx4096M
--Xss4M
+-Xms5120M
+-Xmx5120M
+-Xss6M
 -XX:MaxMetaspaceSize=1024M
+-XX:ReservedCodeCacheSize=256M
+-Dfile.encoding=UTF-8
