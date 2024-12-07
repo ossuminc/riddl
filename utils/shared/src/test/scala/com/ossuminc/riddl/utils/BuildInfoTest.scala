@@ -9,7 +9,6 @@ package com.ossuminc.riddl.utils
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.TestData
 import java.time.Instant
-import java.io.InputStream
 
 class BuildInfoTest extends AbstractTestingBasis {
 
