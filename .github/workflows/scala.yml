@@ -29,14 +29,7 @@ jobs:
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
-    - name: Setup LLVM & Clang
-      uses: KyleMayes/install-llvm-action@v2.0.4
-      with:
-        version: "18.1.8"
-    - name: Set PATH for Clang
-      run: echo "${{env.LLVM_PATH}}/bin" >> "$GITHUB_PATH"
-
-    - name: Check For Clang In Path
+    - name: Check Clang Okayness
       run: |
         which clang
         clang --version
