@@ -83,9 +83,11 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
   )
   .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .jsConfigure(With.build_info_plus_keys(
-    "scalaJSVersion" -> org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.scalaJSVersion
-  ))
+  .jsConfigure(
+    With.build_info_plus_keys(
+      "scalaJSVersion" -> org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.scalaJSVersion
+    )
+  )
   .jsSettings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -96,10 +98,12 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
-  .nativeConfigure(With.native(mode = "full"))
-  .nativeConfigure(With.build_info_plus_keys(
-    "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion
-  ))
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "static"))
+  .nativeConfigure(
+    With.build_info_plus_keys(
+      "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion
+    )
+  )
   .nativeSettings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -149,7 +153,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
-  .nativeConfigure(With.native(mode = "full"))
+  .nativeConfigure(With.native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
@@ -192,7 +196,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   )
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.native(mode = "full"))
+  .nativeConfigure(With.native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
@@ -221,7 +225,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
     )
   )
   .nativeConfigure(With.noMiMa)
-  .nativeConfigure(With.native(mode = "full"))
+  .nativeConfigure(With.native(mode = "fast"))
   .nativeSettings(
     evictionErrorLevel := sbt.util.Level.Warn,
     libraryDependencies ++= Seq(
@@ -247,7 +251,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.native(mode = "full"))
+  .nativeConfigure(With.native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
@@ -266,7 +270,7 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.native(mode = "full"))
+  .nativeConfigure(With.native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
@@ -286,7 +290,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
     libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
     coverageExcludedFiles := """<empty>;$anon"""
   )
-  .nativeConfigure(With.native(mode = "full"))
+  .nativeConfigure(With.native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
@@ -329,7 +333,7 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     libraryDependencies ++= Seq(Dep.sconfig)
   )
-  .nativeConfigure(With.native(mode = "full", buildTarget = "application"))
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "application"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies += "org.ekrich" %%% "sconfig" % V.sconfig
