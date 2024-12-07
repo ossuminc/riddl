@@ -26,8 +26,8 @@ class CommandsTest extends CommandTestBase("commands/input/") {
     "handle from with wrong file as input" in {
       val args = Array(
         "--verbose",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
+        "--show-style-warnings=false",
+        "--show-missing-warnings=false",
         "from",
         "not-an-existing-file", // wrong file!
         "validate"
@@ -39,8 +39,8 @@ class CommandsTest extends CommandTestBase("commands/input/") {
     "handle from with wrong command as target" in {
       val args = Array(
         "--verbose",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
+        "--show-style-warnings=false",
+        "--show-missing-warnings=false",
         "from",
         "commands/input/repeat-options.conf",
         "flumox" // unknown command
