@@ -90,7 +90,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(ld64Path = "ld64.lld"))
   .nativeSettings(
     libraryDependencies ++= Seq(
       "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
@@ -138,7 +138,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(ld64Path = "ld64.lld"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
@@ -181,7 +181,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   )
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(ld64Path = "ld64.lld"))
   .nativeConfigure(With.noMiMa)
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
@@ -210,7 +210,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
     )
   )
   .nativeConfigure(With.noMiMa)
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(ld64Path = "ld64.lld"))
   .nativeSettings(
     evictionErrorLevel := sbt.util.Level.Warn,
     libraryDependencies ++= Seq(
@@ -236,7 +236,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(ld64Path = "ld64.lld"))
   .nativeConfigure(With.noMiMa)
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
@@ -255,7 +255,7 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(ld64Path = "ld64.lld"))
   .nativeConfigure(With.noMiMa)
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
@@ -275,7 +275,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
     libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
     coverageExcludedFiles := """<empty>;$anon"""
   )
-  .nativeConfigure(With.native())
+  .nativeConfigure(With.native(ld64Path = "ld64.lld"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
@@ -318,7 +318,7 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     libraryDependencies ++= Seq(Dep.sconfig)
   )
-  .nativeConfigure(With.native(mode = "full", buildTarget = "application"))
+  .nativeConfigure(With.native(mode = "full", buildTarget = "application", ld64Path = "ld64.lld"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies += "org.ekrich" %%% "sconfig" % V.sconfig
