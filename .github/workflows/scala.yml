@@ -28,7 +28,7 @@ jobs:
     - name: Setup LLVM & Clang
       uses: KyleMayes/install-llvm-action@v2
       with:
-        version: "19"
+        version: "19.1.0"
     - name: Set PATH for Clang
       run: echo "export PATH=\$PATH:${{env.LLVM_PATH}}" >> $GITHUB_ENV
 
