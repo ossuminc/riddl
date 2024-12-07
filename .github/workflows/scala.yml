@@ -23,14 +23,23 @@ jobs:
       uses: actions/setup-java@v4
       with:
         java-version: '21'
-        distribution: 'adopt-hotspot'
+        distribution: temurin
+        cache: sbt
+
+    - name: Set Up SBT
+      uses: sbt/setup-sbt@v1
 
     - name: Setup LLVM & Clang
       uses: KyleMayes/install-llvm-action@v2.0.4
       with:
         version: "18.1.8"
     - name: Set PATH for Clang
-      run: echo "export PATH=\$PATH:${{env.LLVM_PATH}}/bin" >> $GITHUB_ENV
+      run: echo "${{env.LLVM_PATH}}/bin" >> "$GITHUB_PATH"
+
+    - name: Check For Clang In Path
+      run: |
+        which clang
+        clang --version
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
