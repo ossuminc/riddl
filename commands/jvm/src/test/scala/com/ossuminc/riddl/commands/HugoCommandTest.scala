@@ -18,8 +18,8 @@ class HugoCommandTest extends CommandTestBase  {
     "handle hugo" in {
       val args = Seq(
         "--quiet",
-        "--hide-missing-warnings",
-        "--hide-style-warnings",
+        "--show-missing-warnings=false",
+        "--show-style-warnings=false",
         "hugo",
         inputFile,
         "-o",
@@ -31,8 +31,8 @@ class HugoCommandTest extends CommandTestBase  {
     "handle hugo from config" in {
       val args = Seq(
         "--verbose",
-        "--hide-missing-warnings",
-        "--hide-style-warnings",
+        "--show-missing-warnings=false",
+        "--show-style-warnings=false",
         "from",
         hugoConfig,
         "hugo"

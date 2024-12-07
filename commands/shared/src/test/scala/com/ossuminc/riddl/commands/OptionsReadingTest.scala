@@ -23,9 +23,9 @@ class OptionsReadingTest extends AbstractTestingBasis {
           opts.verbose mustBe true
           opts.quiet mustBe false
           opts.dryRun mustBe false
-          opts.showWarnings mustBe true
-          opts.showStyleWarnings mustBe false
-          opts.showMissingWarnings mustBe false
+          opts.showWarnings mustBe false
+          opts.showStyleWarnings mustBe true
+          opts.showMissingWarnings mustBe true
         case Left(messages) => fail(messages.format)
       }
       CommandLoader.loadCommandNamed("repeat") match {

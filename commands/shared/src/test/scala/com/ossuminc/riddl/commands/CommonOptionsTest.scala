@@ -16,8 +16,8 @@ import scala.concurrent.duration.DurationInt
 
 class CommonOptionsTest extends AbstractTestingBasis {
   "CommonOptions" should {
-    "handle --suppress-warnings options" in {
-      val args = Array("--suppress-warnings")
+    "handle --show-warnings options" in {
+      val args = Array("--show-warnings=false")
       val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
         case Some(config) =>
@@ -30,8 +30,8 @@ class CommonOptionsTest extends AbstractTestingBasis {
       }
     }
 
-    "handle --suppress-style-warnings options" in {
-      val args = Array("--suppress-style-warnings")
+    "handle --show-style-warnings options" in {
+      val args = Array("--show-style-warnings=false")
       val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
         case Some(config) =>
@@ -44,8 +44,8 @@ class CommonOptionsTest extends AbstractTestingBasis {
       }
     }
 
-    "handle --suppress-missing-warnings options" in {
-      val args = Array("--suppress-missing-warnings")
+    "handle --show-missing-warnings options" in {
+      val args = Array("--show-missing-warnings=false")
       val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
         case Some(config) =>
@@ -58,8 +58,8 @@ class CommonOptionsTest extends AbstractTestingBasis {
       }
     }
 
-    "handle --suppress-usage-warnings options" in {
-      val args = Array("--suppress-usage-warnings")
+    "handle --show-usage-warnings options" in {
+      val args = Array("--show-usage-warnings=false")
       val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
         case Some(config) =>
@@ -72,8 +72,8 @@ class CommonOptionsTest extends AbstractTestingBasis {
       }
     }
 
-    "handle --suppress-info-messages options" in {
-      val args = Array("--suppress-info-messages")
+    "handle --show-info-messages options" in {
+      val args = Array("--show-info-messages=0")
       val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
       common match {
         case Some(config) =>
@@ -86,75 +86,6 @@ class CommonOptionsTest extends AbstractTestingBasis {
       }
     }
 
-    "handle --hide-warnings options" in {
-      val args = Array("--hide-warnings")
-      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
-      common match {
-        case Some(config) =>
-          config.showWarnings mustBe false
-          config.showStyleWarnings mustBe false
-          config.showMissingWarnings mustBe false
-          config.showUsageWarnings mustBe false
-          config.showInfoMessages mustBe true
-        case None => fail("Failed to parse options")
-      }
-    }
-
-    "handle --hide-style-warnings options" in {
-      val args = Array("--hide-style-warnings")
-      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
-      common match {
-        case Some(config) =>
-          config.showWarnings mustBe true
-          config.showStyleWarnings mustBe false
-          config.showMissingWarnings mustBe true
-          config.showUsageWarnings mustBe true
-          config.showInfoMessages mustBe true
-        case None => fail("Failed to parse options")
-      }
-    }
-
-    "handle --hide-missing-warnings options" in {
-      val args = Array("--hide-missing-warnings")
-      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
-      common match {
-        case Some(config) =>
-          config.showWarnings mustBe true
-          config.showStyleWarnings mustBe true
-          config.showMissingWarnings mustBe false
-          config.showUsageWarnings mustBe true
-          config.showInfoMessages mustBe true
-        case None => fail("Failed to parse options")
-      }
-    }
-
-    "handle --hide-usage-warnings options" in {
-      val args = Array("--hide-usage-warnings")
-      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
-      common match {
-        case Some(config) =>
-          config.showWarnings mustBe true
-          config.showStyleWarnings mustBe true
-          config.showMissingWarnings mustBe true
-          config.showUsageWarnings mustBe false
-          config.showInfoMessages mustBe true
-        case None => fail("Failed to parse options")
-      }
-    }
-
-    "handle --hide-info-messages options" in {
-      val args = Array("--hide-info-messages")
-      val (common, _) = CommonOptionsHelper.parseCommonOptions(args)
-      common match {
-        case Some(config) =>
-          config.showWarnings mustBe true
-          config.showStyleWarnings mustBe true
-          config.showMissingWarnings mustBe true
-          config.showUsageWarnings mustBe true
-          config.showInfoMessages mustBe false
-        case None => fail("Failed to parse options")
-      }
-    }
 
     "options at top level do not override in common object" in {
       val optionFile = Path.of("riddlc/input/common-overrides.conf")
@@ -209,9 +140,8 @@ class CommonOptionsTest extends AbstractTestingBasis {
 
     "parse less frequently used options" in {
       val opts = Array(
-        "--suppress-usage-warnings",
-        "--suppress-info-messages",
-        "--hide-info-messages",
+        "--show-usage-warnings=0",
+        "--show-info-messages=false",
         "--max-include-wait:5",
         "--max-parallel-parsing:12",
         "parse",

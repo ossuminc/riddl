@@ -40,12 +40,12 @@ class CommandTest extends AbstractTestingBasis {
     "get options from config file" in {
       val cmd = ASimpleTestCommand()
       val path: Path = Path.of("commands/input/test.conf")
-      val options: ConfigParseOptions = 
+      val options: ConfigParseOptions =
         ConfigParseOptions.defaults
           .setAllowMissing(true)
            .setOriginDescription(path.getFileName.toString)
       val config = ConfigFactory.parseFile(path.toFile, options)
-      val loadedOptions = cmd.interpretConfig(config) 
+      val loadedOptions = cmd.interpretConfig(config)
       loadedOptions.arg1 mustBe "Success!"
     }
 
@@ -57,8 +57,8 @@ class CommandTest extends AbstractTestingBasis {
     "handle wrong file as input" in {
       val args = Array(
         "--verbose",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
+        "--show-style-warnings=0",
+        "--show-missing-warnings=0",
         "parse",
         "commands/input/foo.riddl", // wrong file!
         "hugo"
@@ -70,8 +70,8 @@ class CommandTest extends AbstractTestingBasis {
     "handle wrong command as target" in {
       val args = Array(
         "--verbose",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
+        "--show-style-warnings=false",
+        "--show-missing-warnings:0",
         "test",
         "commands/input/repeat-options.conf",
         "flumox" // unknown command

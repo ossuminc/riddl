@@ -21,8 +21,8 @@ trait CommandTestBase(val inputDir: String = "commands/input/") extends AnyWordS
   val confFile = s"$inputDir/cmdoptions.conf"
 
   val quiet = "--quiet"
-  val suppressMissing = "--suppress-missing-warnings"
-  val suppressStyle = "--suppress-style-warnings"
+  val suppressMissing = "--show-missing-warnings=false"
+  val suppressStyle = "--show-style-warnings=false"
   val common: Seq[String] = Seq(quiet, suppressMissing, suppressStyle)
 
   given io: PlatformContext = pc
