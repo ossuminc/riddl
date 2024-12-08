@@ -23,6 +23,9 @@ def tkDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;t
 
 lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apache-2.0" */ )
   .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
+  .settings(
+    concurrentRestrictions += Tags.limit(NativeTags.Link, 1)
+  )
   .aggregate(
     utils,
     utilsNative,
@@ -60,7 +63,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
   )
   .jvmConfigure(With.coverage(70))
   .jvmConfigure(With.build_info)
-  .jvmConfigure(With.MiMa("0.52.1", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
+  .jvmConfigure(With.MiMa("0.57.0", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -108,6 +111,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
+      // "com.softwaremill.sttp.client3" %% "core" % V.sttp,
       "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
       "org.scalactic" %%% "scalactic" % V.scalatest % Test,
@@ -129,7 +133,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   )
   .jvmConfigure(With.coverage(65))
   .jvmConfigure(With.publishing)
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
@@ -178,7 +182,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
     description := "AST Pass infrastructure and essential passes"
   )
   .jvmConfigure(With.coverage(30))
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     mimaBinaryIssueFilters ++= Seq(
@@ -214,7 +218,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
       "org.scalatest" %% "scalatest" % V.scalatest
     )
   )
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
@@ -245,7 +249,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
@@ -265,7 +269,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
     description := "RIDDL Command Infrastructure and command definitions"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig),
     libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
@@ -298,7 +302,7 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
     description := "Bundling of essential RIDDL libraries"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
