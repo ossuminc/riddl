@@ -57,8 +57,6 @@ class JVMPlatformContext extends PlatformContext {
     }
   }
 
-  override def dump(url: URL, content: String): Future[Unit] = ???
-
   override def read(file: URL): String =
     val source = Source.fromFile(file.toString)
     try {

@@ -23,6 +23,7 @@ def tkDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;t
 
 lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apache-2.0" */ )
   .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
+  .settings(concurrentRestrictions += Tags.limit(NativeTags.Link, 1))
   .aggregate(
     utils,
     utilsNative,

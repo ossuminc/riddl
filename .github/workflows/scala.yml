@@ -46,7 +46,7 @@ jobs:
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
-    - name: Build JVM Versions
+    - name: Build And Test JVM Versions
       run: |
         sbt -v clean \
           utils/Test/compile \
@@ -56,19 +56,15 @@ jobs:
           commands/Test/compile \
           riddlLib/Test/compile \
           riddlc/Test/compile \
-
-    - name: Test JVM Versions
-      run: |
-        sbt \
           utils/test \
           language/test \
           passes/test \
           diagrams/test \
           commands/test \
           riddlLib/test \
-          riddlc/test \
+          riddlc/test
 
-    - name: Build Native Versions
+    - name: Build And Test Native Versions
       run: |
         sbt -v \
           utilsNative/Test/compile \
@@ -76,49 +72,42 @@ jobs:
           passesNative/Test/compile \
           diagramsNative/Test/compile \
           commandsNative/Test/compile \
-          riddlcNative/Test/compile
-
-    - name: Test Native Versions
-      run: |
-        sbt -v \
-          utilsNative/Test/test \
-          languageNative/Test/test \
-          passesNative/Test/test \
-          diagramsNative/Test/test \
-          commandsNative/Test/test \
           riddlLibNative/Test/compile \
-          riddlcNative/Test/test
+          riddlcNative/Test/compile \
+          utilsNative/test \
+          languageNative/test \
+          passesNative/test \
+          diagramsNative/test \
+          commandsNative/test \
+          riddlLibNative/compile \
+          riddlcNative/test
 
-    - name: Build JS Versions
+    - name: Build And Test JS Versions
       run: |
         sbt -v \
           utilsJS/Test/compile \
           languageJS/Test/compile \
           passesJS/Test/compile \
           diagramsJS/Test/compile \
-          riddlLibJS/Test/compile
-
-    - name: Test JS Versions
-      run: |
-        sbt -v \
-          utilsJS/Test/test \
-          languageJS/Test/test \
-          passesJS/Test/test \
-          diagramsJS/Test/test 
+          riddlLibJS/Test/compile \
+          utilsJS/test \
+          languageJS/test \
+          passesJS/test \
+          diagramsJS/test \
+          riddlLibJS/test
 
     - name: Package Release Artifacts
       run: |
         sbt -v \
           publishLocal \
-          riddlc/stage \
           riddlc/Universal/packageBin \
           riddlcNative/nativeLink \
           riddlLibJS/fullLinkJS
 
-    - name: Package Release Artifacts Collection
+    - name: Collect Release Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: release-artifacts-collection
+        name: collect-release-artifacts
         path: |
           - riddlc/native/target/scala-3.4.3/riddlc
           - riddlc/jvm/target/scala-3.4.3/universal/riddlc.zip
