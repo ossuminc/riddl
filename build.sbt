@@ -257,8 +257,42 @@ val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
 val diagramsNative = diagrams_cp.native
 
-lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
+val Commands = config("commands")
+lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
+  .settings(
+    description := "RIDDL Command Infrastructure and command definitions"
+  )
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmSettings(
+    libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig),
+    libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
+    coverageExcludedFiles := """<empty>;$anon"""
+  )
+  // .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
+  // .jsConfigure(With.noMiMa)
+  // .jsSettings(
+  //   libraryDependencies ++= Seq(
+  //     "com.github.scopt" %%% "scopt" % V.scopt,
+  //     "org.ekrich" %%% "sconfig" % V.sconfig
+  //   )
+  // )
+  .nativeConfigure(With.native(mode = "fast"))
+  .nativeConfigure(With.noMiMa)
+  .nativeSettings(
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %%% "scopt" % V.scopt,
+      "org.ekrich" %%% "sconfig" % V.sconfig
+    )
+  )
+val commands: Project = commands_cp.jvm
+// val commandsJS: Project = commands_cp.js
+val commandsNative = riddlLib_cp.native
+
+lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp)) /*, cpDep(commands_cp) */
   .configure(With.typical)
   .settings(
     description := "Bundling of essential RIDDL libraries"
@@ -275,31 +309,6 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
 val riddlLibNative = riddlLib_cp.native
-
-val Commands = config("commands")
-lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM, Native)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
-  .configure(With.typical, With.headerLicense("Apache-2.0"))
-  .settings(
-    description := "RIDDL Command Infrastructure and command definitions"
-  )
-  .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.52.1"))
-  .jvmSettings(
-    libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig),
-    libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
-    coverageExcludedFiles := """<empty>;$anon"""
-  )
-  .nativeConfigure(With.native(mode = "fast"))
-  .nativeConfigure(With.noMiMa)
-  .nativeSettings(
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %%% "scopt" % V.scopt,
-      "org.ekrich" %%% "sconfig" % V.sconfig
-    )
-  )
-val commands: Project = commands_cp.jvm
-val commandsNative = riddlLib_cp.native
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)

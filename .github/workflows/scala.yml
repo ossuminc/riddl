@@ -96,7 +96,6 @@ jobs:
           languageJS/Test/compile \
           passesJS/Test/compile \
           diagramsJS/Test/compile \
-          commandsJS/Test/compile \
           riddlLibJS/Test/compile
 
     - name: Test JS Versions
@@ -105,8 +104,7 @@ jobs:
           utilsJS/Test/test \
           languageJS/Test/test \
           passesJS/Test/test \
-          diagramsJS/Test/test \
-          commandsJS/Test/test
+          diagramsJS/Test/test 
 
     - name: Package Release Artifacts
       run: |
