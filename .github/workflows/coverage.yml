@@ -1,10 +1,10 @@
-name: Scala Build
+name: Scala Coverage Testing
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  coverage:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
