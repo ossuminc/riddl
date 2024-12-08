@@ -6,27 +6,26 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.{pc, ec}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.utils.{Await, JVMPlatformContext, PathUtils, PlatformContext}
-
-import java.nio.file.Path
+import com.ossuminc.riddl.utils.{Await, PathUtils, PlatformContext, ec, pc}
 import org.apache.commons.io.FileUtils
-
-import java.io.File
-import scala.jdk.CollectionConverters.*
-import scala.io.AnsiColor.*
 import org.scalatest.TestData
 
+import java.io.File
+import java.nio.file.Path
+import java.util.ArrayList
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
+import scala.io.AnsiColor.*
+import scala.jdk.CollectionConverters.*
 
 /** Parsing tests that try a variety of code snippets that should parse */
 class SnippetsFileTest extends ParsingTest {
 
-  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
+  import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
 
   val topDir: Path = Path.of(s"language/jvm/src/test/input/snippets")
+
   val paths: Iterable[Path] =
     FileUtils.listFiles(topDir.toFile, Array("riddl"), true).asScala.map(_.toPath)
 

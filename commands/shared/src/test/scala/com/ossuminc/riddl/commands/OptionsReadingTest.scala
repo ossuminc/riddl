@@ -16,19 +16,19 @@ class OptionsReadingTest extends AbstractTestingBasis {
 
   "RiddlOptions Reading" must {
     "load repeat options from a file" in {
-      val optionFile = Path.of("commands/shared/src/test/input/repeat-options.conf")
+      val optionFile = Path.of("commands/input/repeat-options.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {
         case Right(opts) =>
           opts.showTimes mustBe true
           opts.verbose mustBe true
           opts.quiet mustBe false
           opts.dryRun mustBe false
-          opts.showWarnings mustBe true
-          opts.showStyleWarnings mustBe false
-          opts.showMissingWarnings mustBe false
+          opts.showWarnings mustBe false
+          opts.showStyleWarnings mustBe true
+          opts.showMissingWarnings mustBe true
         case Left(messages) => fail(messages.format)
       }
-      Commands.loadCommandNamed("repeat") match {
+      CommandLoader.loadCommandNamed("repeat") match {
         case Right(cmd) =>
           cmd.loadOptionsFrom(optionFile) match {
             case Left(errors) => fail(errors.format)

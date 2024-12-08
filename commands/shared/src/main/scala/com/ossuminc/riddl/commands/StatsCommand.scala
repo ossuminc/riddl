@@ -13,7 +13,7 @@ import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.stats.{KindStats, StatsOutput, StatsPass}
 import com.ossuminc.riddl.utils.PlatformContext
-import pureconfig.{ConfigCursor, ConfigReader}
+import org.ekrich.config.*
 import scopt.OParser
 
 import java.io.File
@@ -39,17 +39,10 @@ class StatsCommand(using pc: PlatformContext) extends PassCommand[StatsCommand.O
   import StatsCommand.Options
 
   // Members declared in com.ossuminc.riddl.commands.CommandPlugin
-  def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
-    for
-      topCur <- cur.asObjectCursor
-      topRes <- topCur.atKey(pluginName)
-      objCur <- topRes.asObjectCursor
-      inFileRes <- objCur.atKey("input-file").map(_.asString)
-      inFile <- inFileRes
-    yield {
-      Options(inputFile = Some(Path.of(inFile)))
-    }
-  }
+  def interpretConfig(config: Config): Options =
+    val obj = config.getObject(commandName).toConfig
+    Options(Some(Path.of(obj.getString("input-file"))))
+  end interpretConfig
 
   def getOptionsParser: (OParser[Unit, Options], StatsCommand.Options) = {
     import builder.*

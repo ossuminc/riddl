@@ -1,5 +1,5 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
-import com.ossuminc.sbt.{CrossModule, DocSite, OssumIncPlugin, Plugin}
+import com.ossuminc.sbt.OssumIncPlugin
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import de.heikoseeberger.sbtheader.License.ALv2
 import de.heikoseeberger.sbtheader.LicenseStyle.SpdxSyntax
@@ -10,7 +10,7 @@ import sbtcrossproject.{CrossClasspathDependency, CrossProject}
 import sbttastymima.TastyMiMaPlugin.autoImport.*
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
-(Global / excludeLintKeys) ++= Set(mainClass)
+(Global / excludeLintKeys) ++= Set(mainClass, maintainer)
 
 enablePlugins(OssumIncPlugin)
 
@@ -25,37 +25,45 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
   .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
   .aggregate(
     utils,
+    utilsNative,
     utilsJS,
     language,
+    languageNative,
     languageJS,
     passes,
+    passesNative,
     passesJS,
     testkit,
+    testkitNative,
     testkitJS,
     diagrams,
+    diagramsNative,
     diagramsJS,
     riddlLib,
+    riddlLibNative,
     riddlLibJS,
     commands,
+    commandsNative,
     riddlc,
+    riddlcNative,
     docsite,
     plugin
   )
 
 lazy val Utils = config("utils")
-lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
+lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
-  .configure(With.build_info)
+  .configure(With.publishing)
   .settings(
     scalacOptions += "-explain-cyclic",
-    buildInfoPackage := "com.ossuminc.riddl.utils",
-    buildInfoObject := "RiddlBuildInfo",
     description := "Various utilities used throughout riddl libraries"
   )
   .jvmConfigure(With.coverage(70))
-  .jvmConfigure(With.publishing)
+  .jvmConfigure(With.build_info)
   .jvmConfigure(With.MiMa("0.52.1", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
+    buildInfoPackage := "com.ossuminc.riddl.utils",
+    buildInfoObject := "RiddlBuildInfo",
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
     libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing,
     tastyMiMaConfig ~= { prevConfig =>
@@ -75,19 +83,43 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS)
   )
   .jsConfigure(With.js("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
-  .jsConfigure(With.publishing)
+  .jsConfigure(
+    With.build_info_plus_keys(
+      "scalaJSVersion" -> org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.scalaJSVersion
+    )
+  )
   .jsSettings(
+    buildInfoPackage := "com.ossuminc.riddl.utils",
+    buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "2.8.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalacheck" %%% "scalacheck" % V.scalacheck % "test"
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test
+    )
+  )
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "static"))
+  .nativeConfigure(
+    With.build_info_plus_keys(
+      "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion
+    )
+  )
+  .nativeSettings(
+    buildInfoPackage := "com.ossuminc.riddl.utils",
+    buildInfoObject := "RiddlBuildInfo",
+    libraryDependencies ++= Seq(
+      "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
+      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
 lazy val utils = utils_cp.jvm
 lazy val utilsJS = utils_cp.js
+lazy val utilsNative = utils_cp.native
 
 val Language = config("language")
-lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS)
+lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp))
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
@@ -116,17 +148,28 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += Dep.commons_io % Test
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
-  .jsConfigure(With.publishing)
   .jsConfigure(With.noMiMa)
   .jsSettings(
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
-    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % "24.9.2"
+    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
+  .nativeConfigure(With.native(mode = "fast"))
+  .nativeConfigure(With.noMiMa)
+  .nativeSettings(
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %%% "fastparse" % V.fastparse,
+      "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid,
+      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
+      "org.scalatest" %%% "scalatest" % V.scalatest % Test
+    )
+  )
+
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
+lazy val languageNative = language_cp.native.dependsOn(utilsNative)
 
 val Passes = config("passes")
-lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
+lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
@@ -152,12 +195,14 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS)
     }
   )
   .jsConfigure(With.js("RIDDL: passes", withCommonJSModule = true))
-  .jsConfigure(With.publishing)
   .jsConfigure(With.noMiMa)
+  .nativeConfigure(With.native(mode = "fast"))
+  .nativeConfigure(With.noMiMa)
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
+val passesNative = passes_cp.native
 
-lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
+lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
   .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Testing kit for RIDDL language and passes"
@@ -169,8 +214,9 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
       "org.scalatest" %% "scalatest" % V.scalatest
     )
   )
+  .jvmConfigure(With.MiMa("0.52.1"))
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
-  .jsConfigure(With.publishing)
+  .jsConfigure(With.noMiMa)
   .jsSettings(
     // scalacOptions ++= Seq("-rewrite", "-source", "3.4-migration"),
     libraryDependencies ++= Seq(
@@ -178,13 +224,23 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS)
       "org.scalatest" %%% "scalatest" % V.scalatest
     )
   )
+  .nativeConfigure(With.noMiMa)
+  .nativeConfigure(With.native(mode = "fast"))
+  .nativeSettings(
+    evictionErrorLevel := sbt.util.Level.Warn,
+    libraryDependencies ++= Seq(
+      "org.scalactic" %%% "scalactic" % V.scalatest,
+      "org.scalatest" %%% "scalatest" % V.scalatest
+    )
+  )
 val testkit = testkit_cp.jvm
 val testkitJS = testkit_cp.js
+val testkitNative = testkit_cp.native
 
 val Diagrams = config("diagrams")
-lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS)
+lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
@@ -195,57 +251,104 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   )
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
+  .nativeConfigure(With.native(mode = "fast"))
+  .nativeConfigure(With.noMiMa)
 val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
-
-lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JVM, JS)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
-  .configure(With.scala3, With.publishing)
-  .settings(
-    description := "Bundling of essential RIDDL libraries"
-  )
-val riddlLib = riddlLib_cp.jvm
-val riddlLibJS = riddlLib_cp.js
+val diagramsNative = diagrams_cp.native
 
 val Commands = config("commands")
-lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM)
+lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
-    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
-    description := "RIDDL Command Infrastructure and command definitions",
-    libraryDependencies ++= Seq(Dep.scopt, Dep.pureconfig) ++ Dep.testing ++ Seq(
-      "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
+    description := "RIDDL Command Infrastructure and command definitions"
+  )
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmSettings(
+    libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig),
+    libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
+    coverageExcludedFiles := """<empty>;$anon"""
+  )
+  // .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
+  // .jsConfigure(With.noMiMa)
+  // .jsSettings(
+  //   libraryDependencies ++= Seq(
+  //     "com.github.scopt" %%% "scopt" % V.scopt,
+  //     "org.ekrich" %%% "sconfig" % V.sconfig
+  //   )
+  // )
+  .nativeConfigure(With.native(mode = "fast"))
+  .nativeConfigure(With.noMiMa)
+  .nativeSettings(
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %%% "scopt" % V.scopt,
+      "org.ekrich" %%% "sconfig" % V.sconfig
     )
+  )
+val commands: Project = commands_cp.jvm
+// val commandsJS: Project = commands_cp.js
+val commandsNative = riddlLib_cp.native
+
+lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp)) /*, cpDep(commands_cp) */
+  .configure(With.typical)
+  .settings(
+    description := "Bundling of essential RIDDL libraries"
   )
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa("0.52.1"))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
-val commands: Project = commands_cp.jvm
+  .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.noMiMa)
+  .nativeConfigure(With.native(mode = "fast"))
+  .nativeConfigure(With.noMiMa)
+val riddlLib = riddlLib_cp.jvm
+val riddlLibJS = riddlLib_cp.js
+val riddlLibNative = riddlLib_cp.native
 
 val Riddlc = config("riddlc")
-lazy val riddlc: Project = Program("riddlc", "riddlc")
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
+lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50.0))
   .configure(With.noMiMa)
-  .dependsOn(pDep(utils), pDep(language), pDep(passes), pDep(commands))
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(commands_cp))
   .settings(
-    coverageExcludedFiles := """<empty>;$anon""",
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
-    coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
     maintainer := "reid@ossuminc.com",
-    mainClass := Option("com.ossuminc.riddl.RIDDLC"),
-    graalVMNativeImageOptions ++= Seq(
-      "--verbose",
-      "--no-fallback",
-      "--native-image-info",
-      "--enable-url-protocols=https,http",
-      "-H:ResourceConfigurationFiles=../../src/native-image.resources"
-    ),
-    libraryDependencies ++= Seq(Dep.pureconfig) ++ Dep.testing
+    mainClass := Option("com.ossuminc.riddl.RIDDLC")
+    // graalVMNativeImageOptions ++= Seq(
+    //   "--verbose",
+    //   "--no-fallback",
+    //   "--native-image-info",
+    //   "--enable-url-protocols=https,http",
+    //   "-H:ResourceConfigurationFiles=../../src/native-image.resources"
+    // ),
   )
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(
+    With.packagingUniversal(
+      maintainerEmail = "reid@ossuminc.com",
+      pkgName = "riddlc",
+      pkgSummary = "Compiler for RIDDL language, Universal packaging",
+      pkgDescription = ""
+    )
+  )
+  .jvmSettings(
+    coverageExcludedFiles := """<empty>;$anon""",
+    coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
+    libraryDependencies ++= Seq(Dep.sconfig)
+  )
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "application"))
+  .nativeConfigure(With.noMiMa)
+  .nativeSettings(
+    libraryDependencies += "org.ekrich" %%% "sconfig" % V.sconfig
+  )
+val riddlc = riddlc_cp.jvm
+val riddlcNative = riddlc_cp.native
 
 lazy val docProjects = List(
   (utils, Utils),

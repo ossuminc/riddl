@@ -9,12 +9,12 @@ package com.ossuminc.riddl.utils
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.TestData
 import java.time.Instant
-import java.io.InputStream
 
 class BuildInfoTest extends AbstractTestingBasis {
 
   "BuildInfo" must {
     "have all the fields" in { (td: TestData) =>
+      println(td.name)
       RiddlBuildInfo.name must be("utils")
       RiddlBuildInfo.version must startWith regex """[0-9]+."""
       RiddlBuildInfo.scalaVersion must startWith("3")
@@ -42,10 +42,12 @@ class BuildInfoTest extends AbstractTestingBasis {
       RiddlBuildInfo.builtAtMillis must be < now
     }
     "has functioning toMap" in { (td: TestData) =>
+      println(td.name)
       val map = RiddlBuildInfo.toMap
       map.size must be(23)
     }
     "has functioning toJson" in { (td: TestData) =>
+      println(td.name)
       val json = RiddlBuildInfo.toJson
       json must not be (empty)
     }

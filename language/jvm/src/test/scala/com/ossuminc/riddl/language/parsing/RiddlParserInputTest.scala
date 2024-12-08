@@ -9,12 +9,10 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, Await, URL, ec, pc}
 import org.scalatest.Assertion
 
-import scala.io.Source
 import scala.concurrent.duration.DurationInt
+import scala.io.Source
 
 class RiddlParserInputTest extends AbstractTestingBasis {
-
-  import com.ossuminc.riddl.language.parsing.RiddlParserInput._
 
   val fullPath = "/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"
   val src = s"https://raw.githubusercontent.com$fullPath"
@@ -50,7 +48,8 @@ class RiddlParserInputTest extends AbstractTestingBasis {
 
     "construct from URL" in {
       val url = URL(src)
-      val rpi2 = Await.result(fromURL(url), 10.seconds)
+      val rpiFuture = RiddlParserInput.fromURL(url)
+      val rpi2 = Await.result(rpiFuture, 10.seconds)
       checkRPI(rpi2, url)
     }
   }

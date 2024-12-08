@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{ec, pc}
 
 class JVMApplicationParsingTest extends ApplicationParsingTest
 class JVMCommonParserTest extends CommonParserTest

@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.utils
 
+import scala.collection.convert.StreamExtensions
 import scala.concurrent.{ExecutionContext, Future}
 
 /** This trait allows RIDDL to abstract away its IO operations. Several places in RIDDL declare a `using` clause with
@@ -100,4 +101,5 @@ trait PlatformContext {
 
   /** The newline character for this platform */
   def newline: String
+  
 }

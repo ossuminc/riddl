@@ -10,7 +10,7 @@ import com.ossuminc.riddl.command.{Command, CommandOptions, CommonOptionsHelper}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, StringHelpers}
-import pureconfig.{ConfigCursor, ConfigReader}
+import org.ekrich.config.*
 import scopt.OParser
 
 import java.io.File
@@ -24,7 +24,7 @@ object FromCommand {
   }
 }
 
-class FromCommand(using io: PlatformContext) extends Command[FromCommand.Options](FromCommand.cmdName) {
+class FromCommand(using val pc: PlatformContext) extends Command[FromCommand.Options](FromCommand.cmdName) {
   import FromCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
@@ -45,19 +45,17 @@ class FromCommand(using io: PlatformContext) extends Command[FromCommand.Options
       FromCommand.Options()
   }
 
-  override def getConfigReader: ConfigReader[FromCommand.Options] = { (cur: ConfigCursor) =>
-    for
-      topCur <- cur.asObjectCursor
-      topRes <- topCur.atKey(pluginName)
-      objCur <- topRes.asObjectCursor
-      inFileRes <- objCur.atKey("config-file").map(_.asString)
-      inFile <- inFileRes
-      targetRes <- objCur.atKey("target-command").map(_.asString)
-      target <- targetRes
-    yield {
-      Options(inputFile = Some(Path.of(inFile)), targetCommand = target)
-    }
-  }
+  override def interpretConfig(config: Config): FromCommand.Options =
+    val rootObj = config.getObject(commandName)
+    val rootConfig = rootObj.toConfig 
+    val inputFile = 
+      if rootObj.containsKey("config-file") then
+        Some(Path.of(rootConfig.getString("config-file")))
+      else
+        None
+    val targetCommand = rootConfig.getString("target-command")
+    Options(inputFile, targetCommand)
+  end interpretConfig
 
   override def run(
     options: FromCommand.Options,
@@ -66,23 +64,23 @@ class FromCommand(using io: PlatformContext) extends Command[FromCommand.Options
     val loadedCO =
       CommonOptionsHelper.loadCommonOptions(options.inputFile.fold(Path.of(""))(identity)) match
         case Right(newCO: CommonOptions) =>
-          if io.options.verbose then
-            io.log.info(
+          if pc.options.verbose then
+            pc.log.info(
               s"Read new common options from ${options.inputFile.get} as:\n" +
                 StringHelpers.toPrettyString(newCO)
             )
           newCO
         case Left(messages) =>
-          if io.options.debug then
-            io.stdout(
+          if pc.options.debug then
+            pc.stdout(
               s"Failed to read common options from ${options.inputFile.get} because:\n" ++
                 messages.format
             )
           end if
-          io.options
-
+          pc.options
       end match
-    io.withOptions(loadedCO) { _ =>
+      
+    pc.withOptions(loadedCO) { _ =>
       Commands.runFromConfig(
         options.inputFile,
         options.targetCommand,

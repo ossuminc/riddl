@@ -10,8 +10,8 @@ import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{Logger, PlatformContext}
-import pureconfig.{ConfigCursor, ConfigReader}
 import scopt.OParser
+import org.ekrich.config.*
 
 import java.nio.file.Path
 
@@ -38,17 +38,12 @@ class ASimpleTestCommand(using io: PlatformContext) extends Command[ASimpleTestC
     ) -> Options()
   }
 
-  override def getConfigReader: ConfigReader[Options] = { (cur: ConfigCursor) =>
-    for
-      objCur <- cur.asObjectCursor
-      contentCur <- objCur.atKey("test")
-      contentObjCur <- contentCur.asObjectCursor
-      inputFileRes <- contentObjCur.atKey("input-file")
-      inputF <- inputFileRes.asString
-      arg1Res <- contentObjCur.atKey("arg1")
-      str <- arg1Res.asString
-    yield { Options(inputFile = Some(Path.of(inputF)), arg1 = str) }
-  }
+  override def interpretConfig(config: Config): Options = 
+    val obj = config.getObject(commandName).toConfig 
+    val inputFile = obj.getString("input-file")
+    val arg1 = obj.getString("arg1")
+    Options(Some(Path.of(inputFile)), arg1)
+  end interpretConfig
 
   override def run(
     options: Options,

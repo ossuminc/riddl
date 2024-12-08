@@ -10,34 +10,31 @@ import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{PlatformContext, RiddlBuildInfo}
-import pureconfig.{ConfigCursor, ConfigReader}
+import org.ekrich.config.*
 import scopt.OParser
 
 import java.nio.file.Path
 
 /** Unit Tests For FromCommand */
-object InfoCommand {
-  case class Options(command: String = "info", inputFile: Option[Path] = None, targetCommand: Option[String] = None)
-      extends CommandOptions
-}
+object InfoCommand:
+  case class Options(command: String = "info") extends CommandOptions:
+    def inputFile: Option[Path] = None
+  end Options
+end InfoCommand
 
 class InfoCommand(using pc: PlatformContext) extends Command[InfoCommand.Options]("info") {
   import InfoCommand.Options
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd(pluginName)
-      .action((_, c) => c.copy(command = pluginName))
+    cmd(commandName)
+      .action((_, c) => c.copy(command = commandName))
       .text("Print out build information about this program") ->
       InfoCommand.Options()
   }
 
-  override def getConfigReader: ConfigReader[InfoCommand.Options] = { (cur: ConfigCursor) =>
-    for
-      topCur <- cur.asObjectCursor
-      topRes <- topCur.atKey(pluginName)
-      cmd <- topRes.asObjectCursor
-    yield { Options(cmd.path) }
-  }
+  override def interpretConfig(config: Config) =
+    Options(commandName)
+  end interpretConfig
 
   override def run(
     options: InfoCommand.Options,
