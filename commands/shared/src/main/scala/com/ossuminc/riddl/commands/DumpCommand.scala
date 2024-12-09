@@ -32,8 +32,10 @@ class DumpCommand(using pc: PlatformContext) extends InputFileCommand(DumpComman
       implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
         Riddl.parseAndValidate(rpi).map { result =>
-          pc.log.info(s"AST of $inputFile is:")
-          pc.log.info(StringHelpers.toPrettyString(result, 1, None))
+          if ! pc.options.quiet then 
+            pc.log.info(s"AST of $inputFile is:")
+            pc.log.info(StringHelpers.toPrettyString(result, 1, None))
+          end if   
           result
         }
       }

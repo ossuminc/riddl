@@ -10,13 +10,12 @@ import com.ossuminc.riddl.command.{Command, CommandOptions}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{Interrupt, PlatformContext}
-import pureconfig.{ConfigCursor, ConfigReader}
-import pureconfig.ConfigReader.Result
-import pureconfig.error.CannotParse
+import org.ekrich.config.*
 import scopt.OParser
 
 import java.io.File
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 import scala.util.Success
 
@@ -95,52 +94,16 @@ class RepeatCommand(using pc: PlatformContext) extends Command[RepeatCommand.Opt
       ) -> Options()
   }
 
-  // target-command = "hugo"
-  //  refresh-rate = 5.seconds
-  //  max-cycles = 10
-  //  interactive = true
-
-  private class OptionsReader extends ConfigReader[Options] {
-    override def from(cur: ConfigCursor): Result[Options] = for
-      topCur <- cur.asObjectCursor
-      topRes <- topCur.atKey(pluginName)
-      objCur <- topRes.asObjectCursor
-      inputPathRes <- objCur.atKey("input-file")
-      inputPath <- inputPathRes.asString.flatMap { inputPath =>
-        if inputPath.isEmpty then {
-          ConfigReader.Result.fail[String](
-            CannotParse("'input-path' requires a non-empty value", None)
-          )
-        } else Right(inputPath)
-      }
-      targetCommand <- CommandOptions.optional(objCur, "target-command", "")(_.asString)
-      refreshRate <- CommandOptions
-        .optional(objCur, "refresh-rate", "10s")(_.asString)
-        .flatMap { rr =>
-          val dur = Duration.create(rr)
-          if dur.isFinite then { Right(dur.asInstanceOf[FiniteDuration]) }
-          else {
-            ConfigReader.Result.fail[FiniteDuration](
-              CannotParse(
-                s"'refresh-rate' must be a finite duration, not $rr",
-                None
-              )
-            )
-          }
-        }
-      maxCycles <- CommandOptions.optional(objCur, "max-cycles", 100)(_.asInt)
-      interactive <- CommandOptions.optional(objCur, "interactive", true)(_.asBoolean)
-    yield {
-      RepeatCommand.Options(
-        Some(Path.of(inputPath)),
-        targetCommand,
-        refreshRate,
-        maxCycles,
-        interactive
-      )
-    }
-  }
-  override def getConfigReader: ConfigReader[Options] = { new OptionsReader }
+  override def interpretConfig(config: Config): Options =
+    val obj = config.getObject(commandName).toConfig
+    val inputFile = Path.of(obj.getString("config-file"))
+    val targetCommand = obj.getString("target-command")
+    val refreshRate: FiniteDuration =
+      FiniteDuration(obj.getDuration("refresh-rate", TimeUnit.SECONDS), TimeUnit.SECONDS)
+    val maxCycles = obj.getInt("max-cycles")
+    val interactive = obj.getBoolean("interactive")
+    Options(Some(inputFile),targetCommand, refreshRate, maxCycles, interactive)
+  end interpretConfig
 
   /** Execute the command given the options. Error should be returned as Left(messages) and not directly logged. The log
     * is for verbose or debug output

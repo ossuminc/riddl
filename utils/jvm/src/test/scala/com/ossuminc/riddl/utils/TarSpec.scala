@@ -14,7 +14,7 @@ import java.nio.file.Path
 
 class TarSpec extends AnyWordSpec with Matchers {
 
-  final val test_tar_file = Path.of("utils/jvm/src/test/input/test-data.tar.gz")
+  final val test_tar_file = Path.of("utils/input/test-data.tar.gz")
   "Tar" must {
     "untar a .tar.gz file correctly" in {
 

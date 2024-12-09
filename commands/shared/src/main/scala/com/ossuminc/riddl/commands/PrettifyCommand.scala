@@ -6,17 +6,16 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.command.CommandOptions.optional
-import com.ossuminc.riddl.command.{CommandOptions, PassCommandOptions, TranslationCommand}
+import com.ossuminc.riddl.command.{PassCommandOptions, TranslationCommand}
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.Pass.standardPasses
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.utils.{ExceptionUtils, PlatformContext}
-import pureconfig.{ConfigCursor, ConfigReader}
+import org.ekrich.config.*
 import scopt.OParser
 
-import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, StandardOpenOption}
 
 object PrettifyCommand {
@@ -65,26 +64,31 @@ class PrettifyCommand(using pc: PlatformContext)
       PrettifyCommand.Options()
   }
 
-  override def getConfigReader: ConfigReader[PrettifyCommand.Options] = { (cur: ConfigCursor) =>
-    for
-      topCur <- cur.asObjectCursor
-      cmdCur <- topCur.atKey(PrettifyCommand.cmdName)
-      objCur <- cmdCur.asObjectCursor
-      content <- cmdCur.asObjectCursor
-      inputPathRes <- content.atKey("input-file")
-      inputPath <- inputPathRes.asString
-      outputPathRes <- content.atKey("output-dir")
-      outputPath <- outputPathRes.asString
-      projectName <- optional(content, "project-name", "No Project Name Specified") { cur => cur.asString }
-      singleFileRes <- objCur.atKey("single-file")
-      singleFile <- singleFileRes.asBoolean
-    yield PrettifyCommand.Options(
-      Option(Path.of(inputPath)),
-      Option(Path.of(outputPath)),
-      Option(projectName),
-      singleFile
-    )
-  }
+  override def interpretConfig(config: Config): Options =
+    val rootConfig = config.getObject(commandName).toConfig
+    val inputFile =
+      if rootConfig.hasPath("input-file") then
+        Some(Path.of(rootConfig.getString("input-file")))
+      else
+        None
+    val outputDir =
+      if rootConfig.hasPath("output-dir") then
+        Some(Path.of(rootConfig.getString("output-dir")))
+      else
+        None
+    val projectName =
+      if rootConfig.hasPath("project-name") then
+        Some(rootConfig.getString("project-name"))
+      else
+       Some("No Project Name Specified")
+    val singleFile =
+      if rootConfig.hasPath("single-file") then
+        rootConfig.getBoolean("single-file")
+      else
+        false
+    PrettifyCommand.Options(inputFile, outputDir, projectName, singleFile)
+  end interpretConfig
+
 
   override def getPasses(
     options: PrettifyCommand.Options
@@ -131,7 +135,7 @@ class PrettifyCommand(using pc: PlatformContext)
         Files.writeString(
           path,
           output.state.filesAsString,
-          Charset.forName("UTF-8"),
+          StandardCharsets.UTF_8,
           StandardOpenOption.CREATE,
           StandardOpenOption.WRITE
         )
@@ -143,7 +147,7 @@ class PrettifyCommand(using pc: PlatformContext)
           Files.writeString(
             path,
             content,
-            Charset.forName("UTF-8"),
+            StandardCharsets.UTF_8,
             StandardOpenOption.CREATE_NEW,
             StandardOpenOption.WRITE
           )

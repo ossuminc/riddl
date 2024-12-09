@@ -27,9 +27,9 @@ class URLTest extends AbstractTestingBasis {
       val url2 = URL("http://host.name/path/to/file")
       val url3 = URL("https://host.name/path/to/file")
       val url4 = URL(
-      "https://raw.githubusercontent.com/ossuminc/riddl/scalaJs-support/language/jvm/src/test/input/domains/rbbq.riddl")
+      "https://raw.githubusercontent.com/ossuminc/riddl/main/language/input/domains/rbbq.riddl")
       val url5 = URL(
-        "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit/src/test/input/domains/simpleDomain2.riddl"
+        "https://raw.githubusercontent.com/ossuminc/riddl/main/testkit//domains/simpleDomain2.riddl"
       )
     }
   }

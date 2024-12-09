@@ -15,7 +15,7 @@ import java.nio.file.Path
 import scala.concurrent.duration.DurationInt
 
 /** Unit Tests For ReadRiddlOptionsTest */
-class ReadRiddlOptionsTest extends CommandTestBase("commands/shared/src/test/input/") {
+class ReadRiddlOptionsTest extends CommandTestBase("commands/input/") {
 
   "RiddlOptions" should {
     "read for dump" in {

@@ -40,9 +40,7 @@ case class DOMPlatformContext() extends PlatformContext {
         }
       }
   }
-
-  override def dump(url: URL, content: String): Future[Unit] = ???
-
+  
   override def read(url: URL): String = {
     val fr = new dom.FileReader()
     val file: dom.File = ???

@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.utils
 
+import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
 
@@ -35,6 +36,11 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
 
   /** Determine if the URL is not empty */
   @JSExport def nonEmpty: Boolean = !isEmpty
+
+  /** Determine if this is a file:/// scheme */
+  @JSExport def isFileScheme: Boolean = scheme == URL.fileScheme
+
+  @JSExport def isHttpScheme: Boolean = scheme == URL.httpsScheme || scheme == URL.httpScheme
 
   /** Determine if the URL is valid. URLs are valid if they are empty, or they have a valid scheme name and the path is
     * not empty
@@ -85,13 +91,17 @@ case class URL(scheme: String = "", authority: String = "", basis: String = "", 
       end if
     URL(scheme, authority, basis, p)
   }
+
+  def load: Future[String] = {
+    pc.load(this)
+  }
 }
 
 @JSExportTopLevel("URL$")
 object URL {
   final val fileScheme = "file"
-  private val httpScheme = "http"
-  private val httpsScheme = "https"
+  final val httpScheme = "http"
+  final val httpsScheme = "https"
   private val namePattern = """[A-Za-z0-9_:.+-]*""".r
   private val authorityPattern = s"""(?<authority>(($namePattern@)?$namePattern(:[0-9]{1,5})?))""".r
   private val pathPattern = """(?<path>[A-Za-z0-9_:.+-][A-Za-z0-9_:.+/-]*)""".r

@@ -15,6 +15,7 @@ class TimerTest extends AbstractTestingBasis {
   
   "timer" should {
     "measure the correct time" in { (td: TestData) =>
+      println(td.name)
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
       val clock = new AdjustableClock(start)
 
@@ -30,6 +31,7 @@ class TimerTest extends AbstractTestingBasis {
       logger.toString.matches("[info] Stage 'MyStage': 0.0\\d\\d seconds\n")
     }
     "not print anything" in { (td: TestData) =>
+      println(td.name)
       val start = Instant.parse("2007-12-03T00:00:00.00Z")
       val clock = new AdjustableClock(start)
 

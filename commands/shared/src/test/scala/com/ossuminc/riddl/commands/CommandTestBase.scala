@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.command.{Command, CommandOptions}
-import com.ossuminc.riddl.utils.{JVMPlatformContext, PlatformContext, SysLogger}
+import com.ossuminc.riddl.utils.{PlatformContext, SysLogger}
+import com.ossuminc.riddl.utils.pc
 import org.scalatest.Assertion
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -15,16 +16,16 @@ import org.scalatest.wordspec.AnyWordSpec
 import java.nio.file.Path
 
 /** Unit Tests For CommandTestBase */
-trait CommandTestBase(val inputDir: String = "commands/shared/src/test/input/") extends AnyWordSpec with Matchers {
+trait CommandTestBase(val inputDir: String = "commands/input/") extends AnyWordSpec with Matchers {
 
   val confFile = s"$inputDir/cmdoptions.conf"
 
   val quiet = "--quiet"
-  val suppressMissing = "--suppress-missing-warnings"
-  val suppressStyle = "--suppress-style-warnings"
+  val suppressMissing = "--show-missing-warnings=false"
+  val suppressStyle = "--show-style-warnings=false"
   val common: Seq[String] = Seq(quiet, suppressMissing, suppressStyle)
 
-  given io: PlatformContext = JVMPlatformContext()
+  given io: PlatformContext = pc
 
   def runCommand(
     args: Seq[String] = Seq.empty[String]

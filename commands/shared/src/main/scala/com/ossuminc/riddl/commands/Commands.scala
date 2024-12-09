@@ -11,9 +11,7 @@ import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
-import pureconfig.error.ConfigReaderFailures
-import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader, ConfigSource}
-
+import org.ekrich.config.*
 import java.nio.file.Path
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.util.control.NonFatal
@@ -38,7 +36,6 @@ object Commands:
       case "flatten"  => Right(FlattenCommand())
       case "from"     => Right(FromCommand())
       case "help"     => Right(HelpCommand())
-      case "hugo"     => Right(HugoCommand())
       case "info"     => Right(InfoCommand())
       case "onchange" => Right(OnChangeCommand())
       case "parse"    => Right(ParseCommand())
@@ -71,7 +68,7 @@ object Commands:
   )(using io: PlatformContext): Either[Messages, PassesResult] =
     require(args.nonEmpty, "Empty argument list provided")
     val name = args.head
-    val result = loadCommandNamed(name).flatMap { cmd =>
+    val result = CommandLoader.loadCommandNamed(name).flatMap { cmd =>
       cmd.run(args)
     }
     if io.options.verbose then
@@ -88,7 +85,7 @@ object Commands:
   )(using io: PlatformContext): Either[Messages, PassesResult] =
     if io.options.verbose then io.log.info(s"About to run $name with options from $optionsPath")
     end if
-    loadCommandNamed(name).flatMap { cmd =>
+    CommandLoader.loadCommandNamed(name).flatMap { cmd =>
       cmd.loadOptionsFrom(optionsPath).flatMap { opts =>
         cmd.run(opts, outputDirOverride) match
           case Left(errors) =>
@@ -106,18 +103,17 @@ object Commands:
   def loadCandidateCommands(
     configFile: Path
   )(using io: PlatformContext): Either[Messages, Seq[String]] =
-    val names = ConfigSource
-      .file(configFile.toFile)
-      .value()
-      .map(_.keySet().asScala.toSeq)
-    names match
-      case Right(value) =>
-        if io.options.verbose then io.log.info(s"Found candidate commands in $configFile: ${value.mkString(" ")}")
-        Right(value)
-      case Left(fails) =>
-        val message = s"Errors while reading $configFile:\n" + fails.prettyPrint(1)
+    try
+      val config = ConfigFactory.parseFile(configFile.toFile)
+      val names = config.root.keySet().asScala.toSeq
+      if io.options.verbose then io.log.info(s"Found candidate commands in $configFile: ${names.mkString(" ")}")
+      Right(names)
+    catch
+      case ce: ConfigException =>
+        val message = s"Errors while reading $configFile:\n" +
+          ce.getClass.getSimpleName + ": " + ce.getMessage
         Left(errors(message))
-    end match
+    end try
   end loadCandidateCommands
 
   /** An easy way to run the `from` command which loads commands and their options from a `.config` file and uses them
@@ -223,7 +219,6 @@ object Commands:
           pc.log.info("Option parsing failed, terminating.")
           1
       end match
-
     catch
       case NonFatal(exception) =>
         pc.log.severe("Exception Thrown:", exception)
@@ -234,7 +229,7 @@ object Commands:
     args: Array[String]
   )(using io: PlatformContext): Either[Messages, CommandOptions] =
     require(args.nonEmpty)
-    val result = loadCommandNamed(args.head)
+    val result = CommandLoader.loadCommandNamed(args.head)
     result match
       case Right(cmd) =>
         cmd.parseOptions(args) match {
@@ -244,30 +239,3 @@ object Commands:
       case Left(messages) => Left(messages)
     end match
   end parseCommandOptions
-
-  /** A helper function for reading optional items from a config file.
-    *
-    * @param objCur
-    *   The ConfigObjectCursor to start with
-    * @param key
-    *   The name of the optional config item
-    * @param default
-    *   The default value of the config item
-    * @param mapIt
-    *   The function to map ConfigCursor to ConfigReader.Result[T]
-    * @tparam T
-    *   The Scala type of the config item's value
-    * @return
-    *   The reader for this optional configuration item.
-    */
-  def optional[T](
-    objCur: ConfigObjectCursor,
-    key: String,
-    default: T
-  )(mapIt: ConfigCursor => ConfigReader.Result[T]): ConfigReader.Result[T] =
-    objCur.atKeyOrUndefined(key) match
-      case stCur if stCur.isUndefined => Right[ConfigReaderFailures, T](default)
-      case stCur                      => mapIt(stCur)
-    end match
-  end optional
-end Commands

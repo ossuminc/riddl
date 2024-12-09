@@ -15,7 +15,7 @@ class LoaderTest extends AnyWordSpec with Matchers {
     "load" in {
       import scala.concurrent.duration.DurationInt
       val url = URL(
-        "https://raw.githubusercontent.com/ossuminc/riddl/main/language/jvm/src/test/input/domains/rbbq.riddl"
+        "https://raw.githubusercontent.com/ossuminc/riddl/main/language/input/domains/rbbq.riddl"
       )
       val contentF = JVMPlatformContext().load(url)
       val content = Await.result(contentF, 5.seconds)

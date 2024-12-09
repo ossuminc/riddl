@@ -9,7 +9,7 @@ package com.ossuminc.riddl.commands
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, ec, pc}
-import pureconfig.*
+import org.ekrich.config.*
 import scopt.*
 
 import java.nio.file.Path
@@ -39,14 +39,14 @@ class CommandTest extends AbstractTestingBasis {
     }
     "get options from config file" in {
       val cmd = ASimpleTestCommand()
-      val reader = cmd.getConfigReader
-      val path: Path = Path.of("commands/shared/src/test/input/test.conf")
-      ConfigSource
-        .file(path.toFile)
-        .load[ASimpleTestCommand.Options](reader) match {
-        case Right(loadedOptions) => loadedOptions.arg1 mustBe "Success!"
-        case Left(failures)       => fail(failures.prettyPrint())
-      }
+      val path: Path = Path.of("commands/input/test.conf")
+      val options: ConfigParseOptions =
+        ConfigParseOptions.defaults
+          .setAllowMissing(true)
+           .setOriginDescription(path.getFileName.toString)
+      val config = ConfigFactory.parseFile(path.toFile, options)
+      val loadedOptions = cmd.interpretConfig(config)
+      loadedOptions.arg1 mustBe "Success!"
     }
 
     "run a command" in {
@@ -57,10 +57,10 @@ class CommandTest extends AbstractTestingBasis {
     "handle wrong file as input" in {
       val args = Array(
         "--verbose",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
+        "--show-style-warnings=0",
+        "--show-missing-warnings=0",
         "parse",
-        "commands/shared/src/test/input/foo.riddl", // wrong file!
+        "commands/input/foo.riddl", // wrong file!
         "hugo"
       )
       val rc = Commands.runMain(args)
@@ -70,10 +70,10 @@ class CommandTest extends AbstractTestingBasis {
     "handle wrong command as target" in {
       val args = Array(
         "--verbose",
-        "--suppress-style-warnings",
-        "--suppress-missing-warnings",
+        "--show-style-warnings=false",
+        "--show-missing-warnings:0",
         "test",
-        "commands/shared/src/test/input/repeat-options.conf",
+        "commands/input/repeat-options.conf",
         "flumox" // unknown command
       )
       val rc = Commands.runMain(args)

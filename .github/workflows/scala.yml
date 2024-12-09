@@ -11,9 +11,10 @@ on:
       - '.github/workflows/gh-pages.yml'
 
 jobs:
-  build:
+  scala-build:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
@@ -23,7 +24,18 @@ jobs:
       uses: actions/setup-java@v4
       with:
         java-version: '21'
-        distribution: 'adopt-hotspot'
+        distribution: temurin
+        cache: sbt
+
+    - name: Set Up SBT
+      uses: sbt/setup-sbt@v1
+
+    - name: Check Clang Okayness
+      run: |
+        echo CLANG: `which clang`
+        echo LD64.LLD: `which ld64.lld`
+        echo LLD: `which lld`
+        clang --version      
 
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v3
@@ -34,35 +46,78 @@ jobs:
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
-    - name: Build, Run Test
-      env:
-        RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
+    - name: Build And Test JVM Versions
       run: |
-        sbt -v clean Test/compile test
-        # Disable until 1.0: mimaReportBinaryIssues tastyMiMaReportIssues
+        sbt -v clean \
+          utils/Test/compile \
+          language/Test/compile \
+          passes/Test/compile \
+          diagrams/Test/compile \
+          commands/Test/compile \
+          riddlLib/Test/compile \
+          riddlc/Test/compile \
+          utils/test \
+          language/test \
+          passes/test \
+          diagrams/test \
+          commands/test \
+          riddlLib/test \
+          riddlc/test
+
+    - name: Build And Test Native Versions
+      run: |
+        sbt -v \
+          utilsNative/Test/compile \
+          languageNative/Test/compile \
+          passesNative/Test/compile \
+          diagramsNative/Test/compile \
+          commandsNative/Test/compile \
+          riddlLibNative/Test/compile \
+          riddlcNative/Test/compile \
+          utilsNative/test \
+          languageNative/test \
+          passesNative/test \
+          diagramsNative/test \
+          commandsNative/test \
+          riddlLibNative/compile \
+          riddlcNative/test
+
+    - name: Build And Test JS Versions
+      run: |
+        sbt -v \
+          utilsJS/Test/compile \
+          languageJS/Test/compile \
+          passesJS/Test/compile \
+          diagramsJS/Test/compile \
+          riddlLibJS/Test/compile \
+          utilsJS/test \
+          languageJS/test \
+          passesJS/test \
+          diagramsJS/test \
+          riddlLibJS/test
+
+    - name: Package Release Artifacts
+      run: |
+        sbt -v \
+          publishLocal \
+          riddlc/Universal/packageBin \
+          riddlcNative/nativeLink \
+          riddlLibJS/fullLinkJS
+
+    - name: Collect Release Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: collect-release-artifacts
+        path: |
+          - riddlc/native/target/scala-3.4.3/riddlc
+          - riddlc/jvm/target/scala-3.4.3/universal/riddlc.zip
+          - riddlLib/js/target/scala-3.4.3/riddl-lib-opt/main.js
 
     - name: Test sbt-riddl plugin
       env:
         RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
       run: |
-        sbt -v publishLocal riddlc/stage sbt-riddl/scripted
-
-    - name: Coverage For JVM projects only
-      run: |
-        sbt -v clean coverage \
-          utils/Test/compile language/Test/compile passes/Test/compile diagrams/Test/compile \
-          commands/Test/compile riddlc/Test/compile \
-          utils/test language/test passes/test diagrams/test commands/test riddlc/test \
-          coverageAggregate coveralls
-
-    - name: Coverage Results Collection
-      uses: actions/upload-artifact@v4
-      with:
-        name: code-coverage-report
-        path: |
-          - **/jvm/target/scala-3.4.3/scoverage-report/scoverage.xml
-          - **/target/scala-3.4.3/scoverage-report/scoverage.xml
-          - target/scala-3.4.3/scoverage-report/scoverage.xml
+        sbt -v sbt-riddl/scripted
 
     - name: Cleanup Before Caching
       shell: bash

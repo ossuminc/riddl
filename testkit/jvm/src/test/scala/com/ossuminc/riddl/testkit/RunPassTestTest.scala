@@ -20,7 +20,7 @@ import scala.concurrent.duration.FiniteDuration
 class RunPassTestTest extends AbstractRunPassTest {
   "RunPassTestTest" should {
     "work for stats pass" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/input/rbbq.riddl")
+      val url = URL.fromCwdPath("passes/input/rbbq.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
       inputFuture.map { input =>
         val result = runPassesWith(input, StatsPass.creator())

@@ -8,15 +8,13 @@ package com.ossuminc.riddl.command
 
 import com.ossuminc.riddl.language.Messages.{Messages, errors}
 import com.ossuminc.riddl.language.Messages
-import pureconfig.{ConfigCursor, ConfigObjectCursor, ConfigReader}
-import pureconfig.error.ConfigReaderFailures
 import scopt.OParser
 
 import java.nio.file.Path
 
 /** Base class for command options. Every command should extend this to a case class
   */
-trait CommandOptions {
+trait CommandOptions:
   def command: String
 
   def inputFile: Option[Path]
@@ -34,9 +32,9 @@ trait CommandOptions {
       Messages.empty
     }
   }
-}
+end CommandOptions
 
-object CommandOptions {
+object CommandOptions:
 
   def withInputFile[S](
     inputFile: Option[Path],
@@ -55,31 +53,4 @@ object CommandOptions {
     def command: String = "unspecified"
     def inputFile: Option[Path] = Option.empty[Path]
   }
-
-  /** A helper function for reading optional items from a config file.
-    *
-    * @param objCur
-    *   The ConfigObjectCursor to start with
-    * @param key
-    *   The name of the optional config item
-    * @param default
-    *   The default value of the config item
-    * @param mapIt
-    *   The function to map ConfigCursor to ConfigReader.Result[T]
-    * @tparam T
-    *   The Scala type of the config item's value
-    *
-    * @return
-    *   The reader for this optional configuration item.
-    */
-  def optional[T](
-    objCur: ConfigObjectCursor,
-    key: String,
-    default: T
-  )(mapIt: ConfigCursor => ConfigReader.Result[T]): ConfigReader.Result[T] = {
-    objCur.atKeyOrUndefined(key) match {
-      case stCur if stCur.isUndefined => Right[ConfigReaderFailures, T](default)
-      case stCur                      => mapIt(stCur)
-    }
-  }
-}
+end CommandOptions

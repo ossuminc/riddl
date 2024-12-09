@@ -14,7 +14,7 @@ class LoaderTest extends AnyWordSpec with Matchers {
   "Loader" must {
     "load" in {
       val url = URL(
-"https://raw.githubusercontent.com/ossuminc/riddl/scalaJs-support/language/jvm/src/test/input/domains/rbbq.riddl"
+        "https://raw.githubusercontent.com/ossuminc/riddl/language/input/domains/rbbq.riddl"
       )
       val io = DOMPlatformContext()
       val future = io.load(url).map[String] { (content: String) =>

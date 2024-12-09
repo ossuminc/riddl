@@ -9,7 +9,6 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.utils.PlatformContext
-import org.scalacheck.Arbitrary
 import org.scalatest.{Assertion, TestData}
 
 abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest{

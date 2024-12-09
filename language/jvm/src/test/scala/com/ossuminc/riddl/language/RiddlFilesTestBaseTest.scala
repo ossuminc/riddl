@@ -14,14 +14,12 @@ import java.nio.file.Path
 
 class RiddlFilesTestBaseTest extends RiddlFilesTestBase {
 
-  def checkAFile(rootDir: Path, file: File): Assertion = {
-    succeed
-  }
+  def checkAFile(rootDir: Path, file: Path): Assertion = { succeed }
 
   "RiddlFilesTestBase" should {
     "find riddl files" in { (td: TestData) =>
-      val dir = "language/jvm/src/test/input"
-      val files = findRiddlFiles(new File(dir), true)
+      val dir = "language/input"
+      val files = findRiddlFiles(Path.of(dir), true)
       files.size must be > 0
     }
     "not find non-files" in { (td: TestData) =>
@@ -31,12 +29,12 @@ class RiddlFilesTestBaseTest extends RiddlFilesTestBase {
     }
     "require .riddl suffix" in { (td: TestData) =>
       intercept[org.scalatest.exceptions.TestFailedException] {
-        processAFile("language/src/test/input/not-a-file")
+        processAFile("language/input/not-a-file")
       }
     }
     "handle a file or directory" in { (td: TestData) =>
-      processADirectory("language/jvm/src/test/input/hugo.conf")
-      processADirectory("language/jvm/src/test/input/domains")
+      processADirectory("language/input/hugo.conf")
+      processADirectory("language/input/domains")
     }
   }
 }

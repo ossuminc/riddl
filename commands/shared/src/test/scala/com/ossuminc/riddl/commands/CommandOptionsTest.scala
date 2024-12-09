@@ -23,7 +23,6 @@ class CommandOptionsTest extends AbstractTestingBasis {
       messages.justErrors.head.message must be("An input path was not provided.")
     }
     "show empty is empty" in {
-      pending
       CommandOptions.empty.inputFile must be(empty)
       CommandOptions.empty.command must be("unspecified")
     }
