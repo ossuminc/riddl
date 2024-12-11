@@ -142,7 +142,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           hasDescription = true
         case t: Term =>
           check(
-            t.definition.length > 10,
+            t.definition.length < 10,
             s"${t.identify}'s definition is too short. It must be at least 10 characters'",
             Warning,
             t.loc
