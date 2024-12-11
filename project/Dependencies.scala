@@ -6,7 +6,7 @@ import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
 
 object V {
   val airframe_json = "24.9.2"
-  val airframe_ulid = "24.9.3"
+  val airframe_ulid = "24.12.1"
   val commons_io = "2.18.0"
   val compress = "1.27.1"
   val config = "1.4.2"
