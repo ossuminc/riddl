@@ -221,35 +221,6 @@ private[parsing] trait CommonParser(using io: PlatformContext)
     }
   }
 
-  private def hostString[u: P]: P[String] = {
-    P(CharsWhile { ch => ch.isLetterOrDigit || ch == '-' }.rep(1, ".", 32)).!
-  }
-
-  private def portNum[u: P]: P[String] = {
-    P(Index ~~ CharsWhileIn("0-9").rep(min = 1, max = 5).! ~~ Index).map { (i1, numStr: String, i2) =>
-      val num = numStr.toInt
-      if num > 0 && num < 65535 then
-        numStr
-      else
-        error(at(i1,i2), s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
-        "0"
-      end if
-    }
-  }
-
-  private def urlPath[u: P]: P[String] = {
-    P(
-      CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch))
-        .rep(min = 0, max = 240)
-    ).!
-  }
-
-  def httpUrl[u: P]: P[URL] = {
-    P(
-      "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath.?
-    ).!.map(URL)
-  }
-
   def invariant[u: P]: P[Invariant] = {
     P(
       Index ~ Keywords.invariant ~ identifier ~/ is ~ (

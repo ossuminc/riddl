@@ -8,7 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.utils.{PlatformContext,URL}
 import org.scalatest.{TestData, fixture}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -124,10 +124,20 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
         identity
       ) match {
         case Left(errors) =>
-          val msg = errors.map(_.format).mkString
-          fail(msg)
+          fail(errors.format)
         case Right((actual, rpi)) =>
           actual mustBe LiteralString((1, 1, rpi), input.data.drop(1).dropRight(1))
+      }
+    }
+  }
+  "NoWhiteSpaceParsers" should { 
+    "handle a URL" in { (td: TestData) =>
+      val input = RiddlParserInput("https://www.wordnik.com/words/phi",td)
+      parse[URL,URL](input, StringParser("").httpUrl(_), identity) match {
+        case Left(errors) => 
+          fail(errors.format)
+        case Right((actual, _)) =>
+          actual mustBe URL("https://www.wordnik.com/words/phi")
       }
     }
   }
