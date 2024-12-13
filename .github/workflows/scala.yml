@@ -107,7 +107,7 @@ jobs:
       env:
         RIDDLC_PATH: riddlc/jvm/target/universal/stage/bin/riddlc
       run: |
-        sbt -v 
+        sbt -v \ 
           utils/publishLocal \
           language/publishLocal \
           passes/publishLocal \
