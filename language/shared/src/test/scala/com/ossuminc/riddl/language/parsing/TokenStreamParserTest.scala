@@ -166,9 +166,9 @@ abstract class TokenStreamParserTest(using pc: PlatformContext) extends Abstract
          IdentifierTKN(At(rpi,847,851)),
          PunctuationTKN(At(rpi,852,853))
       )
-      val result = pc.withOptions(pc.options.copy(showTimes=true)) { options => 
-        Timer.time("parseToTokens") { 
-          TopLevelParser.parseToTokens(rpi) 
+      val result = pc.withOptions(pc.options.copy(showTimes=true)) { _ =>
+        Timer.time("parseToTokens") {
+          TopLevelParser.parseToTokens(rpi)
         }
       }
       result match

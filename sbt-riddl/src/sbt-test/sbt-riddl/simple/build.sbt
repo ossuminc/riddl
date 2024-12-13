@@ -2,7 +2,7 @@ import scala.sys.process.Process
 
 lazy val scalacheck = "1.18.1" // NOTE: Synchronize with Dependencies.V.scalacheck
 lazy val scalatest = "3.2.19" // NOTE: Synchronize with Depenendencies.V.scalatest
-lazy val riddl = sys.props.get("plugin.version").getOrElse("0.51.0")
+lazy val riddl = sys.props.get("plugin.version").getOrElse("0.56.0")
 
 lazy val root = (project in file("."))
   .enablePlugins(RiddlSbtPlugin)
@@ -15,7 +15,6 @@ lazy val root = (project in file("."))
       "com.ossuminc" %% "riddl-commands" % riddl % Test,
       "com.ossuminc" %% "riddl-commands" % riddl % Test,
       "org.scalactic" %% "scalactic" % scalatest % Test,
-      "org.scalatest" %% "scalatest" % scalatest % Test,
-      "org.scalacheck" %% "scalacheck" % scalacheck % Test
+      "org.scalatest" %% "scalatest" % scalatest % Test
     )
   )

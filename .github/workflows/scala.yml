@@ -99,10 +99,23 @@ jobs:
     - name: Package Release Artifacts
       run: |
         sbt -v \
-          publishLocal \
           riddlc/Universal/packageBin \
           riddlcNative/nativeLink \
           riddlLibJS/fullLinkJS
+
+    - name: Publish JVM RIDDL Libs & Test sbt-riddl plugin
+      env:
+        RIDDLC_PATH: riddlc/jvm/target/universal/stage/bin/riddlc
+      run: |
+        sbt -v 
+          utils/publishLocal \
+          language/publishLocal \
+          passes/publishLocal \
+          diagrams/publishLocal \
+          commands/publishLocal \
+          riddlLib/publishLocal \
+          riddlc/stage \
+          sbt-riddl/scripted
 
     - name: Collect Release Artifacts
       uses: actions/upload-artifact@v4
@@ -110,14 +123,8 @@ jobs:
         name: collect-release-artifacts
         path: |
           - riddlc/native/target/scala-3.4.3/riddlc
-          - riddlc/jvm/target/scala-3.4.3/universal/riddlc.zip
+          - riddlc/jvm/target/universal/riddlc.zip
           - riddlLib/js/target/scala-3.4.3/riddl-lib-opt/main.js
-
-    - name: Test sbt-riddl plugin
-      env:
-        RIDDLC_PATH: riddlc/target/universal/stage/bin/riddlc
-      run: |
-        sbt -v sbt-riddl/scripted
 
     - name: Cleanup Before Caching
       shell: bash
