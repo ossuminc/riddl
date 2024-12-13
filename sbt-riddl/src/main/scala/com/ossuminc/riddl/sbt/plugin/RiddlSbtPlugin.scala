@@ -37,7 +37,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   import autoImport.*
 
   private object V {
-    val scala = "3.4.2" // NOTE: Synchronize with Helpers.C.withScala3
+    val scala = "3.4.2" // NOTE: Synchronize with sbt-ossuminc scala version
   }
 
   /*private def getLogger(project: Extracted, state: State): ManagedLogger = {
