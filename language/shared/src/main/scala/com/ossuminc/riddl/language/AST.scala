@@ -710,14 +710,13 @@ object AST:
   ///// This section defines various abstract things needed by the rest of the definitions
 
   /** The list of definitions to which a reference cannot be made */
-  type NonReferencableDefinitions =
-    Author | User | Enumerator | Group | Root | SagaStep | Term | Handler | Invariant | Definition
+  type NonReferencableDefinitions = Enumerator | Root | SagaStep | Term | Invariant
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description | Interaction | Include[?] |
     TypeExpression | Comment | OptionValue | Reference[?] | StreamletShape | AdaptorDirection | UserStory |
     MethodArgument | Schema | ShownBy | SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription |
-    FileAttachment | StringAttachment | ULIDAttachment | Meta
+    FileAttachment | StringAttachment | ULIDAttachment | Meta | Statement
 
   /** Type of definitions that occur in a [[Root]] without [[Include]] */
   private type OccursInModule = Domain | Author | Comment
@@ -729,7 +728,8 @@ object AST:
   type RootContents = ModuleContents | Module
 
   /** Things that can occur in the "With" section of a leaf definition */
-  type MetaData = BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment | ULIDAttachment
+  type MetaData = 
+    BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment | ULIDAttachment | Comment
 
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition = Type | Comment
@@ -821,7 +821,7 @@ object AST:
   /** Type of definitions that occur in a [[Type]] */
   type TypeContents = Field | Method | Enumerator
 
-  type AggregateContents = Field | Method
+  type AggregateContents = Field | Method | Comment
 
   /** Type of definitions that occur in a block of [[Statement]] */
   type Statements = Statement | Comment
@@ -1358,8 +1358,9 @@ object AST:
   case class Enumerator(
     loc: At,
     id: Identifier,
-    enumVal: Option[Long] = None
-  ) extends Definition:
+    enumVal: Option[Long] = None,
+    metadata: Contents[MetaData] = Contents.empty
+  ) extends Definition with WithMetaData:
     override def format: String = id.format + enumVal.map(x => s"($x)").getOrElse("")
   end Enumerator
 
@@ -1563,6 +1564,7 @@ object AST:
 
     /** Thelist of aggregated [[Method]] */
     def methods: Seq[Method] = contents.filter[Method]
+
     override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean =
       other match

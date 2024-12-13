@@ -41,9 +41,9 @@ private[parsing] trait EntityParser {
   def entity[u: P]: P[Entity] = {
     P(
       Index ~ Keywords.entity ~/ identifier ~ is ~ open ~/ entityBody ~ close ~ withMetaData ~ Index
-    )./ map { case (start, id, contents, descriptives, end) =>
+    )./ map { case (start, id, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      Entity(at(start,end), id, contents.toContents, descriptives.toContents)
+      Entity(at(start,end), id, contents.toContents, meta.toContents)
     }
   }
 }

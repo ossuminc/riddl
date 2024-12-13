@@ -18,7 +18,7 @@ class RunRiddlcOnRemoteTest extends RunCommandSpecBase {
   // NOTE: This test will succeed if the cwd or config don't exist to allow
   //  it to pass when run from GitHub workflow. Beware of false positives
   //  when using it to test locally.
-  
+
   def runOnLocalProject(cwd: String, config: String, cmd: String): Assertion = {
     if Files.isDirectory(Path.of(cwd)) then {
       val fullPath = Path.of(cwd, config)
@@ -64,7 +64,7 @@ class RunRiddlcOnRemoteTest extends RunCommandSpecBase {
         "main",
         "src/main/riddl",
         "ImprovingApp.conf",
-        "parse" // FIXME: should be "validate"
+        "validate"
       )
     }
   }

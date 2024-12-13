@@ -328,8 +328,8 @@ private[parsing] trait TypeParser {
   }
 
   def enumerator[u: P]: P[Enumerator] = {
-    P(Index ~ identifier ~ enumValue ~~ Index).map { case (start, id, value, end) =>
-      Enumerator(at(start, end), id, value)
+    P(Index ~~ identifier ~ enumValue  ~ withMetaData ~~Index).map { case (start, id, value, metaData, end) =>
+      Enumerator(at(start, end), id, value, metaData.toContents)
     }
   }
 
@@ -401,7 +401,7 @@ private[parsing] trait TypeParser {
   }
 
   private def aggregateContent[u: P]: P[AggregateContents] = {
-    P(field | method)./.asInstanceOf[P[AggregateContents]]
+    P(field | method | comment)./.asInstanceOf[P[AggregateContents]]
   }
 
   private def aggregateDefinitions[u: P]: P[Seq[AggregateContents]] = {

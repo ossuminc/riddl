@@ -95,6 +95,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveOnMessageClause(mc, parents)
       case statement: Statement =>
         resolveStatement(statement, parents)
+      case _: OnInitializationClause => ()
       case _: OnTerminationClause => ()
       case _: OnOtherClause       => ()
       case e: Entity =>
@@ -126,6 +127,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         resolveAuthorRefs(r, parents)
       case s: Saga =>
         resolveAuthorRefs(s, parents)
+      case r: Relationship =>
+        resolveARef[Processor[?]](r.withProcessor, parents)
+      case m: Module =>
+        resolveAuthorRefs(m, parents)
+      case n: Nebula => ()
       case d: Domain =>
         resolveAuthorRefs(d, parents)
       case c: Context =>
@@ -148,6 +154,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage(cg, resolveARef[Group](cg.group, parents))
       case _: NonReferencableDefinitions => () // These can't be referenced
       case _: NonDefinitionValues        => () // Neither can these values
+      case _: Definition => () // abstract definition, can't be referenced
       // case _ => () // NOTE: Never have this catchall! Want compile time errors!
     end match
   end process

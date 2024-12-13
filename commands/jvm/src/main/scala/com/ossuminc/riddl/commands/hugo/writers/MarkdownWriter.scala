@@ -368,9 +368,9 @@ trait MarkdownWriter(using pc: PlatformContext)
   }
 
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Parents): this.type = {
-    val data = agg.contents.map {
-      case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
-    }.toSeq
+    val data = agg.contents.filter[AggregateValue].map { (f: AggregateValue) =>
+      f.id.format -> resolveTypeExpression(f.typeEx, parents)
+    }
     list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
   }

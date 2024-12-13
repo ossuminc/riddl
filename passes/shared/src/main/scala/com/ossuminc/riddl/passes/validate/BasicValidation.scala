@@ -265,7 +265,7 @@ trait BasicValidation(using pc: PlatformContext) {
               val formatted = ref.format
               messages.add(
                 style(
-                  s"Path Identifier $formatted at ${ref.loc} references ${definition.identify} in " +
+                  s"Path Identifier $formatted at ${ref.loc.format} references ${definition.identify} in " +
                     s"${definitionContext.identify} but occurs in ${container.identify} in ${containerContext.identify}." +
                     " Cross-context references are ill-advised as they lead to model confusion and violate " +
                     "the 'bounded' aspect of bounded contexts",

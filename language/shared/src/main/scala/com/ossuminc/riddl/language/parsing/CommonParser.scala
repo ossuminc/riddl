@@ -201,7 +201,7 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   end ulidAttachment
 
   private def metaData[u: P]: P[MetaData] =
-    P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment)
+    P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment | comment)
       .asInstanceOf[P[MetaData]]
 
   def withMetaData[u: P]: P[Seq[MetaData]] = {
