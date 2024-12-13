@@ -60,13 +60,11 @@ object Punctuation {
         equalsSign,
         plus,
         question,
-        quote,
         roundOpen,
         roundClose,
         squareOpen,
         squareClose,
-        undefinedMark,
-        verticalBar
+        undefinedMark
       )
     )
   }

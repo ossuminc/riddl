@@ -3926,7 +3926,7 @@ object AST:
   case class KeywordTKN(at: At) extends Token
   case class CommentTKN(at: At) extends Token
   case class LiteralStringTKN(at: At) extends Token
-  case class MarkdownLinesTKN(at: At) extends Token
+  case class MarkdownLineTKN(at: At) extends Token
   case class IdentifierTKN(at: At) extends Token
   case class OtherTKN(at: At) extends Token
 

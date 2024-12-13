@@ -45,12 +45,9 @@ trait TokenStreamParser extends CommonParser with Readability {
     P(comment)./.map { case comment: Comment => CommentTKN(comment.loc) }
   }
   
-  def markdownLinesToken[u: P]: P[MarkdownLinesTKN] = {
-    P(markdownLines)./.map { case mdl: Seq[LiteralString] =>
-      require(mdl.nonEmpty, "markdownLines return empty list of lines")
-      val first = mdl.head.loc
-      val last = mdl.last.loc
-      MarkdownLinesTKN(At.range(first, last))
+  def markdownLinesToken[u: P]: P[MarkdownLineTKN] = {
+    P(Index ~~ Punctuation.verticalBar ~~ CharsWhile(ch => ch != '\n' && ch != '\r') ~~ Index)./.map { 
+      case (start, end) => MarkdownLineTKN(at(start,end))
     }
   }
 
@@ -58,22 +55,25 @@ trait TokenStreamParser extends CommonParser with Readability {
     P(identifier)./.map { case id: Identifier => IdentifierTKN(id.loc) }
   }
 
+  
   def otherToken[u: P]: P[OtherTKN] = {
-    P(Index ~~ AnyChar.rep(1) ~~ Index)./.map { case (start, end) => OtherTKN(at(start, end)) }
+    P(Index ~~ AnyChar.rep(1) ~~ Index)./.map { case (start, end) => 
+      OtherTKN(at(start, end)) 
+    }
   }
 
   def parseAnyToken[u: P]: P[Token] = {
     P(
       keywordToken |
-        readabilityToken |
-        quotedStringToken |
-        predefinedToken |
-        identifierToken |
-        commentToken |
-        markdownLinesToken |
-        punctuationToken |
-        otherToken
-    )./
+      punctuationToken |
+      quotedStringToken |
+      markdownLinesToken |
+      readabilityToken |
+      predefinedToken |
+      identifierToken |
+      commentToken |
+      otherToken
+  )./
   }
 
   def parseAllTokens[u: P]: P[List[Token]] = {
