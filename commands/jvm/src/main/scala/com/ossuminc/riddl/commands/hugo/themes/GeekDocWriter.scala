@@ -78,7 +78,7 @@ case class GeekDocWriter(
       Some(brief),
       Map(
         "geekdocCollapseSection" -> "true"
-        // FIXME: "geekdocFilePath" -> s"${generator.makeFilePath(cont).getOrElse("no-such-file")}"
+        // TODO: "geekdocFilePath" -> s"${generator.makeFilePath(cont).getOrElse("no-such-file")}"
       )
     )
   }
