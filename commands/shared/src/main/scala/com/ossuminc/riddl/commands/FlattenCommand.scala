@@ -32,6 +32,7 @@ class FlattenCommand(using pc: PlatformContext) extends InputFileCommand(DumpCom
       implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
         Riddl.parseAndValidate(rpi).map { result =>
+          removeIncludes(result.root)
           // TODO: output the model to System.out without spacing and with a line break only after every Definition
           result
         }
