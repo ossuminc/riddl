@@ -8,149 +8,14 @@ package com.ossuminc.riddl.language.parsing
 
 import fastparse.*
 import MultiLineWhitespace.*
-import com.ossuminc.riddl.language.parsing.Keyword.{
-  acquires,
-  adaptor,
-  all,
-  any,
-  append,
-  attachment,
-  author,
-  become,
-  benefit,
-  body,
-  briefly,
-  call,
-  capability,
-  case_,
-  command,
-  commands,
-  condition,
-  connector,
-  constant,
-  container,
-  contains,
-  context,
-  create,
-  described,
-  details,
-  direct,
-  do_,
-  domain,
-  else_,
-  email,
-  end_,
-  entity,
-  epic,
-  error,
-  event,
-  example,
-  execute,
-  explained,
-  field,
-  fields,
-  file,
-  flow,
-  focus,
-  for_,
-  foreach,
-  from,
-  function,
-  graph,
-  group,
-  handler,
-  if_,
-  import_,
-  include,
-  index,
-  init,
-  inlet,
-  inlets,
-  input,
-  invariant,
-  items,
-  label,
-  link,
-  many,
-  mapping,
-  merge,
-  message,
-  module,
-  morph,
-  name,
-  nebula,
-  on,
-  one,
-  option,
-  optional,
-  options,
-  organization,
-  other,
-  outlet,
-  outlets,
-  output,
-  parallel,
-  pipe,
-  plant,
-  presents,
-  projector,
-  query,
-  range,
-  record,
-  reference,
-  relationship,
-  remove,
-  replica,
-  reply,
-  repository,
-  required,
-  requires,
-  result,
-  results,
-  return_,
-  returns,
-  reverted,
-  router,
-  saga,
-  schema,
-  selects,
-  send,
-  sequence,
-  set,
-  show,
-  shown,
-  sink,
-  source,
-  split,
-  state,
-  step,
-  stop,
-  story,
-  streamlet,
-  table,
-  take,
-  tell,
-  term,
-  then_,
-  title,
-  type_,
-  updates,
-  url,
-  user,
-  value,
-  void,
-  when,
-  where,
-  with_
-}
-
-import java.lang.Character.isLetterOrDigit
+import com.ossuminc.riddl.language.parsing.Keyword.*
+import java.lang.Character.isLetter
 
 /** Keywords must not be followed by other program text so ensure this happens
   */
 object Keywords {
 
-  private val keywordChars = (c: Char) => isLetterOrDigit(c) | c == '_' | c == '_'
+  private val keywordChars = (c: Char) => isLetter(c)
 
   // Succeeds if the next character (look ahead without consuming) is not an
   // identifier character. This is used with keywords to make sure the keyword
@@ -273,8 +138,6 @@ object Keywords {
   def explained[u: P]: P[Unit] = keyword(Keyword.explained)
 
   def field[u: P]: P[Unit] = keyword(Keyword.field)
-
-  def fields[u: P]: P[Unit] = keyword(Keyword.fields)
 
   def file[u: P]: P[Unit] = keyword(Keyword.file)
 
@@ -511,7 +374,6 @@ object Keywords {
         Keyword.execute,
         Keyword.explained,
         Keyword.field,
-        Keyword.fields,
         Keyword.file,
         Keyword.flow,
         Keyword.focus,
@@ -653,7 +515,6 @@ object Keyword {
   final val explained = "explained"
   final val explanation = "explanation"
   final val field = "field"
-  final val fields = "fields"
   final val file = "file"
   final val flow = "flow"
   final val focus = "focus"
@@ -793,7 +654,6 @@ object Keyword {
     explanation,
     explained,
     field,
-    fields,
     file,
     flow,
     focus,

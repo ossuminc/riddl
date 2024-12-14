@@ -38,9 +38,11 @@ trait TokenStreamParser extends CommonParser with Readability {
     import com.ossuminc.riddl.language.parsing.PredefType.*
     P(Index ~~ PredefTypes.anyPredefType ~~ Index)./.map { case (start, end) => PredefinedTKN(at(start, end)) }
   }
+  
   def keywordToken[u: P]: P[KeywordTKN] = {
     P(Index ~~ Keywords.anyKeyword ~~ Index)./.map { case (start, end) => KeywordTKN(at(start, end)) }
   }
+  
   def commentToken[u: P]: P[CommentTKN] = {
     P(comment)./.map { case comment: Comment => CommentTKN(comment.loc) }
   }
