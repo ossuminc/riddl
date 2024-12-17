@@ -8,7 +8,8 @@ package com.ossuminc.riddl.commands
 
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.passes.{PassesResult, Riddl}
+import com.ossuminc.riddl.passes.*
+import com.ossuminc.riddl.passes.transforms.FlattenPass
 import com.ossuminc.riddl.utils.{Await, PlatformContext}
 
 import java.nio.file.Path
@@ -31,11 +32,13 @@ class FlattenCommand(using pc: PlatformContext) extends InputFileCommand(DumpCom
     options.withInputFile { (inputFile: Path) =>
       implicit val ec: ExecutionContext = pc.ec
       val future = RiddlParserInput.fromPath(inputFile.toString).map { rpi =>
-        Riddl.parseAndValidate(rpi).map { result =>
-          removeIncludes(result.root)
-          // TODO: output the model to System.out without spacing and with a line break only after every Definition
-          result
-        }
+        Riddl.parse(rpi)(pc) match
+          case Left(errors) => return Left(errors)
+          case Right(root) =>
+            val input = PassInput(root)
+            val result = Pass.runThesePasses(input, Pass.standardPasses +: FlattenPass.creator )
+
+        end match
       }
       Await.result(future, 10.seconds)
     }

@@ -728,7 +728,7 @@ object AST:
   type RootContents = ModuleContents | Module
 
   /** Things that can occur in the "With" section of a leaf definition */
-  type MetaData = 
+  type MetaData =
     BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment | ULIDAttachment | Comment
 
   /** Type of definitions that occurs within all Vital Definitions */

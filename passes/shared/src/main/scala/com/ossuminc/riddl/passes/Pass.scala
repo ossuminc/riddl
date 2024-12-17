@@ -46,7 +46,7 @@ trait PassInfo[OPT <: PassOptions] {
     *   The options the pass requires
     * @return
     */
-  def creator(options: OPT)(using PlatformContext): PassCreator
+  def creator(options: OPT)(using pc: PlatformContext): PassCreator
 }
 
 /** Information that a Pass must produce, currently just any messages it generated. Passes should derive their own
@@ -170,7 +170,10 @@ object PassesResult {
   */
 abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: PlatformContext) {
 
-  /** THe name of the pass for inclusion in messages it produces. This must be implemented by the subclass
+  /** The messages collected during the pass */
+  protected val messages: Messages.Accumulator = Messages.Accumulator()
+
+  /** The name of the pass for inclusion in messages it produces. This must be implemented by the subclass
     * @return
     *   A string value giving the name of this pass
     */
@@ -231,7 +234,7 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
   def close(): Unit = ()
 
   /** A method for the traversal of the AST hierarchy. While subclasses implement this differently, there is generally
-    * no need to override in non-RIDDL code.
+    * no need to override in non-RIDDL code. This implementation is width first
     *
     * @param definition
     *   The root (starting point) of the traversal
@@ -260,8 +263,44 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
         process(value, parents)
     }
   }
+}
 
-  protected val messages: Messages.Accumulator = Messages.Accumulator()
+abstract class DepthFirstPass(
+  input: PassInput,
+  outputs: PassesOutput
+)(using pc: PlatformContext) extends Pass(input, outputs) {
+
+  /** A method for the traversal of the AST hierarchy. This implementation traverses nodes in a depth first fashion.
+   *
+   * @param definition
+   *   The root (starting point) of the traversal
+   * @param parents
+   *   The parents of the definition
+   */
+  protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
+    definition match {
+      case root: Root =>
+        parents.push(root)
+        root.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        process(root, parents)
+      case include: Include[?] =>
+        // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
+        include.contents.foreach { value => traverse(value, parents) }
+        process(include, parents)
+      case leaf: LeafDefinition =>
+        process(leaf, parents)
+      case branch: BranchDefinition[?] =>
+        parents.push(branch)
+        branch.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
+        parents.pop()
+        process(branch, parents)
+      case value: RiddlValue =>
+        // NOTE: everything else is just a non-definition non-container
+        process(value, parents)
+    }
+  }
+
 }
 
 /** A Pass base class that allows the processing to be done based on containers, and calling these methods:
@@ -614,7 +653,7 @@ object Pass {
     * resolve path references, and validate the input. Only after these three have passed successful should the model be
     * considered processable by other passes
     */
-  def standardPasses(using PlatformContext) =
+  def standardPasses(using PlatformContext): Seq[PassCreator] =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
   /** A PassesCreate of the passes that extract information but don't do much real work. These generate the symbol
