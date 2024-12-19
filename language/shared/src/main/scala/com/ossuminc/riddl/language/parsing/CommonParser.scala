@@ -33,6 +33,10 @@ private[parsing] trait CommonParser(using io: PlatformContext)
     P(Punctuation.curlyClose)
   }
 
+  def is[u: P]: P[Unit] = Keywords.keywords( StringIn("is", "are", ":", "=") ).?
+
+  def byAs[u: P]: P[Unit] = Keywords.keywords(StringIn("by", "as"))
+  
   def author[u: P]: P[Author] =
     P(
       Index ~ Keywords.author ~/ identifier ~ is ~ open ~

@@ -9,31 +9,26 @@ package com.ossuminc.riddl.language.parsing
 import fastparse.*
 import MultiLineWhitespace.*
 import com.ossuminc.riddl.language.parsing.Keyword.*
-import java.lang.Character.isLetter
+
+import java.lang.Character.{isLetter, isWhitespace}
 
 /** Keywords must not be followed by other program text so ensure this happens
   */
 object Keywords {
 
-  private val keywordChars = (c: Char) => isLetter(c)
+  private val nonKeywordChars = (c: Char) => !isLetter(c)
 
   // Succeeds if the next character (look ahead without consuming) is not an
   // identifier character. This is used with keywords to make sure the keyword
   // isn't followed by keyword
-  private def isNotKeywordChar[u: P]: P[Unit] = {
-    !CharPred(keywordChars) | End
-  }
-
-  def whiteSpaceChar[u: P]: P[Unit] = {
-    CharIn(" \t\n")
-  }
+  private def isNotKeywordChar[u: P]: P[Unit] = { CharPred(nonKeywordChars) | End }
 
   def keyword[u: P](key: String): P[Unit] = {
-    P(key ~~/ (isNotKeywordChar | Fail(s"white space after keyword $key")))./
+    P(key ~~ &(isNotKeywordChar))./
   }
 
   def keywords[u: P, T](keywordsRule: P[T]): P[T] = {
-    P(keywordsRule ~~/ (isNotKeywordChar | Fail(s"white space after a keyword")))./
+    P(keywordsRule ~~ &(isNotKeywordChar))./
   }
 
   def streamlets[u: P]: P[String] = keywords(
@@ -209,13 +204,15 @@ object Keywords {
 
   def one[u: P]: P[Unit] = keyword(Keyword.one)
 
-  def organization[u: P]: P[Unit] = keyword(Keyword.organization)
-
   def option[u: P]: P[Unit] = keyword(Keyword.option)
 
   def optional[u: P]: P[Unit] = keyword(Keyword.optional)
 
   def options[u: P]: P[Unit] = keyword(Keyword.options)
+
+  def or[u: P]: P[Unit] = keyword(Keyword.or)
+
+  def organization[u: P]: P[Unit] = keyword(Keyword.organization)
 
   def other[u: P]: P[Unit] = keyword(Keyword.other)
 
@@ -333,139 +330,141 @@ object Keywords {
 
   def anyKeyword[u: P]: P[Unit] = {
     P(
-      StringIn(
-        Keyword.acquires,
-        Keyword.adaptor,
-        Keyword.all,
-        Keyword.any,
-        Keyword.append,
-        Keyword.attachment,
-        Keyword.author,
-        Keyword.become,
-        Keyword.benefit,
-        Keyword.briefly,
-        Keyword.body,
-        Keyword.call,
-        Keyword.case_,
-        Keyword.capability,
-        Keyword.command,
-        Keyword.commands,
-        Keyword.condition,
-        Keyword.connector,
-        Keyword.constant,
-        Keyword.container,
-        Keyword.contains,
-        Keyword.context,
-        Keyword.create,
-        Keyword.described,
-        Keyword.details,
-        Keyword.direct,
-        Keyword.presents,
-        Keyword.do_,
-        Keyword.domain,
-        Keyword.else_,
-        Keyword.email,
-        Keyword.end_,
-        Keyword.entity,
-        Keyword.epic,
-        Keyword.error,
-        Keyword.event,
-        Keyword.example,
-        Keyword.execute,
-        Keyword.explained,
-        Keyword.field,
-        Keyword.file,
-        Keyword.flow,
-        Keyword.focus,
-        Keyword.for_,
-        Keyword.foreach,
-        Keyword.from,
-        Keyword.function,
-        Keyword.graph,
-        Keyword.group,
-        Keyword.handler,
-        Keyword.if_,
-        Keyword.import_,
-        Keyword.include,
-        Keyword.index,
-        Keyword.init,
-        Keyword.inlet,
-        Keyword.inlets,
-        Keyword.input,
-        Keyword.invariant,
-        Keyword.items,
-        Keyword.label,
-        Keyword.link,
-        Keyword.many,
-        Keyword.mapping,
-        Keyword.merge,
-        Keyword.message,
-        Keyword.module,
-        Keyword.morph,
-        Keyword.name,
-        Keyword.nebula,
-        Keyword.on,
-        Keyword.one,
-        Keyword.organization,
-        Keyword.option,
-        Keyword.optional,
-        Keyword.options,
-        Keyword.other,
-        Keyword.outlet,
-        Keyword.outlets,
-        Keyword.output,
-        Keyword.parallel,
-        Keyword.pipe,
-        Keyword.plant,
-        Keyword.projector,
-        Keyword.query,
-        Keyword.range,
-        Keyword.reference,
-        Keyword.relationship,
-        Keyword.remove,
-        Keyword.replica,
-        Keyword.reply,
-        Keyword.repository,
-        Keyword.requires,
-        Keyword.required,
-        Keyword.record,
-        Keyword.result,
-        Keyword.results,
-        Keyword.return_,
-        Keyword.returns,
-        Keyword.reverted,
-        Keyword.router,
-        Keyword.saga,
-        Keyword.schema,
-        Keyword.selects,
-        Keyword.send,
-        Keyword.sequence,
-        Keyword.set,
-        Keyword.show,
-        Keyword.shown,
-        Keyword.sink,
-        Keyword.source,
-        Keyword.split,
-        Keyword.state,
-        Keyword.step,
-        Keyword.stop,
-        Keyword.story,
-        Keyword.streamlet,
-        Keyword.table,
-        Keyword.take,
-        Keyword.tell,
-        Keyword.term,
-        Keyword.then_,
-        Keyword.title,
-        Keyword.type_,
-        Keyword.url,
-        Keyword.updates,
-        Keyword.user,
-        Keyword.value,
-        Keyword.void,
-        Keyword.when,
-        Keyword.where,
-        Keyword.with_
+      keywords(
+        StringIn(
+          Keyword.acquires,
+          Keyword.adaptor,
+          Keyword.all,
+          Keyword.any,
+          Keyword.append,
+          Keyword.attachment,
+          Keyword.author,
+          Keyword.become,
+          Keyword.benefit,
+          Keyword.briefly,
+          Keyword.body,
+          Keyword.call,
+          Keyword.case_,
+          Keyword.capability,
+          Keyword.command,
+          Keyword.commands,
+          Keyword.condition,
+          Keyword.connector,
+          Keyword.constant,
+          Keyword.container,
+          Keyword.contains,
+          Keyword.context,
+          Keyword.create,
+          Keyword.described,
+          Keyword.details,
+          Keyword.direct,
+          Keyword.presents,
+          Keyword.do_,
+          Keyword.domain,
+          Keyword.else_,
+          Keyword.email,
+          Keyword.end_,
+          Keyword.entity,
+          Keyword.epic,
+          Keyword.error,
+          Keyword.event,
+          Keyword.example,
+          Keyword.execute,
+          Keyword.explained,
+          Keyword.field,
+          Keyword.file,
+          Keyword.flow,
+          Keyword.focus,
+          Keyword.for_,
+          Keyword.foreach,
+          Keyword.from,
+          Keyword.function,
+          Keyword.graph,
+          Keyword.group,
+          Keyword.handler,
+          Keyword.if_,
+          Keyword.import_,
+          Keyword.include,
+          Keyword.index,
+          Keyword.init,
+          Keyword.inlet,
+          Keyword.inlets,
+          Keyword.input,
+          Keyword.invariant,
+          Keyword.items,
+          Keyword.label,
+          Keyword.link,
+          Keyword.many,
+          Keyword.mapping,
+          Keyword.merge,
+          Keyword.message,
+          Keyword.module,
+          Keyword.morph,
+          Keyword.name,
+          Keyword.nebula,
+          Keyword.on,
+          Keyword.one,
+          Keyword.organization,
+          Keyword.option,
+          Keyword.optional,
+          Keyword.options,
+          Keyword.other,
+          Keyword.outlet,
+          Keyword.outlets,
+          Keyword.output,
+          Keyword.parallel,
+          Keyword.pipe,
+          Keyword.plant,
+          Keyword.projector,
+          Keyword.query,
+          Keyword.range,
+          Keyword.reference,
+          Keyword.relationship,
+          Keyword.remove,
+          Keyword.replica,
+          Keyword.reply,
+          Keyword.repository,
+          Keyword.requires,
+          Keyword.required,
+          Keyword.record,
+          Keyword.result,
+          Keyword.results,
+          Keyword.return_,
+          Keyword.returns,
+          Keyword.reverted,
+          Keyword.router,
+          Keyword.saga,
+          Keyword.schema,
+          Keyword.selects,
+          Keyword.send,
+          Keyword.sequence,
+          Keyword.set,
+          Keyword.show,
+          Keyword.shown,
+          Keyword.sink,
+          Keyword.source,
+          Keyword.split,
+          Keyword.state,
+          Keyword.step,
+          Keyword.stop,
+          Keyword.story,
+          Keyword.streamlet,
+          Keyword.table,
+          Keyword.take,
+          Keyword.tell,
+          Keyword.term,
+          Keyword.then_,
+          Keyword.title,
+          Keyword.type_,
+          Keyword.url,
+          Keyword.updates,
+          Keyword.user,
+          Keyword.value,
+          Keyword.void,
+          Keyword.when,
+          Keyword.where,
+          Keyword.with_
+        )
       )
     )
   }
@@ -549,6 +548,7 @@ object Keyword {
   final val nebula = "nebula"
   final val on = "on"
   final val one = "one"
+  final val or = "or"
   final val organization = "organization"
   final val option = "option"
   final val optional = "optional"
@@ -688,6 +688,7 @@ object Keyword {
     nebula,
     on,
     one,
+    or,
     organization,
     option,
     optional,
