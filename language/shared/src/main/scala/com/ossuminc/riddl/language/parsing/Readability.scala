@@ -22,21 +22,11 @@ trait Readability {
 
   def by[u: P]: P[Unit] = keyword("by")
 
-  def byAs[u: P]: P[Unit] = Keywords.keywords(StringIn("by", "as"))
-
   def `for`[u: P]: P[Unit] = keyword("for")
 
   def from[u: P]: P[Unit] = keyword("from")
 
   def in[u: P]: P[Unit] = keyword("in")
-
-  def is[u: P]: P[Unit] = {
-    Keywords
-      .keywords(
-        StringIn("is", "are", ":", "=")
-      )
-      .?
-  }
 
   def of[u: P]: P[Unit] = keyword("of")
 
@@ -52,24 +42,24 @@ trait Readability {
 
   def anyReadability[u: P]: P[Unit] = {
     P(
-      StringIn(
-        ReadabilityWords.and,
-        ReadabilityWords.are,
-        ReadabilityWords.as,
-        ReadabilityWords.at,
-        ReadabilityWords.by,
-        ReadabilityWords.colon,
-        ReadabilityWords.equals,
-        ReadabilityWords.`for`,
-        ReadabilityWords.from,
-        ReadabilityWords.in,
-        ReadabilityWords.is,
-        ReadabilityWords.of,
-        ReadabilityWords.so,
-        ReadabilityWords.that,
-        ReadabilityWords.to,
-        ReadabilityWords.wants,
-        ReadabilityWords.with_
+      Keywords.keywords(
+        StringIn(
+          ReadabilityWords.and,
+          ReadabilityWords.are,
+          ReadabilityWords.as,
+          ReadabilityWords.at,
+          ReadabilityWords.by,
+          ReadabilityWords.`for`,
+          ReadabilityWords.from,
+          ReadabilityWords.in,
+          ReadabilityWords.is,
+          ReadabilityWords.of,
+          ReadabilityWords.so,
+          ReadabilityWords.that,
+          ReadabilityWords.to,
+          ReadabilityWords.wants,
+          ReadabilityWords.with_
+        )
       )
     )
   }
@@ -85,8 +75,6 @@ object ReadabilityWords {
   final val from = "from"
   final val in = "in"
   final val is = "is"
-  final val colon = ":"
-  final val equals = "="
   final val of = "of"
   final val so = "so"
   final val that = "that"
@@ -105,8 +93,6 @@ object ReadabilityWords {
     from,
     in,
     is,
-    colon,
-    equals,
     of,
     so,
     that,

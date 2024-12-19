@@ -45,8 +45,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.message must include("white space after keyword")
-        case Right(_) => fail("'domainfoois' should be flagged as needing whitespace after a keyword")
+          errors.head.message must include("Expected one of (\"/*\" | \"//\" | \"author\" | \"include\" | \"module\"")
+        case Right(_) => fail("'domainfoois' should not be recognized")
       }
     }
     "handle missing }" in { (td: TestData) =>

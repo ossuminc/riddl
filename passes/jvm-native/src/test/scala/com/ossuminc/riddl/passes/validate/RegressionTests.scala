@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
@@ -20,11 +21,13 @@ class RegressionTests extends AbstractValidatingTest {
         """domain foo is { ??? } with {
           |  described as { "foo" }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
         case Right((domain: Domain, _)) =>
-          domain.descriptions must not be(empty)
+          domain.descriptions must not be (empty)
       }
     }
     "allow descriptions as a doc block" in { (td: TestData) =>
@@ -36,15 +39,17 @@ class RegressionTests extends AbstractValidatingTest {
           |    }
           |  }
           |
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseDefinition[Domain](input) match {
         case Left(errors) => fail(errors.format)
         case Right((domain: Domain, _)) =>
-          domain.descriptions must not be(empty)
+          domain.descriptions must not be (empty)
       }
     }
 
-    "allow simple descriptions" in {  (td: TestData) =>
+    "allow simple descriptions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is {
           |type DeliveryInstruction is any of {
@@ -63,7 +68,9 @@ class RegressionTests extends AbstractValidatingTest {
           |    |25 Livrer au bureau de poste
           |  }
           |}
-          |}""".stripMargin,td)
+          |}""".stripMargin,
+        td
+      )
       parseDomainDefinition[Type](input, _.types.last) match {
         case Left(errors) => fail(errors.format)
         case Right(_)     =>
@@ -75,26 +82,22 @@ class RegressionTests extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain foo {
           |  type Bug: IntegerRange
-          |}""".stripMargin,td)
+          |}""".stripMargin,
+        td
+      )
 
       def extract(root: Root): Type = {
         root.domains.head.types.head
       }
       parseTopLevelDomain[Type](input, extract) match {
         case Left(messages) =>
-          val errors = messages.justErrors
-          errors.size.mustBe(1)
-          errors.head.message.contains ("whitespace after keyword")
+          fail(messages.format)
         case Right((typ, rpi)) =>
           import scala.language.postfixOps
           val expected: Type = Type(
-            (2, 3, rpi),
-            Identifier((2, 8, rpi), "Bug"),
-            AliasedTypeExpression(
-              (2, 15, rpi),
-              "type",
-              PathIdentifier((2, 20, rpi), List("IntegerRange"))
-            )
+            At(rpi, 15, 38),
+            Identifier(At(rpi, 20, 23), "Bug"),
+            AliasedTypeExpression(At(rpi, 25, 38), "type", PathIdentifier(At(rpi, 25, 37), List("IntegerRange")))
           )
           typ.mustBe(expected)
       }
@@ -110,7 +113,9 @@ class RegressionTests extends AbstractValidatingTest {
           |    schedule: type DateRange+
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       def extract(root: Root): Type = {
         root.domains.head.types(2)
       }
@@ -186,7 +191,9 @@ class RegressionTests extends AbstractValidatingTest {
           |    }
           |	 }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
         val errors: Messages.Messages = msgs.justErrors
         errors must be(empty)
@@ -220,7 +227,9 @@ class RegressionTests extends AbstractValidatingTest {
           |    }
           |  }
           |}
-          |""".stripMargin,td)
+          |""".stripMargin,
+        td
+      )
       parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_, _, msgs) =>
         msgs mustNot be(empty)
         val duplicate =
