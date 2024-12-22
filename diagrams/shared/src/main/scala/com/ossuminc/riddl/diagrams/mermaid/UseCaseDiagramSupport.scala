@@ -23,7 +23,7 @@ trait UseCaseDiagramSupport(using pc: PlatformContext) {
   def makeDocLink(definition: Definition): String
 
   @JSExport
-  def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Parent): Option[T] = {
+  def getDefinitionFor[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Branch[?]): Option[T] = {
     passesResult.refMap.definitionOf[T](pathId, parent)
   }
 

@@ -54,13 +54,13 @@ class ReferenceMapTest extends AbstractValidatingTest {
 
     "inserts a value and finds it" in { _ =>
       val context: Context = Context(At(), Identifier(At(), "context"))
-      val parent: Parent = Domain(At(), Identifier(At(), "domain"))
+      val parent: Branch[?] = Domain(At(), Identifier(At(), "domain"))
       val pid = PathIdentifier(At(), Seq("wrong-name"))
       refMap.add[Context](pid, parent, context)
       refMap.definitionOf[Context](pid, parent) must not be empty
     }
 
-    "have definitionOf(pid: PathIdentifier, parent: Parent) work" in { _ =>
+    "have definitionOf(pid: PathIdentifier, parent: Branch) work" in { _ =>
       val pid = PathIdentifier(At.empty, Seq("Sink", "Commands"))
       val context = result.root.domains.head.includes.head.contents.filter[Context].head
       val parent = context.connectors.head
@@ -83,7 +83,7 @@ class ReferenceMapTest extends AbstractValidatingTest {
       }
     }
 
-    "have definitionOf(ref: References[T], parent: Parent) work" in { (td: TestData) =>
+    "have definitionOf(ref: References[T], parent: Branch) work" in { (td: TestData) =>
       val context = result.root.domains.head.includes(1).contents.filter[Context].head
       val entity = context.entities.head
       val expected = entity.types(2)

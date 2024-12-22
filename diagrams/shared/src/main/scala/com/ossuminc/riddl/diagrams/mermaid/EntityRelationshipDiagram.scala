@@ -17,7 +17,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap)(using pc: PlatformContext)
 
   private def makeTypeName(
     pid: PathIdentifier,
-    parent: Parent
+    parent: Branch[?]
   ): String = {
     refMap.definitionOf[Definition](pid, parent) match {
       case None => s"unresolved path: ${pid.format}"
@@ -27,7 +27,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap)(using pc: PlatformContext)
 
   private def makeTypeName(
     typeEx: TypeExpression,
-    parent: Parent
+    parent: Branch[?]
   ): String = {
     val name = typeEx match {
       case AliasedTypeExpression(_, _, pid)      => makeTypeName(pid, parent)
@@ -47,7 +47,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap)(using pc: PlatformContext)
   private def makeERDRelationship(
     from: String,
     to: Field,
-    parent: Parent
+    parent: Branch[?]
   ): String = {
     val typeName = makeTypeName(to.typeEx, parent)
     if typeName.nonEmpty then
@@ -66,7 +66,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap)(using pc: PlatformContext)
   def generate(
     name: String,
     fields: Seq[Field],
-    parent: Parent
+    parent: Branch[?]
   ): Seq[String] = {
 
     val typ: Seq[String] = s"$name {" +: fields.map { f =>

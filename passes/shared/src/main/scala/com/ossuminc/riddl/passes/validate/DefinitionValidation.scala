@@ -16,7 +16,7 @@ import com.ossuminc.riddl.utils.PlatformContext
 trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   def symbols: SymbolsOutput
 
-  private def checkUniqueContent(definition: Parent): Unit = {
+  private def checkUniqueContent(definition: Branch[?]): Unit = {
     val allNamedValues = definition.contents.definitions
     val allNames = allNamedValues.map(_.identify)
     if allNames.distinct.size < allNames.size then {
@@ -51,7 +51,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       case vd: VitalDefinition[?] =>
         checkMetadata(vd)
         vd.authorRefs.foreach { (authorRef: AuthorRef) =>
-          pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Parent] +: parents) match
+          pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Branch[?]] +: parents) match
             case None =>
               messages.addError(
                 authorRef.loc,
@@ -76,10 +76,10 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   }
 
   def checkContents(
-    container: Parent,
-    parents: Parents
+                     container: Branch[?],
+                     parents: Parents
   ): Unit =
-    val parent: Parent = parents.headOption.getOrElse(Root.empty)
+    val parent: Branch[?] = parents.headOption.getOrElse(Root.empty)
     check(
       container.contents.definitions.nonEmpty || container.isInstanceOf[Field],
       s"${container.identify} in ${parent.identify} should have content",
@@ -90,7 +90,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
 
   def checkContainer(
     parents: Parents,
-    container: Parent
+    container: Branch[?]
   ): Unit = {
     checkDefinition(parents, container)
     checkContents(container, parents)

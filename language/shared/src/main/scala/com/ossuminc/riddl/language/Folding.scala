@@ -33,7 +33,7 @@ object Folding {
     *   The resulting state of type `S`
     */
   @JSExport
-  def foldEachDefinition[S, CV <: ContentValues](
+  def foldEachDefinition[S, CV <: RiddlValue](
     container: Container[CV],
     empty: S
   )(foldIt: (S, CV) => S): S =
@@ -57,14 +57,14 @@ object Folding {
     * @see
     *   [[scala.collection.Seq.foldLeft()]]
     */
-  @JSExport final def foldLeftWithStack[S, CT <: ContentValues](
+  @JSExport final def foldLeftWithStack[S, CT <: RiddlValue](
     zeroValue: S,
     top: Container[CT],
     parents: ParentStack
   )(f: (S, CT | Container[CT], Parents) => S): S = {
     val initial = f(zeroValue, top, parents.toParents)
     top match
-      case p: Parent => parents.push(p)
+      case p: Branch[?] => parents.push(p)
       case _         => ()
     end match
     val value =
@@ -77,7 +77,7 @@ object Folding {
         }
       } finally {
         top match
-          case p: Parent => parents.pop()
+          case p: Branch[?] => parents.pop()
           case _         => ()
         end match
       }

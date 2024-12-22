@@ -24,7 +24,7 @@ trait BasicValidation(using pc: PlatformContext) {
   def resolution: ResolutionOutput
   protected def messages: Messages.Accumulator
 
-  def parentOf(definition: Definition): Parent = {
+  def parentOf(definition: Definition): Branch[?] = {
     symbols.parentOf(definition).getOrElse(Root.empty)
   }
 
@@ -44,7 +44,7 @@ trait BasicValidation(using pc: PlatformContext) {
       // Let's try the symbol table
       symbols.lookup[Definition](pid.value.reverse).headOption
     else
-      parents.headOption.flatMap { (head: Parent) =>
+      parents.headOption.flatMap { (head: Branch[?]) =>
         resolution.refMap.definitionOf[Definition](pid, head)
       }
   }

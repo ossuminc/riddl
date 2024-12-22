@@ -113,7 +113,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
   private val kind_stats: mutable.HashMap[String, KindStats] = mutable.HashMap.empty
   private var total_stats: Option[KindStats] = None
 
-  private def computeNumStatements(definition: Parent): Long = {
+  private def computeNumStatements(definition: Branch[?]): Long = {
     def handlerStatements(handlers: Seq[Handler]): Long = {
       val sizes: Seq[Long] = for {
         handler <- handlers
@@ -155,7 +155,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     val specs: Int = specificationsFor(definition)
     val completes: Int = completedCount(definition)
     definition match {
-      case definition: Parent =>
+      case definition: Branch[?] =>
         Seq(
           DefinitionStats(
             kind = definition.kind,

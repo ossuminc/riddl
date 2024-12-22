@@ -65,7 +65,7 @@ trait MarkdownWriter(using pc: PlatformContext)
     }
   end makeDomainIndex
 
-  private def makeData(container: Parent, parents: Seq[String]): Level =
+  private def makeData(container: Branch[?], parents: Seq[String]): Level =
     Level(
       container.identify,
       generator.makeDocLink(container, parents),

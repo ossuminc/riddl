@@ -251,9 +251,9 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
       case include: Include[?] =>
         // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
         include.contents.foreach { value => traverse(value, parents) }
-      case leaf: LeafDefinition =>
+      case leaf: Leaf =>
         process(leaf, parents)
-      case branch: BranchDefinition[?] =>
+      case branch: Branch[?] =>
         process(branch, parents)
         parents.push(branch)
         branch.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
@@ -277,7 +277,7 @@ abstract class DepthFirstPass(
    * @param parents
    *   The parents of the definition
    */
-  protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
+  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case root: Root =>
         parents.push(root)
@@ -288,9 +288,9 @@ abstract class DepthFirstPass(
         // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
         include.contents.foreach { value => traverse(value, parents) }
         process(include, parents)
-      case leaf: LeafDefinition =>
+      case leaf: Leaf =>
         process(leaf, parents)
-      case branch: BranchDefinition[?] =>
+      case branch: Branch[?] =>
         parents.push(branch)
         branch.contents.foreach { (value: RiddlValue) => traverse(value, parents) }
         parents.pop()
@@ -345,7 +345,7 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
     * @param parents
     *   THe parents of the leaf node
     */
-  protected def processLeaf(definition: LeafDefinition, parents: Parents): Unit
+  protected def processLeaf(definition: Leaf, parents: Parents): Unit
 
   /** Process a non-definition, non-include, value
     *
@@ -381,7 +381,7 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
         openInclude(include, parents.toParents)
         include.contents.foreach { item => traverse(item, parents) }
         closeInclude(include, parents.toParents)
-      case container: Parent => // must be a container so descend
+      case container: Branch[?] => // must be a container so descend
         val def_parents = parents.toParents // save this for the closeContainer below
         openContainer(container, def_parents)
         if container.contents.nonEmpty then // just optimize out the push/pop for empty contents, which is frequent
@@ -390,7 +390,7 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
           parents.pop()
         end if
         closeContainer(container, def_parents)
-      case leaf: LeafDefinition => // no further descent
+      case leaf: Leaf => // no further descent
         processLeaf(leaf, parents.toParents)
       case value: RiddlValue => // no further descent
         processValue(value, parents.toParents)
@@ -536,7 +536,7 @@ abstract class VisitingPass[VT <: PassVisitor](
     end match
   end closeContainer
 
-  protected final def processLeaf(definition: LeafDefinition, parents: Parents): Unit =
+  protected final def processLeaf(definition: Leaf, parents: Parents): Unit =
     definition match
       case field: Field                   => visitor.doField(field)
       case method: Method                 => visitor.doMethod(method)

@@ -64,10 +64,10 @@ case class GeekDocWriter(
     sb.append(headTemplate)
   }
 
-  def containerHead(cont: Parent): Unit = {
+  def containerHead(cont: Branch[?]): Unit = {
     val brief: String =
       cont match
-        case p: Parent if p.contents.filter[BriefDescription].nonEmpty =>
+        case p: Branch[?] if p.contents.filter[BriefDescription].nonEmpty =>
           p.contents.filter[BriefDescription].foldLeft("")((x,y) => x + y.brief.s)
         case d: WithMetaData => d.briefString
         case _ => cont.id.format + " has no brief description"
@@ -83,7 +83,7 @@ case class GeekDocWriter(
     )
   }
 
-  def leafHead(definition: LeafDefinition, weight: Int): Unit = {
+  def leafHead(definition: Leaf, weight: Int): Unit = {
     fileHead(
       s"${definition.id.format}: ${definition.getClass.getSimpleName}",
       weight,

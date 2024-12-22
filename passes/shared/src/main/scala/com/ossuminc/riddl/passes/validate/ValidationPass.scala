@@ -184,7 +184,7 @@ case class ValidationPass(
     statement: Statement,
     parents: Parents
   ): Unit =
-    val onClause: Parent = parents.head
+    val onClause: Branch[?] = parents.head
     statement match
       case ArbitraryStatement(loc, what) =>
         checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)

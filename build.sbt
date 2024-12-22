@@ -4,10 +4,12 @@ import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProble
 import de.heikoseeberger.sbtheader.License.ALv2
 import de.heikoseeberger.sbtheader.LicenseStyle.SpdxSyntax
 import sbt.Append.{appendSeqImplicit, appendSet}
-import sbt.Keys.{description, libraryDependencies}
+import sbt.Keys.{description, libraryDependencies, scalacOptions}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
 import sbttastymima.TastyMiMaPlugin.autoImport.*
+
+import scala.collection.Seq
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass, maintainer)
@@ -263,6 +265,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
+    scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     description := "RIDDL Command Infrastructure and command definitions"
   )
   .jvmConfigure(With.coverage(50))

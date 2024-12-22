@@ -97,25 +97,22 @@ object AST:
 
   end RiddlValue
 
-  /** The kinds of things that are valid content, either immediate or future */
-  type ContentValues = RiddlValue
-
   /** A frequently used type alias for a Seq of [[RiddlValue]] */
-  type Contents[CV <: ContentValues] = mutable.ArrayBuffer[CV]
+  type Contents[CV <: RiddlValue] = mutable.ArrayBuffer[CV]
 
   object Contents:
-    def empty[T <: ContentValues] = mutable.ArrayBuffer.empty[T]
-    def apply[T <: ContentValues](items: T*) = mutable.ArrayBuffer[T](items: _*)
-    def unapply[T <: ContentValues](contents: Contents[T]) = mutable.ArrayBuffer.unapplySeq[T](contents)
+    def empty[T <: RiddlValue] = mutable.ArrayBuffer.empty[T]
+    def apply[T <: RiddlValue](items: T*) = mutable.ArrayBuffer[T](items: _*)
+    def unapply[T <: RiddlValue](contents: Contents[T]) = mutable.ArrayBuffer.unapplySeq[T](contents)
   end Contents
 
-  extension [CV <: ContentValues](sequence: Seq[CV])
+  extension [CV <: RiddlValue](sequence: Seq[CV])
     def toContents: Contents[CV] = Contents[CV](sequence: _*)
     def find(name: String): Option[CV] =
       sequence.find(d => d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name)
 
   /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
-  extension [CV <: ContentValues](container: Contents[CV])
+  extension [CV <: RiddlValue](container: Contents[CV])
 
     /** Extract the elements of the [[Contents]] that have identifiers (are definitions, essentially) */
     private def identified: Contents[CV] = container.filter(_.isIdentified)
@@ -153,8 +150,8 @@ object AST:
     /** find the elements of the [[Contents]] that are [[Definition]]s */
     def definitions: Definitions = container.filter[Definition].map(_.asInstanceOf[Definition])
 
-    /** find the elemetns of the [[Contents]] that are [[Parent]]s */
-    def parents: Seq[Parent] = container.filter[Parent]
+    /** find the elemetns of the [[Contents]] that are [[Branch]]s */
+    def parents: Seq[Branch[CV]] = container.filter[Branch[CV]]
 
     def toSeq: Seq[CV] = container.toSeq
   end extension
@@ -164,7 +161,7 @@ object AST:
     * @tparam CV
     *   The kind of contained value that is contained within.
     */
-  sealed trait Container[CV <: ContentValues] extends RiddlValue:
+  sealed trait Container[CV <: RiddlValue] extends RiddlValue:
     /** The definitional contents of this Container value. The [[contents]] are constrained by the type parameter CV so
       * subclasses must honor that constraint.
       */
@@ -177,7 +174,7 @@ object AST:
   end Container
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
-  case class SimpleContainer[CV <: ContentValues](contents: Contents[CV]) extends Container[CV]:
+  case class SimpleContainer[CV <: RiddlValue](contents: Contents[CV]) extends Container[CV]:
     def format: String = ""
     def loc: At = At.empty
   end SimpleContainer
@@ -477,14 +474,14 @@ object AST:
   end WithMetaData
 
   /** A trait that includes the `comments` field to extract the comments from the contents */
-  sealed trait WithComments[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithComments[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Comment]] filtered from the contents */
     def comments: Seq[Comment] = contents.filter[Comment]
   end WithComments
 
   /** Added to definitions that support includes */
-  sealed trait WithIncludes[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithIncludes[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Include]] filtered from the contents */
     def includes: Seq[Include[CV]] = contents.filter[Include[CV]]
@@ -494,7 +491,7 @@ object AST:
   /** Base trait that can be used in any definition that takes options and ensures the options are defined, can be
     * queried, and formatted.
     */
-  sealed trait WithOptions[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithOptions[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[OptionValue]] filtered from the contents */
     def options: Seq[OptionValue] = contents.filter[OptionValue]
@@ -510,7 +507,7 @@ object AST:
   end WithOptions
 
   /** Base trait of any definition that is a container and contains types */
-  sealed trait WithTypes[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithTypes[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Type]] filtered from the contents */
     def types: Seq[Type] = contents.filter[Type]
@@ -518,91 +515,91 @@ object AST:
   end WithTypes
 
   /** Base trait to use in any definition that can define a constant */
-  sealed trait WithConstants[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithConstants[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Constant]] filtered from the contents */
     def constants: Seq[Constant] = contents.filter[Constant]
   end WithConstants
 
   /** Base trait to use in any [[Definition]] that can define an invariant */
-  sealed trait WithInvariants[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithInvariants[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Invariant]] filtered from the contents */
     def invariants: Seq[Invariant] = contents.filter[Invariant]
   end WithInvariants
 
   /** Base trait to use in any [[Definition]] that can define a [[Function]] */
-  sealed trait WithFunctions[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithFunctions[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Function]] filtered from the contents */
     def functions: Seq[Function] = contents.filter[Function].toSeq
   end WithFunctions
 
   /** Base trait to use in any [[Processor]] because they define [[Handler]]s */
-  sealed trait WithHandlers[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithHandlers[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Handler]] filtered from the contents */
     def handlers: Seq[Handler] = contents.filter[Handler]
   end WithHandlers
 
   /** Base trait to use in any [[Definition]] that can define an [[Inlet]] */
-  sealed trait WithInlets[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithInlets[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Inlet]] filtered from the contents */
     def inlets: Seq[Inlet] = contents.filter[Inlet]
   end WithInlets
 
   /** Base trait to use in any [[Definition]] that can define an [[Outlet]] */
-  sealed trait WithOutlets[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithOutlets[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Outlet]] filtered from the contents */
     def outlets: Seq[Outlet] = contents.filter[Outlet]
   end WithOutlets
 
   /** Base trait to use in any [[Definition]] that can define a [[State]] */
-  sealed trait WithStates[CV <: ContentValues] extends Container[?]:
+  sealed trait WithStates[CV <: RiddlValue] extends Container[?]:
 
     /** A lazily constructed [[Seq]] of [[State]] filtered from the contents */
     def states: Seq[State] = contents.filter[State]
   end WithStates
 
   /** Base trait to use in any [[Definition]] that can define a [[Group]] */
-  sealed trait WithGroups[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithGroups[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Group]] filtered from the contents */
     def groups: Seq[Group] = contents.filter[Group]
   end WithGroups
 
   /** Base trait to use in any [[Definition]] that can define a [[Output]] */
-  sealed trait WithOutputs[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithOutputs[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
     def outputs: Seq[Output] = contents.filter[Output]
   end WithOutputs
 
   /** Base trait to use in any [[Definition]] that can define a [[Output]] */
-  sealed trait WithInputs[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithInputs[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Output]] filtered from the contents */
     def inputs: Seq[Input] = contents.filter[Input]
   end WithInputs
 
   /** Base trait to use to define the [[AST.Statement]]s that form the body of a [[Function]] or [[OnClause]] */
-  sealed trait WithStatements[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithStatements[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Statement]] filtered from the contents */
     def statements: Seq[Statement] = contents.filter[Statement]
   end WithStatements
 
   /** Base trait to use in a [[Domain]] to define the bounded [[Context]] it contains */
-  sealed trait WithContexts[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithContexts[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Context]] filtered from the contents */
     def contexts: Seq[Context] = contents.filter[Context]
   end WithContexts
 
   /** Base trait to use in any [[Definition]] that can define [[Author]]s */
-  sealed trait WithAuthors[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithAuthors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Author]] filtered from the contents */
     def authors: Seq[Author] = contents.filter[Author]
@@ -610,98 +607,98 @@ object AST:
   end WithAuthors
 
   /** Base trait to use in any [[Definition]] that can define [[User]]s */
-  sealed trait WithUsers[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithUsers[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[User]] filtered from the contents */
     def users: Seq[User] = contents.filter[User]
   end WithUsers
 
   /** Base trait to use in any [[Definition]] that can define [[Epic]]s */
-  sealed trait WithEpics[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithEpics[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Epic]] filtered from the contents */
     def epics: Seq[Epic] = contents.filter[Epic]
   end WithEpics
 
   /** Base trait to use in any [[Definition]] that can define [[Domain]]s */
-  sealed trait WithDomains[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithDomains[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Domain]] filtered from the contents */
     def domains: Seq[Domain] = contents.filter[Domain]
   end WithDomains
 
   /** Base trait to use in any [[Definition]] that can define [[Projector]]s */
-  sealed trait WithProjectors[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithProjectors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Projector]] filtered from the contents */
     def projectors: Seq[Projector] = contents.filter[Projector]
   end WithProjectors
 
   /** Base trait to use in any [[Definition]] that can define [[Repository]]s */
-  sealed trait WithRepositories[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithRepositories[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Repository]] filtered from the contents */
     def repositories: Seq[Repository] = contents.filter[Repository]
   end WithRepositories
 
   /** Base trait to use in any [[Definition]] that can define [[Entity]]s */
-  sealed trait WithEntities[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithEntities[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Entity]] filtered from the contents */
     def entities: Seq[Entity] = contents.filter[Entity]
   end WithEntities
 
   /** Base trait to use in any [[Definition]] that can define [[Streamlet]]s */
-  sealed trait WithStreamlets[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithStreamlets[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Streamlet]] filtered from the contents */
     def streamlets: Seq[Streamlet] = contents.filter[Streamlet]
   end WithStreamlets
 
   /** Base trait to use in any [[Definition]] that can define [[Connector]]s */
-  sealed trait WithConnectors[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithConnectors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Connector]] filtered from the contents */
     def connectors: Seq[Connector] = contents.filter[Connector]
   end WithConnectors
 
   /** Base trait to use in any [[Definition]] that can define [[Adaptor]]s */
-  sealed trait WithAdaptors[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithAdaptors[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Adaptor]] filtered from the contents */
     def adaptors: Seq[Adaptor] = contents.filter[Adaptor]
   end WithAdaptors
 
   /** Base trait to use in any [[Definition]] that can define [[Saga]]s */
-  sealed trait WithSagas[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithSagas[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[Saga]] filtered from the contents */
     def sagas: Seq[Saga] = contents.filter[Saga]
   end WithSagas
 
   /** Base trait to use in any [[Definition]] that can define [[SagaStep]]s */
-  sealed trait WithSagaSteps[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithSagaSteps[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[SagaStep]] filtered from the contents */
     def sagaSteps: Seq[SagaStep] = contents.filter[SagaStep]
   end WithSagaSteps
 
   /** Base trait to use in any [[Definition]] that can define [[UseCase]]s */
-  sealed trait WithUseCases[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithUseCases[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[UseCase]] filtered from the contents */
     def cases: Seq[UseCase] = contents.filter[UseCase]
   end WithUseCases
 
   /** Base trait to use in any [[Definition]] that can define [[ShownBy]]s */
-  sealed trait WithShownBy[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithShownBy[CV <: RiddlValue] extends Container[CV]:
 
     /** A lazily constructed [[Seq]] of [[ShownBy]] filtered from the contents */
     def shownBy: Seq[ShownBy] = contents.filter[ShownBy]
   end WithShownBy
 
   /** Base trait to use anywhere that can contain [[Module]]s */
-  sealed trait WithModules[CV <: ContentValues] extends Container[CV]:
+  sealed trait WithModules[CV <: RiddlValue] extends Container[CV]:
     /** A lazily constructed [[Contents]] of [[Module]] */
     def modules: Seq[Module] = contents.filter[Module]
   end WithModules
@@ -836,7 +833,7 @@ object AST:
     * identifier and can have attachments
     *
     * @see
-    *   [[BranchDefinition]] and [[LeafDefinition]]
+    *   [[Branch]] and [[Leaf]]
     */
   sealed trait Definition extends WithIdentifier:
     /** Yes anything deriving from here is a definition */
@@ -855,21 +852,17 @@ object AST:
     }
   end Definition
 
-  /** The Base trait for a definition that contains some unrestricted kind of content, ContentValues */
-  sealed trait Parent extends Definition with Container[?]:
+  /** The Base trait for a definition that contains some unrestricted kind of content, RiddlValue */
+  sealed trait Branch[CV <: RiddlValue] extends Definition with Container[CV]:
     override def isParent: Boolean = true
+    override def hasDefinitions: Boolean = !contents.isEmpty
+    type ContentType = CV
+  end Branch
 
-    /** True iff there are contained definitions */
-    override def hasDefinitions: Boolean = contents.definitions.nonEmpty
-  end Parent
-
-  /** A leaf node in the hierarchy of definitions. Leaves have no content, unlike [[Parent]]. They do permit a single
+  /** A leaf node in the hierarchy of definitions. Leaves have no content, unlike [[Branch]]. They do permit a single
     * [[BriefDescription]] value and single [[Description]] value. There are no contents.
     */
-  sealed trait LeafDefinition extends Definition with WithMetaData
-
-  /** Base trait for all definitions that have a specific kind of contents */
-  sealed trait BranchDefinition[CV <: ContentValues] extends Parent with Container[CV]
+  sealed trait Leaf extends Definition with WithMetaData
 
   type Definitions = Seq[Definition] // TODO: Make this opaque some day
 
@@ -878,14 +871,14 @@ object AST:
   end Definitions
 
   /** A simple sequence of Parents from the closest all the way up to the Root */
-  type Parents = Seq[Parent] // TODO: Make this opaque some day
+  type Parents = Seq[Branch[?]]
 
   object Parents:
-    def empty: Parents = Seq.empty[Parent]
+    def empty[CV <: RiddlValue]: Parents = Seq.empty[Branch[?]]
   end Parents
 
-  /** A mutable stack of Parent[?] for keeping track of the parent hierarchy */
-  type ParentStack = mutable.Stack[Parent] // TODO: Make this opaque some day
+  /** A mutable stack of Branch[?] for keeping track of the parent hierarchy */
+  type ParentStack = mutable.Stack[Branch[?]] // TODO: Make this opaque some day
 
   /** Extension methods for the ParentStack type */
   extension (ps: ParentStack)
@@ -896,7 +889,7 @@ object AST:
   /** A Companion to the ParentStack class */
   object ParentStack:
     /** @return  an empty ParentStack */
-    def empty: ParentStack = mutable.Stack.empty[Parent]
+    def empty[CV <: RiddlValue]: ParentStack = mutable.Stack.empty[Branch[?]]
   end ParentStack
 
   type DefinitionStack = mutable.Stack[Definition] // TODO: Make this opaque some day
@@ -904,8 +897,7 @@ object AST:
   extension (ds: DefinitionStack)
     def toDefinitions: Definitions = ds.toSeq.asInstanceOf[Definitions]
     def isOnlyParents: Boolean = ds.forall(_.isParent)
-    def toParentStack: ParentStack = ds.filter(_.isParent).map(_.asInstanceOf[Parent]).asInstanceOf[ParentStack]
-    def toParentsSeq: Seq[Parent] = ds.filter(_.isParent).map(_.asInstanceOf[Parent]).toSeq
+    def toParentsSeq[CV <: RiddlValue]: Seq[Branch[CV]] = ds.filter(_.isParent).map(_.asInstanceOf[Branch[CV]]).toSeq
   end extension
 
   object DefinitionStack:
@@ -923,8 +915,8 @@ object AST:
     * @tparam CT
     *   The type of the contents of the Vital Definition which must be rooted in RiddlValue
     */
-  sealed trait VitalDefinition[CT <: ContentValues]
-      extends BranchDefinition[CT]
+  sealed trait VitalDefinition[CT <: RiddlValue]
+      extends Branch[CT]
       with WithTypes[CT]
       with WithIncludes[CT]
       with WithComments[CT]
@@ -939,7 +931,7 @@ object AST:
     * @tparam CT
     *   The type of content that the [[Processor]] may contain
     */
-  sealed trait Processor[CT <: ContentValues]
+  sealed trait Processor[CT <: RiddlValue]
       extends VitalDefinition[CT]
       with WithConstants[CT]
       with WithInvariants[CT]
@@ -968,6 +960,7 @@ object AST:
     origin: URL = URL.empty,
     contents: Contents[CT]
   ) extends Container[CT]:
+    type ContentType = CT
 
     override def isRootContainer: Boolean = true
 
@@ -992,7 +985,7 @@ object AST:
   case class Root(
     loc: At = At(),
     contents: Contents[RootContents] = Contents.empty[RootContents]
-  ) extends BranchDefinition[RootContents]
+  ) extends Branch[RootContents]
       with WithModules[RootContents]
       with WithDomains[RootContents]
       with WithAuthors[RootContents]
@@ -1026,7 +1019,7 @@ object AST:
   case class Nebula(
     loc: At,
     contents: Contents[NebulaContents] = Contents.empty
-  ) extends BranchDefinition[NebulaContents]:
+  ) extends Branch[NebulaContents]:
     override def isRootContainer: Boolean = false
 
     override def id: Identifier = Identifier(loc, "Nebula")
@@ -1078,7 +1071,7 @@ object AST:
     id: Identifier,
     is_a: LiteralString,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition:
+  ) extends Leaf:
     def format: String = s"${Keyword.user} ${id.format} is ${is_a.format}"
   end User
 
@@ -1099,7 +1092,7 @@ object AST:
     id: Identifier,
     definition: Seq[LiteralString],
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition:
+  ) extends Leaf:
     def format: String = s"${Keyword.term} ${id.format}"
   end Term
 
@@ -1133,7 +1126,7 @@ object AST:
     title: Option[LiteralString] = None,
     url: Option[com.ossuminc.riddl.utils.URL] = None,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition:
+  ) extends Leaf:
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
     }
@@ -1181,7 +1174,7 @@ object AST:
     cardinality: RelationshipCardinality,
     label: Option[LiteralString] = None,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition:
+  ) extends Leaf:
     def format: String = Keyword.relationship + " " + id.format + " to " + withProcessor.format
   end Relationship
 
@@ -1479,7 +1472,7 @@ object AST:
   /** The base trait of values of an aggregate type to provide the required `typeEx` field to give the
     * [[TypeExpression]] for that value of the aggregate
     */
-  sealed trait AggregateValue extends LeafDefinition:
+  sealed trait AggregateValue extends Leaf:
     def typeEx: TypeExpression
   end AggregateValue
 
@@ -2100,7 +2093,7 @@ object AST:
     id: Identifier,
     typEx: TypeExpression,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends BranchDefinition[TypeContents]
+  ) extends Branch[TypeContents]
       with WithMetaData:
     def contents: Contents[TypeContents] = {
       val type_contents: Seq[TypeContents] =
@@ -2174,7 +2167,7 @@ object AST:
     typeEx: TypeExpression,
     value: LiteralString,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition {
+  ) extends Leaf {
 
     /** Format the node to a string */
     override def format: String =
@@ -2634,7 +2627,7 @@ object AST:
     id: Identifier,
     condition: Option[LiteralString] = Option.empty[LiteralString],
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition {
+  ) extends Leaf {
     override def isEmpty: Boolean = condition.isEmpty
     def format: String = Keyword.invariant + " " + id.format + condition.map(_.format)
   }
@@ -2643,7 +2636,7 @@ object AST:
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends BranchDefinition[Statements] with WithStatements[Statements] with WithMetaData
+  sealed trait OnClause extends Branch[Statements] with WithStatements[Statements] with WithMetaData
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause corresponds
     * to the "other" case of an [[Handler]].
@@ -2749,7 +2742,7 @@ object AST:
     id: Identifier,
     contents: Contents[HandlerContents] = Contents.empty[HandlerContents],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
-  ) extends BranchDefinition[HandlerContents]
+  ) extends Branch[HandlerContents]
       with WithMetaData {
     override def isEmpty: Boolean = clauses.isEmpty
 
@@ -2793,7 +2786,7 @@ object AST:
     id: Identifier,
     typ: TypeRef,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition:
+  ) extends Leaf:
     def format: String = Keyword.state + " " + id.format
   end State
 
@@ -2875,7 +2868,7 @@ object AST:
     links: Map[Identifier, (FieldRef, FieldRef)] = Map.empty[Identifier, (FieldRef, FieldRef)],
     indices: Seq[FieldRef] = Seq.empty[FieldRef],
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition:
+  ) extends Leaf:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   end Schema
 
@@ -3010,7 +3003,7 @@ object AST:
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// STREAMLET
 
   /** A sealed trait for Inlets and Outlets */
-  sealed trait Portlet extends LeafDefinition
+  sealed trait Portlet extends Leaf
 
   /** A streamlet that supports input of data of a particular type.
     *
@@ -3081,7 +3074,7 @@ object AST:
     to: InletRef,
     options: Seq[OptionValue] = Seq.empty[OptionValue],
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition {
+  ) extends Leaf {
     def hasOption(name: String): Boolean = options.exists(_.name == name)
     override def format: String = Keyword.connector + " " + id.format
 
@@ -3278,7 +3271,7 @@ object AST:
     doStatements: Contents[Statements] = Contents.empty[Statements],
     undoStatements: Contents[Statements] = Contents.empty[Statements],
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition {
+  ) extends Leaf {
     def format: String = s"step ${id.format}"
   }
 
@@ -3640,7 +3633,7 @@ object AST:
     userStory: UserStory,
     contents: Contents[UseCaseContents] = Contents.empty[UseCaseContents],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
-  ) extends BranchDefinition[UseCaseContents]
+  ) extends Branch[UseCaseContents]
       with WithMetaData {
     override def kind: String = "UseCase"
     override def format: String = s"case ${id.format}"
@@ -3743,7 +3736,7 @@ object AST:
     id: Identifier,
     contents: Contents[OccursInGroup] = Contents.empty[OccursInGroup],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
-  ) extends BranchDefinition[OccursInGroup]
+  ) extends Branch[OccursInGroup]
       with WithShownBy[OccursInGroup]
       with WithInputs[OccursInGroup]
       with WithOutputs[OccursInGroup]
@@ -3783,7 +3776,7 @@ object AST:
     id: Identifier,
     group: GroupRef,
     metadata: Contents[MetaData] = Contents.empty
-  ) extends LeafDefinition:
+  ) extends Leaf:
     def format: String = s"contains ${id.format} as ${group.format}"
   end ContainedGroup
 
@@ -3807,7 +3800,7 @@ object AST:
     putOut: TypeRef | ConstantRef | LiteralString,
     contents: Contents[OccursInOutput] = Contents.empty[OccursInOutput],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
-  ) extends BranchDefinition[OccursInOutput]
+  ) extends Branch[OccursInOutput]
       with WithOutputs[OccursInOutput]
       with WithMetaData:
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
@@ -3848,7 +3841,7 @@ object AST:
     takeIn: TypeRef,
     contents: Contents[OccursInInput] = Contents.empty[OccursInInput],
     metadata: Contents[MetaData] = Contents.empty[MetaData]
-  ) extends BranchDefinition[OccursInInput]
+  ) extends Branch[OccursInInput]
       with WithInputs[OccursInInput]
       with WithMetaData:
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind

@@ -33,15 +33,15 @@ case class ReferenceMap(messages: Messages.Accumulator) {
 
   def size: Int = map.size
 
-  def add[T <: Definition: ClassTag](ref: Reference[T], parent: Parent, definition: T): Unit = {
+  def add[T <: Definition: ClassTag](ref: Reference[T], parent: Branch[?], definition: T): Unit = {
     add(ref.pathId.format, parent, definition)
   }
 
-  def add[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Parent, definition: T): Unit = {
+  def add[T <: Definition: ClassTag](pathId: PathIdentifier, parent: Branch[?], definition: T): Unit = {
     add(pathId.format, parent, definition)
   }
 
-  private def add[T <: Definition: ClassTag](pathId: String, parent: Parent, definition: T): Unit = {
+  private def add[T <: Definition: ClassTag](pathId: String, parent: Branch[?], definition: T): Unit = {
     val key = Key(pathId, parent)
     val expected = classTag[T].runtimeClass
     val actual = definition.getClass
@@ -79,7 +79,8 @@ case class ReferenceMap(messages: Messages.Accumulator) {
         None
   }
 
-  def definitionOf[T <: Definition: ClassTag](ref: Reference[T], parent: Parent)(using PlatformContext): Option[T] = {
+  def definitionOf[T <: Definition: ClassTag](ref: Reference[T], parent: Branch[?])(using PlatformContext): Option[T]
+  = {
     definitionOf[T](ref.pathId, parent)
   }
 }

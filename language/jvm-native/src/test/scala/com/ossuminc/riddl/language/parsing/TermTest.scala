@@ -32,7 +32,7 @@ class TermTest extends ParsingTest {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right((model, _)) =>
-          import com.ossuminc.riddl.language.AST.{Parent, RiddlValue}
+          import com.ossuminc.riddl.language.AST.{Branch, RiddlValue}
           val finder = Finder(model)
           val found = finder.find(_.isInstanceOf[Term])
           found contains Term(

@@ -170,7 +170,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def makeOutletRelationships(
     context: Context,
     outlets: Seq[Outlet],
-    parent: Parent
+    parent: Branch[?]
   ): Seq[ContextRelationship] = {
     for {
       o <- outlets
@@ -182,7 +182,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     }
   }
 
-  private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Parent): Seq[ContextRelationship] = {
+  private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Branch[?]): Seq[ContextRelationship]
+  = {
     for {
       i <- inlets
       t = i.type_
@@ -244,7 +245,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def makeTypeRelationships(
     context: Context,
     types: Seq[Type],
-    parent: Parent
+    parent: Branch[?]
   ): Seq[ContextRelationship] = {
     for {
       typ <- types
@@ -260,7 +261,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def makeFieldRelationships(
     context: Context,
     fields: Seq[Field],
-    parent: Parent
+    parent: Branch[?]
   ): Seq[ContextRelationship] = {
     for {
       f <- fields
