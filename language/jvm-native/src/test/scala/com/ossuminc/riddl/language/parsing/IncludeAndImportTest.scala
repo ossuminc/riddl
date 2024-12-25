@@ -57,13 +57,13 @@ class IncludeAndImportTest extends ParsingTest {
       val inc = StringParserInput("", url)
       root.domains mustNot be(empty)
       root.domains.head.includes mustNot be(empty)
-      root.domains.head.includes.head.contents mustNot be(empty)
+      root.domains.head.includes.head.contents.isEmpty mustNot be(true)
       val actual = root.domains.head.includes.head.contents.head
       val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
         String_((1, 13, inc)),
-        Contents.empty
+        Contents.empty()
       )
       actual mustBe expected
     }
@@ -74,20 +74,20 @@ class IncludeAndImportTest extends ParsingTest {
       root.domains mustNot be(empty)
       root.domains.head.contexts mustNot be(empty)
       root.domains.head.contexts.head.includes mustNot be(empty)
-      root.domains.head.contexts.head.includes.head.contents mustNot be(empty)
+      root.domains.head.contexts.head.includes.head.contents.isEmpty mustNot be(true)
       val actual = root.domains.head.contexts.head.includes.head.contents.head
       val expected = Type(
         (1, 1, inc),
         Identifier((1, 6, inc), "foo"),
         String_((1, 12, inc)),
-        Contents.empty
+        Contents.empty()
       )
       actual mustBe expected
     }
     "handle 553-Contained-Group-References-Do-Not-Work" in { (td: TestData) =>
       val (root, _) = checkFile("Include Group", "includes/includer.riddl")
       root.domains mustNot be(empty)
-      root.domains.head.includes.head.contents mustNot be(empty)
+      root.domains.head.includes.head.contents.isEmpty mustNot be(true)
     }
     "warn about duplicate includes" in { (td: TestData) =>
       val path = java.nio.file.Path.of(defaultInputDir + "/includes/duplicateInclude.riddl")

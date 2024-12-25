@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.AST.{Contents, *}
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST.RelationshipCardinality.OneToOne
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.language.{AST, At}
@@ -39,9 +39,9 @@ class ASTTest extends AbstractTestingBasis {
     }
     "support all type constructs" in {
       AliasedTypeExpression(0 -> 0, "record", PathIdentifier(0 -> 0, Seq("Foo"))).format mustBe "record Foo"
-      Enumeration((0, 0), Contents.empty[Enumerator]).format mustBe "{  }"
-      Alternation((0, 0), Contents.empty[AliasedTypeExpression]).format mustBe "one of {  }"
-      Aggregation((0, 0), Contents.empty[AggregateContents]).format mustBe "{  }"
+      Enumeration((0, 0), Contents.empty[Enumerator]()).format mustBe "{  }"
+      Alternation((0, 0), Contents.empty[AliasedTypeExpression]()).format mustBe "one of {  }"
+      Aggregation((0, 0), Contents.empty[AggregateContents]()).format mustBe "{  }"
       Optional(
         (0, 0),
         AliasedTypeExpression((0, 0), "record", PathIdentifier((0, 0), Seq("String")))
@@ -119,7 +119,7 @@ class ASTTest extends AbstractTestingBasis {
   val entityRef: EntityRef = EntityRef(At.empty, PathIdentifier(At.empty, Seq("Entity")))
   val aggregate: AggregateUseCaseTypeExpression = AggregateUseCaseTypeExpression(
     At.empty,
-    CommandCase,
+    AggregateUseCase.CommandCase,
     Contents(Field(At(), Identifier(At(), "foo"), String_(At(), None, None)))
   )
   val command: Type = Type(At.empty, Identifier(At(), "command"), aggregate)
@@ -139,8 +139,8 @@ class ASTTest extends AbstractTestingBasis {
     CodeStatement(At.empty, language = LiteralString(At.empty, "scala"), body = "def f[A](x: A): A"),
     ErrorStatement(At.empty, LiteralString(At.empty, "error message")),
     FocusStatement(At.empty, GroupRef(At.empty, "panel", PathIdentifier(At.empty, Seq("panel")))),
-    ForEachStatement(At.empty, fieldRef, Contents.empty),
-    IfThenElseStatement(At.empty, LiteralString.empty, Contents.empty, Contents.empty),
+    ForEachStatement(At.empty, fieldRef, Contents.empty()),
+    IfThenElseStatement(At.empty, LiteralString.empty, Contents.empty(), Contents.empty()),
     MorphStatement(At.empty, entityRef, StateRef(At.empty, PathIdentifier(At(), Seq("state"))), messageRef),
     ReadStatement(At.empty, "read", LiteralString(At(), "something"), typeRef, LiteralString(At(), "foo")),
     ReplyStatement(At.empty, messageRef),
@@ -292,16 +292,23 @@ class ASTTest extends AbstractTestingBasis {
           OptionValue(At(), "transient", Seq.empty),
           OptionValue(At(), "kind", Seq(LiteralString(At(), "concept")))
         )
+
         val entityContents: Contents[EntityContents] =
-          (options ++ states ++ types ++ handlers ++ functions ++ invariants).asInstanceOf[Contents[EntityContents]]
+          Contents.empty[EntityContents](states.size + types.size + handlers.size + functions.size + invariants.size)
+            .merge(options)
+            .merge(states)
+            .merge(types)
+            .merge(handlers)
+            .merge(functions)
+            .merge(invariants)
+            .asInstanceOf[Contents[EntityContents]]
         val entity = AST.Entity(
           loc = At(),
           id = Identifier(At(), "foo"),
           contents = entityContents
         )
 
-        entity.contents.toSet mustBe
-          (options ++ states ++ types ++ handlers ++ functions ++ invariants).toSet
+        entity.contents must be(entityContents)
       }
     }
   }
@@ -317,7 +324,7 @@ class ASTTest extends AbstractTestingBasis {
   }
 
   "Group" should {
-    val group = Group(At(), "panel", Identifier(At(), "42"), Contents.empty)
+    val group = Group(At(), "panel", Identifier(At(), "42"), Contents.empty())
     "has an alias" in {
       group.alias must be("panel")
     }
@@ -348,14 +355,14 @@ class ASTTest extends AbstractTestingBasis {
   "Repository" should { "have a test" in { pending } }
 
   "Root(Nil)" should {
-    "be at location 0,0" in { Root(At.empty, Contents.empty).loc must be(At.empty) }
-    "have 'Root' id" in { Root(At.empty, Contents.empty).identify must be("Root") }
-    "have no modules" in { Root(At.empty, Contents.empty).modules must be(empty) }
-    "have no domains" in { Root(At.empty, Contents.empty).domains must be(empty) }
-    "have no comments" in { Root(At.empty, Contents.empty).comments must be(empty) }
-    "have no authors" in { Root(At.empty, Contents.empty).authors must be(empty) }
+    "be at location 0,0" in { Root(At.empty, Contents.empty()).loc must be(At.empty) }
+    "have 'Root' id" in { Root(At.empty, Contents.empty()).identify must be("Root") }
+    "have no modules" in { Root(At.empty, Contents.empty()).modules must be(empty) }
+    "have no domains" in { Root(At.empty, Contents.empty()).domains must be(empty) }
+    "have no comments" in { Root(At.empty, Contents.empty()).comments must be(empty) }
+    "have no authors" in { Root(At.empty, Contents.empty()).authors must be(empty) }
     "identify as root container" in {
-      Root(At.empty, Contents.empty).isRootContainer mustBe true
+      Root(At.empty, Contents.empty()).isRootContainer mustBe true
     }
   }
 

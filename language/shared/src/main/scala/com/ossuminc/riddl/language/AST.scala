@@ -11,7 +11,7 @@ import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
-import scala.collection.mutable
+import scala.collection.{mutable,immutable}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.{tailrec, targetName, unused}
@@ -97,12 +97,17 @@ object AST:
 
   end RiddlValue
 
-  /** A frequently used type alias for a Seq of [[RiddlValue]] */
-  type Contents[CV <: RiddlValue] = mutable.ArrayBuffer[CV]
+  /** A representation of the editable contents of a definition
+    * @tparam CV
+    *   The upper bound of the values that can be contained (RiddlValue)
+    */
+  opaque type Contents[CV <: RiddlValue] = mutable.ArrayBuffer[CV]
 
   object Contents:
-    def empty[T <: RiddlValue] = mutable.ArrayBuffer.empty[T]
-    def apply[T <: RiddlValue](items: T*) = mutable.ArrayBuffer[T](items: _*)
+    def dempty[T <: RiddlValue] : Contents[T] = new mutable.ArrayBuffer[T](2)
+    def empty[T <: RiddlValue](initialSize: Int = mutable.ArrayBuffer.DefaultInitialSize): Contents[T] =
+      new mutable.ArrayBuffer[T](initialSize)
+    def apply[T <: RiddlValue](items: T*): Contents[T] = mutable.ArrayBuffer[T](items: _*)
     def unapply[T <: RiddlValue](contents: Contents[T]) = mutable.ArrayBuffer.unapplySeq[T](contents)
   end Contents
 
@@ -111,8 +116,46 @@ object AST:
     def find(name: String): Option[CV] =
       sequence.find(d => d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name)
 
-  /** The extension of a Seq of [[RiddlValue]] for ease of access to the contents of the Seq */
-  extension [CV <: RiddlValue](container: Contents[CV])
+  /** The extension of a mutable ArrayBuffer of [[RiddlValue]] for ease of manipulating that content */
+  extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
+
+    inline def length: Int = container.length
+    inline def size: Int = container.length
+    inline def apply(n: Int): CV = container.apply(n)
+    inline def head: CV = container.apply(0)
+    inline def indexOf[B >: CV](elem: B): Int = container.indexOf[B](elem, 0)
+    inline def splitAt(n: Int): (Contents[CV], Contents[CV]) = container.splitAt(n)
+    inline def indices: Range = Range(0, container.length)
+    inline def foreach[T](f: CV => T): Unit = container.foreach(f)
+    inline def forall(p: CV => Boolean): Boolean = container.forall(p)
+    inline def update(index: Int, elem: CV): Unit = container.update(index, elem)
+    inline def foldLeft[B](z: B)(op: (B, CV) => B): B = container.foldLeft[B](z)(op)
+    inline def isEmpty: Boolean = container.isEmpty
+    inline def nonEmpty: Boolean = !isEmpty
+    inline def map[B <: RiddlValue](f: CV => B): Contents[B] = container.map[B](f)
+    inline def flatMap[B <: RiddlValue](f: CV => IterableOnce[B]): Contents[B] = container.flatMap[B](f)
+
+
+    inline def startsWith[B >: CV](that: IterableOnce[B], offset: Int = 0): Boolean = container.startsWith[B](that)
+
+    def toSet[B >: CV <: RiddlValue]: immutable.Set[B] = immutable.Set.from(container)
+    def toSeq: immutable.Seq[CV] = container.toSeq
+    def toIterator: Iterator[CV] = container.toIterator
+
+    inline def dropRight(howMany: Int): Contents[CV] = container.dropRight(howMany)
+    inline def drop(howMany: Int): Contents[CV] = container.drop(howMany)
+    inline def append(elem: CV): Unit = container.append(elem)
+    inline def prepend(elem: CV): Unit = container.prepend(elem)
+    inline def ++(suffix: IterableOnce[CV]): Contents[CV] = container.concat[CV](suffix).asInstanceOf[Contents[CV]]
+
+    // @`inline` final def ++ [B >: A](xs: => IterableOnce[B]): Iterator[B] = concat(xs)
+    /** Merge to Contents of varying upper bound constraints into a single combined container */
+    def merge(other: Contents[CV2]): Contents[CV & CV2] =
+      val result = Contents.empty[CV & CV2](container.size + other.size)
+      result ++= container.asInstanceOf[Contents[CV & CV2]]
+      result ++= other.asInstanceOf[Contents[CV & CV2]]
+      result
+    end merge
 
     /** Extract the elements of the [[Contents]] that have identifiers (are definitions, essentially) */
     private def identified: Contents[CV] = container.filter(_.isIdentified)
@@ -153,7 +196,6 @@ object AST:
     /** find the elemetns of the [[Contents]] that are [[Branch]]s */
     def parents: Seq[Branch[CV]] = container.filter[Branch[CV]]
 
-    def toSeq: Seq[CV] = container.toSeq
   end extension
 
   /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
@@ -170,7 +212,7 @@ object AST:
     override def isEmpty: Boolean = contents.isEmpty
 
     /** Force all subclasses to return true as they are containers */
-    final inline override def isContainer: Boolean = true
+    final override def isContainer: Boolean = true
   end Container
 
   /** A simple container for utility purposes in code. The parser never returns one of these */
@@ -337,7 +379,7 @@ object AST:
 
   /** This trait represents the base trait of all comments recognized by the parser */
   sealed trait Comment extends RiddlValue:
-    final inline override def isComment: Boolean = true
+    final override def isComment: Boolean = true
   end Comment
 
   /** The AST Representation of a single line comment in the input. LineComments can only occur after the closing brace,
@@ -856,7 +898,7 @@ object AST:
   sealed trait Branch[CV <: RiddlValue] extends Definition with Container[CV]:
     override def isParent: Boolean = true
     override def hasDefinitions: Boolean = !contents.isEmpty
-    type ContentType = CV
+    opaque type ContentType <: RiddlValue = CV
   end Branch
 
   /** A leaf node in the hierarchy of definitions. Leaves have no content, unlike [[Branch]]. They do permit a single
@@ -984,7 +1026,7 @@ object AST:
     */
   case class Root(
     loc: At = At(),
-    contents: Contents[RootContents] = Contents.empty[RootContents]
+    contents: Contents[RootContents] = Contents.empty[RootContents]()
   ) extends Branch[RootContents]
       with WithModules[RootContents]
       with WithDomains[RootContents]
@@ -1018,7 +1060,7 @@ object AST:
     */
   case class Nebula(
     loc: At,
-    contents: Contents[NebulaContents] = Contents.empty
+    contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
   ) extends Branch[NebulaContents]:
     override def isRootContainer: Boolean = false
 
@@ -1034,7 +1076,7 @@ object AST:
   object Nebula:
 
     /** The value to use for an empty [[Nebula]] instance */
-    val empty: Nebula = Nebula(At.empty, Contents.empty[NebulaContents])
+    val empty: Nebula = Nebula(At.empty, Contents.empty[NebulaContents]())
   end Nebula
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// MODULE
@@ -1043,8 +1085,8 @@ object AST:
   case class Module(
     loc: At,
     id: Identifier,
-    contents: Contents[ModuleContents] = Contents.empty,
-    metadata: Contents[MetaData] = Contents.empty
+    contents: Contents[ModuleContents] = Contents.empty[ModuleContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[ModuleContents]
       with WithModules[ModuleContents]
       with WithDomains[ModuleContents]:
@@ -1070,7 +1112,7 @@ object AST:
     loc: At,
     id: Identifier,
     is_a: LiteralString,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf:
     def format: String = s"${Keyword.user} ${id.format} is ${is_a.format}"
   end User
@@ -1091,7 +1133,7 @@ object AST:
     loc: At,
     id: Identifier,
     definition: Seq[LiteralString],
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf:
     def format: String = s"${Keyword.term} ${id.format}"
   end Term
@@ -1125,7 +1167,7 @@ object AST:
     organization: Option[LiteralString] = None,
     title: Option[LiteralString] = None,
     url: Option[com.ossuminc.riddl.utils.URL] = None,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf:
     override def isEmpty: Boolean = {
       name.isEmpty && email.isEmpty && organization.isEmpty && title.isEmpty
@@ -1173,7 +1215,7 @@ object AST:
     withProcessor: ProcessorRef[?],
     cardinality: RelationshipCardinality,
     label: Option[LiteralString] = None,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf:
     def format: String = Keyword.relationship + " " + id.format + " to " + withProcessor.format
   end Relationship
@@ -1230,49 +1272,16 @@ object AST:
     override def format: String = s"$keyword ${pathId.format}"
   end AliasedTypeExpression
 
-  /** Base of an enumeration for the four kinds of message types */
-  sealed trait AggregateUseCase:
-    override def toString: String = useCase
-
-    /** The textual name of the usecase, for subclasses to define */
-    def useCase: String
+  /** An enumeration for the fix kinds of message types */
+  enum AggregateUseCase(val useCase: String):
+    override inline def toString: String = useCase
+    case CommandCase extends AggregateUseCase("Command")
+    case EventCase extends AggregateUseCase("Event")
+    case QueryCase extends AggregateUseCase("Query")
+    case ResultCase extends AggregateUseCase("Result")
+    case RecordCase extends AggregateUseCase("Record")
+    case TypeCase extends AggregateUseCase("Type")
   end AggregateUseCase
-
-  /** An enumerator value to distinguish command aggregates */
-  @JSExportTopLevel("CommandCase")
-  case object CommandCase extends AggregateUseCase {
-    @inline def useCase: String = "Command"
-  }
-
-  /** An enumerator value to distinguish event aggregates */
-  @JSExportTopLevel("EventCase")
-  case object EventCase extends AggregateUseCase {
-    @inline def useCase: String = "Event"
-  }
-
-  /** An enumerator value to distinguish query aggregates */
-  @JSExportTopLevel("QueryCase")
-  case object QueryCase extends AggregateUseCase {
-    @inline def useCase: String = "Query"
-  }
-
-  /** An enumerator value  to distinguish result aggregates */
-  @JSExportTopLevel("ResultCase")
-  case object ResultCase extends AggregateUseCase {
-    @inline def useCase: String = "Result"
-  }
-
-  /** An enumerator value  to distinguish record aggregates */
-  @JSExportTopLevel("RecordCase")
-  case object RecordCase extends AggregateUseCase {
-    @inline def useCase: String = "Record"
-  }
-
-  /** An enumerator value to identify undistinguished aggregates */
-  @JSExportTopLevel("TypeCase")
-  case object TypeCase extends AggregateUseCase {
-    @inline def useCase: String = "Type"
-  }
 
   /** Base trait of the cardinality for type expressions */
   sealed trait Cardinality extends TypeExpression:
@@ -1352,8 +1361,9 @@ object AST:
     loc: At,
     id: Identifier,
     enumVal: Option[Long] = None,
-    metadata: Contents[MetaData] = Contents.empty
-  ) extends Definition with WithMetaData:
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
+  ) extends Definition
+      with WithMetaData:
     override def format: String = id.format + enumVal.map(x => s"($x)").getOrElse("")
   end Enumerator
 
@@ -1495,7 +1505,7 @@ object AST:
     loc: At,
     id: Identifier,
     typeEx: TypeExpression,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends AggregateValue:
     override def format: String = s"${id.format}: ${typeEx.format}"
   end Field
@@ -1538,7 +1548,7 @@ object AST:
     id: Identifier,
     typeEx: TypeExpression,
     args: Seq[MethodArgument] = Seq.empty[MethodArgument],
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends AggregateValue:
     override def format: String = s"${id.format}(${args.map(_.format).mkString(", ")}): ${typeEx.format}"
   end Method
@@ -1588,7 +1598,7 @@ object AST:
   @JSExportTopLevel("Aggregation")
   case class Aggregation(
     loc: At,
-    contents: Contents[AggregateContents] = Contents.empty[AggregateContents]
+    contents: Contents[AggregateContents] = Contents.empty[AggregateContents]()
   ) extends AggregateTypeExpression(contents)
 
   @JSExportTopLevel("Aggregation$")
@@ -1598,7 +1608,6 @@ object AST:
     /** The empty value for an [[Aggregation]] */
     def empty(loc: At = At.empty): Aggregation = { Aggregation(loc) }
   end Aggregation
-
 
   /** A type expression for an aggregation that is marked as being one of the use cases. This is used for messages,
     * records, and other aggregate types that need to have their purpose distinguished.
@@ -1614,7 +1623,7 @@ object AST:
   case class AggregateUseCaseTypeExpression(
     loc: At,
     usecase: AggregateUseCase,
-    contents: Contents[AggregateContents] = Contents.empty[AggregateContents]
+    contents: Contents[AggregateContents] = Contents.empty[AggregateContents]()
   ) extends AggregateTypeExpression(contents):
     override def format: String = usecase.useCase.toLowerCase() + " " + super.format
   end AggregateUseCaseTypeExpression
@@ -1989,7 +1998,7 @@ object AST:
   @JSExportTopLevel("MessageRef")
   object MessageRef {
     lazy val empty: MessageRef = new MessageRef {
-      def messageKind: AggregateUseCase = RecordCase
+      def messageKind: AggregateUseCase = AggregateUseCase.RecordCase
 
       override def pathId: PathIdentifier = PathIdentifier.empty
 
@@ -2009,7 +2018,7 @@ object AST:
     loc: At,
     pathId: PathIdentifier
   ) extends MessageRef {
-    def messageKind: AggregateUseCase = CommandCase
+    def messageKind: AggregateUseCase = AggregateUseCase.CommandCase
   }
 
   /** A Reference to an event message type
@@ -2024,7 +2033,7 @@ object AST:
     loc: At,
     pathId: PathIdentifier
   ) extends MessageRef:
-    def messageKind: AggregateUseCase = EventCase
+    def messageKind: AggregateUseCase = AggregateUseCase.EventCase
   end EventRef
 
   /** A reference to a query message type
@@ -2039,7 +2048,7 @@ object AST:
     loc: At,
     pathId: PathIdentifier
   ) extends MessageRef:
-    def messageKind: AggregateUseCase = QueryCase
+    def messageKind: AggregateUseCase = AggregateUseCase.QueryCase
   end QueryRef
 
   /** A reference to a result message type
@@ -2054,7 +2063,7 @@ object AST:
     loc: At,
     pathId: PathIdentifier
   ) extends MessageRef:
-    def messageKind: AggregateUseCase = ResultCase
+    def messageKind: AggregateUseCase = AggregateUseCase.ResultCase
   end ResultRef
 
   /** A reference to a record message type
@@ -2069,7 +2078,7 @@ object AST:
     loc: At,
     pathId: PathIdentifier
   ) extends MessageRef:
-    def messageKind: AggregateUseCase = RecordCase
+    def messageKind: AggregateUseCase = AggregateUseCase.RecordCase
     override def isEmpty: Boolean =
       super.isEmpty && loc.isEmpty && pathId.isEmpty
   end RecordRef
@@ -2092,7 +2101,7 @@ object AST:
     loc: At,
     id: Identifier,
     typEx: TypeExpression,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[TypeContents]
       with WithMetaData:
     def contents: Contents[TypeContents] = {
@@ -2166,7 +2175,7 @@ object AST:
     id: Identifier,
     typeEx: TypeExpression,
     value: LiteralString,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
 
     /** Format the node to a string */
@@ -2551,8 +2560,8 @@ object AST:
     id: Identifier,
     direction: AdaptorDirection,
     referent: ContextRef,
-    contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[AdaptorContents]
       with WithOptions[AdaptorContents]:
     def format: String = Keyword.adaptor + " " + id.format
@@ -2586,8 +2595,8 @@ object AST:
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Contents[FunctionContents] = Contents.empty[FunctionContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[FunctionContents] = Contents.empty[FunctionContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[FunctionContents]
       with WithTypes[FunctionContents]
       with WithFunctions[FunctionContents]
@@ -2609,8 +2618,8 @@ object AST:
     override def format: String = Keyword.function + " " + pathId.format
   }
 
-  /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional expressions
-    * that must be true at all times in the lifecycle of an entity.
+  /** An invariant expression that can be used in the definition of an entity. Invariants provide conditional
+    * expressions that must be true at all times in the lifecycle of an entity.
     *
     * @param loc
     *   The location of the invariant definition
@@ -2626,7 +2635,7 @@ object AST:
     loc: At,
     id: Identifier,
     condition: Option[LiteralString] = Option.empty[LiteralString],
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
     override def isEmpty: Boolean = condition.isEmpty
     def format: String = Keyword.invariant + " " + id.format + condition.map(_.format)
@@ -2638,8 +2647,8 @@ object AST:
     */
   sealed trait OnClause extends Branch[Statements] with WithStatements[Statements] with WithMetaData
 
-  /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause corresponds
-    * to the "other" case of an [[Handler]].
+  /** Defines the actions to be taken when a message does not match any of the OnMessageClauses. OnOtherClause
+    * corresponds to the "other" case of an [[Handler]].
     *
     * @param loc
     *   THe location of the "on other" clause
@@ -2649,8 +2658,8 @@ object AST:
   @JSExportTopLevel("OnOtherClause")
   case class OnOtherClause(
     loc: At,
-    contents: Contents[Statements] = Contents.empty,
-    metadata: Contents[MetaData] = Contents.empty
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"pther")
 
@@ -2669,8 +2678,8 @@ object AST:
   @JSExportTopLevel("OnInitializationClause")
   case class OnInitializationClause(
     loc: At,
-    contents: Contents[Statements] = Contents.empty,
-    metadata: Contents[MetaData] = Contents.empty
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"init")
 
@@ -2679,8 +2688,8 @@ object AST:
     override def format: String = ""
   }
 
-  /** Defines the actions to be taken when a particular message is received by an entity. [[OnMessageClause]]s are used in
-    * the definition of a [[Handler]] with one for each kind of message that handler deals with.
+  /** Defines the actions to be taken when a particular message is received by an entity. [[OnMessageClause]]s are used
+    * in the definition of a [[Handler]] with one for each kind of message that handler deals with.
     *
     * @param loc
     *   The location of the "on" clause
@@ -2696,8 +2705,8 @@ object AST:
     loc: At,
     msg: MessageRef,
     from: Option[(Option[Identifier], Reference[Definition])],
-    contents: Contents[Statements] = Contents.empty,
-    metadata: Contents[MetaData] = Contents.empty
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
     def id: Identifier = Identifier(msg.loc, msg.format)
     def format: String = ""
@@ -2713,8 +2722,8 @@ object AST:
   @JSExportTopLevel("OnTerminationClause")
   case class OnTerminationClause(
     loc: At,
-    contents: Contents[Statements] = Contents.empty[Statements],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
     def id: Identifier = Identifier(loc, s"term")
 
@@ -2734,14 +2743,15 @@ object AST:
     * @param id
     *   The name of the handler.
     * @param contents
-    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received messages.
+    *   The set of [[OnMessageClause]] definitions and comments that define how the entity responds to received
+    *   messages.
     */
   @JSExportTopLevel("Handler")
   case class Handler(
     loc: At,
     id: Identifier,
-    contents: Contents[HandlerContents] = Contents.empty[HandlerContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[HandlerContents] = Contents.empty[HandlerContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[HandlerContents]
       with WithMetaData {
     override def isEmpty: Boolean = clauses.isEmpty
@@ -2765,9 +2775,9 @@ object AST:
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////// STATE
 
-  /** Represents a state of an entity. A State defines the shape of the entity's state when it is active. The MorphAction
-    * can cause the active state of an entity to change. Consequently the state of an entity can change its value
-    * (mutable) and they shape of that value.
+  /** Represents a state of an entity. A State defines the shape of the entity's state when it is active. The
+    * MorphAction can cause the active state of an entity to change. Consequently the state of an entity can change its
+    * value (mutable) and they shape of that value.
     *
     * @param loc
     *   The location of the state definition
@@ -2785,7 +2795,7 @@ object AST:
     loc: At,
     id: Identifier,
     typ: TypeRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf:
     def format: String = Keyword.state + " " + id.format
   end State
@@ -2817,8 +2827,8 @@ object AST:
   case class Entity(
     loc: At,
     id: Identifier,
-    contents: Contents[EntityContents] = Contents.empty[EntityContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[EntityContents] = Contents.empty[EntityContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[EntityContents]
       with WithStates[EntityContents]
       with WithOptions[EntityContents]:
@@ -2867,14 +2877,14 @@ object AST:
     data: Map[Identifier, TypeRef] = Map.empty[Identifier, TypeRef],
     links: Map[Identifier, (FieldRef, FieldRef)] = Map.empty[Identifier, (FieldRef, FieldRef)],
     indices: Seq[FieldRef] = Seq.empty[FieldRef],
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf:
     def format: String = Keyword.schema + " " + id.format + s" is $schemaKind"
   end Schema
 
-  /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a later
-    * time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented. There is
-    * no specific technology implied other than the retention and retrieval of information. You should think of
+  /** A RIDDL repository is an abstraction for anything that can retain information(e.g. messages for retrieval at a
+    * later time. This might be a relational database, NoSQL database, data lake, API, or something not yet invented.
+    * There is no specific technology implied other than the retention and retrieval of information. You should think of
     * repositories more like a message-oriented version of the Java Repository Pattern than any particular kind
     * ofdatabase.
     *
@@ -2891,8 +2901,8 @@ object AST:
   case class Repository(
     loc: At,
     id: Identifier,
-    contents: Contents[RepositoryContents] = Contents.empty[RepositoryContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[RepositoryContents] = Contents.empty[RepositoryContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[RepositoryContents]
       with WithOptions[RepositoryContents] {
     def format: String = Keyword.entity + " " + id.format
@@ -2912,9 +2922,9 @@ object AST:
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// PROJECTOR
 
-  /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view. The
-    * concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data into a
-    * specific record type, and support querying that data arbitrarily.
+  /** Projectors get their name from Euclidean Geometry but are probably more analogous to a relational database view.
+    * The concept is very simple in RIDDL: projectors gather data from entities and other sources, transform that data
+    * into a specific record type, and support querying that data arbitrarily.
     *
     * @see
     *   https://en.wikipedia.org/wiki/View_(SQL)).
@@ -2931,8 +2941,8 @@ object AST:
   case class Projector(
     loc: At,
     id: Identifier,
-    contents: Contents[ProjectorContents] = Contents.empty[ProjectorContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[ProjectorContents] = Contents.empty[ProjectorContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[ProjectorContents]
       with WithOptions[ProjectorContents] {
     def repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
@@ -2953,10 +2963,10 @@ object AST:
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// CONTEXT
 
-  /** A bounded referent definition. Bounded contexts provide a definitional boundary on the language used to describe some
-    * aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a common
-    * purpose. Context can be used to house entities, read side projectors, sagas, adaptations to other contexts, apis,
-    * and etc.
+  /** A bounded referent definition. Bounded contexts provide a definitional boundary on the language used to describe
+    * some aspect of a system. They imply a tightly integrated ecosystem of one or more microservices that share a
+    * common purpose. Context can be used to house entities, read side projectors, sagas, adaptations to other contexts,
+    * apis, and etc.
     *
     * @param loc
     *   The location of the bounded referent definition
@@ -2969,8 +2979,8 @@ object AST:
   case class Context(
     loc: At,
     id: Identifier,
-    contents: Contents[ContextContents] = Contents.empty[ContextContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[ContextContents] = Contents.empty[ContextContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[ContextContents]
       with WithProjectors[ContextContents]
       with WithRepositories[ContextContents]
@@ -3023,7 +3033,7 @@ object AST:
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Portlet {
     def format: String = s"inlet ${id.format} is ${type_.format}"
   }
@@ -3046,7 +3056,7 @@ object AST:
     loc: At,
     id: Identifier,
     type_ : TypeRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Portlet {
     def format: String = s"outlet ${id.format} is ${type_.format}"
   }
@@ -3073,7 +3083,7 @@ object AST:
     from: OutletRef,
     to: InletRef,
     options: Seq[OptionValue] = Seq.empty[OptionValue],
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
     def hasOption(name: String): Boolean = options.exists(_.name == name)
     override def format: String = Keyword.connector + " " + id.format
@@ -3152,8 +3162,8 @@ object AST:
     loc: At,
     id: Identifier,
     shape: StreamletShape,
-    contents: Contents[StreamletContents] = Contents.empty[StreamletContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[StreamletContents] = Contents.empty[StreamletContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[StreamletContents]
       with WithInlets[StreamletContents]
       with WithOutlets[StreamletContents] {
@@ -3163,37 +3173,37 @@ object AST:
     shape match {
       case Source(_) =>
         require(
-          isEmpty || (outlets.size == 1 && inlets.isEmpty),
+          contents.isEmpty || (outlets.size == 1 && inlets.isEmpty),
           s"Invalid Source Streamlet ins: ${outlets.size} == 1, ${inlets.size} == 0"
         )
       case Sink(_) =>
         require(
-          isEmpty || (outlets.isEmpty && inlets.size == 1),
+          contents.isEmpty || (outlets.isEmpty && inlets.size == 1),
           "Invalid Sink Streamlet"
         )
       case Flow(_) =>
         require(
-          isEmpty || (outlets.size == 1 && inlets.size == 1),
+          contents.isEmpty || (outlets.size == 1 && inlets.size == 1),
           "Invalid Flow Streamlet"
         )
       case Merge(_) =>
         require(
-          isEmpty || (outlets.size == 1 && inlets.size >= 2),
+          contents.isEmpty || (outlets.size == 1 && inlets.size >= 2),
           "Invalid Merge Streamlet"
         )
       case Split(_) =>
         require(
-          isEmpty || (outlets.size >= 2 && inlets.size == 1),
+          contents.isEmpty || (outlets.size >= 2 && inlets.size == 1),
           "Invalid Split Streamlet"
         )
       case Router(_) =>
         require(
-          isEmpty || (outlets.size >= 2 && inlets.size >= 2),
+          contents.isEmpty || (outlets.size >= 2 && inlets.size >= 2),
           "Invalid Router Streamlet"
         )
       case Void(_) =>
         require(
-          isEmpty || (outlets.isEmpty && inlets.isEmpty),
+          contents.isEmpty || (outlets.isEmpty && inlets.isEmpty),
           "Invalid Void Stream"
         )
     }
@@ -3268,15 +3278,15 @@ object AST:
   case class SagaStep(
     loc: At,
     id: Identifier,
-    doStatements: Contents[Statements] = Contents.empty[Statements],
-    undoStatements: Contents[Statements] = Contents.empty[Statements],
-    metadata: Contents[MetaData] = Contents.empty
+    doStatements: Contents[Statements] = Contents.empty[Statements](),
+    undoStatements: Contents[Statements] = Contents.empty[Statements](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
     def format: String = s"step ${id.format}"
   }
 
-  /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define a
-    * computing action based on a variety of related commands that must all succeed atomically or have their effects
+  /** The definition of a Saga based on inputs, outputs, and the set of [[SagaStep]]s involved in the saga. Sagas define
+    * a computing action based on a variety of related commands that must all succeed atomically or have their effects
     * undone.
     *
     * @param loc
@@ -3296,8 +3306,8 @@ object AST:
     id: Identifier,
     input: Option[Aggregation] = None,
     output: Option[Aggregation] = None,
-    contents: Contents[SagaContents] = Contents.empty[SagaContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[SagaContents] = Contents.empty[SagaContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[SagaContents]
       with WithSagaSteps[SagaContents] {
     override def format: String = Keyword.saga + " " + id.format
@@ -3357,8 +3367,8 @@ object AST:
   @JSExportTopLevel("ParallelInteractions")
   case class ParallelInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Contents.empty,
-    metadata: Contents[MetaData] = Contents.empty
+    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends InteractionContainer {
     override def kind: String = "Parallel Interaction"
   }
@@ -3378,8 +3388,8 @@ object AST:
   @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends InteractionContainer {
     override def kind: String = "Sequential Interaction"
   }
@@ -3396,8 +3406,8 @@ object AST:
   @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
     loc: At,
-    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[InteractionContainerContents] = Contents.empty[InteractionContainerContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends InteractionContainer {
     override def kind: String = "Optional Interaction"
   }
@@ -3409,7 +3419,7 @@ object AST:
     from: LiteralString,
     relationship: LiteralString,
     to: LiteralString,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends GenericInteraction {
     override def kind: String = "Vague Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3436,7 +3446,7 @@ object AST:
     from: Reference[Definition],
     message: MessageRef,
     to: ProcessorRef[?],
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends GenericInteraction {
     def relationship: LiteralString = {
       LiteralString(message.loc, s"sends ${message.format} to")
@@ -3465,7 +3475,7 @@ object AST:
     from: Reference[Definition],
     relationship: LiteralString,
     to: Reference[Definition],
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends TwoReferenceInteraction {
     override def kind: String = "Arbitrary Interaction"
 
@@ -3491,7 +3501,7 @@ object AST:
     loc: At,
     from: Reference[Definition],
     relationship: LiteralString,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends TwoReferenceInteraction {
     override def kind: String = "Self Interaction"
     override def to: Reference[Definition] = from
@@ -3514,7 +3524,7 @@ object AST:
     loc: At,
     from: UserRef,
     to: GroupRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends TwoReferenceInteraction {
     override def kind: String = "Focus On Group"
     override def relationship: LiteralString =
@@ -3539,7 +3549,7 @@ object AST:
     loc: At,
     from: UserRef,
     url: com.ossuminc.riddl.utils.URL,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends GenericInteraction {
     def relationship: LiteralString =
       LiteralString(loc + (6 + from.pathId.format.length), "directed to ")
@@ -3565,7 +3575,7 @@ object AST:
     from: OutputRef,
     relationship: LiteralString,
     to: UserRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends TwoReferenceInteraction {
     override def kind: String = "Show Output Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3587,7 +3597,7 @@ object AST:
     loc: At,
     from: UserRef,
     to: InputRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends TwoReferenceInteraction {
     override def kind: String = "Select Input Interaction"
     def format: String = s"${from.format} selects ${to.format}"
@@ -3610,7 +3620,7 @@ object AST:
     loc: At,
     from: UserRef,
     to: InputRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends TwoReferenceInteraction {
     override def kind: String = "Take Input Interaction"
     def format: String = s"${from.format} ${relationship.s} ${to.format}"
@@ -3631,8 +3641,8 @@ object AST:
     loc: At,
     id: Identifier,
     userStory: UserStory,
-    contents: Contents[UseCaseContents] = Contents.empty[UseCaseContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[UseCaseContents] = Contents.empty[UseCaseContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[UseCaseContents]
       with WithMetaData {
     override def kind: String = "UseCase"
@@ -3695,8 +3705,8 @@ object AST:
     loc: At,
     id: Identifier,
     userStory: UserStory,
-    contents: Contents[EpicContents] = Contents.empty[EpicContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[EpicContents] = Contents.empty[EpicContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[EpicContents]
       with WithUseCases[EpicContents]
       with WithShownBy[EpicContents] {
@@ -3734,8 +3744,8 @@ object AST:
     loc: At,
     alias: String,
     id: Identifier,
-    contents: Contents[OccursInGroup] = Contents.empty[OccursInGroup],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[OccursInGroup] = Contents.empty[OccursInGroup](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[OccursInGroup]
       with WithShownBy[OccursInGroup]
       with WithInputs[OccursInGroup]
@@ -3775,7 +3785,7 @@ object AST:
     loc: At,
     id: Identifier,
     group: GroupRef,
-    metadata: Contents[MetaData] = Contents.empty
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf:
     def format: String = s"contains ${id.format} as ${group.format}"
   end ContainedGroup
@@ -3798,8 +3808,8 @@ object AST:
     id: Identifier,
     verbAlias: String,
     putOut: TypeRef | ConstantRef | LiteralString,
-    contents: Contents[OccursInOutput] = Contents.empty[OccursInOutput],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[OccursInOutput] = Contents.empty[OccursInOutput](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[OccursInOutput]
       with WithOutputs[OccursInOutput]
       with WithMetaData:
@@ -3839,8 +3849,8 @@ object AST:
     id: Identifier,
     verbAlias: String,
     takeIn: TypeRef,
-    contents: Contents[OccursInInput] = Contents.empty[OccursInInput],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[OccursInInput] = Contents.empty[OccursInInput](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[OccursInInput]
       with WithInputs[OccursInInput]
       with WithMetaData:
@@ -3868,8 +3878,8 @@ object AST:
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////// DOMAIN
 
   /** The definition of a domain. Domains are the highest building block in RIDDL and may be nested inside each other to
-    * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies and
-    * ontologies may be modelled with domains too.
+    * form a hierarchy of domains. Generally, domains follow hierarchical organization structure but other taxonomies
+    * and ontologies may be modelled with domains too.
     *
     * @param loc
     *   The location of the domain definition
@@ -3882,8 +3892,8 @@ object AST:
   case class Domain(
     loc: At,
     id: Identifier,
-    contents: Contents[DomainContents] = Contents.empty[DomainContents],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]
+    contents: Contents[DomainContents] = Contents.empty[DomainContents](),
+    metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends VitalDefinition[DomainContents]
       with WithTypes[DomainContents]
       with WithAuthors[DomainContents]

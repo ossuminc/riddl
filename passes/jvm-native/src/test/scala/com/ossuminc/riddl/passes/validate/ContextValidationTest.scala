@@ -145,14 +145,14 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
                 Identifier(At(rpi, 62, 66), "one"),
                 AggregateUseCaseTypeExpression(
                   At(rpi, 69, 79),
-                  RecordCase,
-                  Contents.empty
+                  AggregateUseCase.RecordCase,
+                  Contents.empty()
                 )
               ),
               Handler(
                 At(rpi, 79, 102),
                 Identifier(At(rpi, 87, 91), "one"),
-                Contents.empty
+                Contents.empty()
               )
             )
           )
@@ -169,7 +169,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
           case Left(errors) => fail(errors.format)
           case Right(root) =>
             root mustNot be(empty)
-            root.contents mustNot be(empty)
+            root.contents.isEmpty mustNot be(true)
             val d = root.domains.head
             d.contexts mustNot be(empty)
             val c = d.contexts.head

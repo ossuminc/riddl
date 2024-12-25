@@ -30,7 +30,7 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
               Aggregation(
                 At(5, 14, rpi),
                 Contents(
-                  Field(At(5, 15, rpi), Identifier(At(5, 15, rpi), "b"), AST.Bool(At(5, 18, rpi)), Contents.empty)
+                  Field(At(5, 15, rpi), Identifier(At(5, 15, rpi), "b"), AST.Bool(At(5, 18, rpi)), Contents.empty())
                 )
               )
             )

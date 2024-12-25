@@ -327,8 +327,7 @@ trait MarkdownWriter(using pc: PlatformContext)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
       case UniqueId(_, pid)                      => makeTypeName(pid, parents)
       case Alternation(_, of) =>
-        of.map(ate => makeTypeName(ate.pathId, parents))
-          .mkString("-")
+        of.toSeq.map(ate => makeTypeName(ate.pathId, parents)).mkString("-")
       case _: Mapping                        => "Mapping"
       case _: Aggregation                    => "Aggregation"
       case _: AggregateUseCaseTypeExpression => "Message"
@@ -349,7 +348,7 @@ trait MarkdownWriter(using pc: PlatformContext)
       case uid: UniqueId =>
         s"Unique identifier for entity ${makePathIdRef(uid.entityPath, parents)}"
       case alt: Alternation =>
-        val data = alt.of.map { (te: AliasedTypeExpression) =>
+        val data = alt.of.toSeq.map { (te: AliasedTypeExpression) =>
           makePathIdRef(te.pathId, parents)
         }
         s"Alternation of: " + data.mkString(", ")

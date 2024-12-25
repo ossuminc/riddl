@@ -34,8 +34,7 @@ class EntityRelationshipDiagram(refMap: ReferenceMap)(using pc: PlatformContext)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parent)
       case UniqueId(_, pid)                      => makeTypeName(pid, parent)
       case Alternation(_, of) =>
-        of.map(ate => makeTypeName(ate.pathId, parent))
-          .mkString("-")
+        of.toSeq.map(ate => makeTypeName(ate.pathId, parent)).mkString("-")
       case _: Mapping                        => "Mapping"
       case _: Aggregation                    => "Aggregation"
       case _: AggregateUseCaseTypeExpression => "Message"

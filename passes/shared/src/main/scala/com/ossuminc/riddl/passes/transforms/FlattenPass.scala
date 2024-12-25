@@ -36,13 +36,15 @@ case class FlattenPass(
 
   override protected def process(definition: RiddlValue, parents: ParentStack): Unit =
     val parent: Branch[?] = parents.head
-    type CT = parent.ContentType
     definition match
-      case include: Include[CT] @unchecked =>
+      case include: Include[parent.ContentType] @unchecked =>
         parent.contents.indexOf(include) match
           case -1                => // error
           case includeIndex: Int =>
-          // parent.contents.insertAll(includeIndex, include.contents)
+            val (prefix, suffix) = parent.contents.splitAt(includeIndex): @unchecked
+            prefix.dropRight(1)
+            val mid = prefix.merge(include.contents)
+            mid.merge(suffix)
         end match
       case _ => ()
     end match

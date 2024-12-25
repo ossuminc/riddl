@@ -421,12 +421,12 @@ private[parsing] trait TypeParser {
       Keywords.typeKeywords
     ).map { mk =>
       mk.toLowerCase() match {
-        case kind if kind == Keyword.type_   => TypeCase
-        case kind if kind == Keyword.command => CommandCase
-        case kind if kind == Keyword.event   => EventCase
-        case kind if kind == Keyword.query   => QueryCase
-        case kind if kind == Keyword.result  => ResultCase
-        case kind if kind == Keyword.record  => RecordCase
+        case kind if kind == Keyword.type_   => AggregateUseCase.TypeCase
+        case kind if kind == Keyword.command => AggregateUseCase.CommandCase
+        case kind if kind == Keyword.event   => AggregateUseCase.EventCase
+        case kind if kind == Keyword.query   => AggregateUseCase.QueryCase
+        case kind if kind == Keyword.result  => AggregateUseCase.ResultCase
+        case kind if kind == Keyword.record  => AggregateUseCase.RecordCase
       }
     }
   }

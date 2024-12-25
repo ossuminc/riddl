@@ -712,11 +712,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case Some((typ: Type, _: Parents)) =>
         keyword match
           case Keyword.type_ | "" => resolution // this is generic, any type so just pass the result
-          case Keyword.command    => handleTypeResolution(typ, CommandCase, resolution)
-          case Keyword.query      => handleTypeResolution(typ, QueryCase, resolution)
-          case Keyword.event      => handleTypeResolution(typ, EventCase, resolution)
-          case Keyword.result     => handleTypeResolution(typ, ResultCase, resolution)
-          case Keyword.record     => handleTypeResolution(typ, RecordCase, resolution)
+          case Keyword.command    => handleTypeResolution(typ, AggregateUseCase.CommandCase, resolution)
+          case Keyword.query      => handleTypeResolution(typ, AggregateUseCase.QueryCase, resolution)
+          case Keyword.event      => handleTypeResolution(typ, AggregateUseCase.EventCase, resolution)
+          case Keyword.result     => handleTypeResolution(typ, AggregateUseCase.ResultCase, resolution)
+          case Keyword.record     => handleTypeResolution(typ, AggregateUseCase.RecordCase, resolution)
           case Keyword.graph =>
             typ.typEx match
               case _: Graph => resolution // success
@@ -917,7 +917,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           // NOTE: So we take the WithIdentifiers from the contents as well as from the includes
           val nested = candidatesFromContents(contents.includes.toContents)
           val current = contents.definitions
-          current ++ nested
+          current ++ nested.toSeq
         case definition: Definition =>
           Seq(definition)
         case _ =>

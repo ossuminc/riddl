@@ -430,7 +430,7 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         Identifier(At(rpi, 7, 10), "agg"),
         AggregateUseCaseTypeExpression(
           At(rpi, 13, 60),
-          RecordCase,
+          AggregateUseCase.RecordCase,
           Contents(
             Field(
               At(rpi, 17, 28),
@@ -468,10 +468,10 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
           AggregateUseCaseTypeExpression(
             At(rpi, 11, 71+l),
             mk match {
-              case "command" => CommandCase
-              case "event"   => EventCase
-              case "query"   => QueryCase
-              case "result"  => ResultCase
+              case "command" => AggregateUseCase.CommandCase
+              case "event"   => AggregateUseCase.EventCase
+              case "query"   => AggregateUseCase.QueryCase
+              case "result"  => AggregateUseCase.ResultCase
             },
             Contents(
               Field(
@@ -593,7 +593,7 @@ abstract class TypeParserTest(using PlatformContext) extends AbstractParsingTest
         Identifier(At(rpi, 8, 12), "foo"),
         AggregateUseCaseTypeExpression(
           At(rpi, 15, 29),
-          CommandCase,
+          AggregateUseCase.CommandCase,
           Contents(
             Field(
               At(rpi, 17, 28),

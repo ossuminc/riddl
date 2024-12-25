@@ -23,7 +23,7 @@ class DomainValidatorTest extends AbstractValidatingTest {
     "identify duplicate domain definitions" in { (td: TestData) =>
       val source =
         """
-          |domain foo is { ??? } 
+          |domain foo is { ??? }
           |domain foo is { ??? }
           |""".stripMargin
       val rpi = RiddlParserInput(source, td)
@@ -59,7 +59,7 @@ class DomainValidatorTest extends AbstractValidatingTest {
           val domain: Domain = result.root.domains.head
           val author: Author = result.root.authors.head
           domain must be(empty)
-          domain.contents must be(empty)
+          domain.contents.isEmpty must be(true)
           val expectedAuthor =
             Author(
               (1, 1, rpi),
@@ -94,7 +94,7 @@ class DomainValidatorTest extends AbstractValidatingTest {
       )
       parseAndValidateDomain(input) { (domain: Domain, _: RiddlParserInput, messages: Messages) =>
         domain mustNot be(empty)
-        domain.contents mustNot be(empty)
+        domain.contents.isEmpty mustNot be(true)
         messages mustNot be(empty)
         messages.isOnlyIgnorable mustBe true
         messages.find(_.message.contains("Singly nested")) mustNot be(empty)

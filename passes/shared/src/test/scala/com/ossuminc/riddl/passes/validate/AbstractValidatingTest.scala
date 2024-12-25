@@ -75,13 +75,12 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
             fail(messages.format)
           case Right(result) =>
             val msgs = result.messages
-            model.contexts.head.contents
+            model.contexts.head.contents.toSeq
               .filter(_.getClass == clazz)
               .map { (d: ContextContents) =>
                 val reducedMessages = msgs.filterNot(_.loc.line == 1)
                 validator(d.asInstanceOf[D], rpi, reducedMessages)
               }
-              .toSeq
         }
     }
   }
