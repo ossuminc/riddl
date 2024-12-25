@@ -459,10 +459,10 @@ object AST:
 
     def errorLoc: At = loc.copy(endOffset = id.loc.endOffset)
 
-    final override inline def isIdentified: Boolean = true
+    final override def isIdentified: Boolean = true
 
     /** This one has an identifier so it is only anonymous if that identifier is empty */
-    override final inline def isAnonymous: Boolean = id.value.isEmpty
+    override final def isAnonymous: Boolean = id.value.isEmpty
 
     /** Convert the identifier into a string format with its [[kind]] and dealing with anonymity. */
     def identify: String =
@@ -2602,7 +2602,7 @@ object AST:
       with WithFunctions[FunctionContents]
       with WithStatements[FunctionContents] {
     override def format: String = Keyword.function + " " + id.format
-    final override inline def kind: String = "Function"
+    final override def kind: String = "Function"
     override def isEmpty: Boolean = statements.isEmpty && input.isEmpty && output.isEmpty
   }
 
