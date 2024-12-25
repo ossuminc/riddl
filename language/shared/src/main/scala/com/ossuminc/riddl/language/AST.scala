@@ -3918,20 +3918,18 @@ object AST:
   }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////// TOKENS
-  sealed trait Token:
-    def at: At
+  enum Token(at: At):
+    case Punctuation(at: At) extends Token(at)
+    case QuotedString(at: At) extends Token(at)
+    case Readability(at: At) extends Token(at)
+    case Predefined(at: At) extends Token(at)
+    case Keyword(at: At) extends Token(at)
+    case Comment(at: At) extends Token(at)
+    case LiteralString(at: At) extends Token(at)
+    case MarkdownLine(at: At) extends Token(at)
+    case Identifier(at: At) extends Token(at)
+    case Other(at: At) extends Token(at)
   end Token
-
-  case class PunctuationTKN(at: At) extends Token
-  case class QuotedStringTKN(at: At) extends Token
-  case class ReadabilityTKN(at: At) extends Token
-  case class PredefinedTKN(at: At) extends Token
-  case class KeywordTKN(at: At) extends Token
-  case class CommentTKN(at: At) extends Token
-  case class LiteralStringTKN(at: At) extends Token
-  case class MarkdownLineTKN(at: At) extends Token
-  case class IdentifierTKN(at: At) extends Token
-  case class OtherTKN(at: At) extends Token
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////// FUNCTIONS
 
