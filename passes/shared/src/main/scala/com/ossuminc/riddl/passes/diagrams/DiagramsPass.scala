@@ -170,7 +170,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def makeOutletRelationships(
     context: Context,
     outlets: Seq[Outlet],
-    parent: Parent
+    parent: Branch[?]
   ): Seq[ContextRelationship] = {
     for {
       o <- outlets
@@ -182,7 +182,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     }
   }
 
-  private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Parent): Seq[ContextRelationship] = {
+  private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Branch[?]): Seq[ContextRelationship]
+  = {
     for {
       i <- inlets
       t = i.type_
@@ -244,7 +245,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def makeTypeRelationships(
     context: Context,
     types: Seq[Type],
-    parent: Parent
+    parent: Branch[?]
   ): Seq[ContextRelationship] = {
     for {
       typ <- types
@@ -260,7 +261,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private def makeFieldRelationships(
     context: Context,
     fields: Seq[Field],
-    parent: Parent
+    parent: Branch[?]
   ): Seq[ContextRelationship] = {
     for {
       f <- fields
@@ -309,26 +310,25 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
 
   private def captureUseCase(uc: UseCase): UseCaseDiagramData = {
     val actors: Map[String, Definition] = {
-      uc.contents
-        .map {
-          case tri: TwoReferenceInteraction =>
-            val fromDef = refMap.definitionOf[Definition](tri.from.pathId, uc)
-            val toDef = refMap.definitionOf[Definition](tri.to.pathId, uc)
-            Seq(
-              tri.from.pathId.format -> fromDef,
-              tri.to.pathId.format -> toDef
-            )
-          case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description | _: BriefDescription |
-              _: AuthorRef =>
-            Seq.empty
-        }
-        .filterNot(_.isEmpty) // ignore None values generated when ref not found
-        .flatten // get rid of seq of seq
-        .filterNot(_._1.isEmpty) // drop empty things
-        .map(x => x._1 -> x._2.getOrElse(Root.empty)) // get rid of no definition case
-        .distinctBy(_._1) // eliminate duplicates
-        .sortWith(actorsFirst) // always list actors first (left side of diagram)
-        .toMap
+      uc.contents.toSeq.map {
+        case tri: TwoReferenceInteraction =>
+          val fromDef = refMap.definitionOf[Definition](tri.from.pathId, uc)
+          val toDef = refMap.definitionOf[Definition](tri.to.pathId, uc)
+          Seq(
+            tri.from.pathId.format -> fromDef,
+            tri.to.pathId.format -> toDef
+          )
+        case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description | _: BriefDescription |
+            _: AuthorRef =>
+          Seq.empty
+      }
+      .filterNot(_.isEmpty) // ignore None values generated when ref not found
+      .flatten // get rid of seq of seq
+      .filterNot(_._1.isEmpty) // drop empty things
+      .map(x => x._1 -> x._2.getOrElse(Root.empty)) // get rid of no definition case
+      .distinctBy(_._1) // eliminate duplicates
+      .sortWith(actorsFirst) // always list actors first (left side of diagram)
+      .toMap
     }
     val title = uc.identify + " in " + symTab.parentOf(uc).map(_.identify).getOrElse(" an Epic")
     UseCaseDiagramData(title, actors, uc.contents.filter[Interaction])

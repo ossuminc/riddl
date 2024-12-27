@@ -49,7 +49,7 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
           val expected = Domain(
             (1, 1),
             Identifier((1, 8), "foo"),
-            contents = Contents.empty,
+            contents = Contents.empty(),
             metadata = Contents(
               URLDescription(
                 (1, 30),
@@ -130,11 +130,11 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
       }
     }
   }
-  "NoWhiteSpaceParsers" should { 
+  "NoWhiteSpaceParsers" should {
     "handle a URL" in { (td: TestData) =>
       val input = RiddlParserInput("https://www.wordnik.com/words/phi",td)
       parse[URL,URL](input, StringParser("").httpUrl(_), identity) match {
-        case Left(errors) => 
+        case Left(errors) =>
           fail(errors.format)
         case Right((actual, _)) =>
           actual mustBe URL("https://www.wordnik.com/words/phi")

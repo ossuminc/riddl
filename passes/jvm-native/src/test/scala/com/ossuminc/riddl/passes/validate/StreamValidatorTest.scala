@@ -175,7 +175,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
                 Identifier(At(), "context"),
                 Contents(
                   Type(At(), Identifier(At(), "Int"), Integer(At()))
-                ) ++ streamlets
+                ) ++ (streamlets)
               )
             )
           )

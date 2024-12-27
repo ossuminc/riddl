@@ -12,14 +12,13 @@ import scala.reflect.{ClassTag, classTag}
 import scalajs.js.annotation._
 
 /** The referent for finding things within a given [[com.ossuminc.riddl.language.AST.Container]] of
-  * [[com.ossuminc.riddl.language.AST.RiddlValue]] as
-  * found in the AST model. This provides the ability to find values in the model by traversing it and looking for the
-  * matching condition.
+  * [[com.ossuminc.riddl.language.AST.RiddlValue]] as found in the AST model. This provides the ability to find values
+  * in the model by traversing it and looking for the matching condition.
   * @param root
   *   The container of RiddlValues to traverse for the sought condition
   */
 @JSExportTopLevel("Finder")
-case class Finder[CV <: ContentValues](root: Container[CV]) {
+case class Finder[CV <: RiddlValue](root: Container[CV]) {
 
   import scala.reflect.ClassTag
 
@@ -32,20 +31,20 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
     *   A [[scala.Seq]] of the matching [[AST.RiddlValue]]
     */
   @JSExport
-  def find(select: CV => Boolean): Seq[CV] = {
+  def find(select: CV => Boolean): Seq[CV] =
     Folding.foldEachDefinition[Seq[CV], CV](root, Seq.empty[CV]) { case (state: Seq[CV], value: CV) =>
       if select(value) then state :+ value else state
     }
-  }
+  end find
 
   /** Search the [[root]] for a certain kind of [[AST.RiddlValue]] and return those */
   @JSExport
-  def findByType[T <: AST.RiddlValue: ClassTag]: Seq[T] = {
+  def findByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
     import scala.reflect.classTag
     val lookingFor = classTag[T].runtimeClass
     val result = find { (value: RiddlValue) => lookingFor.isAssignableFrom(value.getClass) }
     result.asInstanceOf[Seq[T]]
-  }
+  end findByType
 
   /** The return value for the [[Finder.findWithParents()]] function */
   type DefWithParents[T <: RiddlValue] = Seq[(T, Parents)]
@@ -61,7 +60,7 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
   @JSExport
   def findWithParents[T <: RiddlValue: ClassTag](
     select: T => Boolean
-  ): DefWithParents[T] = {
+  ): DefWithParents[T] =
     import scala.collection.mutable
     val lookingFor = classTag[T].runtimeClass
     Folding.foldLeftWithStack[Seq[(T, Parents)], CV](
@@ -75,30 +74,28 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
         else state
       else state
     }
-  }
+  end findWithParents
 
-  /** Run a transformation function on the [[Finder]] contents. They type parameter specifies what kind of thing
-   * should be found, the `select` argument provides further refinement of which things of that type should
-   * be selected. The transformation function, `transformF` does the transformation, probably by using the
-   * Scala `.copy` method.
-   *
-   * @tparam TT
-   *   The transform type. This narrows the search to just the contents that have the base type TT.
-   * @param select
-   *   The function to select which values should be operated on. It should return true if the transformation function
-   *   should be executed on the element passed to it.
-   * @param transformF
-   *   The transformation function to convert one value to another. The returned value will replace the passed value
-   *   in the [[Finder]]'s container.
-   */
+  /** Run a transformation function on the [[Finder]] contents. They type parameter specifies what kind of thing should
+    * be found, the `select` argument provides further refinement of which things of that type should be selected. The
+    * transformation function, `transformF` does the transformation, probably by using the Scala `.copy` method.
+    *
+    * @tparam TT
+    *   The transform type. This narrows the search to just the contents that have the base type TT.
+    * @param select
+    *   The function to select which values should be operated on. It should return true if the transformation function
+    *   should be executed on the element passed to it.
+    * @param transformF
+    *   The transformation function to convert one value to another. The returned value will replace the passed value in
+    *   the [[Finder]]'s container.
+    */
   @JSExport
-  def transform[TT <: ContentValues : ClassTag](select: TT => Boolean)(transformF: CV => CV): Unit =
+  def transform[TT <: RiddlValue: ClassTag](select: TT => Boolean)(transformF: CV => CV): Unit =
     val clazz = classTag[TT].runtimeClass
     for { i <- root.contents.indices } do {
       val item: CV = root.contents(i)
       if clazz.isAssignableFrom(item.getClass) then
-        if select(item.asInstanceOf[TT]) then
-          root.contents(i) = transformF(item)
+        if select(item.asInstanceOf[TT]) then root.contents(i) = transformF(item)
         end if
       end if
     }
@@ -112,9 +109,9 @@ case class Finder[CV <: ContentValues](root: Container[CV]) {
   @JSExport def findEmpty: DefWithParents[Definition] = findWithParents[Definition](_.isEmpty)
 }
 
-object Finder {
-  def apply[CV <: ContentValues](contents: Contents[CV]): Finder[CV] = {
+object Finder:
+  def apply[CV <: RiddlValue](contents: Contents[CV]): Finder[CV] =
     val container = SimpleContainer[CV](contents)
     Finder[CV](container)
-  }
-}
+  end apply
+end Finder

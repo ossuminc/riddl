@@ -115,12 +115,12 @@ abstract class StreamingParserTest(using PlatformContext) extends AbstractParsin
           Type(
             (4, 3, rpi),
             Identifier((4, 11, rpi), "Forecast"),
-            AggregateUseCaseTypeExpression((4, 23, rpi), CommandCase, Contents.empty)
+            AggregateUseCaseTypeExpression((4, 23, rpi), AggregateUseCase.CommandCase, Contents.empty())
           ),
           Type(
             (5, 3, rpi),
             Identifier((5, 11, rpi), "Temperature"),
-            AggregateUseCaseTypeExpression((5, 26, rpi), CommandCase, Contents.empty)
+            AggregateUseCaseTypeExpression((5, 26, rpi), AggregateUseCase.CommandCase, Contents.empty())
           ),
           Streamlet(
             (6, 3, rpi),

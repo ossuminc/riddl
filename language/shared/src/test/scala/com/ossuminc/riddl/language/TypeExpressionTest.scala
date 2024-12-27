@@ -280,7 +280,7 @@ class TypeExpressionTest extends AbstractTestingBasis {
   )
 
   val message: AggregateUseCaseTypeExpression =
-    AggregateUseCaseTypeExpression(At.empty, RecordCase, aggregation.fields.toContents)
+    AggregateUseCaseTypeExpression(At.empty, AggregateUseCase.RecordCase, aggregation.fields.toContents)
 
   val alias: AliasedTypeExpression =
     AliasedTypeExpression(At.empty, "message", PathIdentifier(At.empty, Seq("a", "b", "foo")))

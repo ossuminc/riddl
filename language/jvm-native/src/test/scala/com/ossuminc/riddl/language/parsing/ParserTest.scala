@@ -95,8 +95,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
     "allow multiple domains" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain foo is { ??? }
-                                     |domain bar is { ??? }
-                                     |""".stripMargin,
+          |domain bar is { ??? }
+          |""".stripMargin,
         td
       )
       parseTopLevelDomains(input) match {
@@ -140,7 +140,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           val msg = errors.map(_.format).mkString
           fail(msg)
         case Right(content) =>
-          content.contents must not be empty
+          content.contents.isEmpty mustNot be(true)
           succeed
       }
     }
@@ -277,8 +277,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
         case Left(errors) =>
           val msg = errors.map(_.format).mkString
           fail(msg)
-        case Right((content, rpi)) =>
-          content mustBe Adaptor(
+        case Right((adaptor: Adaptor, rpi: RiddlParserInput)) =>
+          adaptor mustBe Adaptor(
             At(rpi, 0, 44),
             Identifier(At(rpi, 8, 13), "fuzz"),
             InboundAdaptor(At(rpi, 13, 18)),
@@ -286,7 +286,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
               At(rpi, 18, 34),
               PathIdentifier(At(rpi, 26, 34), Seq("foo", "bar"))
             ),
-            Contents.empty
+            Contents.empty()
           )
       }
     }
@@ -317,10 +317,10 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                   _
                 ) =>
               val firstExpected =
-                Field(At(rpi, 32, 43), Identifier(At(rpi, 32, 34), "b"), Bool(At(rpi, 36, 43)), Contents.empty)
+                Field(At(rpi, 32, 43), Identifier(At(rpi, 32, 34), "b"), Bool(At(rpi, 36, 43)), Contents.empty())
               firstAggrContents.head must be(firstExpected)
               val secondExpected =
-                Field(At(rpi, 57, 68), Identifier(At(rpi, 57, 59), "i"), Integer(At(rpi, 61, 68)), Contents.empty)
+                Field(At(rpi, 57, 68), Identifier(At(rpi, 57, 59), "i"), Integer(At(rpi, 61, 68)), Contents.empty())
               secondAggrContents.head must be(secondExpected)
           end match
 

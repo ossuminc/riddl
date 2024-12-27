@@ -80,7 +80,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   def process(value: RiddlValue, parentsStack: ParentStack): Unit =
     val parents: Parents =
       value match
-        case p: Parent =>
+        case p: Branch[?] =>
           kindMap.add(p)
           p +: parentsStack.toParents
         case _ => parentsStack.toParents
@@ -159,7 +159,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     end match
   end process
 
-  private def resolveAuthorRefs(definition: Parent & WithMetaData, parents: Parents): Unit =
+  private def resolveAuthorRefs(definition: Branch[?] & WithMetaData, parents: Parents): Unit =
     definition.authorRefs.foreach { item => associateUsage(definition, resolveARef[Author](item, parents)) }
   end resolveAuthorRefs
 
@@ -505,10 +505,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           // rightfully return an empty sequence for "not found"
           stack.pop()
           // Convert parent stack to immutable sequence
-          Some(stack.head.asInstanceOf[T] -> stack.tail.toSeq.asInstanceOf[Seq[Parent]])
+          Some(stack.head.asInstanceOf[T] -> stack.tail.toSeq.asInstanceOf[Seq[Branch[?]]])
         case Some(definition: T) =>
           // Not the root, just convert the result to immutable Seq
-          Some(definition -> stack.tail.toSeq.asInstanceOf[Seq[Parent]])
+          Some(definition -> stack.tail.toSeq.asInstanceOf[Seq[Branch[?]]])
         case Some(_) =>
           None
         case None =>
@@ -518,9 +518,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   }
 
   private def resolved[T <: Definition: ClassTag](
-    pathId: PathIdentifier,
-    pidDirectParent: Parent,
-    definition: Definition
+                                                   pathId: PathIdentifier,
+                                                   pidDirectParent: Branch[?],
+                                                   definition: Definition
   ): T =
     // A candidate was found, and it has the same type as expected
     val t = definition.asInstanceOf[T]
@@ -640,11 +640,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                 function.contents.definitions
             case vital: VitalDefinition[?] =>
               vital.contents.toSeq.flatMap {
-                case include: Include[ContentValues] @unchecked => include.contents.definitions
+                case include: Include[RiddlValue] @unchecked => include.contents.definitions
                 case value: Definition                          => Seq(value)
                 case _                                          => Seq.empty[Definition]
               }
-            case p: Parent =>
+            case p: Branch[?] =>
               p.contents.definitions
             case _ =>
               // No match so no candidates
@@ -712,11 +712,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case Some((typ: Type, _: Parents)) =>
         keyword match
           case Keyword.type_ | "" => resolution // this is generic, any type so just pass the result
-          case Keyword.command    => handleTypeResolution(typ, CommandCase, resolution)
-          case Keyword.query      => handleTypeResolution(typ, QueryCase, resolution)
-          case Keyword.event      => handleTypeResolution(typ, EventCase, resolution)
-          case Keyword.result     => handleTypeResolution(typ, ResultCase, resolution)
-          case Keyword.record     => handleTypeResolution(typ, RecordCase, resolution)
+          case Keyword.command    => handleTypeResolution(typ, AggregateUseCase.CommandCase, resolution)
+          case Keyword.query      => handleTypeResolution(typ, AggregateUseCase.QueryCase, resolution)
+          case Keyword.event      => handleTypeResolution(typ, AggregateUseCase.EventCase, resolution)
+          case Keyword.result     => handleTypeResolution(typ, AggregateUseCase.ResultCase, resolution)
+          case Keyword.record     => handleTypeResolution(typ, AggregateUseCase.RecordCase, resolution)
           case Keyword.graph =>
             typ.typEx match
               case _: Graph => resolution // success
@@ -869,7 +869,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
 
         // Return the name and candidates we should next search for
         definition match
-          case foundType: Parent =>
+          case foundType: Branch[?] =>
             defStack.push(foundType)
             foundType.contents.definitions
           case definition: T =>
@@ -917,7 +917,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           // NOTE: So we take the WithIdentifiers from the contents as well as from the includes
           val nested = candidatesFromContents(contents.includes.toContents)
           val current = contents.definitions
-          current ++ nested
+          current ++ nested.toSeq
         case definition: Definition =>
           Seq(definition)
         case _ =>

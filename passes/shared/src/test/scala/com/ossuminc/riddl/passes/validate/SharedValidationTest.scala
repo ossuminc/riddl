@@ -132,7 +132,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
     "handle includes" in { (_: TestData) =>
       sharedRoot.domains.headOption match {
         case Some(domain) =>
-          domain.contents mustNot be(empty)
+          domain.contents.isEmpty mustNot be(true)
           domain.contents.find("dosomething").getOrElse(None).getClass mustBe classOf[Context]
           domain.contents(3).getClass mustBe classOf[Context]
         case None => fail("There should be a domain")

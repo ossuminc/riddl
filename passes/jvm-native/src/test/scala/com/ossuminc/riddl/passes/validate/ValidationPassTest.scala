@@ -66,7 +66,7 @@ class ValidationPassTest extends AbstractValidatingTest {
     "handle includes" in { (td: TestData) =>
       val incls = sharedRoot.domains.head.includes
       incls mustNot be(empty)
-      incls.head.contents mustNot be(empty)
+      incls.head.contents.isEmpty mustNot be(true)
       incls.head.contents.head.getClass mustBe classOf[Context]
       incls(1).contents.head.getClass mustBe classOf[Context]
     }

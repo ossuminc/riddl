@@ -145,11 +145,10 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
     add(s"any of {").nl.incr
-    val enumerators: String = enumeration.enumerators
-      .map { enumerator =>
-        enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)")
-      }
-      .mkString(s"$spc", s",$new_line$spc", new_line)
+    val enumerators: String = enumeration.enumerators.toSeq.map { enumerator =>
+      enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)")
+    }
+    .mkString(s"$spc", s",$new_line$spc", new_line)
     add(enumerators).decr.addLine("}")
     this
   }
@@ -157,7 +156,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   private def emitAlternation(alternation: Alternation): this.type = {
     add(s"one of {").nl.incr.addIndent("")
     val paths: Seq[String] =
-      alternation.of.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }.toSeq
+      alternation.of.toSeq.map { (typeEx: AliasedTypeExpression) => typeEx.pathId.format }.toSeq
     add(paths.mkString("", " or ", new_line))
     decr.addIndent("}")
     this

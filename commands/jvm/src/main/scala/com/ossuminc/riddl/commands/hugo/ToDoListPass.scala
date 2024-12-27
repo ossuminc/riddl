@@ -65,7 +65,7 @@ case class ToDoListPass(
     else
       parents.headOption match {
         case None => Seq.empty
-        case Some(parent: Parent) =>
+        case Some(parent: Branch[?]) =>
           authors
             .map { (ref: AuthorRef) =>
               outputs.refMap.definitionOf[Author](ref.pathId, parent)

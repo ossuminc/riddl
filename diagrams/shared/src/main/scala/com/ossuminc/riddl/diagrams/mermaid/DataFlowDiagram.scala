@@ -66,7 +66,7 @@ case class DataFlowDiagram(pr: PassesResult)(using pc: PlatformContext) extends 
     else addLine(s"$fromName -- $how --> $toName")
   }
 
-  private[mermaid] def participants(connector: Connector, parent: Parent): Seq[Definition] = {
+  private[mermaid] def participants(connector: Connector, parent: Branch[?]): Seq[Definition] = {
     for {
       toDef <- pr.refMap.definitionOf[Inlet](connector.to, parent)
       fromDef <- pr.refMap.definitionOf[Outlet](connector.from, parent)

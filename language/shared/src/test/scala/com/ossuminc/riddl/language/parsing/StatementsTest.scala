@@ -117,14 +117,14 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
     "check Foreach Statement" in { td =>
       val pathId = PathIdentifier(At.empty, Seq("foo"))
       val fieldRef = FieldRef(At.empty, pathId)
-      val s = ForEachStatement(At.empty, fieldRef, Contents.empty)
+      val s = ForEachStatement(At.empty, fieldRef, Contents.empty())
       s.kind must be("Foreach Statement")
       s.format must be(s"foreach field foo do\n\n  end")
       checkStatement(s)
     }
     "check If-Then-Else Statement" in { td =>
       val condition = LiteralString(At.empty, "foo")
-      val s = IfThenElseStatement(At.empty, condition, Contents.empty, Contents.empty)
+      val s = IfThenElseStatement(At.empty, condition, Contents.empty(), Contents.empty())
       s.kind must be("IfThenElse Statement")
       s.format must be(s"if ${condition.format} then {\n  \n} else {\n  \n}\nend")
       checkStatement(s)

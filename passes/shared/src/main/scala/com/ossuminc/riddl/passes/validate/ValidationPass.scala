@@ -160,15 +160,17 @@ case class ValidationPass(
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
-        case CommandCase =>
+        case AggregateUseCase.CommandCase =>
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
-          if sends.isEmpty || !sends.contains { (x: SendStatement) => x.msg.messageKind == EventCase } then
+          if sends.isEmpty || !sends.contains { (x: SendStatement) => x.msg.messageKind == AggregateUseCase.EventCase }
+          then
             messages.add(
               missing("Processing for commands should result in sending an event", omc.errorLoc)
             )
-        case QueryCase =>
+        case AggregateUseCase.QueryCase =>
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
-          if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == ResultCase) then
+          if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == AggregateUseCase.ResultCase)
+          then
             messages.add(
               missing("Processing for queries should result in sending a result", omc.errorLoc)
             )
@@ -184,7 +186,7 @@ case class ValidationPass(
     statement: Statement,
     parents: Parents
   ): Unit =
-    val onClause: Parent = parents.head
+    val onClause: Branch[?] = parents.head
     statement match
       case ArbitraryStatement(loc, what) =>
         checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
@@ -515,11 +517,11 @@ case class ValidationPass(
       projector.types.exists { (typ: Type) =>
         typ.typEx match {
           case auc: AggregateUseCaseTypeExpression =>
-            auc.usecase == RecordCase
+            auc.usecase == AggregateUseCase.RecordCase
           case _ => false
         }
       },
-      s"${projector.identify} lacks a required ${RecordCase.useCase} definition.",
+      s"${projector.identify} lacks a required ${AggregateUseCase.RecordCase.useCase} definition.",
       Messages.Error,
       projector.errorLoc
     )
@@ -646,7 +648,7 @@ case class ValidationPass(
     }
     checkMetadata(epic)
   }
-  
+
   private def validateGroup(
     grp: Group,
     parents: Parents
@@ -781,7 +783,7 @@ case class ValidationPass(
                       case Some(Type(_, _, typEx, _)) if typEx.isContainer =>
                         typEx match {
                           case ate: AggregateUseCaseTypeExpression
-                              if ate.usecase == EventCase || ate.usecase == ResultCase =>
+                              if ate.usecase == AggregateUseCase.EventCase || ate.usecase == AggregateUseCase.ResultCase =>
                             None // events and results are permitted
                           case ty: TypeExpression => // everything else is not
                             Some(
@@ -814,7 +816,7 @@ case class ValidationPass(
                   case Some(Type(_, _, typEx, _)) if typEx.isContainer =>
                     typEx match {
                       case ate: AggregateUseCaseTypeExpression
-                          if ate.usecase == CommandCase || ate.usecase == QueryCase =>
+                          if ate.usecase == AggregateUseCase.CommandCase || ate.usecase == AggregateUseCase.QueryCase =>
                         None // commands and queries are permitted
                       case ty: TypeExpression => // everything else is not
                         Some(
