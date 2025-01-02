@@ -19,4 +19,4 @@ class JVMRepositoryTest extends RepositoryTest
 class JVMStatementsTest extends StatementsTest
 class JVMStreamingParserTest extends StreamingParserTest
 class JVMTypeParserTest extends TypeParserTest
-class JVMTokenStreamParserTest extends TokenStreamParserTest
+class JVMTokenParserTest extends TokenParserTest

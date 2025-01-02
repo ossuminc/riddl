@@ -38,7 +38,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
       SagaParser,
       StreamingParser,
       StatementParser,
-      TokenStreamParser,
+      TokenParser,
       ParsingContext {
 
   def input: RiddlParserInput

@@ -20,7 +20,11 @@ import jdk.jshell.SourceCodeAnalysis.Documentation
 
 import scala.util.control.NonFatal
 
-trait TokenStreamParser extends CommonParser with Readability {
+trait TokenParser extends CommonParser with Readability {
+
+  private def numericToken[u:P]: P[Token.Numeric] = {
+    P(Index ~~ integer ~~ Index)./.map { case (start, _, end) => Token.Numeric(at(start, end)) }
+  }
 
   private def punctuationToken[u: P]: P[Token.Punctuation] = {
     P(Index ~~ Punctuation.anyPunctuation ~~ Index)./.map { case (start, end) => Token.Punctuation(at(start, end)) }
@@ -72,6 +76,7 @@ trait TokenStreamParser extends CommonParser with Readability {
         readabilityToken |
         predefinedToken |
         identifierToken |
+        numericToken |
         commentToken |
         otherToken
     )./

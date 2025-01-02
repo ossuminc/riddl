@@ -123,7 +123,7 @@ object PredefType {
   final val Whole = "Whole"
   final val ZonedDateTime = "ZonedDateTime"
 
-  // NOTE: Keep this list in synch with the one in TokenStreamParser
+  // NOTE: Keep this list in synch with the one in TokenParser
   final val allPredefTypes: Seq[String] = Seq(
     Abstract,
     Blob,

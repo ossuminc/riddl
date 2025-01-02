@@ -82,7 +82,7 @@ object ReadabilityWords {
   final val wants = "wants"
   final val with_ = "with"
 
-  // NOTE: Keep this list in synch with the list in TokenStreamParser
+  // NOTE: Keep this list in synch with the list in TokenParser
   def allReadability: Seq[String] = Seq(
     and,
     are,

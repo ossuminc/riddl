@@ -17,14 +17,15 @@ import org.scalatest.TestData
 import scala.concurrent.ExecutionContext
 import scala.io.AnsiColor.{GREEN, RED, RESET}
 
-abstract class TokenStreamParserTest(using pc: PlatformContext) extends AbstractParsingTest {
-  "TokenStreamParser" must {
+abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsingTest {
+  "TokenParser" must {
     "handle simple document fragment" in { (td: TestData) =>
       val rpi: RiddlParserInput = RiddlParserInput(
         """module foo is {
           |   // this is a comment
           |   domain blah is { ??? }
           |   invariant bar is "condition"
+          |   type enum is any of { Apple, Pear,  Peach(23),  Persimmon(24) }
           |}
           |""".stripMargin,
         td
@@ -52,7 +53,27 @@ abstract class TokenStreamParserTest(using pc: PlatformContext) extends Abstract
             AST.Token.Identifier(At(rpi, 79, 82)),
             AST.Token.Readability(At(rpi, 83, 85)),
             AST.Token.QuotedString(At(rpi, 86, 97)),
-            AST.Token.Punctuation(At(rpi, 98, 99))
+            AST.Token.Keyword(At(rpi, 101, 105)),
+            AST.Token.Identifier(At(rpi, 106, 110)),
+            AST.Token.Readability(At(rpi, 111, 113)),
+            AST.Token.Keyword(At(rpi, 114, 117)),
+            AST.Token.Readability(At(rpi, 118, 120)),
+            AST.Token.Punctuation(At(rpi, 121, 122)),
+            AST.Token.Identifier(At(rpi, 123, 128)),
+            AST.Token.Punctuation(At(rpi, 128, 129)),
+            AST.Token.Identifier(At(rpi, 130, 134)),
+            AST.Token.Punctuation(At(rpi, 134, 135)),
+            AST.Token.Identifier(At(rpi, 137, 142)),
+            AST.Token.Punctuation(At(rpi, 142, 143)),
+            AST.Token.Numeric(At(rpi, 143, 145)),
+            AST.Token.Punctuation(At(rpi, 145, 146)),
+            AST.Token.Punctuation(At(rpi, 146, 147)),
+            AST.Token.Identifier(At(rpi, 149, 158)),
+            AST.Token.Punctuation(At(rpi, 158, 159)),
+            AST.Token.Numeric(At(rpi, 159, 161)),
+            AST.Token.Punctuation(At(rpi, 161, 162)),
+            AST.Token.Punctuation(At(rpi, 163, 164)),
+            AST.Token.Punctuation(At(rpi, 165, 166))
           )
           tokens must be(expected)
     }

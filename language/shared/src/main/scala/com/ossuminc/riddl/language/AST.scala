@@ -3919,6 +3919,7 @@ object AST:
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////// TOKENS
   enum Token(at: At):
+    val loc: At = at
     case Punctuation(at: At) extends Token(at)
     case QuotedString(at: At) extends Token(at)
     case Readability(at: At) extends Token(at)
@@ -3928,6 +3929,7 @@ object AST:
     case LiteralString(at: At) extends Token(at)
     case MarkdownLine(at: At) extends Token(at)
     case Identifier(at: At) extends Token(at)
+    case Numeric(at: At) extends Token(at)
     case Other(at: At) extends Token(at)
   end Token
 
