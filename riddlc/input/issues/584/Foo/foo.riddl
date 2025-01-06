@@ -1,0 +1,21 @@
+context FooContext is {
+  command FooStateChange {???}
+
+  entity Foo is {
+      option is aggregate
+      record InitialFooData is { f1: Integer }
+      record FinalFooStateData is {f1: String }
+      state InitialFooState of Foo.InitialFooData
+      handler InitializeFoo is {
+         on command FooStateChange {
+           become entity FooContext.Foo to handler Foo.FinalizeFoo
+         }
+      }
+      state FinalFooState of Foo.FinalFooStateData
+      handler FinalizeFoo is {
+         on command FooStateChange {
+           become entity FooContext.Foo to handler Foo.InitializeFoo
+         }
+      }
+    }
+}

@@ -1,0 +1,9 @@
+domain foo {
+  context one is {
+    page top { ??? }
+    page middle {
+      input empty acquires String is { ??? }
+    }
+  }
+  context two is { ??? }
+}

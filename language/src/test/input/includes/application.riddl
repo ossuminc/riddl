@@ -1,4 +1,0 @@
-application ignore {
-  include "page"
-  type foo = Integer
-}

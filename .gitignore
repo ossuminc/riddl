@@ -5,7 +5,7 @@
 /.bsp/
 !.idea/runConfigurations/
 !.idea/dictionaries
-/.idea/
+/.idea/**
 /project/project
 /project/.bloop
 target
@@ -22,3 +22,6 @@ target
 /doc/src/main/hugo/resources/_gen/**
 *.lock
 /hugo-input/
+/scoverage-report/
+/package-lock.json
+/node_modules

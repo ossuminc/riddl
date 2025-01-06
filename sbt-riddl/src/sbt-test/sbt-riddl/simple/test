@@ -1,6 +1,9 @@
 # Put in sbt-test scripted checks in this file
 # See: https://www.scala-sbt.org/1.x/docs/Testing-sbt-plugins.html for options
 
+# Update dependencies to make sure we get riddl in the plugin's context
+> update
+
 # See if the minimal info command works
 > info
 

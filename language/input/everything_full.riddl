@@ -1,0 +1,113 @@
+context full is {
+  type str is String             // Define str as a String
+  type num is Number             // Define num as a Number
+  type boo is Boolean            // Define boo as a Boolean
+  type ident is Id(Something)    // Define ident as an Id
+  type dat is Date               // Define dat as a Date
+  type tim is Time               // Define tim as a Time
+  type stamp is TimeStamp        // Define stamp as a TimeStamp
+  type url is URL                // Define url as a Uniform Resource Locator
+
+  type PeachType is { a: Integer with { ??? } }
+  type enum is any of { Apple Pear Peach(23)   Persimmon(24) }
+
+  type alt is one of { enum or stamp or url } with {
+    described as {
+      | Alternations select one type from a list of types
+    }
+  }
+
+
+  type agg is {
+    key: num,
+    id: ident,
+    time is TimeStamp
+  }
+
+  type moreThanNone is many agg
+  type zeroOrMore is agg*
+  type optionality is agg?
+
+  repository StoreIt is {
+    schema One is relational
+      of a as type agg
+      link relationship as field agg.time to field agg.ident
+      index on field agg.id
+    with { briefly as "This is how to store data" }
+
+    handler Putter is {
+      on command ACommand {
+        put "something" to type agg
+      }
+    }
+  } with {
+    briefly as "This is a simple repository"
+    term foo is "an arbitrary name as a contraction for fubar which has grotesque connotations"
+  }
+
+
+  projector ProjectIt is {
+    updates repository StoreIt
+    record Record is { ??? }
+    handler projector is {
+      on init {
+        tell command ACommand to repository StoreIt
+      }
+    }
+  }
+
+  command ACommand()
+
+  adaptor fromAPlant to context APlant is {
+    handler adaptCommands is {
+      on command ACommand {
+        send command DoAThing to outlet APlant.Source.Commands
+      }
+    }
+  }
+
+  entity Something is {
+    option aggregate
+    option transient
+    function misc is {
+      requires { n: Nothing }
+      returns { b: Boolean }
+      ???
+    }
+    type somethingDate is Date
+
+    event Inebriated is { ??? }
+
+    record someData(field:  SomeType)
+    state someState of Something.someData
+
+    handler foo is {
+      // Handle the ACommand
+      on command ACommand {
+        if "Something arrives" then {
+          // we want to send an event
+          send event Inebriated to outlet APlant.Source.Commands
+        }
+      }
+    }
+
+    function whenUnderTheInfluence is {
+      requires { n: Nothing }
+      returns  { b: Boolean }
+        "aribtrary statement"
+    } with {
+      briefly as "Something is nothing interesting"
+    }
+  }
+
+  entity SomeOtherThing is {
+    type ItHappened is event { aField: String }
+    record otherThingData is { aField: String }
+    state otherThingState of SomeOtherThing.otherThingData
+    handler fee is {
+      on event ItHappened {
+        set field SomeOtherThing.otherThingState.aField to "arbitrary string value"
+      }
+    }
+  }
+}

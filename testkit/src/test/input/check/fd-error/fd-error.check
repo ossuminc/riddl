@@ -1,4 +1,0 @@
-testkit/src/test/input/check/fd-error/fd-error.riddl(1:36):
- Description file cannot be read: /Users/reid/Code/ossuminc/riddl/testkit/src/test/input/check/fd-error/bar.md :
- domain bar is { ??? } explained in file "bar.md"
-                                    ^

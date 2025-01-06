@@ -1,0 +1,4 @@
+context ignore {
+  include "page"
+  type foo = Integer
+}

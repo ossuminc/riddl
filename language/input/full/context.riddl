@@ -1,0 +1,38 @@
+context other  is {
+  ???
+} with {
+  by author Reid
+}
+context context is {
+  adaptor adaptor from context other is { ??? }
+  function function is { ??? }
+  event event is { at: TimeStamp }
+  handler handler is {
+    on event event {
+      if "there is an error" then {
+        error "This is an error"
+      }
+    }
+  }
+  repository repository is { ??? }
+  source source is { ??? }
+  sink sink is { ??? }
+  flow flow is { ??? }
+  merge merge is { ??? }
+  split split is { ??? }
+  saga saga is {
+   step a is {
+     "a.1"
+   } reverted by {
+     "a_r.1"
+   }
+   step b is {
+     "b.1"
+   } reverted by {
+     "b_r.1"
+   }
+ }
+} with {
+  by author Reid
+  term term is "not interesting"
+}

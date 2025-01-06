@@ -1,0 +1,1 @@
+domain foo is { ??? } with { explained in file "bar.md" }

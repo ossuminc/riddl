@@ -1,17 +1,7 @@
 /*
- * Copyright 2019-2024 Ossum, Inc.
+ * Copyright 2019 Ossum, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.ossuminc.riddl.sbt.plugin
@@ -33,9 +23,9 @@ object RiddlSbtPlugin extends AutoPlugin {
 
     lazy val riddlcPath = settingKey[Option[File]]("Optional path to riddlc").withRank(KeyRanks.Invisible)
 
-    lazy val riddlcConf = settingKey[File]("Path to the config file")
+    lazy val riddlcConf = settingKey[File]("Path to the config file").withRank(KeyRanks.Invisible)
 
-    lazy val riddlcOptions = settingKey[Seq[String]]("Options to pass to riddlc")
+    lazy val riddlcOptions = settingKey[Seq[String]]("Options to pass to riddlc").withRank(KeyRanks.Invisible)
 
     lazy val riddlcMinVersion = {
       settingKey[String]("Ensure the riddlc used is at least this version")
@@ -47,10 +37,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   import autoImport.*
 
   private object V {
-    val scala = "3.3.1" // NOTE: Synchronize with Helpers.C.withScala3
-    val scalacheck = "1.17.0" // NOTE: Synchronize with Helpers.V.scalacheck
-    val scalatest = "3.2.18" // NOTE: Synchronize with Helpers.V.scalatest
-    val riddl: String = SbtRiddlPluginBuildInfo.version
+    val scala = "3.4.2" // NOTE: Synchronize with sbt-ossuminc scala version
   }
 
   /*private def getLogger(project: Extracted, state: State): ManagedLogger = {
@@ -80,13 +67,6 @@ object RiddlSbtPlugin extends AutoPlugin {
   override def projectSettings: Seq[Setting[_]] = Seq(
     // Global / excludeLintKeys ++= Seq(riddlcConf, riddlcOptions),
     scalaVersion := V.scala,
-    libraryDependencies ++= Seq(
-      "com.ossuminc" %% "riddlc" % V.riddl,
-      "com.ossuminc" %% "riddl-testkit" % V.riddl % Test,
-      "org.scalactic" %% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test,
-      "org.scalacheck" %% "scalacheck" % V.scalacheck % Test
-    ),
     Test / classLoaderLayeringStrategy := ClassLoaderLayeringStrategy.ScalaLibrary,
     riddlcPath := None,
     riddlcOptions := Seq("--show-times"),

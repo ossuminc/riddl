@@ -7,7 +7,7 @@ creatordisplayname: "Reid Spencer"
 creatoremail: "reid@ossum.biz"
 ---
 
-<img src="/images/RIDDL-Logo.svg" align="left" width="100px"/>IDDL is a 
+<img src="/static/images/RIDDL-Logo.svg" align="left" width="100px"/>IDDL is a 
 language and toolset for specifying a system design. RIDDL is *not*
 a programming language. This documentation is structured to accommodate 
 many learning styles. It is not intended to be read linearly. This page
@@ -22,6 +22,13 @@ Everyone should read the [Introduction]({{< relref "./introduction">}})
 as it answers many fundamental questions about RIDDL, defining what RIDDL 
 is, what it can do, what it is based upon, who helped it come to fruition, and 
 how to get help. 
+
+## Quick Help
+
+* This Documentation: https://riddl.tech/
+* Scala 3 API DOC: https://riddl.tech/apidoc/
+* GitHub Source Code: https://github.com/ossuminc/riddl/
+* Examples Repository: https://github.com/ossuminc/riddl-examples/
 
 ## Guides
 People involved with RIDDL come from many professional roles so there are
@@ -57,14 +64,6 @@ use them.
 ## Future Work
 If you're interested in knowing how we plan to extend RIDDl in the future, 
 please review our [Future Work]({{< relref "./future-work" >}}) section. 
-
-## Important Links
-
-* This Documentation: https://riddl.tech/
-* Scala 3 API DOC: https://riddl.tech/apidoc/
-* Source Code: https://github.com/ossuminc/riddl/
-* Examples Repository: https://github.com/ossuminc/riddl-examples/
-* Contact: [Reid's LinkedIn Profile](https://www.linkedin.com/in/reidspencer/)
 
 ## Full Index
 
