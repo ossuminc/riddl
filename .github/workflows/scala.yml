@@ -33,6 +33,12 @@ jobs:
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
+    - name: Test Package Path
+      run: |
+        curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+             -H "Accept: application/vnd.github.v3+json" \
+             "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom"
+
     - name: Debug SBT Resolution
       run: |
         sbt -v -Dsbt.log.noformat=true \
