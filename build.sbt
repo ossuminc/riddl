@@ -55,8 +55,8 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
 
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
-  .configure(With.publishing)
   .settings(
     scalacOptions += "-explain-cyclic",
     description := "Various utilities used throughout riddl libraries"
@@ -124,6 +124,7 @@ lazy val utilsNative = utils_cp.native
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp))
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
@@ -131,7 +132,6 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     Test / parallelExecution := false
   )
   .jvmConfigure(With.coverage(65))
-  .jvmConfigure(With.publishing)
   .jvmConfigure(With.MiMa("0.52.1"))
   .jvmSettings(
     tastyMiMaConfig ~= { prevConfig =>
@@ -174,6 +174,7 @@ lazy val languageNative = language_cp.native.dependsOn(utilsNative)
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     Test / parallelExecution := false,
@@ -206,7 +207,8 @@ val passesJS = passes_cp.js
 val passesNative = passes_cp.native
 
 lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
+  .configure(With.GithubPublishing)
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Testing kit for RIDDL language and passes"
   )
@@ -243,15 +245,14 @@ val testkitNative = testkit_cp.native
 val Diagrams = config("diagrams")
 lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa("0.52.1"))
-  .jvmSettings(
-    coverageExcludedFiles := """<empty>;$anon"""
-  )
+  .jvmSettings(coverageExcludedFiles := """<empty>;$anon""")
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.native(mode = "fast"))
@@ -297,6 +298,7 @@ val commandsNative = riddlLib_cp.native
 
 lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp)) /*, cpDep(commands_cp) */
+  .configure(With.GithubPublishing)
   .configure(With.typical)
   .settings(
     description := "Bundling of essential RIDDL libraries"
@@ -316,6 +318,7 @@ val riddlLibNative = riddlLib_cp.native
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50.0))
   .configure(With.noMiMa)
@@ -386,7 +389,8 @@ lazy val docsite = DocSite(
   .dependsOn(utils, language, passes, diagrams, commands)
 
 lazy val plugin = Plugin("sbt-riddl")
-  .configure(With.build_info, With.scala2, With.noMiMa, With.publishing)
+  .configure(With.GithubPublishing)
+  .configure(With.build_info, With.scala2, With.noMiMa)
   .configure(With.headerLicense("Apache-2.0"))
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",
