@@ -52,6 +52,15 @@ jobs:
             "$URL" 2>&1 | grep -E "^< HTTP|^< Location|error|message"
         done
 
+    - name: Debug GitHub Package Redirects
+      run: |
+        echo "Testing with redirect following..."
+        curl -L -v \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom" \
+          2>&1 | grep -E "^< HTTP|^< Location|error|message"
+
     - name: Configure Coursier
       run: |
         mkdir -p ~/.config/coursier

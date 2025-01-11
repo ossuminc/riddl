@@ -1,27 +1,13 @@
-credentials += Credentials(
-  realm = "GitHub Package Registry",
-  host = "maven.pkg.github.com",
-  userName = sys.env.getOrElse("GITHUB_ACTOR", ""),
-  passwd = sys.env.getOrElse("GITHUB_TOKEN", "")
-)
-
-resolvers += MavenRepository(
-  "GitHub Package Registry",
-  "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc"
-)
-
-ThisBuild / csrConfiguration := {
-  csrConfiguration.value.withCredentials(
-    Seq(
-      lmcoursier.credentials.Credentials(
-        "GitHub Package Registry",
-        "maven.pkg.github.com",
-        sys.env.getOrElse("GITHUB_ACTOR", ""),
-        sys.env.getOrElse("GITHUB_TOKEN", "")
-      )
-    )
-  )
+val resolver = sys.env.get("GITHUB_ACTOR") match {
+  case Some(actor) =>
+    // We're in GitHub Actions
+    s"https://${actor}:${sys.env("GITHUB_TOKEN")}@maven.pkg.github.com/ossuminc/_"
+  case None =>
+    // We're in development environment
+    "https://maven.pkg.github.com/ossuminc/_"
 }
+
+resolvers += "GitHub Package Registry" at resolver
 
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3" cross CrossVersion.binary)
 
