@@ -1,7 +1,15 @@
 resolvers += MavenRepository(
   "GitHub Package Registry",
-  "https://maven.pkg.github.com/ossuminc/*"
+  "https://maven.pkg.github.com/ossuminc"
 )
+
+credentials += Credentials(
+  realm = "GitHub Package Registry",
+  host = "maven.pkg.github.com",
+  userName = System.getenv.getOrDefault("GITHUB_ACTOR", ""),
+  passwd = System.getenv.getOrDefault("GITHUB_TOKEN", "")
+)
+
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3")
 
 // This enables sbt-bloop to create bloop config files for Metals editors
