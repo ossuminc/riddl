@@ -33,7 +33,17 @@ jobs:
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
-    - name: Check Clang Okayness
+    - name: Debug SBT Resolution
+      run: |
+        sbt -v -Dsbt.log.noformat=true \
+            -Dsbt.global.base=.sbt \
+            -Dsbt.boot.directory=.sbt/boot \
+            -Dsbt.ivy.home=.ivy2 \
+            -Dcoursier.verbose=true \
+            plugins
+        
+        
+        - name: Check Clang Okayness
       run: |
         echo CLANG: `which clang`
         echo LD64.LLD: `which ld64.lld`
@@ -62,23 +72,6 @@ jobs:
         echo "credentials.githubusercontent.com.host=maven.pkg.github.com" >> ~/.config/coursier/credentials.properties
         echo "credentials.githubusercontent.com.user=$GITHUB_ACTOR" >> ~/.config/coursier/credentials.properties
         echo "credentials.githubusercontent.com.password=${{ secrets.GITHUB_TOKEN }}" >> ~/.config/coursier/credentials.properties
-
-    - name: Configure SBT GitHub Packages
-      run: |
-        mkdir -p ~/.sbt/1.0/plugins
-        cat > ~/.sbt/1.0/plugins/github.sbt << EOF
-        resolvers += Resolver.url(
-          "GitHub Package Registry",
-          url("https://maven.pkg.github.com/ossuminc/sbt-ossuminc")
-        )(Resolver.ivyStylePatterns)
-        
-        credentials += Credentials(
-          "GitHub Package Registry",
-          "maven.pkg.github.com",
-          "$GITHUB_ACTOR",
-          "${{ secrets.GITHUB_TOKEN }}"
-        )
-        EOF
 
     - name: Build And Test JVM Versions
       run: |
