@@ -6,7 +6,7 @@ resolvers += Resolver.url(
 ThisBuild / csrConfiguration := {
   csrConfiguration.value.withCredentials(
     Seq(
-      Credentials(
+      lmcoursier.credentials.Credentials(
         "GitHub Package Registry",
         "maven.pkg.github.com",
         sys.env.getOrElse("GITHUB_ACTOR", ""),
