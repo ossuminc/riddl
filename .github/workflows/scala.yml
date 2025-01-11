@@ -18,6 +18,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
+      COURSIER_REPOSITORIES: central|maven:https://maven.pkg.github.com/ossuminc
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code

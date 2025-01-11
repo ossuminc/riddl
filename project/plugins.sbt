@@ -1,26 +1,9 @@
 resolvers += Resolver.url(
   "GitHub Package Registry",
   url("https://maven.pkg.github.com/ossuminc")
-)(
-  Patterns(
-    Vector(
-      "[organisation]/[module]_[scalaVersion]_[sbtVersion]/[revision]/[artifact]-[revision](-[classifier]).[ext]"
-    ),
-    Vector(
-      "[organisation]/[module]_[scalaVersion]_[sbtVersion]/[revision]/[artifact]-[revision](-[classifier]).[ext]"
-    ),
-    isMavenCompatible = true,
-    descriptorOptional = false,
-    skipConsistencyCheck = true
-  )
-)
-credentials += Credentials(
+)(Resolver.ivyStylePatterns).withAllowInsecureProtocol(false)
 
-  realm = "GitHub Package Registry",
-  host = "maven.pkg.github.com",
-  userName = System.getenv.getOrDefault("GITHUB_ACTOR", ""),
-  passwd = System.getenv.getOrDefault("GITHUB_TOKEN", "")
-)
+ThisBuild / coursierUseSbtCredentials := true
 
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3" cross CrossVersion.binary)
 
