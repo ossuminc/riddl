@@ -42,8 +42,8 @@ jobs:
             -Dcoursier.verbose=true \
             plugins
         
-        
-        - name: Check Clang Okayness
+
+    - name: Check Clang Okayness
       run: |
         echo CLANG: `which clang`
         echo LD64.LLD: `which ld64.lld`
