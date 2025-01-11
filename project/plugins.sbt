@@ -1,9 +1,21 @@
-resolvers += MavenRepository(
+resolvers += Resolver.url(
   "GitHub Package Registry",
-  "https://maven.pkg.github.com/ossuminc"
+  url("https://maven.pkg.github.com/ossuminc")
+)(
+  Patterns(
+    Vector(
+      "[organisation]/[module]_[scalaVersion]_[sbtVersion]/[revision]/[artifact]-[revision](-[classifier]).[ext]"
+    ),
+    Vector(
+      "[organisation]/[module]_[scalaVersion]_[sbtVersion]/[revision]/[artifact]-[revision](-[classifier]).[ext]"
+    ),
+    isMavenCompatible = true,
+    descriptorOptional = false,
+    skipConsistencyCheck = true
+  )
 )
-
 credentials += Credentials(
+
   realm = "GitHub Package Registry",
   host = "maven.pkg.github.com",
   userName = System.getenv.getOrDefault("GITHUB_ACTOR", ""),
