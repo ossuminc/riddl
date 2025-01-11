@@ -17,7 +17,7 @@ object V {
   val scalatest = "3.2.19"
   val sconfig = "1.8.1"
   val scopt = "4.1.0"
-  val sttp = "3.10.1"
+  val sttp = "4.0.0-M22"
   val slf4j = "2.0.4"
 }
 

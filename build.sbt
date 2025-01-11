@@ -17,7 +17,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
-lazy val license = ALv2(yyyy = "2019-2025", copyrightOwner = "Ossum Inc.", licenseStyle = SpdxSyntax)
+lazy val license =
+  ALv2(yyyy = "2019-2025", copyrightOwner = "Ossum Inc.", licenseStyle = SpdxSyntax)
 
 def cpDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
 def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
@@ -74,12 +75,24 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.version"),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.utils.RiddlBuildInfo.version"
+          ),
           ProblemMatcher
-            .make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"),
+            .make(
+              ProblemKind.IncompatibleTypeChange,
+              "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"
+            ),
           ProblemMatcher
-            .make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"),
-          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot")
+            .make(
+              ProblemKind.IncompatibleTypeChange,
+              "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"
+            ),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot"
+          )
         )
       )
     }
@@ -111,7 +124,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
-      // "com.softwaremill.sttp.client3" %% "core" % V.sttp,
+      "com.softwaremill.sttp.client4" %%% "core" % V.sttp,
       "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
       "org.scalactic" %%% "scalactic" % V.scalatest % Test,
@@ -140,8 +153,14 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc"),
-          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.language.AST.OccursInProcessor")
+          ProblemMatcher.make(
+            ProblemKind.NewAbstractMember,
+            "com.ossuminc.riddl.language.AST.RiddlValue.loc"
+          ),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.language.AST.OccursInProcessor"
+          )
         )
       )
     },
@@ -187,14 +206,19 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     mimaBinaryIssueFilters ++= Seq(
-      ProblemFilters.exclude[ReversedMissingMethodProblem]("com.ossuminc.riddl.passes.PassVisitor.doRelationship")
+      ProblemFilters.exclude[ReversedMissingMethodProblem](
+        "com.ossuminc.riddl.passes.PassVisitor.doRelationship"
+      )
     ),
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.passes.PassVisitor.doRelationship")
+          ProblemMatcher.make(
+            ProblemKind.NewAbstractMember,
+            "com.ossuminc.riddl.passes.PassVisitor.doRelationship"
+          )
         )
       )
     }
@@ -298,7 +322,12 @@ val commands: Project = commands_cp.jvm
 val commandsNative = riddlLib_cp.native
 
 lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp)) /*, cpDep(commands_cp) */
+  .dependsOn(
+    cpDep(utils_cp),
+    cpDep(language_cp),
+    cpDep(passes_cp),
+    cpDep(diagrams_cp)
+  ) /*, cpDep(commands_cp) */
   .configure(With.GithubPublishing)
   .configure(With.typical)
   .settings(
