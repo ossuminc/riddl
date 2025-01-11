@@ -1,6 +1,6 @@
 resolvers += MavenRepository(
   "GitHub Package Registry",
-  "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"
+  "https://maven.pkg.github.com/ossuminc/*"
 )
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3")
 
