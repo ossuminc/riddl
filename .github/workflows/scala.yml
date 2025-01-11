@@ -18,7 +18,6 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
-      COURSIER_REPOSITORIES: central|maven:https://maven.pkg.github.com/ossuminc
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
@@ -31,64 +30,10 @@ jobs:
         distribution: temurin
         cache: sbt
 
-    - name: Configure SBT Credentials
-      run: |
-        mkdir -p ~/.sbt/1.0
-        echo "credentials += Credentials(
-          \"GitHub Package Registry\",
-          \"maven.pkg.github.com\",
-          \"$GITHUB_ACTOR\",
-          \"$GITHUB_TOKEN\"
-        )" > ~/.sbt/1.0/github.sbt
-
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
-    - name: Configure Coursier Credentials
-      run: |
-        mkdir -p ~/.config/coursier
-        echo "realm=GitHub Package Registry
-        host=maven.pkg.github.com
-        user=$GITHUB_ACTOR
-        password=$GITHUB_TOKEN" > ~/.config/coursier/credentials.properties
-
-        # Also set specific environment variables for coursier
-        echo "COURSIER_CREDENTIALS=$HOME/.config/coursier/credentials.properties" >> $GITHUB_ENV
-
-    - name: Configure Coursier
-      run: |
-        mkdir -p ~/.config/coursier
-        echo "
-        repositories:
-          - central
-          - maven:https://maven.pkg.github.com/ossuminc/sbt-ossuminc
-        " > ~/.config/coursier/repositories
-
-    - name: Debug SBT Resolution
-      run: |
-        sbt -v -Dsbt.log.noformat=true \
-            -Dsbt.global.base=.sbt \
-            -Dsbt.boot.directory=.sbt/boot \
-            -Dsbt.ivy.home=.ivy2 \
-            -Dcoursier.verbose=true \
-            plugins
-  
-
-    - name: Debug Package Resolution
-      env:
-        COURSIER_VERBOSE: true
-        SBT_VERBOSE: true
-      run: |
-        curl -v -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-             "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom"
-        sbt -Dsbt.log.level=debug \
-            -Dsbt.global.base=.sbt \
-            -Dsbt.boot.directory=.sbt/boot \
-            -Dsbt.ivy.home=.ivy2 \
-            "show resolvers"
-
-
-    - name: Check Clang Okayness
+    - name: Check Clang Viability
       run: |
         echo CLANG: `which clang`
         echo LD64.LLD: `which ld64.lld`
@@ -103,20 +48,6 @@ jobs:
 
     - name: Coursier Caching
       uses: coursier/cache-action@v6
-
-    - name: Test Package Registry Access With Curl
-      run: |
-        curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Accept: application/vnd.github+json" \
-          https://api.github.com/orgs/ossuminc/packages?package_type=maven
-
-    - name: Configure Coursier
-      run: |
-        mkdir -p ~/.config/coursier
-        echo "credentials.githubusercontent.com.realm=GitHub Package Registry" >> ~/.config/coursier/credentials.properties
-        echo "credentials.githubusercontent.com.host=maven.pkg.github.com" >> ~/.config/coursier/credentials.properties
-        echo "credentials.githubusercontent.com.user=$GITHUB_ACTOR" >> ~/.config/coursier/credentials.properties
-        echo "credentials.githubusercontent.com.password=${{ secrets.GITHUB_TOKEN }}" >> ~/.config/coursier/credentials.properties
 
     - name: Build And Test JVM Versions
       run: |
