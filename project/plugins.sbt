@@ -3,7 +3,18 @@ resolvers += Resolver.url(
   url("https://maven.pkg.github.com/ossuminc")
 )(Resolver.ivyStylePatterns).withAllowInsecureProtocol(false)
 
-ThisBuild / coursierUseSbtCredentials := true
+ThisBuild / csrConfiguration := {
+  csrConfiguration.value.withCredentials(
+    Seq(
+      Credentials(
+        "GitHub Package Registry",
+        "maven.pkg.github.com",
+        sys.env.getOrElse("GITHUB_ACTOR", ""),
+        sys.env.getOrElse("GITHUB_TOKEN", "")
+      )
+    )
+  )
+}
 
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3" cross CrossVersion.binary)
 
