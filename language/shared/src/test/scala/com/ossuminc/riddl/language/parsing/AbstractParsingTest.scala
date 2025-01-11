@@ -26,7 +26,7 @@ trait AbstractParsingTest(using PlatformContext) extends AbstractTestingBasisWit
     val withVerboseFailures: Boolean = true
   end StringParser
 
-  def parse[T <: RiddlValue, U <: RiddlValue](
+  def parse[T, U](
     input: RiddlParserInput,
     parser: P[?] => P[T],
     extraction: T => U

@@ -328,8 +328,8 @@ private[parsing] trait TypeParser {
   }
 
   def enumerator[u: P]: P[Enumerator] = {
-    P(Index ~ identifier ~ enumValue ~~ Index).map { case (start, id, value, end) =>
-      Enumerator(at(start, end), id, value)
+    P(Index ~~ identifier ~ enumValue  ~ withMetaData ~~Index).map { case (start, id, value, metaData, end) =>
+      Enumerator(at(start, end), id, value, metaData.toContents)
     }
   }
 
@@ -401,7 +401,7 @@ private[parsing] trait TypeParser {
   }
 
   private def aggregateContent[u: P]: P[AggregateContents] = {
-    P(field | method)./.asInstanceOf[P[AggregateContents]]
+    P(field | method | comment)./.asInstanceOf[P[AggregateContents]]
   }
 
   private def aggregateDefinitions[u: P]: P[Seq[AggregateContents]] = {
@@ -421,12 +421,12 @@ private[parsing] trait TypeParser {
       Keywords.typeKeywords
     ).map { mk =>
       mk.toLowerCase() match {
-        case kind if kind == Keyword.type_   => TypeCase
-        case kind if kind == Keyword.command => CommandCase
-        case kind if kind == Keyword.event   => EventCase
-        case kind if kind == Keyword.query   => QueryCase
-        case kind if kind == Keyword.result  => ResultCase
-        case kind if kind == Keyword.record  => RecordCase
+        case kind if kind == Keyword.type_   => AggregateUseCase.TypeCase
+        case kind if kind == Keyword.command => AggregateUseCase.CommandCase
+        case kind if kind == Keyword.event   => AggregateUseCase.EventCase
+        case kind if kind == Keyword.query   => AggregateUseCase.QueryCase
+        case kind if kind == Keyword.result  => AggregateUseCase.ResultCase
+        case kind if kind == Keyword.record  => AggregateUseCase.RecordCase
       }
     }
   }

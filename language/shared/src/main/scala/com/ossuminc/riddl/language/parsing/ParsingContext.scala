@@ -113,7 +113,7 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     } catch {
       case NonFatal(exception) =>
         makeParseFailureError(exception, loc, s"while including '$path'")
-        Include[CT](loc, newURL, Contents.empty[CT])
+        Include[CT](loc, newURL, Contents.empty[CT](1))
     }
   }
 

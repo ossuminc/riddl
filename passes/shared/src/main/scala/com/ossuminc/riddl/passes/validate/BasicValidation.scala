@@ -24,7 +24,7 @@ trait BasicValidation(using pc: PlatformContext) {
   def resolution: ResolutionOutput
   protected def messages: Messages.Accumulator
 
-  def parentOf(definition: Definition): Parent = {
+  def parentOf(definition: Definition): Branch[?] = {
     symbols.parentOf(definition).getOrElse(Root.empty)
   }
 
@@ -44,7 +44,7 @@ trait BasicValidation(using pc: PlatformContext) {
       // Let's try the symbol table
       symbols.lookup[Definition](pid.value.reverse).headOption
     else
-      parents.headOption.flatMap { (head: Parent) =>
+      parents.headOption.flatMap { (head: Branch[?]) =>
         resolution.refMap.definitionOf[Definition](pid, head)
       }
   }
@@ -265,7 +265,7 @@ trait BasicValidation(using pc: PlatformContext) {
               val formatted = ref.format
               messages.add(
                 style(
-                  s"Path Identifier $formatted at ${ref.loc} references ${definition.identify} in " +
+                  s"Path Identifier $formatted at ${ref.loc.format} references ${definition.identify} in " +
                     s"${definitionContext.identify} but occurs in ${container.identify} in ${containerContext.identify}." +
                     " Cross-context references are ill-advised as they lead to model confusion and violate " +
                     "the 'bounded' aspect of bounded contexts",

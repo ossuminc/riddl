@@ -26,7 +26,7 @@ case class TestParser(
     extends ExtensibleTopLevelParser
     with Matchers {
 
-  def expect[CT <: RiddlValue](
+  def expect[CT](
     parser: P[?] => P[CT],
     withVerboseFailures: Boolean = false
   ): Either[Messages, CT] = {
@@ -46,7 +46,7 @@ case class TestParser(
     }
   }
 
-  def parse[T <: RiddlValue, U <: RiddlValue](
+  def parse[T, U](
     parser: P[?] => P[T],
     extract: T => U
   ): Either[Messages, (U, RiddlParserInput)] = {

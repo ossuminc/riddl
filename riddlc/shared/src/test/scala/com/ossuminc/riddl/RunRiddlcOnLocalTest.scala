@@ -48,7 +48,7 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
     "validate on ossuminc/institutional-commerce" in {
       val cwd = "/Users/reid/Code/ossuminc/institutional-commerce"
       val config = "src/main/riddl/ImprovingApp.conf"
-      runOnLocalProject(cwd, config, "parse") // FIXME: should be validate
+      runOnLocalProject(cwd, config, "validate")
     }
     "validate riddl-examples dokn" in {
       val cwd = "/Users/reid/Code/ossuminc/riddl-examples"

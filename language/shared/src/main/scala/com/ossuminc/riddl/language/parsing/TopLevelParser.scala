@@ -30,7 +30,7 @@ import scala.scalajs.js.annotation.*
 case class TopLevelParser(
   input: RiddlParserInput,
   withVerboseFailures: Boolean
-)(using io: PlatformContext)
+)(using PlatformContext)
     extends ExtensibleTopLevelParser
 
 @JSExportTopLevel("TopLevelParser$")
@@ -51,8 +51,8 @@ object TopLevelParser {
   def parseURL(
     url: URL,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformContext): Future[Either[Messages, Root]] = {
-    io.load(url).map { (data: String) =>
+  )(using pc: PlatformContext): Future[Either[Messages, Root]] = {
+    pc.load(url).map { (data: String) =>
       val rpi = RiddlParserInput(data.mkString, url)
       val tlp = new TopLevelParser(rpi, withVerboseFailures)
       tlp.parseRoot
@@ -70,9 +70,9 @@ object TopLevelParser {
   def parseInput(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformContext): Either[Messages, Root] = {
-    Timer.time(s"parse ${input.origin}", io.options.showTimes) {
-      implicit val _: ExecutionContext = io.ec
+  )(using pc: PlatformContext): Either[Messages, Root] = {
+    Timer.time(s"parse ${input.origin}", pc.options.showTimes) {
+      implicit val _: ExecutionContext = pc.ec
       val tlp = new TopLevelParser(input, withVerboseFailures)
       tlp.parseRoot
     }
@@ -110,15 +110,15 @@ object TopLevelParser {
   def parseNebula(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformContext): Either[Messages, Nebula] = {
-    Timer.time(s"parse nebula from ${input.origin}", io.options.showTimes) {
+  )(using pc: PlatformContext): Either[Messages, Nebula] = {
+    Timer.time(s"parse nebula from ${input.origin}", pc.options.showTimes) {
       val tlp = new TopLevelParser(input, withVerboseFailures)
       tlp.parseNebula
     }
   }
 
   /** Parse the input to a list of tokens. This is aimed to making highlighting
-   * in editors quick and simple. The input is not validate for syntactic 
+   * in editors quick and simple. The input is not validate for syntactic
    * correctness and likely succeeds on most input.
    * @param input
    * The input to be parsed
@@ -129,7 +129,7 @@ object TopLevelParser {
   def parseToTokens(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(using io: PlatformContext): Either[Messages, List[Token]] = {
+  )(using PlatformContext): Either[Messages, List[Token]] = {
     val tlp = new TopLevelParser(input, withVerboseFailures)
     tlp.parseTokens
   }

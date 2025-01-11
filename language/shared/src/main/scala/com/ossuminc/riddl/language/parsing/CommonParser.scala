@@ -33,6 +33,10 @@ private[parsing] trait CommonParser(using io: PlatformContext)
     P(Punctuation.curlyClose)
   }
 
+  def is[u: P]: P[Unit] = Keywords.keywords( StringIn("is", "are", ":", "=") ).?
+
+  def byAs[u: P]: P[Unit] = Keywords.keywords(StringIn("by", "as"))
+  
   def author[u: P]: P[Author] =
     P(
       Index ~ Keywords.author ~/ identifier ~ is ~ open ~
@@ -201,7 +205,7 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   end ulidAttachment
 
   private def metaData[u: P]: P[MetaData] =
-    P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment)
+    P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment | comment)
       .asInstanceOf[P[MetaData]]
 
   def withMetaData[u: P]: P[Seq[MetaData]] = {
@@ -219,35 +223,6 @@ private[parsing] trait CommonParser(using io: PlatformContext)
     P(Index ~ Keywords.include ~ literalString ~~ Index)./.map { case (off1, str: LiteralString, off2) =>
       doIncludeParsing[CT](at(off1, off2), str.s, parser)
     }
-  }
-
-  private def hostString[u: P]: P[String] = {
-    P(CharsWhile { ch => ch.isLetterOrDigit || ch == '-' }.rep(1, ".", 32)).!
-  }
-
-  private def portNum[u: P]: P[String] = {
-    P(Index ~~ CharsWhileIn("0-9").rep(min = 1, max = 5).! ~~ Index).map { (i1, numStr: String, i2) =>
-      val num = numStr.toInt
-      if num > 0 && num < 65535 then
-        numStr
-      else
-        error(at(i1,i2), s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
-        "0"
-      end if
-    }
-  }
-
-  private def urlPath[u: P]: P[String] = {
-    P(
-      CharsWhile(ch => ch.isLetterOrDigit || "/-?#/.=".contains(ch))
-        .rep(min = 0, max = 240)
-    ).!
-  }
-
-  def httpUrl[u: P]: P[URL] = {
-    P(
-      "http" ~ "s".? ~ "://" ~ hostString ~ (":" ~ portNum).? ~ "/" ~ urlPath.?
-    ).!.map(URL)
   }
 
   def invariant[u: P]: P[Invariant] = {

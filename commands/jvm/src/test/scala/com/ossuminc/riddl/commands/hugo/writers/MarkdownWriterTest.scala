@@ -37,7 +37,7 @@ class MarkdownWriterTest extends HugoTestBase {
         case Left(errors) =>
           fail("Parse Failed:\n" + errors.map(_.format).mkString("\n"))
         case Right(root) =>
-          root.contents mustNot be(empty)
+          root.contents.isEmpty mustNot be(true)
           val domain = root.domains.head
           val mkd = makeMDW(output, PassesResult.empty)
           val diagram = DomainMapDiagram(domain)

@@ -33,7 +33,8 @@ object SymbolsPass extends PassInfo[PassOptions] {
   * @param input
   *   The output of the parser pass is the input to SymbolPass
   */
-case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using PlatformContext) extends Pass(input, outputs) {
+case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: PlatformContext) extends Pass(input,
+  outputs) {
 
   override def name: String = SymbolsPass.name
 
@@ -53,8 +54,10 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using PlatformCo
 
   def process(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
-      case _: Root                          => // NOTE: Root doesn't have any names
-      case nv: Definition if nv.isAnonymous => // Nameless things, like includes, don't go in symbol table
+      case _: Root                          => // Root doesn't have a name
+      case _: NonDefinitionValues           => // none of these can have names
+      case nv: Definition if nv.isAnonymous => // Nameless things, like includes, aren't stored
+      case nv: Definition if nv.id.isEmpty  => // Empty names are not stored
       case namedValue: Definition => // NOTE: Anything with a name goes in symbol table
         val name = namedValue.id.value
         if name.nonEmpty then {
@@ -72,11 +75,15 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using PlatformCo
         } else {
           messages.addError(namedValue.loc, "Non implicit value with empty name should not happen")
         }
-      case _ => // NOTE: nothing else has a name
+      // case rv: RiddlValue => // everything should be handled above
+      //    assert(false, s"SymTab didn't process: $rv") // NOTE: nothing else has a name
     }
   }
 
   override def result(root: Root): SymbolsOutput = {
+    if pc.options.debug then
+      println(symTab.toPrettyString)
+    end if
     SymbolsOutput(root, Messages.empty, symTab, parentage)
   }
 

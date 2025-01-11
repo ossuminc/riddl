@@ -411,12 +411,12 @@ def keyword(definition: Definition): String =
       typ.typEx match
         case AggregateUseCaseTypeExpression(_, useCase, _) =>
           useCase match
-            case CommandCase => Keyword.command
-            case EventCase   => Keyword.event
-            case QueryCase   => Keyword.query
-            case ResultCase  => Keyword.result
-            case RecordCase  => Keyword.record
-            case TypeCase    => Keyword.type_
+            case AggregateUseCase.CommandCase => Keyword.command
+            case AggregateUseCase.EventCase   => Keyword.event
+            case AggregateUseCase.QueryCase   => Keyword.query
+            case AggregateUseCase.ResultCase  => Keyword.result
+            case AggregateUseCase.RecordCase  => Keyword.record
+            case AggregateUseCase.TypeCase    => Keyword.type_
           end match
         case _ => Keyword.type_
       end match

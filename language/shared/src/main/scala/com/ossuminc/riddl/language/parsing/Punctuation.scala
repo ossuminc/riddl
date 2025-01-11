@@ -26,7 +26,7 @@ object Punctuation {
   final val undefinedMark = "???"
   final val verticalBar = "|"
 
-  // NOTE: Keep this link in synch with the list in TokenStreamParser
+  // NOTE: Keep this link in synch with the list in TokenParser
   def allPunctuation: Seq[String] = Seq(
     asterisk,
     atSign,
@@ -60,13 +60,11 @@ object Punctuation {
         equalsSign,
         plus,
         question,
-        quote,
         roundOpen,
         roundClose,
         squareOpen,
         squareClose,
-        undefinedMark,
-        verticalBar
+        undefinedMark
       )
     )
   }

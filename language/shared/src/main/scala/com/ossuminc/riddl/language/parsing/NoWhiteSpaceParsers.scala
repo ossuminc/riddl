@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.LiteralString
+import com.ossuminc.riddl.utils.URL
 import fastparse.*
 import fastparse.NoWhitespace.*
 
@@ -107,4 +108,35 @@ private[parsing] trait NoWhiteSpaceParsers {
       Index ~ Punctuation.quote ~/ (strChars | escape).rep.! ~ Punctuation.quote ~ Index
     )
   }.map { case (off1, litStr, off2) => LiteralString(at(off1, off2), litStr) }
+
+  private def hostString[u: P]: P[String] = {
+    P(CharsWhile { ch => ch.isLetterOrDigit || ch == '-' }.rep(1, ".", 32)).!
+  }
+
+  private def portNum[u: P]: P[String] = {
+    P(Index ~~ CharsWhileIn("0-9").rep(min = 1, max = 5).! ~~ Index).map { (i1, numStr: String, i2) =>
+      val num = numStr.toInt
+      if num > 0 && num < 65535 then
+        numStr
+      else
+        error(at(i1,i2), s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
+        "0"
+      end if
+    }
+  }
+
+  private final val validURLChars = "-_.~!$&'()*+,;="
+  private def urlPath[u: P]: P[String] = {
+    P(
+      CharsWhile(ch => ch.isLetterOrDigit || validURLChars.contains(ch))
+    ).repX(1,"/").!
+  }
+
+  def httpUrl[u: P]: P[URL] = {
+    P(
+      StringIn("http","https") ~~ "://" ~~ hostString ~~ (":" ~~ portNum).? ~~ "/" ~~ urlPath.?
+    ).!.map(URL)
+  }
+
+
 }

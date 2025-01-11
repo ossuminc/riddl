@@ -65,7 +65,7 @@ trait MarkdownWriter(using pc: PlatformContext)
     }
   end makeDomainIndex
 
-  private def makeData(container: Parent, parents: Seq[String]): Level =
+  private def makeData(container: Branch[?], parents: Seq[String]): Level =
     Level(
       container.identify,
       generator.makeDocLink(container, parents),
@@ -327,8 +327,7 @@ trait MarkdownWriter(using pc: PlatformContext)
       case EntityReferenceTypeExpression(_, pid) => makeTypeName(pid, parents)
       case UniqueId(_, pid)                      => makeTypeName(pid, parents)
       case Alternation(_, of) =>
-        of.map(ate => makeTypeName(ate.pathId, parents))
-          .mkString("-")
+        of.toSeq.map(ate => makeTypeName(ate.pathId, parents)).mkString("-")
       case _: Mapping                        => "Mapping"
       case _: Aggregation                    => "Aggregation"
       case _: AggregateUseCaseTypeExpression => "Message"
@@ -349,7 +348,7 @@ trait MarkdownWriter(using pc: PlatformContext)
       case uid: UniqueId =>
         s"Unique identifier for entity ${makePathIdRef(uid.entityPath, parents)}"
       case alt: Alternation =>
-        val data = alt.of.map { (te: AliasedTypeExpression) =>
+        val data = alt.of.toSeq.map { (te: AliasedTypeExpression) =>
           makePathIdRef(te.pathId, parents)
         }
         s"Alternation of: " + data.mkString(", ")
@@ -368,9 +367,9 @@ trait MarkdownWriter(using pc: PlatformContext)
   }
 
   private def emitAggregateMembers(agg: AggregateTypeExpression, parents: Parents): this.type = {
-    val data = agg.contents.map {
-      case f: AggregateValue => (f.id.format, resolveTypeExpression(f.typeEx, parents))
-    }.toSeq
+    val data = agg.contents.filter[AggregateValue].map { (f: AggregateValue) =>
+      f.id.format -> resolveTypeExpression(f.typeEx, parents)
+    }
     list(data.filterNot(t => t._1.isEmpty && t._2.isEmpty))
     this
   }

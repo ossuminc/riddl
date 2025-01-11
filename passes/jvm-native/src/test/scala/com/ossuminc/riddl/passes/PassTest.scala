@@ -133,7 +133,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
 
     override protected def openContainer(definition: Definition, parents: Parents): Unit = opens = opens + 1
 
-    override protected def processLeaf(definition: LeafDefinition, parents: Parents): Unit = leaves = leaves + 1
+    override protected def processLeaf(definition: Leaf, parents: Parents): Unit = leaves = leaves + 1
 
     override protected def closeContainer(definition: Definition, parents: Parents): Unit = closes = closes + 1
 

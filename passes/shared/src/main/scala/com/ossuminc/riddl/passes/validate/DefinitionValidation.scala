@@ -16,7 +16,7 @@ import com.ossuminc.riddl.utils.PlatformContext
 trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   def symbols: SymbolsOutput
 
-  private def checkUniqueContent(definition: Parent): Unit = {
+  private def checkUniqueContent(definition: Branch[?]): Unit = {
     val allNamedValues = definition.contents.definitions
     val allNames = allNamedValues.map(_.identify)
     if allNames.distinct.size < allNames.size then {
@@ -51,7 +51,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       case vd: VitalDefinition[?] =>
         checkMetadata(vd)
         vd.authorRefs.foreach { (authorRef: AuthorRef) =>
-          pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Parent] +: parents) match
+          pathIdToDefinition(authorRef.pathId, definition.asInstanceOf[Branch[?]] +: parents) match
             case None =>
               messages.addError(
                 authorRef.loc,
@@ -76,10 +76,10 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   }
 
   def checkContents(
-    container: Parent,
-    parents: Parents
+                     container: Branch[?],
+                     parents: Parents
   ): Unit =
-    val parent: Parent = parents.headOption.getOrElse(Root.empty)
+    val parent: Branch[?] = parents.headOption.getOrElse(Root.empty)
     check(
       container.contents.definitions.nonEmpty || container.isInstanceOf[Field],
       s"${container.identify} in ${parent.identify} should have content",
@@ -90,7 +90,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
 
   def checkContainer(
     parents: Parents,
-    container: Parent
+    container: Branch[?]
   ): Unit = {
     checkDefinition(parents, container)
     checkContents(container, parents)
@@ -113,14 +113,14 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         case bd: BriefDescription =>
           check(
             bd.brief.s.length < 80,
-            s"In $identity, brief description at ${bd.loc} is too long. Max is 80 chars",
+            s"In $identity, brief description at ${bd.loc.format} is too long. Max is 80 chars",
             Warning,
             bd.loc
           )
         case bd: BlockDescription =>
           check(
             bd.lines.nonEmpty && !bd.lines.forall(_.s.isEmpty),
-            s"For $identity, description at ${bd.loc} is declared but empty",
+            s"For $identity, description at ${bd.loc.format} is declared but empty",
             MissingWarning,
             bd.loc
           )
@@ -135,14 +135,14 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         case ud: URLDescription =>
           check(
             ud.url.isValid,
-            s"For $identity, description at ${ud.loc} has an invalid URL: ${ud.url}",
+            s"For $identity, description at ${ud.loc.format} has an invalid URL: ${ud.url}",
             Error,
             ud.loc
           )
           hasDescription = true
         case t: Term =>
           check(
-            t.definition.length > 10,
+            t.definition.length >= 10,
             s"${t.identify}'s definition is too short. It must be at least 10 characters'",
             Warning,
             t.loc
@@ -153,6 +153,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         case _: FileAttachment   => ()
         case _: ULIDAttachment   => ()
         case _: Description      => ()
+        case _: Comment => ()
     }
     check(hasDescription, s"$identity should have a description", MissingWarning, loc)
     check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, loc)

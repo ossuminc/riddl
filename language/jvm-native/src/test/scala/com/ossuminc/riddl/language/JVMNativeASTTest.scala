@@ -18,7 +18,7 @@ class JVMNativeASTTest extends AbstractTestingBasis {
     "allow attachments to be added programmatically" in {
       val container = Entity(At.empty, Identifier.empty)
       val a = StringAttachment(At.empty, Identifier(At.empty, "foo"), "application/json", LiteralString(At.empty, "{}"))
-      container.metadata += a
+      container.metadata.append(a)
       container.metadata.filter[StringAttachment] match
         case Seq(value) if value == a => succeed
         case _                        => fail("No go")
@@ -27,7 +27,7 @@ class JVMNativeASTTest extends AbstractTestingBasis {
   "Include" should {
     "identify as root container, etc" in {
       import com.ossuminc.riddl.utils.URL
-      val incl = Include(At.empty, URL.empty, Contents.empty)
+      val incl = Include(At.empty, URL.empty, Contents.empty())
       incl.isRootContainer mustBe true
       incl.loc mustBe At.empty
       incl.format mustBe "include \"\""

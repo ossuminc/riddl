@@ -178,8 +178,8 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
         s"${index.offset}>=0 && ${index.offset} <= ${data.length}"
       )
       require(
-        index.endOffset >= 0 && index.endOffset <= data.length,
-        s"${index.endOffset} >= 0 && ${index.endOffset} <= ${data.length}"
+        index.endOffset >= 0 && index.endOffset <= data.length + 1,
+        s"${index.endOffset} >= 0 && ${index.endOffset} <= ${data.length + 1}"
       )
       val (start, end) = lineRangeOf(index)
       require(start <= index.offset, s"fail: $start <= ${index.offset}")

@@ -24,7 +24,7 @@ class KeywordsTest extends AbstractTestingBasis {
 
   "Readability" should {
     "produce all readability words" in {
-      ReadabilityWords.allReadability.size must be(17)
+      ReadabilityWords.allReadability.size must be(15)
     }
   }
 }

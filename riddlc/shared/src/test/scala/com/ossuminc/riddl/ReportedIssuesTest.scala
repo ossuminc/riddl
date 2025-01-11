@@ -132,7 +132,7 @@ class ReportedIssuesTest extends JVMAbstractValidatingTest {
         case Left(messages) =>
           val errors = messages.justErrors
           errors.size mustBe 1
-          errors.head.message must include("white space after a keyword")
+          errors.head.message must include("Expected one of (end-of-input | pattern)")
         case Right(result) =>
           fail("Should not have parsed correctly")
       }

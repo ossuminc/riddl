@@ -60,14 +60,12 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
       }
     }
     "supports 'shown by' in groups" in { (td: TestData) =>
-      // FIXME: Enable "shown by" processing for a group
       val input = RiddlParserInput(
         """
           |domain foo {
           |  context ignore {
-          |    /* group Micky shown by https://pngimg.com/uploads/mickey_mouse/mickey_mouse_PNG54.png is ... */
           |    group Mickey  is {
-          |      ???
+          |      shown by { https://pngimg.com/uploads/mickey_mouse/mickey_mouse_PNG54.png }
           |    }
           |  }
           |}

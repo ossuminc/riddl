@@ -35,7 +35,7 @@ trait EpicWriter(using pc: PlatformContext) { this: MarkdownWriter =>
           p(italic(storyText))
       }
     }
-    emitDescriptions(epic.descriptions) // FIXME: there could be more description
+    emitDescriptions(epic.descriptions)
     emitOptions(epic.options)
     list("Visualizations", epic.shownBy.map(u => s"($u)[$u]"))
     emitTerms(epic.terms)

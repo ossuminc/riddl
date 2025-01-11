@@ -132,7 +132,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
       val input = RiddlParserInput("domain foo is { ??? }", td)
       parseTopLevelDomains(input) match {
         case Left(messages) => fail(messages.format)
-        case Right(root)    => root.contents mustNot be(empty)
+        case Right(root)    => root.contents.isEmpty mustNot be(true)
       }
     }
     "parseDomainDefinition" in { (td: TestData) =>

@@ -65,7 +65,7 @@ class TestVisitor extends PassVisitor:
   def decr(parent: Container[?]): Unit =
     require(depth > 0); depth = depth - 1; closes = closes + 1
 
-  def leaf(leaf: LeafDefinition): Unit =
+  def leaf(leaf: Leaf): Unit =
     leaves = leaves + 1
     val old = kindMap.getOrElse(leaf.kind, 0)
     kindMap.put(leaf.kind, old + 1)

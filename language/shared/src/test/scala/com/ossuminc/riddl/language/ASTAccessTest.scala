@@ -22,12 +22,12 @@ class ASTAccessTest extends AsyncFunSpec with Matchers:
     }
     it("must accept storage of arbitrary named string values") {
       val node = Context(At.empty, Identifier(At.empty, "foo"))
-      node.metadata += StringAttachment(
+      node.metadata.append( StringAttachment(
         At.empty,
         Identifier(At.empty, "foo"),
         "application/json",
         LiteralString(At.empty, "{}")
-      )
+      ))
       succeed
     }
   }

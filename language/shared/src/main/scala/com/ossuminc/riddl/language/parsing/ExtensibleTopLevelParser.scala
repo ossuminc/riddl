@@ -38,7 +38,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
       SagaParser,
       StreamingParser,
       StatementParser,
-      TokenStreamParser,
+      TokenParser,
       ParsingContext {
 
   def input: RiddlParserInput
@@ -69,7 +69,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     end match
   }
 
-  private def doParse[E <: Parent: ClassTag](rule: P[?] => P[E]): Either[Messages, E] = {
+  private def doParse[E <: Branch[?]: ClassTag](rule: P[?] => P[E]): Either[Messages, E] = {
      parseRule[E](input, rule, withVerboseFailures) {
       (result: Either[Messages, E], input: RiddlParserInput, index: Int) =>
         result match {
