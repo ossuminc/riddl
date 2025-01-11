@@ -10,7 +10,7 @@ credentials += Credentials(
   passwd = System.getenv.getOrDefault("GITHUB_TOKEN", "")
 )
 
-addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3")
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3" cross CrossVersion.binary)
 
 // This enables sbt-bloop to create bloop config files for Metals editors
 // Uncomment locally if you use metals, otherwise don't slow down other
