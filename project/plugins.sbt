@@ -1,4 +1,7 @@
-resolvers += "GitHub Package Registry" at "https://maven.pkg.github.com/ossuminc/_"
+resolvers += MavenRepository(
+  "GitHub Package Registry",
+  "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"
+)
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3")
 
 // This enables sbt-bloop to create bloop config files for Metals editors
