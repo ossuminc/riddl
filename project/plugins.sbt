@@ -1,7 +1,8 @@
 resolvers += Resolver.url(
   "GitHub Package Registry",
-  url("https://maven.pkg.github.com/ossuminc/sbt-ossuminc")
+  url("https://maven.pkg.github.com/ossuminc/_")
 )(Resolver.ivyStylePatterns)
+
 // resolvers += "GitHub Package Registry" at "https://maven.pkg.github.com/ossuminc/_"
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3")
 
