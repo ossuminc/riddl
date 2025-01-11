@@ -49,7 +49,7 @@ jobs:
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
-    - name: Test Package Registry Access
+    - name: Test Package Registry Access With Curl
       run: |
         curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
           -H "Accept: application/vnd.github+json" \
