@@ -52,8 +52,8 @@ jobs:
     - name: Test Package Registry Access
       run: |
         curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/orgs/ossuminc/packages
+          -H "Accept: application/vnd.github+json" \
+          https://api.github.com/orgs/ossuminc/packages?package_type=maven
 
     - name: Configure Coursier
       run: |
