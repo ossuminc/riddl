@@ -1,9 +1,4 @@
-addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.3")
-
-githubTokenSource := TokenSource.Environment("GITHUB_TOKEN")
-resolvers += Resolver.githubPackages("ossuminc")
-
-addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3" cross CrossVersion.binary)
+addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.4")
 
 // This enables sbt-bloop to create bloop config files for Metals editors
 // Uncomment locally if you use metals, otherwise don't slow down other
