@@ -34,6 +34,18 @@ jobs:
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
+    - name: Debug GitHub Token Access
+      run: |
+        echo "GITHUB_ACTOR is set: $([[ ! -z $GITHUB_ACTOR ]] && echo 'true' || echo 'false')"
+        echo "GITHUB_TOKEN is set: $([[ ! -z $GITHUB_TOKEN ]] && echo 'true' || echo 'false')"
+        echo "Token length: ${#GITHUB_TOKEN}"
+        
+        # Test token access (without exposing it)
+        curl -s -o /dev/null -w "%{http_code}" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"  
+
     - name: Configure Coursier
       run: |
         mkdir -p ~/.config/coursier

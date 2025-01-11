@@ -1,7 +1,7 @@
-resolvers += Resolver.url(
+resolvers += MavenRepository(
   "GitHub Package Registry",
-  url("https://maven.pkg.github.com/ossuminc")
-)(Resolver.ivyStylePatterns).withAllowInsecureProtocol(false)
+  "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"
+).withAllowInsecureProtocol(false)
 
 ThisBuild / csrConfiguration := {
   csrConfiguration.value.withCredentials(
