@@ -40,12 +40,17 @@ jobs:
         echo "GITHUB_TOKEN is set: $([[ ! -z $GITHUB_TOKEN ]] && echo 'true' || echo 'false')"
         echo "Token length: ${#GITHUB_TOKEN}"
         
-        # Test token access (without exposing it)
+        # Test token access with the exact published path
         curl -s -o /dev/null -w "%{http_code}" \
           -H "Authorization: Bearer $GITHUB_TOKEN" \
           -H "Accept: application/vnd.github.v3+json" \
-          "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"  
+          "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom"
 
+        # Also test package API access
+        curl -s -o /dev/null -w "%{http_code}" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/orgs/ossuminc/packages"
     - name: Configure Coursier
       run: |
         mkdir -p ~/.config/coursier

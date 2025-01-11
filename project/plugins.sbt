@@ -1,7 +1,14 @@
+credentials += Credentials(
+  realm = "GitHub Package Registry",
+  host = "maven.pkg.github.com",
+  userName = sys.env.getOrElse("GITHUB_ACTOR", ""),
+  passwd = sys.env.getOrElse("GITHUB_TOKEN", "")
+)
+
 resolvers += MavenRepository(
   "GitHub Package Registry",
-  "https://maven.pkg.github.com/ossuminc/sbt-ossuminc"
-).withAllowInsecureProtocol(false)
+  "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc"
+)
 
 ThisBuild / csrConfiguration := {
   csrConfiguration.value.withCredentials(
