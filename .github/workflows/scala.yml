@@ -44,6 +44,16 @@ jobs:
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
+    - name: Debug Token Usage
+      run: |
+        # Test direct package download
+        curl -v -H "Authorization: token $GITHUB_TOKEN" \
+             "https://maven.pkg.github.com/ossuminc/_/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom" 2>&1 | grep -E "HTTP|Authorization"
+        
+        # Test with Bearer token
+        curl -v -H "Authorization: Bearer $GITHUB_TOKEN" \
+             "https://maven.pkg.github.com/ossuminc/_/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom" 2>&1 | grep -E "HTTP|Authorization"
+
     - name: Debug GitHub Token Access
       run: |
         echo "Testing GitHub Package access..."
