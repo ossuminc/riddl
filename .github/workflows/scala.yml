@@ -39,6 +39,19 @@ jobs:
              -H "Accept: application/vnd.github.v3+json" \
              "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom"
 
+    - name: Debug Package Resolution
+      env:
+        COURSIER_VERBOSE: true
+        SBT_VERBOSE: true
+      run: |
+        curl -v -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+             "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom"
+        sbt -Dsbt.log.level=debug \
+            -Dsbt.global.base=.sbt \
+            -Dsbt.boot.directory=.sbt/boot \
+            -Dsbt.ivy.home=.ivy2 \
+            "show resolvers"
+
     - name: Debug SBT Resolution
       run: |
         sbt -v -Dsbt.log.noformat=true \
