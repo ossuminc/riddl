@@ -114,7 +114,11 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
-  .nativeConfigure(With.native(mode = "fast", buildTarget = "static"))
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "static", linkOptions = Seq(
+      "-I/usr/include",
+      "-I/usr/local/opt/curl/include",
+      "-I/opt/homebrew/opt/curl/include"
+    )))
   .nativeConfigure(
     With.build_info_plus_keys(
       "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion
@@ -397,11 +401,6 @@ lazy val docProjects = List(
 )
 
 lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "apidoc"
-
-//def akkaMappings: Map[(String, String), URL] = Map(
-//  ("com.typesafe.akka", "akka-actor") -> url(s"http://doc.akka.io/api/akka/"),
-//  ("com.typesafe", "config") -> url("http://typesafehub.github.io/config/latest/api/")
-//)
 
 lazy val docsite = DocSite(
   dirName = "doc",
