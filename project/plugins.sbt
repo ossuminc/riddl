@@ -1,4 +1,7 @@
-resolvers += "GitHub Package Registry" at "https://maven.pkg.github.com/ossuminc/_"
+addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.3")
+
+githubTokenSource := TokenSource.Environment("GITHUB_TOKEN")
+resolvers += Resolver.githubPackages("ossuminc")
 
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3" cross CrossVersion.binary)
 
