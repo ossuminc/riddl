@@ -12,6 +12,9 @@ on:
 
 jobs:
   scala-build:
+    permissions:
+      contents: read
+      packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
