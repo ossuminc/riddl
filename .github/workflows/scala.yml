@@ -44,42 +44,16 @@ jobs:
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
-    - name: Debug Token Usage
+    - name: Configure Coursier Credentials
       run: |
-        # Test direct package download
-        curl -v -H "Authorization: token $GITHUB_TOKEN" \
-             "https://maven.pkg.github.com/ossuminc/_/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom" 2>&1 | grep -E "HTTP|Authorization"
-        
-        # Test with Bearer token
-        curl -v -H "Authorization: Bearer $GITHUB_TOKEN" \
-             "https://maven.pkg.github.com/ossuminc/_/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom" 2>&1 | grep -E "HTTP|Authorization"
+        mkdir -p ~/.config/coursier
+        echo "realm=GitHub Package Registry
+        host=maven.pkg.github.com
+        user=$GITHUB_ACTOR
+        password=$GITHUB_TOKEN" > ~/.config/coursier/credentials.properties
 
-    - name: Debug GitHub Token Access
-      run: |
-        echo "Testing GitHub Package access..."
-        
-        # Test with multiple request forms
-        for URL in \
-          "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom" \
-          "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc_2.12_1.0-0.20.3.pom" \
-          "https://api.github.com/user/packages?package_type=maven"
-        do
-          echo "Testing $URL"
-          curl -v \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "$URL" 2>&1 | grep -E "^< HTTP|^< Location|error|message"
-        done
-
-    - name: Debug GitHub Package Redirects
-      run: |
-        echo "Testing with redirect following..."
-        curl -L -v \
-          -H "Authorization: Bearer $GITHUB_TOKEN" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_2.12_1.0/0.20.3/sbt-ossuminc-0.20.3.pom" \
-          2>&1 | grep -E "^< HTTP|^< Location|error|message"
+        # Also set specific environment variables for coursier
+        echo "COURSIER_CREDENTIALS=$HOME/.config/coursier/credentials.properties" >> $GITHUB_ENV
 
     - name: Configure Coursier
       run: |
@@ -87,7 +61,7 @@ jobs:
         echo "
         repositories:
           - central
-          - maven:https://maven.pkg.github.com/ossuminc
+          - maven:https://maven.pkg.github.com/ossuminc/sbt-ossuminc
         " > ~/.config/coursier/repositories
 
     - name: Debug SBT Resolution
