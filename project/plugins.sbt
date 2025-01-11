@@ -1,13 +1,4 @@
-val resolver = sys.env.get("GITHUB_ACTOR") match {
-  case Some(actor) =>
-    // We're in GitHub Actions
-    s"https://${actor}:${sys.env("GITHUB_TOKEN")}@maven.pkg.github.com/ossuminc/_"
-  case None =>
-    // We're in development environment
-    "https://maven.pkg.github.com/ossuminc/_"
-}
-
-resolvers += "GitHub Package Registry" at resolver
+resolvers += "GitHub Package Registry" at "https://maven.pkg.github.com/ossuminc/_"
 
 addSbtPlugin("com.ossuminc" % "sbt-ossuminc" % "0.20.3" cross CrossVersion.binary)
 

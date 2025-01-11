@@ -31,6 +31,16 @@ jobs:
         distribution: temurin
         cache: sbt
 
+    - name: Configure SBT Credentials
+      run: |
+        mkdir -p ~/.sbt/1.0
+        echo "credentials += Credentials(
+          \"GitHub Package Registry\",
+          \"maven.pkg.github.com\",
+          \"$GITHUB_ACTOR\",
+          \"$GITHUB_TOKEN\"
+        )" > ~/.sbt/1.0/github.sbt
+
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
