@@ -25,7 +25,7 @@ class JVMASTTest extends AbstractTestingBasis {
       ud.format must be(url.toExternalForm)
       val lines: scala.collection.Seq[String] = ud.lines.map(_.s)
       val head = lines.head
-      head must include("GitHub Package Registry")
+      head must include("resolver")
     }
   }
 }

@@ -63,6 +63,23 @@ jobs:
         echo "credentials.githubusercontent.com.user=$GITHUB_ACTOR" >> ~/.config/coursier/credentials.properties
         echo "credentials.githubusercontent.com.password=${{ secrets.GITHUB_TOKEN }}" >> ~/.config/coursier/credentials.properties
 
+    - name: Configure SBT GitHub Packages
+      run: |
+        mkdir -p ~/.sbt/1.0/plugins
+        cat > ~/.sbt/1.0/plugins/github.sbt << EOF
+        resolvers += Resolver.url(
+          "GitHub Package Registry",
+          url("https://maven.pkg.github.com/ossuminc/sbt-ossuminc")
+        )(Resolver.ivyStylePatterns)
+        
+        credentials += Credentials(
+          "GitHub Package Registry",
+          "maven.pkg.github.com",
+          "$GITHUB_ACTOR",
+          "${{ secrets.GITHUB_TOKEN }}"
+        )
+        EOF
+
     - name: Build And Test JVM Versions
       run: |
         sbt -v clean \
