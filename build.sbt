@@ -428,3 +428,43 @@ lazy val plugin = Plugin("sbt-riddl")
     buildInfoUsePackageAsPath := true,
     scalaVersion := "2.12.20"
   )
+
+addCommandAlias(
+  "cJVM",
+  "; project utils; Test/compile ; project language ; Test/compile ; project passes; " +
+    " Test/compile; project testkit ; Test/compile ; project diagrams; Test/compile ; project commands ; " +
+    "Test/compile ; project riddlLib ; Test/compile ; project riddlc ; Test/compile"
+)
+addCommandAlias(
+  "cNative",
+  "; project utilsNative; Test/compile ; project languageNative ; Test/compile ; project passesNative ; " +
+    "Test/compile ; project testkitNative ; Test/compile ; project diagramsNative; Test/compile ; " +
+    "project commandsNative ; Test/compile ; project riddlLibNative ; Test/compile ; project riddlcNative ; " +
+    "Test/compile"
+)
+
+addCommandAlias(
+  "cJS",
+  "; project utilsJS; Test/compile ; project languageJS ; Test/compile ; project passesJS ; " +
+    "Test/compile ; project testkitJS ; Test/compile ; project diagramsJS; Test/compile ; " +
+    "project riddlLibJS ; Test/compile ; fastLinkJS"
+)
+addCommandAlias(
+  "tJVM",
+  "; project utils; test ; project language ; test ; project passes; " +
+    " test; project testkit ; test ; project diagrams; test ; project commands ; " +
+    "test ; project riddlLib ; test ; project riddlc ; test ; project root"
+)
+addCommandAlias(
+  "tNative",
+  "; project utilsNative; test ; project languageNative ; test ; project passesNative ; " +
+    "test ; project testkitNative ; test ; project diagramsNative; test ; " +
+    "project commandsNative ; test ; project riddlLibNative ; test ; project riddlcNative ; " +
+    "test ; nativeLink ; project root"
+)
+addCommandAlias(
+  "tJS",
+  "; project utilsJS; test ; project languageJS ; test ; project passesJS ; " +
+    "test ; project testkitJS ; test ; project diagramsJS; test ; " +
+    "project riddlLibJS ; test ; fastLinkJS ; project root"
+)
