@@ -10,6 +10,7 @@ import fastparse.*
 object Punctuation {
   final val asterisk = "*"
   final val atSign = "@"
+  final val codeQuote = "```"
   final val comma = ","
   final val colon = ":"
   final val curlyOpen = "{"
@@ -48,6 +49,31 @@ object Punctuation {
   )
 
   def anyPunctuation[u: P]: P[Unit] = {
+    P(
+      StringIn(
+        asterisk,
+        atSign,
+        codeQuote,
+        comma,
+        colon,
+        curlyOpen,
+        curlyClose,
+        dot,
+        equalsSign,
+        plus,
+        question,
+        quote,
+        roundOpen,
+        roundClose,
+        squareOpen,
+        squareClose,
+        verticalBar,
+        undefinedMark
+      )
+    )
+  }
+
+  def tokenPunctuation[u: P]: P[Unit] = {
     P(
       StringIn(
         asterisk,

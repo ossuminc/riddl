@@ -94,7 +94,15 @@ context full is {
     function whenUnderTheInfluence is {
       requires { n: Nothing }
       returns  { b: Boolean }
-        "aribtrary statement"
+      "aribtrary statement"
+      ```scala
+        // Simulate a creative state
+        val randomFactor = Math.random() // A random value between 0 and 1
+        val threshold = 0.7 // Threshold for creativity
+
+        // If the random factor exceeds the threshold, consider it a creative state
+        b = randomFactor > threshold
+      ```
     } with {
       briefly as "Something is nothing interesting"
     }
