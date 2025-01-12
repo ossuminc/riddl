@@ -331,6 +331,7 @@ val Commands = config("commands")
 lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
   .configure(With.typical, With.headerLicense("Apache-2.0"))
+  .configure(With.GithubPublishing)
   .settings(
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     description := "RIDDL Command Infrastructure and command definitions"
@@ -413,13 +414,14 @@ lazy val docsite = DocSite(
   inclusions = Seq(utils, language, passes, diagrams, commands),
   logoPath = Some("doc/src/main/hugo/static/images/RIDDL-Logo-128x128.png")
 )
+  .dependsOn(utils, language, passes, diagrams, commands)
+  .configure(With.noMiMa)
+  .configure(With.GithubPublishing)
   .settings(
     name := "riddl-doc",
     description := "Generation of the documentation web site",
     libraryDependencies ++= Dep.testing
   )
-  .configure(With.noMiMa)
-  .dependsOn(utils, language, passes, diagrams, commands)
 
 lazy val plugin = Plugin("sbt-riddl")
   .configure(With.GithubPublishing)
