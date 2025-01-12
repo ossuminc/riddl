@@ -180,7 +180,11 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
-  .nativeConfigure(With.native(mode = "fast"))
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "static", linkOptions = Seq(
+    "-I/usr/include",
+    "-I/usr/local/opt/curl/include",
+    "-I/opt/homebrew/opt/curl/include"
+  )))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
