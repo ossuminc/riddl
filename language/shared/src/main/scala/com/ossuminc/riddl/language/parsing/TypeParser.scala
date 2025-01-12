@@ -318,8 +318,9 @@ private[parsing] trait TypeParser {
 
   private def uniqueIdType[u: P]: P[UniqueId] = {
     (Index ~ PredefType.Id ~ Punctuation.roundOpen ~/
-      maybe(Keyword.entity) ~ pathIdentifier ~ Punctuation.roundClose ~/ Index) map { case (start, pid, end) =>
-      UniqueId(at(start, end), pid)
+      maybe(Keyword.entity) ~ pathIdentifier ~ Punctuation.roundClose ~/ Index) map {
+      case (start, pid, end) =>
+        UniqueId(at(start, end), pid)
     }
   }
 
@@ -328,13 +329,16 @@ private[parsing] trait TypeParser {
   }
 
   def enumerator[u: P]: P[Enumerator] = {
-    P(Index ~~ identifier ~ enumValue  ~ withMetaData ~~Index).map { case (start, id, value, metaData, end) =>
-      Enumerator(at(start, end), id, value, metaData.toContents)
+    P(Index ~~ identifier ~ enumValue ~ withMetaData ~~ Index).map {
+      case (start, id, value, metaData, end) =>
+        Enumerator(at(start, end), id, value, metaData.toContents)
     }
   }
 
   private def enumerators[u: P]: P[Seq[Enumerator]] = {
-    enumerator.rep(1, maybe(Punctuation.comma)) | undefined[u, Seq[Enumerator]](Seq.empty[Enumerator])
+    enumerator.rep(1, maybe(Punctuation.comma)) | undefined[u, Seq[Enumerator]](
+      Seq.empty[Enumerator]
+    )
 
   }
 
@@ -348,7 +352,9 @@ private[parsing] trait TypeParser {
     P(
       Index ~ Keywords.one ~ of.? ~/ open ~
         (Punctuation.undefinedMark.!.map(_ => Seq.empty[AliasedTypeExpression]) |
-          aliasedTypeExpression.rep(0, P("or" | "|" | ","))) ~ close ~/ Index
+          aliasedTypeExpression
+            .rep(0, P(Keywords.or | Punctuation.verticalBar | Punctuation.comma))) ~ close
+        ~/ Index
     ).map { case (start, contents, end) =>
       Alternation(at(start, end), contents.toContents)
     }
@@ -525,16 +531,18 @@ private[parsing] trait TypeParser {
           Punctuation.plus
         ).!.? ~/ Index
     ).map {
-      case (start, None, None, typ, Some("?"), end)                     => Optional(at(start, end), typ)
-      case (start, None, None, typ, Some("+"), end)                     => OneOrMore(at(start, end), typ)
-      case (start, None, None, typ, Some("*"), end)                     => ZeroOrMore(at(start, end), typ)
-      case (start, Some("many"), None, typ, None, end)                  => OneOrMore(at(start, end), typ)
-      case (start, None, Some("optional"), typ, None, end)              => Optional(at(start, end), typ)
-      case (start, Some("many"), Some("optional"), typ, None, end)      => ZeroOrMore(at(start, end), typ)
-      case (start, None, Some("optional"), typ, Some("?"), end)         => Optional(at(start, end), typ)
-      case (start, Some("many"), None, typ, Some("+"), end)             => OneOrMore(at(start, end), typ)
-      case (start, Some("many"), Some("optional"), typ, Some("*"), end) => ZeroOrMore(at(start, end), typ)
-      case (_, None, None, typ, None, _)                                => typ
+      case (start, None, None, typ, Some("?"), end)        => Optional(at(start, end), typ)
+      case (start, None, None, typ, Some("+"), end)        => OneOrMore(at(start, end), typ)
+      case (start, None, None, typ, Some("*"), end)        => ZeroOrMore(at(start, end), typ)
+      case (start, Some("many"), None, typ, None, end)     => OneOrMore(at(start, end), typ)
+      case (start, None, Some("optional"), typ, None, end) => Optional(at(start, end), typ)
+      case (start, Some("many"), Some("optional"), typ, None, end) =>
+        ZeroOrMore(at(start, end), typ)
+      case (start, None, Some("optional"), typ, Some("?"), end) => Optional(at(start, end), typ)
+      case (start, Some("many"), None, typ, Some("+"), end)     => OneOrMore(at(start, end), typ)
+      case (start, Some("many"), Some("optional"), typ, Some("*"), end) =>
+        ZeroOrMore(at(start, end), typ)
+      case (_, None, None, typ, None, _) => typ
       case (start, _, _, typ, _, end) =>
         error(at(start, end), s"Cannot determine cardinality for $typ")
         typ

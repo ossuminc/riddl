@@ -17,7 +17,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
-lazy val license = ALv2(yyyy = "2019-2025", copyrightOwner = "Ossum Inc.", licenseStyle = SpdxSyntax)
+lazy val license =
+  ALv2(yyyy = "2019-2025", copyrightOwner = "Ossum Inc.", licenseStyle = SpdxSyntax)
 
 def cpDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
 def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
@@ -55,15 +56,15 @@ lazy val riddl: Project = Root("riddl", startYr = startYear /*, license = "Apach
 
 lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
-  .configure(With.publishing)
   .settings(
     scalacOptions += "-explain-cyclic",
     description := "Various utilities used throughout riddl libraries"
   )
   .jvmConfigure(With.coverage(70))
   .jvmConfigure(With.build_info)
-  .jvmConfigure(With.MiMa("0.52.1", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
+  .jvmConfigure(With.MiMa("0.57.0", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -74,12 +75,24 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.version"),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.utils.RiddlBuildInfo.version"
+          ),
           ProblemMatcher
-            .make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"),
+            .make(
+              ProblemKind.IncompatibleTypeChange,
+              "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtString"
+            ),
           ProblemMatcher
-            .make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"),
-          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot")
+            .make(
+              ProblemKind.IncompatibleTypeChange,
+              "com.ossuminc.riddl.utils.RiddlBuildInfo.builtAtMillis"
+            ),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.utils.RiddlBuildInfo.isSnapshot"
+          )
         )
       )
     }
@@ -101,7 +114,11 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
-  .nativeConfigure(With.native(mode = "fast", buildTarget = "static"))
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "static", linkOptions = Seq(
+      "-I/usr/include",
+      "-I/usr/local/opt/curl/include",
+      "-I/opt/homebrew/opt/curl/include"
+    )))
   .nativeConfigure(
     With.build_info_plus_keys(
       "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion
@@ -111,6 +128,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client4" %%% "core" % V.sttp,
       "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
       "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
       "org.scalactic" %%% "scalactic" % V.scalatest % Test,
@@ -124,6 +142,7 @@ lazy val utilsNative = utils_cp.native
 val Language = config("language")
 lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp))
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Abstract Syntax Tree and basic RIDDL language parser",
@@ -131,16 +150,21 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     Test / parallelExecution := false
   )
   .jvmConfigure(With.coverage(65))
-  .jvmConfigure(With.publishing)
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.language.AST.RiddlValue.loc"),
-          ProblemMatcher.make(ProblemKind.IncompatibleTypeChange, "com.ossuminc.riddl.language.AST.OccursInProcessor")
+          ProblemMatcher.make(
+            ProblemKind.NewAbstractMember,
+            "com.ossuminc.riddl.language.AST.RiddlValue.loc"
+          ),
+          ProblemMatcher.make(
+            ProblemKind.IncompatibleTypeChange,
+            "com.ossuminc.riddl.language.AST.OccursInProcessor"
+          )
         )
       )
     },
@@ -174,6 +198,7 @@ lazy val languageNative = language_cp.native.dependsOn(utilsNative)
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     Test / parallelExecution := false,
@@ -181,18 +206,23 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
     description := "AST Pass infrastructure and essential passes"
   )
   .jvmConfigure(With.coverage(30))
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     mimaBinaryIssueFilters ++= Seq(
-      ProblemFilters.exclude[ReversedMissingMethodProblem]("com.ossuminc.riddl.passes.PassVisitor.doRelationship")
+      ProblemFilters.exclude[ReversedMissingMethodProblem](
+        "com.ossuminc.riddl.passes.PassVisitor.doRelationship"
+      )
     ),
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
       import tastymima.intf._
       prevConfig.withMoreProblemFilters(
         asList(
-          ProblemMatcher.make(ProblemKind.NewAbstractMember, "com.ossuminc.riddl.passes.PassVisitor.doRelationship")
+          ProblemMatcher.make(
+            ProblemKind.NewAbstractMember,
+            "com.ossuminc.riddl.passes.PassVisitor.doRelationship"
+          )
         )
       )
     }
@@ -206,7 +236,8 @@ val passesJS = passes_cp.js
 val passesNative = passes_cp.native
 
 lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
-  .configure(With.typical, With.publishing, With.headerLicense("Apache-2.0"))
+  .configure(With.GithubPublishing)
+  .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Testing kit for RIDDL language and passes"
   )
@@ -217,7 +248,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
       "org.scalatest" %% "scalatest" % V.scalatest
     )
   )
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
@@ -243,15 +274,14 @@ val testkitNative = testkit_cp.native
 val Diagrams = config("diagrams")
 lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .settings(
     description := "Implementation of various AST diagrams passes other libraries may use"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.52.1"))
-  .jvmSettings(
-    coverageExcludedFiles := """<empty>;$anon"""
-  )
+  .jvmConfigure(With.MiMa("0.57.0"))
+  .jvmSettings(coverageExcludedFiles := """<empty>;$anon""")
   .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.native(mode = "fast"))
@@ -269,7 +299,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
     description := "RIDDL Command Infrastructure and command definitions"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig),
     libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
@@ -296,13 +326,19 @@ val commands: Project = commands_cp.jvm
 val commandsNative = riddlLib_cp.native
 
 lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp)) /*, cpDep(commands_cp) */
+  .dependsOn(
+    cpDep(utils_cp),
+    cpDep(language_cp),
+    cpDep(passes_cp),
+    cpDep(diagrams_cp)
+  ) /*, cpDep(commands_cp) */
+  .configure(With.GithubPublishing)
   .configure(With.typical)
   .settings(
     description := "Bundling of essential RIDDL libraries"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.52.1"))
+  .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
@@ -316,6 +352,7 @@ val riddlLibNative = riddlLib_cp.native
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
+  .configure(With.GithubPublishing)
   .configure(With.typical, With.headerLicense("Apache-2.0"))
   .configure(With.coverage(50.0))
   .configure(With.noMiMa)
@@ -365,11 +402,6 @@ lazy val docProjects = List(
 
 lazy val docOutput: File = file("doc") / "src" / "main" / "hugo" / "static" / "apidoc"
 
-//def akkaMappings: Map[(String, String), URL] = Map(
-//  ("com.typesafe.akka", "akka-actor") -> url(s"http://doc.akka.io/api/akka/"),
-//  ("com.typesafe", "config") -> url("http://typesafehub.github.io/config/latest/api/")
-//)
-
 lazy val docsite = DocSite(
   dirName = "doc",
   apiOutput = file("src") / "main" / "hugo" / "static" / "apidoc",
@@ -386,7 +418,8 @@ lazy val docsite = DocSite(
   .dependsOn(utils, language, passes, diagrams, commands)
 
 lazy val plugin = Plugin("sbt-riddl")
-  .configure(With.build_info, With.scala2, With.noMiMa, With.publishing)
+  .configure(With.GithubPublishing)
+  .configure(With.build_info, With.scala2, With.noMiMa)
   .configure(With.headerLicense("Apache-2.0"))
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",

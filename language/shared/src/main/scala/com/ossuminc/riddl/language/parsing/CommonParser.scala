@@ -71,7 +71,7 @@ private[parsing] trait CommonParser(using io: PlatformContext)
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
-
+  
   def markdownLines[u: P]: P[Seq[LiteralString]] = {
     P(markdownLine.rep(1))
   }

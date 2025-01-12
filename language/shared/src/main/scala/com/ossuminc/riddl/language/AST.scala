@@ -3926,7 +3926,7 @@ object AST:
     case Predefined(at: At) extends Token(at)
     case Keyword(at: At) extends Token(at)
     case Comment(at: At) extends Token(at)
-    case LiteralString(at: At) extends Token(at)
+    case LiteralCode(at: At) extends Token(at)
     case MarkdownLine(at: At) extends Token(at)
     case Identifier(at: At) extends Token(at)
     case Numeric(at: At) extends Token(at)

@@ -12,6 +12,9 @@ on:
 
 jobs:
   scala-build:
+    permissions:
+      contents: read
+      packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
@@ -30,7 +33,7 @@ jobs:
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
-    - name: Check Clang Okayness
+    - name: Check Clang Viability
       run: |
         echo CLANG: `which clang`
         echo LD64.LLD: `which ld64.lld`

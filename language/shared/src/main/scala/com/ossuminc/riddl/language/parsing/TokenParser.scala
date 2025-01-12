@@ -22,29 +22,53 @@ import scala.util.control.NonFatal
 
 trait TokenParser extends CommonParser with Readability {
 
-  private def numericToken[u:P]: P[Token.Numeric] = {
+  private def numericToken[u: P]: P[Token.Numeric] = {
     P(Index ~~ integer ~~ Index)./.map { case (start, _, end) => Token.Numeric(at(start, end)) }
   }
 
   private def punctuationToken[u: P]: P[Token.Punctuation] = {
-    P(Index ~~ Punctuation.anyPunctuation ~~ Index)./.map { case (start, end) => Token.Punctuation(at(start, end)) }
+    P(Index ~~ Punctuation.tokenPunctuation ~~ Index)./.map { case (start, end) =>
+      Token.Punctuation(at(start, end))
+    }
   }
 
+  private def notCodeQuote[u:P]: P[Unit] = {
+    P(AnyChar.rep(1))
+  }
+  
+  private def literalCode[u: P]: P[Token.LiteralCode] = {
+    P(
+      Index ~~ Punctuation.codeQuote ~~ until3('`','`','`') ~~ Index
+    ).map { case (start: Int, _: String, end: Int) =>
+      Token.LiteralCode(at(start, end))
+    }
+  }
+
+  private def stringContent[u: P]: P[Unit] = P(CharsWhile(stringChars) | escape)
+
   private def quotedStringToken[u: P]: P[Token.QuotedString] = {
-    P(literalString)./.map { case litStr: LiteralString => Token.QuotedString(litStr.loc) }
+    P(
+      Index ~~ Punctuation.quote ~~/ stringContent.rep ~~ Punctuation.quote ~~ Index
+    )./.map { case (start: Int, end: Int) => Token.QuotedString(at(start, end)) }
   }
 
   private def readabilityToken[u: P]: P[Token.Readability] = {
-    P(Index ~~ anyReadability ~~ Index)./.map { case (start, end) => Token.Readability(at(start, end)) }
+    P(Index ~~ anyReadability ~~ Index)./.map { case (start, end) =>
+      Token.Readability(at(start, end))
+    }
   }
 
   private def predefinedToken[u: P]: P[Token.Predefined] = {
     import com.ossuminc.riddl.language.parsing.PredefType.*
-    P(Index ~~ PredefTypes.anyPredefType ~~ Index)./.map { case (start, end) => Token.Predefined(at(start, end)) }
+    P(Index ~~ Keywords.keywords(PredefTypes.anyPredefType) ~~ Index)./.map { case (start, end) =>
+      Token.Predefined(at(start, end))
+    }
   }
 
   private def keywordToken[u: P]: P[Token.Keyword] = {
-    P(Index ~~ Keywords.anyKeyword ~~ Index)./.map { case (start, end) => Token.Keyword(at(start, end)) }
+    P(Index ~~ Keywords.anyKeyword ~~ Index)./.map { case (start, end) =>
+      Token.Keyword(at(start, end))
+    }
   }
 
   private def commentToken[u: P]: P[Token.Comment] = {
@@ -62,17 +86,20 @@ trait TokenParser extends CommonParser with Readability {
   }
 
   private def otherToken[u: P]: P[Token.Other] = {
-    P(Index ~~ AnyChar.rep(1) ~~ Index)./.map { case (start, end) =>
+    P(
+      Index ~~ (!(CharIn(" \n\r") | End) ~~ AnyChar).rep(1) ~~ Index
+    )./.map { case (start, end) =>
       Token.Other(at(start, end))
     }
   }
 
   def parseAnyToken[u: P]: P[Token] = {
     P(
-      keywordToken |
-        punctuationToken |
-        quotedStringToken |
+      quotedStringToken |
         markdownLinesToken |
+        literalCode |
+        punctuationToken |
+        keywordToken |
         readabilityToken |
         predefinedToken |
         identifierToken |
@@ -83,6 +110,6 @@ trait TokenParser extends CommonParser with Readability {
   }
 
   def parseAllTokens[u: P]: P[List[Token]] = {
-    P(Start ~ parseAnyToken.rep(0) ~ End).map(_.toList)
+    P(Start ~ parseAnyToken.rep(1) ~ End).map(_.toList)
   }
 }

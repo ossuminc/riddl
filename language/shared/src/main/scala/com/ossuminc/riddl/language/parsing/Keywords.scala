@@ -195,7 +195,7 @@ object Keywords {
   def nebula[u: P]: P[Unit] = keyword(Keyword.nebula)
 
   def on[u: P]: P[Unit] = keyword(Keyword.on)
-
+  
   def onInit[u: P]: P[Unit] = keyword("on init")
 
   def onOther[u: P]: P[Unit] = keyword("on other")

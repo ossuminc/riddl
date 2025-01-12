@@ -97,11 +97,12 @@ private[parsing] trait NoWhiteSpaceParsers {
 
   private final val escape_chars = "\\\\\\\"aefnrt"
   private def shortcut[u: P]: P[String] = P("\\" ~ CharIn(escape_chars)).!
+  
   def escape[u: P]: P[String] = P(shortcut | hexEscape | unicodeEscape).!./
 
-  private def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
+  def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
 
-  private def strChars[u: P]: P[String] = P(CharsWhile(stringChars)).!./
+  def strChars[u: P]: P[String] = P(CharsWhile(stringChars)).!./
 
   def literalString[u: P]: P[LiteralString] = {
     P(

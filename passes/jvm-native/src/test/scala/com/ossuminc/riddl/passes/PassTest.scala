@@ -160,7 +160,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
             val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
             opens must be(closes)
             opens must be(55)
-            values must be(26)
+            values must be(27)
             leaves must be(19)
       }
       Await.result(future, 10.seconds)
