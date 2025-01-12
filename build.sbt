@@ -294,6 +294,39 @@ val diagrams = diagrams_cp.jvm
 val diagramsJS = diagrams_cp.js
 val diagramsNative = diagrams_cp.native
 
+lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
+  .dependsOn(
+    cpDep(utils_cp),
+    cpDep(language_cp),
+    cpDep(passes_cp),
+    cpDep(diagrams_cp)
+  )
+  .configure(With.GithubPublishing)
+  .configure(With.typical)
+  .settings(
+    description := "Bundling of essential RIDDL libraries"
+  )
+  .jvmConfigure(With.coverage(50))
+  .jvmConfigure(With.MiMa("0.57.0"))
+  .jvmConfigure(
+    With.packagingUniversal(
+        maintainerEmail = "reid@ossuminc.com",
+        pkgName = "riddlLib",
+        pkgSummary = "Library for RIDDL language, Universal packaging",
+        pkgDescription = ""
+      )
+  )
+  .jvmSettings(
+    coverageExcludedFiles := """<empty>;$anon"""
+  )
+  .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.noMiMa)
+  .nativeConfigure(With.native(mode = "fast", buildTarget = "static"))
+  .nativeConfigure(With.noMiMa)
+val riddlLib = riddlLib_cp.jvm
+val riddlLibJS = riddlLib_cp.js
+val riddlLibNative = riddlLib_cp.native
+
 val Commands = config("commands")
 lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
@@ -326,33 +359,7 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
     )
   )
 val commands: Project = commands_cp.jvm
-// val commandsJS: Project = commands_cp.js
 val commandsNative = riddlLib_cp.native
-
-lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
-  .dependsOn(
-    cpDep(utils_cp),
-    cpDep(language_cp),
-    cpDep(passes_cp),
-    cpDep(diagrams_cp)
-  ) /*, cpDep(commands_cp) */
-  .configure(With.GithubPublishing)
-  .configure(With.typical)
-  .settings(
-    description := "Bundling of essential RIDDL libraries"
-  )
-  .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.57.0"))
-  .jvmSettings(
-    coverageExcludedFiles := """<empty>;$anon"""
-  )
-  .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
-  .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.native(mode = "fast"))
-  .nativeConfigure(With.noMiMa)
-val riddlLib = riddlLib_cp.jvm
-val riddlLibJS = riddlLib_cp.js
-val riddlLibNative = riddlLib_cp.native
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
@@ -365,13 +372,6 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     maintainer := "reid@ossuminc.com",
     mainClass := Option("com.ossuminc.riddl.RIDDLC")
-    // graalVMNativeImageOptions ++= Seq(
-    //   "--verbose",
-    //   "--no-fallback",
-    //   "--native-image-info",
-    //   "--enable-url-protocols=https,http",
-    //   "-H:ResourceConfigurationFiles=../../src/native-image.resources"
-    // ),
   )
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(
@@ -471,4 +471,12 @@ addCommandAlias(
   "; project utilsJS; test ; project languageJS ; test ; project passesJS ; " +
     "test ; project testkitJS ; test ; project diagramsJS; test ; " +
     "project riddlLibJS ; test ; fastLinkJS ; project root"
+)
+addCommandAlias(
+  "packageArtifacts",
+  "; riddlc/Universal/packageBin " +
+    "; riddlcNative/nativeLink " +
+    "; riddlLibJS/fullLinkJS" +
+    "; riddlLibNative/nativeLink" +
+    "; riddlLib/Universal/packageBin"
 )
