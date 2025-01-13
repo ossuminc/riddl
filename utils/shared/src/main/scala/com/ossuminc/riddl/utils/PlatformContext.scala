@@ -57,7 +57,7 @@ trait PlatformContext {
     *   The content of the file as a String, asynchronously in a Future
     */
   def load(url: URL): Future[String]
-  
+
   /** Read the entire contents of a file and return it, synchronously
     *
     * @param file
@@ -91,5 +91,5 @@ trait PlatformContext {
 
   /** The newline character for this platform */
   def newline: String
-  
+
 }
