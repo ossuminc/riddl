@@ -3,6 +3,7 @@ import com.ossuminc.sbt.OssumIncPlugin
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import de.heikoseeberger.sbtheader.License.ALv2
 import de.heikoseeberger.sbtheader.LicenseStyle.SpdxSyntax
+import os./
 import sbt.Append.{appendSeqImplicit, appendSet}
 import sbt.Keys.{description, libraryDependencies, scalacOptions}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
@@ -114,11 +115,17 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       "org.scalatest" %%% "scalatest" % V.scalatest % Test
     )
   )
-  .nativeConfigure(With.native(mode = "fast", buildTarget = "static", linkOptions = Seq(
-      "-I/usr/include",
-      "-I/usr/local/opt/curl/include",
-      "-I/opt/homebrew/opt/curl/include"
-    )))
+  .nativeConfigure(
+    With.native(
+      mode = "fast",
+      buildTarget = "static",
+      linkOptions = Seq(
+        "-I/usr/include",
+        "-I/usr/local/opt/curl/include",
+        "-I/opt/homebrew/opt/curl/include"
+      )
+    )
+  )
   .nativeConfigure(
     With.build_info_plus_keys(
       "scalaNativeVersion" -> scalanative.sbtplugin.ScalaNativePlugin.autoImport.nativeVersion
@@ -180,11 +187,17 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
     libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
   )
-  .nativeConfigure(With.native(mode = "fast", buildTarget = "static", linkOptions = Seq(
-    "-I/usr/include",
-    "-I/usr/local/opt/curl/include",
-    "-I/opt/homebrew/opt/curl/include"
-  )))
+  .nativeConfigure(
+    With.native(
+      mode = "fast",
+      buildTarget = "static",
+      linkOptions = Seq(
+        "-I/usr/include",
+        "-I/usr/local/opt/curl/include",
+        "-I/opt/homebrew/opt/curl/include"
+      )
+    )
+  )
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
@@ -310,11 +323,11 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   .jvmConfigure(With.MiMa("0.57.0"))
   .jvmConfigure(
     With.packagingUniversal(
-        maintainerEmail = "reid@ossuminc.com",
-        pkgName = "riddlLib",
-        pkgSummary = "Library for RIDDL language, Universal packaging",
-        pkgDescription = ""
-      )
+      maintainerEmail = "reid@ossuminc.com",
+      pkgName = "riddlLib",
+      pkgSummary = "Library for RIDDL language, Universal packaging",
+      pkgDescription = ""
+    )
   )
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
@@ -437,42 +450,35 @@ lazy val plugin = Plugin("sbt-riddl")
 
 addCommandAlias(
   "cJVM",
-  "; project utils; Test/compile ; project language ; Test/compile ; project passes; " +
-    " Test/compile; project testkit ; Test/compile ; project diagrams; Test/compile ; project commands ; " +
-    "Test/compile ; project riddlLib ; Test/compile ; project riddlc ; Test/compile"
+  "; utils/Test/compile ; language/Test/compile ; passes/Test/compile; testkit/Test/compile ; " +
+    "diagrams/Test/compile ; commands/Test/compile ; riddlLib/Test/compile ; riddlc/Test/compile"
 )
 addCommandAlias(
   "cNative",
-  "; project utilsNative; Test/compile ; project languageNative ; Test/compile ; project passesNative ; " +
-    "Test/compile ; project testkitNative ; Test/compile ; project diagramsNative; Test/compile ; " +
-    "project commandsNative ; Test/compile ; project riddlLibNative ; Test/compile ; project riddlcNative ; " +
-    "Test/compile"
+  "; utilsNative/Test/compile ; languageNative/Test/compile ;  passesNative/Test/compile ; " +
+    "testkitNative/Test/compile ; diagramsNative/Test/compile ; commandsNative/Test/compile ; " +
+    "riddlLibNative/Test/compile ;  riddlcNative/Test/compile"
 )
 
 addCommandAlias(
   "cJS",
-  "; project utilsJS; Test/compile ; project languageJS ; Test/compile ; project passesJS ; " +
-    "Test/compile ; project testkitJS ; Test/compile ; project diagramsJS; Test/compile ; " +
-    "project riddlLibJS ; Test/compile ; fastLinkJS"
+  "; utilsJS/Test/compile ; languageJS/Test/compile ; passesJS/Test/compile ; " +
+    "testkitJS/Test/compile ; diagramsJS/Test/compile ; riddlLibJS/Test/compile ; fastLinkJS"
 )
 addCommandAlias(
   "tJVM",
-  "; project utils; test ; project language ; test ; project passes; " +
-    " test; project testkit ; test ; project diagrams; test ; project commands ; " +
-    "test ; project riddlLib ; test ; project riddlc ; test ; project root"
+  "; utils/test ; language/test ; passes/test ; /testkit/test ; diagrams/test ; commands/test ; " +
+    "riddlLib/test ; riddlc/test"
 )
 addCommandAlias(
   "tNative",
-  "; project utilsNative; test ; project languageNative ; test ; project passesNative ; " +
-    "test ; project testkitNative ; test ; project diagramsNative; test ; " +
-    "project commandsNative ; test ; project riddlLibNative ; test ; project riddlcNative ; " +
-    "test ; nativeLink ; project root"
+  "; utils/test ; language/test ; passesNative/test ; testkit/test ; diagrams/test ; " +
+    "commands/test ; riddlLib/test ; riddlcNative/test ; nativeLink"
 )
 addCommandAlias(
   "tJS",
-  "; project utilsJS; test ; project languageJS ; test ; project passesJS ; " +
-    "test ; project testkitJS ; test ; project diagramsJS; test ; " +
-    "project riddlLibJS ; test ; fastLinkJS ; project root"
+  "; utilsJS/test ; languageJS/test ; passesJS/test ; testkitJS/test ; diagramsJS/test ; " +
+    "riddlLibJS/test ; fastLinkJS"
 )
 addCommandAlias(
   "packageArtifacts",

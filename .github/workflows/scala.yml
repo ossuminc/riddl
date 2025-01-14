@@ -57,53 +57,15 @@ jobs:
 
     - name: Build And Test JVM Versions
       run: |
-        sbt -v clean \
-          utils/Test/compile \
-          language/Test/compile \
-          passes/Test/compile \
-          diagrams/Test/compile \
-          commands/Test/compile \
-          riddlLib/Test/compile \
-          riddlc/Test/compile \
-          utils/test \
-          language/test \
-          passes/test \
-          diagrams/test \
-          commands/test \
-          riddlLib/test \
-          riddlc/test
+        sbt -v clean cJVM tJVM
 
     - name: Build And Test Native Versions
       run: |
-        sbt -v \
-          utilsNative/Test/compile \
-          languageNative/Test/compile \
-          passesNative/Test/compile \
-          diagramsNative/Test/compile \
-          commandsNative/Test/compile \
-          riddlLibNative/Test/compile \
-          riddlcNative/Test/compile \
-          utilsNative/test \
-          languageNative/test \
-          passesNative/test \
-          diagramsNative/test \
-          commandsNative/test \
-          riddlLibNative/compile \
-          riddlcNative/test
+        sbt -v cNative tNative
 
     - name: Build And Test JS Versions
       run: |
-        sbt -v \
-          utilsJS/Test/compile \
-          languageJS/Test/compile \
-          passesJS/Test/compile \
-          diagramsJS/Test/compile \
-          riddlLibJS/Test/compile \
-          utilsJS/test \
-          languageJS/test \
-          passesJS/test \
-          diagramsJS/test \
-          riddlLibJS/test
+        sbt -v cJS tJS 
 
     - name: Publish JVM RIDDL Libs & Test sbt-riddl plugin
       env:
