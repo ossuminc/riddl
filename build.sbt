@@ -463,7 +463,7 @@ addCommandAlias(
 addCommandAlias(
   "cJS",
   "; utilsJS/Test/compile ; languageJS/Test/compile ; passesJS/Test/compile ; " +
-    "testkitJS/Test/compile ; diagramsJS/Test/compile ; riddlLibJS/Test/compile ; fastLinkJS"
+    "testkitJS/Test/compile ; diagramsJS/Test/compile ; riddlLibJS/Test/compile"
 )
 addCommandAlias(
   "tJVM",
@@ -473,12 +473,12 @@ addCommandAlias(
 addCommandAlias(
   "tNative",
   "; utils/test ; language/test ; passesNative/test ; testkit/test ; diagrams/test ; " +
-    "commands/test ; riddlLib/test ; riddlcNative/test ; nativeLink"
+    "commands/test ; riddlLib/test ; riddlcNative/test ; riddlcNative/nativeLink"
 )
 addCommandAlias(
   "tJS",
   "; utilsJS/test ; languageJS/test ; passesJS/test ; testkitJS/test ; diagramsJS/test ; " +
-    "riddlLibJS/test ; fastLinkJS"
+    "riddlLibJS/test"
 )
 addCommandAlias(
   "packageArtifacts",
