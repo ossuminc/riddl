@@ -467,7 +467,7 @@ addCommandAlias(
 )
 addCommandAlias(
   "tJVM",
-  "; utils/test ; language/test ; passes/test ; /testkit/test ; diagrams/test ; commands/test ; " +
+  "; utils/test ; language/test ; passes/test ; testkit/test ; diagrams/test ; commands/test ; " +
     "riddlLib/test ; riddlc/test"
 )
 addCommandAlias(
