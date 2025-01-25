@@ -3,12 +3,12 @@ import com.ossuminc.sbt.OssumIncPlugin
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import de.heikoseeberger.sbtheader.License.ALv2
 import de.heikoseeberger.sbtheader.LicenseStyle.SpdxSyntax
-import os./
 import sbt.Append.{appendSeqImplicit, appendSet}
 import sbt.Keys.{description, libraryDependencies, scalacOptions}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 import sbtcrossproject.{CrossClasspathDependency, CrossProject}
 import sbttastymima.TastyMiMaPlugin.autoImport.*
+import tastymima.intf.{ProblemKind, ProblemMatcher}
 
 import scala.collection.Seq
 
@@ -109,10 +109,10 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
-      "org.scala-js" %%% "scalajs-dom" % "2.8.0",
-      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %%% "scalatest" % V.scalatest % Test
+      Dep.dom.value,
+      Dep.scala_java_time.value,
+      Dep.scalatest_nojvm.value,
+      Dep.scalactic_nojvm.value
     )
   )
   .nativeConfigure(
@@ -135,11 +135,12 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client4" %%% "core" % V.sttp,
-      "org.scala-native" %%% "java-net-url-stubs" % "1.0.0",
-      "io.github.cquiroz" %%% "scala-java-time" % "2.6.0",
-      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %%% "scalatest" % V.scalatest % Test
+      Dep.sttp_nojvm.value,
+      Dep.java_net_url_stubs.value,
+      Dep.scala_java_time.value,
+      Dep.scalactic_nojvm.value,
+      Dep.scalatest_nojvm.value,
+      Dep.scalactic_nojvm.value
     )
   )
 lazy val utils = utils_cp.jvm
@@ -176,16 +177,17 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
       )
     },
     coverageExcludedPackages := "<empty>;$anon",
-    libraryDependencies ++= Dep.testing ++ Seq(Dep.fastparse),
-    libraryDependencies += "org.wvlet.airframe" %% "airframe-ulid" % V.airframe_ulid,
-    libraryDependencies += "org.wvlet.airframe" %% "airframe-json" % V.airframe_json,
-    libraryDependencies += Dep.commons_io % Test
+    libraryDependencies ++= Dep.testing ++ Seq(
+      Dep.fastparse,
+      Dep.airframe_ulid,
+      Dep.airframe_json,
+      Dep.commons_io % Test
+    )
   )
   .jsConfigure(With.js("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
-    libraryDependencies += "com.lihaoyi" %%% "fastparse" % V.fastparse,
-    libraryDependencies += "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid
+    libraryDependencies ++= Seq(Dep.fastparse_nojvm.value, Dep.airframe_ulid_nojvm.value)
   )
   .nativeConfigure(
     With.native(
@@ -201,10 +203,10 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %%% "fastparse" % V.fastparse,
-      "org.wvlet.airframe" %%% "airframe-ulid" % V.airframe_ulid,
-      "org.scalactic" %%% "scalactic" % V.scalatest % Test,
-      "org.scalatest" %%% "scalatest" % V.scalatest % Test
+      Dep.fastparse_nojvm.value,
+      Dep.airframe_ulid_nojvm.value,
+      Dep.scalatest_nojvm.value,
+      Dep.scalactic_nojvm.value
     )
   )
 
@@ -261,8 +263,8 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
   .dependsOn(tkDep(utils_cp), tkDep(language_cp), tkDep(passes_cp))
   .jvmSettings(
     libraryDependencies ++= Seq(
-      "org.scalactic" %% "scalactic" % V.scalatest,
-      "org.scalatest" %% "scalatest" % V.scalatest
+      Dep.scalatest_nojvm.value,
+      Dep.scalactic_nojvm.value
     )
   )
   .jvmConfigure(With.MiMa("0.57.0"))
@@ -271,8 +273,8 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
   .jsSettings(
     // scalacOptions ++= Seq("-rewrite", "-source", "3.4-migration"),
     libraryDependencies ++= Seq(
-      "org.scalactic" %%% "scalactic" % V.scalatest,
-      "org.scalatest" %%% "scalatest" % V.scalatest
+      Dep.scalatest_nojvm.value,
+      Dep.scalactic_nojvm.value
     )
   )
   .nativeConfigure(With.noMiMa)
@@ -280,8 +282,8 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
   .nativeSettings(
     evictionErrorLevel := sbt.util.Level.Warn,
     libraryDependencies ++= Seq(
-      "org.scalactic" %%% "scalactic" % V.scalatest,
-      "org.scalatest" %%% "scalatest" % V.scalatest
+      Dep.scalatest_nojvm.value,
+      Dep.scalactic_nojvm.value
     )
   )
 val testkit = testkit_cp.jvm
@@ -352,25 +354,20 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(
-    libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig),
-    libraryDependencies += "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided",
+    libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig, Dep.scalajs_stubs),
     coverageExcludedFiles := """<empty>;$anon"""
   )
+  // NOTE: This configuration is not supported because executing commands
+  // NOTE: from javascript is not easy
   // .jsConfigure(With.js("RIDDL: diagrams", withCommonJSModule = true))
   // .jsConfigure(With.noMiMa)
   // .jsSettings(
-  //   libraryDependencies ++= Seq(
-  //     "com.github.scopt" %%% "scopt" % V.scopt,
-  //     "org.ekrich" %%% "sconfig" % V.sconfig
-  //   )
+  //   libraryDependencies ++= Seq(Dep.scopt_njvm.value, Dep.sconfig_nojvm.value)
   // )
   .nativeConfigure(With.native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %%% "scopt" % V.scopt,
-      "org.ekrich" %%% "sconfig" % V.sconfig
-    )
+    libraryDependencies ++= Seq(Dep.scopt_nojvm.value, Dep.sconfig_nojvm.value)
   )
 val commands: Project = commands_cp.jvm
 val commandsNative = riddlLib_cp.native
@@ -399,12 +396,12 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon""",
     coverallsTokenFile := Some("/home/reid/.coveralls.yml"),
-    libraryDependencies ++= Seq(Dep.sconfig)
+    libraryDependencies += Dep.sconfig
   )
   .nativeConfigure(With.native(mode = "fast", buildTarget = "application"))
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
-    libraryDependencies += "org.ekrich" %%% "sconfig" % V.sconfig
+    libraryDependencies += Dep.sconfig_nojvm.value
   )
 val riddlc = riddlc_cp.jvm
 val riddlcNative = riddlc_cp.native
