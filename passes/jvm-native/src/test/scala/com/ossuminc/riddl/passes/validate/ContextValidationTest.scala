@@ -23,17 +23,42 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
   "Context" should {
     "allow options" in { (td: TestData) =>
       val input =
-        """option wrapper option service option gateway option package("foo") option technology("http")  """
-      parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
-        msgs.filter(_.kind.isError) mustBe empty
-        context.options.size mustBe 5
-        context.options must contain(OptionValue(At(rpi, 34, 49), "wrapper", Seq.empty))
-        context.options must contain(OptionValue(At(rpi, 49, 64), "service", Seq.empty))
-        context.options must contain(OptionValue(At(rpi, 64, 79), "gateway", Seq.empty))
-        context.options must contain(OptionValue(At(rpi, 79, 101), "package",
-          Seq(LiteralString(At(rpi, 94, 99), "foo"))))
-        context.options must contain(OptionValue(At(rpi, 101, 128), "technology",
-          Seq(LiteralString(At(rpi, 119, 125), "http"))))
+        """domain bar {
+         |context foo { ??? } with {
+         |  option wrapper option service option gateway option package("foo")
+         |  option technology("http")
+         |}}
+       """.stripMargin
+      parseAndValidate(input, "", true) {
+        case (root: Root, rpi: RiddlParserInput, msgs: Messages) =>
+          msgs.filter(_.kind.isError) mustBe empty
+          val context = root.domains.head.contexts.head
+          context.options.size mustBe 5
+          val names = context.options.map(_.name)
+          names must contain("wrapper")
+          names must contain("service")
+          names must contain("gateway")
+          context.options.find(_.name == "package") match {
+            case Some(option) =>
+              option must be(
+                OptionValue(
+                  At(rpi, 87, 109),
+                  "package",
+                  Seq(LiteralString(At(rpi, 102, 107), "foo"))
+                )
+              )
+            case None => fail("No package option")
+          }
+          context.options.find(_.name == "technology") match {
+            case Some(option) =>
+              option must be(
+                OptionValue(
+                  At(rpi, 111, 137),
+                  "technology",
+                  Seq(LiteralString(At(rpi, 129, 135), "http"))
+                )
+              )
+          }
       }
     }
     "allow types" in { (td: TestData) =>

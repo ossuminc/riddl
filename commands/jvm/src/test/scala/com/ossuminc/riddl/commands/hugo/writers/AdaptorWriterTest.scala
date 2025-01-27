@@ -51,7 +51,7 @@ class AdaptorWriterTest extends WriterTest {
                 || _Briefly_ | No brief description. |
                 || _Authors_ |  |
                 || _Definition Path_ | Root.Adaptors.One.FromTwo |
-                || _View Source Link_ | [commands/input/adaptors.riddl(77->372)]() |
+                || _View Source Link_ | [commands/input/adaptors.riddl(77->375)]() |
                 || _Used By_ | None |
                 || _Uses_ | None |
                 |
@@ -69,7 +69,7 @@ class AdaptorWriterTest extends WriterTest {
                 || :---: | :---  |
                 || _Briefly_ | No brief description. |
                 || _Definition Path_ | FromTwo.Root.Adaptors.One.Adaptation |
-                || _View Source Link_ | [commands/input/adaptors.riddl(158->368)]() |
+                || _View Source Link_ | [commands/input/adaptors.riddl(121->331)]() |
                 || _Used By_ | None |
                 || _Uses_ | None |
                 |

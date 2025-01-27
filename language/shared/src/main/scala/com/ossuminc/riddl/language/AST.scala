@@ -429,7 +429,8 @@ object AST:
     def format: String = lines.mkString("/* ", "\n", "*/")
   end InlineComment
 
-  /** Base trait for option values for any option of a definition.
+  /** Provides a meta-data value for processing options. A given named option may have one or more
+    * values of string types.
     *
     * @param loc
     *   The location at which the OptionValue occurs
@@ -527,6 +528,13 @@ object AST:
     /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
     def terms: Seq[Term] = metadata.filter[Term]
 
+    def options: Seq[OptionValue] = metadata.filter[OptionValue]
+
+    def hasOption(name: String): Boolean = options.exists(_.name == name)
+
+    /** Get the value of `name`'d option, if there is one. */
+    def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
+
     /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
     def authorRefs: Seq[AuthorRef] = metadata.filter[AuthorRef]
 
@@ -556,24 +564,6 @@ object AST:
     def includes: Seq[Include[CV]] = contents.filter[Include[CV]]
     final override def hasIncludes = true
   end WithIncludes
-
-  /** Base trait that can be used in any definition that takes options and ensures the options are
-    * defined, can be queried, and formatted.
-    */
-  sealed trait WithOptions[CV <: RiddlValue] extends Container[CV]:
-
-    /** A lazily constructed [[Seq]] of [[OptionValue]] filtered from the contents */
-    def options: Seq[OptionValue] = contents.filter[OptionValue]
-
-    /** True if this value contains an option with the given `name`. */
-    def hasOption(name: String): Boolean = options.exists(_.name == name)
-
-    /** Get the value of `name`'d option, if there is one. */
-    def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
-
-    override def isEmpty: Boolean = super.isEmpty && options.isEmpty
-    override def hasOptions: Boolean = options.nonEmpty
-  end WithOptions
 
   /** Base trait of any definition that is a container and contains types */
   sealed trait WithTypes[CV <: RiddlValue] extends Container[CV]:
@@ -782,7 +772,7 @@ object AST:
 
   /** THe list of RiddlValues that are not Definitions for excluding them in match statements */
   type NonDefinitionValues = LiteralString | Identifier | PathIdentifier | Description |
-    Interaction | Include[?] | TypeExpression | Comment | OptionValue | Reference[?] |
+    Interaction | Include[?] | TypeExpression | Comment | Reference[?] | OptionValue |
     StreamletShape | AdaptorDirection | UserStory | MethodArgument | Schema | ShownBy |
     SimpleContainer[?] | BriefDescription | BlockDescription | URLDescription | FileAttachment |
     StringAttachment | ULIDAttachment | Meta | Statement
@@ -799,14 +789,14 @@ object AST:
   /** Things that can occur in the "With" section of a leaf definition */
   type MetaData =
     BriefDescription | Description | Term | AuthorRef | FileAttachment | StringAttachment |
-      ULIDAttachment | Comment
+      ULIDAttachment | Comment | OptionValue
 
   /** Type of definitions that occurs within all Vital Definitions */
   type OccursInVitalDefinition = Type | Comment
 
   /** Type of definitions that occur within all Processor types */
-  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | OptionValue |
-    Handler | Streamlet | Connector | Relationship
+  type OccursInProcessor = OccursInVitalDefinition | Constant | Invariant | Function | Handler |
+    Streamlet | Connector | Relationship
 
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga
@@ -997,7 +987,6 @@ object AST:
       with WithTypes[CT]
       with WithIncludes[CT]
       with WithComments[CT]
-      with WithOptions[CT]
       with WithMetaData:
     final override def isVital: Boolean = true
   end VitalDefinition
@@ -2629,8 +2618,7 @@ object AST:
     referent: ContextRef,
     contents: Contents[AdaptorContents] = Contents.empty[AdaptorContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Processor[AdaptorContents]
-      with WithOptions[AdaptorContents]:
+  ) extends Processor[AdaptorContents]:
     def format: String = Keyword.adaptor + " " + id.format
   end Adaptor
 
@@ -2901,8 +2889,7 @@ object AST:
     contents: Contents[EntityContents] = Contents.empty[EntityContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Processor[EntityContents]
-      with WithStates[EntityContents]
-      with WithOptions[EntityContents]:
+      with WithStates[EntityContents]:
     override def format: String = Keyword.entity + " " + id.format
   end Entity
 
@@ -2976,10 +2963,9 @@ object AST:
     id: Identifier,
     contents: Contents[RepositoryContents] = Contents.empty[RepositoryContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Processor[RepositoryContents]
-      with WithOptions[RepositoryContents] {
+  ) extends Processor[RepositoryContents]:
     def format: String = Keyword.entity + " " + id.format
-  }
+  end Repository
 
   /** A reference to a repository definition
     *
@@ -3019,11 +3005,10 @@ object AST:
     id: Identifier,
     contents: Contents[ProjectorContents] = Contents.empty[ProjectorContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Processor[ProjectorContents]
-      with WithOptions[ProjectorContents] {
+  ) extends Processor[ProjectorContents]:
     def repositories: Seq[RepositoryRef] = contents.filter[RepositoryRef]
     def format: String = Keyword.projector + " " + id.format
-  }
+  end Projector
 
   /** A reference to an referent's projector definition
     *
@@ -3159,13 +3144,11 @@ object AST:
     id: Identifier,
     from: OutletRef,
     to: InletRef,
-    options: Seq[OptionValue] = Seq.empty[OptionValue],
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Leaf {
-    def hasOption(name: String): Boolean = options.exists(_.name == name)
     override def format: String = Keyword.connector + " " + id.format
 
-    override def isEmpty: Boolean = super.isEmpty && from.isEmpty && to.isEmpty && options.isEmpty
+    override def isEmpty: Boolean = super.isEmpty && from.isEmpty && to.isEmpty
   }
 
   sealed trait StreamletShape extends RiddlValue {
@@ -4199,7 +4182,6 @@ object AST:
       case m @ AggregateUseCaseTypeExpression(_, messageKind, _) =>
         s"${messageKind.useCase} of ${m.fields.size} fields and ${m.methods.size} methods"
       case pt: PredefinedType => pt.kind
-      case _                  => "<unknown type expression>"
     end match
   end errorDescription
 end AST

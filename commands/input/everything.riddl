@@ -55,7 +55,6 @@ domain Everything is {
     command ACommand is { ??? }
 
     entity Something is {
-      option aggregate option transient
 
       type somethingDate is Date
 
@@ -76,6 +75,8 @@ domain Everything is {
         returns {b: Boolean}
         ???
       }
+    } with {
+      option aggregate option transient
     }
 
     entity SomeOtherThing is {

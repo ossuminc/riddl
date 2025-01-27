@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.TestData
@@ -20,17 +21,16 @@ class OptionsValidationTest extends AbstractValidatingTest {
       val input: String =
         """domain ignore {
           |  context invalid {
-          |    option css("fill:#333", "color:white")
           |    type JustHereToConformToSyntax = String
+          |  } with {
+          |    option css("fill:#333", "color:white")
           |  }
           |}
           |""".stripMargin
-      parseAndValidate(input,"identify incorrect css test case") {
-         (root: Root, messages: Messages) =>
-          if messages.justErrors.nonEmpty then
-            fail(messages.justErrors.format)
-          else
-            succeed
+      parseAndValidate(input, "identify incorrect css test case") {
+        (_: Root, _: RiddlParserInput, messages: Messages) =>
+          if messages.justErrors.nonEmpty then fail(messages.justErrors.format)
+          else succeed
           end if
       }
     }

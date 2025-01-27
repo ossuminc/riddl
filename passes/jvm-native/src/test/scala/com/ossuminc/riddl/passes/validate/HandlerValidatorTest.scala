@@ -16,9 +16,10 @@ import org.scalatest.TestData
 class HandlerValidatorTest extends AbstractValidatingTest {
 
   "Handler Validation" should {
-    "produce an error when on clause references a command that does not exist" in { (td: TestData) =>
-      val input = RiddlParserInput(
-        """
+    "produce an error when on clause references a command that does not exist" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """
           |domain entityTest is {
           |context EntityContext is {
           |entity Hamburger is {
@@ -36,27 +37,28 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |} with { briefly as "Irrelevant" }
           |} with { briefly as "Irrelevant" }
           |""".stripMargin,
-        td
-      )
-      pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
-        parseAndValidateDomain(input, shouldFailOnErrors = false) { case (_: Domain, _, msgs: Messages) =>
-          assertValidationMessage(
-            msgs,
-            Error,
-            """Path 'EntityCommand' was not resolved, in OnMessageClause 'command EntityCommand'
+          td
+        )
+        pc.withOptions(CommonOptions.noMinorWarnings) { _ =>
+          parseAndValidateDomain(input, shouldFailOnErrors = false) {
+            case (_: Domain, _, msgs: Messages) =>
+              assertValidationMessage(
+                msgs,
+                Error,
+                """Path 'EntityCommand' was not resolved, in OnMessageClause 'command EntityCommand'
               |because the sought name, 'EntityCommand', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
-          )
-          assertValidationMessage(
-            msgs,
-            Error,
-            """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
+              )
+              assertValidationMessage(
+                msgs,
+                Error,
+                """Path 'EntityEvent' was not resolved, in OnMessageClause 'event EntityEvent'
               |because the sought name, 'EntityEvent', was not found in the symbol table,
               |and it should refer to a Type""".stripMargin
-          )
-          msgs.justErrors.size must be(2)
+              )
+              msgs.justErrors.size must be(2)
+          }
         }
-      }
     }
 
     "produce an error when on clause references a message of the wrong type" in { (td: TestData) =>
@@ -138,11 +140,12 @@ class HandlerValidatorTest extends AbstractValidatingTest {
           |  }
           |}""".stripMargin
       pc.withOptions(CommonOptions.default) { _ =>
-        parseAndValidate(input, "test", shouldFailOnErrors = false) { case (_, messages: Messages) =>
-          val warnings = messages.justWarnings.format
-          // info(warnings)
-          warnings mustNot be(empty)
-          warnings must include("commands should result in sending an event")
+        parseAndValidate(input, "test", shouldFailOnErrors = false) {
+          case (_, _, messages: Messages) =>
+            val warnings = messages.justWarnings.format
+            // info(warnings)
+            warnings mustNot be(empty)
+            warnings must include("commands should result in sending an event")
         }
       }
     }

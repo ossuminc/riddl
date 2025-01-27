@@ -12,17 +12,19 @@ domain PersonalBanking is {
 
   domain PersonalBankingApp is {
     context Test is {
-        option is technology("react.js")
-        result Title is { value: String }
-        command Name is { value: String }
-        group HomePage is {
-          output AccountDetailsPage  presents result Title with {
-            described as "Show a blank page with a title"
-          }
-          input Two acquires command Name with {
-            described as "Show a blank page with a title, collect a Name"
-          }
+      result Title is { value: String }
+      command Name is { value: String }
+      group HomePage is {
+        output AccountDetailsPage  presents result Title with {
+          described as "Show a blank page with a title"
         }
-    } with { described as "A very simple app for testing" }
+        input Two acquires command Name with {
+          described as "Show a blank page with a title, collect a Name"
+        }
+      }
+    } with {
+      option is technology("react.js")
+      described as "A very simple app for testing"
+    }
   } with { briefly "The user interface for the Personal Banking Application" }
 }

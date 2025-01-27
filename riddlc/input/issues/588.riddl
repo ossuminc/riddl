@@ -1,10 +1,10 @@
 author Reid is { name: "Reid Spencer" email: "reid@ossuminc.com" }
 domain test588 {
   context TestGateway is {
-    option gateway
     include "588included"
 
   } with {
+    option gateway
     by author Reid
     briefly "A gateway for testing Improving.app instances"
     explained as {

@@ -40,7 +40,7 @@ class StatementValidatorTest extends AbstractValidatingTest {
           |}
           |""".stripMargin
       parseAndValidate(input, "test case", shouldFailOnErrors = false) {
-        (root: Root, messages: Messages) =>
+        (root: Root, _: RiddlParserInput, messages: Messages) =>
           // info(messages.format)
           root.isEmpty mustBe false
           messages.hasErrors mustBe false

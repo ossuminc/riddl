@@ -32,7 +32,6 @@ domain dokn is {
         }
 
         entity Company is {
-            option event-sourced option available
 
             type AddCompany is command {
               mailingAddress: Address,
@@ -56,6 +55,9 @@ domain dokn is {
                     send event CompanyAdded to outlet CompanyEvents_out
                 }
             }
+        } with {
+          option event-sourced
+          option available
         }
     }
 
@@ -66,7 +68,6 @@ domain dokn is {
         }
 
         entity Driver is {
-            option event-sourced option available
 
             type AddDriverToCompany is command  { name: String, mobile: MobileNumber, companyId: CompanyId }
             type DriverAddedToCompany is event { name: String, mobile: MobileNumber, companyId: CompanyId }
@@ -97,12 +98,13 @@ domain dokn is {
                   send event DriverRemovedFromCompany to inlet Driver_out
                 }
             }
+        } with {
+          option event-sourced option available
         }
     }
 
     context Note is {
         entity Note is {
-            option event-sourced option available
             record fields is {
               noteId: NoteId,
               locationId: type LocationId,
@@ -114,12 +116,13 @@ domain dokn is {
             }
             state NoteBase of Note.fields
             handler NoteBaseHandler is { ??? }
+        } with {
+            option event-sourced option available
         }
     }
 
     context Media is {
         entity Media is {
-            option consistent
             record fields is {
               mediaId: MediaId,
               path: String,
@@ -127,12 +130,13 @@ domain dokn is {
             }
             state MediaBase of Media.fields
             handler MediaBaseHandler is { ??? }
+        } with {
+            option consistent
         }
     }
 
     context Location is {
         entity Location is {
-            option event-sourced option available
 
             type AddDeliveryLocation is command  {
               geohash: Location, label: String
@@ -189,6 +193,8 @@ domain dokn is {
                 send result Location.LocationNotes to outlet Driver_out
               }
             }
+        } with {
+          option event-sourced option available
         }
     }
 } with {

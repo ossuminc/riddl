@@ -2,7 +2,6 @@ context FooContext is {
   command FooStateChange {???}
 
   entity Foo is {
-      option is aggregate
       record InitialFooData is { f1: Integer }
       record FinalFooStateData is {f1: String }
       state InitialFooState of Foo.InitialFooData
@@ -17,5 +16,7 @@ context FooContext is {
            become entity FooContext.Foo to handler Foo.InitializeFoo
          }
       }
-    }
+  } with {
+      option is aggregate
+  }
 }

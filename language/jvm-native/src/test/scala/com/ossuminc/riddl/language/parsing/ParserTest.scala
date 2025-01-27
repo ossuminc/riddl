@@ -45,7 +45,9 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          errors.head.message must include("Expected one of (\"/*\" | \"//\" | \"author\" | \"include\" | \"module\"")
+          errors.head.message must include(
+            "Expected one of (\"/*\" | \"//\" | \"author\" | \"include\" | \"module\""
+          )
         case Right(_) => fail("'domainfoois' should not be recognized")
       }
     }
@@ -54,7 +56,9 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
       parseTopLevelDomain(input, _.contents.head) match {
         case Left(errors) =>
           errors must not be empty
-          if errors.head.message.startsWith("Expected one of (") && errors.head.message.contains("context") then succeed
+          if errors.head.message
+              .startsWith("Expected one of (") && errors.head.message.contains("context")
+          then succeed
           else fail(errors.format)
         case Right(_) => fail("Missing closing brace should make an error")
       }
@@ -157,7 +161,8 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
     }
     "allow options on context definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
-        """context bar is {
+        """context bar is { ??? }
+          |with {
           |  option service
           |  option wrapper
           |  option gateway
@@ -172,12 +177,13 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
         case Right((content, rpi)) =>
           content must be(
             Context(
-              At(rpi, 0, 70),
-              Identifier(At(rpi, 8, 12), "bar"),
+              At(rpi, 0, 83),
+              Identifier(At(rpi, 8, 11), "bar"),
+              Contents(),
               Contents(
-                OptionValue(At(rpi, 19, 36), "service", Seq.empty),
-                OptionValue(At(rpi, 36, 53), "wrapper", Seq.empty),
-                OptionValue(At(rpi, 53, 68), "gateway", Seq.empty)
+                OptionValue(At(rpi, 32, 49), "service", Seq.empty),
+                OptionValue(At(rpi, 49, 66), "wrapper", Seq.empty),
+                OptionValue(At(rpi, 66, 81), "gateway", Seq.empty)
               )
             )
           )
@@ -232,11 +238,12 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
     "allow entity definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """entity Hamburger is {
-         |  option transient
-         |  option aggregate
          |  type Foo is { x: String }
          |  state BurgerState of type BurgerStruct
          |  handler BurgerHandler is {}
+         |} with {
+         |  option transient
+         |  option aggregate
          |}
          |""".stripMargin,
         td
@@ -247,25 +254,37 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           fail(msg)
         case Right((content, rpi)) =>
           val expected = Entity(
-            At(rpi, 0, 161),
-            Identifier(At(rpi, 7, 17), "Hamburger"),
+            At(rpi, 0, 170),
+            Identifier(At(rpi, 7, 16), "Hamburger"),
             Contents(
-              OptionValue(At(rpi, 24, 43), "transient", Seq.empty),
-              OptionValue(At(rpi, 43, 62), "aggregate", Seq.empty),
               Type(
-                At(rpi, 62, 90),
-                Identifier(At(rpi, 67, 71), "Foo"),
+                At(rpi, 24, 52),
+                Identifier(At(rpi, 29, 32), "Foo"),
                 Aggregation(
-                  At(rpi, 74, 90),
-                  Contents(Field(At(rpi, 76, 86), Identifier(At(rpi, 76, 77), "x"), String_(At(rpi, 79, 86))))
+                  At(rpi, 36, 52),
+                  Contents(
+                    Field(
+                      At(rpi, 38, 48),
+                      Identifier(At(rpi, 38, 39), "x"),
+                      String_(At(rpi, 41, 48))
+                    )
+                  )
                 )
               ),
               State(
-                At(rpi, 90, 131),
-                Identifier(At(rpi, 96, 108), "BurgerState"),
-                TypeRef(At(rpi, 111, 131), "type", PathIdentifier(At(rpi, 116, 131), List("BurgerStruct")))
+                At(rpi, 52, 93),
+                Identifier(At(rpi, 58, 69), "BurgerState"),
+                TypeRef(
+                  At(rpi, 73, 93),
+                  "type",
+                  PathIdentifier(At(rpi, 78, 90), List("BurgerStruct"))
+                )
               ),
-              Handler(At(rpi, 131, 159), Identifier(At(rpi, 139, 153), "BurgerHandler"))
+              Handler(At(rpi, 93, 121), Identifier(At(rpi, 101, 114), "BurgerHandler"))
+            ),
+            Contents(
+              OptionValue(At(rpi, 132, 151), "transient", Seq.empty),
+              OptionValue(At(rpi, 151, 168), "aggregate", Seq.empty)
             )
           )
           content mustBe expected
@@ -317,10 +336,20 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
                   _
                 ) =>
               val firstExpected =
-                Field(At(rpi, 32, 43), Identifier(At(rpi, 32, 34), "b"), Bool(At(rpi, 36, 43)), Contents.empty())
+                Field(
+                  At(rpi, 32, 43),
+                  Identifier(At(rpi, 32, 34), "b"),
+                  Bool(At(rpi, 36, 43)),
+                  Contents.empty()
+                )
               firstAggrContents.head must be(firstExpected)
               val secondExpected =
-                Field(At(rpi, 57, 68), Identifier(At(rpi, 57, 59), "i"), Integer(At(rpi, 61, 68)), Contents.empty())
+                Field(
+                  At(rpi, 57, 68),
+                  Identifier(At(rpi, 57, 59), "i"),
+                  Integer(At(rpi, 61, 68)),
+                  Contents.empty()
+                )
               secondAggrContents.head must be(secondExpected)
           end match
 

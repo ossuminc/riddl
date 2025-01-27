@@ -67,12 +67,13 @@ context full is {
   }
 
   entity Something is {
-    option aggregate
-    option transient
     function misc is {
       requires { n: Nothing }
       returns { b: Boolean }
       ???
+    } with {
+      option aggregate
+      option transient
     }
     type somethingDate is Date
 

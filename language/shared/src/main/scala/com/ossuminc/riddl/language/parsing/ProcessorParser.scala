@@ -17,15 +17,7 @@ trait ProcessorParser
     with StreamingParser
     with CommonParser {
 
-  def option[u: P]: P[OptionValue] =
-    P(
-      Index ~ Keywords.option ~/ is.? ~ CharsWhile(ch => ch.isLower | ch.isDigit | ch == '_' | ch == '-').! ~
-        (Punctuation.roundOpen ~ literalString.rep(0, Punctuation.comma) ~ Punctuation.roundClose).? ~ Index
-    ).map { case (start, option, params, end) =>
-      OptionValue(at(start, end), option, params.getOrElse(Seq.empty[LiteralString]))
-    }
-
-  def relationshipCardinality[u: P]: P[RelationshipCardinality] =
+  private def relationshipCardinality[u: P]: P[RelationshipCardinality] =
     P(StringIn("1:1", "1:N", "N:1", "N:N").!).map {
       case s: String if s == "1:1" => RelationshipCardinality.OneToOne
       case s: String if s == "1:N" => RelationshipCardinality.OneToMany
@@ -43,7 +35,7 @@ trait ProcessorParser
 
   def processorDefinitionContents[u: P](statementsSet: StatementsSet): P[OccursInProcessor] =
     P(
-      vitalDefinitionContents | constant | invariant | function | handler(statementsSet) | option |
+      vitalDefinitionContents | constant | invariant | function | handler(statementsSet) |
         streamlet | connector | relationship
     )./.asInstanceOf[P[OccursInProcessor]]
 }

@@ -1,6 +1,5 @@
 domain foo {
   context A {
-    option css("fill:white,stroke:#333,stroke-width:3px,color:blue") option faicon("fa-house")
     type AEvents is one of { A.AEvent1, C.CEvent }
     sink Sink { inlet aInlet is A.AEvents }
     command ACommand { ??? }
@@ -17,17 +16,12 @@ domain foo {
         }
       }
     }
+  } with {
+    option css("fill:white,stroke:#333,stroke-width:3px,color:blue")
+    option faicon("fa-house")
   }
-//             case m: Type            => Some(foreignContext -> s"Uses ${m.identify} from")
-//                 case e: Entity          => Some(foreignContext -> s"References ${e.identify} in")
-//                 case f: Field           => Some(foreignContext -> s"Sets ${f.identify} in")
-//                 case i: Inlet           => Some(foreignContext -> s"Sends to ${i.identify} in")
-//                 case o: Outlet          => Some(foreignContext -> s"Takes from ${o.identify} in")
-//                 case p: Processor[?, ?] => Some(foreignContext -> s"Tells to ${p.identify} in")
 
   context B {
-    option css("fill:white,stroke:#333,stroke-width:3px,color:green")
-    option faicon("fa-house")
     command BCommand { ??? }
     flow Flow is {
       inlet bInlet is A.AEvents
@@ -42,10 +36,11 @@ domain foo {
         }
       }
     }
+  } with {
+    option css("fill:white,stroke:#333,stroke-width:3px,color:green")
+    option faicon("fa-house")
   }
   context C {
-    option css("fill:white,stroke:#333,stroke-width:3px,color:purple")
-    option faicon("fa-house")
     command CCommand is { ??? }
     event CEvent is { ??? }
     entity CEntity {
@@ -57,13 +52,17 @@ domain foo {
         }
       }
     }
+  } with {
+    option css("fill:white,stroke:#333,stroke-width:3px,color:purple")
+    option faicon("fa-house")
   }
 }
 
 domain bar {
   context D {
+    adaptor Dadaptor from context A is { ??? }
+  } with {
     option css("fill:white,stroke:#333,stroke-width:3px,color:red")
     option faicon("fa-house")
-    adaptor Dadaptor from context A is { ??? }
   }
 }

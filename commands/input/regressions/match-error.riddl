@@ -12,7 +12,6 @@ domain PersonalBanking is {
 
   domain PersonalBankingApp is {
     context Test is {
-        option is technology("react.js")
         result Title is { value: String }
         command Name is { value: String }
         group HomePage is {
@@ -24,6 +23,7 @@ domain PersonalBanking is {
           }
         }
     } with {
+      option is technology("react.js")
       briefly "The user interface for the Personal Banking Application"
       described as "A very simple app for testing"
     }

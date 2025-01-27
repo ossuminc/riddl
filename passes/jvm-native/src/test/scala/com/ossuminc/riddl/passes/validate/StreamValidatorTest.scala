@@ -134,7 +134,8 @@ class StreamValidatorTest extends AbstractValidatingTest {
             |  }
             |  connector c1 {
             |    from outlet a.through.out to inlet uno.a.through.in
-            |    option persistent
+            |  } with {
+            |   option persistent
             |  }
             | }
             |} """.stripMargin,

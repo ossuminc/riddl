@@ -49,7 +49,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     if definition.nonEmpty then decr.addLine("}")
     definition match
       case wd: WithMetaData => emitDescriptives(wd.descriptions).nl
-      case _                    => this.nl
+      case _                => this.nl
     end match
   }
 
@@ -57,14 +57,15 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     if descriptives.nonEmpty then
       add(" with {").nl.incr
       descriptives.foreach {
-        case c: Comment          => emitComment(c)
-        case b: BriefDescription => emitBriefDescription(b)
-        case d: Description      => emitDescription(d)
-        case t: Term             => emitTerm(t)
-        case a: AuthorRef        => emitAuthorRef(a)
+        case c: Comment           => emitComment(c)
+        case b: BriefDescription  => emitBriefDescription(b)
+        case d: Description       => emitDescription(d)
+        case t: Term              => emitTerm(t)
+        case o: OptionValue       => emitOption(o)
+        case a: AuthorRef         => emitAuthorRef(a)
         case sa: StringAttachment => emitStringAttachment(sa)
-        case fa: FileAttachment => emitFileAttachment(fa)
-        case ua: ULIDAttachment => emitULIDAttachment(ua)
+        case fa: FileAttachment   => emitFileAttachment(fa)
+        case ua: ULIDAttachment   => emitULIDAttachment(ua)
       }
       decr.add("}")
     end if
@@ -145,10 +146,11 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
     add(s"any of {").nl.incr
-    val enumerators: String = enumeration.enumerators.toSeq.map { enumerator =>
-      enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)")
-    }
-    .mkString(s"$spc", s",$new_line$spc", new_line)
+    val enumerators: String = enumeration.enumerators.toSeq
+      .map { enumerator =>
+        enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)")
+      }
+      .mkString(s"$spc", s",$new_line$spc", new_line)
     add(enumerators).decr.addLine("}")
     this
   }
@@ -215,7 +217,10 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   }
 
   private def emitTable(table: Table): this.type = {
-    this.add("table of ").emitTypeExpression(table.of).add(table.dimensions.mkString("[ ", ", ", " ]"))
+    this
+      .add("table of ")
+      .emitTypeExpression(table.of)
+      .add(table.dimensions.mkString("[ ", ", ", " ]"))
   }
 
   private def emitReplica(replica: Replica): this.type = {
@@ -257,7 +262,8 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case replica: Replica                => emitReplica(replica)
       case RangeType(_, min, max)          => add(s"range($min,$max) ")
       case Decimal(_, whl, frac)           => add(s"Decimal($whl,$frac)")
-      case EntityReferenceTypeExpression(_, er) => add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
+      case EntityReferenceTypeExpression(_, er) =>
+        add(s"${Keyword.reference} to ${Keyword.entity} ${er.format}")
       case pattern: Pattern     => emitPattern(pattern)
       case UniqueId(_, id)      => this.add(s"Id(${id.format}) ")
       case Optional(_, typex)   => emitTypeExpression(typex).add("?")
@@ -321,9 +327,9 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     addIndent(option.format + new_line)
   end emitOption
 
-  def emitOptions(optionDef: WithOptions[?]): this.type =
-    if optionDef.options.nonEmpty then
-      optionDef.options.map { option => option.format + new_line }.foreach(addIndent); this
+  def emitOptions(options: Seq[OptionValue]): this.type =
+    if options.nonEmpty then
+      options.map { option => option.format + new_line }.foreach(addIndent); this
     else this
     end if
   end emitOptions

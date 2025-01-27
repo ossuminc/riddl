@@ -203,9 +203,24 @@ private[parsing] trait CommonParser(using io: PlatformContext)
       ULIDAttachment(at(start, end), ulid)
     }
   end ulidAttachment
+  
+  def option[u: P]: P[OptionValue] =
+    P(
+      Index ~ Keywords.option ~/ is.? ~ CharsWhile(ch =>
+        ch.isLower | ch.isDigit | ch == '_' | ch == '-'
+      ).! ~
+        (Punctuation.roundOpen ~ literalString.rep(
+          0,
+          Punctuation.comma
+        ) ~ Punctuation.roundClose).? ~ Index
+    ).map { case (start, option, params, end) =>
+      OptionValue(at(start, end), option, params.getOrElse(Seq.empty[LiteralString]))
+    }
+  end option
 
   private def metaData[u: P]: P[MetaData] =
-    P(briefDescription | description | term | authorRef | fileAttachment | stringAttachment | ulidAttachment | comment)
+    P(briefDescription | description | term | option | authorRef | fileAttachment | 
+      stringAttachment | ulidAttachment | comment)
       .asInstanceOf[P[MetaData]]
 
   def withMetaData[u: P]: P[Seq[MetaData]] = {

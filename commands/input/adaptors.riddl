@@ -2,14 +2,13 @@ domain Adaptors is {
   context One is {
     command TwoIsDone is { ??? }
     adaptor FromTwo from context Two is {
-      option css("background: blue")
       handler Adaptation is {
         on event  Adaptors.Two.DidIt from context Two {
           "convert Two.DidIt to One.TwoIsDone"
           tell command Adaptors.One.TwoIsDone to context One
         }
       }
-    }
+    } with { option css("background: blue") }
   }
   context Two is {
     event DidIt is { ??? }

@@ -135,7 +135,7 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
     origin: String,
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (Root, Messages) => Assertion
+    validation: (Root, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     val rpi = RiddlParserInput(input, origin)
     parseAndValidateInput(rpi, shouldFailOnErrors)(validation)
@@ -145,7 +145,7 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
     rpi: RiddlParserInput,
     shouldFailOnErrors: Boolean = true
   )(
-    validation: (Root, Messages) => Assertion
+    validation: (Root, RiddlParserInput, Messages) => Assertion
   ): Assertion = {
     TopLevelParser.parseInput(rpi) match {
       case Left(errors) =>
@@ -155,9 +155,9 @@ abstract class AbstractValidatingTest(using PlatformContext) extends AbstractPar
         runStandardPasses(root, shouldFailOnErrors) match {
           case Left(errors) =>
             if shouldFailOnErrors then fail(errors.format)
-            else validation(root, errors)
+            else validation(root, rpi, errors)
           case Right(pr: PassesResult) =>
-            validation(root, pr.messages)
+            validation(root, rpi, pr.messages)
         }
     }
   }
