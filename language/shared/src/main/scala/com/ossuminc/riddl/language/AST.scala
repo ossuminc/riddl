@@ -956,6 +956,7 @@ object AST:
   object ParentStack:
     /** @return  an empty ParentStack */
     def empty[CV <: RiddlValue]: ParentStack = mutable.Stack.empty[Branch[?]]
+    def apply(items: Branch[?]*): ParentStack = mutable.Stack(items: _*)
   end ParentStack
 
   type DefinitionStack = mutable.Stack[Definition] // TODO: Make this opaque some day

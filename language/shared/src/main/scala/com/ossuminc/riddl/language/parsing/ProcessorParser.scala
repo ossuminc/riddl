@@ -29,7 +29,7 @@ trait ProcessorParser
     P(
       Index ~ Keywords.relationship ~ identifier ~/ to ~ processorRef ~ as ~ relationshipCardinality ~
         (Keywords.label ~ as ~ literalString).? ~ withMetaData ~ Index
-    ).map { case (start, id, procRef, cardinality, label, descriptives, end) =>
+    ).map { (start, id, procRef, cardinality, label, descriptives, end) =>
       Relationship(at(start, end), id, procRef, cardinality, label, descriptives.toContents)
     }
 
