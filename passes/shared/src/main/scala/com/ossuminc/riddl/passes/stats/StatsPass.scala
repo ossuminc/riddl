@@ -349,10 +349,6 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
       case _                 => ()
     end match
     value match
-      case _: WithOptions[?] => result += 1
-      case _                 => ()
-    end match
-    value match
       case _: WithMetaData => result += 1
       case _               => ()
     end match

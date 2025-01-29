@@ -40,7 +40,6 @@ domain Everything is {
     type optional is agg?
 
     entity Something is {
-      option aggregate option transient
 
       type somethingDate is Date
 
@@ -60,6 +59,8 @@ domain Everything is {
             inlet SomeOtherThing.trashBin.SOT_In
         }
       }
+    } with {
+      option aggregate option transient
     }
 
     entity SomeOtherThing is {

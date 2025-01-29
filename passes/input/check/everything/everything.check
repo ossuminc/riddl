@@ -100,73 +100,70 @@ passes/input/check/everything/everything.riddl(42:5->21):
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' should have an author reference:
      entity Something is {
-passes/input/check/everything/everything.riddl(42:5->21):
- Metadata in Entity 'Something' should not be empty:
-     entity Something is {
-passes/input/check/everything/everything.riddl(45:7->25):
+passes/input/check/everything/everything.riddl(44:7->25):
  Type 'somethingDate' is unused:
        type somethingDate is Date
-passes/input/check/everything/everything.riddl(45:7->25):
+passes/input/check/everything/everything.riddl(44:7->25):
  Type 'somethingDate' should start with a capital letter:
        type somethingDate is Date
-passes/input/check/everything/everything.riddl(49:7->22):
+passes/input/check/everything/everything.riddl(48:7->22):
  Metadata in State 'someState' should not be empty:
        state someState of type Everything.StateType
-passes/input/check/everything/everything.riddl(49:7->22):
+passes/input/check/everything/everything.riddl(48:7->22):
  State 'someState' should have a description:
        state someState of type Everything.StateType
-passes/input/check/everything/everything.riddl(49:7->22):
+passes/input/check/everything/everything.riddl(48:7->22):
  State 'someState' should have an author reference:
        state someState of type Everything.StateType
-passes/input/check/everything/everything.riddl(51:7->37):
+passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' in Entity 'Something' should have content:
        function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(51:7->37):
+passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(51:7->37):
+passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' should have a description:
        function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(51:7->37):
+passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' should have an author reference:
        function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(51:7->37):
+passes/input/check/everything/everything.riddl(50:7->37):
  Metadata in Function 'whenUnderTheInfluence' should not be empty:
        function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(58:9->28):
+passes/input/check/everything/everything.riddl(57:9->28):
  Processing for commands should result in sending an event:
          on command ACommand {
-passes/input/check/everything/everything.riddl(65:5->26):
+passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' is unused:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(65:5->26):
+passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' should have a description:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(65:5->26):
+passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' should have an author reference:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(65:5->26):
+passes/input/check/everything/everything.riddl(66:5->26):
  Metadata in Entity 'SomeOtherThing' should not be empty:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(66:26->38):
+passes/input/check/everything/everything.riddl(67:26->38):
  Inlet 'SOT_In' is not connected:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(66:7->20):
+passes/input/check/everything/everything.riddl(67:7->20):
  Metadata in Sink 'trashBin' should not be empty:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(66:7->20):
+passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' should have a description:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(66:7->20):
+passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' should have an author reference:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(68:7->28):
+passes/input/check/everything/everything.riddl(69:7->28):
  Metadata in State 'otherThingState' should not be empty:
        state otherThingState of type Everything.StateType
-passes/input/check/everything/everything.riddl(68:7->28):
+passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' should have a description:
        state otherThingState of type Everything.StateType
-passes/input/check/everything/everything.riddl(68:7->28):
+passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' should have an author reference:
        state otherThingState of type Everything.StateType
 passes/input/check/everything/everything.riddl(6:3->17):

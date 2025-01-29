@@ -18,7 +18,6 @@ trait SharedApplicationTest extends AbstractValidatingTest {
       val rpi = RiddlParserInput(
         """domain foo is {
           |  context Test is {
-          |    option is technology("react.js")
           |    result Title { content: String }
           |    command Name { content: String }
           |    group Together is {
@@ -29,6 +28,7 @@ trait SharedApplicationTest extends AbstractValidatingTest {
           |    }
           |  } with {
           |    description as "A very simple app just for testing"
+          |    option is technology("react.js")
           |  }
           |} with {
           |  described by "Just a parsing convenience"

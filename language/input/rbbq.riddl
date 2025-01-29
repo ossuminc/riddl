@@ -31,11 +31,11 @@ domain ReactiveBBQ is {
       address:  type IP4Address
     }
     entity OrderViewer is {
-     option is kind("device")
      record AField is { field: type OrderViewType }
      state OrderState of OrderViewer.AField
      handler Input is { ??? }
     } with {
+     option is kind("device")
      explained as {
        |# brief
        |This is an OrderViewer
@@ -97,19 +97,19 @@ domain ReactiveBBQ is {
 
   context Order is {
     entity Order is {
-      option is aggregate
       record Fields is {
         orderId is OrderId,
         customerId is CustomerId
       }
       state OrderState of Order.Fields
       handler foo  is {}
+    } with {
+      option is aggregate
     }
   }
 
   context Payment is {
     entity Payment is {
-      option is aggregate
       record Fields is {
         orderId is OrderId,
         amount is Number,
@@ -117,6 +117,8 @@ domain ReactiveBBQ is {
       }
       state PaymentState of Payment.Fields
       handler foo is { ??? }
+    } with {
+     option is aggregate
     }
   }
 
@@ -128,10 +130,11 @@ domain ReactiveBBQ is {
     }
     type MenuItemRef is reference to entity MenuItem
     entity Menu is {
-      option is aggregate
       record Fields is { items: many MenuItemRef }
       state typical of Menu.Fields
       handler foo is { ??? }
+    } with {
+      option is aggregate
     }
   }
 
@@ -150,11 +153,12 @@ domain ReactiveBBQ is {
     } with { explained as "This is a retail store Location" }
 
     entity Reservation is {
-     option aggregate
      record Fields is { value: ReservationValue }
      state reservation of Reservation.Fields
      handler ofInputs is {}
-    }
+    } with {
+     option aggregate
+   }
   }
 } with {
   explained as {

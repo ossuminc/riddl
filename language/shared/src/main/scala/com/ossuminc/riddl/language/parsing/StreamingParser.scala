@@ -27,22 +27,22 @@ private[parsing] trait StreamingParser {
     P(
       Index ~ Keywords.outlet ~ identifier ~ is ~ typeRef ~/ withMetaData ~/ Index
     ).map { case (start, id, typeRef, descriptives, end) =>
-      Outlet(at(start,end), id, typeRef, descriptives.toContents)
+      Outlet(at(start, end), id, typeRef, descriptives.toContents)
     }
   }
 
-  private def connectorDefinitions[u: P]: P[(OutletRef, InletRef, Seq[OptionValue])] = {
+  private def connectorDefinitions[u: P]: P[(OutletRef, InletRef)] = {
     P(
-      (open ~ from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0) ~ close) |
-        (from ~ outletRef ~/ to ~ inletRef ~/ option.rep(0))
+      (open ~ from ~ outletRef ~/ to ~ inletRef ~/ close) |
+        (from ~ outletRef ~/ to ~ inletRef)
     )
   }
 
   def connector[u: P]: P[Connector] = {
     P(
       Index ~ Keywords.connector ~/ identifier ~/ is ~ connectorDefinitions ~ withMetaData ~/ Index
-    ).map { case (start, id, (out, in, opts), descriptives, end) =>
-      Connector(at(start,end), id, out, in, opts, descriptives.toContents)
+    ).map { case (start, id, (out, in), descriptives, end) =>
+      Connector(at(start, end), id, out, in, descriptives.toContents)
     }
   }
 
@@ -64,9 +64,14 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Seq[StreamletContents]] = {
     P(
-      inlet./.rep(min = minInlets, max = maxInlets) ~ outlet./.rep(min = minOutlets, max = maxOutlets) ~
+      inlet./.rep(min = minInlets, max = maxInlets) ~ outlet./.rep(
+        min = minOutlets,
+        max = maxOutlets
+      ) ~
         (processorDefinitionContents(StatementsSet.StreamStatements) |
-          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.asInstanceOf[P[StreamletContents]].rep(0)
+          streamletInclude(minInlets, maxInlets, minOutlets, maxOutlets))./.asInstanceOf[P[
+          StreamletContents
+        ]].rep(0)
     )./.map { case (inlets, outlets, contents) =>
       (inlets ++ outlets ++ contents).asInstanceOf[Seq[StreamletContents]]
     }

@@ -31,13 +31,13 @@ passes/input/check/saga/saga.riddl(13:7->20):
 passes/input/check/saga/saga.riddl(15:5->14):
  Saga 'name' should have an author reference:
      saga name is {
-passes/input/check/saga/saga.riddl(19:7->15):
+passes/input/check/saga/saga.riddl(18:7->15):
  SagaStep 'One' should have an author reference:
        step One is {
 passes/input/check/saga/saga.riddl(1:1->15):
  Domain 'ignore1' should have an author reference:
  domain ignore1 is {
-passes/input/check/saga/saga.riddl(26:7->15):
+passes/input/check/saga/saga.riddl(25:7->15):
  SagaStep 'Two' should have an author reference:
        step Two is {
 passes/input/check/saga/saga.riddl(2:3->18):

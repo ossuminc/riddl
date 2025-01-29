@@ -76,8 +76,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
   }
 
   def checkContents(
-                     container: Branch[?],
-                     parents: Parents
+    container: Branch[?],
+    parents: Parents
   ): Unit =
     val parent: Branch[?] = parents.headOption.getOrElse(Root.empty)
     check(
@@ -147,13 +147,19 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             Warning,
             t.loc
           )
-        case _: AuthorRef =>
-          hasAuthorRef = true
+        case o: OptionValue =>
+          check(
+            o.name.length >= 3,
+            s"Option ${o.name}'s name is too short. It must be at least 3 characters'",
+            StyleWarning,
+            o.loc
+          )
+        case _: AuthorRef        => hasAuthorRef = true
         case _: StringAttachment => ()
         case _: FileAttachment   => ()
         case _: ULIDAttachment   => ()
         case _: Description      => ()
-        case _: Comment => ()
+        case _: Comment          => ()
     }
     check(hasDescription, s"$identity should have a description", MissingWarning, loc)
     check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, loc)

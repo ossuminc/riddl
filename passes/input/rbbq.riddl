@@ -31,11 +31,11 @@ domain ReactiveBBQ is {
       address:  type IP4Address
     }
     entity OrderViewer is {
-     option is kind("device")
      record fields is { field: type OrderViewType }
      state OrderState of OrderViewer.fields
      handler input is { ??? }
     } with {
+      option is kind("device")
       explained as {
         |# brief
         |This is an OrderViewer
@@ -97,19 +97,19 @@ domain ReactiveBBQ is {
 
   context Order is {
     entity Order is {
-      option is aggregate
       record fields is {
         orderId is OrderId,
         customerId is CustomerId
       }
       state OrderState of Order.fields
       handler foo  is {}
+    } with {
+      option is aggregate
     }
   }
 
   context Payment is {
     entity Payment is {
-      option is aggregate
       record fields is {
         orderId is OrderId,
         amount is Number,
@@ -117,6 +117,8 @@ domain ReactiveBBQ is {
       }
       state PaymentState of Payment.fields
       handler foo is { ??? }
+    } with {
+      option is aggregate
     }
   }
 
@@ -128,10 +130,11 @@ domain ReactiveBBQ is {
     }
     type MenuItemRef is reference to entity MenuItem
     entity Menu is {
-      option is aggregate
       record fields is { items: many MenuItemRef }
       state typical of Menu.fields
       handler foo is { ??? }
+    } with {
+      option is aggregate
     }
   }
 
@@ -152,12 +155,12 @@ domain ReactiveBBQ is {
     }
 
     entity Reservation is {
-     option aggregate
      record fields is { value: ReservationValue }
      state reservation of Reservation.fields
      handler ofInputs is {}
     }
   } with {
+   option aggregate
    explained as {
     |# brief
     | Reactive BBQ Domain Definition
