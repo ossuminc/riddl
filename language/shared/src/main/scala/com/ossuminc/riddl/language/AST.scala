@@ -941,6 +941,7 @@ object AST:
 
   object Parents:
     def empty[CV <: RiddlValue]: Parents = Seq.empty[Branch[?]]
+    def apply(contents: Branch[?]*) = Seq(contents: _*)
   end Parents
 
   /** A mutable stack of Branch[?] for keeping track of the parent hierarchy */
