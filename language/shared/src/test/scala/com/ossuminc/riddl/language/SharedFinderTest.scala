@@ -10,7 +10,6 @@ import com.ossuminc.riddl.utils.pc
 import com.ossuminc.riddl.language.AST.{Root, Parents, RootContents}
 import com.ossuminc.riddl.language.parsing.{
   AbstractParsingTest,
-  ParsingTest,
   RiddlParserInput,
   TestParser,
   TopLevelParser
@@ -22,7 +21,7 @@ import com.ossuminc.riddl.utils.{
 }
 import org.scalatest.TestData
 
-class AbstractFinderTest extends AbstractTestingBasis {
+class SharedFinderTest extends AbstractTestingBasis {
 
   val content =
     """module A {
