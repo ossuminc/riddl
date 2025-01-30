@@ -8,6 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
+
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -272,6 +273,26 @@ private[parsing] trait TypeParser {
     }
   }
 
+  private def zone[u: P]: P[Option[LiteralString]] = {
+    P(Index ~ StringIn("A-Z", "0-9", ":.+-").!.? ~ Index).map { case (start, str, end) =>
+      str.map(s => LiteralString(at(start, end), s))
+    }
+  }
+
+  private def zonedPredefTypes[u: P]: P[TypeExpression] = {
+    P(
+      Index ~ PredefTypes.zonedDateTypes ~
+        Punctuation.roundOpen ~ zone ~ Punctuation.roundClose ~
+        Index
+    ).map { case (start, dateType, zone, end) =>
+      val loc = at(start, end)
+      dateType match
+        case PredefType.ZonedDate     => ZonedDate(loc, zone)
+        case PredefType.ZonedDateTime => ZonedDateTime(loc, zone)
+      end match
+    }
+  }
+
   private def otherPredefTypes[u: P]: P[TypeExpression] = {
     P(
       Index ~ PredefTypes.otherTypes ~ Index
@@ -295,7 +316,7 @@ private[parsing] trait TypeParser {
   private def predefinedTypes[u: P]: P[TypeExpression] = {
     P(
       stringType | currencyType | urlType | integerPredefTypes | realPredefTypes | timePredefTypes |
-        decimalType | otherPredefTypes
+        zonedPredefTypes | decimalType | otherPredefTypes
     )./
   }
 
