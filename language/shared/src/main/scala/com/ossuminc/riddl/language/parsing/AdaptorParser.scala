@@ -48,9 +48,9 @@ private[parsing] trait AdaptorParser(using PlatformContext) { this: ProcessorPar
       Index ~ Keywords.adaptor ~/ identifier ~
         adaptorDirection ~ contextRef ~ is ~ open ~ adaptorBody ~
         close ~ withMetaData ~ Index
-    )./ map { case (start, id, direction, cRef, contents, descriptives, end) =>
+    )./ map { (start, id, direction, cRef, contents, meta, end) =>
       checkForDuplicateIncludes(contents)
-      Adaptor(at(start, end), id, direction, cRef, contents.toContents, descriptives.toContents)
+      Adaptor(at(start, end), id, direction, cRef, contents.toContents, meta.toContents)
     }
   }
 }

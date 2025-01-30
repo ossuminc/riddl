@@ -38,6 +38,10 @@ object PredefTypes {
       PredefType.Time
     ).!
   )
+  
+  def zonedDateTypes[u:P]: P[String] = keywords(
+    StringIn(PredefType.ZonedDate, PredefType.ZonedDate).!
+  )
 
   def otherTypes[u: P]: P[String] = keywords(
     StringIn(
@@ -121,6 +125,7 @@ object PredefType {
   final val UserId = "UserId"
   final val UUID = "UUID"
   final val Whole = "Whole"
+  final val ZonedDate = "ZonedDate"
   final val ZonedDateTime = "ZonedDateTime"
 
   // NOTE: Keep this list in synch with the one in TokenParser
@@ -156,6 +161,7 @@ object PredefType {
     UserId,
     UUID,
     Whole,
+    ZonedDate,
     ZonedDateTime
   )
 }

@@ -7,13 +7,15 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.*
+import scala.collection.immutable.HashMap
+import scala.collection.mutable
 
 import scala.reflect.{ClassTag, classTag}
-import scalajs.js.annotation._
+import scalajs.js.annotation.*
 
 /** The referent for finding things within a given [[com.ossuminc.riddl.language.AST.Container]] of
-  * [[com.ossuminc.riddl.language.AST.RiddlValue]] as found in the AST model. This provides the ability to find values
-  * in the model by traversing it and looking for the matching condition.
+  * [[com.ossuminc.riddl.language.AST.RiddlValue]] as found in the AST model. This provides the
+  * ability to find values in the model by traversing it and looking for the matching condition.
   * @param root
   *   The container of RiddlValues to traverse for the sought condition
   */
@@ -32,8 +34,9 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     */
   @JSExport
   def find(select: CV => Boolean): Seq[CV] =
-    Folding.foldEachDefinition[Seq[CV], CV](root, Seq.empty[CV]) { case (state: Seq[CV], value: CV) =>
-      if select(value) then state :+ value else state
+    Folding.foldEachDefinition[Seq[CV], CV](root, Seq.empty[CV]) {
+      case (state: Seq[CV], value: CV) =>
+        if select(value) then state :+ value else state
     }
   end find
 
@@ -52,10 +55,11 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
   /** Find a matching set of [[AST.RiddlValue]] but return them with their parents
     *
     * @param select
-    *   The boolean expression derived from a candidate [[AST.RiddlValue]] that selects it to the result set
+    *   The boolean expression derived from a candidate [[AST.RiddlValue]] that selects it to the
+    *   result set
     * @return
-    *   A [[Finder#DefWithParents]] that returns a [[scala.Seq]] of two-tuples with the [[AST.RiddlValue]] a a
-    *   [[scala.Seq]] of the parents of that value.
+    *   A [[Finder#DefWithParents]] that returns a [[scala.Seq]] of two-tuples with the
+    *   [[AST.RiddlValue]] a a [[scala.Seq]] of the parents of that value.
     */
   @JSExport
   def findWithParents[T <: RiddlValue: ClassTag](
@@ -76,18 +80,43 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     }
   end findWithParents
 
-  /** Run a transformation function on the [[Finder]] contents. They type parameter specifies what kind of thing should
-    * be found, the `select` argument provides further refinement of which things of that type should be selected. The
-    * transformation function, `transformF` does the transformation, probably by using the Scala `.copy` method.
+  /** Find the Parents for a given node in the root */
+  @JSExport
+  def findParents(node: Definition): Parents = {
+    val result = findWithParents[Definition](_ == node)
+    result.headOption.map(_._2).getOrElse(Parents.empty)
+  }
+
+  /** Start from the root Container and for every definition it contains, compute the Parents (path
+    * to that definition).
+    * @returns
+    *   A HashMap[Definition,Parents] that provides the path to every definition in a fast-access
+    *   data structure
+    */
+  @JSExport
+  def findAllPaths: HashMap[Definition, Parents] = {
+    val stack = ParentStack.empty[Branch[?]]
+    val result: mutable.HashMap[Definition, Parents] = mutable.HashMap.empty
+    Folding.foldLeftWithStack(result, root, stack) { case (map, definition: Definition, parents) =>
+      map.addOne((definition, parents))
+      map
+    }
+    result.toMap[Definition, Parents].asInstanceOf[HashMap[Definition, Parents]]
+  }
+
+  /** Run a transformation function on the [[Finder]] contents. They type parameter specifies what
+    * kind of thing should be found, the `select` argument provides further refinement of which
+    * things of that type should be selected. The transformation function, `transformF` does the
+    * transformation, probably by using the Scala `.copy` method.
     *
     * @tparam TT
     *   The transform type. This narrows the search to just the contents that have the base type TT.
     * @param select
-    *   The function to select which values should be operated on. It should return true if the transformation function
-    *   should be executed on the element passed to it.
+    *   The function to select which values should be operated on. It should return true if the
+    *   transformation function should be executed on the element passed to it.
     * @param transformF
-    *   The transformation function to convert one value to another. The returned value will replace the passed value in
-    *   the [[Finder]]'s container.
+    *   The transformation function to convert one value to another. The returned value will replace
+    *   the passed value in the [[Finder]]'s container.
     */
   @JSExport
   def transform[TT <: RiddlValue: ClassTag](select: TT => Boolean)(transformF: CV => CV): Unit =

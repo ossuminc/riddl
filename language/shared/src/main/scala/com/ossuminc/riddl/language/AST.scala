@@ -941,6 +941,7 @@ object AST:
 
   object Parents:
     def empty[CV <: RiddlValue]: Parents = Seq.empty[Branch[?]]
+    def apply(contents: Branch[?]*) = Seq(contents: _*)
   end Parents
 
   /** A mutable stack of Branch[?] for keeping track of the parent hierarchy */
@@ -956,6 +957,7 @@ object AST:
   object ParentStack:
     /** @return  an empty ParentStack */
     def empty[CV <: RiddlValue]: ParentStack = mutable.Stack.empty[Branch[?]]
+    def apply(items: Branch[?]*): ParentStack = mutable.Stack(items: _*)
   end ParentStack
 
   type DefinitionStack = mutable.Stack[Definition] // TODO: Make this opaque some day
@@ -969,6 +971,7 @@ object AST:
 
   object DefinitionStack:
     def empty: DefinitionStack = mutable.Stack.empty[Definition]
+    def apply(items: Definition*): DefinitionStack = mutable.Stack(items: _*)
   end DefinitionStack
 
   /** The kind of thing that can be returned by PathId Resolution Pass optionally providing the
@@ -1953,7 +1956,19 @@ object AST:
     }
   }
 
-  @JSExportTopLevel("ZonedDatTime")
+  @JSExportTopLevel("ZonedDate")
+  case class ZonedDate(loc: At, zone: Option[LiteralString] = None) extends TimeType {
+
+    override def isAssignmentCompatible(other: TypeExpression): Boolean = {
+      super.isAssignmentCompatible(other) || other.isInstanceOf[ZonedDateTime] ||
+      other.isInstanceOf[DateTime] || other.isInstanceOf[Date] || other.isInstanceOf[String_] ||
+      other.isInstanceOf[Pattern]
+    }
+
+    override def format: String = s"ZonedDateTime(${zone.map(_.format).getOrElse("\"UTC\"")})"
+  }
+
+  @JSExportTopLevel("ZonedDateTime")
   case class ZonedDateTime(loc: At, zone: Option[LiteralString] = None) extends TimeType {
 
     override def isAssignmentCompatible(other: TypeExpression): Boolean = {
