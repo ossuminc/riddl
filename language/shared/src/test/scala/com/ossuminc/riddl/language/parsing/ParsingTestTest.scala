@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -154,12 +154,12 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
     "parseDefinition[Domain,Term]" in { (td: TestData) =>
       val input = RiddlParserInput(
-        "domain foo { ??? }  with { term X is \"foo\" with { briefly as \"X\" } }",
+        "domain foo { ??? }  with { term X is \"foo\" }",
         td
       )
       parseDefinition[Domain, Term](input, _.terms.head) match {
         case Left(messages)  => fail(messages.format)
-        case Right((typ, _)) => typ.id.value must be("X")
+        case Right((term, _)) => term.id.value must be("X")
       }
     }
     "parseDefinition[Function]" in { (_: TestData) =>
@@ -171,7 +171,7 @@ abstract class ParsingTestTest(using PlatformContext) extends AbstractParsingTes
     }
     "parseInContext[Term]" in { (td: TestData) =>
       val input = RiddlParserInput(
-        "context foo { ??? } with { term X is \"foo\" with { briefly as \"X\" } }",
+        "context foo { ??? } with { term X is \"foo\" }",
         td
       )
       parseContextDefinition(input, identity) match {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -184,8 +184,14 @@ trait BasicValidation(using pc: PlatformContext) {
     this
   }
 
-  def checkIdentifierLength[T <: Definition](d: T, min: Int = 3): this.type = {
-    if d.id.value.nonEmpty && d.id.value.length < min then {
+  def checkIdentifierLength[T <: WithIdentifier](d: T, min: Int = 3): this.type = {
+    check(
+      d.id.nonEmpty | d.isAnonymous,
+      "Identifiers must not be empty",
+      Error,
+      d.errorLoc
+    )
+    if !d.isAnonymous && d.id.value.length < min then {
       messages.addStyle(
         d.id.loc,
         s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min"

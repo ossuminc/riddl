@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -445,7 +445,6 @@ trait PassVisitor:
   // LeafDefinitions
   def doField(field: Field): Unit
   def doMethod(method: Method): Unit
-  def doTerm(term: Term): Unit
   def doAuthor(author: Author): Unit
   def doConstant(constant: Constant): Unit
   def doInvariant(invariant: Invariant): Unit
@@ -540,7 +539,6 @@ abstract class VisitingPass[VT <: PassVisitor](
     definition match
       case field: Field                   => visitor.doField(field)
       case method: Method                 => visitor.doMethod(method)
-      case term: Term                     => visitor.doTerm(term)
       case author: Author                 => visitor.doAuthor(author)
       case constant: Constant             => visitor.doConstant(constant)
       case invariant: Invariant           => visitor.doInvariant(invariant)

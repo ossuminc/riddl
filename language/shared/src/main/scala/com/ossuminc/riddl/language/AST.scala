@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -506,6 +506,10 @@ object AST:
   sealed trait WithMetaData extends RiddlValue:
     def metadata: Contents[MetaData]
 
+    /** Return the AuthorRef instances from the metadata */
+    def authorRefs: Seq[AuthorRef] = metadata.filter[AuthorRef]
+
+    /** Determine if the metadata has any author refs */
     override def hasAuthorRefs: Boolean = authorRefs.nonEmpty
 
     /** AN optional [[BriefDescription]] */
@@ -528,16 +532,18 @@ object AST:
     /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
     def terms: Seq[Term] = metadata.filter[Term]
 
+    /** Return the [[OptionValue]]s in the meta data */
     def options: Seq[OptionValue] = metadata.filter[OptionValue]
 
+    /** Determine if the metadata has any option values */
     def hasOption(name: String): Boolean = options.exists(_.name == name)
 
     /** Get the value of `name`'d option, if there is one. */
     def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
 
-    /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
-    def authorRefs: Seq[AuthorRef] = metadata.filter[AuthorRef]
-
+    /** Get the ULID associated with the definition. There can only be one and they are
+     * assigned when this method is called, spreading their definition across the access
+     * patterns, on purpose. */
     lazy val ulid: ULID =
       metadata.find("ULID") match
         case Some(ulid: ULIDAttachment) => ulid.ulid
@@ -1161,9 +1167,8 @@ object AST:
   case class Term(
     loc: At,
     id: Identifier,
-    definition: Seq[LiteralString],
-    metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Leaf:
+    definition: Seq[LiteralString]
+  ) extends Meta with WithIdentifier :
     def format: String = s"${Keyword.term} ${id.format}"
   end Term
 
@@ -1212,7 +1217,7 @@ object AST:
     *   The [[PathIdentifier]] providing the path to the [[Author]]
     */
   @JSExportTopLevel("AuthorRef")
-  case class AuthorRef(loc: At, pathId: PathIdentifier) extends Reference[Author]:
+  case class AuthorRef(loc: At, pathId: PathIdentifier) extends Reference[Author] with Meta:
     override def format: String = Keyword.author + " " + pathId.format
   end AuthorRef
 

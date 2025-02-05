@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -112,10 +112,7 @@ trait MarkdownWriter(using pc: PlatformContext)
   }
 
   def emitTerms(terms: Seq[Term]): Unit = {
-    list(
-      "Terms",
-      terms.map(t => (t.id.format, t.briefString, t.descriptions.headOption.getOrElse("No description")))
-    )
+    list("Terms", terms.map(t => t.id.format))
   }
 
   protected def emitFields(fields: Seq[Field]): Unit = {

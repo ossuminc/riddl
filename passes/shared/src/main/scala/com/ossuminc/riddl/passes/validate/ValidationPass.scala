@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -262,8 +262,7 @@ case class ValidationPass(
     t: Term,
     parents: Parents
   ): Unit = {
-    checkDefinition(parents, t)
-    checkMetadata(t)
+    checkIdentifierLength(t)
   }
 
   private def validateEnumerator(

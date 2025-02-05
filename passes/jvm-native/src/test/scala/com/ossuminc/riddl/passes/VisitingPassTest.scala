@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -117,7 +117,6 @@ class TestVisitor extends PassVisitor:
   // LeafDefinitions
   def doField(field: Field): Unit = leaf(field)
   def doMethod(method: Method): Unit = leaf(method)
-  def doTerm(term: Term): Unit = leaf(term)
   def doAuthor(author: Author): Unit = leaf(author)
   def doConstant(constant: Constant): Unit = leaf(constant)
   def doInvariant(invariant: Invariant): Unit = leaf(invariant)

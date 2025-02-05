@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -40,13 +40,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     parents: Parents,
     definition: Definition
   ): Unit = {
-    check(
-      definition.id.nonEmpty | definition.isAnonymous,
-      "Definitions may not have empty names",
-      Error,
-      definition.errorLoc
-    )
-      .checkIdentifierLength(definition)
+    checkIdentifierLength(definition)
     definition match
       case vd: VitalDefinition[?] =>
         checkMetadata(vd)
@@ -155,11 +149,11 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             o.loc
           )
         case _: AuthorRef        => hasAuthorRef = true
-        case _: StringAttachment => ()
-        case _: FileAttachment   => ()
-        case _: ULIDAttachment   => ()
-        case _: Description      => ()
-        case _: Comment          => ()
+        case _: StringAttachment => () // No validation needed
+        case _: FileAttachment   => () // No validation needed
+        case _: ULIDAttachment   => () // No validation needed
+        case _: Description      => () // No validation needed
+        case _: Comment          => () // No validation needed
     }
     check(hasDescription, s"$identity should have a description", MissingWarning, loc)
     check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, loc)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -169,8 +169,8 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
 
   // LeafDefinitions
-  def doField(field: Field): Unit = ()
-  def doMethod(method: Method): Unit = ()
+  def doField(field: Field): Unit = () // TODO: Implement
+  def doMethod(method: Method): Unit = () // TODO: Implement
 
   def doTerm(term: Term): Unit =
     state.withCurrent { (rfe: RiddlFileEmitter) =>
@@ -179,7 +179,6 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(term.id.format)
         .add(" is ")
         .add(term.definition)
-        .emitDescriptives(term.metadata.toSeq)
     }
   end doTerm
 

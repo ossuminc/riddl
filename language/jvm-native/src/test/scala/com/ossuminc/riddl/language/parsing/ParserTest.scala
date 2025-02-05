@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -133,7 +133,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
           |    }
           |    adaptor one from context over.consumption is { ??? }
           |  } with {
-          |   term expialidocious is "supercalifragilistic" with { ??? }
+          |   term expialidocious is "supercalifragilistic"
           |  }
           |}
           |""".stripMargin,

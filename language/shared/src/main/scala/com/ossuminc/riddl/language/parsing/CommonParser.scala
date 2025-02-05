@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -167,9 +167,9 @@ private[parsing] trait CommonParser(using io: PlatformContext)
 
   def term[u: P]: P[Term] = {
     P(
-      Index ~ Keywords.term ~ identifier ~ is ~ docBlock ~ withMetaData ~ Index
-    )./.map { case (off1, id, definition, descriptives, off2) =>
-      Term(at(off1, off2), id, definition, descriptives.toContents)
+      Index ~ Keywords.term ~ identifier ~ is ~ docBlock ~ Index
+    )./.map { case (off1, id, definition, off2) =>
+      Term(at(off1, off2), id, definition)
     }
   }
 

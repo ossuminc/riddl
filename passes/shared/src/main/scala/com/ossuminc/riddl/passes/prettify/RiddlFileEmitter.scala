@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Ossum, Inc.
+ * Copyright 2019-2025 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -108,7 +108,6 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(term.id.format)
     add(" is ")
     add(term.definition)
-    emitDescriptives(term.metadata.toSeq)
     nl
   end emitTerm
 
