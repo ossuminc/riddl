@@ -44,6 +44,9 @@ jobs:
           java-version: '21'
           distribution: 'adopt-hotspot'
 
+      - name: Set Up SBT
+        uses: sbt/setup-sbt@v1
+
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3
         with:
