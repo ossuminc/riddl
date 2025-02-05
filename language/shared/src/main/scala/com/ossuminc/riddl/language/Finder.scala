@@ -80,7 +80,12 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     }
   end findWithParents
 
-  /** Find the Parents for a given node in the root */
+  /** Find the Parents for a given node in the root
+    * @param node
+    *   The node for which the Parents are sought.
+    * @return
+    *   Parents - A Sequence of Branch nodes from nearest parent towards the Root.
+    */
   @JSExport
   def findParents(node: Definition): Parents = {
     val result = findWithParents[Definition](_ == node)
@@ -89,7 +94,7 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
 
   /** Start from the root Container and for every definition it contains, compute the Parents (path
     * to that definition).
-    * @returns
+    * @return
     *   A HashMap[Definition,Parents] that provides the path to every definition in a fast-access
     *   data structure
     */
