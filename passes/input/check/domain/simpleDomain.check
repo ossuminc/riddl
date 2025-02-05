@@ -9,5 +9,5 @@ passes/input/check/domain/simpleDomain.riddl(2:3->14):
    author Nada is {
 passes/input/check/domain/simpleDomain.riddl(7:5->8:3):
  Term 'Fum''s definition is too short. It must be at least 10 characters':
-     term Fum is "Phi-Pho" with { described by "A Fum Description" }
+     term Fum is "Phi-Pho"
    }

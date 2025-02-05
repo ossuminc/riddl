@@ -4,7 +4,7 @@ domain foo is {
     email: "anil.nada@nowhere.org"
   } with {
     described as "Nothing"
-    term Fum is "Phi-Pho" with { described by "A Fum Description" }
+    term Fum is "Phi-Pho"
   }
 } with {
   brief "this is the brief description"
