@@ -163,12 +163,19 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     this
   }
 
-  private def emitField(field: Field): this.type =
+  def emitField(field: Field): this.type =
     add(s"${field.id.value}: ")
     emitTypeExpression(field.typeEx)
     emitDescriptives(field.metadata.toSeq)
     this
   end emitField
+
+  def emitMethod(method: Method): this.type =
+    add(s"${method.id.value}(${method.args.map(_.format).mkString(", ")}): ")
+    emitTypeExpression(method.typeEx)
+    emitDescriptives(method.metadata.toSeq)
+    this
+  end emitMethod
 
   private def emitFields(of: Seq[Field]): this.type = {
     of.headOption match {

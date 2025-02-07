@@ -26,7 +26,8 @@ object ValidationPass extends PassInfo[PassOptions] {
   }
 }
 
-/** A Pass for validating the content of a RIDDL model. This pass can produce many warnings and errors about the model.
+/** A Pass for validating the content of a RIDDL model. This pass can produce many warnings and
+  * errors about the model.
   * @param input
   *   Input from previous passes
   * @param outputs
@@ -44,10 +45,12 @@ case class ValidationPass(
 
   override def name: String = ValidationPass.name
 
-  lazy val resolution: ResolutionOutput = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
+  lazy val resolution: ResolutionOutput =
+    outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
   lazy val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
-  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+  /** Generate the output of this Pass. This will only be called after all the calls to process have
+    * completed.
     *
     * @return
     *   an instance of the output type
@@ -83,7 +86,7 @@ case class ValidationPass(
       case i: Invariant =>
         validateInvariant(i, parentsAsSeq)
       case t: Term =>
-        validateTerm(t, parentsAsSeq)
+        validateTerm(t)
       case sa: User =>
         validateUser(sa, parentsAsSeq)
       case omc: OnMessageClause =>
@@ -162,14 +165,18 @@ case class ValidationPass(
       omc.msg.messageKind match {
         case AggregateUseCase.CommandCase =>
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
-          if sends.isEmpty || !sends.contains { (x: SendStatement) => x.msg.messageKind == AggregateUseCase.EventCase }
+          if sends.isEmpty || !sends.contains { (x: SendStatement) =>
+              x.msg.messageKind == AggregateUseCase.EventCase
+            }
           then
             messages.add(
               missing("Processing for commands should result in sending an event", omc.errorLoc)
             )
         case AggregateUseCase.QueryCase =>
           val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
-          if sends.isEmpty || sends.contains((x: SendStatement) => x.msg.messageKind == AggregateUseCase.ResultCase)
+          if sends.isEmpty || sends.contains((x: SendStatement) =>
+              x.msg.messageKind == AggregateUseCase.ResultCase
+            )
           then
             messages.add(
               missing("Processing for queries should result in sending a result", omc.errorLoc)
@@ -189,11 +196,25 @@ case class ValidationPass(
     val onClause: Branch[?] = parents.head
     statement match
       case ArbitraryStatement(loc, what) =>
-        checkNonEmptyValue(what, "arbitrary statement", onClause, loc, MissingWarning, required = true)
+        checkNonEmptyValue(
+          what,
+          "arbitrary statement",
+          onClause,
+          loc,
+          MissingWarning,
+          required = true
+        )
       case FocusStatement(_, group) =>
         checkRef[Group](group, parents)
       case ErrorStatement(loc, message) =>
-        checkNonEmptyValue(message, "error description", onClause, loc, MissingWarning, required = true)
+        checkNonEmptyValue(
+          message,
+          "error description",
+          onClause,
+          loc,
+          MissingWarning,
+          required = true
+        )
       case SetStatement(loc, field, value) =>
         checkRef[Field](field, parents)
         checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
@@ -259,8 +280,7 @@ case class ValidationPass(
   end validateStatement
 
   private def validateTerm(
-    t: Term,
-    parents: Parents
+    t: Term
   ): Unit = {
     checkIdentifierLength(t)
   }
@@ -374,7 +394,10 @@ case class ValidationPass(
                 )
               end if
               if inType.isEmpty then
-                messages.addError(inlet.loc, s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}")
+                messages.addError(
+                  inlet.loc,
+                  s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}"
+                )
               end if
           end match
         case _ => // one of the two didn't resolve, already handled above.
@@ -480,7 +503,11 @@ case class ValidationPass(
     }
     if entity.handlers.nonEmpty && entity.handlers.forall(_.clauses.isEmpty) then {
       messages.add(
-        Message(entity.errorLoc, s"${entity.identify} has only empty handlers", Messages.MissingWarning)
+        Message(
+          entity.errorLoc,
+          s"${entity.identify} has only empty handlers",
+          Messages.MissingWarning
+        )
       )
     }
     if entity.hasOption("finite-state-machine") && entity.states.sizeIs < 2 then {

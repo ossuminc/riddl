@@ -23,7 +23,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   def openType(typ: Type, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      rfe.openDef(typ, withBrace=false)
+      rfe.openDef(typ, withBrace = false)
       rfe.emitTypeExpression(typ.typEx)
     }
   def closeType(typ: Type, parents: Parents): Unit =
@@ -167,20 +167,14 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
 
   // Close for each type of container definition
 
-
   // LeafDefinitions
-  def doField(field: Field): Unit = () // TODO: Implement
-  def doMethod(method: Method): Unit = () // TODO: Implement
+  def doField(field: Field): Unit =
+    state.withCurrent(_.emitField(field))
+  end doField
 
-  def doTerm(term: Term): Unit =
-    state.withCurrent { (rfe: RiddlFileEmitter) =>
-      rfe
-        .addIndent("term ")
-        .add(term.id.format)
-        .add(" is ")
-        .add(term.definition)
-    }
-  end doTerm
+  def doMethod(method: Method): Unit =
+    state.withCurrent(_.emitMethod(method))
+  end doMethod
 
   def doAuthor(author: Author): Unit =
     state.withCurrent { rfe =>
@@ -243,7 +237,8 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       rfe.addIndent(s"${keyword(connector)} ${connector.id.format} is ")
       rfe
         .add {
-          val from = if connector.from.nonEmpty then s"from ${connector.from.format} " else "from empty "
+          val from =
+            if connector.from.nonEmpty then s"from ${connector.from.format} " else "from empty "
           val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
           from + to
         }
@@ -273,7 +268,14 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         rfe.addIndent("of ").add(id.format).add(" as ").add(typeRef.format).nl
       }
       schema.links.toSeq.sortBy(_._1.value).foreach { (id: Identifier, tr: (FieldRef, FieldRef)) =>
-        rfe.addIndent("link ").add(id.format).add(" as ").add(tr._1.format).add(" to ").add(tr._2.format).nl
+        rfe
+          .addIndent("link ")
+          .add(id.format)
+          .add(" as ")
+          .add(tr._1.format)
+          .add(" to ")
+          .add(tr._2.format)
+          .nl
       }
       schema.indices.foreach { fieldRef =>
         rfe.addIndent("index on ").add(fieldRef.format).nl
@@ -292,14 +294,14 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       rfe.addIndent(
         s"${keyword(rel)} ${rel.id.format} to ${rel.withProcessor.format} as ${rel.cardinality.proportion}"
       )
-      if rel.label.nonEmpty then
-        rfe.add(s" label as ${rel.label.format}")
+      if rel.label.nonEmpty then rfe.add(s" label as ${rel.label.format}")
       end if
       rfe.nl
     }
   end doRelationship
 
-  def doEnumerator(enumerator: Enumerator): Unit = () // Note: Handled by RiddlFileEmitter.emitEnumeration
+  def doEnumerator(enumerator: Enumerator): Unit =
+    () // Note: Handled by RiddlFileEmitter.emitEnumeration
 
   def doContainedGroup(containedGroup: ContainedGroup): Unit =
     state.withCurrent { rfe =>
@@ -322,15 +324,15 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   end doAuthorRef
 
   def doBriefDescription(brief: BriefDescription): Unit = ()
-    // state.withCurrent { rfe =>
-    //   rfe.emitBriefDescription(brief)
-    // }
+  // state.withCurrent { rfe =>
+  //   rfe.emitBriefDescription(brief)
+  // }
   end doBriefDescription
 
   def doDescription(description: Description): Unit = ()
-    // state.withCurrent { rfe =>
-    //   rfe.emitDescription(description)
-    // }
+  // state.withCurrent { rfe =>
+  //   rfe.emitDescription(description)
+  // }
   end doDescription
 
   def doStatement(statement: Statements): Unit =
@@ -379,7 +381,8 @@ end PrettifyVisitor
   * @param definition
   *   The definition to look up
   * @return
-  *   A string providing the definition keyword, if any. Enumerators and fields don't have their own keywords
+  *   A string providing the definition keyword, if any. Enumerators and fields don't have their own
+  *   keywords
   */
 def keyword(definition: Definition): String =
   definition match
