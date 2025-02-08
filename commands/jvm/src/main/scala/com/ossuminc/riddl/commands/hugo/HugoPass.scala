@@ -117,7 +117,7 @@ object HugoPass extends PassInfo[HugoPass.Options] {
 }
 
 case class HugoOutput(
-  root: Root = Root.empty,
+  root: PassRoot = Root.empty,
   messages: Messages = Messages.empty
 ) extends PassOutput
 
@@ -139,7 +139,7 @@ case class HugoPass(
     "Output path is empty"
   )
 
-  val root: Root = input.root
+  val root: PassRoot = input.root
   val name: String = HugoPass.name
 
   protected val generator: ThemeGenerator = ThemeGenerator(options, input, outputs, messages)
@@ -152,7 +152,10 @@ case class HugoPass(
       messages.addWarning((0, 0), "The input-file option was not provided")
   }
 
-  private val maybeAuthor = root.authors.headOption.orElse { root.domains.headOption.flatMap(_.authors.headOption) }
+  private val maybeAuthor = 
+    root.contents.filter[Author].headOption.orElse { 
+      root.contents.filter[Domain].headOption.flatMap(_.authors.headOption) 
+    }
   writeConfigToml(options, maybeAuthor)
 
   def makeWriter(parents: Seq[String], fileName: String): MarkdownWriter = {
@@ -207,12 +210,12 @@ case class HugoPass(
     }
   }
 
-  override def postProcess(root: AST.Root): Unit = {
+  override def postProcess(root: PassRoot): Unit = {
     summarize()
     close(root)
   }
 
-  override def result(root: Root): HugoOutput = HugoOutput(root, messages.toMessages)
+  override def result(root: PassRoot): HugoOutput = HugoOutput(root, messages.toMessages)
 
   private def deleteAll(directory: File): Boolean = {
     if !directory.isDirectory then false
@@ -336,11 +339,14 @@ case class HugoPass(
   }
 
   private def makeSystemLandscapeView: Seq[String] = {
-    val rod = new RootOverviewDiagram(root)
-    rod.generate
+    root match
+      case r: Root => 
+        val rod = new RootOverviewDiagram(r)
+        rod.generate
+      case _ => Seq.empty   
   }
 
-  private def close(root: Root): Unit = {
+  private def close(root: PassRoot): Unit = {
     Timer.time(s"Writing ${this.files.size} Files") {
       writeFiles(pc.options.verbose || pc.options.debug)
     }

@@ -57,7 +57,7 @@ class UsageTest extends ParsingTest {
           // Now let's make sure we get the right results, first extract
           // all the definitions
           val model = result.root
-          val domain = model.domains.head
+          val domain = model.contents.filter[Domain].head
           val D_T = domain.types.find(_.id.value == "T").get
           val context = domain.contexts.head
           val DoIt = context.types.find(_.id.value == "DoIt").get

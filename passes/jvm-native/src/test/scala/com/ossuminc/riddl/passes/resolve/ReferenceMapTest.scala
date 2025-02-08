@@ -62,7 +62,8 @@ class ReferenceMapTest extends AbstractValidatingTest {
 
     "have definitionOf(pid: PathIdentifier, parent: Branch) work" in { _ =>
       val pid = PathIdentifier(At.empty, Seq("Sink", "Commands"))
-      val context = result.root.domains.head.includes.head.contents.filter[Context].head
+      val context = result.root.contents.
+        filter[Domain].head.includes.head.contents.filter[Context].head
       val parent = context.connectors.head
       parent.id.value mustBe "AChannel"
       refMap.definitionOf[Inlet](pid) match {
@@ -84,7 +85,8 @@ class ReferenceMapTest extends AbstractValidatingTest {
     }
 
     "have definitionOf(ref: References[T], parent: Branch) work" in { (td: TestData) =>
-      val context = result.root.domains.head.includes(1).contents.filter[Context].head
+      val context = result.root.contents.filter[Domain].head
+        .includes(1).contents.filter[Context].head
       val entity = context.entities.head
       val expected = entity.types(2)
       val pid = PathIdentifier(At.empty, Seq("Something", "someData"))

@@ -9,7 +9,8 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, PathUtils, PlatformContext}
-import com.ossuminc.riddl.utils.{pc, ec, Await}
+import com.ossuminc.riddl.utils.{ec, pc, Await}
+import com.ossuminc.riddl.utils.Timer
 
 import java.nio.file.Path
 import scala.concurrent.ExecutionContext
@@ -70,5 +71,25 @@ class RiddlTest extends AbstractTestingBasis {
         case Right(result)  => succeed
       end match
     }
+
+    "convert a Root back to text" in {
+      val input =
+        """domain foo is {
+          |  domain bar is { ??? }
+          |
+          |}
+          |
+          |""".stripMargin
+      val rpi = RiddlParserInput(input, "")
+      Riddl.parse(rpi) match
+        case Left(messages) => fail(messages.format)
+        case Right(root) =>
+          val converted = 
+            Timer.time("toRiddlText", true) {
+              Riddl.toRiddlText(root)
+            }
+          converted must be(input)
+    }
+
   }
 }

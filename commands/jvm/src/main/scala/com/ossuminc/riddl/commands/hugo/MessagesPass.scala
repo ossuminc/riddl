@@ -9,9 +9,10 @@ import com.ossuminc.riddl.commands.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassesOutput, PassInfo, PassInput}
 import com.ossuminc.riddl.utils.PlatformContext
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.passes.PassRoot
 
 import scala.collection.mutable
 
@@ -36,7 +37,7 @@ case class MessageInfo(
 )
 
 case class MessageOutput(
-  root: Root,
+  root: PassRoot,
   messages: Messages.Messages,
   collected: Seq[MessageInfo]
 ) extends CollectingPassOutput[MessageInfo]
@@ -89,7 +90,7 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
     }
   }
 
-  override def result(root: Root): MessageOutput = {
+  override def result(root: PassRoot): MessageOutput = {
     val sortedList = collectedValues.sortBy(_.message).toSeq
     MessageOutput(root, messages.toMessages, sortedList)
   }
@@ -97,7 +98,10 @@ case class MessagesPass(input: PassInput, outputs: PassesOutput, options: HugoPa
 
 object MessagesPass extends PassInfo[HugoPass.Options] {
   val name: String = "Messages"
-  def creator(options: HugoPass.Options)(using PlatformContext) = { (in: PassInput, out: PassesOutput) =>
-    MessagesPass(in, out, options)
+  def creator(
+    options: HugoPass.Options
+  )(using PlatformContext): (PassInput, PassesOutput) => MessagesPass = {
+    (in: PassInput, out: PassesOutput) =>
+      MessagesPass(in, out, options)
   }
 }

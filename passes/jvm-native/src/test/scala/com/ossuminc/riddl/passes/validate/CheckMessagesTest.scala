@@ -9,8 +9,9 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.passes.PassRoot
 import com.ossuminc.riddl.passes.Riddl
-import com.ossuminc.riddl.utils.{Await, CommonOptions, PathUtils, ec, pc}
+import com.ossuminc.riddl.utils.{ec, pc, Await, CommonOptions, PathUtils}
 import org.scalatest.{Assertion, TestData}
 
 import java.nio.file.{Files, Path}
@@ -34,7 +35,7 @@ class CheckMessagesTest extends AbstractValidatingTest {
   def validatePath(
     path: Path
   )(
-    validation: (Root, Messages) => Assertion
+    validation: (PassRoot, Messages) => Assertion
   ): Assertion = {
     val url = PathUtils.urlFromCwdPath(path)
     val future = RiddlParserInput.fromURL(url).map { rpi =>

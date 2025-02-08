@@ -17,7 +17,7 @@ object FlattenPass extends PassInfo[PassOptions] {
   def creator(options: PassOptions)(using PlatformContext): PassCreator = {
     (in: PassInput, out: PassesOutput) => FlattenPass(in, out)
   }
-  case class Output(root: Root, messages: Messages.Messages) extends PassOutput
+  case class Output(root: PassRoot, messages: Messages.Messages) extends PassOutput
 }
 
 /** A Pass for flattening the structure of a model
@@ -50,6 +50,6 @@ case class FlattenPass(
     end match
   end process
 
-  override def result(root: Root): PassOutput = FlattenPass.Output(root, messages.toMessages)
+  override def result(root: PassRoot): PassOutput = FlattenPass.Output(root, messages.toMessages)
 
 end FlattenPass

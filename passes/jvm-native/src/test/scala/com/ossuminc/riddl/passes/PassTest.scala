@@ -47,11 +47,11 @@ class PassTest extends AbstractTestingBasisWithTestData {
   class TestPass(input: PassInput, output: PassesOutput) extends Pass(input, output) {
     def name: String = TestPass.name
 
-    override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
+    override def postProcess(root: PassRoot): Unit = ???
 
     protected def process(definition: RiddlValue, parents: ParentStack): Unit = ???
 
-    def result(root: Root): PassOutput = ???
+    def result(root: PassRoot): PassOutput = ???
   }
 
   object TestPass extends PassInfo[PassOptions] {
@@ -66,11 +66,11 @@ class PassTest extends AbstractTestingBasisWithTestData {
 
     def name: String = "TestPass2"
 
-    override def postProcess(root: com.ossuminc.riddl.language.AST.Root): Unit = ???
+    override def postProcess(root: PassRoot): Unit = ???
 
     protected def process(definition: RiddlValue, parents: ParentStack): Unit = {}
 
-    def result(root: Root): PassOutput = ???
+    def result(root: PassRoot): PassOutput = ???
   }
 
   object TestPass2 extends PassInfo[PassOptions] {
@@ -141,9 +141,9 @@ class PassTest extends AbstractTestingBasisWithTestData {
 
     override def name: String = "TestHierarchyPass"
 
-    override def postProcess(root: Root): Unit = ()
+    override def postProcess(root: PassRoot): Unit = ()
 
-    override def result(root: Root): PassOutput = PassOutput.empty
+    override def result(root: PassRoot): PassOutput = PassOutput.empty
   }
 
   "HierarchyPass" must {

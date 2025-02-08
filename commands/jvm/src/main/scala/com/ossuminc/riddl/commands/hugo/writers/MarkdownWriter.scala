@@ -12,6 +12,7 @@ import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.{Keyword, Keywords}
 import com.ossuminc.riddl.language.parsing.Keywords.*
+import com.ossuminc.riddl.passes.PassRoot
 import com.ossuminc.riddl.utils.{PlatformContext, TextFileWriter}
 
 import scala.annotation.unused
@@ -39,8 +40,17 @@ trait MarkdownWriter(using pc: PlatformContext)
     override def toString: String =
       s"{name:\"$name\",href:\"$href\",children:[${children.map(_.toString).mkString(",")}]}"
 
-  def makeRootIndex(root: Root, indent: Int = 0): Unit =
-    for { topLevelDomain <- root.domains.sortBy(_.id.value) } do makeDomainIndex(topLevelDomain, indent)
+  def makeRootIndex(root: PassRoot, indent: Int = 0): Unit = {
+    root match
+      case root: Root => 
+        val tops = root.domains.sortBy(_.id.value)
+        for { topLevelDomain <- tops } do makeDomainIndex(topLevelDomain, indent)
+      case nebula: Nebula => 
+        // TODO: make an index with nebula.contents.toSeq.sortBy(_.id.value)
+      case vital: VitalDefinition[?] => 
+        // TODO: make an index with vital.contents.definitions.sortBy(_.id.value)
+    end match     
+  }
   end makeRootIndex
 
   private def makeDomainIndex(domain: Domain, indent: Int = 0): Unit =

@@ -69,7 +69,7 @@ type DomainDiagramData = Seq[(Context, ContextDiagramData)]
   */
 @JSExportTopLevel("DiagramsPassOutput")
 case class DiagramsPassOutput(
-  root: Root = Root.empty,
+  root: PassRoot = Root.empty,
   messages: Messages.Messages = Messages.empty,
   dataFlowDiagrams: Map[Context, DataFlowDiagramData] = Map.empty,
   useCaseDiagrams: Map[UseCase, UseCaseDiagramData] = Map.empty,
@@ -334,7 +334,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     UseCaseDiagramData(title, actors, uc.contents.filter[Interaction])
   }
 
-  def result(root: Root): DiagramsPassOutput = {
+  def result(root: PassRoot): DiagramsPassOutput = {
     DiagramsPassOutput(
       root,
       messages.toMessages,

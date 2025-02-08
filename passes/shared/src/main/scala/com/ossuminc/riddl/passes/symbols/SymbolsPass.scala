@@ -42,7 +42,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
 
   private val parentage: Parentage = mutable.HashMap.empty[Definition, Parents]
 
-  override def postProcess(root: Root @unused): Unit = ()
+  override def postProcess(root: PassRoot @unused): Unit = ()
 
   private def rootLessParents(parents: Parents): Parents = {
     parents.filter {
@@ -80,7 +80,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
     }
   }
 
-  override def result(root: Root): SymbolsOutput = {
+  override def result(root: PassRoot): SymbolsOutput = {
     if pc.options.debug then
       println(symTab.toPrettyString)
     end if

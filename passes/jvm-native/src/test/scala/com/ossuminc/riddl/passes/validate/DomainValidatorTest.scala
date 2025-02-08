@@ -56,8 +56,8 @@ class DomainValidatorTest extends AbstractValidatingTest {
       Riddl.parseAndValidate(rpi) match {
         case Left(errors) => fail(errors.format)
         case Right(result) =>
-          val domain: Domain = result.root.domains.head
-          val author: Author = result.root.authors.head
+          val domain: Domain = result.root.contents.filter[Domain].head
+          val author: Author = result.root.contents.filter[Author].head
           domain must be(empty)
           domain.contents.isEmpty must be(true)
           val expectedAuthor =

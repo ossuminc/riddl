@@ -10,9 +10,13 @@ import com.ossuminc.riddl
 import com.ossuminc.riddl.language.AST.Root
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.language.AST.Branch
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.PassCreators
-import com.ossuminc.riddl.utils.{PlatformContext, URL, Await}
+import com.ossuminc.riddl.passes.prettify.PrettifyOutput
+import com.ossuminc.riddl.passes.prettify.PrettifyPass
+import com.ossuminc.riddl.passes.symbols.SymbolsPass
+import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
@@ -74,9 +78,19 @@ object Riddl {
     path: String,
     shouldFailOnError: Boolean = true,
     extraPasses: PassCreators = Seq.empty[PassCreator]
-  )(using io: PlatformContext): Either[Messages, PassesResult] = {
+  )(using io: PlatformContext): Either[Messages, PassesResult] =
     val url = URL.fromCwdPath(path)
     val rpi = Await.result(RiddlParserInput.fromURL(url), 10)
     parseAndValidate(rpi, shouldFailOnError, Pass.standardPasses ++ extraPasses)
-  }
+  end parseAndValidatePath
+
+  /** Convert a previously parsed Root back into plain text */
+  def toRiddlText(root: PassRoot)(using pc: PlatformContext): String =
+    val input: PassInput = PassInput(root)
+    val outputs: PassesOutput = PassesOutput()
+    val result = Pass.runPass[PrettifyOutput](input, outputs,
+      PrettifyPass(input, outputs, PrettifyPass.Options(flatten = true))
+    )
+    result.state.filesAsString
+  end toRiddlText
 }

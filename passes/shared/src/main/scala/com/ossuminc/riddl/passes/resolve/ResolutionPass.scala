@@ -18,7 +18,7 @@ import scala.collection.mutable
 import scala.reflect.{ClassTag, classTag}
 
 case class ResolutionOutput(
-  root: Root = Root.empty,
+  root: PassRoot = Root.empty,
   messages: Messages.Messages = Messages.empty,
   refMap: ReferenceMap = ReferenceMap.empty,
   usage: Usages = Usages.empty
@@ -68,12 +68,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   val kindMap: KindMap = KindMap()
   val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
-  override def result(root: Root): ResolutionOutput =
+  override def result(root: PassRoot): ResolutionOutput =
     ResolutionOutput(root, messages.toMessages, refMap, Usages(uses, usedBy))
 
   override def close(): Unit = ()
 
-  override def postProcess(root: Root): Unit = {
+  override def postProcess(root: PassRoot): Unit = {
     checkUnused()
   }
 

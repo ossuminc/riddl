@@ -14,7 +14,7 @@ import com.ossuminc.riddl.utils.{pc, ec}
 import scala.collection.mutable
 import java.nio.file.Path
 
-case class TestPassOutput(root: Root, messages: Messages) extends PassOutput
+case class TestPassOutput(root: PassRoot, messages: Messages) extends PassOutput
 
 class VisitingPassTest extends ParsingTest {
 
@@ -30,7 +30,7 @@ class VisitingPassTest extends ParsingTest {
           val outputs = PassesOutput()
           val pass = new VisitingPass(input, outputs, visitor) {
             def name: String = "VisitingPassTest"
-            override def result(root: Root): PassOutput = TestPassOutput(root, List.empty)
+            override def result(root: PassRoot): PassOutput = TestPassOutput(root, List.empty)
           }
           Pass.runPass[TestPassOutput](input, outputs, pass)
           // info(visitor.kindMap.toSeq.sortBy(_._1).map(_.toString).mkString("\n"))

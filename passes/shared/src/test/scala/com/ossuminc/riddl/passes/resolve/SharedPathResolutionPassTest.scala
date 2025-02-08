@@ -31,9 +31,10 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
         td
       )
       parseAndResolve(rpi) { (input, outputs) =>
-        val target: Type = input.root.domains.head.domains.head.domains.head.types.head
-        val pid: Type = input.root.domains.head.types.head
-        val parent = input.root.domains.head
+        val domains = input.root.contents.filter[Domain]
+        val target: Type = domains.head.domains.head.domains.head.types.head
+        val pid: Type = domains.head.types.head
+        val parent = domains.head
         val resolution = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid.typEx.asInstanceOf[AliasedTypeExpression].pathId, parent) match {
           case Some(definition) =>
@@ -58,8 +59,9 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
         td
       )
       parseAndResolve(rpi) { (in, outs) =>
-        val target: Type = in.root.domains.head.domains.head.domains.head.types.head
-        val parent = in.root.domains.head.domains.head.types.head
+        val domains = in.root.contents.filter[Domain]
+        val target: Type = domains.head.domains.head.domains.head.types.head
+        val parent = domains.head.domains.head.types.head
         val pid = parent.typEx.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
@@ -80,8 +82,9 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
         td
       )
       parseAndResolve(input) { (in, outs) =>
-        val target: Type = in.root.domains.head.types.find(_.id.value == "Top").get
-        val parent: Type = in.root.domains.head.types.find(_.id.value == "aTop").get
+        val domains = in.root.contents.filter[Domain]
+        val target: Type = domains.head.types.find(_.id.value == "Top").get
+        val parent: Type = domains.head.types.find(_.id.value == "aTop").get
         val pid = parent.typEx.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
         resolution.refMap.definitionOf[Type](pid, parent) match {
@@ -212,8 +215,9 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
       )
       parseAndResolve(input) { (in, outs) =>
         outs.getAllMessages mustBe Messages.empty
-        val Top = in.root.domains.head.types.head
-        val D = in.root.domains.head.domains.head.contexts.find(_.id.value == "D").get
+        val domains = in.root.contents.filter[Domain]
+        val Top = domains.head.types.head
+        val D = domains.head.domains.head.contexts.find(_.id.value == "D").get
         val ATop = D.types.find(_.id.value == "ATop").get
         val pid = ATop.typEx.asInstanceOf[AliasedTypeExpression].pathId
         val resolution = outs.outputOf[ResolutionOutput](ResolutionPass.name).get
@@ -344,7 +348,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
       domain.contexts.forall(_.kind == "Include")
       domain.includes.size mustBe 1
       domain.includes.head.contents.filter[Context].length mustBe 2
-      val (in, outs) = resolve(root)
+      val (_, outs) = resolve(root)
       val messages = outs.getAllMessages
       val errors = messages.justErrors
       if errors.nonEmpty then fail(errors.format) else succeed
@@ -363,9 +367,10 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
         td
       )
       parseAndResolve(input) { (in, outs) =>
-        val entity = in.root.domains.head.contexts.head.entities.head
+        val domains = in.root.contents.filter[Domain]
+        val entity = domains.head.contexts.head.entities.head
         entity.getClass mustBe classOf[Entity]
-        val cid = in.root.domains.head.types.head
+        val cid = domains.head.types.head
         cid.getClass mustBe classOf[Type]
         cid.typEx.getClass mustBe classOf[UniqueId]
         val pid = cid.typEx.asInstanceOf[UniqueId].entityPath
@@ -443,7 +448,7 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
         td
       )
       parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
-        val app: Context = pi.root.domains.head.contexts.head
+        val app: Context = pi.root.contents.filter[Domain].head.contexts.head
         val contained: Group = app.groups.head
         po.refMap.definitionOf[Group]("contained") match
           case Some(group: Group) =>

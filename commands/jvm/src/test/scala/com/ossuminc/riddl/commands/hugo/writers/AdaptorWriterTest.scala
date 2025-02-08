@@ -26,7 +26,7 @@ class AdaptorWriterTest extends WriterTest {
           case passesResult: PassesResult =>
             val mkd = makeMDW(output, PassesResult.empty)
             val root = passesResult.root
-            val domain = root.domains.head
+            val domain = root.contents.filter[Domain].head
             val context = domain.contexts.head
             val adaptor = context.adaptors.head
             val parents = Seq(root, domain, context)

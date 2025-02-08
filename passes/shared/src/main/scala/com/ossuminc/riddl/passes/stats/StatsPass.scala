@@ -87,7 +87,7 @@ class KindStats(
 
 @JSExportTopLevel("StatsOutput")
 case class StatsOutput(
-  root: Root = Root.empty,
+  root: PassRoot = Root.empty,
   messages: Messages.Messages = Messages.empty,
   maximum_depth: Int = 0,
   categories: Map[String, KindStats] = Map.empty
@@ -188,11 +188,11 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             numStatements = computeNumStatements(definition)
           )
         )
-      case value: RiddlValue => Seq.empty[DefinitionStats]
+      case _: RiddlValue => Seq.empty[DefinitionStats]
     }
   }
 
-  override def postProcess(root: Root): Unit = {
+  override def postProcess(root: PassRoot): Unit = {
     for { defStats <- collectedValues } {
       def remapping(existing: Option[KindStats]): Option[KindStats] = {
         Some(
@@ -248,7 +248,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     * @return
     *   an instance of the output type
     */
-  override def result(root: Root): StatsOutput = {
+  override def result(root: PassRoot): StatsOutput = {
     val totals = total_stats.getOrElse(KindStats())
     StatsOutput(
       root,
@@ -367,7 +367,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
       case p: Processor[?] =>
         val countForProcessor = processorCount(p)
         p match {
-          case a: Adaptor =>
+          case _: Adaptor =>
             countForProcessor
               + 1 // direction (required)
               + 1 // contextRef (required)
@@ -389,9 +389,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             countForProcessor
               + { if p.invariants.nonEmpty then 1 else 0 }
           case _: Repository => countForProcessor
-          case s: Streamlet =>
-            countForProcessor
-              + 1 // shape required
+          case _: Streamlet => countForProcessor + 1 // shape required
         }
       case d: Domain =>
         definitionCount(d)

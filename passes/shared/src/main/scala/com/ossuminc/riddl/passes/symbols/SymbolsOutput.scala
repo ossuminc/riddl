@@ -10,9 +10,10 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.passes.PassOutput
 import com.ossuminc.riddl.passes.symbols.Symbols.*
+import com.ossuminc.riddl.passes.PassRoot
 
 import scala.collection.mutable
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.{classTag, ClassTag}
 
 
 /** Output from the Symbols Pass
@@ -22,7 +23,7 @@ import scala.reflect.{ClassTag, classTag}
   *   The SymbolTable that handles identifier translation to definitions
   */
 case class SymbolsOutput(
-  root: Root = Root.empty,
+  root: PassRoot = Root.empty,
   messages: Messages.Messages = Messages.empty,
   symTab: SymTab = Symbols.emptySymTab,
   parentage: Parentage = Symbols.emptyParentage
@@ -98,7 +99,7 @@ case class SymbolsOutput(
     * definition, as a Definition, and, if the definition matches the type of interest, D, then an Option[D] for
     * convenience.
     */
-  type LookupResult[D <: Definition] = List[(Definition, Option[D])]
+  private type LookupResult[D <: Definition] = List[(Definition, Option[D])]
 
   /** Look up a symbol in the table
     *

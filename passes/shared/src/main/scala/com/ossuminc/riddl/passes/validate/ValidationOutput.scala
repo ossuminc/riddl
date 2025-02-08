@@ -9,10 +9,11 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.PassOutput
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.passes.PassRoot
 
 /** The output of the Validation Pass */
 case class ValidationOutput(
-  root: Root = Root.empty,
+  root: PassRoot = Root.empty,
   messages: Messages.Messages = Messages.empty,
   inlets: Seq[Inlet] = Seq.empty[Inlet],
   outlets: Seq[Outlet] = Seq.empty[Outlet],

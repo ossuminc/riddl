@@ -11,6 +11,7 @@ import com.ossuminc.riddl.language.AST.{Context, Domain, Entity, Parents, Root}
 import com.ossuminc.riddl.passes.symbols.Symbols
 import com.ossuminc.riddl.utils.{PlatformContext, Timer}
 import com.ossuminc.riddl.diagrams.mermaid.RootOverviewDiagram
+import com.ossuminc.riddl.language.AST.Author
 
 import scala.reflect.ClassTag
 
@@ -32,8 +33,13 @@ trait Summarizer(using PlatformContext) {
       val mdw = this.makeWriter(Seq.empty[String], "_index.md")
       mdw.fileHead("Index", 10, Option("The main index to the content"))
       mdw.h2("Root Overview")
-      val diagram = RootOverviewDiagram(root)
-      mdw.emitMermaidDiagram(diagram.generate)
+      root match
+        case r: Root =>
+          val diagram = RootOverviewDiagram(r)
+          diagram.generate
+          mdw.emitMermaidDiagram(diagram.generate)
+        case _ => 
+      end match     
       mdw.h2("Index")
       val authors = Seq("[Authors](authors)")
       val users = Seq("[Users](users)")
@@ -90,15 +96,23 @@ trait Summarizer(using PlatformContext) {
   }
 
   private def makeUsers(): Unit = {
-    val users = AST.getUsers(root)
-    val mdw = makeWriter(Seq.empty[String], fileName = "users.md")
-    mdw.emitUsers(usersWeight, users)
+    root match
+      case root1: Root =>
+        val users = AST.getUsers(root1)
+        val mdw = makeWriter(Seq.empty[String], fileName = "users.md")
+        mdw.emitUsers(usersWeight, users)
+      case _ =>
+    end match   
   }
 
   private def makeAuthors(): Unit = {
-    val authors = root.authors ++ AST.getAuthors(root)
-    val mdw = makeWriter(Seq.empty[String], fileName = "authors.md")
-    mdw.emitAuthors(authorsWeight, authors)
+    root match
+      case root1: Root =>
+        val authors = root1.contents.filter[Author] ++ AST.getAuthors(root1)
+        val mdw = makeWriter(Seq.empty[String], fileName = "authors.md")
+        mdw.emitAuthors(authorsWeight, authors)
+      case _ =>
+    end match    
   }
 
   protected def makeMessageSummary(parents: Parents, domain: Domain): Unit = {

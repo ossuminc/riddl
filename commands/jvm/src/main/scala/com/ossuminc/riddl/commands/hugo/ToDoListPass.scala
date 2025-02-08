@@ -6,9 +6,10 @@
 
 package com.ossuminc.riddl.commands.hugo
 import com.ossuminc.riddl.commands.hugo.themes.ThemeGenerator
-import com.ossuminc.riddl.language.{Messages, AST}
+import com.ossuminc.riddl.language.{AST, Messages}
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassInfo, PassInput, PassesOutput}
+import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassCreator, PassesOutput, PassInfo, PassInput}
+import com.ossuminc.riddl.passes.PassRoot
 import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
@@ -21,7 +22,7 @@ case class ToDoItem(
 )
 
 case class ToDoListOutput(
-  root: Root,
+  root: PassRoot,
   messages: Messages.Messages,
   collected: Seq[ToDoItem] = Seq.empty
 ) extends CollectingPassOutput[ToDoItem]
@@ -76,7 +77,7 @@ case class ToDoListPass(
       }
   }
 
-  override def result(root: Root): ToDoListOutput = {
+  override def result(root: PassRoot): ToDoListOutput = {
     ToDoListOutput(root, messages.toMessages, collectedValues.toSeq)
   }
 

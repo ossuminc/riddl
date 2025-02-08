@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.passes.PassRoot
 import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.collection.mutable
@@ -20,7 +21,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
   def addStreamlet(streamlet: Streamlet): Unit = streamlets.addOne(streamlet)
   def addConnector(connector: Connector): Unit = connectors.addOne(connector)
 
-  def checkStreaming(root: Root): Unit = {
+  def checkStreaming(root: PassRoot): Unit = {
     checkStreamingUsage(root)
     checkConnectorPersistence()
     checkUnattachedOutlets()
@@ -31,7 +32,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
   protected val streamlets: mutable.ListBuffer[Streamlet] = mutable.ListBuffer.empty
   protected val connectors: mutable.ListBuffer[Connector] = mutable.ListBuffer.empty
 
-  private def checkStreamingUsage(root: Root): Unit = {
+  private def checkStreamingUsage(root: PassRoot): Unit = {
     if inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty then {
       messages.add(
         Messages.usage(

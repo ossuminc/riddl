@@ -55,7 +55,7 @@ case class ValidationPass(
     * @return
     *   an instance of the output type
     */
-  override def result(root: Root): ValidationOutput = {
+  override def result(root: PassRoot): ValidationOutput = {
     ValidationOutput(
       root,
       messages.toMessages,
@@ -66,7 +66,7 @@ case class ValidationPass(
     )
   }
 
-  override def postProcess(root: Root): Unit = {
+  override def postProcess(root: PassRoot): Unit = {
     checkOverloads()
     checkStreaming(root)
   }
@@ -482,6 +482,7 @@ case class ValidationPass(
     checkContainer(parents, h)
   }
 
+  // FIXME: This should be used:
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
     check(i.contents.nonEmpty, "Include has no included content", Messages.Error, i.loc)
     check(i.origin.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
@@ -867,6 +868,7 @@ case class ValidationPass(
     }
   }
 
+  // FIXME: This should be used
   private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
     val useCase = parents.head
     checkMetadata(useCase.identify, interaction, interaction.loc)

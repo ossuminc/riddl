@@ -10,9 +10,9 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.PassesResult
-import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.utils.{Await, URL, PathUtils}
-
+import com.ossuminc.riddl.passes.PassRoot
+import com.ossuminc.riddl.utils.{ec, pc}
+import com.ossuminc.riddl.utils.{Await, PathUtils, URL}
 import org.scalatest.Assertion
 
 import java.nio.file.Path
@@ -79,7 +79,7 @@ class JVMAbstractValidatingTest extends AbstractValidatingTest {
   def validateFile(
     label: String,
     fileName: String
-  )(validation: (Root, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
+  )(validation: (PassRoot, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
     val url = URL.fromCwdPath(passesTestCase + fileName)
     val future = RiddlParserInput.fromURL(url).map { rpi =>
       simpleParseAndValidate(rpi) match {

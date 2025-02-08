@@ -9,9 +9,13 @@ package com.ossuminc.riddl.commands.hugo.mermaid
 import com.ossuminc.riddl.diagrams.mermaid.DataFlowDiagram
 import com.ossuminc.riddl.language.AST
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
+import com.ossuminc.riddl.language.AST.Domain
+import com.ossuminc.riddl.language.AST.Nebula
+import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.AST.VitalDefinition
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.validate.JVMAbstractValidatingTest
-import com.ossuminc.riddl.utils.{Await, URL, ec, pc}
+import com.ossuminc.riddl.utils.{ec, pc, Await, URL}
 import org.scalatest.TestData
 
 import java.nio.file.Path
@@ -26,7 +30,12 @@ class DataFlowDiagramTest extends JVMAbstractValidatingTest {
           case Left(messages) => fail(messages.justErrors.format)
           case Right(passesResult: PassesResult) =>
             val dfd = DataFlowDiagram(passesResult)
-            val domains = AST.getTopLevelDomains(passesResult.root)
+            val domains = 
+              passesResult.root match
+                case root1: Root => AST.getTopLevelDomains(root1)
+                case nebula: Nebula => nebula.contents.filter[Domain]
+                case vital: VitalDefinition[?] => vital.contents.filter[Domain]
+              end match
             val contexts = AST.getContexts(domains.head)
             val actual = dfd.generate(contexts.head)
             val expected =

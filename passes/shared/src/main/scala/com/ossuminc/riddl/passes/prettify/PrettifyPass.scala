@@ -29,7 +29,7 @@ end PrettifyPass
 
 @JSExportTopLevel("PrettifyOutput")
 case class PrettifyOutput(
-  root: Root = Root.empty,
+  root: PassRoot = Root.empty,
   messages: Messages = empty,
   state: PrettifyState = PrettifyState()
 ) extends PassOutput
@@ -44,15 +44,15 @@ class PrettifyPass(
     extends VisitingPass[PrettifyVisitor](input, outputs, new PrettifyVisitor(options)):
   def name: String = PrettifyPass.name
 
-  requires(SymbolsPass)
-  requires(ResolutionPass)
-  requires(ValidationPass)
+//  requires(SymbolsPass)
+//  requires(ResolutionPass)
+//  requires(ValidationPass)
 
   /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
     *
     * @return
     *   an instance of the output type
     */
-  def result(root: Root): PassOutput = PrettifyOutput(root, empty, visitor.result)
+  def result(root: PassRoot): PassOutput = PrettifyOutput(root, empty, visitor.result)
 
 end PrettifyPass

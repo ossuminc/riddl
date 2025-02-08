@@ -10,8 +10,9 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, StringParserInput}
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, Riddl}
-import com.ossuminc.riddl.utils.{PlatformContext, pc, CommonOptions}
+import com.ossuminc.riddl.passes.{Pass, PassesOutput, PassInput, Riddl}
+import com.ossuminc.riddl.passes.PassRoot
+import com.ossuminc.riddl.utils.{pc, CommonOptions, PlatformContext}
 
 import scala.io.AnsiColor.{BOLD, RESET}
 import org.scalatest.TestData
@@ -42,7 +43,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
   }
 
   "SymbolsOutput.parentOf" should {
-    "find the parent of an existent child" in { (td: TestData) =>
+    "find the parent of an existent child" in { (_: TestData) =>
       val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
       val domain = Domain(At(), Identifier(At(), "foo"), Contents(aType))
       val root = Root(At(), Contents(domain))
@@ -50,7 +51,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
       val output = Pass.runSymbols(PassInput(root), outputs)
       output.parentOf(aType) must be(Some(domain))
     }
-    "not find the parent of a non-existent child" in { (td: TestData) =>
+    "not find the parent of a non-existent child" in { (_: TestData) =>
       val aType = Type(At(), Identifier(At(), "bar"), String_(At()))
       val domain = Domain(At(), Identifier(At(), "foo"))
       val root = Root(At(), Contents(domain))
@@ -61,7 +62,7 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
   }
 
   "Validate All Things" must {
-    var sharedRoot: Root = Root.empty
+    var sharedRoot: PassRoot = Root.empty
 
     "parse and Validate correctly" in { (td: TestData) =>
       val input =
@@ -130,19 +131,19 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
       }
     }
     "handle includes" in { (_: TestData) =>
-      sharedRoot.domains.headOption match {
+      sharedRoot.contents.filter[Domain].headOption match {
         case Some(domain) =>
-          domain.contents.isEmpty mustNot be(true)
-          domain.contents.find("dosomething").getOrElse(None).getClass mustBe classOf[Context]
+          domain.contents.isEmpty.mustNot(be(true))
+          domain.contents.find("dosomething").getOrElse(None).getClass.mustBe(classOf[Context])
           domain.contents(3).getClass mustBe classOf[Context]
         case None => fail("There should be a domain")
       }
     }
     "have terms and author refs in contexts" in { (_: TestData) =>
-      sharedRoot.domains.headOption match {
+      sharedRoot.contents.filter[Domain].headOption match {
         case Some(domain) =>
           val apps = domain.contents.filter[Context]
-          apps mustNot be(empty)
+          apps.mustNot(be(empty))
           apps.head mustBe a[Context]
           val app: Context = apps.head
           app.terms mustNot be(empty)

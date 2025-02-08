@@ -8,8 +8,9 @@ package com.ossuminc.riddl.commands.hugo
 import com.ossuminc.riddl.commands.hugo.themes.ThemeGenerator
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.passes.symbols.Symbols
-import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassInput, PassesOutput, PassesResult}
+import com.ossuminc.riddl.passes.{CollectingPass, CollectingPassOutput, PassesOutput, PassesResult, PassInput}
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.passes.PassRoot
 import com.ossuminc.riddl.utils.PlatformContext
 
 import java.nio.file.Path
@@ -25,7 +26,7 @@ case class GlossaryEntry(
 )
 
 case class GlossaryOutput(
-  root: Root,
+  root: PassRoot,
   messages: Messages.Messages,
   entries: Seq[GlossaryEntry]
 ) extends CollectingPassOutput[GlossaryEntry]
@@ -78,13 +79,13 @@ case class GlossaryPass(
     entry
   }
 
-  def result(root: Root): GlossaryOutput = {
+  def result(root: PassRoot): GlossaryOutput = {
     GlossaryOutput(root, messages.toMessages, collectedValues.toSeq)
   }
 
   // Members declared in com.ossuminc.riddl.passes.Pass
   def name: String = GlossaryPass.name
-  override def postProcess(root: Root): Unit = ()
+  override def postProcess(root: PassRoot): Unit = ()
 }
 
 object GlossaryPass {
