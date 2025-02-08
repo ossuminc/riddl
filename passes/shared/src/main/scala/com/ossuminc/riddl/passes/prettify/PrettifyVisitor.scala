@@ -28,8 +28,8 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     }
   def closeType(typ: Type, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      rfe.emitDescriptives(typ.metadata.toSeq)
-      rfe.nl
+      if typ.metadata.isEmpty then rfe.nl
+      else rfe.emitMetaData(typ.metadata)
     }
 
   def openDomain(domain: Domain, parents: Parents): Unit = open(domain)
@@ -86,13 +86,13 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def openFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe.addIndent(s"${keyword(function)} ${function.id.format} is { ").nl.incr
-      function.input.foreach(te => rfe.addIndent("requires ").emitTypeExpression(te).nl)
-      function.output.foreach(te => rfe.addIndent("returns  ").emitTypeExpression(te).nl)
+      function.input.foreach(te => rfe.addIndent("requires ").emitAggregation(te))
+      function.output.foreach(te => rfe.addIndent("returns  ").emitAggregation(te))
     }
   end openFunction
   def closeFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      rfe.decr.addLine("}")
+      rfe.decr.addIndent("}")
     }
   end closeFunction
 
@@ -168,12 +168,12 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   // Close for each type of container definition
 
   // LeafDefinitions
-  def doField(field: Field): Unit =
-    state.withCurrent(_.emitField(field))
+  def doField(field: Field): Unit = ()
+    // NOTE: Fields are handled by their type
   end doField
 
-  def doMethod(method: Method): Unit =
-    state.withCurrent(_.emitMethod(method))
+  def doMethod(method: Method): Unit = ()
+    // NOTE: Methods are handled by their type
   end doMethod
 
   def doAuthor(author: Author): Unit =
@@ -200,8 +200,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         .add(invariant.id.format)
         .add(" is ")
         .add(invariant.condition.format)
-        .emitDescriptives(invariant.metadata.toSeq)
-        .nl
+        .emitMetaData(invariant.metadata)
     }
   end doInvariant
 
@@ -219,16 +218,14 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
   def doInlet(inlet: Inlet): Unit =
     state.withCurrent { rfe =>
       rfe.addIndent(inlet.format)
-      rfe.emitDescriptives(inlet.metadata.toSeq)
-      rfe.nl
+      rfe.emitMetaData(inlet.metadata)
     }
   end doInlet
 
   def doOutlet(outlet: Outlet): Unit =
     state.withCurrent { rfe =>
       rfe.addLine(outlet.format)
-      rfe.emitDescriptives(outlet.metadata.toSeq)
-      rfe.nl
+      rfe.emitMetaData(outlet.metadata)
     }
   end doOutlet
 
@@ -242,8 +239,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
           val to = if connector.to.nonEmpty then s"to ${connector.to.format}" else "to empty"
           from + to
         }
-        .emitDescriptives(connector.metadata.toSeq)
-        .nl
+        .emitMetaData(connector.metadata)
     }
   end doConnector
 
@@ -251,8 +247,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
     state.withCurrent { rfe =>
       rfe
         .addIndent(s"user ${user.id.value} is \"${user.is_a.s}\"")
-        .emitDescriptives(user.metadata.toSeq)
-        .nl
+        .emitMetaData(user.metadata)
     }
   end doUser
 
@@ -308,7 +303,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
       rfe
         .addIndent(s"${keyword(containedGroup)} ${containedGroup.id.format} as ")
         .add(containedGroup.group.format)
-        .emitDescriptives(containedGroup.metadata.toSeq)
+        .emitMetaData(containedGroup.metadata)
     }
   end doContainedGroup
 
@@ -348,7 +343,7 @@ class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
         case _: TwoReferenceInteraction => () // TODO: implement
         case _: GenericInteraction      => () // TODO: implement
       end match
-      rfe.emitDescriptives(interaction.metadata.toSeq)
+      rfe.emitMetaData(interaction.metadata)
     }
   end doInteraction
 

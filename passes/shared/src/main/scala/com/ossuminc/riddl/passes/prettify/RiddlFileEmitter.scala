@@ -10,6 +10,7 @@ import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.utils.FileBuilder
+import fastparse.ParserInputSource.fromReadable
 
 /** Generates RIDDL in textual format based on the AST */
 case class RiddlFileEmitter(url: URL) extends FileBuilder {
@@ -46,17 +47,17 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def closeDef(
     definition: Definition
   ): this.type = {
-    if definition.nonEmpty then decr.addLine("}")
+    if definition.nonEmpty then decr.addIndent("}")
     definition match
-      case wd: WithMetaData => emitDescriptives(wd.descriptions).nl
+      case wd: WithMetaData => emitMetaData(wd.metadata)
       case _                => this.nl
     end match
   }
 
-  def emitDescriptives(descriptives: Seq[MetaData]): this.type =
-    if descriptives.nonEmpty then
+  def emitMetaData(meta: Contents[MetaData]): this.type =
+    if meta.nonEmpty then
       add(" with {").nl.incr
-      descriptives.foreach {
+      meta.foreach {
         case c: Comment           => emitComment(c)
         case b: BriefDescription  => emitBriefDescription(b)
         case d: Description       => emitDescription(d)
@@ -67,15 +68,17 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
         case fa: FileAttachment   => emitFileAttachment(fa)
         case ua: ULIDAttachment   => emitULIDAttachment(ua)
       }
-      decr.add("}")
+      decr.add("}").nl
     end if
     this
-  end emitDescriptives
+  end emitMetaData
 
   def emitComment(comment: Comment): this.type =
     comment match
-      case inline: InlineComment => this.addLine(inline.format)
-      case block: LineComment    => this.addLine(block.format)
+      case block: InlineComment =>
+        val all = block.lines.mkString(s"$spc/* ", s"$spc  \n", s"$spc*/")
+        this.add(all).nl
+      case inline: LineComment    => this.addLine(inline.format)
     end match
   end emitComment
 
@@ -83,7 +86,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     addLine(brief.format)
   end emitBriefDescription
 
-  def emitDescription(description: Description): this.type =
+  private def emitDescription(description: Description): this.type =
     description match
       case bd: BlockDescription =>
         addLine("described as {")
@@ -139,8 +142,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     add(constant.id.format)
     add(" is ")
     add(constant.value.format)
-    emitDescriptives(constant.metadata.toSeq)
-    nl
+    emitMetaData(constant.metadata)
   end emitConstant
 
   private def emitEnumeration(enumeration: Enumeration): this.type = {
@@ -166,14 +168,14 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitField(field: Field): this.type =
     add(s"${field.id.value}: ")
     emitTypeExpression(field.typeEx)
-    emitDescriptives(field.metadata.toSeq)
+    emitMetaData(field.metadata)
     this
   end emitField
 
   def emitMethod(method: Method): this.type =
     add(s"${method.id.value}(${method.args.map(_.format).mkString(", ")}): ")
     emitTypeExpression(method.typeEx)
-    emitDescriptives(method.metadata.toSeq)
+    emitMetaData(method.metadata)
     this
   end emitMethod
 
@@ -183,7 +185,8 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case Some(field) if of.size == 1 =>
         add(s"{ ")
           .emitField(field)
-          .addLine("}")
+          .add(" }")
+          .nl
       case Some(_) =>
         this.add("{").nl.incr
         of.foldLeft(this) { case (s, f) =>
@@ -198,7 +201,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     this
   }
 
-  private def emitAggregation(aggregation: Aggregation): this.type = {
+  def emitAggregation(aggregation: Aggregation): this.type = {
     emitFields(aggregation.fields)
   }
 
@@ -291,9 +294,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitType(t: Type): this.type = {
     add(s"${spc}type ${t.id.value} is ")
     emitTypeExpression(t.typEx)
-    if t.metadata.nonEmpty then
-      add(" with {").nl.incr.emitDescriptives(t.metadata.toSeq).decr.addLine("}")
-    end if
+    emitMetaData(t.metadata)
     this
   }
 
@@ -313,6 +314,8 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
         addLine(s"send ${msg.format} to ${portlet.format}")
       case TellStatement(_, msg, to) =>
         addLine(s"tell ${msg.format} to ${to.format}")
+      case CodeStatement(_, lang, body) =>
+        addIndent(s"```${lang.s}").add(body).nl.addIndent("```")
       case statement: Statement => addLine(statement.format)
       case comment: Comment     => emitComment(comment)
     end match
@@ -321,7 +324,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   def emitCodeBlock(statements: Seq[Statements]): this.type = {
     if statements.isEmpty then add(" { ??? }").nl
     else
-      add(" {").incr.nl
+      add(" {").nl.incr
       statements.foreach(emitStatement)
       decr.addIndent("}").nl
     this
