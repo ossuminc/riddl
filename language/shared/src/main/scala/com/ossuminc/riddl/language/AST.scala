@@ -4026,6 +4026,7 @@ object AST:
     case MarkdownLine(at: At) extends Token(at)
     case Identifier(at: At) extends Token(at)
     case Numeric(at: At) extends Token(at)
+    case NewLine(at: At) extends Token(at)
     case Other(at: At) extends Token(at)
   end Token
 

@@ -19,7 +19,7 @@ import scala.reflect.{ClassTag, classTag}
 import scala.concurrent.Future
 
 /** Common Parsing Rules */
-private[parsing] trait CommonParser(using io: PlatformContext)
+private[parsing] trait CommonParser(using pc: PlatformContext)
     extends ReferenceParser
     with Readability
     with NoWhiteSpaceParsers

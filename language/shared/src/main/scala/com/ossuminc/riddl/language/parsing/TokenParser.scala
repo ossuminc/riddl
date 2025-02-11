@@ -13,14 +13,14 @@ import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Timer}
 import com.ossuminc.riddl.utils.SeqHelpers.*
 import com.ossuminc.riddl.utils.URL
 import fastparse.*
-import fastparse.MultiLineWhitespace.*
+import fastparse.SingleLineWhitespace.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 import jdk.jshell.SourceCodeAnalysis.Documentation
 
 import scala.util.control.NonFatal
 
-trait TokenParser extends CommonParser with Readability {
+trait TokenParser(using pc: PlatformContext) extends CommonParser with Readability {
 
   private def numericToken[u: P]: P[Token.Numeric] = {
     P(Index ~~ integer ~~ Index)./.map { case (start, _, end) => Token.Numeric(at(start, end)) }
@@ -32,13 +32,13 @@ trait TokenParser extends CommonParser with Readability {
     }
   }
 
-  private def notCodeQuote[u:P]: P[Unit] = {
+  private def notCodeQuote[u: P]: P[Unit] = {
     P(AnyChar.rep(1))
   }
-  
+
   private def literalCode[u: P]: P[Token.LiteralCode] = {
     P(
-      Index ~~ Punctuation.codeQuote ~~ until3('`','`','`') ~~ Index
+      Index ~~ Punctuation.codeQuote ~~ until3('`', '`', '`') ~~ Index
     ).map { case (start: Int, _: String, end: Int) =>
       Token.LiteralCode(at(start, end))
     }
@@ -76,13 +76,21 @@ trait TokenParser extends CommonParser with Readability {
   }
 
   private def markdownLinesToken[u: P]: P[Token.MarkdownLine] = {
-    P(Index ~~ Punctuation.verticalBar ~~ CharsWhile(ch => ch != '\n' && ch != '\r') ~~ Index)./.map {
-      case (start, end) => Token.MarkdownLine(at(start, end))
+    P(
+      Index ~~ Punctuation.verticalBar ~~ CharsWhile(ch => ch != '\n' && ch != '\r') ~~ Index
+    )./.map { case (start, end) =>
+      Token.MarkdownLine(at(start, end))
     }
   }
 
   private def identifierToken[u: P]: P[Token.Identifier] = {
     P(identifier)./.map { case id: Identifier => Token.Identifier(id.loc) }
+  }
+
+  private def newlineToken[u: P]: P[Token.NewLine] = {
+    P(Index ~~ pc.newline ~~ Index).map { case (start, end) =>
+      Token.NewLine(at(start, end))
+    }
   }
 
   private def otherToken[u: P]: P[Token.Other] = {
@@ -105,6 +113,7 @@ trait TokenParser extends CommonParser with Readability {
         identifierToken |
         numericToken |
         commentToken |
+        newlineToken |
         otherToken
     )./
   }
@@ -112,4 +121,5 @@ trait TokenParser extends CommonParser with Readability {
   def parseAllTokens[u: P]: P[List[Token]] = {
     P(Start ~ parseAnyToken.rep(1) ~ End).map(_.toList)
   }
+  
 }

@@ -9,7 +9,7 @@ package com.ossuminc.riddl.language.parsing
 import com.ossuminc.riddl.language.AST.Token.{Comment, Readability}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{AST, At, AST as rpi}
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{Token, *}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{Await, PlatformContext, Timer, URL}
 import org.scalatest.TestData
@@ -643,5 +643,31 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
       end match
     }
     Await.result(future, 30)
+  }
+
+  "handle returning text with tokens" in { (td: TestData) =>
+    implicit val ec: ExecutionContext = pc.ec
+    val url = URL.fromCwdPath("language/input/everything_full.riddl")
+    val future = RiddlParserInput.fromURL(url, td).map { rpi =>
+      val result: Either[Messages, List[(Token, String)]] =
+        pc.withOptions(pc.options.copy(showTimes = true)) { _ =>
+          Timer.time("parseToTokensAndText") {
+            TopLevelParser.parseToTokensAndText(rpi)
+          }
+        }
+      result match
+        case Left(messages) =>
+          fail(messages.format)
+        case Right(list) =>
+          list.length must be(433)
+          val (firstT, firstStr) = list(0)
+          val (secondT, secondStr) = list(1)
+          firstT must be(AST.Token.Keyword(At(rpi, 0, 7)))
+          firstStr must be("context")
+          secondT must be(AST.Token.Identifier(At(rpi, 8, 11)))
+      end match
+    }
+    Await.result(future, 30)
+
   }
 }

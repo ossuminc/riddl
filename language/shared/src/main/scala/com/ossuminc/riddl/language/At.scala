@@ -48,6 +48,9 @@ case class At(source: RiddlParserInput, offset: Int = 0, endOffset: Int = 0) ext
   @inline override def toString: String = { source.origin + toShort }
 
   @JSExport
+  @inline def toText: String = source.data.substring(offset, endOffset)
+
+  @JSExport
   @inline def toShort: String = { s"($offset->$endOffset)" }
 
   @JSExport

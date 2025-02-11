@@ -53,13 +53,19 @@ trait ExtensibleTopLevelParser(using PlatformContext)
           case l: Left[Messages, Seq[E]] => l
           case result @ Right(node: Seq[E]) =>
             if node.isEmpty then
-              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
+              error(
+                At(input, index),
+                s"Parser could not translate '${input.origin}' after $index characters"
+              )
             end if
             result
           case _ @Right(wrongNode) =>
             val expected = classTag[E].runtimeClass
             val actual = wrongNode.getClass
-            error(At(input, index), s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}")
+            error(
+              At(input, index),
+              s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}"
+            )
             Left(this.messagesAsList)
         }
     }
@@ -70,19 +76,25 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   }
 
   private def doParse[E <: Branch[?]: ClassTag](rule: P[?] => P[E]): Either[Messages, E] = {
-     parseRule[E](input, rule, withVerboseFailures) {
+    parseRule[E](input, rule, withVerboseFailures) {
       (result: Either[Messages, E], input: RiddlParserInput, index: Int) =>
         result match {
           case l: Left[Messages, E] => l
           case result @ Right(node: E) =>
             if node.contents.isEmpty then
-              error(At(input, index), s"Parser could not translate '${input.origin}' after $index characters")
+              error(
+                At(input, index),
+                s"Parser could not translate '${input.origin}' after $index characters"
+              )
             end if
             result
           case _ @Right(wrongNode) =>
             val expected = classTag[E].runtimeClass
             val actual = wrongNode.getClass
-            error(At(input, index), s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}")
+            error(
+              At(input, index),
+              s"Parser did not yield a ${expected.getSimpleName} but ${actual.getSimpleName}"
+            )
             Left(this.messagesAsList)
         }
     }
@@ -91,27 +103,27 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   /** Obtain the parser for any of the main AST definition types */
   protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
     val parser: P[?] => P[?] = classTag[T].runtimeClass match {
-      case x if x == classOf[Adaptor]        => adaptor(_)
-      case x if x == classOf[Author]         => author(_)
-      case x if x == classOf[Connector]      => connector(_)
-      case x if x == classOf[Constant]       => constant(_)
-      case x if x == classOf[Context]        => context(_)
-      case x if x == classOf[Domain]         => domain(_)
-      case x if x == classOf[Entity]         => entity(_)
-      case x if x == classOf[Epic]           => epic(_)
-      case x if x == classOf[Function]       => function(_)
-      case x if x == classOf[Group]          => group(_)
-      case x if x == classOf[Invariant]      => invariant(_)
-      case x if x == classOf[Module]         => module(_)
-      case x if x == classOf[Nebula]         => nebula(_)
-      case x if x == classOf[Projector]      => projector(_)
-      case x if x == classOf[Relationship]   => relationship(_)
-      case x if x == classOf[Repository]     => repository(_)
-      case x if x == classOf[Root]           => root(_)
-      case x if x == classOf[Saga]           => saga(_)
-      case x if x == classOf[Streamlet]      => streamlet(_)
-      case x if x == classOf[Type]           => typeDef(_)
-      case x if x == classOf[User]           => user(_)
+      case x if x == classOf[Adaptor]      => adaptor(_)
+      case x if x == classOf[Author]       => author(_)
+      case x if x == classOf[Connector]    => connector(_)
+      case x if x == classOf[Constant]     => constant(_)
+      case x if x == classOf[Context]      => context(_)
+      case x if x == classOf[Domain]       => domain(_)
+      case x if x == classOf[Entity]       => entity(_)
+      case x if x == classOf[Epic]         => epic(_)
+      case x if x == classOf[Function]     => function(_)
+      case x if x == classOf[Group]        => group(_)
+      case x if x == classOf[Invariant]    => invariant(_)
+      case x if x == classOf[Module]       => module(_)
+      case x if x == classOf[Nebula]       => nebula(_)
+      case x if x == classOf[Projector]    => projector(_)
+      case x if x == classOf[Relationship] => relationship(_)
+      case x if x == classOf[Repository]   => repository(_)
+      case x if x == classOf[Root]         => root(_)
+      case x if x == classOf[Saga]         => saga(_)
+      case x if x == classOf[Streamlet]    => streamlet(_)
+      case x if x == classOf[Type]         => typeDef(_)
+      case x if x == classOf[User]         => user(_)
       case _ =>
         throw new RuntimeException(
           s"No parser defined for ${classTag[T].runtimeClass}"
@@ -126,9 +138,11 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     */
   def parseRoot: Either[Messages, Root] = doParse[Root](root(_))
 
-  /** Parse the input expecting the contents of a Root node but also return the list of files that were read
+  /** Parse the input expecting the contents of a Root node but also return the list of files that
+    * were read
     * @return
-    *   Either the failure messages and a list of files or the Root that was parsed and the list of files parsed.
+    *   Either the failure messages and a list of files or the Root that was parsed and the list of
+    *   files parsed.
     */
   def parseRootWithURLs: Either[(Messages, Seq[URL]), (Root, Seq[URL])] = {
     doParse[Root](root(_)) match {
@@ -137,18 +151,20 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     }
   }
 
-  /** Parse the input expecting main definitions in any order, a nebula. Each definition must be syntactically correct
-    * but the top level definitions do not require the hierarchical structure of parsing for Root contents.
+  /** Parse the input expecting main definitions in any order, a nebula. Each definition must be
+    * syntactically correct but the top level definitions do not require the hierarchical structure
+    * of parsing for Root contents.
     * @return
     *   Either the failure messages or the Nebula of definitions
     */
   def parseNebula: Either[Messages, Nebula] = doParse[Nebula](nebula(_))
 
-  /** Parse the input expecting definitions in any order, a nebula. Each definition must be syntactically correct but
-    * the top level definitions do not require the hierarchical structure of parsing for Root contents.
+  /** Parse the input expecting definitions in any order, a nebula. Each definition must be
+    * syntactically correct but the top level definitions do not require the hierarchical structure
+    * of parsing for Root contents.
     * @return
-    *   Either the failure messages with the list of parsed URL or the Nebula of definitions with the list of parsed
-    *   URLs
+    *   Either the failure messages with the list of parsed URL or the Nebula of definitions with
+    *   the list of parsed URLs
     */
   def parseNebulaWithURLs: Either[(Messages, Seq[URL]), (Nebula, Seq[URL])] = {
     doParse[Nebula](nebula(_)) match {
@@ -161,6 +177,14 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     parse[List[Token]](input, parseAllTokens(_)) match
       case Left((messages, _)) => Left(messages)
       case Right((list, _))    => Right(list)
+    end match
+  }
+
+  def parseTokensAndText: Either[Messages, List[(Token, String)]] = {
+    parse[List[Token]](input, parseAllTokens(_)) match
+      case Left((messages, _)) => Left(messages)
+      case Right((list, _)) =>
+        Right(list.map { token => token -> token.loc.toText })
     end match
   }
 }

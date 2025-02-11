@@ -19,8 +19,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.{ClassTag, classTag}
 import scala.scalajs.js.annotation.*
 
-/** The TopLevel (Root) parser. This class munges all the individual parsers together and provides top level parsing
-  * functionality.
+/** The TopLevel (Root) parser. This class munges all the individual parsers together and provides
+  * top level parsing functionality.
   * @param input
   *   The RiddlParserInput that contains the data to parse
   * @param withVerboseFailures
@@ -40,13 +40,13 @@ object TopLevelParser {
 
   import scala.concurrent.ExecutionContext
 
-  /** Main entry point into parsing. This sets up the asynchronous (but maybe not parallel) parsing of the input to the
-    * parser.
+  /** Main entry point into parsing. This sets up the asynchronous (but maybe not parallel) parsing
+    * of the input to the parser.
     * @param url
     *   A `file://` or `https://` based url to specify the source of the parser input
     * @param withVerboseFailures
-    *   Control whether parse failures are diagnosed verbosely or not. Typically only useful to maintainers of RIDDL, or
-    *   test cases
+    *   Control whether parse failures are diagnosed verbosely or not. Typically only useful to
+    *   maintainers of RIDDL, or test cases
     */
   def parseURL(
     url: URL,
@@ -59,8 +59,8 @@ object TopLevelParser {
     }
   }
 
-  /** Alternate, non-asynchronous interface to parsing. If you have your data already, you can just make your own
-    * RiddlParserInput from a string and call this to start parsing.
+  /** Alternate, non-asynchronous interface to parsing. If you have your data already, you can just
+    * make your own RiddlParserInput from a string and call this to start parsing.
     * @param input
     *   The RiddlParserInput that contains the data to parse
     * @param withVerboseFailures
@@ -79,15 +79,15 @@ object TopLevelParser {
   }
 
   /** Parse a string directly
-   *
-   * @param input
-   * The input string to parse
-   * @param withVerboseFailures
-   *   For the utility of RIDDL implementers.
-   * @return
-   *   Left(messages) -> messages indicaitng the error
-   *   Right(root) -> the resulting AST.Root from the parse
-   */
+    *
+    * @param input
+    *   The input string to parse
+    * @param withVerboseFailures
+    *   For the utility of RIDDL implementers.
+    * @return
+    *   Left(messages) -> messages indicaitng the error Right(root) -> the resulting AST.Root from
+    *   the parse
+    */
   def parseString(
     input: String,
     withVerboseFailures: Boolean = false
@@ -117,15 +117,14 @@ object TopLevelParser {
     }
   }
 
-  /** Parse the input to a list of tokens. This is aimed to making highlighting
-   * in editors quick and simple. The input is not validate for syntactic
-   * correctness and likely succeeds on most input.
-   * @param input
-   * The input to be parsed
-   * @param withVerboseFailures
-   * Set to true to debug parsing failures. Probably of interest only to
-   * the implementors. The default, false, causes no functional difference.
-   */
+  /** Parse the input to a list of tokens. This is aimed to making highlighting in editors quick and
+    * simple. The input is not validate for syntactic correctness and likely succeeds on most input.
+    * @param input
+    *   The input to be parsed
+    * @param withVerboseFailures
+    *   Set to true to debug parsing failures. Probably of interest only to the implementors. The
+    *   default, false, causes no functional difference.
+    */
   def parseToTokens(
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
@@ -133,4 +132,13 @@ object TopLevelParser {
     val tlp = new TopLevelParser(input, withVerboseFailures)
     tlp.parseTokens
   }
+
+  def parseToTokensAndText(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, List[(Token, String)]] = {
+    val tlp = new TopLevelParser(input, withVerboseFailures)
+    tlp.parseTokensAndText
+  }
+
 }

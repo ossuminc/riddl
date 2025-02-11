@@ -7,16 +7,17 @@
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl
-import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.AST.{Branch, Root, Token}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.language.AST.Branch
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.PassCreators
+import com.ossuminc.riddl.passes.Riddl.toTokenizedRiddlText
 import com.ossuminc.riddl.passes.prettify.PrettifyOutput
 import com.ossuminc.riddl.passes.prettify.PrettifyPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass
 import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
+import sourcecode.Macros.text
 
 /** Primary Interface to Riddl Language parsing and validating */
 object Riddl {
@@ -24,7 +25,8 @@ object Riddl {
   /** Parse an input with options and return the result
     *
     * @param input
-    *   The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input of the parsing
+    *   The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input of the
+    *   parsing
     * @return
     */
   def parse(input: RiddlParserInput)(using io: PlatformContext): Either[Messages, Root] = {
@@ -51,10 +53,11 @@ object Riddl {
   /** Parse and validate some [[com.ossuminc.riddl.language.parsing.RiddlParserInput]]
     *
     * @param input
-    *   The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input to the parser
+    *   The [[com.ossuminc.riddl.language.parsing.RiddlParserInput]] to use as the input to the
+    *   parser
     * @param shouldFailOnError
-    *   If set to true if the parsing succeeds and the validation generates errors in which case the errors will simply
-    *   be returned, otherwise the PassesResult will be returned.
+    *   If set to true if the parsing succeeds and the validation generates errors in which case the
+    *   errors will simply be returned, otherwise the PassesResult will be returned.
     * @return
     */
   def parseAndValidate(
@@ -88,9 +91,20 @@ object Riddl {
   def toRiddlText(root: PassRoot)(using pc: PlatformContext): String =
     val input: PassInput = PassInput(root)
     val outputs: PassesOutput = PassesOutput()
-    val result = Pass.runPass[PrettifyOutput](input, outputs,
+    val result = Pass.runPass[PrettifyOutput](
+      input,
+      outputs,
       PrettifyPass(input, outputs, PrettifyPass.Options(flatten = true))
     )
     result.state.filesAsString
   end toRiddlText
+
+  /** Convert a previously parsed Root to Tokens and corresponding string text */
+  def toTokenizedRiddlText(
+    root: PassRoot
+  )(using pc: PlatformContext): Either[Messages, List[(Token, String)]] =
+    val text = toRiddlText(root)
+    val rpi = RiddlParserInput(text, "")
+    TopLevelParser.parseToTokensAndText(rpi)
+  end toTokenizedRiddlText
 }
