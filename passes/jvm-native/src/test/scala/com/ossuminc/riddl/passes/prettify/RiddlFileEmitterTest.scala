@@ -83,7 +83,7 @@ abstract class RiddlFileEmitterTest extends AbstractTestingBasis {
     "emits descriptions" in {
       rfe.clear()
       val desc = BlockDescription(At.empty, Seq(LiteralString(At.empty, "foo")))
-      rfe.emitDescription(desc)
+      rfe.emitMetaData(Contents(desc))
       rfe.toString mustBe "described as {\n  |foo\n}\n"
     }
 
