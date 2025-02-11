@@ -13,7 +13,7 @@ import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Timer}
 import com.ossuminc.riddl.utils.SeqHelpers.*
 import com.ossuminc.riddl.utils.URL
 import fastparse.*
-import fastparse.SingleLineWhitespace.*
+import fastparse.MultiLineWhitespace.*
 import fastparse.Parsed.Failure
 import fastparse.Parsed.Success
 import jdk.jshell.SourceCodeAnalysis.Documentation
@@ -32,10 +32,6 @@ trait TokenParser(using pc: PlatformContext) extends CommonParser with Readabili
     }
   }
 
-  private def notCodeQuote[u: P]: P[Unit] = {
-    P(AnyChar.rep(1))
-  }
-
   private def literalCode[u: P]: P[Token.LiteralCode] = {
     P(
       Index ~~ Punctuation.codeQuote ~~ until3('`', '`', '`') ~~ Index
@@ -44,7 +40,8 @@ trait TokenParser(using pc: PlatformContext) extends CommonParser with Readabili
     }
   }
 
-  private def stringContent[u: P]: P[Unit] = P(CharsWhile(stringChars) | escape)
+  private def stringContent[u: P]: P[Unit] =
+    P(CharsWhile(stringChars) | escape)
 
   private def quotedStringToken[u: P]: P[Token.QuotedString] = {
     P(
@@ -87,12 +84,6 @@ trait TokenParser(using pc: PlatformContext) extends CommonParser with Readabili
     P(identifier)./.map { case id: Identifier => Token.Identifier(id.loc) }
   }
 
-  private def newlineToken[u: P]: P[Token.NewLine] = {
-    P(Index ~~ pc.newline ~~ Index).map { case (start, end) =>
-      Token.NewLine(at(start, end))
-    }
-  }
-
   private def otherToken[u: P]: P[Token.Other] = {
     P(
       Index ~~ (!(CharIn(" \n\r") | End) ~~ AnyChar).rep(1) ~~ Index
@@ -113,7 +104,6 @@ trait TokenParser(using pc: PlatformContext) extends CommonParser with Readabili
         identifierToken |
         numericToken |
         commentToken |
-        newlineToken |
         otherToken
     )./
   }
@@ -121,5 +111,5 @@ trait TokenParser(using pc: PlatformContext) extends CommonParser with Readabili
   def parseAllTokens[u: P]: P[List[Token]] = {
     P(Start ~ parseAnyToken.rep(1) ~ End).map(_.toList)
   }
-  
+
 }

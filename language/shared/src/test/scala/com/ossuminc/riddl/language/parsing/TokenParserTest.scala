@@ -638,6 +638,7 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
         case Right(tokens) =>
           tokens.length must be(404)
           val tasStr = tokens.toString
+          tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")
           tasStr must not include ("Other")
       end match
@@ -645,29 +646,152 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
     Await.result(future, 30)
   }
 
-  "handle returning text with tokens" in { (td: TestData) =>
-    implicit val ec: ExecutionContext = pc.ec
-    val url = URL.fromCwdPath("language/input/everything_full.riddl")
-    val future = RiddlParserInput.fromURL(url, td).map { rpi =>
-      val result: Either[Messages, List[(Token, String)]] =
-        pc.withOptions(pc.options.copy(showTimes = true)) { _ =>
-          Timer.time("parseToTokensAndText") {
-            TopLevelParser.parseToTokensAndText(rpi)
-          }
+  "handle mapping text with tokens" in { (td: TestData) =>
+    val data =
+      """
+        |context full is {
+        |  type str is String             // Define str as a String
+        |  type num is Number             // Define num as a Number
+        |  type boo is Boolean            // Define boo as a Boolean
+        |  type ident is Id(Something)    // Define ident as an Id
+        |  type dat is Date               // Define dat as a Date
+        |  type tim is Time               // Define tim as a Time
+        |  type stamp is TimeStamp        // Define stamp as a TimeStamp
+        |  type url is URL                // Define url as a Uniform Resource Locator
+        |
+        |  type PeachType is { a: Integer with { ??? } }
+        |  type enum is any of { Apple Pear Peach(23)   Persimmon(24) }
+        |
+        |  type alt is one of { enum or stamp or url } with {
+        |    described as {
+        |      | Alternations select one type from a list of types
+        |    }
+        |  }
+        |
+        |
+        |  type agg is {
+        |    key: num,
+        |    id: ident,
+        |    time is TimeStamp
+        |  }
+        |
+        |  type moreThanNone is many agg
+        |  type zeroOrMore is agg*
+        |  type optionality is agg?
+        |
+        |  repository StoreIt is {
+        |    schema One is relational
+        |      of a as type agg
+        |      link relationship as field agg.time to field agg.ident
+        |      index on field agg.id
+        |    with { briefly as "This is how to store data" }
+        |
+        |    handler Putter is {
+        |      on command ACommand {
+        |        put "something" to type agg
+        |      }
+        |    }
+        |  } with {
+        |    briefly as "This is a simple repository"
+        |    term foo is "an arbitrary name as a contraction for fubar which has grotesque connotations"
+        |  }
+        |
+        |
+        |  projector ProjectIt is {
+        |    updates repository StoreIt
+        |    record Record is { ??? }
+        |    handler projector is {
+        |      on init {
+        |        tell command ACommand to repository StoreIt
+        |      }
+        |    }
+        |  }
+        |
+        |  command ACommand()
+        |
+        |  adaptor fromAPlant to context APlant is {
+        |    handler adaptCommands is {
+        |      on command ACommand {
+        |        send command DoAThing to outlet APlant.Source.Commands
+        |      }
+        |    }
+        |  }
+        |
+        |  entity Something is {
+        |    function misc is {
+        |      requires { n: Nothing }
+        |      returns { b: Boolean }
+        |      ???
+        |    } with {
+        |      option aggregate
+        |      option transient
+        |    }
+        |    type somethingDate is Date
+        |
+        |    event Inebriated is { ??? }
+        |
+        |    record someData(field:  SomeType)
+        |    state someState of Something.someData
+        |
+        |    handler foo is {
+        |      // Handle the ACommand
+        |      on command ACommand {
+        |        if "Something arrives" then {
+        |          // we want to send an event
+        |          send event Inebriated to outlet APlant.Source.Commands
+        |        }
+        |      }
+        |    }
+        |
+        |    function whenUnderTheInfluence is {
+        |      requires { n: Nothing }
+        |      returns  { b: Boolean }
+        |      "aribtrary statement"
+        |      ```scala
+        |        // Simulate a creative state
+        |        val randomFactor = Math.random() // A random value between 0 and 1
+        |        val threshold = 0.7 // Threshold for creativity
+        |
+        |        // If the random factor exceeds the threshold, consider it a creative state
+        |        b = randomFactor > threshold
+        |      ```
+        |    } with {
+        |      briefly as "Something is nothing interesting"
+        |    }
+        |  }
+        |
+        |  entity SomeOtherThing is {
+        |    type ItHappened is event { aField: String }
+        |    record otherThingData is { aField: String }
+        |    state otherThingState of SomeOtherThing.otherThingData
+        |    handler fee is {
+        |      on event ItHappened {
+        |        set field SomeOtherThing.otherThingState.aField to "arbitrary string value"
+        |      }
+        |    }
+        |  }
+        |}
+        |
+        |""".stripMargin
+    import scala.collection.IndexedSeqView
+    def mapTokens(slice: IndexedSeqView[Char], token: AST.Token): String =
+      token.getClass.getSimpleName + "(" + slice.mkString + ")"
+    end mapTokens
+    val rpi = RiddlParserInput(data, td)
+    val result: Either[Messages, List[String]] =
+      pc.withOptions(pc.options.copy(showTimes = true)) { _ =>
+        Timer.time("parseToTokensAndText") {
+          TopLevelParser.mapTextAndToken[String](rpi)( (x,y) => mapTokens(x,y))
         }
-      result match
-        case Left(messages) =>
-          fail(messages.format)
-        case Right(list) =>
-          list.length must be(433)
-          val (firstT, firstStr) = list(0)
-          val (secondT, secondStr) = list(1)
-          firstT must be(AST.Token.Keyword(At(rpi, 0, 7)))
-          firstStr must be("context")
-          secondT must be(AST.Token.Identifier(At(rpi, 8, 11)))
-      end match
-    }
-    Await.result(future, 30)
-
+      }
+    result match
+      case Left(messages) =>
+        fail(messages.format)
+      case Right(list) =>
+        list.length must be(404)
+        list.head mustBe("Keyword(context)")
+        list(1) mustBe("Identifier(full)")
+        print(list.mkString("\n"))
+    end match
   }
 }

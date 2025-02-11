@@ -14,9 +14,11 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
 import java.nio.file.{Files, Path}
+import scala.collection.IndexedSeqView
+import scala.collection.StringView
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.{classTag, ClassTag}
 import scala.scalajs.js.annotation.*
 
 /** The TopLevel (Root) parser. This class munges all the individual parsers together and provides
@@ -34,7 +36,7 @@ case class TopLevelParser(
     extends ExtensibleTopLevelParser
 
 @JSExportTopLevel("TopLevelParser$")
-object TopLevelParser {
+object TopLevelParser:
 
   import com.ossuminc.riddl.utils.URL
 
@@ -133,12 +135,20 @@ object TopLevelParser {
     tlp.parseTokens
   }
 
-  def parseToTokensAndText(
+  def mapTextAndToken[T](
     input: RiddlParserInput,
     withVerboseFailures: Boolean = false
-  )(using PlatformContext): Either[Messages, List[(Token, String)]] = {
+  )(f: (IndexedSeqView[Char],Token) => T)(using PlatformContext): Either[Messages, List[T]] =
     val tlp = new TopLevelParser(input, withVerboseFailures)
-    tlp.parseTokensAndText
-  }
-
-}
+    tlp.parseTokens match
+      case Left(messages) => Left(messages)
+      case Right(tokens: List[Token]) =>
+        val view = StringView(input.data)
+        val mapped = tokens.map { token =>
+          val slice = view.slice(token.loc.offset, token.loc.endOffset)
+          f(slice,token)
+        }
+        Right(mapped)
+    end match
+  end mapTextAndToken
+end TopLevelParser
