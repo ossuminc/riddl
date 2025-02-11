@@ -76,15 +76,12 @@ class RiddlTest extends AbstractTestingBasis {
       val input =
         """domain foo is {
           |  domain bar is { ??? }
-          |
-          |}
-          |
-          |""".stripMargin
+          |}""".stripMargin
       val rpi = RiddlParserInput(input, "")
       Riddl.parse(rpi) match
         case Left(messages) => fail(messages.format)
         case Right(root) =>
-          val converted = 
+          val converted =
             Timer.time("toRiddlText", true) {
               Riddl.toRiddlText(root)
             }
