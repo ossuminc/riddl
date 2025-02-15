@@ -50,10 +50,10 @@ trait PassInfo[OPT <: PassOptions] {
 }
 
 /** The kinds of nodes that can be at the root of a pass. */
-type PassRoot = Root | Nebula | VitalDefinition[?]
+type PassRoot = Branch[?]
 
-/** Information that a Pass must produce, currently just any messages it generated. Passes should derive their own
-  * concrete PassOutput classes from this trait
+/** Information that a Pass must produce, currently just any messages it generated. Passes should
+  * derive their own concrete PassOutput classes from this trait
   */
 trait PassOutput {
 
@@ -73,21 +73,22 @@ object PassOutput {
   }
 }
 
-/** The input to a Pass in order to do its work. This consists of just the parsed model and the common options. Passes
-  * cannot extend this.
+/** The input to a Pass in order to do its work. This consists of just the parsed model and the
+  * common options. Passes cannot extend this.
   * @param root
-  *   The result of the parsing run, consisting of the RootContainer from which all AST content can be reached
+  *   The result of the parsing run, consisting of the RootContainer from which all AST content can
+  *   be reached
   */
 case class PassInput(
-  root: PassRoot 
+  root: PassRoot
 )
 
 object PassInput {
   val empty: PassInput = PassInput(Root.empty)
 }
 
-/** The output from running a set of Passes. This collects the PassOutput instances from each Pass run and provides
-  * utility messages for getting that information.
+/** The output from running a set of Passes. This collects the PassOutput instances from each Pass
+  * run and provides utility messages for getting that information.
   */
 case class PassesOutput() {
 
@@ -125,8 +126,9 @@ case class PassesOutput() {
 
 }
 
-/** The result of running a set of passes. This provides the input and outputs of the run as well as any additional
-  * messages (likely from an exception). This provides convenience methods for accessing the various output content
+/** The result of running a set of passes. This provides the input and outputs of the run as well as
+  * any additional messages (likely from an exception). This provides convenience methods for
+  * accessing the various output content
   *
   * @param input
   *   The input provided to the run of the passes
@@ -145,7 +147,8 @@ case class PassesResult(
   /** Get the output of one pass that ran
     *
     * @param passName
-    *   The name of the pass. Use the Pass's companion object's [[PassInfo.name]] method to retrieve it.
+    *   The name of the pass. Use the Pass's companion object's [[PassInfo.name]] method to retrieve
+    *   it.
     * @tparam T
     *   The type of the Pass's output which must derive from [[PassOutput]].
     * @return
@@ -177,55 +180,63 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
   /** The messages collected during the pass */
   protected val messages: Messages.Accumulator = Messages.Accumulator()
 
-  /** The name of the pass for inclusion in messages it produces. This must be implemented by the subclass
+  /** The name of the pass for inclusion in messages it produces. This must be implemented by the
+    * subclass
     * @return
     *   A string value giving the name of this pass
     */
   def name: String
 
-  /** If your pass requires the output from other passes, call this function from your pass's constructor. It will
-    * ensure that your pass will fail construction if the input doesn't contain that required pass's output.
+  /** If your pass requires the output from other passes, call this function from your pass's
+    * constructor. It will ensure that your pass will fail construction if the input doesn't contain
+    * that required pass's output.
     * @param passInfo
     *   The pass's companion object from which this function will obtain the pass's name
     */
   protected final def requires[OPT <: PassOptions](passInfo: PassInfo[OPT]): Unit = {
-    require(out.hasPassOutput(passInfo.name), s"Required pass '${passInfo.name}' was not run prior to '$name'")
+    require(
+      out.hasPassOutput(passInfo.name),
+      s"Required pass '${passInfo.name}' was not run prior to '$name'"
+    )
   }
 
-  /** Pre-process the root before actually traversing. This is also a signal that the processing is about to start.
+  /** Pre-process the root before actually traversing. This is also a signal that the processing is
+    * about to start.
     * @param root
-    *   A [[com.ossuminc.riddl.language.AST.Root]] node which encapsulates the whole model. This is the state of the
-    *   Root as of the last pass.
+    *   A [[com.ossuminc.riddl.language.AST.Root]] node which encapsulates the whole model. This is
+    *   the state of the Root as of the last pass.
     * @return
-    *   Typically returns the same Root objects with changes in subsequent levels, but it entirely possibly to
-    *   completely reorganize the hierarchy, including its root node.
+    *   Typically returns the same Root objects with changes in subsequent levels, but it entirely
+    *   possibly to completely reorganize the hierarchy, including its root node.
     */
   def preProcess(root: PassRoot): PassRoot = root
 
-  /** The main implementation of the Pass. The AST is walked in a depth first manner calling this function for each
-    * definition it encounters.
+  /** The main implementation of the Pass. The AST is walked in a depth first manner calling this
+    * function for each definition it encounters.
     *
     * @param definition
     *   The definition to be processed
     * @param parents
-    *   The stack of definitions that are the parents of [[com.ossuminc.riddl.language.AST.Definition]]. This stack goes
-    *   from immediate parent towards the root. The root is deepest in the stack.
+    *   The stack of definitions that are the parents of
+    *   [[com.ossuminc.riddl.language.AST.Definition]]. This stack goes from immediate parent
+    *   towards the root. The root is deepest in the stack.
     */
   protected def process(
     definition: RiddlValue,
     parents: ParentStack
   ): Unit
 
-  /** A signal that the processing is complete and no more calls to `process` will be made. This also gives the Pass
-    * subclass a chance to do post-processing as some computations can only be done after collecting data from the
-    * entire AST
+  /** A signal that the processing is complete and no more calls to `process` will be made. This
+    * also gives the Pass subclass a chance to do post-processing as some computations can only be
+    * done after collecting data from the entire AST
     *
     * @param root
     *   The root of the parsed model just as a convenience for post-processing
     */
   def postProcess(root: PassRoot): Unit = ()
 
-  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+  /** Generate the output of this Pass. This will only be called after all the calls to process have
+    * completed.
     * @param root
     *   The new [[com.ossuminc.riddl.language.AST.Root]] of the model that the pass computed
     * @return
@@ -237,8 +248,8 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
     */
   def close(): Unit = ()
 
-  /** A method for the traversal of the AST hierarchy. While subclasses implement this differently, there is generally
-    * no need to override in non-RIDDL code. This implementation is width first
+  /** A method for the traversal of the AST hierarchy. While subclasses implement this differently,
+    * there is generally no need to override in non-RIDDL code. This implementation is width first
     *
     * @param definition
     *   The root (starting point) of the traversal
@@ -272,15 +283,17 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
 abstract class DepthFirstPass(
   input: PassInput,
   outputs: PassesOutput
-)(using pc: PlatformContext) extends Pass(input, outputs) {
+)(using pc: PlatformContext)
+    extends Pass(input, outputs) {
 
-  /** A method for the traversal of the AST hierarchy. This implementation traverses nodes in a depth first fashion.
-   *
-   * @param definition
-   *   The root (starting point) of the traversal
-   * @param parents
-   *   The parents of the definition
-   */
+  /** A method for the traversal of the AST hierarchy. This implementation traverses nodes in a
+    * depth first fashion.
+    *
+    * @param definition
+    *   The root (starting point) of the traversal
+    * @param parents
+    *   The parents of the definition
+    */
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case root: Root =>
@@ -307,15 +320,17 @@ abstract class DepthFirstPass(
 
 }
 
-/** A Pass base class that allows the processing to be done based on containers, and calling these methods:
+/** A Pass base class that allows the processing to be done based on containers, and calling these
+  * methods:
   *   - openContainer at the start of container's processing
   *   - processLeaf for any leaf nodes within the container
   *     - processValue for any non-definitions within the container
   *   - closeContainer after all the container's contents have been processed
   *
-  * This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can run before all their
-  * content (openContainer) and also after all its content (closeContainer). This is necessary for passes that must
-  * maintain the hierarchical structure of the AST model in their processing.
+  * This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can
+  * run before all their content (openContainer) and also after all its content (closeContainer).
+  * This is necessary for passes that must maintain the hierarchical structure of the AST model in
+  * their processing.
   *
   * @param input
   *   The PassInput to process
@@ -330,8 +345,9 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
     * @param definition
     *   The definition to be processed
     * @param parents
-    *   The stack of definitions that are the parents of [[com.ossuminc.riddl.language.AST.Definition]]. This stack goes
-    *   from immediate parent towards the root. The root is deepest in the stack.
+    *   The stack of definitions that are the parents of
+    *   [[com.ossuminc.riddl.language.AST.Definition]]. This stack goes from immediate parent
+    *   towards the root. The root is deepest in the stack.
     */
   override final def process(definition: RiddlValue, parents: ParentStack): Unit = ()
 
@@ -363,8 +379,8 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
   protected def openInclude(include: Include[?], parents: Parents): Unit = ()
   protected def closeInclude(include: Include[?], parents: Parents): Unit = ()
 
-  /** Called by traverse after all leaf nodes of an opened node have been processed and the opened node is now being
-    * closed. Subclasses must implement this method.
+  /** Called by traverse after all leaf nodes of an opened node have been processed and the opened
+    * node is now being closed. Subclasses must implement this method.
     * @param definition
     *   The opened node that now needs to be closed
     * @param parents
@@ -388,7 +404,8 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
       case container: Branch[?] => // must be a container so descend
         val def_parents = parents.toParents // save this for the closeContainer below
         openContainer(container, def_parents)
-        if container.contents.nonEmpty then // just optimize out the push/pop for empty contents, which is frequent
+        if container.contents.nonEmpty
+        then // just optimize out the push/pop for empty contents, which is frequent
           parents.push(container)
           container.contents.foreach(item => traverse(item, parents)) // recurse!
           parents.pop()
@@ -402,8 +419,8 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
   }
 }
 
-/** The Visitor definition for the [[VisitingPass]]. You must implement all the methods of this class and pass it to the
-  * [[VisitingPass]]
+/** The Visitor definition for the [[VisitingPass]]. You must implement all the methods of this
+  * class and pass it to the [[VisitingPass]]
   */
 trait PassVisitor:
   // Open for each Container Definition
@@ -472,7 +489,8 @@ trait PassVisitor:
   def doInteraction(interaction: Interaction): Unit
   def doOptionValue(optionValue: OptionValue): Unit
 
-/** An abstract Pass that uses the Visitor pattern (https://refactoring.guru/design-patterns/visitor)
+/** An abstract Pass that uses the Visitor pattern
+  * (https://refactoring.guru/design-patterns/visitor)
   * @param input
   *   The PassInput to process
   * @param outputs
@@ -486,55 +504,57 @@ abstract class VisitingPass[VT <: PassVisitor](
     extends HierarchyPass(input, outputs):
   protected final def openContainer(container: Definition, parents: Parents): Unit =
     container match
-      case typ: Type                => visitor.openType(typ, parents)
-      case domain: Domain           => visitor.openDomain(domain, parents)
-      case context: Context         => visitor.openContext(context, parents)
-      case entity: Entity           => visitor.openEntity(entity, parents)
-      case adaptor: Adaptor         => visitor.openAdaptor(adaptor, parents)
-      case epic: Epic               => visitor.openEpic(epic, parents)
-      case uc: UseCase              => visitor.openUseCase(uc, parents)
-      case function: Function       => visitor.openFunction(function, parents)
-      case saga: Saga               => visitor.openSaga(saga, parents)
-      case streamlet: Streamlet     => visitor.openStreamlet(streamlet, parents)
-      case repository: Repository   => visitor.openRepository(repository, parents)
-      case projector: Projector     => visitor.openProjector(projector, parents)
-      case handler: Handler         => visitor.openHandler(handler, parents)
-      case onClause: OnClause       => visitor.openOnClause(onClause, parents)
-      case group: Group             => visitor.openGroup(group, parents)
-      case output: Output           => visitor.openOutput(output, parents)
-      case input: Input             => visitor.openInput(input, parents)
-      case _: Root                  => () // ignore
-      case _: Enumerator            => () // not a container
-      case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
-          _: Outlet | _: Connector | _: User | _: Schema | _: State | _: GenericInteraction | _: SelfInteraction |
-          _: VagueInteraction | _: ContainedGroup | _: Definition => // not containers
+      case typ: Type              => visitor.openType(typ, parents)
+      case domain: Domain         => visitor.openDomain(domain, parents)
+      case context: Context       => visitor.openContext(context, parents)
+      case entity: Entity         => visitor.openEntity(entity, parents)
+      case adaptor: Adaptor       => visitor.openAdaptor(adaptor, parents)
+      case epic: Epic             => visitor.openEpic(epic, parents)
+      case uc: UseCase            => visitor.openUseCase(uc, parents)
+      case function: Function     => visitor.openFunction(function, parents)
+      case saga: Saga             => visitor.openSaga(saga, parents)
+      case streamlet: Streamlet   => visitor.openStreamlet(streamlet, parents)
+      case repository: Repository => visitor.openRepository(repository, parents)
+      case projector: Projector   => visitor.openProjector(projector, parents)
+      case handler: Handler       => visitor.openHandler(handler, parents)
+      case onClause: OnClause     => visitor.openOnClause(onClause, parents)
+      case group: Group           => visitor.openGroup(group, parents)
+      case output: Output         => visitor.openOutput(output, parents)
+      case input: Input           => visitor.openInput(input, parents)
+      case _: Root                => () // ignore
+      case _: Enumerator          => () // not a container
+      case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep |
+          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: State |
+          _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
+          _: Definition => // not containers
         () // not  containers
     end match
   end openContainer
 
   protected final def closeContainer(container: Definition, parents: Parents): Unit =
     container match
-      case typ: Type                => visitor.closeType(typ, parents)
-      case domain: Domain           => visitor.closeDomain(domain, parents)
-      case context: Context         => visitor.closeContext(context, parents)
-      case entity: Entity           => visitor.closeEntity(entity, parents)
-      case adaptor: Adaptor         => visitor.closeAdaptor(adaptor, parents)
-      case epic: Epic               => visitor.closeEpic(epic, parents)
-      case useCase: UseCase         => visitor.closeUseCase(useCase, parents)
-      case function: Function       => visitor.closeFunction(function, parents)
-      case saga: Saga               => visitor.closeSaga(saga, parents)
-      case streamlet: Streamlet     => visitor.closeStreamlet(streamlet, parents)
-      case repository: Repository   => visitor.closeRepository(repository, parents)
-      case projector: Projector     => visitor.closeProjector(projector, parents)
-      case handler: Handler         => visitor.closeHandler(handler, parents)
-      case onClause: OnClause       => visitor.closeOnClause(onClause, parents)
-      case group: Group             => visitor.closeGroup(group, parents)
-      case output: Output           => visitor.closeOutput(output, parents)
-      case input: Input             => visitor.closeInput(input, parents)
-      case _: Root                  => () // ignore
-      case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep | _: Inlet |
-          _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator | _: GenericInteraction |
-          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup | _: Definition =>
+      case typ: Type              => visitor.closeType(typ, parents)
+      case domain: Domain         => visitor.closeDomain(domain, parents)
+      case context: Context       => visitor.closeContext(context, parents)
+      case entity: Entity         => visitor.closeEntity(entity, parents)
+      case adaptor: Adaptor       => visitor.closeAdaptor(adaptor, parents)
+      case epic: Epic             => visitor.closeEpic(epic, parents)
+      case useCase: UseCase       => visitor.closeUseCase(useCase, parents)
+      case function: Function     => visitor.closeFunction(function, parents)
+      case saga: Saga             => visitor.closeSaga(saga, parents)
+      case streamlet: Streamlet   => visitor.closeStreamlet(streamlet, parents)
+      case repository: Repository => visitor.closeRepository(repository, parents)
+      case projector: Projector   => visitor.closeProjector(projector, parents)
+      case handler: Handler       => visitor.closeHandler(handler, parents)
+      case onClause: OnClause     => visitor.closeOnClause(onClause, parents)
+      case group: Group           => visitor.closeGroup(group, parents)
+      case output: Output         => visitor.closeOutput(output, parents)
+      case input: Input           => visitor.closeInput(input, parents)
+      case _: Root                => () // ignore
+      case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep |
+          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator |
+          _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
+          _: Definition =>
         () // not  containers
     end match
   end closeContainer
@@ -589,8 +609,8 @@ abstract class VisitingPass[VT <: PassVisitor](
   end closeInclude
 end VisitingPass
 
-/** An abstract PassOutput for use with passes that derive from CollectingPass. This just provides a standard field name
-  * for the data that is collected, being `collected`.
+/** An abstract PassOutput for use with passes that derive from CollectingPass. This just provides a
+  * standard field name for the data that is collected, being `collected`.
   *
   * @param messages
   *   The required messages field from the PassOutput trait
@@ -605,8 +625,8 @@ abstract class CollectingPassOutput[T](
   collected: Seq[T] = Seq.empty[T]
 ) extends PassOutput
 
-/** A Pass subclass that processes the AST exactly the same as the depth first search that the Pass class uses. The only
-  * difference is that
+/** A Pass subclass that processes the AST exactly the same as the depth first search that the Pass
+  * class uses. The only difference is that
   *
   * @param input
   *   The PassInput to process
@@ -615,16 +635,19 @@ abstract class CollectingPassOutput[T](
   * @tparam ET
   *   The element type of the collected values
   */
-abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using PlatformContext) extends Pass(input, outputs) {
+abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using PlatformContext)
+    extends Pass(input, outputs) {
 
-  /** The method usually called for each definition that is to be processed but our implementation of traverse instead
-    * calls collect so a value can be returned. This implementation is final because it is meant to be ignored.
+  /** The method usually called for each definition that is to be processed but our implementation
+    * of traverse instead calls collect so a value can be returned. This implementation is final
+    * because it is meant to be ignored.
     *
     * @param definition
     *   The definition to be processed
     * @param parents
-    *   The stack of definitions that are the parents of [[com.ossuminc.riddl.language.AST.Definition]]. This stack goes
-    *   from immediate parent towards the root. The root is deepest in the stack.
+    *   The stack of definitions that are the parents of
+    *   [[com.ossuminc.riddl.language.AST.Definition]]. This stack goes from immediate parent
+    *   towards the root. The root is deepest in the stack.
     */
   override final def process(definition: RiddlValue, parents: ParentStack): Unit = {
     val collected: Seq[ET] = collect(definition, parents)
@@ -633,8 +656,8 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using
 
   protected val collectedValues: mutable.ArrayBuffer[ET] = mutable.ArrayBuffer.empty[ET]
 
-  /** The processing method called at each node, similar to [[Pass.process]] but modified to return a sequence of the
-    * collectable, [[ET]].
+  /** The processing method called at each node, similar to [[Pass.process]] but modified to return
+    * a sequence of the collectable, [[ET]].
     *
     * @param definition
     *   The definition from which an [[ET]] value is collected.
@@ -651,16 +674,16 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using
 
 object Pass {
 
-  /** A PassCreators of the standard passes that should be run on every AST pass. These generate the symbol table,
-    * resolve path references, and validate the input. Only after these three have passed successful should the model be
-    * considered processable by other passes
+  /** A PassCreators of the standard passes that should be run on every AST pass. These generate the
+    * symbol table, resolve path references, and validate the input. Only after these three have
+    * passed successful should the model be considered processable by other passes
     */
   def standardPasses(using PlatformContext): Seq[PassCreator] =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
-  /** A PassesCreate of the passes that extract information but don't do much real work. These generate the symbol
-    * table, resolve path references, and calculate statistics. This allows basic information be refreshed without doing
-    * a full validation
+  /** A PassesCreate of the passes that extract information but don't do much real work. These
+    * generate the symbol table, resolve path references, and calculate statistics. This allows
+    * basic information be refreshed without doing a full validation
     */
 
   def informationPasses(using PlatformContext): PassCreators =
@@ -671,7 +694,8 @@ object Pass {
     * @param input
     *   The post-parsing input to the passes as a PassInput containing a Root
     * @param passes
-    *   The list of Pass construction functions to use to instantiate the passes and run them. The type
+    *   The list of Pass construction functions to use to instantiate the passes and run them. The
+    *   type
     * @param log
     *   The log to which messages are logged
     * @return
@@ -731,17 +755,23 @@ object Pass {
   }
 
   /** Run the Resolution Pass */
-  def runResolution(input: PassInput, outputs: PassesOutput)(using PlatformContext): ResolutionOutput = {
+  def runResolution(input: PassInput, outputs: PassesOutput)(using
+    PlatformContext
+  ): ResolutionOutput = {
     runPass[ResolutionOutput](input, outputs, ResolutionPass(input, outputs))
   }
 
   /** Run the Validation pass */
-  def runValidation(input: PassInput, outputs: PassesOutput)(using PlatformContext): ValidationOutput = {
+  def runValidation(input: PassInput, outputs: PassesOutput)(using
+    PlatformContext
+  ): ValidationOutput = {
     runPass[ValidationOutput](input, outputs, ValidationPass(input, outputs))
   }
 
   /** Run an arbitrary pass */
-  def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass)(using PlatformContext): OUT = {
+  def runPass[OUT <: PassOutput](input: PassInput, outputs: PassesOutput, pass: Pass)(using
+    PlatformContext
+  ): OUT = {
     val output: OUT = Pass.runOnePass(input.root, pass).asInstanceOf[OUT]
     outputs.outputIs(pass.name, output)
     output

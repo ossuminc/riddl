@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl
-import com.ossuminc.riddl.language.AST.{Root, Token}
+import com.ossuminc.riddl.language.AST.{Branch, Root, Token}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.*
@@ -87,7 +87,7 @@ object Riddl {
   end parseAndValidatePath
 
   /** Convert a previously parsed Root back into plain text */
-  def toRiddlText(root: PassRoot)(using pc: PlatformContext): String =
+  def toRiddlText(root: Branch[?])(using pc: PlatformContext): String =
     val input: PassInput = PassInput(root)
     val outputs: PassesOutput = PassesOutput()
     val result = Pass.runPass[PrettifyOutput](
@@ -100,7 +100,7 @@ object Riddl {
 
   /** Convert a previously parsed Root to Tokens and corresponding string text */
   def mapTextAndToken[T](
-    root: PassRoot
+    root: Branch[?]
   )(f: (IndexedSeqView[Char],Token) => T)
   (using pc: PlatformContext): Either[Messages, List[T]] =
     val text = toRiddlText(root)
