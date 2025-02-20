@@ -8,8 +8,10 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
-import com.ossuminc.riddl.utils.{PlatformContext,URL}
+import com.ossuminc.riddl.utils.{PlatformContext, URL}
+import org.scalatest.matchers.must.Matchers.must
 import org.scalatest.{TestData, fixture}
+import sourcecode.Text.generate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -129,11 +131,32 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
           actual mustBe LiteralString((1, 1, rpi), input.data.drop(1).dropRight(1))
       }
     }
+    "attachments parse correctly" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """context foo {
+          | ???
+          |} with {
+          |  attachment infile is text/plain in file "nada.txt"
+          |  attachment inline is text/plain as "nada"
+          |}""".stripMargin,
+        td
+      )
+      parseDefinition[Context](input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          fail(msg)
+        case Right((context: Context, _)) =>
+          context.stringAttachments.size must be(1)
+          context.stringAttachments.head.value.s must be("nada")
+          context.fileAttachments.size must be(1)
+          context.fileAttachments.head.inFile.s must be("nada.txt")
+      }
+    }
   }
   "NoWhiteSpaceParsers" should {
     "handle a URL" in { (td: TestData) =>
-      val input = RiddlParserInput("https://www.wordnik.com/words/phi",td)
-      parse[URL,URL](input, StringParser("").httpUrl(_), identity) match {
+      val input = RiddlParserInput("https://www.wordnik.com/words/phi", td)
+      parse[URL, URL](input, StringParser("").httpUrl(_), identity) match {
         case Left(errors) =>
           fail(errors.format)
         case Right((actual, _)) =>

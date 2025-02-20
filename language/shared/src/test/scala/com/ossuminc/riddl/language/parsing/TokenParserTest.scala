@@ -781,7 +781,7 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
     val result: Either[Messages, List[String]] =
       pc.withOptions(pc.options.copy(showTimes = true)) { _ =>
         Timer.time("parseToTokensAndText") {
-          TopLevelParser.mapTextAndToken[String](rpi)( (x,y) => mapTokens(x,y))
+          TopLevelParser.mapTextAndToken[String](rpi)((x, y) => mapTokens(x, y))
         }
       }
     result match
@@ -789,9 +789,8 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
         fail(messages.format)
       case Right(list) =>
         list.length must be(404)
-        list.head mustBe("Keyword(context)")
-        list(1) mustBe("Identifier(full)")
-        print(list.mkString("\n"))
+        list.head mustBe ("Keyword(context)")
+        list(1) mustBe ("Identifier(full)")
     end match
   }
 }

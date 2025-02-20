@@ -2,6 +2,7 @@ context other  is {
   ???
 } with {
   by author Reid
+  attachment foo is text/plain as "nada"
 }
 context context is {
   adaptor adaptor from context other is { ??? }

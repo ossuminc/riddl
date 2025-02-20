@@ -7,11 +7,12 @@
 package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.AST.Contents.unapply
+import com.ossuminc.riddl.language.AST.{WithContexts, WithDomains, WithModules}
 import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
-import scala.collection.{mutable, immutable}
+import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.{ClassTag, classTag}
 import scala.annotation.{tailrec, targetName, unused}
@@ -369,14 +370,15 @@ object AST:
     override def format: String = url.toExternalForm
   end URLDescription
 
+  sealed trait Attachment extends Meta with WithIdentifier
+
   /** */
   case class FileAttachment(
     loc: At,
     id: Identifier,
     mimeType: String,
     inFile: LiteralString
-  ) extends Meta
-      with WithIdentifier:
+  ) extends Attachment:
     def format: String = identify
   end FileAttachment
 
@@ -386,16 +388,14 @@ object AST:
     id: Identifier,
     mimeType: String,
     value: LiteralString
-  ) extends Meta
-      with WithIdentifier:
+  ) extends Attachment:
     def format: String = identify
   end StringAttachment
 
   case class ULIDAttachment(
     loc: At,
     ulid: ULID
-  ) extends Meta
-      with WithIdentifier:
+  ) extends Attachment:
     override def id: Identifier = Identifier(At.empty, "ULID")
     def format: String = identify
   end ULIDAttachment
@@ -532,6 +532,10 @@ object AST:
     /** A lazily constructed mutable [[Seq]] of [[AuthorRef]] */
     def terms: Seq[Term] = metadata.filter[Term]
 
+    def stringAttachments: Seq[StringAttachment] = metadata.filter[StringAttachment]
+
+    def fileAttachments: Seq[FileAttachment] = metadata.filter[FileAttachment]
+
     /** Return the [[OptionValue]]s in the meta data */
     def options: Seq[OptionValue] = metadata.filter[OptionValue]
 
@@ -541,9 +545,10 @@ object AST:
     /** Get the value of `name`'d option, if there is one. */
     def getOptionValue(name: String): Option[OptionValue] = options.find(_.name == name)
 
-    /** Get the ULID associated with the definition. There can only be one and they are
-     * assigned when this method is called, spreading their definition across the access
-     * patterns, on purpose. */
+    /** Get the ULID associated with the definition. There can only be one and they are assigned
+      * when this method is called, spreading their definition across the access patterns, on
+      * purpose.
+      */
     lazy val ulid: ULID =
       metadata.find("ULID") match
         case Some(ulid: ULIDAttachment) => ulid.ulid
@@ -1096,7 +1101,25 @@ object AST:
   case class Nebula(
     loc: At,
     contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
-  ) extends Branch[NebulaContents]:
+  ) extends Branch[NebulaContents]
+      with WithAdaptors[NebulaContents]
+      with WithAuthors[NebulaContents]
+      with WithComments[NebulaContents]
+      with WithConstants[NebulaContents]
+      with WithContexts[NebulaContents]
+      with WithDomains[NebulaContents]
+      with WithEntities[NebulaContents]
+      with WithEpics[NebulaContents]
+      with WithFunctions[NebulaContents]
+      with WithInvariants[NebulaContents]
+      with WithModules[NebulaContents]
+      with WithProjectors[NebulaContents]
+      with WithRepositories[NebulaContents]
+      with WithSagas[NebulaContents]
+      with WithStreamlets[NebulaContents]
+      with WithTypes[NebulaContents]
+      with WithUsers[NebulaContents]:
+
     override def isRootContainer: Boolean = false
 
     override def id: Identifier = Identifier(loc, "Nebula")
@@ -1168,7 +1191,8 @@ object AST:
     loc: At,
     id: Identifier,
     definition: Seq[LiteralString]
-  ) extends Meta with WithIdentifier :
+  ) extends Meta
+      with WithIdentifier:
     def format: String = s"${Keyword.term} ${id.format}"
   end Term
 

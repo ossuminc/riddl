@@ -13,6 +13,7 @@ import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import wvlet.airframe.ulid.ULID
 
+import java.lang.Character.isLowerCase
 import java.net.URI
 import java.nio.file.Files
 import scala.reflect.{ClassTag, classTag}
@@ -176,27 +177,27 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   }
 
+  private def mimeTypeChars(in: Char): Boolean =
+    isLowerCase(in) | in == '.' || in == '-' || in == '*'
+  end mimeTypeChars
+
   def mimeType[u: P]: P[String] = {
     P(
       ("application" | "audio" | "example" | "font" |
         "image" | "model" | "text" | "video") ~~ "/" ~~
-        CharIn("a-z", ".*", "\\-").rep(1)
+        CharsWhile(mimeTypeChars)
     ).!
   }
 
-  private def fileAttachment[u: P]: P[FileAttachment] = {
+  private def attachment[u: P]: P[Attachment] =
     P(
-      Index ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ in ~ Keywords.file ~ literalString ~ Index
-    ).map { case (off1, id, mimeType, fileName, off2) =>
-      FileAttachment(at(off1, off2), id, mimeType, fileName)
-    }
-  }
-
-  private def stringAttachment[u: P]: P[StringAttachment] =
-    P(
-      Index ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~ as ~ literalString ~ Index
-    ).map { case (off1, id, mimeType, value, off2) =>
-      StringAttachment(at(off1, off2), id, mimeType, value)
+      Index ~ Keywords.attachment ~ identifier ~ is ~ mimeType ~
+        ((in.! ~ Keywords.file ~ literalString) | (as.! ~ literalString)) ~ Index
+    ).map {
+      case (off1, id, mimeType, ("in", fileName), off2) =>
+        FileAttachment(at(off1, off2), id, mimeType, fileName)
+      case (off1, id, mimeType, ("as", value), off2) =>
+        StringAttachment(at(off1, off2), id, mimeType, value)
     }
 
   private def ulidAttachment[u: P]: P[ULIDAttachment] =
@@ -224,10 +225,9 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
 
   private def metaData[u: P]: P[MetaData] =
     P(
-      briefDescription | description | term | option | authorRef | fileAttachment |
-        stringAttachment | ulidAttachment | comment
-    )
-      .asInstanceOf[P[MetaData]]
+      briefDescription | description | term | option | authorRef | attachment |
+        ulidAttachment | comment
+    ).asInstanceOf[P[MetaData]]
 
   def withMetaData[u: P]: P[Seq[MetaData]] = {
     P(

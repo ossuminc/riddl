@@ -12,33 +12,37 @@ import com.ossuminc.riddl.language.parsing.Keywords.keyword
 
 trait Readability {
 
-  def and[u: P]: P[Unit] = keyword("and")
+  def readable[u: P](key: String): P[Unit] = {
+    P(key)
+  }
 
-  def are[u: P]: P[Unit] = keyword("are")
+  def and[u: P]: P[Unit] = readable("and")
 
-  def as[u: P]: P[Unit] = keyword("as")
+  def are[u: P]: P[Unit] = readable("are")
 
-  def at[u: P]: P[Unit] = keyword("at")
+  def as[u: P]: P[Unit] = readable("as")
 
-  def by[u: P]: P[Unit] = keyword("by")
+  def at[u: P]: P[Unit] = readable("at")
 
-  def `for`[u: P]: P[Unit] = keyword("for")
+  def by[u: P]: P[Unit] = readable("by")
 
-  def from[u: P]: P[Unit] = keyword("from")
+  def `for`[u: P]: P[Unit] = readable("for")
 
-  def in[u: P]: P[Unit] = keyword("in")
+  def from[u: P]: P[Unit] = readable("from")
 
-  def of[u: P]: P[Unit] = keyword("of")
+  def in[u: P]: P[Unit] = readable("in")
 
-  def so[u: P]: P[Unit] = keyword("so")
+  def of[u: P]: P[Unit] = readable("of")
 
-  def that[u: P]: P[Unit] = keyword("that")
+  def so[u: P]: P[Unit] = readable("so")
 
-  def to[u: P]: P[Unit] = keyword("to")
+  def that[u: P]: P[Unit] = readable("that")
 
-  def wants[u: P]: P[Unit] = keyword("wants")
+  def to[u: P]: P[Unit] = readable("to")
 
-  def `with`[u: P]: P[Unit] = keyword("with")
+  def wants[u: P]: P[Unit] = readable("wants")
+
+  def `with`[u: P]: P[Unit] = readable("with")
 
   def anyReadability[u: P]: P[Unit] = {
     P(
