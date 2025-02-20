@@ -33,10 +33,10 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     P(Punctuation.curlyClose)
   }
 
-  def is[u: P]: P[Unit] = Keywords.keywords( StringIn("is", "are", ":", "=") ).?
+  def is[u: P]: P[Unit] = Keywords.keywords(StringIn("is", "are", ":", "=")).?
 
   def byAs[u: P]: P[Unit] = Keywords.keywords(StringIn("by", "as"))
-  
+
   def author[u: P]: P[Author] =
     P(
       Index ~ Keywords.author ~/ identifier ~ is ~ open ~
@@ -71,7 +71,7 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   }
 
   def literalStrings[u: P]: P[Seq[LiteralString]] = { P(literalString.rep(1)) }
-  
+
   def markdownLines[u: P]: P[Seq[LiteralString]] = {
     P(markdownLine.rep(1))
   }
@@ -79,8 +79,9 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   def maybe[u: P](keyword: String): P[Unit] = P(keyword).?
 
   private def briefDescription[u: P]: P[BriefDescription] = {
-    P(Index ~ Keywords.briefly ~ byAs.? ~ literalString ~~ Index).map { case (off1, brief: LiteralString, off2) =>
-      BriefDescription(at(off1, off2), brief)
+    P(Index ~ Keywords.briefly ~ byAs.? ~ literalString ~~ Index).map {
+      case (off1, brief: LiteralString, off2) =>
+        BriefDescription(at(off1, off2), brief)
     }
   }
 
@@ -155,7 +156,9 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   }
 
   def identifier[u: P]: P[Identifier] = {
-    P(Index ~ anyIdentifier ~~ Index).map { case (off1, value, off2) => Identifier(at(off1, off2), value) }
+    P(Index ~ anyIdentifier ~~ Index).map { case (off1, value, off2) =>
+      Identifier(at(off1, off2), value)
+    }
   }
 
   def pathIdentifier[u: P]: P[PathIdentifier] = {
@@ -176,7 +179,8 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   def mimeType[u: P]: P[String] = {
     P(
       ("application" | "audio" | "example" | "font" |
-        "image" | "model" | "text" | "video") ~~ "/" ~~ CharIn("a-z\\-.+").rep(1)
+        "image" | "model" | "text" | "video") ~~ "/" ~~
+        CharIn("a-z", ".*", "\\-").rep(1)
     ).!
   }
 
@@ -203,7 +207,7 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
       ULIDAttachment(at(start, end), ulid)
     }
   end ulidAttachment
-  
+
   def option[u: P]: P[OptionValue] =
     P(
       Index ~ Keywords.option ~/ is.? ~ CharsWhile(ch =>
@@ -219,8 +223,10 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   end option
 
   private def metaData[u: P]: P[MetaData] =
-    P(briefDescription | description | term | option | authorRef | fileAttachment | 
-      stringAttachment | ulidAttachment | comment)
+    P(
+      briefDescription | description | term | option | authorRef | fileAttachment |
+        stringAttachment | ulidAttachment | comment
+    )
       .asInstanceOf[P[MetaData]]
 
   def withMetaData[u: P]: P[Seq[MetaData]] = {
@@ -235,8 +241,9 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
   }
 
   def include[u: P, CT <: RiddlValue](parser: P[?] => P[Seq[CT]]): P[Include[CT]] = {
-    P(Index ~ Keywords.include ~ literalString ~~ Index)./.map { case (off1, str: LiteralString, off2) =>
-      doIncludeParsing[CT](at(off1, off2), str.s, parser)
+    P(Index ~ Keywords.include ~ literalString ~~ Index)./.map {
+      case (off1, str: LiteralString, off2) =>
+        doIncludeParsing[CT](at(off1, off2), str.s, parser)
     }
   }
 
