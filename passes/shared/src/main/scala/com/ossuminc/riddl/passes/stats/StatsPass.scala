@@ -31,7 +31,8 @@ object StatsPass extends PassInfo[PassOptions] {
   * @param descriptionLines
   *   The number of lines of documentation between the description and brief fields
   * @param numSpecifications
-  *   The number of kinds of specifications that can be completed from the node's specifications method
+  *   The number of kinds of specifications that can be completed from the node's specifications
+  *   method
   * @param numCompleted
   *   The number of specifications that hve been completed
   * @param numContained
@@ -127,14 +128,16 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     definition.contents.vitals
       .map { (vd: Definition) =>
         vd match {
-          case a: Adaptor     => handlerStatements(a.handlers)
-          case c: Context     => handlerStatements(c.handlers)
-          case e: Entity      => handlerStatements(e.handlers)
-          case p: Projector   => handlerStatements(p.handlers)
-          case r: Repository  => handlerStatements(r.handlers)
-          case s: Streamlet   => handlerStatements(s.handlers)
+          case a: Adaptor    => handlerStatements(a.handlers)
+          case c: Context    => handlerStatements(c.handlers)
+          case e: Entity     => handlerStatements(e.handlers)
+          case p: Projector  => handlerStatements(p.handlers)
+          case r: Repository => handlerStatements(r.handlers)
+          case s: Streamlet  => handlerStatements(s.handlers)
           case s: Saga =>
-            s.sagaSteps.map(step => step.doStatements.size.toLong + step.undoStatements.size).sum[Long]
+            s.sagaSteps
+              .map(step => step.doStatements.size.toLong + step.undoStatements.size)
+              .sum[Long]
           case f: Function   => f.statements.size.toLong
           case _: Epic       => 0L
           case _: Domain     => 0L
@@ -162,20 +165,16 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             isEmpty = definition.isEmpty,
             descriptionLines = {
               var lines: Int = 0
-              definition match
-                case wb: WithMetaData =>
-                  lines = lines + { if wb.brief.nonEmpty then 1 else 0 }
-                  lines = lines + {
-                    wb.descriptions.foldLeft(0) { (sum, next) =>
-                      next match
-                        case BlockDescription(_, lines) => sum + lines.size
-                        case _: URLDescription          => sum + 1
-                        case _: Description             => sum
-                      end match
-                    }
-                  }
-                case _ => ()
-              end match
+              lines = lines + { if definition.brief.nonEmpty then 1 else 0 }
+              lines = lines + {
+                definition.descriptions.foldLeft(0) { (sum, next) =>
+                  next match
+                    case BlockDescription(_, lines) => sum + lines.size
+                    case _: URLDescription          => sum + 1
+                    case _: Description             => sum
+                  end match
+                }
+              }
               lines
             },
             numSpecifications = specs,
@@ -243,7 +242,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     total_stats = Some(totals)
   }
 
-  /** Generate the output of this Pass. This will only be called after all the calls to process have completed.
+  /** Generate the output of this Pass. This will only be called after all the calls to process have
+    * completed.
     *
     * @return
     *   an instance of the output type
@@ -258,7 +258,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     )
   }
 
-  /** Calculates the number of types of specifications that can be added to the vital definition provided.
+  /** Calculates the number of types of specifications that can be added to the vital definition
+    * provided.
     * @param v
     *   The vital definition for whom specifications number is computed
     * @return
@@ -389,7 +390,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             countForProcessor
               + { if p.invariants.nonEmpty then 1 else 0 }
           case _: Repository => countForProcessor
-          case _: Streamlet => countForProcessor + 1 // shape required
+          case _: Streamlet  => countForProcessor + 1 // shape required
         }
       case d: Domain =>
         definitionCount(d)

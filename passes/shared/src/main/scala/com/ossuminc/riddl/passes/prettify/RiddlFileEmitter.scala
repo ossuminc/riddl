@@ -48,10 +48,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
     definition: Definition
   ): this.type = {
     if definition.nonEmpty then decr.addIndent("}")
-    definition match
-      case wd: WithMetaData => emitMetaData(wd.metadata)
-      case _                => this.nl
-    end match
+    emitMetaData(definition.metadata)
   }
 
   def emitMetaData(meta: Contents[MetaData]): this.type =
@@ -78,7 +75,7 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
       case block: InlineComment =>
         val all = block.lines.mkString(s"$spc/* ", s"$spc  \n", s"$spc*/")
         this.add(all).nl
-      case inline: LineComment    => this.addLine(inline.format)
+      case inline: LineComment => this.addLine(inline.format)
     end match
   end emitComment
 

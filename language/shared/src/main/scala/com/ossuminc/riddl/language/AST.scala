@@ -911,7 +911,7 @@ object AST:
     * @see
     *   [[Branch]] and [[Leaf]]
     */
-  sealed trait Definition extends WithIdentifier:
+  sealed trait Definition extends WithIdentifier with WithMetaData:
     /** Yes anything deriving from here is a definition */
     override def isDefinition: Boolean = true
     override def isParent: Boolean = false
@@ -925,6 +925,7 @@ object AST:
       def format: String = ""
       def loc: At = At.empty
       override def isEmpty: Boolean = true
+      override def metadata: Contents[MetaData] = Contents.empty[MetaData](0)
     }
   end Definition
 
@@ -939,7 +940,7 @@ object AST:
     * do permit a single [[BriefDescription]] value and single [[Description]] value. There are no
     * contents.
     */
-  sealed trait Leaf extends Definition with WithMetaData
+  sealed trait Leaf extends Definition
 
   type Definitions = Seq[Definition] // TODO: Make this opaque some day
 
@@ -1000,8 +1001,7 @@ object AST:
       extends Branch[CT]
       with WithTypes[CT]
       with WithIncludes[CT]
-      with WithComments[CT]
-      with WithMetaData:
+      with WithComments[CT]:
     final override def isVital: Boolean = true
   end VitalDefinition
 
@@ -1074,6 +1074,8 @@ object AST:
       with WithComments[RootContents]
       with WithIncludes[RootContents]:
 
+    def metadata: Contents[MetaData] = Contents.empty[MetaData](0)
+
     override def isRootContainer: Boolean = true
 
     override def id: Identifier = Identifier(loc, "Root")
@@ -1119,6 +1121,8 @@ object AST:
       with WithStreamlets[NebulaContents]
       with WithTypes[NebulaContents]
       with WithUsers[NebulaContents]:
+
+    def metadata: Contents[MetaData] = Contents.empty[MetaData](0)
 
     override def isRootContainer: Boolean = false
 
@@ -1428,8 +1432,7 @@ object AST:
     id: Identifier,
     enumVal: Option[Long] = None,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Definition
-      with WithMetaData:
+  ) extends Definition:
     override def format: String = id.format + enumVal.map(x => s"($x)").getOrElse("")
   end Enumerator
 
@@ -2196,8 +2199,7 @@ object AST:
     id: Identifier,
     typEx: TypeExpression,
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Branch[TypeContents]
-      with WithMetaData:
+  ) extends Branch[TypeContents]:
     def contents: Contents[TypeContents] = {
       val type_contents: Seq[TypeContents] =
         typEx match
@@ -2745,7 +2747,7 @@ object AST:
 
   /** A sealed trait for the kinds of OnClause that can occur within a Handler definition.
     */
-  sealed trait OnClause extends Branch[Statements] with WithStatements[Statements] with WithMetaData
+  sealed trait OnClause extends Branch[Statements] with WithStatements[Statements]
 
   /** Defines the actions to be taken when a message does not match any of the OnMessageClauses.
     * OnOtherClause corresponds to the "other" case of an [[Handler]].
@@ -2854,8 +2856,7 @@ object AST:
     id: Identifier,
     contents: Contents[HandlerContents] = Contents.empty[HandlerContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Branch[HandlerContents]
-      with WithMetaData {
+  ) extends Branch[HandlerContents] {
     override def isEmpty: Boolean = clauses.isEmpty
 
     def clauses: Seq[OnClause] = contents.filter[OnClause]
@@ -3756,8 +3757,7 @@ object AST:
     userStory: UserStory,
     contents: Contents[UseCaseContents] = Contents.empty[UseCaseContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Branch[UseCaseContents]
-      with WithMetaData {
+  ) extends Branch[UseCaseContents] {
     override def kind: String = "UseCase"
     override def format: String = s"case ${id.format}"
   }
@@ -3865,8 +3865,7 @@ object AST:
   ) extends Branch[OccursInGroup]
       with WithShownBy[OccursInGroup]
       with WithInputs[OccursInGroup]
-      with WithOutputs[OccursInGroup]
-      with WithMetaData:
+      with WithOutputs[OccursInGroup]:
     override def identify: String = s"$alias ${id.value}"
 
     /** Format the node to a string */
@@ -3929,8 +3928,7 @@ object AST:
     contents: Contents[OccursInOutput] = Contents.empty[OccursInOutput](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[OccursInOutput]
-      with WithOutputs[OccursInOutput]
-      with WithMetaData:
+      with WithOutputs[OccursInOutput]:
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 
@@ -3972,8 +3970,7 @@ object AST:
     contents: Contents[OccursInInput] = Contents.empty[OccursInInput](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends Branch[OccursInInput]
-      with WithInputs[OccursInInput]
-      with WithMetaData:
+      with WithInputs[OccursInInput]:
     override def kind: String = if nounAlias.nonEmpty then nounAlias else super.kind
     override def identify: String = s"$verbAlias ${id.value}"
 
@@ -4066,11 +4063,11 @@ object AST:
     */
   @JSExport
   def findAuthors(
-    definition: WithMetaData,
+    definition: Definition,
     parents: Contents[RiddlValue]
   ): Seq[AuthorRef] =
     val result = definition.authorRefs
-    if result.isEmpty then parents.filter[WithMetaData].flatMap(_.authorRefs)
+    if result.isEmpty then parents.filter[Definition].flatMap(_.authorRefs)
     else result
     end if
   end findAuthors
