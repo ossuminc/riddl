@@ -75,8 +75,6 @@ case class ReferenceMap(messages: Messages.Accumulator) {
       case None => Option.empty[T]
       case Some((_, definition)) =>
         val klass = classTag[T].runtimeClass
-        println(s"klass=${klass.getSimpleName}")
-        println(s"definition.getClass=${definition.getClass.getSimpleName}")
         if definition.getClass == klass then Some(definition.asInstanceOf[T]) else Option.empty[T]
   }
 

@@ -11,6 +11,7 @@ import com.ossuminc.riddl.utils.{ec, pc}
 class JVMApplicationParsingTest extends ApplicationParsingTest
 class JVMCommonParserTest extends CommonParserTest
 class JVMHandlerTest extends HandlerTest
+class JVMMetaDataTest extends MetaDataTest
 class JVMModuleTest extends ModuleTest
 class JVMNebulaTest extends NebulaTest
 class JVMParsingTestTest extends ParsingTestTest

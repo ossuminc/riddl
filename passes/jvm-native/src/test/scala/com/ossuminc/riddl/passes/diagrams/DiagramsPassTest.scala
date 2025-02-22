@@ -4,17 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.passes
+package com.ossuminc.riddl.passes.diagrams
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.diagrams.*
-import com.ossuminc.riddl.utils.{PlatformContext, URL}
-import com.ossuminc.riddl.utils.{ec, pc, Await}
+import com.ossuminc.riddl.passes.{Pass, PassesResult}
+import com.ossuminc.riddl.utils.{Await, PlatformContext, URL, ec, pc}
+import org.scalatest.TestData
 
 import scala.concurrent.duration.DurationInt
-import org.scalatest.TestData
 
 class DiagramsPassTest extends SharedDiagramsPassTest {
   "generate diagrams output" in { (td: TestData) =>

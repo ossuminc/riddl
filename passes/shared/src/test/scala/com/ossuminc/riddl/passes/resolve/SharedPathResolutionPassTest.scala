@@ -36,7 +36,8 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
         val pid: Type = domains.head.types.head
         val parent = domains.head
         val resolution = outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
-        resolution.refMap.definitionOf[Type](pid.typEx.asInstanceOf[AliasedTypeExpression].pathId, parent) match {
+        resolution.refMap
+          .definitionOf[Type](pid.typEx.asInstanceOf[AliasedTypeExpression].pathId, parent) match {
           case Some(definition) =>
             definition must be(target)
           case None =>
@@ -307,7 +308,8 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
     "resolve simple path through an include" in { _ =>
       import com.ossuminc.riddl.utils.URL
       val eL = At.empty
-      val root = Root(At(),
+      val root = Root(
+        At(),
         contents = Contents(
           Domain(
             eL,
@@ -456,6 +458,30 @@ abstract class SharedPathResolutionPassTest(using pc: PlatformContext) extends S
           case _ =>
             fail("contained group not found")
       }()
+    }
+    "resolve author from authorref" in { (td: TestData) =>
+      val rpi = RiddlParserInput(
+        """domain foo {
+          |  author Reid is { name: "Reid Spencer", email: "info@ossuminc.com" }
+          |  context app {
+          |    ???
+          |  } with {
+          |    by author foo.Reid
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndResolve(rpi) { (pi: PassInput, po: PassesOutput) =>
+        val app: Context = pi.root.contents.filter[Domain].head.contexts.head
+        val au: AuthorRef = app.authorRefs.head
+        po.refMap.definitionOf[Author](au.pathId) match
+          case Some(author: Author) =>
+            author.id.value must be("Reid")
+            author.name.s must be("Reid Spencer")
+          case _ =>
+            fail("authorRef not resolved")
+      }
     }
   }
 }

@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.testkit
+package com.ossuminc.riddl.passes.resolve
 
-import com.ossuminc.riddl.utils.{pc, ec}
-import com.ossuminc.riddl.passes.resolve.ResolvingTest
 import com.ossuminc.riddl.passes.resolve.SharedPathResolutionPassTest
+import com.ossuminc.riddl.utils.pc
 
 class JVMPathResolutionPassTest extends SharedPathResolutionPassTest

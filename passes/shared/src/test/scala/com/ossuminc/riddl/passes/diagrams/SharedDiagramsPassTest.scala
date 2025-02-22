@@ -4,14 +4,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.passes
+package com.ossuminc.riddl.passes.diagrams
 
 import com.ossuminc.riddl.language.AST.{Domain, Identifier, Root}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.passes.diagrams.{ContextDiagramData, DiagramsPass, DiagramsPassOutput}
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
-import com.ossuminc.riddl.utils.{Await,PlatformContext, URL}
+import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
+import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 import org.scalatest.TestData
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec

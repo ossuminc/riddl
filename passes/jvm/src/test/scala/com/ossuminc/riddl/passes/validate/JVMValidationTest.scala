@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package com.ossuminc.riddl.testkit
+package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.passes.validate.SharedValidationTest
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.pc
 
 class JVMValidationTest extends SharedValidationTest

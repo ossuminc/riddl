@@ -11,6 +11,7 @@ import com.ossuminc.riddl.utils.{pc, ec}
 class JSApplicationParsingTest extends ApplicationParsingTest
 class JSCommonParserTest extends CommonParserTest
 class JSHandlerTest extends HandlerTest
+class JSMetaDataTest extends MetaDataTest
 class JSModuleTest extends ModuleTest
 class JSNebulaTest extends NebulaTest
 class JSParsingTestTest extends ParsingTestTest
