@@ -116,14 +116,14 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
   end emitAuthorRef
 
   private def emitStringAttachment(a: StringAttachment): this.type =
-    addIndent(a.identify).add(s" is \"${a.mimeType}\" as \"${a.value}\"")
+    addIndent("attachment " + a.id.format).add(s" is \"${a.mimeType}\" as ${a.value.format}")
   end emitStringAttachment
 
   private def emitFileAttachment(a: FileAttachment): this.type =
-    addIndent(a.identify).add(s" is \"${a.mimeType} in file \"${a.inFile}\"")
+    addIndent("attachment " + a.id.format).add(s" is \"${a.mimeType}\" in file ${a.inFile.format}")
 
-  private def emitULIDAttachment(ulid: ULIDAttachment): this.type =
-    addIndent(ulid.identify)
+  private def emitULIDAttachment(a: ULIDAttachment): this.type =
+    addIndent("attachment " + a.id.format).add(s" is \"${a.ulid.toString}\"")
 
   def emitString(s: String_): this.type = {
     (s.min, s.max) match {

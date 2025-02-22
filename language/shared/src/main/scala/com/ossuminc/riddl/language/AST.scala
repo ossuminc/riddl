@@ -252,6 +252,8 @@ object AST:
   case class LiteralString(loc: At, s: String) extends RiddlValue:
     override def format = s"\"$s\""
 
+    override def toString: String = format
+
     /** Only empty if the string is empty too */
     override def isEmpty: Boolean = s.isEmpty
   end LiteralString

@@ -31,30 +31,34 @@ object ResolutionPass extends PassInfo[PassOptions] {
   }
 }
 
-/** The Reference Resolution Pass. This pass traverses the entire model and resolves every reference it finds into the
-  * `refmap` in its output. See [[ReferenceMap]] for details. This resolution must be done before validation to make
-  * sure there are no cycles in the references. While it is at it, it also tracks which definition uses which other
-  * definition. See [[Usages]] for details. It also keeps a `kindMap`. See [[KindMap]] for details.
+/** The Reference Resolution Pass. This pass traverses the entire model and resolves every reference
+  * it finds into the `refmap` in its output. See [[ReferenceMap]] for details. This resolution must
+  * be done before validation to make sure there are no cycles in the references. While it is at it,
+  * it also tracks which definition uses which other definition. See [[Usages]] for details. It also
+  * keeps a `kindMap`. See [[KindMap]] for details.
   *
-  * Reference Resolution is the process of turning a [[com.ossuminc.riddl.language.AST.PathIdentifier]] into the
+  * Reference Resolution is the process of turning a
+  * [[com.ossuminc.riddl.language.AST.PathIdentifier]] into the
   * [[com.ossuminc.riddl.language.AST.Definition]] that is referenced by the
-  * [[com.ossuminc.riddl.language.AST.PathIdentifier]]. There are several ways to resolve a reference:
+  * [[com.ossuminc.riddl.language.AST.PathIdentifier]]. There are several ways to resolve a
+  * reference:
   *
   *   1. If its already in the [[ReferenceMap]] then use that resolution
-  *   1. A single identifier in the path is looked up in the symbol table and if it uniquely matches only one definition
-  *      then that definition is the resolved definition.
-  *   1. If there are multiple identifiers in the [[com.ossuminc.riddl.language.AST.PathIdentifier]] then we attempt to
-  *      anchor the search using the first identifier. Anchoring is done by (a) checking to see if it is the "Root" node
-  *      in which case that is the anchor, (b) checking to see if the first identifier is the name of one of the parent
-  *      nodes from the location of the reference, and finally (c) looking up the first identifier in the symbol table
-  *      and if it is unique then using that as the anchor. Once the anchor is determined, it is simply a matter of
-  *      walking down tree of nodes from the anchor, one name at a time.
+  *   1. A single identifier in the path is looked up in the symbol table and if it uniquely matches
+  *      only one definition then that definition is the resolved definition.
+  *   1. If there are multiple identifiers in the [[com.ossuminc.riddl.language.AST.PathIdentifier]]
+  *      then we attempt to anchor the search using the first identifier. Anchoring is done by (a)
+  *      checking to see if it is the "Root" node in which case that is the anchor, (b) checking to
+  *      see if the first identifier is the name of one of the parent nodes from the location of the
+  *      reference, and finally (c) looking up the first identifier in the symbol table and if it is
+  *      unique then using that as the anchor. Once the anchor is determined, it is simply a matter
+  *      of walking down tree of nodes from the anchor, one name at a time.
   *
   * @param input
   *   The input to the original pass.
   * @param outputs
-  *   THe outputs from preceding passes, which should only be the [[com.ossuminc.riddl.passes.symbols.SymbolsPass]]
-  *   output.
+  *   THe outputs from preceding passes, which should only be the
+  *   [[com.ossuminc.riddl.passes.symbols.SymbolsPass]] output.
   */
 case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: PlatformContext)
     extends Pass(input, outputs)
@@ -85,6 +89,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           p +: parentsStack.toParents
         case _ => parentsStack.toParents
       end match
+    // Resolve the AuthorRefs in metadata of definitions
+    value match {
+      case d: Definition => resolveAuthorRefs(d, parents)
+      case _             => ()
+    }
+
     value match
       case av: AggregateValue => // Field, Method
         val resolution = resolveTypeExpression(av, av.typeEx, parents)
@@ -96,10 +106,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case statement: Statement =>
         resolveStatement(statement, parents)
       case _: OnInitializationClause => ()
-      case _: OnTerminationClause => ()
-      case _: OnOtherClause       => ()
+      case _: OnTerminationClause    => ()
+      case _: OnOtherClause          => ()
       case e: Entity =>
-        resolveAuthorRefs(e, parents)
         addEntity(e)
       case s: State =>
         associateUsage(s, resolveATypeRef(s.typ, parents))
@@ -117,29 +126,21 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage(c, resolveTypeExpression(c, c.typeEx, parents))
       case a: Adaptor =>
         associateUsage(a, resolveARef[Context | Group](a.referent, parents))
-        resolveAuthorRefs(a, parents)
       case s: Streamlet =>
-        resolveAuthorRefs(s, parents)
       case p: Projector =>
-        resolveAuthorRefs(p, parents)
         p.repositories.foreach { ref => associateUsage(p, resolveARef[Repository](ref, parents)) }
       case r: Repository =>
-        resolveAuthorRefs(r, parents)
-      case s: Saga =>
-        resolveAuthorRefs(s, parents)
+      case s: Saga       =>
       case r: Relationship =>
         resolveARef[Processor[?]](r.withProcessor, parents)
-      case m: Module =>
-        resolveAuthorRefs(m, parents)
-      case n: Nebula => ()
-      case d: Domain =>
-        resolveAuthorRefs(d, parents)
+      case m: Module  =>
+      case n: Nebula  => ()
+      case d: Domain  =>
       case c: Context =>
-        resolveAuthorRefs(c, parents)
-      case e: Epic =>
-        resolveAuthorRefs(e, parents)
+      case e: Epic    =>
       case uc: UseCase =>
-        if uc.userStory.nonEmpty then associateUsage[User](uc, resolveARef(uc.userStory.user, parents))
+        if uc.userStory.nonEmpty then
+          associateUsage[User](uc, resolveARef(uc.userStory.user, parents))
         val interactions = uc.contents.filter[Interaction]
         if interactions.nonEmpty then resolveInteractions(uc, interactions, parents)
       case in: Input =>
@@ -154,13 +155,15 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage(cg, resolveARef[Group](cg.group, parents))
       case _: NonReferencableDefinitions => () // These can't be referenced
       case _: NonDefinitionValues        => () // Neither can these values
-      case _: Definition => () // abstract definition, can't be referenced
+      case _: Definition                 => () // abstract definition, can't be referenced
       // case _ => () // NOTE: Never have this catchall! Want compile time errors!
     end match
   end process
 
-  private def resolveAuthorRefs(definition: Branch[?] & WithMetaData, parents: Parents): Unit =
-    definition.authorRefs.foreach { item => associateUsage(definition, resolveARef[Author](item, parents)) }
+  private def resolveAuthorRefs(definition: Definition, parents: Parents): Unit =
+    definition.authorRefs.foreach { item =>
+      associateUsage(definition, resolveARef[Author](item, parents))
+    }
   end resolveAuthorRefs
 
   private def resolveFunction(f: Function, parents: Parents): Unit = {
@@ -237,9 +240,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage[Group](parents.head, resolveARef[Group](group, parents))
       case ForEachStatement(_, ref, _) =>
         ref match {
-          case ir: InletRef  => associateUsage[Inlet](parents.head, resolveAPathId[Inlet](ir.pathId, parents))
-          case or: OutletRef => associateUsage[Outlet](parents.head, resolveAPathId[Outlet](or.pathId, parents))
-          case fr: FieldRef  => associateUsage[Type](parents.head, resolveAPathId[Type](fr.pathId, parents))
+          case ir: InletRef =>
+            associateUsage[Inlet](parents.head, resolveAPathId[Inlet](ir.pathId, parents))
+          case or: OutletRef =>
+            associateUsage[Outlet](parents.head, resolveAPathId[Outlet](or.pathId, parents))
+          case fr: FieldRef =>
+            associateUsage[Type](parents.head, resolveAPathId[Type](fr.pathId, parents))
         }
       case SendStatement(_, msg, portlet) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
@@ -380,8 +386,10 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private case class AnchorNotFoundInParents(topName: String) extends AnchorCase
   private case class AnchorNotFoundAnywhere(topName: String) extends AnchorCase
   private case class AnchorIsAmbiguous(topName: String, list: List[SymTabItem]) extends AnchorCase
-  private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Parents) extends AnchorCase
-  private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Parents) extends AnchorCase
+  private case class AnchorFoundInSymTab(anchor: Definition, anchor_parents: Parents)
+      extends AnchorCase
+  private case class AnchorFoundInParents(anchor: Definition, anchor_parents: Parents)
+      extends AnchorCase
   private case class AnchorIsRoot(anchor: Definition, anchor_parents: Parents) extends AnchorCase
 
   private def findAnchorInParents(
@@ -439,13 +447,22 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               case anfis: AnchorNotFoundInSymTab => anfis
               case aia: AnchorIsAmbiguous        => aia
               case anfis: AnchorCase =>
-                messages.addSevere(pathId.loc, s"Invalid result from findAnchorInSymTab($topName, $parents): $anfis")
+                messages.addSevere(
+                  pathId.loc,
+                  s"Invalid result from findAnchorInSymTab($topName, $parents): $anfis"
+                )
                 anfis
           case anfis: AnchorCase =>
-            messages.addSevere(pathId.loc, s"Invalid result from findAnchorInParents($topName, $parents): $anfis")
+            messages.addSevere(
+              pathId.loc,
+              s"Invalid result from findAnchorInParents($topName, $parents): $anfis"
+            )
             anfis
       case None =>
-        messages.addSevere(pathId.loc, "PathId is empty; this should already be checked in resolveAPathId")
+        messages.addSevere(
+          pathId.loc,
+          "PathId is empty; this should already be checked in resolveAPathId"
+        )
         AnchorNotFoundAnywhere("<unknown>")
   }
 
@@ -457,7 +474,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   ): Resolution[T] = {
     val stack = DefinitionStack.empty
     val parents_to_add = anchor_parents.reverse
-    if anchor_parents.nonEmpty && anchor_parents.last.isRootContainer then stack.pushAll(parents_to_add.drop(1))
+    if anchor_parents.nonEmpty && anchor_parents.last.isRootContainer then
+      stack.pushAll(parents_to_add.drop(1))
     else stack.pushAll(parents_to_add)
     stack.push(anchor)
     val pathIdStart = pathId.value.drop(1) // we already resolved the anchor
@@ -518,9 +536,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   }
 
   private def resolved[T <: Definition: ClassTag](
-                                                   pathId: PathIdentifier,
-                                                   pidDirectParent: Branch[?],
-                                                   definition: Definition
+    pathId: PathIdentifier,
+    pidDirectParent: Branch[?],
+    definition: Definition
   ): T =
     // A candidate was found, and it has the same type as expected
     val t = definition.asInstanceOf[T]
@@ -548,7 +566,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       s" in ${container.identify}, but ${article(referTo)} was expected"
     messages.addError(pathId.loc, message)
     if io.options.debug then
-      println(s"WrongType: ${pathId.format} ==> ${foundDef.identifyWithLoc} not ${article(referTo)}")
+      println(
+        s"WrongType: ${pathId.format} ==> ${foundDef.identifyWithLoc} not ${article(referTo)}"
+      )
     end if
 
   end wrongType
@@ -633,7 +653,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             case outlet: Outlet =>
               candidatesFromPathIdentifier[Type](outlet.type_.pathId, defStack)
             case include: Include[?] =>
-              candidatesFromContents(include.contents.definitions.toContents).asInstanceOf[Definitions]
+              candidatesFromContents(include.contents.definitions.toContents)
+                .asInstanceOf[Definitions]
             case function: Function =>
               function.input.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
                 function.output.map(_.contents.filter[Field]).asInstanceOf[Definitions] ++
@@ -641,8 +662,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             case vital: VitalDefinition[?] =>
               vital.contents.toSeq.flatMap {
                 case include: Include[RiddlValue] @unchecked => include.contents.definitions
-                case value: Definition                          => Seq(value)
-                case _                                          => Seq.empty[Definition]
+                case value: Definition                       => Seq(value)
+                case _                                       => Seq.empty[Definition]
               }
             case p: Branch[?] =>
               p.contents.definitions
@@ -688,16 +709,27 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     resolution: Resolution[Type]
   ): Resolution[Type] =
     typ.typEx match
-      case typEx: AggregateUseCaseTypeExpression if typEx.usecase == useCase => resolution // success
-      case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(useCase)) => resolution // success
+      case typEx: AggregateUseCaseTypeExpression if typEx.usecase == useCase =>
+        resolution // success
+      case typeEx: Alternation if typeEx.of.forall(_.isAggregateOf(useCase)) =>
+        resolution // success
       case typeEx: Alternation =>
-        messages.addError(typ.loc, s"All alternates of `${typeEx.format}` must be $useCase aggregates")
+        messages.addError(
+          typ.loc,
+          s"All alternates of `${typeEx.format}` must be $useCase aggregates"
+        )
         None
       case typEx: AggregateUseCaseTypeExpression =>
-        messages.addError(typ.loc, s"Type expression `${typEx.format}` is not compatible with keyword `$useCase`")
+        messages.addError(
+          typ.loc,
+          s"Type expression `${typEx.format}` is not compatible with keyword `$useCase`"
+        )
         None
       case typEx: TypeExpression =>
-        messages.addError(typ.loc, s"Type expression `${typEx.format}` needs to be an aggregate for `$useCase`")
+        messages.addError(
+          typ.loc,
+          s"Type expression `${typEx.format}` needs to be an aggregate for `$useCase`"
+        )
         None
     end match
   end handleTypeResolution
@@ -712,11 +744,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case Some((typ: Type, _: Parents)) =>
         keyword match
           case Keyword.type_ | "" => resolution // this is generic, any type so just pass the result
-          case Keyword.command    => handleTypeResolution(typ, AggregateUseCase.CommandCase, resolution)
-          case Keyword.query      => handleTypeResolution(typ, AggregateUseCase.QueryCase, resolution)
-          case Keyword.event      => handleTypeResolution(typ, AggregateUseCase.EventCase, resolution)
-          case Keyword.result     => handleTypeResolution(typ, AggregateUseCase.ResultCase, resolution)
-          case Keyword.record     => handleTypeResolution(typ, AggregateUseCase.RecordCase, resolution)
+          case Keyword.command =>
+            handleTypeResolution(typ, AggregateUseCase.CommandCase, resolution)
+          case Keyword.query  => handleTypeResolution(typ, AggregateUseCase.QueryCase, resolution)
+          case Keyword.event  => handleTypeResolution(typ, AggregateUseCase.EventCase, resolution)
+          case Keyword.result => handleTypeResolution(typ, AggregateUseCase.ResultCase, resolution)
+          case Keyword.record => handleTypeResolution(typ, AggregateUseCase.RecordCase, resolution)
           case Keyword.graph =>
             typ.typEx match
               case _: Graph => resolution // success
@@ -807,7 +840,11 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                   resolvePathFromAnchor[T](pathId, parents, anchor, anchor_parents)
                 case AnchorIsAmbiguous(_, list) =>
                   // The anchor is ambiguous so generate that message
-                  ambiguous[T](pathId, list, Some("The top node in the Path Id is the ambiguous one"))
+                  ambiguous[T](
+                    pathId,
+                    list,
+                    Some("The top node in the Path Id is the ambiguous one")
+                  )
                   None
               end match
         end match
@@ -830,7 +867,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         // pick the one that is the right type or the first one
         list.find(_._1.getClass == expectedClass) match {
           case Some((definition, parents)) => definition +: parents
-          case None                  => list.take(1).map(_._1)
+          case None                        => list.take(1).map(_._1)
         }
       case _ =>
         val ambiguity = list
