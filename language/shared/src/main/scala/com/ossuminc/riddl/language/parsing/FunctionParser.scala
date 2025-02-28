@@ -19,23 +19,25 @@ private[parsing] trait FunctionParser {
   }
 
   def funcInput[u: P]: P[Aggregation] = {
-    P(Keywords.requires ~ Punctuation.colon.? ~ aggregation)./
+    P(Keywords.requires ~ aggregation)./
   }
 
   def funcOutput[u: P]: P[Aggregation] = {
-    P(Keywords.returns ~ Punctuation.colon.? ~ aggregation)./
+    P(Keywords.returns ~ aggregation)./
   }
 
   private def functionDefinitions[u: P]: P[Seq[FunctionContents]] = {
     P(
       undefined(Seq.empty[FunctionContents]) | (
-        vitalDefinitionContents | function | functionInclude | statement(StatementsSet.FunctionStatements)
+        vitalDefinitionContents | function | functionInclude | statement(
+          StatementsSet.FunctionStatements
+        )
       ).asInstanceOf[P[FunctionContents]]./.rep(0)
     )
   }
 
   private type BodyType = (Option[Aggregation], Option[Aggregation], Seq[FunctionContents])
-  
+
   private def functionBody[u: P]: P[BodyType] =
     P(funcInput.? ~ funcOutput.? ~ functionDefinitions)
 
@@ -54,7 +56,7 @@ private[parsing] trait FunctionParser {
       Index ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~ close ~ withMetaData ~/ Index
     )./.map { case (start, id, (ins, outs, contents), descriptives, end) =>
       checkForDuplicateIncludes(contents)
-      Function(at(start,end), id, ins, outs, contents.toContents, descriptives.toContents)
+      Function(at(start, end), id, ins, outs, contents.toContents, descriptives.toContents)
     }
   }
 }
