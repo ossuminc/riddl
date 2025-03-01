@@ -8,9 +8,6 @@ passes/input/check/saga/saga.riddl(12:5->16):
  Entity 'blah' should have a description:
      entity blah is {
 passes/input/check/saga/saga.riddl(12:5->16):
- Entity 'blah' should have an author reference:
-     entity blah is {
-passes/input/check/saga/saga.riddl(12:5->16):
  Metadata in Entity 'blah' should not be empty:
      entity blah is {
 passes/input/check/saga/saga.riddl(13:26->34):
@@ -25,42 +22,18 @@ passes/input/check/saga/saga.riddl(13:7->20):
 passes/input/check/saga/saga.riddl(13:7->20):
  Sink 'trashCan' should have a description:
        sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(13:7->20):
- Sink 'trashCan' should have an author reference:
-       sink trashCan is { inlet in is command Something }
-passes/input/check/saga/saga.riddl(15:5->14):
- Saga 'name' should have an author reference:
-     saga name is {
-passes/input/check/saga/saga.riddl(18:7->15):
- SagaStep 'One' should have an author reference:
-       step One is {
-passes/input/check/saga/saga.riddl(1:1->15):
- Domain 'ignore1' should have an author reference:
- domain ignore1 is {
-passes/input/check/saga/saga.riddl(25:7->15):
- SagaStep 'Two' should have an author reference:
-       step Two is {
-passes/input/check/saga/saga.riddl(2:3->18):
- Context 'ignore2' should have an author reference:
-   context ignore2 is {
 passes/input/check/saga/saga.riddl(4:5->23):
  Command 'UndoSomething' is unused:
      type UndoSomething = command { ??? }
 passes/input/check/saga/saga.riddl(5:5->26):
- Function 'AnotherThing' in Context 'ignore2' should have content:
-     function AnotherThing {
-passes/input/check/saga/saga.riddl(5:5->26):
  Function 'AnotherThing' is unused:
      function AnotherThing {
-passes/input/check/saga/saga.riddl(5:5->26):
- Function 'AnotherThing' should have an author reference:
-     function AnotherThing {
-passes/input/check/saga/saga.riddl(8:5->30):
- Function 'UndoAnotherThing' in Context 'ignore2' should have content:
-     function UndoAnotherThing {
 passes/input/check/saga/saga.riddl(8:5->30):
  Function 'UndoAnotherThing' is unused:
      function UndoAnotherThing {
+passes/input/check/saga/saga.riddl(5:5->26):
+ Function 'AnotherThing' in Context 'ignore2' should have statements:
+     function AnotherThing {
 passes/input/check/saga/saga.riddl(8:5->30):
- Function 'UndoAnotherThing' should have an author reference:
+ Function 'UndoAnotherThing' in Context 'ignore2' should have statements:
      function UndoAnotherThing {

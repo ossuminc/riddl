@@ -19,7 +19,7 @@ domain Example is {
   context OtherContext is {
     entity OtherEntity is {
       record OtherState is {
-        foo: Examplexxxx.Foo
+        baz: Examplexxxx.Foo
       }
     }
   }

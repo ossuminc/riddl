@@ -324,8 +324,10 @@ abstract class DepthFirstPass(
   * methods:
   *   - openContainer at the start of container's processing
   *   - processLeaf for any leaf nodes within the container
-  *     - processValue for any non-definitions within the container
+  *   - processValue for any non-definitions within the container
   *   - closeContainer after all the container's contents have been processed
+  *   - openInclude for encountering an include statement
+  *   - closeInclude for completing the included content
   *
   * This kind of Pass allows the processing to follow the AST hierarchy so that container nodes can
   * run before all their content (openContainer) and also after all its content (closeContainer).
@@ -672,13 +674,14 @@ abstract class CollectingPass[ET](input: PassInput, outputs: PassesOutput)(using
   override def result(root: PassRoot): CollectingPassOutput[ET]
 }
 
+/** A companion for Passes to provide entry points and other utilities of general interest */
 object Pass {
 
   /** A PassCreators of the standard passes that should be run on every AST pass. These generate the
     * symbol table, resolve path references, and validate the input. Only after these three have
     * passed successful should the model be considered processable by other passes
     */
-  def standardPasses(using PlatformContext): Seq[PassCreator] =
+  def standardPasses(using PlatformContext): PassCreators =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
   /** A PassesCreate of the passes that extract information but don't do much real work. These

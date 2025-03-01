@@ -32,16 +32,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
   protected val streamlets: mutable.ListBuffer[Streamlet] = mutable.ListBuffer.empty
   protected val connectors: mutable.ListBuffer[Connector] = mutable.ListBuffer.empty
 
-  private def checkStreamingUsage(root: PassRoot): Unit = {
-    if inlets.isEmpty && outlets.isEmpty && streamlets.isEmpty then {
-      messages.add(
-        Messages.usage(
-          "Models without any streaming data will exhibit minimal effect",
-          root.loc.atEnd
-        )
-      )
-    }
-  }
+  private def checkStreamingUsage(root: PassRoot): Unit = ()
 
   private def checkConnectorPersistence(): Unit = {
     connectors.filterNot(_.isEmpty).foreach { connector =>

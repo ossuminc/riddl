@@ -61,7 +61,7 @@ context full is {
   adaptor fromAPlant to context APlant is {
     handler adaptCommands is {
       on command ACommand {
-        send command DoAThing to outlet APlant.Source.Commands
+        send command DoAThing to outlet APlant.Source.OutCommands
       }
     }
   }

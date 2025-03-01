@@ -2,9 +2,6 @@ passes/input/check/everything/everything.riddl(16:3->15):
  Context 'full' should have a description:
    context full is {
 passes/input/check/everything/everything.riddl(16:3->15):
- Context 'full' should have an author reference:
-   context full is {
-passes/input/check/everything/everything.riddl(16:3->15):
  Metadata in Context 'full' should not be empty:
    context full is {
 passes/input/check/everything/everything.riddl(18:5->13):
@@ -18,9 +15,6 @@ passes/input/check/everything/everything.riddl(19:5->13):
      type num is Number             // Define num as a Number
 passes/input/check/everything/everything.riddl(1:1->18):
  Domain 'Everything' should have a description:
- domain Everything is {
-passes/input/check/everything/everything.riddl(1:1->18):
- Domain 'Everything' should have an author reference:
  domain Everything is {
 passes/input/check/everything/everything.riddl(1:1->18):
  Metadata in Domain 'Everything' should not be empty:
@@ -97,9 +91,6 @@ passes/input/check/everything/everything.riddl(42:5->21):
 passes/input/check/everything/everything.riddl(42:5->21):
  Entity 'Something' should have a description:
      entity Something is {
-passes/input/check/everything/everything.riddl(42:5->21):
- Entity 'Something' should have an author reference:
-     entity Something is {
 passes/input/check/everything/everything.riddl(44:7->25):
  Type 'somethingDate' is unused:
        type somethingDate is Date
@@ -112,12 +103,6 @@ passes/input/check/everything/everything.riddl(48:7->22):
 passes/input/check/everything/everything.riddl(48:7->22):
  State 'someState' should have a description:
        state someState of type Everything.StateType
-passes/input/check/everything/everything.riddl(48:7->22):
- State 'someState' should have an author reference:
-       state someState of type Everything.StateType
-passes/input/check/everything/everything.riddl(50:7->37):
- Function 'whenUnderTheInfluence' in Entity 'Something' should have content:
-       function whenUnderTheInfluence is {
 passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
@@ -125,22 +110,13 @@ passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' should have a description:
        function whenUnderTheInfluence is {
 passes/input/check/everything/everything.riddl(50:7->37):
- Function 'whenUnderTheInfluence' should have an author reference:
-       function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(50:7->37):
  Metadata in Function 'whenUnderTheInfluence' should not be empty:
        function whenUnderTheInfluence is {
-passes/input/check/everything/everything.riddl(57:9->28):
- Processing for commands should result in sending an event:
-         on command ACommand {
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' is unused:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' should have a description:
-     entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(66:5->26):
- Entity 'SomeOtherThing' should have an author reference:
      entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(66:5->26):
  Metadata in Entity 'SomeOtherThing' should not be empty:
@@ -154,27 +130,14 @@ passes/input/check/everything/everything.riddl(67:7->20):
 passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' should have a description:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
-passes/input/check/everything/everything.riddl(67:7->20):
- Sink 'trashBin' should have an author reference:
-       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(69:7->28):
  Metadata in State 'otherThingState' should not be empty:
        state otherThingState of type Everything.StateType
 passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' should have a description:
        state otherThingState of type Everything.StateType
-passes/input/check/everything/everything.riddl(69:7->28):
- State 'otherThingState' should have an author reference:
-       state otherThingState of type Everything.StateType
-passes/input/check/everything/everything.riddl(6:3->17):
- Context 'APlant' should have an author reference:
-   context APlant is {
-passes/input/check/everything/everything.riddl(7:5->18):
- Source 'Source' should have an author reference:
+passes/input/check/everything/everything.riddl(7:24->39):
+ Outlet 'Commands' is overloaded with 2 kinds:
+   Outlet 'Commands' at passes/input/check/everything/everything.riddl(7:24->52),
+   Inlet 'Commands' at passes/input/check/everything/everything.riddl(8:20->47):
      source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
-passes/input/check/everything/everything.riddl(8:20->34):
- Inlet 'Commands' overloads Outlet 'Commands' at passes/input/check/everything/everything.riddl(7:24->52):
-     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
-passes/input/check/everything/everything.riddl(8:5->14):
- Sink 'Sink' should have an author reference:
-     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }

@@ -15,17 +15,17 @@ domain dokn is {
        "^[a-zA-Z0-9_+&*-] + (?:\\.[a-zA-Z0-9_+&*-] + )*@(?:[a-zA-Z0-9-]+\\.) + [a-zA-Z]{2,7}"
     )
     type LoadingMethod = any of { dock, tailgate, forklift, none }
-    type CompanyId = Id(dokn.Company.Company)
+    type CompanyId = Id(dokn.Companies.Company)
     type DriverId = MobileNumber
-    type NoteId = Id(dokn.Note.Note)
-    type MediaId is Id(dokn.Media.Media)
-    type LocationId is Id(dokn.Location.Location)
-    type NoteList is reference to entity dokn.Note.Note
+    type NoteId = Id(dokn.Notes.Note)
+    type MediaId is Id(dokn.Media.Medium)
+    type LocationId is Id(dokn.Locations.Location)
+    type NoteList is reference to entity dokn.Notes.Note
 
-    context Company is {
+    context Companies is {
         flow events is {
-          inlet CompanyEvents_in is event dokn.Company.Company.CompanyEvent
-          outlet CompanyEvents_out is event dokn.Company.Company.CompanyEvent
+          inlet CompanyEvents_in is event dokn.Companies.Company.CompanyEvent
+          outlet CompanyEvents_out is event dokn.Companies.Company.CompanyEvent
         }
         connector CompanyEvents is {
           from outlet CompanyEvents_out to inlet CompanyEvents_in
@@ -61,7 +61,7 @@ domain dokn is {
         }
     }
 
-    context Driver is {
+    context Drivers is {
         flow DriverMessages is {
           inlet Driver_in is type DriverCommands
           outlet Driver_out is type DriverEvents
@@ -103,7 +103,7 @@ domain dokn is {
         }
     }
 
-    context Note is {
+    context Notes is {
         entity Note is {
             record fields is {
               noteId: NoteId,
@@ -122,20 +122,20 @@ domain dokn is {
     }
 
     context Media is {
-        entity Media is {
+        entity Medium is {
             record fields is {
               mediaId: MediaId,
               path: String,
               companyId: CompanyId
             }
-            state MediaBase of Media.fields
+            state MediaBase of Medium.fields
             handler MediaBaseHandler is { ??? }
         } with {
             option consistent
         }
     }
 
-    context Location is {
+    context Locations is {
         entity Location is {
 
             type AddDeliveryLocation is command  {

@@ -200,7 +200,7 @@ object AST:
         d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name
       )
 
-    /** Find the first element of the [[Contents]] that */
+    /** Find the first element of the [[Contents]] that have identifiers */
     def identifiedValues: Seq[WithIdentifier] =
       container
         .filter(d => d.isInstanceOf[WithIdentifier])

@@ -76,7 +76,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
     }
     "allow functions" in { (td: TestData) =>
       val input =
-        """function bar is {
+        """function fun is {
           |  requires { i: Integer }
           |  returns { o: Integer }
           |  ???
@@ -89,7 +89,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
         context.functions.size mustBe 1
         val expected = Function(
           (2, 2, rpi),
-          Identifier((2, 11, rpi), "bar"),
+          Identifier((2, 11, rpi), "fun"),
           input = Some(
             Aggregation(
               (3, 12, rpi),
@@ -119,20 +119,20 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
       }
     }
     "allow entities" in { (td: TestData) =>
-      val input = """entity bar is { ??? }
+      val input = """entity ent is { ??? }
                     |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         val errors = msgs.justErrors
         // info(errors.format)
         errors must be(empty)
-        val expected = Entity((2, 2, rpi), Identifier((2, 9, rpi), "bar"))
+        val expected = Entity((2, 2, rpi), Identifier((2, 9, rpi), "ent"))
         context.entities.size mustBe 1
         context.entities.head mustBe expected
       }
 
     }
     "allow processors" in { (td: TestData) =>
-      val input = """source foo is { ??? }
+      val input = """source src is { ??? }
                     |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
         val errors = msgs.justErrors
@@ -140,7 +140,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
         errors must be(empty)
         val expected = Streamlet(
           (2, 2, rpi),
-          Identifier((2, 9, rpi), "foo"),
+          Identifier((2, 9, rpi), "src"),
           Source((2, 2, rpi))
         )
         context.streamlets.size mustBe 1
@@ -149,9 +149,9 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
     }
     "allow projectors" in { (td: TestData) =>
       val input =
-        """projector foo is {
+        """projector prj is {
           |  record one is { ??? }
-          |  handler one is { ??? }
+          |  handler two is { ??? }
           |}
           |""".stripMargin
       parseAndValidateContext(input) { case (context: Context, rpi, msgs: Messages) =>
@@ -163,7 +163,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
         val expected =
           Projector(
             At(rpi, 34, 104),
-            Identifier(At(rpi, 44, 48), "foo"),
+            Identifier(At(rpi, 44, 48), "prj"),
             Contents(
               Type(
                 At(rpi, 55, 79),
@@ -176,7 +176,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
               ),
               Handler(
                 At(rpi, 79, 102),
-                Identifier(At(rpi, 87, 91), "one"),
+                Identifier(At(rpi, 87, 91), "two"),
                 Contents.empty()
               )
             )
