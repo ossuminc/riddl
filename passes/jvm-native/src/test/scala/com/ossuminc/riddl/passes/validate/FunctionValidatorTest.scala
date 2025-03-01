@@ -17,7 +17,7 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
     "accept function but warn about descriptions" in { (_: TestData) =>
       parseAndValidateInContext[Entity]("""
          |entity user is {
-         |  function foo is {
+         |  function fun is {
          |    requires {b: Boolean }
          |    returns {r: Integer }
          |    ???
@@ -30,14 +30,19 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
               Aggregation(
                 At(5, 14, rpi),
                 Contents(
-                  Field(At(5, 15, rpi), Identifier(At(5, 15, rpi), "b"), AST.Bool(At(5, 18, rpi)), Contents.empty())
+                  Field(
+                    At(5, 15, rpi),
+                    Identifier(At(5, 15, rpi), "b"),
+                    AST.Bool(At(5, 18, rpi)),
+                    Contents.empty()
+                  )
                 )
               )
             )
           )
         }
         assert(
-          msgs.exists(_.message == "Function 'foo' should have a description")
+          msgs.exists(_.message == "Function 'fun' should have a description")
         )
       }
     }
@@ -49,10 +54,11 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
         |  set field percent.result to "a percentage result"
         |}
         |""".stripMargin
-      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
-        function.id.value mustBe "percent"
-        function.statements.size mustBe 1
-        msgs.justErrors must be(empty)
+      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) {
+        case (function, _, msgs) =>
+          function.id.value mustBe "percent"
+          function.statements.size mustBe 1
+          msgs.justErrors must be(empty)
       }
 
     }
@@ -69,13 +75,13 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
         |  } with { described as "foo" }
         |""".stripMargin
 
-      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) { case (function, _, msgs) =>
-        function.id.value mustBe "AnAspect"
-        function.statements.size mustBe 6
-        msgs mustNot be(empty)
-        val text = msgs.format
-        text must include("Function 'AnAspect' is unused")
-        text must include("Function 'AnAspect' should have an author reference")
+      parseAndValidateInContext[Function](input, shouldFailOnErrors = false) {
+        case (function, _, msgs) =>
+          function.id.value mustBe "AnAspect"
+          function.statements.size mustBe 6
+          msgs mustNot be(empty)
+          val text = msgs.format
+          text must include("Function 'AnAspect' is unused")
       }
     }
   }

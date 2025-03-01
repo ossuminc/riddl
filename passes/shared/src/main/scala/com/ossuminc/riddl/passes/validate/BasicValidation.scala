@@ -185,7 +185,7 @@ trait BasicValidation(using pc: PlatformContext) {
       this.checkSequence(defs) { defList =>
         val map = defList.groupBy(_.kind)
         if map.size > 1 then
-          val tailStr: String = defList.tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
+          val tailStr: String = defList.map(d => d.identifyWithLoc).mkString(s",\n  ")
           messages.addError(
             defList.head.errorLoc,
             s"${defList.head.identify} is overloaded with ${map.size} kinds:\n  $tailStr"
@@ -202,7 +202,15 @@ trait BasicValidation(using pc: PlatformContext) {
               val types = typeDefs.map(type_ => errorDescription(type_.typEx))
               val locations = typeDefs.map(_.loc.format)
               reportNonDistinctTypes(types, locations, defList)
-            case x: String =>
+            case name: String if name == "Domain" || name == "Context" =>
+              val definitions = map.head._2
+              val typeLoc = definitions
+                .map { defn => s"${defn.identify} at ${defn.loc.format}" }
+                .mkString(",\n  ")
+              val message = defList.head.identify + " is overloaded with " +
+                definitions.size.toString + s" distinct $name definitions:\n  " + typeLoc
+              messages.addError(defList.head.errorLoc, message)
+            case _ => ()
           }
         end if
       }

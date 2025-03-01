@@ -1,12 +1,3 @@
-passes/input/check/domain/simpleDomain.riddl(12:1->13:1):
- Models without any streaming data will exhibit minimal effect:
- }
-passes/input/check/domain/simpleDomain.riddl(1:1->11):
- Domain 'foo' should have an author reference:
- domain foo is {
-passes/input/check/domain/simpleDomain.riddl(2:3->14):
- Author 'Nada' should have an author reference:
-   author Nada is {
 passes/input/check/domain/simpleDomain.riddl(7:5->8:3):
  Term 'Fum''s definition is too short. It must be at least 10 characters':
      term Fum is "Phi-Pho"

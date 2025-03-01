@@ -1,12 +1,12 @@
 domain ReactiveBBQ is {
 
-  type CustomerId is Id(ReactiveBBQ.Customer.Customer) with {
+  type CustomerId is Id(ReactiveBBQ.Customers.Customer) with {
     described as {
       "Unique identifier for a customer"
     }
   }
 
-  type OrderId is Id(ReactiveBBQ.Order.Order) with {
+  type OrderId is Id(ReactiveBBQ.Orders.Order) with {
     described as {
       |# brief
       |Unique identifier for a customer's order
@@ -17,7 +17,7 @@ domain ReactiveBBQ is {
 
   type Empty = Nothing
 
-  context Customer is {
+  context Customers is {
     entity Customer is {
       state main of ReactiveBBQ.Empty
       handler Input is { ??? }
@@ -90,12 +90,12 @@ domain ReactiveBBQ is {
       handler Inputs is { ??? }
     }
 
-    adaptor PaymentAdapter from context ReactiveBBQ.Payment is {
+    adaptor PaymentAdapter from context ReactiveBBQ.Payments is {
       ???
     }
   }
 
-  context Order is {
+  context Orders is {
     entity Order is {
       record Fields is {
         orderId is OrderId,
@@ -108,7 +108,7 @@ domain ReactiveBBQ is {
     }
   }
 
-  context Payment is {
+  context Payments is {
     entity Payment is {
       record Fields is {
         orderId is OrderId,
@@ -122,7 +122,7 @@ domain ReactiveBBQ is {
     }
   }
 
-  context Menu is {
+  context Menus is {
     entity MenuItem is {
       record Fields is { something: String }
       state MenuState of MenuItem.Fields
@@ -138,7 +138,7 @@ domain ReactiveBBQ is {
     }
   }
 
-  context Reservation is {
+  context Reservations is {
     type ReservationValue is {
       partyName is String,
       phoneNumber is String,

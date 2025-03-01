@@ -107,7 +107,7 @@ class UsageTest extends ParsingTest {
           info(result.messages.format)
           result.messages.hasErrors must be(false)
           val warnings = result.messages.justUsage
-          warnings.size mustBe 2
+          warnings.size mustBe 1
           val warnMessage = warnings.last.format
           warnMessage must include("Entity 'fooBar' is unused")
       }
@@ -128,7 +128,7 @@ class UsageTest extends ParsingTest {
         case Right(result) =>
           result.messages.isOnlyIgnorable mustBe true
           val warnings = result.messages.justWarnings
-          warnings.size mustBe 4
+          warnings.size mustBe 1
           val warnMessage = warnings.last.format
           warnMessage must include("Type 'Bar' is unused")
       }

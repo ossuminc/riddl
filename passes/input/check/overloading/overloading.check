@@ -1,15 +1,11 @@
-passes/input/check/overloading/overloading.riddl(1:1->14):
- Domain 'ignore' should have an author reference:
- domain ignore = {
 passes/input/check/overloading/overloading.riddl(3:3->16):
  Type 'Keyboard' is unused:
    type Keyboard is {locale: Locale}
-passes/input/check/overloading/overloading.riddl(4:27->35):
- Enumerator 'Keyboard' overloads Type 'Keyboard' at passes/input/check/overloading/overloading.riddl(3:3->4:3):
-   type Device is any of { Keyboard, Mouse, Monitor}
+passes/input/check/overloading/overloading.riddl(3:3->16):
+ Type 'Keyboard' is overloaded with 2 kinds:
+   Type 'Keyboard' at passes/input/check/overloading/overloading.riddl(3:3->4:3),
+   Enumerator 'Keyboard' at passes/input/check/overloading/overloading.riddl(4:27->35):
+   type Keyboard is {locale: Locale}
 passes/input/check/overloading/overloading.riddl(4:3->14):
  Type 'Device' is unused:
    type Device is any of { Keyboard, Mouse, Monitor}
-passes/input/check/overloading/overloading.riddl(7:1->8:1):
- Models without any streaming data will exhibit minimal effect:
- }

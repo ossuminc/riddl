@@ -13,8 +13,8 @@ domain ignore1 is {
       sink trashCan is { inlet in is command Something }
      }
     saga name is {
-      requires: { p1: String, p2: String }
-      returns: {s: String }
+      requires { p1: String, p2: String }
+      returns {s: String }
       step One is {
         send command Something to inlet blah.trashCan.in
       } reverted by {

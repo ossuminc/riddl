@@ -131,7 +131,7 @@ class AuthorTest extends AbstractValidatingTest {
           |    name: "Reid Spencer"
           |    email: "reid@ossum.biz"
           |  }
-          |  context Bar  is {
+          |  context Bars  is {
           |    entity Bar is { ??? } with { by author Reid  }
           |  } with {
           |    by author Reid

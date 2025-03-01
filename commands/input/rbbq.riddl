@@ -15,7 +15,7 @@ domain ReactiveBBQ is {
 
   type Empty = Nothing
 
-  context Customer is {
+  context Customers is {
     entity Customer is {
       state main of ReactiveBBQ.Empty
       handler input is { ??? }
