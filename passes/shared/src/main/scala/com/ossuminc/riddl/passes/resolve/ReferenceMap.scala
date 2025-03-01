@@ -70,7 +70,6 @@ case class ReferenceMap(messages: Messages.Accumulator) {
 
   def definitionOf[T <: Definition: ClassTag](pathId: String): Option[T] = {
     val potentials = map.find(key => key._1.path == pathId)
-    println(potentials.map(_._1.path))
     potentials match
       case None => Option.empty[T]
       case Some((_, definition)) =>

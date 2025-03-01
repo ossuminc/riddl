@@ -1,5 +1,5 @@
 context Whatever is {
-  record Identity is { name: String, id: UUID, age: Integer }
+  record Identity is { name: String, uuid: UUID, age: Integer }
   group AcquireIdentity is {
     form GetIdentity takes record Whatever.Identity
   }

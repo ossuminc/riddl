@@ -63,6 +63,7 @@ class ReportedIssuesTest extends JVMAbstractValidatingTest {
         case Left(messages) =>
           // info(messages.format)
           val errors = messages.justErrors
+          info(errors.format)
           errors.length must be(3)
           val f = errors.map(_.format)
           f contains "Path 'FooExamplexxx.garbage' was not resolved,"

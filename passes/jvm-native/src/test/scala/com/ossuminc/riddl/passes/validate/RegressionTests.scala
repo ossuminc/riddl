@@ -160,12 +160,12 @@ class RegressionTests extends AbstractValidatingTest {
       val input = RiddlParserInput(
         """domain Example is {
           |   context ExampleContext is {
-          |     type Info {
+          |     type Information {
           |       name: String
           |     }
           |
           |    command Foo {
-          |     info: ExampleContext.Info
+          |     info: ExampleContext.Information
           |    }
           |
           |    entity ExampleEntity is {
@@ -179,7 +179,7 @@ class RegressionTests extends AbstractValidatingTest {
           |      }
           |
           |      record FooExampleState is {
-          |        info: String,
+          |        stateInfo: String,
           |        name: String
           |      }
           |      state FooExample of FooExampleState

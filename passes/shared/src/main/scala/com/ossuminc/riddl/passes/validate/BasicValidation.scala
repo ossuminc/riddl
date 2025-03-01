@@ -176,7 +176,7 @@ trait BasicValidation(using pc: PlatformContext) {
       if distinct.size > 1 then
         val message = defList.head.identify + " is overloaded with " +
           distinct.size.toString + " distinct field types:\n  " + typeLoc
-        messages.addError(defList.head.errorLoc, message)
+        messages.addWarning(defList.head.loc, message)
       end if
 
     end reportNonDistinctTypes
