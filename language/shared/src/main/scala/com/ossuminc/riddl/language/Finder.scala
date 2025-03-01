@@ -49,6 +49,31 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
     result.asInstanceOf[Seq[T]]
   end findByType
 
+  def recursiveFindByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
+    import scala.reflect.classTag
+    val lookingFor = classTag[T].runtimeClass
+    def consider(list: Seq[T], child: RiddlValue): Seq[T] =
+      val nested = {
+        child match
+          case c: Container[?] =>
+            c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
+          case IfThenElseStatement(_, _, thens, elses) =>
+            val r1 = thens.foldLeft(list) { case (next, child) => consider(next, child) }
+            elses.foldLeft(r1) { case (next, child) => consider(next, child) }
+          case ForEachStatement(_, _, do_) =>
+            do_.foldLeft(list) { case (next, child) => consider(next, child) }
+          case SagaStep(_, _, dos, undos, _) =>
+            val r2 = dos.foldLeft(list) { case (next, child) => consider(next, child) }
+            undos.foldLeft(r2) { case (next, child) => consider(next, child) }
+          case _ => list
+        end match
+      }
+      if lookingFor.isAssignableFrom(child.getClass) then nested :+ child.asInstanceOf[T]
+      else nested
+    end consider
+    root.contents.foldLeft(Seq.empty) { case (list, child) => consider(list, child) }
+  end recursiveFindByType
+
   /** The return value for the [[Finder.findWithParents()]] function */
   type DefWithParents[T <: RiddlValue] = Seq[(T, Parents)]
 

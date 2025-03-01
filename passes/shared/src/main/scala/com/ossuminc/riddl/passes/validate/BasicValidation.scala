@@ -6,10 +6,10 @@
 
 package com.ossuminc.riddl.passes.validate
 
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.passes.resolve.ResolutionOutput
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.utils.PlatformContext
@@ -127,15 +127,13 @@ trait BasicValidation(using pc: PlatformContext) {
               case te: TypeExpression =>
                 messages.addError(
                   ref.pathId.loc,
-                  s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${AST
-                      .errorDescription(te)} type " + s"instead"
+                  s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${errorDescription(te)} type " + s"instead"
                 )
             }
           case _ =>
             messages.addError(
               ref.pathId.loc,
-              s"${ref.identify} was expected to be one of these types; ${
-                kinds.mkString(",")}, but is ${article(definition.kind)} instead"
+              s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead"
             )
         }
       }
@@ -165,20 +163,48 @@ trait BasicValidation(using pc: PlatformContext) {
   }
 
   def checkOverloads(): this.type = {
+    def reportNonDistinctTypes(
+      typeNames: Seq[String],
+      locations: Seq[String],
+      defList: Seq[Definition]
+    ): Unit =
+      val distinct = typeNames.distinct
+      val typeLoc = typeNames
+        .zip(locations)
+        .map { (name, loc) => s"$name at $loc" }
+        .mkString(",\n  ")
+      if distinct.size > 1 then
+        val message = defList.head.identify + " is overloaded with " +
+          distinct.size.toString + " distinct field types:\n  " + typeLoc
+        messages.addError(defList.head.errorLoc, message)
+      end if
+
+    end reportNonDistinctTypes
+
     symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
       this.checkSequence(defs) { defList =>
-        defList.toList match {
-          case Nil =>
-            // shouldn't happen
-            messages.addSevere(At.empty, "Empty list from Symbols.foreachOverloadedSymbol")
-          case head :: tail =>
-            tail match
-              case last :: Nil =>
-                messages.addStyle(last.errorLoc, s"${last.identify} overloads ${head.identifyWithLoc}")
-              case _ =>
-                val tailStr: String = tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
-                messages.addStyle(head.errorLoc, s"${head.identify} overloads:\n  $tailStr")
-        }
+        val map = defList.groupBy(_.kind)
+        if map.size > 1 then
+          val tailStr: String = defList.tail.map(d => d.identifyWithLoc).mkString(s",\n  ")
+          messages.addError(
+            defList.head.errorLoc,
+            s"${defList.head.identify} is overloaded with ${map.size} kinds:\n  $tailStr"
+          )
+        else if map.size == 1 then
+          map.head._1 match {
+            case name: String if name == Field.getClass.getSimpleName =>
+              val fields = map.head._2.asInstanceOf[Seq[Field]]
+              val types = fields.map(field => errorDescription(field.typeEx))
+              val locations = fields.map(_.loc.format)
+              reportNonDistinctTypes(types, locations, defList)
+            case name: String if name == Type.getClass.getSimpleName =>
+              val typeDefs = map.head._2.asInstanceOf[Seq[Type]]
+              val types = typeDefs.map(type_ => errorDescription(type_.typEx))
+              val locations = typeDefs.map(_.loc.format)
+              reportNonDistinctTypes(types, locations, defList)
+            case x: String =>
+          }
+        end if
       }
     }
     this
@@ -225,7 +251,8 @@ trait BasicValidation(using pc: PlatformContext) {
   ): this.type = {
     check(
       value.nonEmpty,
-      message = s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
+      message =
+        s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
       kind,
       thing.errorLoc
     )
@@ -262,7 +289,11 @@ trait BasicValidation(using pc: PlatformContext) {
     )
   }
 
-  def checkCrossContextReference(ref: PathIdentifier, definition: Definition, container: Definition): Unit = {
+  def checkCrossContextReference(
+    ref: PathIdentifier,
+    definition: Definition,
+    container: Definition
+  ): Unit = {
     symbols.contextOf(definition) match {
       case Some(definitionContext) =>
         symbols.contextOf(container) match {

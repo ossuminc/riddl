@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.utils.PlatformContext
@@ -90,7 +90,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     checkContents(container, parents)
     checkUniqueContent(container)
   }
-  def checkMetadata(definition: Definition & WithMetaData): Unit =
+  def checkMetadata(definition: Definition): Unit =
     checkMetadata(definition.identify, definition, definition.errorLoc)
 
   def checkMetadata(identity: String, definition: WithMetaData, loc: At): Unit =
@@ -156,6 +156,5 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         case _: Comment          => () // No validation needed
     }
     check(hasDescription, s"$identity should have a description", MissingWarning, loc)
-    check(hasAuthorRef, s"$identity should have an author reference", MissingWarning, loc)
   end checkMetadata
 end DefinitionValidation
