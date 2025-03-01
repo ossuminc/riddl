@@ -183,10 +183,18 @@ trait BasicValidation(using pc: PlatformContext) {
 
     symbols.foreachOverloadedSymbol { (defs: Seq[Seq[Definition]]) =>
       this.checkSequence(defs) { defList =>
-        val map = defList.groupBy(_.kind)
+        val map =
+          defList
+            .filterNot {
+              case g: Group  => true
+              case i: Input  => true
+              case o: Output => true
+              case _         => false
+            }
+            .groupBy(_.kind)
         if map.size > 1 then
           val tailStr: String = defList.map(d => d.identifyWithLoc).mkString(s",\n  ")
-          messages.addError(
+          messages.addWarning(
             defList.head.errorLoc,
             s"${defList.head.identify} is overloaded with ${map.size} kinds:\n  $tailStr"
           )
