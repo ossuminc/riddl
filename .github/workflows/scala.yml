@@ -57,7 +57,7 @@ jobs:
 
     - name: Build And Test JVM Versions
       run: |
-        sbt -v clean cJVM tJVM
+        sbt -v clean cJVM tJVM checkMimaCompatibility 
 
     - name: Build And Test Native Versions
       run: |

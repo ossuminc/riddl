@@ -14,7 +14,7 @@ import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 case class PromptGeneration(passesResult: PassesResult) {
 
   extension (sb: StringBuilder)
-    def description(definition: Definition): StringBuilder =
+    private def description(definition: Definition): StringBuilder =
       sb
         .append("briefly described as \"")
         .append(definition.briefString)
@@ -34,19 +34,19 @@ case class PromptGeneration(passesResult: PassesResult) {
             .append(d.id.format)
             .append(", ")
             .description(d)
-            .append(", ")
+            .append(",\n")
         case c: Context =>
           sb.append(s"In the context of ")
             .append(c.id.format)
             .append(",")
             .description(c)
-            .append(", ")
+            .append(",\n")
         case e: Entity =>
           sb.append(s"For the entity named ")
             .append(e.id.format)
             .append(",")
             .description(e)
-            .append(",")
+            .append(",\n")
         // TODO: Write other cases
         case _: Definition => ()
       end match
