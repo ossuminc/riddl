@@ -28,13 +28,11 @@ class DomainValidatorTest extends AbstractValidatingTest {
           |""".stripMargin
       val rpi = RiddlParserInput(source, td)
       Riddl.parseAndValidate(rpi) match {
-        case Left(errors) => fail(errors.justErrors.format)
+        case Left(errors) => 
+          errors.justErrors.head.message must include(
+            "is overloaded with 2 distinct Domain definitions:")
         case Right(result) =>
-          val theErrors: Messages = result.messages.justErrors
-          theErrors mustBe empty
-          val messages = result.messages.format
-          val notOccur = "Domain 'foo' overloads Domain 'foo' at empty(2:1->3:1)"
-          messages must include(notOccur)
+          fail(s"Expected failure but got success")
       }
     }
 

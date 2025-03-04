@@ -5,9 +5,9 @@ domain Everything is {
 
   context APlant is {
     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
-    sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+    sink Sink is { inlet Events is DoAThing } with { explained as "Data Sink" }
     connector AChannel is {
-      from outlet APlant.Source.Commands to inlet APlant.Sink.Commands
+      from outlet APlant.Source.Commands to inlet APlant.Sink.Events
     } with { explained as "A Channel" }
   } with { explained as "A Plant" }
 
@@ -24,7 +24,7 @@ domain Everything is {
 
     sink Sink is { inlet input is type DoAThing }
 
-    connector foo is {
+    connector con is {
        from outlet Everything.APlant.Source.Commands to inlet full.Sink.input
     }
 

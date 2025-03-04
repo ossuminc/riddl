@@ -55,5 +55,10 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       val config = "src/riddl/dokn/dokn.conf"
       runOnLocalProject(cwd, config, "validate")
     }
+    "validate shopify-cart" in {
+      val cwd = "/Users/reid/Code/ossuminc/riddl-examples"
+      val config = "src/riddl/ShopifyCart/shopify-cart.conf"
+      runOnLocalProject(cwd, config, "validate")
+    }
   }
 }

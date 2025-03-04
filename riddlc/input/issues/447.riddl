@@ -3,12 +3,12 @@ domain example is {
     command CreateTenant { name: String }
     event TenantCreated { name: String, result: String }
   }
-  record Create { name: String }
+  record Creation { name: String }
   user Admin is "fickle"
   context App is {
     page NewTenantPage {
-      input NameEntry acquires record example.Create
-      button Create acquires record example.Create
+      input NameEntry acquires record example.Creation
+      button Create acquires record example.Creation
     }
   }
   epic check_for_wrong_types_to_and_from_vitals {

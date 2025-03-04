@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{Finder, Messages}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.*
@@ -160,24 +160,31 @@ case class ValidationPass(
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
     checkDefinition(parents, omc)
     validateOnClause(omc)
+
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
         case AggregateUseCase.CommandCase =>
-          val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
-          if sends.isEmpty || !sends.contains { (x: SendStatement) =>
-              x.msg.messageKind == AggregateUseCase.EventCase
-            }
-          then
+          val finder = Finder(omc.contents)
+          val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
+          val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
+          val foundSend = sends.nonEmpty &&
+            sends.exists(_.msg.messageKind == AggregateUseCase.EventCase)
+          val foundTell = tells.nonEmpty &&
+            tells.exists(_.msg.messageKind == AggregateUseCase.EventCase)
+          if !(foundSend || foundTell) then
             messages.add(
               missing("Processing for commands should result in sending an event", omc.errorLoc)
             )
         case AggregateUseCase.QueryCase =>
-          val sends: Seq[SendStatement] = omc.contents.filter[SendStatement]
-          if sends.isEmpty || sends.contains((x: SendStatement) =>
-              x.msg.messageKind == AggregateUseCase.ResultCase
-            )
-          then
+          val finder = Finder(omc.contents)
+          val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
+          val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
+          val foundSend = sends.nonEmpty &&
+            sends.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+          val foundTell = tells.nonEmpty &&
+            tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+          if !(foundSend || foundTell) then
             messages.add(
               missing("Processing for queries should result in sending a result", omc.errorLoc)
             )
@@ -471,7 +478,14 @@ case class ValidationPass(
     f: Function,
     parents: Parents
   ): Unit = {
-    checkContainer(parents, f)
+    checkDefinition(parents, f)
+    val parent: Branch[?] = parents.headOption.getOrElse(Root.empty)
+    check(
+      f.contents.filter[Statement].nonEmpty,
+      s"${f.identify} in ${parent.identify} should have statements",
+      MissingWarning,
+      f.errorLoc
+    )
     checkMetadata(f)
   }
 

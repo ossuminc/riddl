@@ -24,12 +24,12 @@ class UsageTest extends ParsingTest {
           |domain D is {
           |  type T is Number
           |  context C is {
-          |    command DoIt is { ref: Id(C.E), f1: C.T }
-          |    type T is D.T
+          |    command DoIt is { ref: Id(C.E), f1: C.DT }
+          |    type DT is D.T
           |    entity E is {
           |      record SFields is {
           |        f2: D.T,
-          |        f3: C.T
+          |        f3: C.DT
           |      }
           |      state S of E.SFields
           |      handler H is {
@@ -63,7 +63,7 @@ class UsageTest extends ParsingTest {
           val DoIt = context.types.find(_.id.value == "DoIt").get
           val ref = DoIt.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
           val f1 = DoIt.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
-          val C_T = context.types.find(_.id.value == "T").get
+          val C_T = context.types.find(_.id.value == "DT").get
           val entityE = context.entities.head
           val SFields = entityE.types.head
           val f2 = SFields.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f2").get
@@ -107,7 +107,7 @@ class UsageTest extends ParsingTest {
           info(result.messages.format)
           result.messages.hasErrors must be(false)
           val warnings = result.messages.justUsage
-          warnings.size mustBe 2
+          warnings.size mustBe 1
           val warnMessage = warnings.last.format
           warnMessage must include("Entity 'fooBar' is unused")
       }
@@ -128,7 +128,7 @@ class UsageTest extends ParsingTest {
         case Right(result) =>
           result.messages.isOnlyIgnorable mustBe true
           val warnings = result.messages.justWarnings
-          warnings.size mustBe 4
+          warnings.size mustBe 1
           val warnMessage = warnings.last.format
           warnMessage must include("Type 'Bar' is unused")
       }

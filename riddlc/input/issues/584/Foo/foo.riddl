@@ -2,8 +2,8 @@ context FooContext is {
   command FooStateChange {???}
 
   entity Foo is {
-      record InitialFooData is { f1: Integer }
-      record FinalFooStateData is {f1: String }
+      record InitialFooData is { fi: Integer }
+      record FinalFooStateData is {fs: String }
       state InitialFooState of Foo.InitialFooData
       handler InitializeFoo is {
          on command FooStateChange {

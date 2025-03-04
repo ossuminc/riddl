@@ -4,9 +4,6 @@ passes/input/check/references/bad-pids.riddl(11:7->23):
 passes/input/check/references/bad-pids.riddl(11:7->23):
  State 'FooExample' should have a description:
        state FooExample of FooExampleState
-passes/input/check/references/bad-pids.riddl(11:7->23):
- State 'FooExample' should have an author reference:
-       state FooExample of FooExampleState
 passes/input/check/references/bad-pids.riddl(13:20->26):
  Path 'DooFoo' was not resolved, in OnMessageClause 'command DooFoo'
  because the sought name, 'DooFoo', was not found in the symbol table,
@@ -20,11 +17,9 @@ passes/input/check/references/bad-pids.riddl(14:21->43):
  because the PathId is invalid since it's first element, FooExamplexxxx, does not exist in the model
  and it should refer to a Field:
            set field FooExamplexxxx.garbage to "record Foo"
-passes/input/check/references/bad-pids.riddl(19:1->20:1):
- Models without any streaming data will exhibit minimal effect:
- }
 passes/input/check/references/bad-pids.riddl(1:1->11):
- Domain 'foo' overloads:
+ Domain 'foo' is overloaded with 2 kinds:
+   Domain 'foo' at passes/input/check/references/bad-pids.riddl(1:1->20:1),
    Field 'foo' at passes/input/check/references/bad-pids.riddl(3:23->31),
    Field 'foo' at passes/input/check/references/bad-pids.riddl(9:9->10:7):
  domain foo {
@@ -32,16 +27,10 @@ passes/input/check/references/bad-pids.riddl(1:1->11):
  Domain 'foo' should have a description:
  domain foo {
 passes/input/check/references/bad-pids.riddl(1:1->11):
- Domain 'foo' should have an author reference:
- domain foo {
-passes/input/check/references/bad-pids.riddl(1:1->11):
  Metadata in Domain 'foo' should not be empty:
  domain foo {
 passes/input/check/references/bad-pids.riddl(2:3->25):
  Context 'ExampleContext' should have a description:
-   context ExampleContext is {
-passes/input/check/references/bad-pids.riddl(2:3->25):
- Context 'ExampleContext' should have an author reference:
    context ExampleContext is {
 passes/input/check/references/bad-pids.riddl(2:3->25):
  Metadata in Context 'ExampleContext' should not be empty:
@@ -54,9 +43,6 @@ passes/input/check/references/bad-pids.riddl(7:5->21):
      entity FooEntity is {
 passes/input/check/references/bad-pids.riddl(7:5->21):
  Entity 'FooEntity' should have a description:
-     entity FooEntity is {
-passes/input/check/references/bad-pids.riddl(7:5->21):
- Entity 'FooEntity' should have an author reference:
      entity FooEntity is {
 passes/input/check/references/bad-pids.riddl(7:5->21):
  Metadata in Entity 'FooEntity' should not be empty:

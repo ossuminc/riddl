@@ -1,9 +1,9 @@
 context APlant is {
-  source Source is { outlet Commands is type DoAThing } with { described as "Data Source" }
-  sink Sink is { inlet Commands is type DoAThing } with { described as "Data Sink" }
+  source Source is { outlet OutCommands is type DoAThing } with { described as "Data Source" }
+  sink Sink is { inlet InCommands is type DoAThing } with { described as "Data Sink" }
 
   connector AChannel is {
-    from outlet Source.Commands
-    to inlet Sink.Commands
+    from outlet Source.OutCommands
+    to inlet Sink.InCommands
   } with { described as "A Channel" }
 } with { described as "A bunch of data flow connections" }

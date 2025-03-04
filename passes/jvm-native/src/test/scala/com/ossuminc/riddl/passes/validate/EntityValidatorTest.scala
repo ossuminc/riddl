@@ -46,9 +46,9 @@ class EntityValidatorTest extends AbstractValidatingTest {
       val input =
         """entity MultiState is {
           |  record fields is { field: String  }
-          |  state foo of MultiState.fields
+          |  state One of MultiState.fields
           |  handler x is {???}
-          |  state bar of MultiState.fields
+          |  state Two of MultiState.fields
           |  handler y is {???}
           |  handler fum is { ??? }
           |} with {
@@ -148,7 +148,8 @@ class EntityValidatorTest extends AbstractValidatingTest {
           |  entity Hamburger  is {
           |    source ofitAll is { outlet ridOfIt is event Message }
           |    type SomeType is Number
-          |    record fields is { field: SomeType } handler x is { ??? }
+          |    record fields is { something: SomeType }
+          |    handler x is { ??? }
           |    state field of Hamburger.fields
           |    handler baz is {
           |      on command DoIt {

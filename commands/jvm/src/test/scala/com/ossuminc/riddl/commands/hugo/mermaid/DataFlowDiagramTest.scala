@@ -30,7 +30,7 @@ class DataFlowDiagramTest extends JVMAbstractValidatingTest {
           case Left(messages) => fail(messages.justErrors.format)
           case Right(passesResult: PassesResult) =>
             val dfd = DataFlowDiagram(passesResult)
-            val domains = 
+            val domains =
               passesResult.root match
                 case root1: Root => AST.getTopLevelDomains(root1)
                 case nebula: Nebula => nebula.contents.filter[Domain]
@@ -40,11 +40,11 @@ class DataFlowDiagramTest extends JVMAbstractValidatingTest {
             val actual = dfd.generate(contexts.head)
             val expected =
               """flowchart LR
-                |Commands[\"Outlet Source.Commands"\]
-                |Commands[/"Inlet Sink.Commands"/]
+                |OutCommands[\"Outlet Source.OutCommands"\]
+                |InCommands[/"Inlet Sink.InCommands"/]
                 |APlant[{"Context Everything.APlant"}]
                 |command ACommand["OnMessageClause adaptCommands.command ACommand"]
-                |Commands -- Type 'DoAThing' --> Commands
+                |OutCommands -- Type 'DoAThing' --> InCommands
                 |""".stripMargin
             actual must be(expected)
         }

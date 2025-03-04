@@ -17,7 +17,7 @@ private[parsing] trait NoWhiteSpaceParsers {
 
   def toEndOfLine[u: P]: P[String] = {
     P(
-      CharsWhile(ch => ch != '\n' && ch != '\r').!
+      CharsWhile(ch => ch != '\n' && ch != '\r', 0).!
     )
   }
 
