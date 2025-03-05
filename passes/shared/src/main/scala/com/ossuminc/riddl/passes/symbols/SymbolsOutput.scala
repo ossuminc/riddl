@@ -45,7 +45,7 @@ case class SymbolsOutput(
   /** Get all parents of a definition
     *
     * @param definition
-    *   The defintiion whose parents are to be sought.
+    *   The definition whose parents are to be sought.
     * @return
     *   the sequence of ParentDefOf parents or empty if none.
     */

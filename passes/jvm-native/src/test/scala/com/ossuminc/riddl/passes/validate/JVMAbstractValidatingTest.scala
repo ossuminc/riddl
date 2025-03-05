@@ -34,12 +34,12 @@ class JVMAbstractValidatingTest extends AbstractValidatingTest {
     val future = RiddlParserInput.fromURL(url).map { rpi =>
       TopLevelParser.parseInput(rpi) match
         case Left(errors) =>
-          val msgs = errors.format
+          val msgs = errors.justErrors.format
           fail(s"In $label:\n$msgs")
         case Right(root) =>
           runStandardPasses(root, shouldFailOnErrors) match {
             case Left(errors) =>
-              fail(errors.justErrors.format)
+              fail(s"In $label:\n${errors.justErrors.format}")
             case Right(pr) =>
               validation(root, pr)
           }
@@ -79,7 +79,9 @@ class JVMAbstractValidatingTest extends AbstractValidatingTest {
   def validateFile(
     label: String,
     fileName: String
-  )(validation: (PassRoot, Messages) => Assertion = (_, msgs) => fail(msgs.format)): Assertion = {
+  )(
+    validation: (PassesResult, Messages) => Assertion = (_, msgs) => fail(msgs.format)
+  ): Assertion = {
     val url = URL.fromCwdPath(passesTestCase + fileName)
     val future = RiddlParserInput.fromURL(url).map { rpi =>
       simpleParseAndValidate(rpi) match {
@@ -87,7 +89,7 @@ class JVMAbstractValidatingTest extends AbstractValidatingTest {
           val msgs = errors.format
           fail(s"In $label:\n$msgs")
         case Right(result) =>
-          validation(result.root, result.messages)
+          validation(result, result.messages)
       }
     }
     Await.result(future, 10.seconds)

@@ -11,13 +11,16 @@ import com.ossuminc.riddl.language.At
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-/** StatementParser Define actions that various constructs can take for modelling behavior in a message-passing system
+/** StatementParser Define actions that various constructs can take for modelling behavior in a
+  * message-passing system
   */
 private[parsing] trait StatementParser {
   this: ReferenceParser & CommonParser =>
 
   private def arbitraryStatement[u: P]: P[ArbitraryStatement] = {
-    P(Index ~ literalString ~/ Index)./ map { case (start, str, end) => ArbitraryStatement(at(start, end), str) }
+    P(Index ~ literalString ~/ Index)./ map { case (start, str, end) =>
+      ArbitraryStatement(at(start, end), str)
+    }
   }
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
@@ -35,7 +38,9 @@ private[parsing] trait StatementParser {
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
       Index ~ Keywords.send ~/ messageRef ~/ to ~ (outletRef | inletRef) ~/ Index
-    ).map { case (start, messageRef, portlet, end) => SendStatement(at(start, end), messageRef, portlet) }
+    ).map { case (start, messageRef, portlet, end) =>
+      SendStatement(at(start, end), messageRef, portlet)
+    }
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
@@ -97,8 +102,11 @@ private[parsing] trait StatementParser {
 
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
-      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ messageRef ~/ Index
-    )./.map { case (start, eRef, sRef, mRef, end) => MorphStatement(at(start, end), eRef, sRef, mRef) }
+      Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ Keyword.with_ ~ messageRef ~/
+        Index
+    )./.map { case (start, eRef, sRef, mRef, end) =>
+      MorphStatement(at(start, end), eRef, sRef, mRef)
+    }
   }
 
   private def becomeStatement[u: P]: P[BecomeStatement] = {
@@ -114,8 +122,9 @@ private[parsing] trait StatementParser {
   }
 
   private def replyStatement[u: P]: P[ReplyStatement] = {
-    P(Index ~ Keywords.reply ~/ `with`.?./ ~ messageRef ~~ Index).map { case (start, ref, end) =>
-      ReplyStatement(at(start, end), ref)
+    P(Index ~ Keywords.reply ~/ Keyword.with_.?./ ~ messageRef ~~ Index).map {
+      case (start, ref, end) =>
+        ReplyStatement(at(start, end), ref)
     }
   }
 
@@ -136,7 +145,17 @@ private[parsing] trait StatementParser {
 
   private def writeStatement[u: P]: P[WriteStatement] = {
     P(
-      Index ~ StringIn("write", "put", "create", "update", "delete", "remove", "append", "insert", "modify").! ~
+      Index ~ StringIn(
+        "write",
+        "put",
+        "create",
+        "update",
+        "delete",
+        "remove",
+        "append",
+        "insert",
+        "modify"
+      ).! ~
         literalString ~ to ~ typeRef ~ Index
     ).map { case (start, keyword, what, to, end) =>
       WriteStatement(at(start, end), keyword, what, to)
@@ -163,8 +182,9 @@ private[parsing] trait StatementParser {
 
   def statement[u: P](set: StatementsSet): P[Statements] = {
     set match {
-      case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
-      case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement | focusStatement
+      case StatementsSet.AdaptorStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.ContextStatements =>
+        anyDefStatements(set) | replyStatement | focusStatement
       case StatementsSet.EntityStatements =>
         anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
       case StatementsSet.FunctionStatements  => anyDefStatements(set) | returnStatement
