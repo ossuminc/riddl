@@ -36,14 +36,11 @@ domain ReactiveBBQ is {
      handler Input is { ??? }
     } with {
      option is kind("device")
+     briefly "A device for viewing Orders"
      explained as {
-       |# brief
-       |This is an OrderViewer
-       |# details
        |The OrderViewer is the device in the kitchen, probably a touch screen,
-       |that the cooks use to view the sequence of orders to cook
-       |# see
-       |* http://foo.com/
+       |that the cooks use to view the sequence of orders to cook and the items
+       |for that order.
      }
    }
  } with {
@@ -161,10 +158,8 @@ domain ReactiveBBQ is {
    }
   }
 } with {
+  briefly "Reactive BBQ Domain Definition"
   explained as {
-    |# brief
-    | Reactive BBQ Domain Definition
-    |#details
     |This domain definition is designed to be instructive in the RIDDL language.
     |It uses the case study from the Lightbend Reactive Architecture course as
     |the basis for defining the domain. The course uses a set of interviews with

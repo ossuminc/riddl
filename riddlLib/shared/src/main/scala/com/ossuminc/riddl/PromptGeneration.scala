@@ -20,14 +20,16 @@ case class PromptGeneration(passesResult: PassesResult) {
         .append(definition.briefString)
         .append("\", fully described as \"")
         .append(definition.descriptionString)
+        .append("\"")
       sb
   end extension
 
   def apply(definition: Definition, prompt: String): Either[Messages, String] =
     val parents: Parents = passesResult.symbols.parentsOf(definition)
-    val stack: ParentStack = ParentStack(parents*)
+    val stack: DefinitionStack = DefinitionStack(parents*)
+    stack.push(definition)
     val result = new StringBuilder
-    parents.reverse.foldLeft(result) { (sb: StringBuilder, definition: Definition) =>
+    stack.foldLeft(result) { (sb: StringBuilder, definition: Definition) =>
       definition match
         case d: Domain =>
           sb.append(s"In the knowledge Domain named ")

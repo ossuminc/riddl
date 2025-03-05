@@ -42,8 +42,6 @@ trait Readability {
 
   def wants[u: P]: P[Unit] = readable("wants")
 
-  def `with`[u: P]: P[Unit] = readable("with")
-
   def anyReadability[u: P]: P[Unit] = {
     P(
       Keywords.keywords(
@@ -61,8 +59,7 @@ trait Readability {
           ReadabilityWords.so,
           ReadabilityWords.that,
           ReadabilityWords.to,
-          ReadabilityWords.wants,
-          ReadabilityWords.with_
+          ReadabilityWords.wants
         )
       )
     )
@@ -84,7 +81,6 @@ object ReadabilityWords {
   final val that = "that"
   final val to = "to"
   final val wants = "wants"
-  final val with_ = "with"
 
   // NOTE: Keep this list in synch with the list in TokenParser
   def allReadability: Seq[String] = Seq(
@@ -101,7 +97,6 @@ object ReadabilityWords {
     so,
     that,
     to,
-    wants,
-    with_
+    wants
   )
 }
