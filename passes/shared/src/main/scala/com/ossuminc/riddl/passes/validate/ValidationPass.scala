@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -147,6 +147,8 @@ case class ValidationPass(
         validateContainedGroup(cg, parentsAsSeq)
       case root: Root =>
         checkContents(root, parentsAsSeq)
+      case include: Include[?] =>
+        validateInclude(include)
       case _: Definition          => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
@@ -770,29 +772,18 @@ case class ValidationPass(
             )
           }
         case gi: GenericInteraction =>
+          // Use comprehensive validateInteraction instead of inline validation
+          validateInteraction(gi, parents)
+          // Additional checks for specific interaction types
           gi match {
-            case vi: VagueInteraction =>
-              check(
-                vi.relationship.nonEmpty,
-                "Vague Interactions should have a non-empty description",
-                Messages.MissingWarning,
-                vi.relationship.loc
-              )
-            case smi: SendMessageInteraction =>
-              checkPathRef[Definition](smi.from.pathId, parents)
-              checkMessageRef(smi.message, parents, Seq(smi.message.messageKind))
-              checkPathRef[Definition](smi.to.pathId, parents)
-            case fou: DirectUserToURLInteraction =>
-              checkPathRef[User](fou.from.pathId, parents)
             case is: TwoReferenceInteraction =>
-              checkPathRef[Definition](is.from.pathId, parents)
-              checkPathRef[Definition](is.to.pathId, parents)
               if is.relationship.isEmpty then {
                 messages.addMissing(
                   is.loc,
                   s"Interactions must have a non-empty relationship"
                 )
               }
+            case _ => // Other interaction types handled by validateInteraction
           }
         case _: BriefDescription | _: Description | _: Term | _: Comment | _: AuthorRef => ()
       }

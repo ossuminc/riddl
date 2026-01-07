@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -38,11 +38,14 @@ object SeqHelpers {
       }
     }
   
-  extension[T](stack: mutable.Stack[T]) 
+  extension[T](stack: mutable.Stack[T])
     def popUntil(f: T => Boolean): mutable.Stack[T] = {
-      val index = stack.indexWhere(f) - 1
-      if index < 0 then { stack.clearAndShrink() }
-      else { for _ <- 0.to(index) do { stack.pop() }; stack }
+      // Pop elements from the top until we find one that matches the predicate
+      // or until the stack is empty
+      while stack.nonEmpty && !f(stack.top) do {
+        stack.pop()
+      }
+      stack
     }
   
 }

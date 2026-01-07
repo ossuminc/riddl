@@ -1,0 +1,62 @@
+// Small test file for performance benchmarking
+// ~100 lines, 10 definitions
+
+domain SmallDomain is {
+  type UserId is Id(User)
+  type UserName is String
+  type EmailAddress is Pattern("\w+@\w+\.\w+")
+
+  context UserManagement is {
+    entity User is {
+      option aggregate
+
+      state UserData is {
+        id: UserId,
+        name: UserName,
+        email: EmailAddress
+      }
+
+      handler UserHandler is {
+        on command CreateUser is {
+          morph entity User to state UserData
+        }
+        on command UpdateUser is {
+          morph entity User to state UserData
+        }
+        on command DeleteUser is {
+          become entity User to state UserDeleted
+        }
+      }
+
+      state UserDeleted is {
+        id: UserId,
+        deletedAt: TimeStamp
+      }
+    }
+
+    adaptor UserAdaptor is {
+      from context UserManagement to context NotificationService is {
+        direction out
+      }
+    }
+  }
+
+  context NotificationService is {
+    entity Notification is {
+      option aggregate
+
+      state NotificationData is {
+        id: Id(Notification),
+        userId: UserId,
+        message: String,
+        sentAt: TimeStamp
+      }
+
+      handler NotificationHandler is {
+        on command SendNotification is {
+          morph entity Notification to state NotificationData
+        }
+      }
+    }
+  }
+}

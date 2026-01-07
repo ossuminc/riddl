@@ -1,0 +1,372 @@
+// Medium test file for performance benchmarking
+// ~1000 lines, 100 definitions, 50 references
+
+domain MediumDomain is {
+  // Common types used throughout
+  type EntityId is Id(Entity)
+  type UserId is Id(User)
+  type ProductId is Id(Product)
+  type OrderId is Id(Order)
+  type CustomerId is Id(Customer)
+  type PaymentId is Id(Payment)
+  type ShipmentId is Id(Shipment)
+  type InvoiceId is Id(Invoice)
+
+  type EmailAddress is Pattern("\w+@\w+\.\w+")
+  type PhoneNumber is Pattern("\d{3}-\d{3}-\d{4}")
+  type PostalCode is Pattern("\d{5}")
+  type Money is Number
+  type Quantity is Number
+
+  context CustomerManagement is {
+    entity Customer is {
+      option aggregate
+
+      state CustomerData is {
+        id: CustomerId,
+        name: String,
+        email: EmailAddress,
+        phone: PhoneNumber,
+        address: Address
+      }
+
+      type Address is {
+        street: String,
+        city: String,
+        state: String,
+        postal: PostalCode
+      }
+
+      handler CustomerHandler is {
+        on command CreateCustomer is {
+          morph entity Customer to state CustomerData
+        }
+        on command UpdateCustomer is {
+          morph entity Customer to state CustomerData
+        }
+        on command DeleteCustomer is {
+          become entity Customer to state CustomerDeleted
+        }
+      }
+
+      state CustomerDeleted is {
+        id: CustomerId,
+        deletedAt: TimeStamp
+      }
+    }
+  }
+
+  context ProductCatalog is {
+    entity Product is {
+      option aggregate
+
+      state ProductData is {
+        id: ProductId,
+        name: String,
+        description: String,
+        price: Money,
+        inventory: Quantity
+      }
+
+      handler ProductHandler is {
+        on command CreateProduct is {
+          morph entity Product to state ProductData
+        }
+        on command UpdateProduct is {
+          morph entity Product to state ProductData
+        }
+        on command AdjustInventory is {
+          morph entity Product to state ProductData
+        }
+        on command DiscontinueProduct is {
+          become entity Product to state ProductDiscontinued
+        }
+      }
+
+      state ProductDiscontinued is {
+        id: ProductId,
+        discontinuedAt: TimeStamp
+      }
+    }
+
+    entity Category is {
+      option aggregate
+
+      state CategoryData is {
+        id: Id(Category),
+        name: String,
+        description: String,
+        products: ProductId*
+      }
+
+      handler CategoryHandler is {
+        on command CreateCategory is {
+          morph entity Category to state CategoryData
+        }
+        on command AddProduct is {
+          morph entity Category to state CategoryData
+        }
+        on command RemoveProduct is {
+          morph entity Category to state CategoryData
+        }
+      }
+    }
+  }
+
+  context OrderManagement is {
+    entity Order is {
+      option aggregate
+
+      state OrderPending is {
+        id: OrderId,
+        customerId: CustomerId,
+        items: OrderItem*,
+        totalAmount: Money,
+        createdAt: TimeStamp
+      }
+
+      type OrderItem is {
+        productId: ProductId,
+        quantity: Quantity,
+        price: Money
+      }
+
+      state OrderConfirmed is {
+        id: OrderId,
+        customerId: CustomerId,
+        items: OrderItem*,
+        totalAmount: Money,
+        confirmedAt: TimeStamp
+      }
+
+      state OrderShipped is {
+        id: OrderId,
+        customerId: CustomerId,
+        items: OrderItem*,
+        totalAmount: Money,
+        shipmentId: ShipmentId,
+        shippedAt: TimeStamp
+      }
+
+      state OrderDelivered is {
+        id: OrderId,
+        customerId: CustomerId,
+        totalAmount: Money,
+        deliveredAt: TimeStamp
+      }
+
+      state OrderCancelled is {
+        id: OrderId,
+        customerId: CustomerId,
+        cancelledAt: TimeStamp,
+        reason: String
+      }
+
+      handler OrderHandler is {
+        on command CreateOrder is {
+          morph entity Order to state OrderPending
+        }
+        on command ConfirmOrder is {
+          become entity Order from state OrderPending to state OrderConfirmed
+        }
+        on command ShipOrder is {
+          become entity Order from state OrderConfirmed to state OrderShipped
+        }
+        on command DeliverOrder is {
+          become entity Order from state OrderShipped to state OrderDelivered
+        }
+        on command CancelOrder is {
+          become entity Order to state OrderCancelled
+        }
+      }
+    }
+  }
+
+  context PaymentProcessing is {
+    entity Payment is {
+      option aggregate
+
+      state PaymentPending is {
+        id: PaymentId,
+        orderId: OrderId,
+        amount: Money,
+        method: PaymentMethod,
+        createdAt: TimeStamp
+      }
+
+      type PaymentMethod is one of {
+        CreditCard, DebitCard, PayPal, BankTransfer
+      }
+
+      state PaymentProcessing is {
+        id: PaymentId,
+        orderId: OrderId,
+        amount: Money,
+        method: PaymentMethod,
+        processingAt: TimeStamp
+      }
+
+      state PaymentCompleted is {
+        id: PaymentId,
+        orderId: OrderId,
+        amount: Money,
+        method: PaymentMethod,
+        completedAt: TimeStamp,
+        transactionId: String
+      }
+
+      state PaymentFailed is {
+        id: PaymentId,
+        orderId: OrderId,
+        amount: Money,
+        method: PaymentMethod,
+        failedAt: TimeStamp,
+        errorMessage: String
+      }
+
+      handler PaymentHandler is {
+        on command InitiatePayment is {
+          morph entity Payment to state PaymentPending
+        }
+        on command ProcessPayment is {
+          become entity Payment from state PaymentPending to state PaymentProcessing
+        }
+        on command CompletePayment is {
+          become entity Payment from state PaymentProcessing to state PaymentCompleted
+        }
+        on command FailPayment is {
+          become entity Payment from state PaymentProcessing to state PaymentFailed
+        }
+      }
+    }
+  }
+
+  context ShippingManagement is {
+    entity Shipment is {
+      option aggregate
+
+      state ShipmentCreated is {
+        id: ShipmentId,
+        orderId: OrderId,
+        customerId: CustomerId,
+        address: CustomerManagement.Customer.Address,
+        items: ShipmentItem*,
+        createdAt: TimeStamp
+      }
+
+      type ShipmentItem is {
+        productId: ProductId,
+        quantity: Quantity
+      }
+
+      state ShipmentInTransit is {
+        id: ShipmentId,
+        orderId: OrderId,
+        trackingNumber: String,
+        carrier: String,
+        shippedAt: TimeStamp
+      }
+
+      state ShipmentDelivered is {
+        id: ShipmentId,
+        orderId: OrderId,
+        deliveredAt: TimeStamp,
+        signedBy: String
+      }
+
+      handler ShipmentHandler is {
+        on command CreateShipment is {
+          morph entity Shipment to state ShipmentCreated
+        }
+        on command ShipPackage is {
+          become entity Shipment from state ShipmentCreated to state ShipmentInTransit
+        }
+        on command DeliverPackage is {
+          become entity Shipment from state ShipmentInTransit to state ShipmentDelivered
+        }
+      }
+    }
+  }
+
+  context InvoiceManagement is {
+    entity Invoice is {
+      option aggregate
+
+      state InvoiceCreated is {
+        id: InvoiceId,
+        orderId: OrderId,
+        customerId: CustomerId,
+        amount: Money,
+        items: InvoiceItem*,
+        createdAt: TimeStamp
+      }
+
+      type InvoiceItem is {
+        description: String,
+        quantity: Quantity,
+        price: Money,
+        totalAmount: Money
+      }
+
+      state InvoiceSent is {
+        id: InvoiceId,
+        orderId: OrderId,
+        customerId: CustomerId,
+        amount: Money,
+        sentAt: TimeStamp
+      }
+
+      state InvoicePaid is {
+        id: InvoiceId,
+        orderId: OrderId,
+        paymentId: PaymentId,
+        paidAt: TimeStamp
+      }
+
+      handler InvoiceHandler is {
+        on command CreateInvoice is {
+          morph entity Invoice to state InvoiceCreated
+        }
+        on command SendInvoice is {
+          become entity Invoice from state InvoiceCreated to state InvoiceSent
+        }
+        on command MarkPaid is {
+          become entity Invoice from state InvoiceSent to state InvoicePaid
+        }
+      }
+    }
+  }
+
+  // Adaptors for context integration
+  context Integration is {
+    adaptor CustomerToOrder is {
+      from context CustomerManagement to context OrderManagement is {
+        direction out
+      }
+    }
+
+    adaptor OrderToPayment is {
+      from context OrderManagement to context PaymentProcessing is {
+        direction out
+      }
+    }
+
+    adaptor OrderToShipping is {
+      from context OrderManagement to context ShippingManagement is {
+        direction out
+      }
+    }
+
+    adaptor OrderToInvoice is {
+      from context OrderManagement to context InvoiceManagement is {
+        direction out
+      }
+    }
+
+    adaptor PaymentToInvoice is {
+      from context PaymentProcessing to context InvoiceManagement is {
+        direction out
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,11 +14,13 @@ import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
 import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.{classTag, ClassTag}
 import scala.annotation.{tailrec, targetName, unused}
 import scala.io.{BufferedSource, Codec}
 import scala.scalajs.js.annotation.*
 import wvlet.airframe.ulid.ULID
+
+import scala.collection.SeqFactory
 
 /** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax
   * Tree. This raw AST has no referential integrity, it just results from applying the parsing rules
@@ -115,7 +117,7 @@ object AST:
     ): Contents[T] =
       new mutable.ArrayBuffer[T](initialSize)
     def apply[T <: RiddlValue](items: T*): Contents[T] = mutable.ArrayBuffer[T](items: _*)
-    def unapply[T <: RiddlValue](contents: Contents[T]) =
+    def unapply[T <: RiddlValue](contents: Contents[T]): SeqFactory.UnapplySeqWrapper[T] =
       mutable.ArrayBuffer.unapplySeq[T](contents)
   end Contents
 
@@ -934,7 +936,7 @@ object AST:
   /** The Base trait for a definition that contains some unrestricted kind of content, RiddlValue */
   sealed trait Branch[CV <: RiddlValue] extends Definition with Container[CV]:
     override def isParent: Boolean = true
-    override def hasDefinitions: Boolean = !contents.isEmpty
+    override def hasDefinitions: Boolean = contents.nonEmpty
     opaque type ContentType <: RiddlValue = CV
   end Branch
 
@@ -1167,10 +1169,8 @@ object AST:
     *   The name (role) of the user
     * @param is_a
     *   What kind of thing the user is
-    * @param brief
-    *   A brief description of the user
-    * @param description
-    *   A longer description of the user and its role
+    * @param metadata
+    *   The metadata for the User
     */
   case class User(
     loc: At,
@@ -1188,10 +1188,8 @@ object AST:
     *   The [[At]] at which this glossary term occurs
     * @param id
     *   The term being defined
-    * @param brief
-    *   The short definition of the term
-    * @param description
-    *   The longer definition of the term.
+    * @param definition
+    *   The definition of the term
     */
   case class Term(
     loc: At,
@@ -1218,10 +1216,8 @@ object AST:
     *   The author's title within the organization
     * @param url
     *   A URL associated with the author
-    * @param brief
-    *   A optional short description of the author
-    * @param description
-    *   An optional long description of the author
+    * @param metadata
+    *   The metadata for the Author
     */
   case class Author(
     loc: At,
@@ -1569,10 +1565,8 @@ object AST:
     *   The name of the field
     * @param typeEx
     *   The type of the field
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the field.
+    * @param metadata
+    *   The metadata for the Field
     */
   @JSExportTopLevel("Field")
   case class Field(
@@ -1611,10 +1605,8 @@ object AST:
     *   The name of the field
     * @param args
     *   The type of the field
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the field.
+    * @param metadata
+    *   The metadata for the Method
     */
   @JSExportTopLevel("Method")
   case class Method(
@@ -2190,10 +2182,8 @@ object AST:
     *   The name of the type being defined
     * @param typEx
     *   The type expression of the type being defined
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the type.
+    * @param metadata
+    *   The metadata for the Type
     */
   @JSExportTopLevel("Type")
   case class Type(
@@ -2262,10 +2252,8 @@ object AST:
     *   The type expression goverining the range of values the constant can have
     * @param value
     *   The value of the constant
-    * @param brief
-    *   A brief descriptin of the constant
-    * @param description
-    *   A detailed description of the constant
+    * @param metadata
+    *   The metadata for the Constant
     */
   @JSExportTopLevel("Constant")
   case class Constant(
@@ -3131,10 +3119,8 @@ object AST:
     *   The name of the inlet
     * @param type_
     *   The type of the data that is received from the inlet
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the Inlet
+    * @param metadata
+    *   The metadata for the Inlet
     */
   @JSExportTopLevel("Inlet")
   case class Inlet(
@@ -3154,10 +3140,8 @@ object AST:
     *   The name of the outlet
     * @param type_
     *   The type expression for the kind of data put out
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the Outlet.
+    * @param metadata
+    *   The metadata for the Outlet
     */
   @JSExportTopLevel("Outlet")
   case class Outlet(
@@ -3180,8 +3164,6 @@ object AST:
     *   The origin Outlet of the connector
     * @param to
     *   The destination Inlet of the connector
-    * @param options
-    *   The options for this connector
     * @param metadata
     *   The meta data for this connector
     */
@@ -3378,10 +3360,8 @@ object AST:
     *   The command to be done.
     * @param undoStatements
     *   The command that undoes [[doStatements]]
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the saga action
+    * @param metadata
+    *   The metadata for the SagaStep
     */
   @JSExportTopLevel("SagaStep")
   case class SagaStep(
@@ -3408,6 +3388,8 @@ object AST:
     *   A definition of the aggregate output values resulting from invoking the saga, if any.
     * @param contents
     *   The definitional content for this Context
+    * @param metadata
+    *   The metadata for the Saga
     */
   @JSExportTopLevel("Saga")
   case class Saga(
@@ -3474,8 +3456,8 @@ object AST:
     *   Location of the parallel group
     * @param contents
     *   The expressions to execute in parallel
-    * @param brief
-    *   A brief description of the parallel group
+    * @param metadata
+    *   The metadata for this ParallelInteractions
     */
   @JSExportTopLevel("ParallelInteractions")
   case class ParallelInteractions(
@@ -3494,10 +3476,8 @@ object AST:
     *   Location of the sequence
     * @param contents
     *   The interactions to execute in sequence
-    * @param brief
-    *   A brief description of the sequence group
-    * @param description
-    *   A longer description of the sequence
+    * @param metadata
+    *   The metadata for this SequentialInteractions
     */
   @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
@@ -3515,8 +3495,8 @@ object AST:
     *   The location of the optional group
     * @param contents
     *   The optional expressions
-    * @param brief
-    *   A brief description of the optional group
+    * @param metadata
+    *   The metadata for this OptionalInteractions
     */
   @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
@@ -3528,7 +3508,18 @@ object AST:
     override def kind: String = "Optional Interaction"
   }
 
-  /** An [[GenericInteraction]] that is vaguely written as a textual description */
+  /** An [[GenericInteraction]] that is vaguely written as a textual description
+   *
+   * @param loc
+   *   The location of the interaction definition
+   * @param from
+   *   A [[LiteralString]] for the originating end of the relationship
+   * @param relationship
+   *   The relationship between the from and to
+   * @param to
+   *   A [[LiteralString]] for the receiving end of the relationship
+   * @param metadata
+   */
   @JSExportTopLevel("VagueInteraction")
   case class VagueInteraction(
     loc: At,
@@ -3551,10 +3542,8 @@ object AST:
     *   The message that is sent to the `to` component
     * @param to
     *   A [[Reference]] to the [[Processor]] that receives the sent `message`
-    * @param brief
-    *   A brief description of this interaction
-    * @param description
-    *   A full description of this interaction
+    * @param metadata
+    *   The metadata for this SendMessageInteraction
     */
   @JSExportTopLevel("SendMessageInteraction")
   case class SendMessageInteraction(
@@ -3582,8 +3571,8 @@ object AST:
     *   A literal spring that specifies the arbitrary relationship
     * @param to
     *   A reference to the destination of the interaction
-    * @param brief
-    *   A brief description of the interaction step
+    * @param metadata
+    *   The metadata for this ArbitraryInteraction
     */
   @JSExportTopLevel("ArbitraryInteraction")
   case class ArbitraryInteraction(
@@ -3607,10 +3596,8 @@ object AST:
     *   A reference to a [[Definition]] from which the relationship extends and to which it returns.
     * @param relationship
     *   A textual description of the relationship
-    * @param brief
-    *   A brief description of the interaction for documentation purposes
-    * @param description
-    *   A full description of the interaction for documentation purposes
+    * @param metadata
+    *   The metadata for this SelfInteraction
     */
   @JSExportTopLevel("SelfInteraction")
   case class SelfInteraction(
@@ -3632,8 +3619,8 @@ object AST:
     *   The User that is being focused
     * @param to
     *   The Group that is the target of the focus
-    * @param brief
-    *   A brief description of this interaction
+    * @param metadata
+    *   The metadata for this FocsOnGroupInteraction
     */
   @JSExportTopLevel("FocusOnGroupInteraction")
   case class FocusOnGroupInteraction(
@@ -3655,10 +3642,8 @@ object AST:
     *   The user from which the interaction emanates
     * @param url
     *   The URL towards which the user is directed
-    * @param brief
-    *   A brief description for documentation purposes
-    * @param description
-    *   A more full description of the interaction for documentation purposes
+    * @param metadata
+    *   The metadata for this DirectUserToURLInteraction
     */
   @JSExportTopLevel("DirectUserToURLInteraction")
   case class DirectUserToURLInteraction(
@@ -3681,9 +3666,9 @@ object AST:
     * @param relationship
     *   THe name of the relationship
     * @param to
-    *   THe user that receives the output
-    * @param brief
-    *   A brief description of this interaction
+    *   The user that receives the output
+    * @param metadata
+    *   The metadata for this ShowoutputInteraction
     */
   @JSExportTopLevel("ShowOutputInteraction")
   case class ShowOutputInteraction(
@@ -3705,8 +3690,8 @@ object AST:
     *   The user providing the input
     * @param to
     *   The input definition that receives the input
-    * @param brief
-    *   A description of this interaction step
+    * @param metadata
+    *   The metadata for this SelectInputInteraction
     */
   @JSExportTopLevel("SelectInputInteraction")
   case class SelectInputInteraction(
@@ -3728,8 +3713,8 @@ object AST:
     *   The user providing the input
     * @param to
     *   The input definition that receives the input
-    * @param brief
-    *   A description of this interaction step
+    * @param metadata
+    *   The metadata for this TakeInputInteraction
     */
   @JSExportTopLevel("TakeInputInteraction")
   case class TakeInputInteraction(
@@ -4056,7 +4041,7 @@ object AST:
 
   /** Find the authors for some definition
     *
-    * @param defn
+    * @param definition
     *   The definition whose [[AST.Author]]s we are seeking
     * @param parents
     *   The parents of the definition whose [[AST.Author]]s we are seeking

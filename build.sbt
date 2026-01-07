@@ -12,6 +12,8 @@ import scala.collection.Seq
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass, maintainer)
 
+Global / scalaVersion := "3.7.4"
+
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
