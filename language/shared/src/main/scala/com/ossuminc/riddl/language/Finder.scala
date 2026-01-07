@@ -106,17 +106,22 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
   ): DefWithParents[T] =
     import scala.collection.mutable
     val lookingFor = classTag[T].runtimeClass
-    Folding.foldLeftWithStack[Seq[(T, Parents)], CV](
-      Seq.empty[(T, Parents)],
+    // Use ArrayBuffer for O(1) amortized append instead of O(n) :+ operator
+    val buffer = mutable.ArrayBuffer.empty[(T, Parents)]
+    Folding.foldLeftWithStack[mutable.ArrayBuffer[(T, Parents)], CV](
+      buffer,
       root,
       ParentStack.empty
     ) { case (state, definition: CV, parents) =>
       if lookingFor.isAssignableFrom(definition.getClass) then
         val value: T = definition.asInstanceOf[T]
-        if select(value) then state :+ (value -> parents)
+        if select(value) then
+          state += (value -> parents)  // O(1) amortized instead of O(n)
+          state
         else state
       else state
     }
+    buffer.toSeq  // Convert to immutable Seq at the end
   end findWithParents
 
   /** Find the Parents for a given node in the root
