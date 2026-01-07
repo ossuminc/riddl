@@ -26,6 +26,7 @@ import scala.concurrent.duration.DurationInt
   * Priority 6: Error Path Tests from test-coverage-analysis.md
   */
 class FileIOErrorTest(using PlatformContext) extends ParsingTest {
+  import FileIOErrorTest.*
 
   "RiddlParserInput file error handling" should {
 
@@ -118,7 +119,7 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
       try {
         // Create a large valid RIDDL file
         val largeContent = new StringBuilder("domain Large is {\n")
-        for (i <- 1 to 10000) {
+        for (i <- 1 to VERY_LARGE_FILE_TYPE_COUNT) {
           largeContent.append(s"  type T$i is String\n")
         }
         largeContent.append("}")
@@ -131,8 +132,8 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
           case Right(root) =>
             val elapsed = System.currentTimeMillis() - startTime
             // Should parse reasonably quickly (< 30 seconds even for large file)
-            elapsed must be < 30000L
-            root.domains.head.types.size mustBe 10000
+            elapsed must be < LARGE_FILE_PARSE_TIMEOUT_MS
+            root.domains.head.types.size mustBe VERY_LARGE_FILE_TYPE_COUNT
         }
       } finally {
         Files.deleteIfExists(tempFile)
@@ -359,4 +360,10 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
       }
     }
   }
+}
+
+object FileIOErrorTest {
+  // Very large file test values
+  val VERY_LARGE_FILE_TYPE_COUNT: Int = 10000
+  val LARGE_FILE_PARSE_TIMEOUT_MS: Long = 30000
 }

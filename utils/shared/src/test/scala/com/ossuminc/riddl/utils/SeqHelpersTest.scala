@@ -19,6 +19,7 @@ import scala.collection.mutable
 class SeqHelpersTest extends AnyWordSpec with Matchers {
 
   import SeqHelpers.*
+  import SeqHelpersTest.*
 
   "SeqHelpers.dropUntil" should {
 
@@ -64,11 +65,11 @@ class SeqHelpersTest extends AnyWordSpec with Matchers {
     }
 
     "handle large sequences efficiently" in {
-      val largeSeq = (1 to 10000).toSeq
-      val result = largeSeq.dropUntil(_ == 5000)
-      result.size mustBe 5001
-      result.head mustBe 5000
-      result.last mustBe 10000
+      val largeSeq = (1 to LARGE_SEQUENCE_SIZE).toSeq
+      val result = largeSeq.dropUntil(_ == TEST_SEARCH_VALUE)
+      result.size mustBe EXPECTED_RESULT_SIZE_WITH_ONE
+      result.head mustBe TEST_SEARCH_VALUE
+      result.last mustBe LARGE_SEQUENCE_SIZE
     }
   }
 
@@ -148,12 +149,12 @@ class SeqHelpersTest extends AnyWordSpec with Matchers {
     }
 
     "work with large sequences of unique elements" in {
-      val largeSeq = (1 to 10000).toSeq
+      val largeSeq = (1 to LARGE_SEQUENCE_SIZE).toSeq
       largeSeq.allUnique mustBe true
     }
 
     "work with large sequences with duplicates" in {
-      val largeSeq = (1 to 10000).toSeq ++ Seq(5000)
+      val largeSeq = (1 to LARGE_SEQUENCE_SIZE).toSeq ++ Seq(TEST_SEARCH_VALUE)
       largeSeq.allUnique mustBe false
     }
 
@@ -227,4 +228,11 @@ class SeqHelpersTest extends AnyWordSpec with Matchers {
       result must be theSameInstanceAs stack
     }
   }
+}
+
+object SeqHelpersTest {
+  // Large sequence test values
+  val LARGE_SEQUENCE_SIZE: Int = 10000
+  val TEST_SEARCH_VALUE: Int = 5000
+  val EXPECTED_RESULT_SIZE_WITH_ONE: Int = 5001
 }

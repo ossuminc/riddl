@@ -25,6 +25,7 @@ import org.scalatest.TestData
   * Priority 5: Edge Case Tests from test-coverage-analysis.md
   */
 class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
+  import ParserEdgeCaseTest.*
 
   "Parser empty input handling" should {
 
@@ -92,7 +93,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
     }
 
     "accept very long identifier (255 chars)" in { (_: TestData) =>
-      val longName = "A" * 255
+      val longName = "A" * LONG_IDENTIFIER_LENGTH
       val input = s"domain $longName is { ??? }"
       val parser = StringParser(input)
       parser.parseRoot match {
@@ -201,7 +202,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
   "Parser boundary value handling" should {
 
     "handle very long string literals (1000+ chars)" in { (_: TestData) =>
-      val longString = "A" * 1000
+      val longString = "A" * LONG_STRING_LENGTH
       val input = s"""domain Test is {
                      |  type LongString is String briefly "$longString"
                      |}""".stripMargin
@@ -257,14 +258,14 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
 
     "handle very large model (1000+ lines)" in { (_: TestData) =>
       // Generate a large model with many types
-      val types = (1 to 1000).map { i =>
+      val types = (1 to LARGE_MODEL_TYPE_COUNT).map { i =>
         s"  type Type$i is String"
       }.mkString("\n")
       val input = s"domain Large is {\n$types\n}"
       val parser = StringParser(input)
       parser.parseRoot match {
         case Right(root) =>
-          root.domains.head.types.size mustBe 1000
+          root.domains.head.types.size mustBe LARGE_MODEL_TYPE_COUNT
         case Left(errors) =>
           fail(s"Should handle large model: ${errors.format}")
       }
@@ -274,7 +275,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
   "Parser nesting depth edge cases" should {
 
     "handle deeply nested contexts (10 levels)" in { (_: TestData) =>
-      val deepNesting = (1 to 10).foldLeft("???") { case (inner, level) =>
+      val deepNesting = (1 to DEEP_NESTING_LEVELS).foldLeft("???") { case (inner, level) =>
         s"context Level$level is { $inner }"
       }
       val input = s"domain Deep is { $deepNesting }"
@@ -305,12 +306,12 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
     }
 
     "handle maximum collection size (100 items)" in { (_: TestData) =>
-      val types = (1 to 100).map(i => s"  type Type$i is String").mkString("\n")
+      val types = (1 to MEDIUM_COLLECTION_SIZE).map(i => s"  type Type$i is String").mkString("\n")
       val input = s"domain Test is {\n$types\n}"
       val parser = StringParser(input)
       parser.parseRoot match {
         case Right(root) =>
-          root.domains.head.types.size mustBe 100
+          root.domains.head.types.size mustBe MEDIUM_COLLECTION_SIZE
         case Left(errors) =>
           fail(s"Should handle large collections: ${errors.format}")
       }
@@ -516,7 +517,7 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
     }
 
     "handle very long single-line comment (1000+ chars)" in { (_: TestData) =>
-      val longComment = "A" * 1000
+      val longComment = "A" * LONG_COMMENT_LENGTH
       val input = s"""domain Test is {
                      |  // $longComment
                      |  type T is String
@@ -592,4 +593,18 @@ class ParserEdgeCaseTest(using PlatformContext) extends ParsingTest {
       }
     }
   }
+}
+
+object ParserEdgeCaseTest {
+  // String/identifier length constraints
+  val LONG_IDENTIFIER_LENGTH: Int = 255
+  val LONG_STRING_LENGTH: Int = 1000
+  val LONG_COMMENT_LENGTH: Int = 1000
+
+  // Collection size test values
+  val LARGE_MODEL_TYPE_COUNT: Int = 1000
+  val MEDIUM_COLLECTION_SIZE: Int = 100
+
+  // Nesting depth test values
+  val DEEP_NESTING_LEVELS: Int = 10
 }

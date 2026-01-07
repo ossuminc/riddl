@@ -23,6 +23,7 @@ import org.scalatest.TestData
   * Priority 8: IDE-Specific Tests from test-coverage-analysis.md
   */
 class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
+  import IDEIntegrationTest.*
 
   private def parseModel(input: String): Either[Messages.Messages, Root] = {
     val rpi = RiddlParserInput(input, "ide-test")
@@ -249,10 +250,10 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
           domain.id.loc.col mustBe 8
 
           // "type" starts at column 18
-          typ.loc.col mustBe 18
+          typ.loc.col mustBe EXPECTED_TYPE_LOC_COL
 
           // "User" identifier starts at column 23
-          typ.id.loc.col mustBe 23
+          typ.id.loc.col mustBe EXPECTED_TYPE_ID_LOC_COL
         case Left(messages) =>
           fail(s"Should parse: ${messages.format}")
       }
@@ -293,7 +294,7 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
     "track location in very long file (line 1000+)" in { (_: TestData) =>
       // Generate a file with 1000+ lines
       val header = "domain Large is {\n"
-      val types = (1 to 1000).map(i => s"  type T$i is String\n").mkString
+      val types = (1 to VERY_LARGE_FILE_TYPE_COUNT).map(i => s"  type T$i is String\n").mkString
       val footer = "}"
       val input = header + types + footer
 
@@ -301,7 +302,7 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
         case Right(root) =>
           val lastType = root.domains.head.types.last
           // Last type should be around line 1001
-          lastType.loc.line must be >= 1000
+          lastType.loc.line must be >= VERY_LARGE_FILE_LINE_THRESHOLD
         case Left(messages) =>
           fail(s"Should parse large file: ${messages.format}")
       }
@@ -384,13 +385,13 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
 
       // All parses should complete quickly (< 100ms each)
       times.foreach { elapsed =>
-        (elapsed / 1_000_000) must be < 100L
+        (elapsed / 1_000_000) must be < SINGLE_PARSE_TIMEOUT_MS
       }
     }
 
     "handle parsing modifications with minimal content change" in { (_: TestData) =>
       val base = "domain Test is { "
-      val variations = (1 to 50).map(i => base + s"type T$i is String }")
+      val variations = (1 to RAPID_MODIFICATION_COUNT).map(i => base + s"type T$i is String }")
 
       val start = System.currentTimeMillis()
       variations.foreach { variant =>
@@ -399,11 +400,11 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
       val totalElapsed = System.currentTimeMillis() - start
 
       // Should handle 50 small variations quickly (< 5 seconds total)
-      totalElapsed must be < 5000L
+      totalElapsed must be < RAPID_MODIFICATIONS_TIMEOUT_MS
     }
 
     "handle rapid successive parses (typing simulation)" in { (_: TestData) =>
-      val steps = (1 to 100).map { i =>
+      val steps = (1 to INCREMENTAL_PARSE_STEPS).map { i =>
         val types = (1 to i).map(j => s"  type T$j is String").mkString("\n")
         s"domain Test is {\n$types\n}"
       }
@@ -413,7 +414,7 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
       val totalElapsed = System.currentTimeMillis() - start
 
       // Should handle 100 incremental parses quickly (< 10 seconds)
-      totalElapsed must be < 10000L
+      totalElapsed must be < INCREMENTAL_PARSES_TIMEOUT_MS
     }
 
     "maintain performance with deeply nested structure" in { (_: TestData) =>
@@ -427,7 +428,7 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
       val elapsed = (System.nanoTime() - start) / 1_000_000
 
       // Should parse deep nesting quickly (< 200ms)
-      elapsed must be < 200L
+      elapsed must be < SIMPLE_VALIDATION_TIMEOUT_MS
     }
   }
 
@@ -468,7 +469,7 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
     }
 
     "handle project with many small files" in { (_: TestData) =>
-      val files = (1 to 100).map { i =>
+      val files = (1 to SMALL_FILES_COUNT).map { i =>
         s"domain D$i is { type T is String }"
       }
 
@@ -477,15 +478,15 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
       val totalElapsed = System.currentTimeMillis() - start
 
       // Should parse 100 small files quickly (< 15 seconds)
-      totalElapsed must be < 15000L
+      totalElapsed must be < MANY_SMALL_FILES_TIMEOUT_MS
 
       // All should succeed
-      results.count(_.isRight) mustBe 100
+      results.count(_.isRight) mustBe EXPECTED_SUCCESSFUL_PARSES
     }
 
     "handle project with few large files" in { (_: TestData) =>
       val files = (1 to 5).map { fileNum =>
-        val types = (1 to 200).map(i => s"  type T${fileNum}_$i is String").mkString("\n")
+        val types = (1 to TYPES_PER_SMALL_FILE).map(i => s"  type T${fileNum}_$i is String").mkString("\n")
         s"domain Large$fileNum is {\n$types\n}"
       }
 
@@ -494,11 +495,11 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
       val totalElapsed = System.currentTimeMillis() - start
 
       // Should parse 5 large files quickly (< 5 seconds)
-      totalElapsed must be < 5000L
+      totalElapsed must be < RAPID_MODIFICATIONS_TIMEOUT_MS
 
       results.foreach {
         case Right(root) =>
-          root.domains.head.types.size mustBe 200
+          root.domains.head.types.size mustBe TOTAL_TYPES_IN_SMALL_FILES
         case Left(messages) =>
           fail(s"Should parse large files: ${messages.format}")
       }
@@ -546,7 +547,7 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
     }
 
     "handle rapid validation requests" in { (_: TestData) =>
-      val inputs = (1 to 50).map { i =>
+      val inputs = (1 to RAPID_VALIDATION_COUNT).map { i =>
         s"domain Test$i is { type T is String }"
       }
 
@@ -557,7 +558,34 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
       val totalElapsed = System.currentTimeMillis() - start
 
       // Should handle 50 validation requests quickly (< 3 seconds)
-      totalElapsed must be < 3000L
+      totalElapsed must be < RAPID_VALIDATION_TIMEOUT_MS
     }
   }
+}
+
+object IDEIntegrationTest {
+  // Performance timeout thresholds (milliseconds)
+  val SINGLE_PARSE_TIMEOUT_MS: Long = 100
+  val SIMPLE_VALIDATION_TIMEOUT_MS: Long = 200
+  val RAPID_MODIFICATIONS_TIMEOUT_MS: Long = 5000
+  val INCREMENTAL_PARSES_TIMEOUT_MS: Long = 10000
+  val MANY_SMALL_FILES_TIMEOUT_MS: Long = 15000
+  val RAPID_VALIDATION_TIMEOUT_MS: Long = 3000
+
+  // Test data sizes
+  val INCREMENTAL_PARSE_STEPS: Int = 100
+  val VERY_LARGE_FILE_TYPE_COUNT: Int = 1000
+  val VERY_LARGE_FILE_LINE_THRESHOLD: Int = 1000
+  val SMALL_FILES_COUNT: Int = 100
+  val TYPES_PER_SMALL_FILE: Int = 200
+  val TOTAL_TYPES_IN_SMALL_FILES: Int = 200
+  val RAPID_MODIFICATION_COUNT: Int = 50
+  val RAPID_VALIDATION_COUNT: Int = 50
+
+  // Expected results
+  val EXPECTED_SUCCESSFUL_PARSES: Int = 100
+
+  // Location tracking test values
+  val EXPECTED_TYPE_LOC_COL: Int = 18
+  val EXPECTED_TYPE_ID_LOC_COL: Int = 23
 }
