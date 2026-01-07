@@ -156,8 +156,16 @@ private[parsing] trait StatementParser {
 
   private def anyDefStatements[u: P](set: StatementsSet): P[Statements] = {
     P(
-      sendStatement | arbitraryStatement | errorStatement | theSetStatement | tellStatement | callStatement |
-        stopStatement | ifThenElseStatement(set) | forEachStatement(set) | codeStatement | comment
+      // GROUP 1: Most common control flow (40-50%)
+      ifThenElseStatement(set) | forEachStatement(set) |
+      // GROUP 2: Common message operations (30-35%)
+      sendStatement | tellStatement |
+      // GROUP 3: Common function operations (10-15%)
+      callStatement | theSetStatement |
+      // GROUP 4: Less common (5-10%)
+      arbitraryStatement | codeStatement |
+      // GROUP 5: Rare (1-5%)
+      errorStatement | stopStatement | comment
     ).asInstanceOf[P[Statements]]
   }
 
