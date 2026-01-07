@@ -28,7 +28,20 @@ object SeqHelpers {
     }
 
     def allUnique: Boolean = {
-      val set = scala.collection.mutable.Set[T]()
+      // Use capacity hint for better performance on large sequences
+      // HashSet with initial capacity avoids repeated resizing/rehashing
+      val initialCapacity = seq match {
+        case indexed: scala.collection.IndexedSeq[?] =>
+          // For indexed sequences with O(1) size, use size as hint
+          // Clamp to reasonable range to avoid over-allocation for small seqs
+          math.max(16, indexed.size)
+        case _ =>
+          // For other sequences, use default capacity (size might be expensive)
+          16
+      }
+      val set = scala.collection.mutable.HashSet.empty[T]
+      set.sizeHint(initialCapacity)
+
       seq.forall { x =>
         if set(x) then false
         else {

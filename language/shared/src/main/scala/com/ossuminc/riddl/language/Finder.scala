@@ -24,6 +24,10 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
 
   import scala.reflect.ClassTag
 
+  // Cache for findByType results - maps Class to previously found Seq of that type
+  // This avoids repeated full tree traversals for the same type
+  private val findByTypeCache: mutable.Map[Class[?], Seq[RiddlValue]] = mutable.Map.empty
+
   /** Search the `root` for a [[AST.RiddlValue]] that matches the boolean expression
     *
     * @param select
@@ -45,8 +49,18 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
   def findByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
     import scala.reflect.classTag
     val lookingFor = classTag[T].runtimeClass
-    val result = find { (value: RiddlValue) => lookingFor.isAssignableFrom(value.getClass) }
-    result.asInstanceOf[Seq[T]]
+
+    // Check cache first
+    findByTypeCache.get(lookingFor) match {
+      case Some(cached) =>
+        // Return cached result
+        cached.asInstanceOf[Seq[T]]
+      case None =>
+        // Cache miss - compute and store result
+        val result = find { (value: RiddlValue) => lookingFor.isAssignableFrom(value.getClass) }
+        findByTypeCache(lookingFor) = result
+        result.asInstanceOf[Seq[T]]
+    }
   end findByType
 
   def recursiveFindByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
