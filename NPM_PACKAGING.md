@@ -4,12 +4,19 @@ This guide explains how to build and use RIDDL JavaScript modules as local npm p
 
 ## Latest Updates (2026-01-08)
 
-- ✅ **NEW: JavaScript-friendly return types** - All methods now return `{ succeeded: boolean, value?: any, errors?: string }` instead of Scala's `Either` type
+- ✅ **NEW: Full TypeScript support** - All Scala types converted to plain JavaScript objects
+  - Scala `List` → JavaScript `Array`
+  - Scala case classes → Plain JS objects with properties
+  - All values are JSON-serializable
+- ✅ **NEW: Error arrays instead of strings** - Errors returned as structured array of objects
+- ✅ **JavaScript-friendly return types** - All methods return `{ succeeded: boolean, value?: object, errors?: Array<object> }`
 - ✅ Added **RiddlAPI facade** with stable, non-minified method names
 - ✅ Fixed minification issue - all API methods preserve their names in production builds
-- ✅ TypeScript-friendly API with clear success/error handling
-- ✅ Current version: `1.0.1-7-a3a42f2e`
-- ✅ Package size: ~240KB (production build)
+- ✅ Complete TypeScript type definitions and examples
+- ✅ Current version: `1.0.1-8-90a737de-20260108-0749`
+- ✅ Package size: ~244KB (production build)
+
+**📘 See [TYPESCRIPT_API.md](./TYPESCRIPT_API.md) for complete TypeScript documentation and examples.**
 
 ## Quick Start
 
@@ -41,22 +48,31 @@ npm install /Users/reid/Code/ossuminc/riddl/npm-packages/ossuminc-riddl-lib-*.tg
 
 ### 3. Use in Your Code
 
-```javascript
+```typescript
 import { RiddlAPI } from '@ossuminc/riddl-lib';
 
 // Parse RIDDL source
 const result = RiddlAPI.parseString("domain MyDomain is { ??? }");
 
 if (result.succeeded) {
-  console.log("Parse successful:", result.value);
+  console.log("Parse successful!");
+  console.log("Domains:", result.value.domains);
+  // result.value is a plain JS object with domains array
 } else {
-  console.error("Parse errors:", result.errors);
+  console.error("Parse errors:");
+  result.errors.forEach(err => {
+    console.error(`  [${err.kind}] ${err.message} at line ${err.location.line}`);
+  });
+  // result.errors is an array of error objects
 }
 
 // Parse for syntax highlighting
 const tokens = RiddlAPI.parseToTokens("domain Example is { ??? }");
 if (tokens.succeeded) {
-  console.log("Tokens:", tokens.value);
+  tokens.value.forEach(token => {
+    console.log(`${token.kind} at line ${token.location.line}`);
+  });
+  // tokens.value is a JavaScript Array of token objects
 }
 
 // Get version
