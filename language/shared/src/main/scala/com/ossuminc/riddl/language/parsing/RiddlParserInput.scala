@@ -242,6 +242,6 @@ protected[parsing] case class StringParserInput(
   override val purpose: String = ""
 ) extends RiddlParserInput {
   override def toString: String = {
-    super.toString ++ s", data: ${data.length} chars, root: $root"
+    super.toString ++ s", data: ${data.length} chars, origin: $origin"
   }
 }
