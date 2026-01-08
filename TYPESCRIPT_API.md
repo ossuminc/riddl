@@ -49,6 +49,7 @@ Tokens returned from `parseToTokens()`:
 
 ```typescript
 interface Token {
+  text: string;        // The actual text content of the token
   kind: string;        // Token type: "Keyword", "Identifier", "Punctuation", etc.
   location: Location;  // Token position in source
 }
@@ -211,7 +212,7 @@ const result = RiddlAPI.parseToTokens("domain Example is { ??? }");
 
 if (result.succeeded) {
   result.value.forEach((token, index) => {
-    console.log(`Token ${index}: ${token.kind} at line ${token.location.line}`);
+    console.log(`Token ${index}: "${token.text}" (${token.kind}) at line ${token.location.line}`);
   });
 }
 ```
@@ -240,11 +241,7 @@ function highlightRIDDL(source: string): string {
   let html = '';
   result.value.forEach(token => {
     const cssClass = tokenToClass[token.kind] || 'syntax-other';
-    const text = source.substring(
-      token.location.offset,
-      token.location.endOffset
-    );
-    html += `<span class="${cssClass}">${escapeHtml(text)}</span>`;
+    html += `<span class="${cssClass}">${escapeHtml(token.text)}</span>`;
   });
 
   return html;

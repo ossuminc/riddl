@@ -70,7 +70,9 @@ object RiddlAPI {
   /** Convert Scala List[Token] to JavaScript array of plain objects */
   private def tokensToJsArray(tokens: List[Token]): js.Array[js.Dynamic] = {
     tokens.map { token =>
+      val text = token.loc.source.data.substring(token.loc.offset, token.loc.endOffset)
       js.Dynamic.literal(
+        text = text,
         kind = token.getClass.getSimpleName.replace("$", ""),
         location = js.Dynamic.literal(
           line = token.loc.line,
