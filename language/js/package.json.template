@@ -1,0 +1,26 @@
+{
+  "name": "@ossuminc/riddl-language",
+  "version": "VERSION_PLACEHOLDER",
+  "description": "RIDDL Language Parser - JavaScript/TypeScript bindings",
+  "main": "main.js",
+  "exports": {
+    ".": "./main.js"
+  },
+  "keywords": [
+    "riddl",
+    "parser",
+    "ast",
+    "language",
+    "dsl"
+  ],
+  "author": "Ossum Inc.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ossuminc/riddl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ossuminc/riddl/issues"
+  },
+  "homepage": "https://github.com/ossuminc/riddl#readme"
+}

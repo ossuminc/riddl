@@ -1,0 +1,24 @@
+{
+  "name": "@ossuminc/riddl-utils",
+  "version": "VERSION_PLACEHOLDER",
+  "description": "RIDDL Utilities - JavaScript/TypeScript bindings",
+  "main": "main.js",
+  "exports": {
+    ".": "./main.js"
+  },
+  "keywords": [
+    "riddl",
+    "utilities",
+    "helpers"
+  ],
+  "author": "Ossum Inc.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ossuminc/riddl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ossuminc/riddl/issues"
+  },
+  "homepage": "https://github.com/ossuminc/riddl#readme"
+}
