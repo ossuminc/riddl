@@ -32,6 +32,9 @@ lazy val riddl: Project = Root("riddl", startYr = startYear, spdx ="Apache-2.0")
     language,
     languageNative,
     languageJS,
+    bast,
+    bastNative,
+    bastJS,
     passes,
     passesNative,
     passesJS,
@@ -94,7 +97,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       )
     }
   )
-  .jsConfigure(With.Javascript("RIDDL: utils", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsConfigure(
     With.BuildInfo.withKeys(
@@ -175,7 +178,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
       Dep.commons_io % Test
     )
   )
-  .jsConfigure(With.Javascript("RIDDL: language", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
     libraryDependencies ++= Seq(Dep.fastparse_nojvm.value, Dep.airframe_ulid_nojvm.value)
@@ -204,6 +207,26 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
 lazy val language = language_cp.jvm.dependsOn(utils)
 lazy val languageJS = language_cp.js.dependsOn(utilsJS)
 lazy val languageNative = language_cp.native.dependsOn(utilsNative)
+
+val BAST = config("bast")
+lazy val bast_cp = CrossModule("bast", "riddl-bast")(JVM, JS, Native)
+  .dependsOn(cpDep(language_cp), cpDep(passes_cp))
+  .configure(With.typical, With.GithubPublishing)
+  .settings(
+    Test / parallelExecution := false,
+    scalacOptions ++= Seq("-explain"),
+    description := "Binary AST (BAST) serialization for fast import of RIDDL modules"
+  )
+  .jvmConfigure(With.coverage(70))
+  .jvmConfigure(With.noMiMa)
+  .jsConfigure(With.ScalaJS("RIDDL: bast", withCommonJSModule = true))
+  .jsConfigure(With.noMiMa)
+  .nativeConfigure(With.Native(mode = "fast"))
+  .nativeConfigure(With.noMiMa)
+
+lazy val bast = bast_cp.jvm.dependsOn(language, passes)
+lazy val bastJS = bast_cp.js.dependsOn(languageJS, passesJS)
+lazy val bastNative = bast_cp.native.dependsOn(languageNative, passesNative)
 
 val Passes = config("passes")
 lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
@@ -236,7 +259,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
       )
     }
   )
-  .jsConfigure(With.Javascript("RIDDL: passes", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: passes", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
@@ -257,7 +280,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
     )
   )
   .jvmConfigure(With.MiMa("0.57.0"))
-  .jsConfigure(With.Javascript("RIDDL: language", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
     // scalacOptions ++= Seq("-rewrite", "-source", "3.4-migration"),
@@ -289,7 +312,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(coverageExcludedFiles := """<empty>;$anon""")
-  .jsConfigure(With.Javascript("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
@@ -321,7 +344,7 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
-  .jsConfigure(With.Javascript("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
