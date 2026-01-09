@@ -3,15 +3,16 @@ name: Scala Build
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, development ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, development ]
     paths-ignore:
       - 'doc/src/main/hugo/**'
       - '.github/workflows/gh-pages.yml'
 
 jobs:
   scala-build:
+    timeout-minutes: 60
     permissions:
       contents: read
       packages: read
@@ -19,59 +20,71 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [JVM, Native, JS]
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set Up JDK 21
+    - name: Set Up JDK 25
       uses: actions/setup-java@v4
       with:
-        java-version: '21'
+        java-version: '25'
         distribution: temurin
         cache: sbt
 
     - name: Set Up SBT
       uses: sbt/setup-sbt@v1
 
-    - name: Setup Hugo
-      uses: peaceiris/actions-hugo@v3
-      with:
-        hugo-version: '0.112.0'
-        extended: true
-
     - name: Coursier Caching
       uses: coursier/cache-action@v6
 
-    - name: Install LLVM and Clang
+    - name: Cache SBT Build Outputs
+      uses: actions/cache@v4
+      with:
+        path: |
+          **/target/scala-3.4.3
+          !**/target/scala-3.4.3/src_managed
+          !**/target/scala-3.4.3/resource_managed
+        key: ${{ runner.os }}-sbt-build-${{ matrix.platform }}-${{ hashFiles('**/*.sbt', 'project/**') }}
+        restore-keys: |
+          ${{ runner.os }}-sbt-build-${{ matrix.platform }}-
+          ${{ runner.os }}-sbt-build-
+
+    - name: Install LLVM and Clang (Native only)
+      if: matrix.platform == 'Native'
       run: |
         sudo apt-get update && sudo apt-get install -y clang llvm
         echo CLANG: `which clang`
         echo LD64.LLD: `which ld64.lld`
         echo LLD: `which lld`
-        clang --version      
+        clang --version
 
-    - name: Install curl dev dependencies
+    - name: Install curl dev dependencies (Native only)
+      if: matrix.platform == 'Native'
       run: |
         sudo apt-get update
         sudo apt-get install -y libcurl4-openssl-dev libidn2-dev
 
-    - name: Build And Test JVM Versions
+    - name: Build And Test ${{ matrix.platform }} Versions
       run: |
-        sbt -v clean cJVM tJVM
+        sbt clean c${{ matrix.platform }} t${{ matrix.platform }} 
 
-    - name: Build And Test Native Versions
-      run: |
-        sbt -v cNative tNative
-
-    - name: Build And Test JS Versions
-      run: |
-        sbt -v cJS tJS 
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          **/target/test-reports/*.xml
 
     - name: Publish JVM RIDDL Libs & Test sbt-riddl plugin
+      if: matrix.platform == 'JVM'
       env:
         RIDDLC_PATH: riddlc/jvm/target/universal/stage/bin/riddlc
       run: |
-        sbt -v \
+        sbt \
           utils/publishLocal \
           language/publishLocal \
           passes/publishLocal \
@@ -82,25 +95,68 @@ jobs:
           sbt-riddl/scripted
 
     - name: Package Release Artifacts
+      if: matrix.platform == 'JVM'
       run: |
-        sbt -v packageArtifacts
+        sbt packageArtifacts
 
     - name: Collect Release Artifacts
+      if: matrix.platform == 'JVM'
       uses: actions/upload-artifact@v4
       with:
-        name: collect-release-artifacts
+        name: collect-release-artifacts-jvm
+        retention-days: 30
+        path: |
+          riddlc/jvm/target/universal/riddlc.zip
+          riddlLib/jvm/target/universal/riddlLib.zip
+
+    - name: Collect Release Artifacts (Native)
+      if: matrix.platform == 'Native'
+      uses: actions/upload-artifact@v4
+      with:
+        name: collect-release-artifacts-native
+        retention-days: 30
         path: |
           riddlc/native/target/scala-3.4.3/riddlc
-          riddlc/jvm/target/universal/riddlc.zip
-          riddlLib/js/target/scala-3.4.3/riddl-lib-opt/main.js
-          riddlLib/jvm/target/universal/riddlLib.zip
           riddlLib/native/target/scala-3.4.3/libriddl-lib.a
+
+    - name: Collect Release Artifacts (JS)
+      if: matrix.platform == 'JS'
+      uses: actions/upload-artifact@v4
+      with:
+        name: collect-release-artifacts-js
+        retention-days: 30
+        path: |
+          riddlLib/js/target/scala-3.4.3/riddl-lib-opt/main.js
 
     - name: Cleanup Before Caching
       shell: bash
       run: |
         rm -rf "$HOME/.ivy2/local" || true
-        find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
         find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
         find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
         find $HOME/.sbt                              -name "*.lock"               -delete || true
+
+  dependency-check:
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Run Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'riddl'
+        path: '.'
+        format: 'SARIF'
+        args: >
+          --enableRetired
+          --enableExperimental
+
+    - name: Upload Dependency Check Results
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: reports/dependency-check-report.sarif
