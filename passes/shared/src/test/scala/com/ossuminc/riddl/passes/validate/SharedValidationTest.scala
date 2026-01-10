@@ -125,6 +125,8 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
         case Left(errors) if errors.hasErrors =>
           println(errors.format)
           fail(errors.justErrors.format)
+        case Left(errors) =>
+          fail(s"Parse failed but no errors: ${errors.format}")
         case Right(result) =>
           sharedRoot = result.root
           succeed

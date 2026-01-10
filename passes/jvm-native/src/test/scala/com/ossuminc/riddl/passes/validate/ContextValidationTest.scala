@@ -58,6 +58,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
                   Seq(LiteralString(At(rpi, 129, 135), "http"))
                 )
               )
+            case None => fail("No technology option")
           }
       }
     }

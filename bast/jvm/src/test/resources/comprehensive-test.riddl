@@ -1,0 +1,204 @@
+// Comprehensive test file covering most AST node types
+domain ComprehensiveTest is {
+
+  described as {
+    | A comprehensive test for BAST serialization.
+    | This domain contains examples of most RIDDL node types
+    | to ensure comprehensive test coverage for BAST serialization.
+  }
+
+  // Authors and users
+  author Reid is {
+    name = "Reid Spencer"
+    email = "reid@ossum inc.com"
+    organization = "Ossum Inc"
+  } described as "Project author"
+
+  // Terms and glossary
+  term "DDD" is "Domain Driven Design"
+  term "BAST" is "Binary Abstract Syntax Tree" described as {
+    | A compact binary representation of the AST for fast deserialization
+  }
+
+  // Context with entities, types, and handlers
+  context TestContext is {
+    briefly "Test context with various definitions"
+
+    // Type definitions
+    type UserId is Id(User)
+    type Email is Pattern("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
+    type UserName is String(1, 100)
+    type Age is Number(0, 150)
+    type IsActive is Boolean
+    type Timestamp is TimeStamp
+
+    // Aggregation type
+    type UserProfile is {
+      userId: UserId,
+      name: UserName,
+      email: Email,
+      age: optional Age,
+      isActive: IsActive,
+      createdAt: Timestamp
+    } described as "User profile aggregation"
+
+    // Enumeration type
+    type UserRole is any of { Admin, User, Guest }
+
+    // Alternation type
+    type UserStatus is one of {
+      Active, Suspended, Deleted
+    }
+
+    // Mapping type
+    type UserPreferences is mapping from String to String
+
+    // Range type
+    type Score is range(0, 100)
+
+    // Collection types
+    type UserList is many UserId
+    type OptionalEmail is optional Email
+    type OneOrMoreRoles is one or more UserRole
+
+    // Entity with states and handlers
+    entity User is {
+      option aggregate
+      option transient
+
+      state UserData is {
+        userId: UserId,
+        profile: UserProfile,
+        role: UserRole,
+        status: UserStatus,
+        preferences: UserPreferences
+      }
+
+      handler CreateUser is {
+        on command CreateUserCommand {
+          then {
+            send event UserCreated to TestContext.User
+          }
+        }
+      } described as "Handles user creation"
+
+      handler UpdateProfile is {
+        on command UpdateProfileCommand {
+          then {
+            set field User.profile to ???
+            send event ProfileUpdated to TestContext.User
+          }
+        }
+      }
+
+      function validateEmail is {
+        requires { email: Email }
+        returns { isValid: Boolean }
+      }
+
+      invariant EmailMustBeUnique is {
+        "Each user must have a unique email address"
+      }
+
+    } described as {
+      | The User entity represents a person using the system.
+      | It maintains user profile, role, and preferences.
+    }
+
+    // Adaptors
+    adaptor UserDatabaseAdaptor from context UserExternalContext is {
+      briefly "Adapts to external user database"
+    }
+
+    adaptor NotificationService to context NotificationContext is {
+      briefly "Sends notifications to external service"
+    }
+
+    // Processor with inlet/outlet
+    processor UserProcessor is {
+      inlet UserInput is type CreateUserCommand
+      outlet UserOutput is type UserCreated
+    } described as "Processes user commands"
+
+    // Projector
+    projector UserViewProjector is {
+      briefly "Projects user view"
+    }
+
+    // Repository
+    repository UserRepository is {
+      briefly "Stores user data"
+    }
+
+  } described as "Test context with comprehensive node coverage"
+
+  // Streamlet definitions
+  context StreamingContext is {
+
+    type DataPoint is { value: Number }
+
+    streamlet DataSource is {
+      inlet SourceInput is type DataPoint
+    } described as "Source streamlet"
+
+    streamlet DataSink is {
+      outlet SinkOutput is type DataPoint
+    } described as "Sink streamlet"
+
+    connector DataConnector is {
+      from streamlet DataSource.SourceInput to streamlet DataSink.SinkOutput
+    }
+
+  }
+
+  // Epic with saga and story
+  epic UserManagement is {
+    briefly "User management epic"
+
+    user PrimaryUser is "The main user of the system"
+
+    saga UserLifecycle is {
+      briefly "Manages user lifecycle"
+
+      input UserCommand is type CreateUserCommand
+      output UserResult is type UserCreated
+
+      step RegisterUser is {
+        briefly "Register new user"
+      }
+
+      step VerifyEmail is {
+        briefly "Verify user email"
+      }
+
+      step ActivateAccount is {
+        briefly "Activate user account"
+      }
+
+    } described as "User lifecycle saga"
+
+    case primary is {
+      user PrimaryUser wants to "Create and manage user accounts"
+      example given "A new user wants to register"
+        when "they submit registration form"
+        then "their account is created and email verification is sent"
+    }
+
+  } described as "Epic for user management flows"
+
+  // Plant with modules and applications
+  plant Infrastructure is {
+    briefly "Infrastructure plant"
+
+    application UserApp is {
+      briefly "User management application"
+
+      group BackendServices is {
+        output UserService is "User microservice"
+        output AuthService is "Authentication service"
+      }
+    }
+
+  }
+
+} described by author Reid

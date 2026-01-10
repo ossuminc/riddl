@@ -8,7 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.Token.{Comment, Readability}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.{AST, At, AST as rpi}
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.AST.{Token, *}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{Await, PlatformContext, Timer, URL}

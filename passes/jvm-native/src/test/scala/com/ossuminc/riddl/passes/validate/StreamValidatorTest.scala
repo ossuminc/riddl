@@ -151,6 +151,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
               message.message must include("The persistence option on Connector 'c1' is not")
               succeed
             case Nil => fail("Missing message")
+            case _ => fail("Unexpected message count")
         }
       }
     }
