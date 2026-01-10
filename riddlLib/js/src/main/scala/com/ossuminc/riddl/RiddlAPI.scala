@@ -9,7 +9,8 @@ package com.ossuminc.riddl
 import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.utils.{CommonOptions, DOMPlatformContext, PlatformContext}
+import com.ossuminc.riddl.passes.Pass
+import com.ossuminc.riddl.utils.{CommonOptions, DOMPlatformContext, PlatformContext, URL}
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.*
@@ -50,6 +51,19 @@ object RiddlAPI {
 
   /** Default platform context for browser/Node.js environments */
   given defaultContext: PlatformContext = DOMPlatformContext()
+
+  /** Convert origin string to URL for RiddlParserInput.
+    * Handles both full file paths (starting with /) and simple identifiers.
+    */
+  private def originToURL(origin: String): URL = {
+    if origin.startsWith("/") then
+      // Full file path - use fromFullPath
+      URL.fromFullPath(origin)
+    else
+      // Simple identifier or relative path - create URL with path component
+      URL(URL.fileScheme, "", "", origin)
+    end if
+  }
 
   /** Convert Either to JavaScript-friendly result object with proper type conversion */
   private def toJsResult[T](either: Either[Messages, T], converter: T => js.Any = (v: T) => v.asInstanceOf[js.Any]): js.Dynamic = {
@@ -162,7 +176,7 @@ object RiddlAPI {
     origin: String = "string",
     verbose: Boolean = false
   ): js.Dynamic = {
-    val input = RiddlParserInput(source, origin)
+    val input = RiddlParserInput(source, originToURL(origin))
     val result = TopLevelParser.parseInput(input, verbose)(using defaultContext)
     toJsResult(result, rootToJsObject)
   }
@@ -182,7 +196,7 @@ object RiddlAPI {
     verbose: Boolean,
     context: PlatformContext
   ): js.Dynamic = {
-    val input = RiddlParserInput(source, origin)
+    val input = RiddlParserInput(source, originToURL(origin))
     val result = TopLevelParser.parseInput(input, verbose)(using context)
     toJsResult(result, rootToJsObject)
   }
@@ -203,7 +217,7 @@ object RiddlAPI {
     origin: String = "string",
     verbose: Boolean = false
   ): js.Dynamic = {
-    val input = RiddlParserInput(source, origin)
+    val input = RiddlParserInput(source, originToURL(origin))
     val result = TopLevelParser.parseNebula(input, verbose)(using defaultContext)
     toJsResult(result, nebulaToJsObject)
   }
@@ -224,9 +238,111 @@ object RiddlAPI {
     origin: String = "string",
     verbose: Boolean = false
   ): js.Dynamic = {
-    val input = RiddlParserInput(source, origin)
+    val input = RiddlParserInput(source, originToURL(origin))
     val result = TopLevelParser.parseToTokens(input, verbose)(using defaultContext)
     toJsResult(result, tokensToJsArray)
+  }
+
+  /** Parse and validate RIDDL source, returning both syntax and semantic errors.
+    *
+    * This method runs the full validation pipeline:
+    * 1. Parse the source to AST (syntax checking)
+    * 2. Run SymbolsPass (build symbol table)
+    * 3. Run ResolutionPass (resolve references)
+    * 4. Run ValidationPass (semantic validation)
+    *
+    * Returns separate arrays for parse errors and validation messages (errors, warnings, etc.)
+    *
+    * @param source The RIDDL source code to validate
+    * @param origin Optional origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    * @param noANSIMessages When true, ANSI color codes are not included in error messages
+    * @return Result object with:
+    *         {
+    *           succeeded: boolean,
+    *           parseErrors?: Array<object>,    // Syntax errors from parsing
+    *           validationMessages?: Array<object>  // Semantic errors/warnings from validation
+    *         }
+    */
+  @JSExport("validateString")
+  def validateString(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false,
+    noANSIMessages: Boolean = true
+  ): js.Dynamic = {
+    // Create a custom context with noANSIMessages option
+    val options = CommonOptions(
+      verbose = verbose,
+      noANSIMessages = noANSIMessages
+    )
+    val ctx = DOMPlatformContext()
+    given customContext: PlatformContext = ctx.withOptions(options)(_ => ctx)
+
+    val input = RiddlParserInput(source, originToURL(origin))
+    val parseResult = TopLevelParser.parseInput(input, verbose)(using customContext)
+
+    parseResult match {
+      case Right(root) =>
+        // Parse succeeded, now run validation passes
+        try {
+          val passesResult = Pass.runStandardPasses(root)(using customContext)
+          val messages = passesResult.messages
+
+          // Separate messages by severity and remove duplicates
+          val errors = messages.filter(_.isError).distinct
+          val warnings = messages.filter(_.isWarning).distinct
+          val info = messages.filter(_.kind.severity == 0).distinct
+
+          js.Dynamic.literal(
+            succeeded = !messages.hasErrors,
+            parseErrors = js.Array(),  // No parse errors
+            validationMessages = js.Dynamic.literal(
+              errors = formatMessagesAsArray(errors),
+              warnings = formatMessagesAsArray(warnings),
+              info = formatMessagesAsArray(info),
+              all = formatMessagesAsArray(messages)
+            )
+          )
+        } catch {
+          case e: Exception =>
+            // Validation failed with exception
+            js.Dynamic.literal(
+              succeeded = false,
+              parseErrors = js.Array(),
+              validationMessages = js.Dynamic.literal(
+                errors = js.Array(
+                  js.Dynamic.literal(
+                    kind = "ValidationException",
+                    message = s"Validation failed: ${e.getMessage}",
+                    location = js.Dynamic.literal(
+                      line = 1,
+                      col = 1,
+                      offset = 0,
+                      source = origin
+                    )
+                  )
+                ),
+                warnings = js.Array(),
+                info = js.Array(),
+                all = js.Array()
+              )
+            )
+        }
+
+      case Left(parseMessages) =>
+        // Parse failed, return parse errors only
+        js.Dynamic.literal(
+          succeeded = false,
+          parseErrors = formatMessagesAsArray(parseMessages),
+          validationMessages = js.Dynamic.literal(
+            errors = js.Array(),
+            warnings = js.Array(),
+            info = js.Array(),
+            all = js.Array()
+          )
+        )
+    }
   }
 
   /** Create a custom platform context with specific options.
@@ -259,6 +375,39 @@ object RiddlAPI {
   def version: String = {
     import com.ossuminc.riddl.utils.RiddlBuildInfo
     RiddlBuildInfo.version
+  }
+
+  /** Get detailed build information about the RIDDL library.
+    *
+    * Returns a JavaScript object with all build metadata including:
+    * - version, scalaVersion, sbtVersion
+    * - organization, copyright, license
+    * - build date/time
+    * - project URLs
+    *
+    * @return JavaScript object with build information
+    */
+  @JSExport("buildInfo")
+  def buildInfo: js.Dynamic = {
+    import com.ossuminc.riddl.utils.RiddlBuildInfo
+    js.Dynamic.literal(
+      name = RiddlBuildInfo.name,
+      version = RiddlBuildInfo.version,
+      scalaVersion = RiddlBuildInfo.scalaVersion,
+      sbtVersion = RiddlBuildInfo.sbtVersion,
+      moduleName = RiddlBuildInfo.moduleName,
+      description = RiddlBuildInfo.description,
+      organization = RiddlBuildInfo.organization,
+      organizationName = RiddlBuildInfo.organizationName,
+      copyrightHolder = RiddlBuildInfo.copyrightHolder,
+      copyright = RiddlBuildInfo.copyright,
+      licenses = RiddlBuildInfo.licenses,
+      projectHomepage = RiddlBuildInfo.projectHomepage,
+      organizationHomepage = RiddlBuildInfo.organizationHomepage,
+      builtAtString = RiddlBuildInfo.builtAtString,
+      buildInstant = RiddlBuildInfo.buildInstant,
+      isSnapshot = RiddlBuildInfo.isSnapshot
+    )
   }
 
   /** Format error messages as a human-readable string.
@@ -299,5 +448,16 @@ object RiddlAPI {
     errors.map { err =>
       err.message.asInstanceOf[String]
     }
+  }
+
+  /** Format build information as a human-readable string.
+    * This method provides the same output as the `riddlc info` command.
+    *
+    * @return Formatted build information string
+    */
+  @JSExport("formatInfo")
+  def formatInfo: String = {
+    import com.ossuminc.riddl.utils.InfoFormatter
+    InfoFormatter.formatInfo
   }
 }

@@ -25,3 +25,4 @@ target
 /scoverage-report/
 /package-lock.json
 /node_modules
+*.bak
