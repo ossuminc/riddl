@@ -952,7 +952,9 @@ object AST:
     def empty: Definitions = Seq.empty[Definition]
   end Definitions
 
-  /** A simple sequence of Parents from the closest all the way up to the Root */
+  /** A simple sequence of Parents from the closest all the way up to the Root.
+    * Contains only Branch (Definition) nodes - Include nodes are tracked separately via includeContext.
+    */
   type Parents = Seq[Branch[?]]
 
   object Parents:
@@ -960,8 +962,10 @@ object AST:
     def apply(contents: Branch[?]*) = Seq(contents: _*)
   end Parents
 
-  /** A mutable stack of Branch[?] for keeping track of the parent hierarchy */
-  type ParentStack = mutable.Stack[Branch[?]] // TODO: Make this opaque some day
+  /** A mutable stack of Branch[?] for keeping track of the parent hierarchy.
+    * Contains only Branch (Definition) nodes - Include nodes are tracked separately via includeContext in Pass.
+    */
+  type ParentStack = mutable.Stack[Branch[?]]
 
   /** Extension methods for the ParentStack type */
   extension (ps: ParentStack)

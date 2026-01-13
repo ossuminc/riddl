@@ -51,7 +51,7 @@ object BASTWriter extends PassInfo[PassOptions] {
   * @param outputs Output from previous passes
   */
 case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: PlatformContext)
-    extends Pass(input, outputs) {
+    extends Pass(input, outputs, withIncludes = true) {
 
   override def name: String = BASTWriter.name
 
@@ -236,7 +236,38 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
       case _ =>
         // Log unhandled types for debugging
-        pc.log.warn(s"Unhandled node type in BASTWriter: ${definition.getClass.getSimpleName} at ${definition.loc}")
+        println(s"Unhandled node type in BASTWriter: ${definition.getClass.getSimpleName} at ${definition.loc}")
+    }
+  }
+
+  // Override traverse to write metadata count AFTER contents items
+  override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
+    definition match {
+      case root: Root =>
+        process(root, parents)
+        parents.push(root)
+        root.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        // Write metadata count for Root (always 0)
+        writeMetadataCount(Contents.empty[MetaData]())
+      case branch: Branch[?] with WithMetaData =>
+        process(branch, parents)  // Writes node data + contents count
+        parents.push(branch)
+        branch.contents.foreach { value => traverse(value, parents) }  // Write contents items
+        parents.pop()
+        // Now write metadata count and items AFTER contents items
+        writeMetadataCount(branch.metadata)
+      case _ =>
+        super.traverse(definition, parents)  // Use default traversal for non-branches
+    }
+  }
+
+  // Write metadata count and items
+  private def writeMetadataCount(metadata: Contents[MetaData]): Unit = {
+    writer.writeVarInt(metadata.length)
+    // Write each metadata item inline
+    metadata.toSeq.foreach { item =>
+      process(item, ParentStack())  // Write metadata items with empty parent stack
     }
   }
 
@@ -272,8 +303,8 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
   }
 
   override def result(root: PassRoot): BASTOutput = {
-    pc.log.info(s"BAST serialization complete: $nodeCount nodes, ${writer.size} bytes")
-    BASTOutput(root, messages.toMessages, writer.toByteArray, nodeCount, stringTable.size)
+    println(s"[info] BAST serialization complete: $nodeCount nodes, ${writer.size} bytes")
+    BASTOutput(root, Messages.empty, writer.toByteArray, nodeCount, stringTable.size)
   }
 
   // ========== Root Container Serialization ==========
@@ -283,7 +314,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(r.loc)
     writeIdentifier(Identifier.empty) // Root has no id
     writeContents(r.contents)
-    writeMetadata(r.metadata)
+    // Metadata for Root is always empty, so no need to store it
   }
 
   private def writeNebula(n: Nebula): Unit = {
@@ -291,11 +322,10 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(n.loc)
     writeIdentifier(Identifier.empty) // Nebula has no explicit id field
     writeContents(n.contents)
-    writeMetadata(Contents.empty[MetaData]())
   }
 
   private def writeInclude[T <: RiddlValue](i: Include[T]): Unit = {
-    writer.writeU8(NODE_NEBULA) // Include is a container
+    writer.writeU8(NODE_INCLUDE)
     writeLocation(i.loc)
     writeURL(i.origin)
     writeContents(i.contents)
@@ -308,7 +338,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(d.loc)
     writeIdentifier(d.id)
     writeContents(d.contents)
-    writeMetadata(d.metadata)
+    // Metadata will be written by traverse() after contents items
   }
 
   private def writeContext(c: Context): Unit = {
@@ -316,7 +346,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(c.loc)
     writeIdentifier(c.id)
     writeContents(c.contents)
-    writeMetadata(c.metadata)
   }
 
   private def writeEntity(e: Entity): Unit = {
@@ -324,7 +353,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(e.loc)
     writeIdentifier(e.id)
     writeContents(e.contents)
-    writeMetadata(e.metadata)
   }
 
   private def writeModule(m: Module): Unit = {
@@ -332,7 +360,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(m.loc)
     writeIdentifier(m.id)
     writeContents(m.contents)
-    writeMetadata(m.metadata)
   }
 
   private def writeType(t: Type): Unit = {
@@ -340,7 +367,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(t.loc)
     writeIdentifier(t.id)
     writeTypeExpression(t.typEx)
-    writeMetadata(t.metadata)
   }
 
   private def writeFunction(f: Function): Unit = {
@@ -350,7 +376,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeOption(f.input)((agg: Aggregation) => writeTypeExpression(agg))
     writeOption(f.output)((agg: Aggregation) => writeTypeExpression(agg))
     writeContents(f.contents)
-    writeMetadata(f.metadata)
   }
 
   private def writeAdaptor(a: Adaptor): Unit = {
@@ -363,7 +388,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     }
     writeContextRef(a.referent)
     writeContents(a.contents)
-    writeMetadata(a.metadata)
   }
 
   private def writeSaga(s: Saga): Unit = {
@@ -373,7 +397,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeOption(s.input)((agg: Aggregation) => writeTypeExpression(agg))
     writeOption(s.output)((agg: Aggregation) => writeTypeExpression(agg))
     writeContents(s.contents)
-    writeMetadata(s.metadata)
   }
 
   private def writeProcessor(p: Processor[?]): Unit = {
@@ -381,7 +404,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(p.loc)
     writeIdentifier(p.id)
     writeContents(p.contents)
-    writeMetadata(p.metadata)
   }
 
   private def writeProjector(p: Projector): Unit = {
@@ -389,7 +411,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(p.loc)
     writeIdentifier(p.id)
     writeContents(p.contents)
-    writeMetadata(p.metadata)
   }
 
   private def writeRepository(r: Repository): Unit = {
@@ -397,7 +418,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(r.loc)
     writeIdentifier(r.id)
     writeContents(r.contents)
-    writeMetadata(r.metadata)
   }
 
   private def writeStreamlet(s: Streamlet): Unit = {
@@ -415,7 +435,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       case _: Router => writer.writeU8(STREAMLET_VOID) // Router not in tags
     }
     writeContents(s.contents)
-    writeMetadata(s.metadata)
   }
 
   private def writeEpic(e: Epic): Unit = {
@@ -424,7 +443,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeIdentifier(e.id)
     writeUserStory(e.userStory)
     writeContents(e.contents)
-    writeMetadata(e.metadata)
   }
 
   // ========== Leaf Definition Serialization ==========
@@ -438,7 +456,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeOption(a.organization)(writeLiteralString)
     writeOption(a.title)(writeLiteralString)
     writeOption(a.url)(writeURL)
-    writeMetadata(a.metadata)
   }
 
   private def writeUser(u: User): Unit = {
@@ -446,7 +463,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(u.loc)
     writeIdentifier(u.id)
     writeLiteralString(u.is_a)
-    writeMetadata(u.metadata)
   }
 
   private def writeTerm(t: Term): Unit = {
@@ -463,7 +479,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeProcessorRef(r.withProcessor)
     writer.writeU8(r.cardinality.ordinal.toByte)
     writeOption(r.label)(writeLiteralString)
-    writeMetadata(r.metadata)
   }
 
   private def writeConstant(c: Constant): Unit = {
@@ -472,7 +487,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeIdentifier(c.id)
     writeTypeExpression(c.typeEx)
     writeLiteralString(c.value)
-    writeMetadata(c.metadata)
   }
 
   // ========== Type Component Serialization ==========
@@ -482,7 +496,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(f.loc)
     writeIdentifier(f.id)
     writeTypeExpression(f.typeEx)
-    writeMetadata(f.metadata)
   }
 
   private def writeEnumerator(e: Enumerator): Unit = {
@@ -490,7 +503,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(e.loc)
     writeIdentifier(e.id)
     writeOption(e.enumVal)((v: Long) => writer.writeVarLong(v))
-    writeMetadata(e.metadata)
   }
 
   private def writeMethod(m: Method): Unit = {
@@ -499,7 +511,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeIdentifier(m.id)
     writeTypeExpression(m.typeEx)
     writeSeq(m.args)(writeMethodArgument)
-    writeMetadata(m.metadata)
   }
 
   private def writeMethodArgument(a: MethodArgument): Unit = {
@@ -516,7 +527,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(h.loc)
     writeIdentifier(h.id)
     writeContents(h.contents)
-    writeMetadata(h.metadata)
   }
 
   private def writeState(s: State): Unit = {
@@ -524,7 +534,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(s.loc)
     writeIdentifier(s.id)
     writeTypeRef(s.typ)
-    writeMetadata(s.metadata)
   }
 
   private def writeInvariant(i: Invariant): Unit = {
@@ -532,7 +541,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(i.loc)
     writeIdentifier(i.id)
     writeOption(i.condition)(writeLiteralString)
-    writeMetadata(i.metadata)
   }
 
   // ========== OnClause Serialization ==========
@@ -542,7 +550,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writer.writeU8(0) // Init clause type
     writeLocation(oc.loc)
     writeContents(oc.contents)
-    writeMetadata(oc.metadata)
   }
 
   private def writeOnTerminationClause(oc: OnTerminationClause): Unit = {
@@ -550,7 +557,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writer.writeU8(1) // Term clause type
     writeLocation(oc.loc)
     writeContents(oc.contents)
-    writeMetadata(oc.metadata)
   }
 
   private def writeOnMessageClause(oc: OnMessageClause): Unit = {
@@ -564,7 +570,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       writeReference(ref)
     }
     writeContents(oc.contents)
-    writeMetadata(oc.metadata)
   }
 
   private def writeOnOtherClause(oc: OnOtherClause): Unit = {
@@ -572,7 +577,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writer.writeU8(3) // Other clause type
     writeLocation(oc.loc)
     writeContents(oc.contents)
-    writeMetadata(oc.metadata)
   }
 
   // ========== Streamlet Component Serialization ==========
@@ -582,7 +586,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(i.loc)
     writeIdentifier(i.id)
     writeTypeRef(i.type_)
-    writeMetadata(i.metadata)
   }
 
   private def writeOutlet(o: Outlet): Unit = {
@@ -590,7 +593,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(o.loc)
     writeIdentifier(o.id)
     writeTypeRef(o.type_)
-    writeMetadata(o.metadata)
   }
 
   private def writeConnector(c: Connector): Unit = {
@@ -599,7 +601,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeIdentifier(c.id)
     writeOutletRef(c.from)
     writeInletRef(c.to)
-    writeMetadata(c.metadata)
   }
 
   // ========== Repository Component Serialization ==========
@@ -624,7 +625,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     }
     // Write indices
     writeSeq(s.indices)(writeFieldRef)
-    writeMetadata(s.metadata)
   }
 
   // ========== Epic/UseCase Component Serialization ==========
@@ -635,7 +635,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeIdentifier(uc.id)
     writeUserStory(uc.userStory)
     writeContents(uc.contents)
-    writeMetadata(uc.metadata)
   }
 
   private def writeUserStory(us: UserStory): Unit = {
@@ -652,13 +651,16 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeSeq(sb.urls)(writeURL)
   }
 
+  // TODO: CRITICAL BUG - Multiple Contents fields not properly traversed
+  // This writes counts for both doStatements and undoStatements, but traverse()
+  // only processes the main .contents field. Items are never written.
+  // See bast/KNOWN_ISSUES.md for details and fix options.
   private def writeSagaStep(ss: SagaStep): Unit = {
     writer.writeU8(NODE_HANDLER) // Steps are like handlers
     writeLocation(ss.loc)
     writeIdentifier(ss.id)
     writeContents(ss.doStatements)
     writeContents(ss.undoStatements)
-    writeMetadata(ss.metadata)
   }
 
   // ========== Interaction Serialization ==========
@@ -668,7 +670,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writer.writeU8(0) // Parallel type
     writeLocation(pi.loc)
     writeContents(pi.contents)
-    writeMetadata(pi.metadata)
   }
 
   private def writeSequentialInteractions(si: SequentialInteractions): Unit = {
@@ -676,7 +677,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writer.writeU8(1) // Sequential type
     writeLocation(si.loc)
     writeContents(si.contents)
-    writeMetadata(si.metadata)
   }
 
   private def writeOptionalInteractions(oi: OptionalInteractions): Unit = {
@@ -684,7 +684,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writer.writeU8(2) // Optional type
     writeLocation(oi.loc)
     writeContents(oi.contents)
-    writeMetadata(oi.metadata)
   }
 
   private def writeVagueInteraction(vi: VagueInteraction): Unit = {
@@ -694,7 +693,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLiteralString(vi.from)
     writeLiteralString(vi.relationship)
     writeLiteralString(vi.to)
-    writeMetadata(vi.metadata)
   }
 
   private def writeSendMessageInteraction(smi: SendMessageInteraction): Unit = {
@@ -704,7 +702,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeReference(smi.from)
     writeMessageRef(smi.message)
     writeProcessorRef(smi.to)
-    writeMetadata(smi.metadata)
   }
 
   private def writeArbitraryInteraction(ai: ArbitraryInteraction): Unit = {
@@ -714,7 +711,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeReference(ai.from)
     writeLiteralString(ai.relationship)
     writeReference(ai.to)
-    writeMetadata(ai.metadata)
   }
 
   private def writeSelfInteraction(si: SelfInteraction): Unit = {
@@ -723,7 +719,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(si.loc)
     writeReference(si.from)
     writeLiteralString(si.relationship)
-    writeMetadata(si.metadata)
   }
 
   private def writeFocusOnGroupInteraction(fgi: FocusOnGroupInteraction): Unit = {
@@ -732,7 +727,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(fgi.loc)
     writeUserRef(fgi.from)
     writeGroupRef(fgi.to)
-    writeMetadata(fgi.metadata)
   }
 
   private def writeDirectUserToURLInteraction(dui: DirectUserToURLInteraction): Unit = {
@@ -741,7 +735,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(dui.loc)
     writeUserRef(dui.from)
     writeURL(dui.url)
-    writeMetadata(dui.metadata)
   }
 
   private def writeShowOutputInteraction(soi: ShowOutputInteraction): Unit = {
@@ -751,7 +744,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeOutputRef(soi.from)
     writeLiteralString(soi.relationship)
     writeUserRef(soi.to)
-    writeMetadata(soi.metadata)
   }
 
   private def writeSelectInputInteraction(sii: SelectInputInteraction): Unit = {
@@ -760,7 +752,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(sii.loc)
     writeUserRef(sii.from)
     writeInputRef(sii.to)
-    writeMetadata(sii.metadata)
   }
 
   private def writeTakeInputInteraction(tii: TakeInputInteraction): Unit = {
@@ -769,7 +760,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(tii.loc)
     writeUserRef(tii.from)
     writeInputRef(tii.to)
-    writeMetadata(tii.metadata)
   }
 
   // ========== UI Component Serialization ==========
@@ -780,7 +770,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeString(g.alias)
     writeIdentifier(g.id)
     writeContents(g.contents)
-    writeMetadata(g.metadata)
   }
 
   private def writeContainedGroup(cg: ContainedGroup): Unit = {
@@ -788,7 +777,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(cg.loc)
     writeIdentifier(cg.id)
     writeGroupRef(cg.group)
-    writeMetadata(cg.metadata)
   }
 
   private def writeInput(i: Input): Unit = {
@@ -799,7 +787,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeString(i.verbAlias)
     writeTypeRef(i.takeIn)
     writeContents(i.contents)
-    writeMetadata(i.metadata)
   }
 
   private def writeOutput(o: Output): Unit = {
@@ -821,7 +808,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
         writeLiteralString(ls)
     }
     writeContents(o.contents)
-    writeMetadata(o.metadata)
   }
 
   // ========== Statement Serialization ==========
@@ -928,6 +914,11 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeContents(s.do_)
   }
 
+  // TODO: CRITICAL BUG - Multiple Contents fields not properly traversed
+  // This writes counts for both thens and elses, but traverse() only processes
+  // the main .contents field. Items are never written.
+  // NOTE: This node type may be removed in future revision.
+  // See bast/KNOWN_ISSUES.md for details and fix options.
   private def writeIfThenElseStatement(s: IfThenElseStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
     writer.writeU8(12) // IfThenElse statement
@@ -1175,7 +1166,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       case outr: OutputRef => writeOutputRef(outr)
       case dr: DomainRef => writeDomainRef(dr)
       case _ =>
-        pc.log.warn(s"Unhandled reference type: ${r.getClass.getSimpleName} at ${r.loc}")
+        println(s"Unhandled reference type: ${r.getClass.getSimpleName} at ${r.loc}")
     }
   }
 
@@ -1187,7 +1178,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       case rr: ResultRef => writeResultRef(rr)
       case recr: RecordRef => writeRecordRef(recr)
       case _ =>
-        pc.log.warn(s"Unhandled message ref type: ${r.getClass.getSimpleName} at ${r.loc}")
+        println(s"Unhandled message ref type: ${r.getClass.getSimpleName} at ${r.loc}")
     }
   }
 
@@ -1619,7 +1610,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
         writeLocation(n.loc)
 
       case _ =>
-        pc.log.warn(s"Unhandled type expression: ${te.getClass.getSimpleName} at ${te.loc}")
+        println(s"Unhandled type expression: ${te.getClass.getSimpleName} at ${te.loc}")
     }
   }
 
@@ -1629,15 +1620,18 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     // Delta encoding: store differences from previous location
     if lastLocation.isEmpty then
       // First location: write full data
+      // Use origin (path) instead of toExternalForm to preserve relative paths
       writeString(loc.source.origin)
       writer.writeVarInt(loc.offset)
       writer.writeVarInt(loc.line)
       writer.writeVarInt(loc.col)
     else
       // Subsequent locations: write deltas
-      if loc.source.origin != lastLocation.source.origin then
+      // Treat 'empty' origin as same source (identifiers often have empty origin)
+      val sameSource = loc.source.origin == lastLocation.source.origin || loc.source.origin == "empty"
+      if !sameSource then
         writer.writeU8(1) // Flag: new source file
-        writeString(loc.source.origin)
+        writeString(loc.source.origin) // Use origin to preserve relative paths
       else
         writer.writeU8(0) // Flag: same source file
       end if
@@ -1651,7 +1645,12 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       writer.writeVarInt(lineDelta + 1000)
       writer.writeVarInt(colDelta + 1000)
     end if
-    lastLocation = loc
+
+    // Only update lastLocation if this location has a real origin (not 'empty')
+    // This prevents corrupting delta encoding when identifiers have placeholder locations
+    if loc.source.origin != "empty" then
+      lastLocation = loc
+    end if
   }
 
   private def writeIdentifier(id: Identifier): Unit = {
@@ -1692,10 +1691,6 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
   private def writeContents[T <: RiddlValue](contents: Contents[T]): Unit = {
     writer.writeVarInt(contents.length)
     // Note: Individual elements are written by the main process() method during traversal
-  }
-
-  private def writeMetadata(metadata: Contents[MetaData]): Unit = {
-    writeContents(metadata)
   }
 
   override def close(): Unit = ()
