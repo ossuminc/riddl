@@ -16,7 +16,9 @@ import java.lang.Character.{isLetter, isWhitespace}
   */
 object Keywords {
 
-  private val nonKeywordChars = (c: Char) => !isLetter(c)
+  // A keyword must be followed by a non-identifier character (not a letter, digit, hyphen, or underscore)
+  // This prevents "event" from matching in "event-sourced" or "type_id"
+  private val nonKeywordChars = (c: Char) => !isLetter(c) && c != '-' && c != '_' && !c.isDigit
 
   // Succeeds if the next character (look ahead without consuming) is not an
   // identifier character. This is used with keywords to make sure the keyword
