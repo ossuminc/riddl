@@ -49,7 +49,7 @@ class BASTLoaderTest extends AnyWordSpec {
 
           try {
             // Step 4: Create a RIDDL file that imports the BAST
-            val riddlContent = s"""import "${bastFile.toAbsolutePath}" as imported
+            val riddlContent = s"""import "${bastFile.toAbsolutePath}"
                                   |
                                   |domain TestDomain is {
                                   |  briefly "A test domain"
@@ -69,8 +69,8 @@ class BASTLoaderTest extends AnyWordSpec {
                 val imports = BASTLoader.getImports(parsedRoot)
                 assert(imports.size == 1, s"Expected 1 import, got ${imports.size}")
                 val bastImport = imports.head
-                assert(bastImport.namespace.value == "imported",
-                  s"Expected namespace 'imported', got '${bastImport.namespace.value}'")
+                assert(bastImport.path.s.endsWith("imported.bast"),
+                  s"Expected path ending with 'imported.bast', got '${bastImport.path.s}'")
                 assert(bastImport.contents.isEmpty, "BASTImport contents should be empty before loading")
 
                 // Step 7: Load the BAST imports
@@ -84,10 +84,11 @@ class BASTLoaderTest extends AnyWordSpec {
                 // Step 8: Verify the contents were populated
                 assert(bastImport.contents.nonEmpty, "BASTImport contents should not be empty after loading")
 
-                // Step 9: Verify we can look up the imported domain
-                val foundDomain = BASTLoader.lookupInNamespace(parsedRoot, "imported", "ImportedLib")
-                assert(foundDomain.isDefined, "Should find ImportedLib in imported namespace")
-                assert(foundDomain.get.isInstanceOf[Domain], "Found definition should be a Domain")
+                // Step 9: Verify we can find the imported domain in contents
+                val importedDomains = bastImport.contents.toSeq.collect { case d: Domain => d }
+                assert(importedDomains.size == 1, s"Expected 1 domain in import, got ${importedDomains.size}")
+                assert(importedDomains.head.id.value == "ImportedLib",
+                  s"Expected domain 'ImportedLib', got '${importedDomains.head.id.value}'")
             }
           } finally {
             // Cleanup
@@ -99,7 +100,7 @@ class BASTLoaderTest extends AnyWordSpec {
 
     "report error for missing BAST file" in { (td: TestData) =>
       // Create a RIDDL file that imports a non-existent BAST
-      val riddlContent = """import "nonexistent.bast" as missing
+      val riddlContent = """import "nonexistent.bast"
                            |
                            |domain TestDomain is {
                            |  briefly "A test domain"
@@ -162,8 +163,8 @@ class BASTLoaderTest extends AnyWordSpec {
           Files.write(bastFile2, output2.bytes)
 
           try {
-            val riddlContent = s"""import "${bastFile1.toAbsolutePath}" as utils
-                                  |import "${bastFile2.toAbsolutePath}" as models
+            val riddlContent = s"""import "${bastFile1.toAbsolutePath}"
+                                  |import "${bastFile2.toAbsolutePath}"
                                   |
                                   |domain TestDomain is {
                                   |  briefly "A test domain"
@@ -188,15 +189,16 @@ class BASTLoaderTest extends AnyWordSpec {
                   s"Expected 0 failed imports: ${loadResult.messages.map(_.format).mkString("; ")}")
                 assert(loadResult.loadedCount == 2, s"Expected 2 loaded imports, got ${loadResult.loadedCount}")
 
-                // Verify namespace isolation
-                val utilsDomain = BASTLoader.lookupInNamespace(parsedRoot, "utils", "UtilsDomain")
-                val modelsDomain = BASTLoader.lookupInNamespace(parsedRoot, "models", "ModelsDomain")
-                assert(utilsDomain.isDefined, "Should find UtilsDomain in utils namespace")
-                assert(modelsDomain.isDefined, "Should find ModelsDomain in models namespace")
+                // Verify both imports have contents
+                imports.foreach { bi =>
+                  assert(bi.contents.nonEmpty, s"Import ${bi.path.s} should have contents after loading")
+                }
 
-                // Verify domains aren't in wrong namespace
-                val wrongLookup = BASTLoader.lookupInNamespace(parsedRoot, "utils", "ModelsDomain")
-                assert(wrongLookup.isEmpty, "ModelsDomain should not be in utils namespace")
+                // Verify we can find domains in the imports
+                val allDomains = imports.flatMap(_.contents.toSeq.collect { case d: Domain => d })
+                val domainNames = allDomains.map(_.id.value).toSet
+                assert(domainNames.contains("UtilsDomain"), "Should find UtilsDomain in imports")
+                assert(domainNames.contains("ModelsDomain"), "Should find ModelsDomain in imports")
             }
           } finally {
             Files.deleteIfExists(bastFile1)

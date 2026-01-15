@@ -1058,33 +1058,31 @@ object AST:
     override def toString: String = format
   end Include
 
-  /** A top-level import of a BAST (Binary AST) file with a namespace alias.
+  /** An import of a BAST (Binary AST) file.
     *
-    * Imports bring in pre-compiled definitions from .bast files at the top level of a RIDDL file.
-    * The imported definitions are accessible via the namespace prefix.
+    * Imports bring in pre-compiled definitions from .bast files. Can appear at the root level
+    * or inside a domain. The imported definitions become children of the containing scope and
+    * are accessible via normal domain path resolution.
     *
-    * Syntax: `import "path/to/file.bast" as namespace`
+    * Syntax: `import "path/to/file.bast"`
     *
     * @param loc
     *   The location of the import statement in the source
     * @param path
     *   The path to the .bast file to import
-    * @param namespace
-    *   The namespace alias for accessing imported definitions
     * @param contents
-    *   The loaded Nebula contents from the BAST file (populated during parsing)
+    *   The loaded Nebula contents from the BAST file (populated by BASTLoader)
     */
   case class BASTImport(
     loc: At = At.empty,
     path: LiteralString,
-    namespace: Identifier,
     contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
   ) extends Container[NebulaContents]:
     type ContentType = NebulaContents
 
     override def isRootContainer: Boolean = false
 
-    def format: String = s"""import "${path.s}" as ${namespace.value}"""
+    def format: String = s"""import "${path.s}""""
     override def toString: String = format
   end BASTImport
 

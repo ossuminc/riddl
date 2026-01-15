@@ -454,9 +454,8 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writer.writeU8(NODE_BAST_IMPORT)
     writeLocation(bi.loc)
     writeLiteralString(bi.path)
-    writeIdentifier(bi.namespace)
     // Contents are not serialized - they're loaded dynamically
-    // during BASTLoadingPass when this import is encountered
+    // by BASTLoader when this import is encountered
   }
 
   // ========== Definition Serialization ==========

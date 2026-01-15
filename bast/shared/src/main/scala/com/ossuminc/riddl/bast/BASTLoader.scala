@@ -124,22 +124,4 @@ object BASTLoader {
       case bi: BASTImport => bi
     }
   }
-
-  /** Look up a definition by namespace and name.
-    *
-    * This is used during reference resolution to find imported definitions.
-    *
-    * @param root The Root containing BASTImport nodes
-    * @param namespace The namespace to look in
-    * @param name The name to find
-    * @return Option containing the found definition, if any
-    */
-  def lookupInNamespace(root: Root, namespace: String, name: String): Option[Definition] = {
-    root.contents.toSeq.collectFirst {
-      case bi: BASTImport if bi.namespace.value == namespace =>
-        bi.contents.toSeq.collectFirst {
-          case d: Definition if d.id.value == name => d
-        }
-    }.flatten
-  }
 }

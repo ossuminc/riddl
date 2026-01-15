@@ -269,10 +269,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readBASTImportNode(): BASTImport = {
     val loc = readLocation()
     val path = readLiteralString()
-    val namespace = readIdentifier()
     // Contents are not stored in BAST - they're loaded dynamically
-    // during BASTLoadingPass when this import is encountered
-    BASTImport(loc, path, namespace)
+    // by BASTLoader when this import is encountered
+    BASTImport(loc, path)
   }
 
   // ========== Type Definitions ==========
