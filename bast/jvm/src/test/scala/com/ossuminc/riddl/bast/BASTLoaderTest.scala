@@ -1,0 +1,212 @@
+/*
+ * Copyright 2019-2026 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.bast
+
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
+import com.ossuminc.riddl.passes.{Pass, PassInput}
+import com.ossuminc.riddl.utils.{pc, ec, Await, URL}
+import org.scalatest.TestData
+import org.scalatest.wordspec.AnyWordSpec
+
+import java.nio.file.{Files, Path}
+import scala.concurrent.duration.*
+
+class BASTLoaderTest extends AnyWordSpec {
+
+  "BASTLoader" should {
+    "load a BAST import and populate contents" in { (td: TestData) =>
+      // Step 1: Create a simple RIDDL source with a type definition
+      val sourceRiddl = """domain ImportedLib is {
+                          |  type MyImportedType is String
+                          |  briefly "A library domain"
+                          |}
+                          |""".stripMargin
+
+      // Step 2: Parse the source RIDDL to get a Root
+      val sourceInput = RiddlParserInput(sourceRiddl, "test-source")
+      val sourceParseResult = TopLevelParser.parseInput(sourceInput, withVerboseFailures = true)
+
+      sourceParseResult match {
+        case Left(messages) =>
+          fail(s"Source parse failed: ${messages.format}")
+
+        case Right(sourceRoot: Root) =>
+          // Step 3: Write the Root to a BAST file using the Pass framework
+          val passInput = PassInput(sourceRoot)
+          val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriter.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriter.name).get
+          val bastBytes = output.bytes
+
+          val tempDir = Files.createTempDirectory("bast-loader-test")
+          val bastFile = tempDir.resolve("imported.bast")
+          Files.write(bastFile, bastBytes)
+
+          try {
+            // Step 4: Create a RIDDL file that imports the BAST
+            val riddlContent = s"""import "${bastFile.toAbsolutePath}" as imported
+                                  |
+                                  |domain TestDomain is {
+                                  |  briefly "A test domain"
+                                  |}
+                                  |""".stripMargin
+
+            // Step 5: Parse the RIDDL file
+            val rpi = RiddlParserInput(riddlContent, "test-import")
+            val parseResult = TopLevelParser.parseInput(rpi, withVerboseFailures = true)
+
+            parseResult match {
+              case Left(messages) =>
+                fail(s"Parse failed: ${messages.format}")
+
+              case Right(parsedRoot: Root) =>
+                // Step 6: Verify we have a BASTImport node
+                val imports = BASTLoader.getImports(parsedRoot)
+                assert(imports.size == 1, s"Expected 1 import, got ${imports.size}")
+                val bastImport = imports.head
+                assert(bastImport.namespace.value == "imported",
+                  s"Expected namespace 'imported', got '${bastImport.namespace.value}'")
+                assert(bastImport.contents.isEmpty, "BASTImport contents should be empty before loading")
+
+                // Step 7: Load the BAST imports
+                val baseURL = URL.fromCwdPath(".")
+                val loadResult = BASTLoader.loadImports(parsedRoot, baseURL)
+
+                assert(loadResult.failedCount == 0,
+                  s"Expected 0 failed imports, got ${loadResult.failedCount}: ${loadResult.messages.map(_.format).mkString("; ")}")
+                assert(loadResult.loadedCount == 1, s"Expected 1 loaded import, got ${loadResult.loadedCount}")
+
+                // Step 8: Verify the contents were populated
+                assert(bastImport.contents.nonEmpty, "BASTImport contents should not be empty after loading")
+
+                // Step 9: Verify we can look up the imported domain
+                val foundDomain = BASTLoader.lookupInNamespace(parsedRoot, "imported", "ImportedLib")
+                assert(foundDomain.isDefined, "Should find ImportedLib in imported namespace")
+                assert(foundDomain.get.isInstanceOf[Domain], "Found definition should be a Domain")
+            }
+          } finally {
+            // Cleanup
+            Files.deleteIfExists(bastFile)
+            Files.deleteIfExists(tempDir)
+          }
+      }
+    }
+
+    "report error for missing BAST file" in { (td: TestData) =>
+      // Create a RIDDL file that imports a non-existent BAST
+      val riddlContent = """import "nonexistent.bast" as missing
+                           |
+                           |domain TestDomain is {
+                           |  briefly "A test domain"
+                           |}
+                           |""".stripMargin
+
+      val rpi = RiddlParserInput(riddlContent, "test-missing")
+      val parseResult = TopLevelParser.parseInput(rpi, withVerboseFailures = true)
+
+      parseResult match {
+        case Left(messages) =>
+          fail(s"Parse failed: ${messages.format}")
+
+        case Right(parsedRoot: Root) =>
+          val baseURL = URL.fromCwdPath(".")
+          val loadResult = BASTLoader.loadImports(parsedRoot, baseURL)
+
+          assert(loadResult.failedCount == 1, s"Expected 1 failed import, got ${loadResult.failedCount}")
+          assert(loadResult.loadedCount == 0, s"Expected 0 loaded imports, got ${loadResult.loadedCount}")
+          assert(loadResult.messages.nonEmpty, "Should have error messages")
+      }
+    }
+
+    "handle multiple imports" in { (td: TestData) =>
+      // Create two RIDDL sources with different definitions
+      val source1Riddl = """domain UtilsDomain is {
+                           |  type TypeA is String
+                           |  briefly "Utils domain"
+                           |}
+                           |""".stripMargin
+
+      val source2Riddl = """domain ModelsDomain is {
+                           |  type TypeB is Number
+                           |  briefly "Models domain"
+                           |}
+                           |""".stripMargin
+
+      // Parse both sources
+      val input1 = RiddlParserInput(source1Riddl, "test-utils")
+      val result1 = TopLevelParser.parseInput(input1, withVerboseFailures = true)
+
+      val input2 = RiddlParserInput(source2Riddl, "test-models")
+      val result2 = TopLevelParser.parseInput(input2, withVerboseFailures = true)
+
+      (result1, result2) match {
+        case (Right(root1: Root), Right(root2: Root)) =>
+          // Write both to BAST files
+          val passInput1 = PassInput(root1)
+          val writerResult1 = Pass.runThesePasses(passInput1, Seq(BASTWriter.creator()))
+          val output1 = writerResult1.outputOf[BASTOutput](BASTWriter.name).get
+
+          val passInput2 = PassInput(root2)
+          val writerResult2 = Pass.runThesePasses(passInput2, Seq(BASTWriter.creator()))
+          val output2 = writerResult2.outputOf[BASTOutput](BASTWriter.name).get
+
+          val tempDir = Files.createTempDirectory("bast-loader-test-multi")
+          val bastFile1 = tempDir.resolve("utils.bast")
+          val bastFile2 = tempDir.resolve("models.bast")
+          Files.write(bastFile1, output1.bytes)
+          Files.write(bastFile2, output2.bytes)
+
+          try {
+            val riddlContent = s"""import "${bastFile1.toAbsolutePath}" as utils
+                                  |import "${bastFile2.toAbsolutePath}" as models
+                                  |
+                                  |domain TestDomain is {
+                                  |  briefly "A test domain"
+                                  |}
+                                  |""".stripMargin
+
+            val rpi = RiddlParserInput(riddlContent, "test-multi-import")
+            val parseResult = TopLevelParser.parseInput(rpi, withVerboseFailures = true)
+
+            parseResult match {
+              case Left(messages) =>
+                fail(s"Parse failed: ${messages.format}")
+
+              case Right(parsedRoot: Root) =>
+                val imports = BASTLoader.getImports(parsedRoot)
+                assert(imports.size == 2, s"Expected 2 imports, got ${imports.size}")
+
+                val baseURL = URL.fromCwdPath(".")
+                val loadResult = BASTLoader.loadImports(parsedRoot, baseURL)
+
+                assert(loadResult.failedCount == 0,
+                  s"Expected 0 failed imports: ${loadResult.messages.map(_.format).mkString("; ")}")
+                assert(loadResult.loadedCount == 2, s"Expected 2 loaded imports, got ${loadResult.loadedCount}")
+
+                // Verify namespace isolation
+                val utilsDomain = BASTLoader.lookupInNamespace(parsedRoot, "utils", "UtilsDomain")
+                val modelsDomain = BASTLoader.lookupInNamespace(parsedRoot, "models", "ModelsDomain")
+                assert(utilsDomain.isDefined, "Should find UtilsDomain in utils namespace")
+                assert(modelsDomain.isDefined, "Should find ModelsDomain in models namespace")
+
+                // Verify domains aren't in wrong namespace
+                val wrongLookup = BASTLoader.lookupInNamespace(parsedRoot, "utils", "ModelsDomain")
+                assert(wrongLookup.isEmpty, "ModelsDomain should not be in utils namespace")
+            }
+          } finally {
+            Files.deleteIfExists(bastFile1)
+            Files.deleteIfExists(bastFile2)
+            Files.deleteIfExists(tempDir)
+          }
+
+        case _ =>
+          fail("Failed to parse source RIDDL files")
+      }
+    }
+  }
+}
