@@ -287,5 +287,94 @@ class BASTLoaderTest extends AnyWordSpec {
           }
       }
     }
+
+    "resolve references to imported types" in { (td: TestData) =>
+      // Create a RIDDL source with a reusable type
+      val libraryRiddl = """domain TypeLibrary is {
+                           |  type UserId is UUID
+                           |  briefly "Reusable type definitions"
+                           |}
+                           |""".stripMargin
+
+      // Parse and convert to BAST
+      val libInput = RiddlParserInput(libraryRiddl, "test-library")
+      val libResult = TopLevelParser.parseInput(libInput, withVerboseFailures = true)
+
+      libResult match {
+        case Left(messages) =>
+          fail(s"Library parse failed: ${messages.format}")
+
+        case Right(libRoot: Root) =>
+          // Write to BAST
+          val passInput = PassInput(libRoot)
+          val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriter.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriter.name).get
+
+          val tempDir = Files.createTempDirectory("bast-resolution-test")
+          val bastFile = tempDir.resolve("types.bast")
+          Files.write(bastFile, output.bytes)
+
+          try {
+            // Create a RIDDL file that imports and USES the type
+            val riddlContent = s"""import "${bastFile.toAbsolutePath}"
+                                  |
+                                  |domain MyApp is {
+                                  |  context Users is {
+                                  |    // Reference the imported type
+                                  |    type LocalUserId is TypeLibrary.UserId
+                                  |    briefly "User context"
+                                  |  }
+                                  |  briefly "Application domain"
+                                  |}
+                                  |""".stripMargin
+
+            val rpi = RiddlParserInput(riddlContent, "test-resolution")
+            val parseResult = TopLevelParser.parseInput(rpi, withVerboseFailures = true)
+
+            parseResult match {
+              case Left(messages) =>
+                fail(s"Parse failed: ${messages.format}")
+
+              case Right(parsedRoot: Root) =>
+                // Load the BAST imports first
+                val baseURL = URL.fromCwdPath(".")
+                val loadResult = BASTLoader.loadImports(parsedRoot, baseURL)
+                assert(loadResult.failedCount == 0,
+                  s"Import load failed: ${loadResult.messages.map(_.format).mkString("; ")}")
+
+                // Now run validation passes to check if resolution works
+                // The resolution pass should find TypeLibrary.UserId
+                import com.ossuminc.riddl.passes.{PassesResult, Riddl}
+
+                Riddl.validate(parsedRoot) match {
+                  case Left(parseErrors) =>
+                    fail(s"Validation failed during parsing: ${parseErrors.map(_.format).mkString("; ")}")
+
+                  case Right(passesResult) =>
+                    val allMessages = passesResult.messages
+
+                    // Check for resolution errors related to our reference
+                    val resolutionErrors = allMessages.filter { msg =>
+                      msg.format.contains("TypeLibrary") || msg.format.contains("UserId")
+                    }
+
+                    // Print any errors for debugging
+                    if resolutionErrors.nonEmpty then
+                      println(s"Resolution-related messages: ${resolutionErrors.map(_.format).mkString("\n")}")
+                    end if
+
+                    // The test passes if there are no errors about unresolved TypeLibrary.UserId
+                    // Note: There may be other validation warnings, but resolution should work
+                    val unresolvedErrors = resolutionErrors.filter(_.kind.isError)
+                    assert(unresolvedErrors.isEmpty,
+                      s"Found unresolved reference errors: ${unresolvedErrors.map(_.format).mkString("\n")}")
+                }
+            }
+          } finally {
+            Files.deleteIfExists(bastFile)
+            Files.deleteIfExists(tempDir)
+          }
+      }
+    }
   }
 }
