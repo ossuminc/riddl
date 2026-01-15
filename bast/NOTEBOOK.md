@@ -19,7 +19,11 @@ The `bast/` module provides efficient binary serialization/deserialization of RI
 
 ## In Progress
 
-No active work items. Phase 4 is complete.
+**Phase 5: CLI & Testing**
+- [x] Add `riddlc bast-gen` command - 77ba7544
+- [ ] Add `--use-bast-cache` flag (auto-generate BAST during parsing)
+- [ ] Performance benchmarks (parse RIDDL vs load BAST)
+- [ ] Cross-platform tests (JS, Native)
 
 ## Design Decisions Log
 
@@ -34,10 +38,11 @@ No active work items. Phase 4 is complete.
 
 ## Next Steps
 
-1. Add `riddlc bast-gen` command to generate BAST from RIDDL files
-2. Implement duplicate definition error detection
-3. Performance benchmarking (parse RIDDL vs load BAST)
-4. Cross-platform testing (JS, Native variants)
+1. ~~Add `riddlc bast-gen` command to generate BAST from RIDDL files~~ DONE
+2. Add `--use-bast-cache` flag for automatic BAST generation during parsing
+3. Implement duplicate definition error detection
+4. Performance benchmarking (parse RIDDL vs load BAST)
+5. Cross-platform testing (JS, Native variants)
 
 ## Open Questions
 
