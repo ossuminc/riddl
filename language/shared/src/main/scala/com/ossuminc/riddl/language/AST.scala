@@ -816,8 +816,8 @@ object AST:
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga
 
-  /** Type of definitions that occur in a [[Domain]] with [[Include]] */
-  type DomainContents = OccursInDomain | Include[OccursInDomain]
+  /** Type of definitions that occur in a [[Domain]] with [[Include]] and [[BASTImport]] */
+  type DomainContents = OccursInDomain | Include[OccursInDomain] | BASTImport
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Group | Saga | Projector |

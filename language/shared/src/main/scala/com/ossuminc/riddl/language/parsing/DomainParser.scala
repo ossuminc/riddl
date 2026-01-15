@@ -33,7 +33,7 @@ private[parsing] trait DomainParser {
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
     P(
       vitalDefinitionContents |
-        author | context | domain | user | epic | saga | importDef | domainInclude | comment
+        author | context | domain | user | epic | saga | importDef | bastImport | domainInclude | comment
     ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 

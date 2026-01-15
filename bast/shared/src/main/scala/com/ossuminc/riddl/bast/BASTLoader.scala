@@ -19,7 +19,8 @@ import scala.util.{Failure, Success, Try}
 /** Utility for loading BAST imports.
   *
   * This loads BAST files referenced by BASTImport nodes and populates their
-  * contents field with the loaded Nebula contents.
+  * contents field with the loaded Nebula contents. Imports can appear at the
+  * root level or inside domains.
   */
 object BASTLoader {
 
@@ -30,10 +31,11 @@ object BASTLoader {
     messages: Messages
   )
 
-  /** Load all BAST imports in a Root.
+  /** Load all BAST imports in a Root, including those inside domains.
     *
-    * Finds all BASTImport nodes in the Root and loads the referenced BAST files,
-    * populating each BASTImport's contents field with the loaded Nebula contents.
+    * Finds all BASTImport nodes in the Root and its domains, loads the referenced
+    * BAST files, and populates each BASTImport's contents field with the loaded
+    * Nebula contents.
     *
     * @param root The Root containing BASTImport nodes to load
     * @param baseURL The base URL for resolving relative BAST file paths
@@ -45,26 +47,33 @@ object BASTLoader {
     var loaded = 0
     var failed = 0
 
-    root.contents.foreach {
-      case bi: BASTImport =>
-        loadSingleImport(bi, baseURL) match {
-          case Right(nebula) =>
-            // Copy Nebula contents into BASTImport contents
-            nebula.contents.foreach { item =>
-              bi.contents.append(item)
-            }
-            loaded += 1
-          case Left(error) =>
-            msgs += Messages.Message(
-              bi.loc,
-              s"Failed to load BAST import '${bi.path.s}': $error",
-              Messages.Error
-            )
-            failed += 1
-        }
-      case _ => () // Not a BASTImport, skip
+    def loadImport(bi: BASTImport): Unit = {
+      loadSingleImport(bi, baseURL) match {
+        case Right(nebula) =>
+          // Copy Nebula contents into BASTImport contents
+          nebula.contents.foreach { item =>
+            bi.contents.append(item)
+          }
+          loaded += 1
+        case Left(error) =>
+          msgs += Messages.Message(
+            bi.loc,
+            s"Failed to load BAST import '${bi.path.s}': $error",
+            Messages.Error
+          )
+          failed += 1
+      }
     }
 
+    def processContents[T <: RiddlValue](contents: Contents[T]): Unit = {
+      contents.foreach {
+        case bi: BASTImport => loadImport(bi)
+        case d: Domain => processContents(d.contents)
+        case _ => () // Not a BASTImport or Domain, skip
+      }
+    }
+
+    processContents(root.contents)
     LoadResult(loaded, failed, msgs.toList)
   }
 
@@ -108,20 +117,35 @@ object BASTLoader {
     * @return true if there are BASTImport nodes with empty contents
     */
   def hasUnloadedImports(root: Root): Boolean = {
-    root.contents.toSeq.exists {
-      case bi: BASTImport => bi.contents.isEmpty
-      case _ => false
+    var found = false
+    def checkContents[T <: RiddlValue](contents: Contents[T]): Unit = {
+      if !found then
+        contents.foreach {
+          case bi: BASTImport => if bi.contents.isEmpty then found = true
+          case d: Domain => checkContents(d.contents)
+          case _ => ()
+        }
+      end if
     }
+    checkContents(root.contents)
+    found
   }
 
-  /** Get all BASTImport nodes from a Root.
+  /** Get all BASTImport nodes from a Root, including those inside domains.
     *
     * @param root The Root to search
     * @return Sequence of BASTImport nodes
     */
   def getImports(root: Root): Seq[BASTImport] = {
-    root.contents.toSeq.collect {
-      case bi: BASTImport => bi
+    val result = mutable.ListBuffer.empty[BASTImport]
+    def collectFromContents[T <: RiddlValue](contents: Contents[T]): Unit = {
+      contents.foreach {
+        case bi: BASTImport => result += bi
+        case d: Domain => collectFromContents(d.contents)
+        case _ => ()
+      }
     }
+    collectFromContents(root.contents)
+    result.toSeq
   }
 }

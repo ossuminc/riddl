@@ -76,16 +76,22 @@ Phase 3 (serialization/deserialization) is fully working. Phase 4 (import integr
 - `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTLoaderTest.scala`
 
 #### Step 2: Support Import in Domains
-**Status**: PENDING (NEXT)
+**Status**: COMPLETE ✅
 
-**Changes needed:**
-- Add `BASTImport` to `DomainContents` type in AST.scala
-- Add `bastImport` parser rule to domain content parsing
-- Update domain parser to include `bastImport` in content rules
+**Changes made:**
+- Added `BASTImport` to `DomainContents` type in AST.scala
+- Moved `bastImport` parser rule to CommonParser (shared)
+- Added `bastImport` to `domainDefinitions` in DomainParser
+- Updated BASTLoader to recursively process domains
+- Added test for imports inside domains
 
-**Files to modify:**
+**Files modified:**
 - `language/shared/src/main/scala/com/ossuminc/riddl/language/AST.scala`
+- `language/shared/src/main/scala/com/ossuminc/riddl/language/parsing/CommonParser.scala`
+- `language/shared/src/main/scala/com/ossuminc/riddl/language/parsing/RootParser.scala`
 - `language/shared/src/main/scala/com/ossuminc/riddl/language/parsing/DomainParser.scala`
+- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTLoader.scala`
+- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTLoaderTest.scala`
 
 #### Step 3: Update BASTLoader
 **Status**: COMPLETE ✅ (done as part of Step 1)
@@ -127,8 +133,8 @@ Phase 3 (serialization/deserialization) is fully working. Phase 4 (import integr
 | BASTWriterSpec | 7 | ✅ All passing |
 | BASTRoundTripTest | 3 | ✅ All passing |
 | BASTPerformanceTest | 4 | ✅ All passing |
-| BASTLoaderTest | 3 | ✅ All passing |
-| **Total** | **17** | ✅ **All passing** |
+| BASTLoaderTest | 4 | ✅ All passing |
+| **Total** | **18** | ✅ **All passing** |
 
 ---
 

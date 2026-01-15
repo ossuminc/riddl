@@ -20,13 +20,7 @@ trait RootParser { this: ModuleParser & CommonParser & ParsingContext =>
     include[u, RootContents](rootContents(_))
   }
 
-  /** Parse a BAST import statement: `import "path/to/file.bast"` */
-  private def bastImport[u: P]: P[BASTImport] = {
-    P(Index ~ Keywords.import_ ~ literalString ~ Index).map {
-      case (start, path, end) =>
-        doBASTImport(at(start, end), path)
-    }
-  }
+  // bastImport is inherited from CommonParser
 
   private def rootContent[u: P]: P[RootContents] = {
     P(bastImport | moduleContent | module | rootInclude[u]).asInstanceOf[P[RootContents]]

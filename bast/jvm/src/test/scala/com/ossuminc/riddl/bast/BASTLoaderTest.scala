@@ -210,5 +210,82 @@ class BASTLoaderTest extends AnyWordSpec {
           fail("Failed to parse source RIDDL files")
       }
     }
+
+    "load imports inside domains" in { (td: TestData) =>
+      // Create a RIDDL source with shared types
+      val sharedRiddl = """domain SharedTypes is {
+                          |  type UserId is UUID
+                          |  type Email is String
+                          |  briefly "Shared type definitions"
+                          |}
+                          |""".stripMargin
+
+      // Parse and convert to BAST
+      val sharedInput = RiddlParserInput(sharedRiddl, "test-shared")
+      val sharedResult = TopLevelParser.parseInput(sharedInput, withVerboseFailures = true)
+
+      sharedResult match {
+        case Left(messages) =>
+          fail(s"Shared parse failed: ${messages.format}")
+
+        case Right(sharedRoot: Root) =>
+          // Write to BAST
+          val passInput = PassInput(sharedRoot)
+          val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriter.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriter.name).get
+
+          val tempDir = Files.createTempDirectory("bast-domain-import-test")
+          val bastFile = tempDir.resolve("shared.bast")
+          Files.write(bastFile, output.bytes)
+
+          try {
+            // Create a RIDDL file with import INSIDE a domain
+            val riddlContent = s"""domain MyApp is {
+                                  |  import "${bastFile.toAbsolutePath}"
+                                  |
+                                  |  context Users is {
+                                  |    briefly "User management"
+                                  |  }
+                                  |  briefly "Main application domain"
+                                  |}
+                                  |""".stripMargin
+
+            val rpi = RiddlParserInput(riddlContent, "test-domain-import")
+            val parseResult = TopLevelParser.parseInput(rpi, withVerboseFailures = true)
+
+            parseResult match {
+              case Left(messages) =>
+                fail(s"Parse failed: ${messages.format}")
+
+              case Right(parsedRoot: Root) =>
+                // Verify we can find the BASTImport inside the domain
+                val imports = BASTLoader.getImports(parsedRoot)
+                assert(imports.size == 1, s"Expected 1 import, got ${imports.size}")
+
+                val bastImport = imports.head
+                assert(bastImport.contents.isEmpty, "BASTImport should be empty before loading")
+
+                // Load imports (including those inside domains)
+                val baseURL = URL.fromCwdPath(".")
+                val loadResult = BASTLoader.loadImports(parsedRoot, baseURL)
+
+                assert(loadResult.failedCount == 0,
+                  s"Expected 0 failed: ${loadResult.messages.map(_.format).mkString("; ")}")
+                assert(loadResult.loadedCount == 1, s"Expected 1 loaded, got ${loadResult.loadedCount}")
+
+                // Verify contents were populated
+                assert(bastImport.contents.nonEmpty, "BASTImport should have contents after loading")
+
+                // Verify the SharedTypes domain was loaded
+                val loadedDomains = bastImport.contents.toSeq.collect { case d: Domain => d }
+                assert(loadedDomains.exists(_.id.value == "SharedTypes"),
+                  "Should find SharedTypes domain in loaded contents")
+            }
+          } finally {
+            Files.deleteIfExists(bastFile)
+            Files.deleteIfExists(tempDir)
+          }
+      }
+    }
   }
 }

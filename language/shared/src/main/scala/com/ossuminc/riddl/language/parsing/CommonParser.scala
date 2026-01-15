@@ -67,6 +67,14 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   }
 
+  /** Parse a BAST import statement: `import "path/to/file.bast"` */
+  def bastImport[u: P]: P[BASTImport] = {
+    P(Index ~ Keywords.import_ ~ literalString ~ Index).map {
+      case (start, path, end) =>
+        doBASTImport(at(start, end), path)
+    }
+  }
+
   def undefined[u: P, RT](f: => RT): P[RT] = {
     P(Punctuation.undefinedMark./).map(_ => f)
   }
