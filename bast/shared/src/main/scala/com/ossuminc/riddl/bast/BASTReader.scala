@@ -153,12 +153,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_ADAPTOR => readAdaptorNode()
       case NODE_FUNCTION => readFunctionNode()
       case NODE_PROJECTOR => readProjectorNode()
-      case NODE_REPOSITORY => readRepositoryOrSchemaNode()
+      case NODE_REPOSITORY => readRepositoryNode()
+      case NODE_SCHEMA => readSchemaNode()
       case NODE_STREAMLET => readStreamletNode()
       case NODE_SAGA => readSagaNode()
 
       // Handler components
-      case NODE_HANDLER => readHandlerOrStatementOrSagaStep()
+      case NODE_HANDLER => readHandlerOrStatement()
+      case NODE_SAGA_STEP => readSagaStepNode()
       case NODE_STATE => readStateNode()
       case NODE_INVARIANT => readInvariantNode()
       case NODE_ON_CLAUSE => readOnClauseNode()
@@ -348,53 +350,49 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     Projector(loc, id, contents, metadata)
   }
 
-  private def readRepositoryOrSchemaNode(): RiddlValue = {
+  private def readRepositoryNode(): Repository = {
+    val loc = readLocation()
+    val id = readIdentifier()
+    val contents = readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
+    val metadata = readMetadataDeferred()
+    Repository(loc, id, contents, metadata)
+  }
+
+  private def readSchemaNode(): Schema = {
+    // Read schemaKind subtype: 0=Relational, 1=Document, 2=Graphical
+    val subtype = reader.readU8()
     val loc = readLocation()
     val id = readIdentifier()
 
-    // Peek to see if this is a Schema (has schemaKind) or Repository
-    val saved = reader.position
-    val nextByte = reader.readU8()
-    reader.seek(saved)
+    val schemaKind = subtype match {
+      case 0 => RepositorySchemaKind.Relational
+      case 1 => RepositorySchemaKind.Document
+      case 2 => RepositorySchemaKind.Graphical
+      case _ => RepositorySchemaKind.Relational
+    }
 
-    // If next byte is a small number, it's likely schemaKind ordinal
-    if nextByte < 10 then
-      // Schema
-      val schemaKind = reader.readU8() match {
-        case 0 => RepositorySchemaKind.Relational
-        case 1 => RepositorySchemaKind.Document
-        case 2 => RepositorySchemaKind.Graphical
-        case _ => RepositorySchemaKind.Relational
-      }
+    // Read data map
+    val dataCount = reader.readVarInt()
+    val data = (0 until dataCount).map { _ =>
+      val dataId = readIdentifier()
+      val tref = readTypeRef()
+      (dataId, tref)
+    }.toMap
 
-      // Read data map
-      val dataCount = reader.readVarInt()
-      val data = (0 until dataCount).map { _ =>
-        val dataId = readIdentifier()
-        val tref = readTypeRef()
-        (dataId, tref)
-      }.toMap
+    // Read links map
+    val linksCount = reader.readVarInt()
+    val links = (0 until linksCount).map { _ =>
+      val linkId = readIdentifier()
+      val fr1 = readFieldRef()
+      val fr2 = readFieldRef()
+      (linkId, (fr1, fr2))
+    }.toMap
 
-      // Read links map
-      val linksCount = reader.readVarInt()
-      val links = (0 until linksCount).map { _ =>
-        val linkId = readIdentifier()
-        val fr1 = readFieldRef()
-        val fr2 = readFieldRef()
-        (linkId, (fr1, fr2))
-      }.toMap
+    // Read indices
+    val indices = readSeq(() => readFieldRef())
+    val metadata = readMetadataDeferred()
 
-      // Read indices
-      val indices = readSeq(() => readFieldRef())
-      val metadata = readMetadataDeferred()
-
-      Schema(loc, id, schemaKind, data, links, indices, metadata)
-    else
-      // Repository
-      val contents = readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
-      val metadata = readMetadataDeferred()
-      Repository(loc, id, contents, metadata)
-    end if
+    Schema(loc, id, schemaKind, data, links, indices, metadata)
   }
 
   private def readStreamletNode(): Streamlet = {
@@ -442,35 +440,38 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   // ========== Handler Components ==========
 
-  private def readHandlerOrStatementOrSagaStep(): RiddlValue = {
-    // Check for statement type byte
-    val saved = reader.position
-    val maybeLoc = readLocation()
-    val nextByte = reader.peekU8()
-    reader.seek(saved)
+  // Marker value used by writer to distinguish statements from handlers
+  // Using 255 (0xFF) as it's distinct from valid location/string data
+  private val STATEMENT_MARKER: Int = 255
 
-    // If next is a small number, it's a statement type
-    if nextByte < 20 then
-      val loc = readLocation()
+  private def readHandlerOrStatement(): RiddlValue = {
+    // After NODE_HANDLER tag is consumed, check the first byte:
+    // - For statements: first byte is STATEMENT_MARKER (0xFF), then stmtType, then location
+    // - For handlers: first byte is start of location data (no marker)
+    val firstByte = reader.peekU8()
+
+    if firstByte == STATEMENT_MARKER then
+      reader.readU8() // Consume marker
       val stmtType = reader.readU8()
+      val loc = readLocation()
       readStatement(loc, stmtType)
     else
-      // Handler or SagaStep
+      // Handler: location, identifier, contents, metadata
       val loc = readLocation()
       val id = readIdentifier()
-
-      // Check if this is SagaStep (has doStatements and undoStatements)
-      // Peek for two Contents
-      val saved2 = reader.position
-      val count1 = reader.readVarInt()
-      reader.seek(saved2)
-
-      // For simplicity, read as Handler
-      // TODO: Disambiguate SagaStep properly
       val contents = readContentsDeferred[HandlerContents]()
       val metadata = readMetadataDeferred()
       Handler(loc, id, contents, metadata)
     end if
+  }
+
+  private def readSagaStepNode(): SagaStep = {
+    val loc = readLocation()
+    val id = readIdentifier()
+    val doStatements = readContentsDeferred[Statements]()
+    val undoStatements = readContentsDeferred[Statements]()
+    val metadata = readMetadataDeferred()
+    SagaStep(loc, id, doStatements, undoStatements, metadata)
   }
 
   private def readStatement(loc: At, stmtType: Int): Statement = {
@@ -1010,48 +1011,41 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     typeTag match {
       // Aggregations
       case TYPE_AGGREGATION =>
-        val saved = reader.position
-        val nextByte = reader.peekU8()
-        reader.seek(saved)
+        // Always read subtype byte - all TYPE_AGGREGATION variants have one
+        val subtype = reader.readU8()
+        val loc = readLocation()
 
-        if nextByte < 100 then
-          // Has subtype
-          val subtype = reader.readU8()
-          val loc = readLocation()
+        subtype match {
+          case 20 => // Sequence
+            val of = readTypeExpression()
+            Sequence(loc, of)
 
-          subtype match {
-            case 20 => // Sequence
-              val of = readTypeExpression()
-              Sequence(loc, of)
+          case 21 => // Set
+            val of = readTypeExpression()
+            Set(loc, of)
 
-            case 21 => // Set
-              val of = readTypeExpression()
-              Set(loc, of)
+          case 22 => // Graph
+            val of = readTypeExpression()
+            Graph(loc, of)
 
-            case 22 => // Graph
-              val of = readTypeExpression()
-              Graph(loc, of)
+          case 23 => // Table
+            val of = readTypeExpression()
+            val dimensions = readSeq(() => reader.readVarLong())
+            Table(loc, of, dimensions)
 
-            case 23 => // Table
-              val of = readTypeExpression()
-              val dimensions = readSeq(() => reader.readVarLong())
-              Table(loc, of, dimensions)
+          case 24 => // Replica
+            val of = readTypeExpression()
+            Replica(loc, of)
 
-            case 24 => // Replica
-              val of = readTypeExpression()
-              Replica(loc, of)
+          case 255 => // Plain Aggregation (subtype marker)
+            val contents = readContentsDeferred[AggregateContents]()
+            Aggregation(loc, contents)
 
-            case _ => // AggregateUseCaseTypeExpression
-              val usecase = AggregateUseCase.fromOrdinal(subtype)
-              val contents = readContentsDeferred[AggregateContents]()
-              AggregateUseCaseTypeExpression(loc, usecase, contents)
-          }
-        else
-          // Plain Aggregation
-          val loc = readLocation()
-          val contents = readContentsDeferred[AggregateContents]()
-          Aggregation(loc, contents)
-        end if
+          case _ => // AggregateUseCaseTypeExpression (usecase ordinals 0-12)
+            val usecase = AggregateUseCase.fromOrdinal(subtype)
+            val contents = readContentsDeferred[AggregateContents]()
+            AggregateUseCaseTypeExpression(loc, usecase, contents)
+        }
 
       case TYPE_ALTERNATION =>
         val loc = readLocation()
@@ -1104,69 +1098,55 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           RangeType(loc, min, max)
         end if
 
-      // References
+      // References - all variants have subtype byte
       case TYPE_REF =>
-        val saved = reader.position
-        val nextByte = reader.peekU8()
-        reader.seek(saved)
+        val subtype = reader.readU8()
+        val loc = readLocation()
 
-        if nextByte < 50 then
-          // Has subtype
-          val subtype = reader.readU8()
-          val loc = readLocation()
+        subtype match {
+          case 0 => // AliasedTypeExpression
+            val keyword = readString()
+            val pathId = readPathIdentifier()
+            AliasedTypeExpression(loc, keyword, pathId)
 
-          subtype match {
-            case 10 => // EntityReference
-              val entity = readPathIdentifier()
-              EntityReferenceTypeExpression(loc, entity)
+          case 10 => // EntityReference
+            val entity = readPathIdentifier()
+            EntityReferenceTypeExpression(loc, entity)
 
-            case 99 => // Abstract
-              Abstract(loc)
+          case 99 => // Abstract
+            Abstract(loc)
 
-            case 100 => // Nothing
-              Nothing(loc)
+          case 100 => // Nothing
+            Nothing(loc)
 
-            case _ => // Unknown
-              Abstract(loc)
-          }
-        else
-          // AliasedTypeExpression
-          val loc = readLocation()
-          val keyword = readString()
-          val pathId = readPathIdentifier()
-          AliasedTypeExpression(loc, keyword, pathId)
-        end if
+          case _ =>
+            addError(s"Unknown TYPE_REF subtype: $subtype")
+            Abstract(loc)
+        }
 
-      // Strings
+      // Strings - all variants have subtype byte
       case TYPE_STRING =>
-        val saved = reader.position
-        val nextByte = reader.peekU8()
-        reader.seek(saved)
+        val subtype = reader.readU8()
+        val loc = readLocation()
 
-        if nextByte < 10 then
-          // Has subtype
-          val subtype = reader.readU8()
-          val loc = readLocation()
+        subtype match {
+          case 0 => // String_
+            val min = readOption(reader.readVarLong())
+            val max = readOption(reader.readVarLong())
+            String_(loc, min, max)
 
-          subtype match {
-            case 1 => // URI
-              val scheme = readOption(readLiteralString())
-              URI(loc, scheme)
+          case 1 => // URI
+            val scheme = readOption(readLiteralString())
+            URI(loc, scheme)
 
-            case 2 => // Blob
-              val blobKind = BlobKind.fromOrdinal(reader.readU8())
-              Blob(loc, blobKind)
+          case 2 => // Blob
+            val blobKind = BlobKind.fromOrdinal(reader.readU8())
+            Blob(loc, blobKind)
 
-            case _ => // String_
-              String_(loc, None, None)
-          }
-        else
-          // String_
-          val loc = readLocation()
-          val min = readOption(reader.readVarLong())
-          val max = readOption(reader.readVarLong())
-          String_(loc, min, max)
-        end if
+          case _ =>
+            addError(s"Unknown TYPE_STRING subtype: $subtype")
+            String_(loc, None, None)
+        }
 
       case TYPE_PATTERN =>
         val loc = readLocation()
@@ -1174,32 +1154,24 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         Pattern(loc, pattern)
 
       case TYPE_UNIQUE_ID =>
-        val saved = reader.position
-        val nextByte = reader.peekU8()
-        reader.seek(saved)
+        val subtype = reader.readU8()
+        val loc = readLocation()
 
-        if nextByte < 10 then
-          // Has subtype
-          val subtype = reader.readU8()
-          val loc = readLocation()
+        subtype match {
+          case 0 => // UniqueId
+            val entityPath = readPathIdentifier()
+            UniqueId(loc, entityPath)
 
-          subtype match {
-            case 1 => // UUID
-              UUID(loc)
+          case 1 => // UUID
+            UUID(loc)
 
-            case 2 => // UserId
-              UserId(loc)
+          case 2 => // UserId
+            UserId(loc)
 
-            case _ => // UniqueId
-              val entityPath = readPathIdentifier()
-              UniqueId(loc, entityPath)
-          }
-        else
-          // UniqueId
-          val loc = readLocation()
-          val entityPath = readPathIdentifier()
-          UniqueId(loc, entityPath)
-        end if
+          case _ =>
+            addError(s"Unknown TYPE_UNIQUE_ID subtype: $subtype")
+            UUID(loc)
+        }
 
       // Boolean
       case TYPE_BOOL =>
@@ -1276,7 +1248,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== References ==========
 
   private def readReference(): Reference[Definition] = {
-    val refTag = reader.readU8()
+    // Peek at tag to determine type - each reader consumes its own tag
+    val refTag = reader.peekU8()
 
     refTag match {
       case NODE_AUTHOR => readAuthorRef()
@@ -1301,18 +1274,21 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_OUTPUT => readOutputRef()
       case NODE_DOMAIN => readDomainRef()
       case _ =>
+        reader.readU8() // consume the unknown tag
         addError(s"Unknown reference tag: $refTag")
         TypeRef(At.empty, "", PathIdentifier.empty)
     }
   }
 
   private def readAuthorRef(): AuthorRef = {
+    val tag = reader.readU8() // Read NODE_AUTHOR tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     AuthorRef(loc, pathId)
   }
 
   private def readTypeRefOrMessageRef(): TypeRef | MessageRef = {
+    val tag = reader.readU8() // Read NODE_TYPE tag
     val saved = reader.position
     val loc = readLocation()
 
@@ -1344,6 +1320,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readTypeRef(): TypeRef = {
+    val tag = reader.readU8() // Read NODE_TYPE tag
     val loc = readLocation()
     val keyword = readString()
     val pathId = readPathIdentifier()
@@ -1351,6 +1328,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readFieldRefOrConstantRef(): FieldRef | ConstantRef = {
+    val tag = reader.readU8() // Read NODE_FIELD tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     // For now, default to FieldRef
@@ -1358,12 +1336,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readFieldRef(): FieldRef = {
+    val tag = reader.readU8() // Read NODE_FIELD tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     FieldRef(loc, pathId)
   }
 
   private def readConstantRef(): ConstantRef = {
+    val tag = reader.readU8() // Read NODE_FIELD tag (constants use same tag as fields)
     val loc = readLocation()
     val pathId = readPathIdentifier()
     ConstantRef(loc, pathId)
@@ -1400,54 +1380,63 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readAdaptorRef(): AdaptorRef = {
+    val tag = reader.readU8() // Read NODE_ADAPTOR tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     AdaptorRef(loc, pathId)
   }
 
   private def readFunctionRef(): FunctionRef = {
+    val tag = reader.readU8() // Read NODE_FUNCTION tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     FunctionRef(loc, pathId)
   }
 
   private def readHandlerRef(): HandlerRef = {
+    val tag = reader.readU8() // Read NODE_HANDLER tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     HandlerRef(loc, pathId)
   }
 
   private def readStateRef(): StateRef = {
+    val tag = reader.readU8() // Read NODE_STATE tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     StateRef(loc, pathId)
   }
 
   private def readEntityRef(): EntityRef = {
+    val tag = reader.readU8() // Read NODE_ENTITY tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     EntityRef(loc, pathId)
   }
 
   private def readRepositoryRef(): RepositoryRef = {
+    val tag = reader.readU8() // Read NODE_REPOSITORY tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     RepositoryRef(loc, pathId)
   }
 
   private def readProjectorRef(): ProjectorRef = {
+    val tag = reader.readU8() // Read NODE_PROJECTOR tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     ProjectorRef(loc, pathId)
   }
 
   private def readContextRef(): ContextRef = {
+    val tag = reader.readU8() // Read NODE_CONTEXT tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     ContextRef(loc, pathId)
   }
 
   private def readStreamletRef(): StreamletRef = {
+    val tag = reader.readU8() // Read NODE_STREAMLET tag
     val loc = readLocation()
     val keyword = readString()
     val pathId = readPathIdentifier()
@@ -1455,18 +1444,21 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readInletRef(): InletRef = {
+    val tag = reader.readU8() // Read NODE_INLET tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     InletRef(loc, pathId)
   }
 
   private def readOutletRef(): OutletRef = {
+    val tag = reader.readU8() // Read NODE_OUTLET tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     OutletRef(loc, pathId)
   }
 
   private def readSagaRef(): SagaRef = {
+    val tag = reader.readU8() // Read NODE_SAGA tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     SagaRef(loc, pathId)
@@ -1480,12 +1472,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readEpicRef(): EpicRef = {
+    val tag = reader.readU8() // Read NODE_EPIC tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     EpicRef(loc, pathId)
   }
 
   private def readGroupRef(): GroupRef = {
+    val tag = reader.readU8() // Read NODE_GROUP tag
     val loc = readLocation()
     val keyword = readString()
     val pathId = readPathIdentifier()
@@ -1493,6 +1487,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readInputRef(): InputRef = {
+    val tag = reader.readU8() // Read NODE_INPUT tag
     val loc = readLocation()
     val keyword = readString()
     val pathId = readPathIdentifier()
@@ -1500,6 +1495,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readOutputRef(): OutputRef = {
+    val tag = reader.readU8() // Read NODE_OUTPUT tag
     val loc = readLocation()
     val keyword = readString()
     val pathId = readPathIdentifier()
@@ -1507,6 +1503,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readDomainRef(): DomainRef = {
+    val tag = reader.readU8() // Read NODE_DOMAIN tag
     val loc = readLocation()
     val pathId = readPathIdentifier()
     DomainRef(loc, pathId)
@@ -1517,8 +1514,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     refTag match {
       case NODE_TYPE =>
         reader.readU8() // consume tag
+        val subtype = reader.readU8() // subtype comes BEFORE location
         val loc = readLocation()
-        val subtype = reader.readU8()
         val pathId = readPathIdentifier()
         subtype match {
           case 0 => CommandRef(loc, pathId)

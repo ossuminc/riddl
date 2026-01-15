@@ -241,6 +241,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
   }
 
   // Override traverse to write metadata count AFTER contents items
+  // and to handle nodes with multiple Contents fields (SagaStep, IfThenElseStatement)
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case root: Root =>
@@ -250,6 +251,116 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
         parents.pop()
         // Write metadata count for Root (always 0)
         writeMetadataCount(Contents.empty[MetaData]())
+
+      // SagaStep has TWO Contents fields: doStatements and undoStatements
+      // Must write count-items, count-items to match reader expectations
+      // SagaStep is not a Branch, so no push/pop needed
+      case ss: SagaStep =>
+        process(ss, parents)
+        // Write doStatements count then items
+        writeContents(ss.doStatements)
+        ss.doStatements.toSeq.foreach { value => traverse(value, parents) }
+        // Write undoStatements count then items
+        writeContents(ss.undoStatements)
+        ss.undoStatements.toSeq.foreach { value => traverse(value, parents) }
+        // Write metadata
+        writeMetadataCount(ss.metadata)
+
+      // IfThenElseStatement has TWO Contents fields: thens and elses
+      // Must write count-items, count-items to match reader expectations
+      // IfThenElseStatement is not a Branch, so no push/pop needed
+      case ite: IfThenElseStatement =>
+        process(ite, parents)
+        // Write thens count then items
+        writeContents(ite.thens)
+        ite.thens.toSeq.foreach { value => traverse(value, parents) }
+        // Write elses count then items
+        writeContents(ite.elses)
+        ite.elses.toSeq.foreach { value => traverse(value, parents) }
+        // IfThenElseStatement is a Statement, no metadata
+
+      // ForEachStatement has a do_ Contents field that must be traversed
+      case fe: ForEachStatement =>
+        process(fe, parents)
+        fe.do_.toSeq.foreach { value => traverse(value, parents) }
+        // ForEachStatement is a Statement, no metadata
+
+      // Handler extends Branch[HandlerContents] but NOT WithMetaData, so handle separately
+      case h: Handler =>
+        process(h, parents)
+        parents.push(h)
+        h.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(h.metadata)
+
+      // OnClauses extend Branch[Statements] but NOT WithMetaData, so handle separately
+      // They have metadata fields that need to be written
+      case oc: OnInitializationClause =>
+        process(oc, parents)
+        parents.push(oc)
+        oc.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(oc.metadata)
+
+      case oc: OnTerminationClause =>
+        process(oc, parents)
+        parents.push(oc)
+        oc.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(oc.metadata)
+
+      case oc: OnMessageClause =>
+        process(oc, parents)
+        parents.push(oc)
+        oc.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(oc.metadata)
+
+      case oc: OnOtherClause =>
+        process(oc, parents)
+        parents.push(oc)
+        oc.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(oc.metadata)
+
+      // Type extends Branch[TypeContents] but NOT WithMetaData
+      // Its contents are computed from typEx, not stored, so no traversal needed
+      case t: Type =>
+        process(t, parents)
+        writeMetadataCount(t.metadata)
+
+      // UseCase extends Branch[UseCaseContents] but NOT WithMetaData
+      case uc: UseCase =>
+        process(uc, parents)
+        parents.push(uc)
+        uc.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(uc.metadata)
+
+      // Group extends Branch[OccursInGroup] but NOT WithMetaData
+      case g: Group =>
+        process(g, parents)
+        parents.push(g)
+        g.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(g.metadata)
+
+      // Output extends Branch[OccursInOutput] but NOT WithMetaData
+      case o: Output =>
+        process(o, parents)
+        parents.push(o)
+        o.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(o.metadata)
+
+      // Input extends Branch[OccursInInput] but NOT WithMetaData
+      case i: Input =>
+        process(i, parents)
+        parents.push(i)
+        i.contents.foreach { value => traverse(value, parents) }
+        parents.pop()
+        writeMetadataCount(i.metadata)
+
       case branch: Branch[?] with WithMetaData =>
         process(branch, parents)  // Writes node data + contents count
         parents.push(branch)
@@ -257,6 +368,13 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
         parents.pop()
         // Now write metadata count and items AFTER contents items
         writeMetadataCount(branch.metadata)
+
+      // Non-Branch leaf definitions with metadata (Author, User, Term, State, Invariant, etc.)
+      // These need their metadata written but have no contents to traverse
+      case wm: WithMetaData =>
+        process(wm, parents)
+        writeMetadataCount(wm.metadata)
+
       case _ =>
         super.traverse(definition, parents)  // Use default traversal for non-branches
     }
@@ -606,10 +724,10 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
   // ========== Repository Component Serialization ==========
 
   private def writeSchema(s: Schema): Unit = {
-    writer.writeU8(NODE_REPOSITORY) // Schema is part of repository
+    writer.writeU8(NODE_SCHEMA)
+    writer.writeU8(s.schemaKind.ordinal) // Subtype: 0=Relational, 1=Document, 2=Graphical
     writeLocation(s.loc)
     writeIdentifier(s.id)
-    writer.writeU8(s.schemaKind.ordinal.toByte)
     // Write data map
     writer.writeVarInt(s.data.size)
     s.data.foreach { case (id, tref) =>
@@ -651,16 +769,12 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeSeq(sb.urls)(writeURL)
   }
 
-  // TODO: CRITICAL BUG - Multiple Contents fields not properly traversed
-  // This writes counts for both doStatements and undoStatements, but traverse()
-  // only processes the main .contents field. Items are never written.
-  // See bast/KNOWN_ISSUES.md for details and fix options.
   private def writeSagaStep(ss: SagaStep): Unit = {
-    writer.writeU8(NODE_HANDLER) // Steps are like handlers
+    writer.writeU8(NODE_SAGA_STEP)
     writeLocation(ss.loc)
     writeIdentifier(ss.id)
-    writeContents(ss.doStatements)
-    writeContents(ss.undoStatements)
+    // NOTE: doStatements and undoStatements are written by traverse() override
+    // to properly interleave count-items, count-items
   }
 
   // ========== Interaction Serialization ==========
@@ -812,8 +926,15 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   // ========== Statement Serialization ==========
 
+  // Marker value to distinguish statements from handlers
+  // Statements: NODE_HANDLER, 0xFF, subtype, loc, ...
+  // Handlers: NODE_HANDLER, loc (no 0xFF marker), ...
+  // Using 255 (0xFF) as it's distinct from valid location/string data
+  private val STATEMENT_MARKER: Int = 255
+
   private def writeArbitraryStatement(s: ArbitraryStatement): Unit = {
     writer.writeU8(NODE_HANDLER) // Statements within handlers
+    writer.writeU8(STATEMENT_MARKER) // Marker to identify as statement
     writer.writeU8(0) // Arbitrary statement type
     writeLocation(s.loc)
     writeLiteralString(s.what)
@@ -821,6 +942,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeErrorStatement(s: ErrorStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(1) // Error statement
     writeLocation(s.loc)
     writeLiteralString(s.message)
@@ -828,6 +950,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeFocusStatement(s: FocusStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(2) // Focus statement
     writeLocation(s.loc)
     writeGroupRef(s.group)
@@ -835,6 +958,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeSetStatement(s: SetStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(3) // Set statement
     writeLocation(s.loc)
     writeFieldRef(s.field)
@@ -843,6 +967,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeReturnStatement(s: ReturnStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(4) // Return statement
     writeLocation(s.loc)
     writeLiteralString(s.value)
@@ -850,6 +975,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeSendStatement(s: SendStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(5) // Send statement
     writeLocation(s.loc)
     writeMessageRef(s.msg)
@@ -858,6 +984,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeReplyStatement(s: ReplyStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(6) // Reply statement
     writeLocation(s.loc)
     writeMessageRef(s.message)
@@ -865,6 +992,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeMorphStatement(s: MorphStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(7) // Morph statement
     writeLocation(s.loc)
     writeEntityRef(s.entity)
@@ -874,6 +1002,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeBecomeStatement(s: BecomeStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(8) // Become statement
     writeLocation(s.loc)
     writeEntityRef(s.entity)
@@ -882,6 +1011,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeTellStatement(s: TellStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(9) // Tell statement
     writeLocation(s.loc)
     writeMessageRef(s.msg)
@@ -890,6 +1020,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeCallStatement(s: CallStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(10) // Call statement
     writeLocation(s.loc)
     writeFunctionRef(s.func)
@@ -897,6 +1028,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeForEachStatement(s: ForEachStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(11) // ForEach statement
     writeLocation(s.loc)
     // Handle union type: FieldRef | OutletRef | InletRef
@@ -914,28 +1046,26 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeContents(s.do_)
   }
 
-  // TODO: CRITICAL BUG - Multiple Contents fields not properly traversed
-  // This writes counts for both thens and elses, but traverse() only processes
-  // the main .contents field. Items are never written.
-  // NOTE: This node type may be removed in future revision.
-  // See bast/KNOWN_ISSUES.md for details and fix options.
   private def writeIfThenElseStatement(s: IfThenElseStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(12) // IfThenElse statement
     writeLocation(s.loc)
     writeLiteralString(s.cond)
-    writeContents(s.thens)
-    writeContents(s.elses)
+    // NOTE: thens and elses counts/items are written by traverse() override
+    // to properly interleave count-items, count-items
   }
 
   private def writeStopStatement(s: StopStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(13) // Stop statement
     writeLocation(s.loc)
   }
 
   private def writeReadStatement(s: ReadStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(14) // Read statement
     writeLocation(s.loc)
     writeString(s.keyword)
@@ -946,6 +1076,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeWriteStatement(s: WriteStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(15) // Write statement
     writeLocation(s.loc)
     writeString(s.keyword)
@@ -955,6 +1086,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
   private def writeCodeStatement(s: CodeStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(16) // Code statement
     writeLocation(s.loc)
     writeLiteralString(s.language)
@@ -1343,14 +1475,32 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       // Aggregate types
       case a: Aggregation =>
         writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(255) // Subtype marker for plain Aggregation (vs AggregateUseCaseTypeExpression)
         writeLocation(a.loc)
-        writeContents(a.contents)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(a.contents.length)
+        a.contents.toSeq.foreach { item =>
+          process(item, ParentStack())
+          // Fields have metadata that needs to be written
+          item match {
+            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case _ => ()
+          }
+        }
 
       case a: AggregateUseCaseTypeExpression =>
         writer.writeU8(TYPE_AGGREGATION)
         writer.writeU8(a.usecase.ordinal.toByte)
         writeLocation(a.loc)
-        writeContents(a.contents)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(a.contents.length)
+        a.contents.toSeq.foreach { item =>
+          process(item, ParentStack())
+          item match {
+            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case _ => ()
+          }
+        }
 
       case e: EntityReferenceTypeExpression =>
         writer.writeU8(TYPE_REF)
@@ -1362,12 +1512,26 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       case alt: Alternation =>
         writer.writeU8(TYPE_ALTERNATION)
         writeLocation(alt.loc)
-        writeContents(alt.of)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(alt.of.length)
+        alt.of.toSeq.foreach { item =>
+          process(item, ParentStack())
+          item match {
+            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case _ => ()
+          }
+        }
 
       case enumeration: Enumeration =>
         writer.writeU8(TYPE_ENUMERATION)
         writeLocation(enumeration.loc)
-        writeContents(enumeration.enumerators)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(enumeration.enumerators.length)
+        enumeration.enumerators.toSeq.foreach { item =>
+          process(item, ParentStack())
+          // Enumerators always have metadata
+          writeMetadataCount(item.metadata)
+        }
 
       case seq: Sequence =>
         writer.writeU8(TYPE_AGGREGATION)
@@ -1432,6 +1596,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       // Aliased type
       case ate: AliasedTypeExpression =>
         writer.writeU8(TYPE_REF)
+        writer.writeU8(0) // AliasedTypeExpression subtype (0 = aliased, 10 = entity ref, 99 = abstract, 100 = nothing)
         writeLocation(ate.loc)
         writeString(ate.keyword)
         writePathIdentifier(ate.pathId)
@@ -1439,6 +1604,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       // Predefined types - String
       case s: String_ =>
         writer.writeU8(TYPE_STRING)
+        writer.writeU8(0) // String_ subtype (0 = plain String, 1 = URI, 2 = Blob)
         writeLocation(s.loc)
         writeOption(s.min)((v: Long) => writer.writeVarLong(v))
         writeOption(s.max)((v: Long) => writer.writeVarLong(v))
@@ -1450,6 +1616,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
 
       case u: UniqueId =>
         writer.writeU8(TYPE_UNIQUE_ID)
+        writer.writeU8(0) // UniqueId subtype (0 = UniqueId, 1 = UUID, 2 = UserId)
         writeLocation(u.loc)
         writePathIdentifier(u.entityPath)
 

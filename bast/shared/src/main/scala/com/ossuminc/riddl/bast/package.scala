@@ -85,6 +85,8 @@ package object bast {
   val NODE_ENUMERATOR: Byte = 31
   val NODE_ON_CLAUSE: Byte = 32
   val NODE_INCLUDE: Byte = 33
+  val NODE_SAGA_STEP: Byte = 34
+  val NODE_SCHEMA: Byte = 35
 
   // Metadata nodes
   val NODE_DESCRIPTION: Byte = 40
