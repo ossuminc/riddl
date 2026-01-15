@@ -153,6 +153,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         }
       case cg: ContainedGroup =>
         associateUsage(cg, resolveARef[Group](cg.group, parents))
+      case _: BASTImport                 => () // BAST imports are resolved in BASTLoadingPass
       case _: NonReferencableDefinitions => () // These can't be referenced
       case _: NonDefinitionValues        => () // Neither can these values
       case _: Definition                 => () // abstract definition, can't be referenced

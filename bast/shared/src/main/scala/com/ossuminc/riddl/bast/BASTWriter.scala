@@ -70,6 +70,7 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
       case n: Nebula => writeNebula(n)
       case r: Root => writeRoot(r)
       case i: Include[?] => writeInclude(i)
+      case bi: BASTImport => writeBASTImport(bi)
 
       // Vital definitions
       case d: Domain => writeDomain(d)
@@ -447,6 +448,15 @@ case class BASTWriter(input: PassInput, outputs: PassesOutput)(using pc: Platfor
     writeLocation(i.loc)
     writeURL(i.origin)
     writeContents(i.contents)
+  }
+
+  private def writeBASTImport(bi: BASTImport): Unit = {
+    writer.writeU8(NODE_BAST_IMPORT)
+    writeLocation(bi.loc)
+    writeLiteralString(bi.path)
+    writeIdentifier(bi.namespace)
+    // Contents are not serialized - they're loaded dynamically
+    // during BASTLoadingPass when this import is encountered
   }
 
   // ========== Definition Serialization ==========

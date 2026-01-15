@@ -143,6 +143,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_ENTITY => readEntityNode()
       case NODE_MODULE => readModuleNode()
       case NODE_INCLUDE => readIncludeNode()
+      case NODE_BAST_IMPORT => readBASTImportNode()
 
       // Types
       case NODE_TYPE => readTypeNode()
@@ -263,6 +264,15 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val origin = readURL()
     val contents = readContentsDeferred[RiddlValue]()
     Include[RiddlValue](loc, origin, contents)
+  }
+
+  private def readBASTImportNode(): BASTImport = {
+    val loc = readLocation()
+    val path = readLiteralString()
+    val namespace = readIdentifier()
+    // Contents are not stored in BAST - they're loaded dynamically
+    // during BASTLoadingPass when this import is encountered
+    BASTImport(loc, path, namespace)
   }
 
   // ========== Type Definitions ==========

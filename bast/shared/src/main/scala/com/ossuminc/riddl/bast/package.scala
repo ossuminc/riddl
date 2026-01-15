@@ -87,6 +87,7 @@ package object bast {
   val NODE_INCLUDE: Byte = 33
   val NODE_SAGA_STEP: Byte = 34
   val NODE_SCHEMA: Byte = 35
+  val NODE_BAST_IMPORT: Byte = 36
 
   // Metadata nodes
   val NODE_DESCRIPTION: Byte = 40

@@ -798,8 +798,8 @@ object AST:
   /** Type of definitions that can occur in a [[Module]] */
   type ModuleContents = OccursInModule | Include[OccursInModule]
 
-  /** The root is a module that can have other modules */
-  type RootContents = ModuleContents | Module
+  /** The root is a module that can have other modules and BAST imports */
+  type RootContents = ModuleContents | Module | BASTImport
 
   /** Things that can occur in the "With" section of a leaf definition */
   type MetaData =
@@ -1057,6 +1057,36 @@ object AST:
     def format: String = s"include \"$origin\""
     override def toString: String = format
   end Include
+
+  /** A top-level import of a BAST (Binary AST) file with a namespace alias.
+    *
+    * Imports bring in pre-compiled definitions from .bast files at the top level of a RIDDL file.
+    * The imported definitions are accessible via the namespace prefix.
+    *
+    * Syntax: `import "path/to/file.bast" as namespace`
+    *
+    * @param loc
+    *   The location of the import statement in the source
+    * @param path
+    *   The path to the .bast file to import
+    * @param namespace
+    *   The namespace alias for accessing imported definitions
+    * @param contents
+    *   The loaded Nebula contents from the BAST file (populated during parsing)
+    */
+  case class BASTImport(
+    loc: At = At.empty,
+    path: LiteralString,
+    namespace: Identifier,
+    contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
+  ) extends Container[NebulaContents]:
+    type ContentType = NebulaContents
+
+    override def isRootContainer: Boolean = false
+
+    def format: String = s"""import "${path.s}" as ${namespace.value}"""
+    override def toString: String = format
+  end BASTImport
 
   /** Base trait of a reference to definitions that can accept a message directly via a reference
     *

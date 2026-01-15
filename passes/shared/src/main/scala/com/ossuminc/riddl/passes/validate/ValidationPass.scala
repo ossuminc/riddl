@@ -149,6 +149,8 @@ case class ValidationPass(
         checkContents(root, parentsAsSeq)
       case include: Include[?] =>
         validateInclude(include)
+      case bi: BASTImport =>
+        validateBASTImport(bi, parentsAsSeq)
       case _: Definition          => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
@@ -337,7 +339,7 @@ case class ValidationPass(
         messages.add(
           Messages.style(
             "Method argument names should begin with a lower case letter",
-            m.id.loc
+            arg.loc  // Fixed: use argument location, not method identifier location
           )
         )
     checkMetadata(m)
@@ -433,7 +435,7 @@ case class ValidationPass(
       t.id.value.head.isUpper,
       s"${t.identify} should start with a capital letter",
       StyleWarning,
-      t.errorLoc
+      t.id.loc  // Fixed: use identifier location, not type keyword location
     )
     if !t.typEx.isInstanceOf[AggregateTypeExpression] then {
       checkTypeExpression(t.typEx, t, parents)
@@ -502,6 +504,12 @@ case class ValidationPass(
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
     check(i.contents.nonEmpty, "Include has no included content", Messages.Error, i.loc)
     check(i.origin.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
+  }
+
+  private def validateBASTImport(bi: BASTImport, parents: Parents): Unit = {
+    check(bi.path.s.nonEmpty, "BAST import has no path specified", Messages.Error, bi.loc)
+    check(bi.path.s.endsWith(".bast"), s"BAST import path '${bi.path.s}' should end with .bast", Messages.Warning, bi.loc)
+    check(bi.namespace.value.nonEmpty, "BAST import has no namespace alias", Messages.Error, bi.loc)
   }
 
   private def validateEntity(

@@ -1,0 +1,9 @@
+// Test file for BAST import syntax
+import "utils/common-types.bast" as utils
+import "models/shared-domain.bast" as shared
+
+domain MyApp is {
+  // This domain would use imported types like:
+  // type UserId is utils.UUID
+  briefly "Application domain using imported BAST modules"
+}
