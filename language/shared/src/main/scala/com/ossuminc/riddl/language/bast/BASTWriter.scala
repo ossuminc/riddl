@@ -1,0 +1,1730 @@
+/*
+ * Copyright 2019-2026 Ossum, Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.language.bast
+
+import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.utils.URL
+import wvlet.airframe.ulid.ULID
+
+/** BAST serialization utility class
+  *
+  * Contains all the serialization methods for AST nodes. This class does NOT
+  * perform traversal - it only knows HOW to serialize individual nodes. The
+  * actual traversal is performed by BASTWriterPass in the passes module,
+  * which uses the Pass framework to ensure correct node ordering.
+  *
+  * This separation allows:
+  * - Serialization logic to live in the language module (no circular dependency)
+  * - Traversal to use the battle-tested Pass framework
+  * - Independent testing of serialization methods
+  *
+  * @param writer The byte buffer to write to
+  * @param stringTable The string interning table
+  */
+class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
+
+  private var lastLocation: At = At.empty
+  private var nodeCount: Int = 0
+
+  /** Get the total number of nodes written */
+  def getNodeCount: Int = nodeCount
+
+  /** Reset location tracking (called at start of serialization) */
+  def resetLocationTracking(): Unit = {
+    lastLocation = At.empty
+  }
+
+  /** Reserve space for header at the beginning of the buffer */
+  def reserveHeader(): Unit = {
+    writer.writeRawBytes(new Array[Byte](HEADER_SIZE))
+  }
+
+  /** Write the string table to the buffer
+    * @return The offset where the string table was written
+    */
+  def writeStringTable(): Int = {
+    val offset = writer.position
+    stringTable.writeTo(writer)
+    offset
+  }
+
+  /** Finalize the BAST output by writing the header
+    * @param stringTableOffset The offset of the string table
+    * @return The final bytes including header
+    */
+  def finalize(stringTableOffset: Int): Array[Byte] = {
+    val bytes = writer.toByteArray
+    val checksum = BinaryFormat.calculateChecksum(bytes, HEADER_SIZE, bytes.length - HEADER_SIZE)
+
+    val header = BinaryFormat.Header(
+      magic = MAGIC_BYTES,
+      versionMajor = VERSION_MAJOR,
+      versionMinor = VERSION_MINOR,
+      flags = 0,
+      stringTableOffset = stringTableOffset,
+      rootOffset = HEADER_SIZE,
+      fileSize = writer.size,
+      checksum = checksum,
+      reserved = Array.fill(8)(0.toByte)
+    )
+
+    // Write header at the beginning
+    val headerBytes = BinaryFormat.serializeHeader(header)
+    val finalBytes = writer.toByteArray
+    System.arraycopy(headerBytes, 0, finalBytes, 0, HEADER_SIZE)
+    finalBytes
+  }
+
+  // ========== Main Dispatch Method ==========
+
+  /** Write a single AST node (dispatches to appropriate write method)
+    * @param value The node to write
+    */
+  def writeNode(value: RiddlValue): Unit = {
+    nodeCount += 1
+    value match {
+      // Root containers
+      case n: Nebula => writeNebula(n)
+      case r: Root => writeRoot(r)
+      case i: Include[?] => writeInclude(i)
+      case bi: BASTImport => writeBASTImport(bi)
+
+      // Vital definitions
+      case d: Domain => writeDomain(d)
+      case c: Context => writeContext(c)
+      case e: Entity => writeEntity(e)
+      case m: Module => writeModule(m)
+      case epic: Epic => writeEpic(epic)
+
+      // Types
+      case t: Type => writeType(t)
+      case f: Field => writeField(f)
+      case enumerator: Enumerator => writeEnumerator(enumerator)
+      case method: Method => writeMethod(method)
+      case arg: MethodArgument => writeMethodArgument(arg)
+
+      // Processors
+      case a: Adaptor => writeAdaptor(a)
+      case fn: Function => writeFunction(fn)
+      case proj: Projector => writeProjector(proj)
+      case repo: Repository => writeRepository(repo)
+      case s: Streamlet => writeStreamlet(s)
+      case saga: Saga => writeSaga(saga)
+
+      // Handler components
+      case h: Handler => writeHandler(h)
+      case st: State => writeState(st)
+      case inv: Invariant => writeInvariant(inv)
+
+      // OnClauses
+      case oc: OnInitializationClause => writeOnInitializationClause(oc)
+      case oc: OnTerminationClause => writeOnTerminationClause(oc)
+      case oc: OnMessageClause => writeOnMessageClause(oc)
+      case oc: OnOtherClause => writeOnOtherClause(oc)
+
+      // Streamlet components
+      case inlet: Inlet => writeInlet(inlet)
+      case outlet: Outlet => writeOutlet(outlet)
+      case conn: Connector => writeConnector(conn)
+
+      // Repository components
+      case schema: Schema => writeSchema(schema)
+
+      // Epic/UseCase components
+      case uc: UseCase => writeUseCase(uc)
+      case us: UserStory => writeUserStory(us)
+      case shown: ShownBy => writeShownBy(shown)
+      case step: SagaStep => writeSagaStep(step)
+
+      // Interactions
+      case i: ParallelInteractions => writeParallelInteractions(i)
+      case i: SequentialInteractions => writeSequentialInteractions(i)
+      case i: OptionalInteractions => writeOptionalInteractions(i)
+      case i: VagueInteraction => writeVagueInteraction(i)
+      case i: SendMessageInteraction => writeSendMessageInteraction(i)
+      case i: ArbitraryInteraction => writeArbitraryInteraction(i)
+      case i: SelfInteraction => writeSelfInteraction(i)
+      case i: FocusOnGroupInteraction => writeFocusOnGroupInteraction(i)
+      case i: DirectUserToURLInteraction => writeDirectUserToURLInteraction(i)
+      case i: ShowOutputInteraction => writeShowOutputInteraction(i)
+      case i: SelectInputInteraction => writeSelectInputInteraction(i)
+      case i: TakeInputInteraction => writeTakeInputInteraction(i)
+
+      // UI Components
+      case g: Group => writeGroup(g)
+      case cg: ContainedGroup => writeContainedGroup(cg)
+      case input: Input => writeInput(input)
+      case output: Output => writeOutput(output)
+
+      // Statements
+      case s: ArbitraryStatement => writeArbitraryStatement(s)
+      case s: ErrorStatement => writeErrorStatement(s)
+      case s: FocusStatement => writeFocusStatement(s)
+      case s: SetStatement => writeSetStatement(s)
+      case s: ReturnStatement => writeReturnStatement(s)
+      case s: SendStatement => writeSendStatement(s)
+      case s: ReplyStatement => writeReplyStatement(s)
+      case s: MorphStatement => writeMorphStatement(s)
+      case s: BecomeStatement => writeBecomeStatement(s)
+      case s: TellStatement => writeTellStatement(s)
+      case s: CallStatement => writeCallStatement(s)
+      case s: ForEachStatement => writeForEachStatement(s)
+      case s: IfThenElseStatement => writeIfThenElseStatement(s)
+      case s: StopStatement => writeStopStatement(s)
+      case s: ReadStatement => writeReadStatement(s)
+      case s: WriteStatement => writeWriteStatement(s)
+      case s: CodeStatement => writeCodeStatement(s)
+
+      // References
+      case r: AuthorRef => writeAuthorRef(r)
+      case r: TypeRef => writeTypeRef(r)
+      case r: FieldRef => writeFieldRef(r)
+      case r: ConstantRef => writeConstantRef(r)
+      case r: CommandRef => writeCommandRef(r)
+      case r: EventRef => writeEventRef(r)
+      case r: QueryRef => writeQueryRef(r)
+      case r: ResultRef => writeResultRef(r)
+      case r: RecordRef => writeRecordRef(r)
+      case r: AdaptorRef => writeAdaptorRef(r)
+      case r: FunctionRef => writeFunctionRef(r)
+      case r: HandlerRef => writeHandlerRef(r)
+      case r: StateRef => writeStateRef(r)
+      case r: EntityRef => writeEntityRef(r)
+      case r: RepositoryRef => writeRepositoryRef(r)
+      case r: ProjectorRef => writeProjectorRef(r)
+      case r: ContextRef => writeContextRef(r)
+      case r: StreamletRef => writeStreamletRef(r)
+      case r: InletRef => writeInletRef(r)
+      case r: OutletRef => writeOutletRef(r)
+      case r: SagaRef => writeSagaRef(r)
+      case r: UserRef => writeUserRef(r)
+      case r: EpicRef => writeEpicRef(r)
+      case r: GroupRef => writeGroupRef(r)
+      case r: InputRef => writeInputRef(r)
+      case r: OutputRef => writeOutputRef(r)
+      case r: DomainRef => writeDomainRef(r)
+
+      // Metadata & Documentation
+      case bd: BriefDescription => writeBriefDescription(bd)
+      case bd: BlockDescription => writeBlockDescription(bd)
+      case ud: URLDescription => writeURLDescription(ud)
+      case c: LineComment => writeLineComment(c)
+      case c: InlineComment => writeInlineComment(c)
+      case opt: OptionValue => writeOptionValue(opt)
+      case term: Term => writeTerm(term)
+
+      // Attachments
+      case a: FileAttachment => writeFileAttachment(a)
+      case a: StringAttachment => writeStringAttachment(a)
+      case a: ULIDAttachment => writeULIDAttachment(a)
+
+      // Simple values
+      case id: Identifier => writeIdentifier(id)
+      case pid: PathIdentifier => writePathIdentifier(pid)
+      case ls: LiteralString => writeLiteralString(ls)
+
+      // Authors and Users
+      case a: Author => writeAuthor(a)
+      case u: User => writeUser(u)
+
+      // Constants
+      case c: Constant => writeConstant(c)
+
+      // Relationships
+      case r: Relationship => writeRelationship(r)
+
+      // Type expressions (not handled by writeTypeExpression)
+      case te: TypeExpression => writeTypeExpression(te)
+
+      // Streamlet shapes
+      case s: Void => writeVoid(s)
+      case s: Source => writeSource(s)
+      case s: Sink => writeSink(s)
+      case s: Flow => writeFlow(s)
+      case s: Merge => writeMerge(s)
+      case s: Split => writeSplit(s)
+      case s: Router => writeRouter(s)
+
+      // Adaptor directions
+      case d: InboundAdaptor => writeInboundAdaptor(d)
+      case d: OutboundAdaptor => writeOutboundAdaptor(d)
+
+      // Containers (should generally not appear standalone)
+      case sc: SimpleContainer[?] => writeSimpleContainer(sc)
+
+      case _ =>
+        // Log unhandled types for debugging
+        println(s"Unhandled node type in BASTWriter: ${value.getClass.getSimpleName} at ${value.loc}")
+    }
+  }
+
+  // ========== Root Container Serialization ==========
+
+  def writeRoot(r: Root): Unit = {
+    writer.writeU8(NODE_NEBULA) // Root uses same tag as Nebula
+    writeLocation(r.loc)
+    writeIdentifier(Identifier.empty) // Root has no id
+    writeContents(r.contents)
+    // Metadata for Root is always empty, so no need to store it
+  }
+
+  def writeNebula(n: Nebula): Unit = {
+    writer.writeU8(NODE_NEBULA)
+    writeLocation(n.loc)
+    writeIdentifier(Identifier.empty) // Nebula has no explicit id field
+    writeContents(n.contents)
+  }
+
+  def writeInclude[T <: RiddlValue](i: Include[T]): Unit = {
+    writer.writeU8(NODE_INCLUDE)
+    writeLocation(i.loc)
+    writeURL(i.origin)
+    writeContents(i.contents)
+  }
+
+  def writeBASTImport(bi: BASTImport): Unit = {
+    writer.writeU8(NODE_BAST_IMPORT)
+    writeLocation(bi.loc)
+    writeLiteralString(bi.path)
+    // Contents are not serialized - they're loaded dynamically
+    // by BASTLoader when this import is encountered
+  }
+
+  // ========== Definition Serialization ==========
+
+  def writeDomain(d: Domain): Unit = {
+    writer.writeU8(NODE_DOMAIN)
+    writeLocation(d.loc)
+    writeIdentifier(d.id)
+    writeContents(d.contents)
+    // Metadata will be written by traverse() after contents items
+  }
+
+  def writeContext(c: Context): Unit = {
+    writer.writeU8(NODE_CONTEXT)
+    writeLocation(c.loc)
+    writeIdentifier(c.id)
+    writeContents(c.contents)
+  }
+
+  def writeEntity(e: Entity): Unit = {
+    writer.writeU8(NODE_ENTITY)
+    writeLocation(e.loc)
+    writeIdentifier(e.id)
+    writeContents(e.contents)
+  }
+
+  def writeModule(m: Module): Unit = {
+    writer.writeU8(NODE_MODULE)
+    writeLocation(m.loc)
+    writeIdentifier(m.id)
+    writeContents(m.contents)
+  }
+
+  def writeType(t: Type): Unit = {
+    writer.writeU8(NODE_TYPE)
+    writeLocation(t.loc)
+    writeIdentifier(t.id)
+    writeTypeExpression(t.typEx)
+  }
+
+  def writeFunction(f: Function): Unit = {
+    writer.writeU8(NODE_FUNCTION)
+    writeLocation(f.loc)
+    writeIdentifier(f.id)
+    writeOption(f.input)((agg: Aggregation) => writeTypeExpression(agg))
+    writeOption(f.output)((agg: Aggregation) => writeTypeExpression(agg))
+    writeContents(f.contents)
+  }
+
+  def writeAdaptor(a: Adaptor): Unit = {
+    writer.writeU8(NODE_ADAPTOR)
+    writeLocation(a.loc)
+    writeIdentifier(a.id)
+    a.direction match {
+      case _: InboundAdaptor => writer.writeU8(ADAPTOR_INBOUND)
+      case _: OutboundAdaptor => writer.writeU8(ADAPTOR_OUTBOUND)
+    }
+    writeContextRef(a.referent)
+    writeContents(a.contents)
+  }
+
+  def writeSaga(s: Saga): Unit = {
+    writer.writeU8(NODE_SAGA)
+    writeLocation(s.loc)
+    writeIdentifier(s.id)
+    writeOption(s.input)((agg: Aggregation) => writeTypeExpression(agg))
+    writeOption(s.output)((agg: Aggregation) => writeTypeExpression(agg))
+    writeContents(s.contents)
+  }
+
+  def writeProcessor(p: Processor[?]): Unit = {
+    writer.writeU8(NODE_PROCESSOR)
+    writeLocation(p.loc)
+    writeIdentifier(p.id)
+    writeContents(p.contents)
+  }
+
+  def writeProjector(p: Projector): Unit = {
+    writer.writeU8(NODE_PROJECTOR)
+    writeLocation(p.loc)
+    writeIdentifier(p.id)
+    writeContents(p.contents)
+  }
+
+  def writeRepository(r: Repository): Unit = {
+    writer.writeU8(NODE_REPOSITORY)
+    writeLocation(r.loc)
+    writeIdentifier(r.id)
+    writeContents(r.contents)
+  }
+
+  def writeStreamlet(s: Streamlet): Unit = {
+    writer.writeU8(NODE_STREAMLET)
+    writeLocation(s.loc)
+    writeIdentifier(s.id)
+    // Write shape tag
+    s.shape match {
+      case _: Void => writer.writeU8(STREAMLET_VOID)
+      case _: Source => writer.writeU8(STREAMLET_SOURCE)
+      case _: Sink => writer.writeU8(STREAMLET_SINK)
+      case _: Flow => writer.writeU8(STREAMLET_FLOW)
+      case _: Merge => writer.writeU8(STREAMLET_MERGE)
+      case _: Split => writer.writeU8(STREAMLET_SPLIT)
+      case _: Router => writer.writeU8(STREAMLET_VOID) // Router not in tags
+    }
+    writeContents(s.contents)
+  }
+
+  def writeEpic(e: Epic): Unit = {
+    writer.writeU8(NODE_EPIC)
+    writeLocation(e.loc)
+    writeIdentifier(e.id)
+    writeUserStory(e.userStory)
+    writeContents(e.contents)
+  }
+
+  // ========== Leaf Definition Serialization ==========
+
+  def writeAuthor(a: Author): Unit = {
+    writer.writeU8(NODE_AUTHOR)
+    writeLocation(a.loc)
+    writeIdentifier(a.id)
+    writeLiteralString(a.name)
+    writeLiteralString(a.email)
+    writeOption(a.organization)(writeLiteralString)
+    writeOption(a.title)(writeLiteralString)
+    writeOption(a.url)(writeURL)
+  }
+
+  def writeUser(u: User): Unit = {
+    writer.writeU8(NODE_USER)
+    writeLocation(u.loc)
+    writeIdentifier(u.id)
+    writeLiteralString(u.is_a)
+  }
+
+  def writeTerm(t: Term): Unit = {
+    writer.writeU8(NODE_TERM)
+    writeLocation(t.loc)
+    writeIdentifier(t.id)
+    writeSeq(t.definition)(writeLiteralString)
+  }
+
+  def writeRelationship(r: Relationship): Unit = {
+    writer.writeU8(NODE_PIPE) // Reusing PIPE tag for relationship
+    writeLocation(r.loc)
+    writeIdentifier(r.id)
+    writeProcessorRef(r.withProcessor)
+    writer.writeU8(r.cardinality.ordinal.toByte)
+    writeOption(r.label)(writeLiteralString)
+  }
+
+  def writeConstant(c: Constant): Unit = {
+    writer.writeU8(NODE_FIELD) // Constants similar to fields
+    writeLocation(c.loc)
+    writeIdentifier(c.id)
+    writeTypeExpression(c.typeEx)
+    writeLiteralString(c.value)
+  }
+
+  // ========== Type Component Serialization ==========
+
+  def writeField(f: Field): Unit = {
+    writer.writeU8(NODE_FIELD)
+    writeLocation(f.loc)
+    writeIdentifier(f.id)
+    writeTypeExpression(f.typeEx)
+  }
+
+  def writeEnumerator(e: Enumerator): Unit = {
+    writer.writeU8(NODE_ENUMERATOR)
+    writeLocation(e.loc)
+    writeIdentifier(e.id)
+    writeOption(e.enumVal)((v: Long) => writer.writeVarLong(v))
+  }
+
+  def writeMethod(m: Method): Unit = {
+    writer.writeU8(NODE_FIELD) // Methods similar to fields
+    writeLocation(m.loc)
+    writeIdentifier(m.id)
+    writeTypeExpression(m.typeEx)
+    writeSeq(m.args)(writeMethodArgument)
+  }
+
+  def writeMethodArgument(a: MethodArgument): Unit = {
+    writer.writeU8(NODE_FIELD)
+    writeLocation(a.loc)
+    writeString(a.name)
+    writeTypeExpression(a.typeEx)
+  }
+
+  // ========== Handler Component Serialization ==========
+
+  def writeHandler(h: Handler): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writeLocation(h.loc)
+    writeIdentifier(h.id)
+    writeContents(h.contents)
+  }
+
+  def writeState(s: State): Unit = {
+    writer.writeU8(NODE_STATE)
+    writeLocation(s.loc)
+    writeIdentifier(s.id)
+    writeTypeRef(s.typ)
+  }
+
+  def writeInvariant(i: Invariant): Unit = {
+    writer.writeU8(NODE_INVARIANT)
+    writeLocation(i.loc)
+    writeIdentifier(i.id)
+    writeOption(i.condition)(writeLiteralString)
+  }
+
+  // ========== OnClause Serialization ==========
+
+  def writeOnInitializationClause(oc: OnInitializationClause): Unit = {
+    writer.writeU8(NODE_ON_CLAUSE)
+    writer.writeU8(0) // Init clause type
+    writeLocation(oc.loc)
+    writeContents(oc.contents)
+  }
+
+  def writeOnTerminationClause(oc: OnTerminationClause): Unit = {
+    writer.writeU8(NODE_ON_CLAUSE)
+    writer.writeU8(1) // Term clause type
+    writeLocation(oc.loc)
+    writeContents(oc.contents)
+  }
+
+  def writeOnMessageClause(oc: OnMessageClause): Unit = {
+    writer.writeU8(NODE_ON_CLAUSE)
+    writer.writeU8(2) // Message clause type
+    writeLocation(oc.loc)
+    writeMessageRef(oc.msg)
+    // Write from field: Option[(Option[Identifier], Reference[Definition])]
+    writeOption(oc.from) { case (optId, ref) =>
+      writeOption(optId)(writeIdentifier)
+      writeReference(ref)
+    }
+    writeContents(oc.contents)
+  }
+
+  def writeOnOtherClause(oc: OnOtherClause): Unit = {
+    writer.writeU8(NODE_ON_CLAUSE)
+    writer.writeU8(3) // Other clause type
+    writeLocation(oc.loc)
+    writeContents(oc.contents)
+  }
+
+  // ========== Streamlet Component Serialization ==========
+
+  def writeInlet(i: Inlet): Unit = {
+    writer.writeU8(NODE_INLET)
+    writeLocation(i.loc)
+    writeIdentifier(i.id)
+    writeTypeRef(i.type_)
+  }
+
+  def writeOutlet(o: Outlet): Unit = {
+    writer.writeU8(NODE_OUTLET)
+    writeLocation(o.loc)
+    writeIdentifier(o.id)
+    writeTypeRef(o.type_)
+  }
+
+  def writeConnector(c: Connector): Unit = {
+    writer.writeU8(NODE_CONNECTOR)
+    writeLocation(c.loc)
+    writeIdentifier(c.id)
+    writeOutletRef(c.from)
+    writeInletRef(c.to)
+  }
+
+  // ========== Repository Component Serialization ==========
+
+  def writeSchema(s: Schema): Unit = {
+    writer.writeU8(NODE_SCHEMA)
+    writer.writeU8(s.schemaKind.ordinal) // Subtype: 0=Relational, 1=Document, 2=Graphical
+    writeLocation(s.loc)
+    writeIdentifier(s.id)
+    // Write data map
+    writer.writeVarInt(s.data.size)
+    s.data.foreach { case (id, tref) =>
+      writeIdentifier(id)
+      writeTypeRef(tref)
+    }
+    // Write links map
+    writer.writeVarInt(s.links.size)
+    s.links.foreach { case (id, (fr1, fr2)) =>
+      writeIdentifier(id)
+      writeFieldRef(fr1)
+      writeFieldRef(fr2)
+    }
+    // Write indices
+    writeSeq(s.indices)(writeFieldRef)
+  }
+
+  // ========== Epic/UseCase Component Serialization ==========
+
+  def writeUseCase(uc: UseCase): Unit = {
+    writer.writeU8(NODE_EPIC) // UseCase similar to Epic
+    writeLocation(uc.loc)
+    writeIdentifier(uc.id)
+    writeUserStory(uc.userStory)
+    writeContents(uc.contents)
+  }
+
+  def writeUserStory(us: UserStory): Unit = {
+    writer.writeU8(NODE_USER) // User story relates to user
+    writeLocation(us.loc)
+    writeUserRef(us.user)
+    writeLiteralString(us.capability)
+    writeLiteralString(us.benefit)
+  }
+
+  def writeShownBy(sb: ShownBy): Unit = {
+    writer.writeU8(NODE_OUTLET) // Reusing outlet tag
+    writeLocation(sb.loc)
+    writeSeq(sb.urls)(writeURL)
+  }
+
+  def writeSagaStep(ss: SagaStep): Unit = {
+    writer.writeU8(NODE_SAGA_STEP)
+    writeLocation(ss.loc)
+    writeIdentifier(ss.id)
+    // NOTE: doStatements and undoStatements are written by the Pass's traverse() override
+    // to properly interleave count-items, count-items
+  }
+
+  // ========== Interaction Serialization ==========
+
+  def writeParallelInteractions(pi: ParallelInteractions): Unit = {
+    writer.writeU8(NODE_PIPE) // Interactions like connectors
+    writer.writeU8(0) // Parallel type
+    writeLocation(pi.loc)
+    writeContents(pi.contents)
+  }
+
+  def writeSequentialInteractions(si: SequentialInteractions): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(1) // Sequential type
+    writeLocation(si.loc)
+    writeContents(si.contents)
+  }
+
+  def writeOptionalInteractions(oi: OptionalInteractions): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(2) // Optional type
+    writeLocation(oi.loc)
+    writeContents(oi.contents)
+  }
+
+  def writeVagueInteraction(vi: VagueInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(10) // Vague interaction type
+    writeLocation(vi.loc)
+    writeLiteralString(vi.from)
+    writeLiteralString(vi.relationship)
+    writeLiteralString(vi.to)
+  }
+
+  def writeSendMessageInteraction(smi: SendMessageInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(11) // Send message interaction
+    writeLocation(smi.loc)
+    writeReference(smi.from)
+    writeMessageRef(smi.message)
+    writeProcessorRef(smi.to)
+  }
+
+  def writeArbitraryInteraction(ai: ArbitraryInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(12) // Arbitrary interaction
+    writeLocation(ai.loc)
+    writeReference(ai.from)
+    writeLiteralString(ai.relationship)
+    writeReference(ai.to)
+  }
+
+  def writeSelfInteraction(si: SelfInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(13) // Self interaction
+    writeLocation(si.loc)
+    writeReference(si.from)
+    writeLiteralString(si.relationship)
+  }
+
+  def writeFocusOnGroupInteraction(fgi: FocusOnGroupInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(14) // Focus on group
+    writeLocation(fgi.loc)
+    writeUserRef(fgi.from)
+    writeGroupRef(fgi.to)
+  }
+
+  def writeDirectUserToURLInteraction(dui: DirectUserToURLInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(15) // Direct to URL
+    writeLocation(dui.loc)
+    writeUserRef(dui.from)
+    writeURL(dui.url)
+  }
+
+  def writeShowOutputInteraction(soi: ShowOutputInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(16) // Show output
+    writeLocation(soi.loc)
+    writeOutputRef(soi.from)
+    writeLiteralString(soi.relationship)
+    writeUserRef(soi.to)
+  }
+
+  def writeSelectInputInteraction(sii: SelectInputInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(17) // Select input
+    writeLocation(sii.loc)
+    writeUserRef(sii.from)
+    writeInputRef(sii.to)
+  }
+
+  def writeTakeInputInteraction(tii: TakeInputInteraction): Unit = {
+    writer.writeU8(NODE_PIPE)
+    writer.writeU8(18) // Take input
+    writeLocation(tii.loc)
+    writeUserRef(tii.from)
+    writeInputRef(tii.to)
+  }
+
+  // ========== UI Component Serialization ==========
+
+  def writeGroup(g: Group): Unit = {
+    writer.writeU8(NODE_GROUP)
+    writeLocation(g.loc)
+    writeString(g.alias)
+    writeIdentifier(g.id)
+    writeContents(g.contents)
+  }
+
+  def writeContainedGroup(cg: ContainedGroup): Unit = {
+    writer.writeU8(NODE_GROUP)
+    writeLocation(cg.loc)
+    writeIdentifier(cg.id)
+    writeGroupRef(cg.group)
+  }
+
+  def writeInput(i: Input): Unit = {
+    writer.writeU8(NODE_INPUT)
+    writeLocation(i.loc)
+    writeString(i.nounAlias)
+    writeIdentifier(i.id)
+    writeString(i.verbAlias)
+    writeTypeRef(i.takeIn)
+    writeContents(i.contents)
+  }
+
+  def writeOutput(o: Output): Unit = {
+    writer.writeU8(NODE_OUTPUT)
+    writeLocation(o.loc)
+    writeString(o.nounAlias)
+    writeIdentifier(o.id)
+    writeString(o.verbAlias)
+    // Handle union type: TypeRef | ConstantRef | LiteralString
+    o.putOut match {
+      case tr: TypeRef =>
+        writer.writeU8(0)
+        writeTypeRef(tr)
+      case cr: ConstantRef =>
+        writer.writeU8(1)
+        writeConstantRef(cr)
+      case ls: LiteralString =>
+        writer.writeU8(2)
+        writeLiteralString(ls)
+    }
+    writeContents(o.contents)
+  }
+
+  // ========== Statement Serialization ==========
+
+  // Marker value to distinguish statements from handlers
+  // Statements: NODE_HANDLER, 0xFF, subtype, loc, ...
+  // Handlers: NODE_HANDLER, loc (no 0xFF marker), ...
+  // Using 255 (0xFF) as it's distinct from valid location/string data
+  private val STATEMENT_MARKER: Int = 255
+
+  def writeArbitraryStatement(s: ArbitraryStatement): Unit = {
+    writer.writeU8(NODE_HANDLER) // Statements within handlers
+    writer.writeU8(STATEMENT_MARKER) // Marker to identify as statement
+    writer.writeU8(0) // Arbitrary statement type
+    writeLocation(s.loc)
+    writeLiteralString(s.what)
+  }
+
+  def writeErrorStatement(s: ErrorStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(1) // Error statement
+    writeLocation(s.loc)
+    writeLiteralString(s.message)
+  }
+
+  def writeFocusStatement(s: FocusStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(2) // Focus statement
+    writeLocation(s.loc)
+    writeGroupRef(s.group)
+  }
+
+  def writeSetStatement(s: SetStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(3) // Set statement
+    writeLocation(s.loc)
+    writeFieldRef(s.field)
+    writeLiteralString(s.value)
+  }
+
+  def writeReturnStatement(s: ReturnStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(4) // Return statement
+    writeLocation(s.loc)
+    writeLiteralString(s.value)
+  }
+
+  def writeSendStatement(s: SendStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(5) // Send statement
+    writeLocation(s.loc)
+    writeMessageRef(s.msg)
+    writePortletRef(s.portlet)
+  }
+
+  def writeReplyStatement(s: ReplyStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(6) // Reply statement
+    writeLocation(s.loc)
+    writeMessageRef(s.message)
+  }
+
+  def writeMorphStatement(s: MorphStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(7) // Morph statement
+    writeLocation(s.loc)
+    writeEntityRef(s.entity)
+    writeStateRef(s.state)
+    writeMessageRef(s.value)
+  }
+
+  def writeBecomeStatement(s: BecomeStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(8) // Become statement
+    writeLocation(s.loc)
+    writeEntityRef(s.entity)
+    writeHandlerRef(s.handler)
+  }
+
+  def writeTellStatement(s: TellStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(9) // Tell statement
+    writeLocation(s.loc)
+    writeMessageRef(s.msg)
+    writeProcessorRef(s.processorRef)
+  }
+
+  def writeCallStatement(s: CallStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(10) // Call statement
+    writeLocation(s.loc)
+    writeFunctionRef(s.func)
+  }
+
+  def writeForEachStatement(s: ForEachStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(11) // ForEach statement
+    writeLocation(s.loc)
+    // Handle union type: FieldRef | OutletRef | InletRef
+    s.ref match {
+      case fr: FieldRef =>
+        writer.writeU8(0)
+        writeFieldRef(fr)
+      case or: OutletRef =>
+        writer.writeU8(1)
+        writeOutletRef(or)
+      case ir: InletRef =>
+        writer.writeU8(2)
+        writeInletRef(ir)
+    }
+    writeContents(s.do_)
+  }
+
+  def writeIfThenElseStatement(s: IfThenElseStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(12) // IfThenElse statement
+    writeLocation(s.loc)
+    writeLiteralString(s.cond)
+    // NOTE: thens and elses counts/items are written by the Pass's traverse() override
+    // to properly interleave count-items, count-items
+  }
+
+  def writeStopStatement(s: StopStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(13) // Stop statement
+    writeLocation(s.loc)
+  }
+
+  def writeReadStatement(s: ReadStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(14) // Read statement
+    writeLocation(s.loc)
+    writeString(s.keyword)
+    writeLiteralString(s.what)
+    writeTypeRef(s.from)
+    writeLiteralString(s.where)
+  }
+
+  def writeWriteStatement(s: WriteStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(15) // Write statement
+    writeLocation(s.loc)
+    writeString(s.keyword)
+    writeLiteralString(s.what)
+    writeTypeRef(s.to)
+  }
+
+  def writeCodeStatement(s: CodeStatement): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(16) // Code statement
+    writeLocation(s.loc)
+    writeLiteralString(s.language)
+    writeString(s.body)
+  }
+
+  // ========== Reference Serialization ==========
+
+  def writeAuthorRef(r: AuthorRef): Unit = {
+    writer.writeU8(NODE_AUTHOR)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeTypeRef(r: TypeRef): Unit = {
+    writer.writeU8(NODE_TYPE)
+    writeLocation(r.loc)
+    writeString(r.keyword)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeFieldRef(r: FieldRef): Unit = {
+    writer.writeU8(NODE_FIELD)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeConstantRef(r: ConstantRef): Unit = {
+    writer.writeU8(NODE_FIELD)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeCommandRef(r: CommandRef): Unit = {
+    writer.writeU8(NODE_TYPE)
+    writer.writeU8(0) // Command type
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeEventRef(r: EventRef): Unit = {
+    writer.writeU8(NODE_TYPE)
+    writer.writeU8(1) // Event type
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeQueryRef(r: QueryRef): Unit = {
+    writer.writeU8(NODE_TYPE)
+    writer.writeU8(2) // Query type
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeResultRef(r: ResultRef): Unit = {
+    writer.writeU8(NODE_TYPE)
+    writer.writeU8(3) // Result type
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeRecordRef(r: RecordRef): Unit = {
+    writer.writeU8(NODE_TYPE)
+    writer.writeU8(4) // Record type
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeAdaptorRef(r: AdaptorRef): Unit = {
+    writer.writeU8(NODE_ADAPTOR)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeFunctionRef(r: FunctionRef): Unit = {
+    writer.writeU8(NODE_FUNCTION)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeHandlerRef(r: HandlerRef): Unit = {
+    writer.writeU8(NODE_HANDLER)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeStateRef(r: StateRef): Unit = {
+    writer.writeU8(NODE_STATE)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeEntityRef(r: EntityRef): Unit = {
+    writer.writeU8(NODE_ENTITY)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeRepositoryRef(r: RepositoryRef): Unit = {
+    writer.writeU8(NODE_REPOSITORY)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeProjectorRef(r: ProjectorRef): Unit = {
+    writer.writeU8(NODE_PROJECTOR)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeContextRef(r: ContextRef): Unit = {
+    writer.writeU8(NODE_CONTEXT)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeStreamletRef(r: StreamletRef): Unit = {
+    writer.writeU8(NODE_STREAMLET)
+    writeLocation(r.loc)
+    writeString(r.keyword)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeInletRef(r: InletRef): Unit = {
+    writer.writeU8(NODE_INLET)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeOutletRef(r: OutletRef): Unit = {
+    writer.writeU8(NODE_OUTLET)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeSagaRef(r: SagaRef): Unit = {
+    writer.writeU8(NODE_SAGA)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeUserRef(r: UserRef): Unit = {
+    writer.writeU8(NODE_USER)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeEpicRef(r: EpicRef): Unit = {
+    writer.writeU8(NODE_EPIC)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeGroupRef(r: GroupRef): Unit = {
+    writer.writeU8(NODE_GROUP)
+    writeLocation(r.loc)
+    writeString(r.keyword)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeInputRef(r: InputRef): Unit = {
+    writer.writeU8(NODE_INPUT)
+    writeLocation(r.loc)
+    writeString(r.keyword)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeOutputRef(r: OutputRef): Unit = {
+    writer.writeU8(NODE_OUTPUT)
+    writeLocation(r.loc)
+    writeString(r.keyword)
+    writePathIdentifier(r.pathId)
+  }
+
+  def writeDomainRef(r: DomainRef): Unit = {
+    writer.writeU8(NODE_DOMAIN)
+    writeLocation(r.loc)
+    writePathIdentifier(r.pathId)
+  }
+
+  // Generic reference writer for polymorphic cases
+  def writeReference(r: Reference[?]): Unit = {
+    r match {
+      case ar: AuthorRef => writeAuthorRef(ar)
+      case tr: TypeRef => writeTypeRef(tr)
+      case fr: FieldRef => writeFieldRef(fr)
+      case cr: ConstantRef => writeConstantRef(cr)
+      case cmdr: CommandRef => writeCommandRef(cmdr)
+      case er: EventRef => writeEventRef(er)
+      case qr: QueryRef => writeQueryRef(qr)
+      case rr: ResultRef => writeResultRef(rr)
+      case recr: RecordRef => writeRecordRef(recr)
+      case adr: AdaptorRef => writeAdaptorRef(adr)
+      case fnr: FunctionRef => writeFunctionRef(fnr)
+      case hr: HandlerRef => writeHandlerRef(hr)
+      case sr: StateRef => writeStateRef(sr)
+      case entr: EntityRef => writeEntityRef(entr)
+      case repr: RepositoryRef => writeRepositoryRef(repr)
+      case pr: ProjectorRef => writeProjectorRef(pr)
+      case cr: ContextRef => writeContextRef(cr)
+      case slr: StreamletRef => writeStreamletRef(slr)
+      case ir: InletRef => writeInletRef(ir)
+      case or: OutletRef => writeOutletRef(or)
+      case sgr: SagaRef => writeSagaRef(sgr)
+      case ur: UserRef => writeUserRef(ur)
+      case epr: EpicRef => writeEpicRef(epr)
+      case gr: GroupRef => writeGroupRef(gr)
+      case inr: InputRef => writeInputRef(inr)
+      case outr: OutputRef => writeOutputRef(outr)
+      case dr: DomainRef => writeDomainRef(dr)
+      case _ =>
+        println(s"Unhandled reference type: ${r.getClass.getSimpleName} at ${r.loc}")
+    }
+  }
+
+  def writeMessageRef(r: MessageRef): Unit = {
+    r match {
+      case cr: CommandRef => writeCommandRef(cr)
+      case er: EventRef => writeEventRef(er)
+      case qr: QueryRef => writeQueryRef(qr)
+      case rr: ResultRef => writeResultRef(rr)
+      case recr: RecordRef => writeRecordRef(recr)
+      case _ =>
+        println(s"Unhandled message ref type: ${r.getClass.getSimpleName} at ${r.loc}")
+    }
+  }
+
+  def writeProcessorRef(r: ProcessorRef[?]): Unit = {
+    r match {
+      case ar: AdaptorRef => writeAdaptorRef(ar)
+      case er: EntityRef => writeEntityRef(er)
+      case rr: RepositoryRef => writeRepositoryRef(rr)
+      case pr: ProjectorRef => writeProjectorRef(pr)
+      case cr: ContextRef => writeContextRef(cr)
+      case sr: StreamletRef => writeStreamletRef(sr)
+    }
+  }
+
+  def writePortletRef(r: PortletRef[?]): Unit = {
+    r match {
+      case ir: InletRef => writeInletRef(ir)
+      case or: OutletRef => writeOutletRef(or)
+    }
+  }
+
+  // ========== Metadata Serialization ==========
+
+  def writeBriefDescription(bd: BriefDescription): Unit = {
+    writer.writeU8(NODE_DESCRIPTION)
+    writer.writeU8(0) // Brief type
+    writeLocation(bd.loc)
+    writeLiteralString(bd.brief)
+  }
+
+  def writeBlockDescription(bd: BlockDescription): Unit = {
+    writer.writeU8(NODE_BLOCK_DESCRIPTION)
+    writeLocation(bd.loc)
+    writeSeq(bd.lines)(writeLiteralString)
+  }
+
+  def writeURLDescription(ud: URLDescription): Unit = {
+    writer.writeU8(NODE_DESCRIPTION)
+    writer.writeU8(2) // URL type
+    writeLocation(ud.loc)
+    writeURL(ud.url)
+  }
+
+  def writeLineComment(c: LineComment): Unit = {
+    writer.writeU8(NODE_COMMENT)
+    writeLocation(c.loc)
+    writeString(c.text)
+  }
+
+  def writeInlineComment(c: InlineComment): Unit = {
+    writer.writeU8(NODE_BLOCK_COMMENT)
+    writeLocation(c.loc)
+    writeSeq(c.lines)(writeString)
+  }
+
+  def writeOptionValue(ov: OptionValue): Unit = {
+    writer.writeU8(NODE_DESCRIPTION) // Options are metadata
+    writer.writeU8(10) // Option type
+    writeLocation(ov.loc)
+    writeString(ov.name)
+    writeSeq(ov.args)(writeLiteralString)
+  }
+
+  // ========== Attachment Serialization ==========
+
+  def writeFileAttachment(a: FileAttachment): Unit = {
+    writer.writeU8(NODE_DESCRIPTION)
+    writer.writeU8(20) // File attachment
+    writeLocation(a.loc)
+    writeIdentifier(a.id)
+    writeString(a.mimeType)
+    writeLiteralString(a.inFile)
+  }
+
+  def writeStringAttachment(a: StringAttachment): Unit = {
+    writer.writeU8(NODE_DESCRIPTION)
+    writer.writeU8(21) // String attachment
+    writeLocation(a.loc)
+    writeIdentifier(a.id)
+    writeString(a.mimeType)
+    writeLiteralString(a.value)
+  }
+
+  def writeULIDAttachment(a: ULIDAttachment): Unit = {
+    writer.writeU8(NODE_DESCRIPTION)
+    writer.writeU8(22) // ULID attachment
+    writeLocation(a.loc)
+    // Write ULID as bytes
+    val ulidBytes = a.ulid.toBytes
+    writer.writeRawBytes(ulidBytes)
+  }
+
+  // ========== Simple Value Serialization ==========
+
+  def writeLiteralString(ls: LiteralString): Unit = {
+    writer.writeU8(NODE_LITERAL_STRING)
+    writeLocation(ls.loc)
+    writeString(ls.s)
+  }
+
+  // ========== Streamlet Shape Serialization ==========
+
+  def writeVoid(v: Void): Unit = {
+    writer.writeU8(STREAMLET_VOID)
+    writeLocation(v.loc)
+  }
+
+  def writeSource(s: Source): Unit = {
+    writer.writeU8(STREAMLET_SOURCE)
+    writeLocation(s.loc)
+  }
+
+  def writeSink(s: Sink): Unit = {
+    writer.writeU8(STREAMLET_SINK)
+    writeLocation(s.loc)
+  }
+
+  def writeFlow(f: Flow): Unit = {
+    writer.writeU8(STREAMLET_FLOW)
+    writeLocation(f.loc)
+  }
+
+  def writeMerge(m: Merge): Unit = {
+    writer.writeU8(STREAMLET_MERGE)
+    writeLocation(m.loc)
+  }
+
+  def writeSplit(s: Split): Unit = {
+    writer.writeU8(STREAMLET_SPLIT)
+    writeLocation(s.loc)
+  }
+
+  def writeRouter(r: Router): Unit = {
+    writer.writeU8(STREAMLET_VOID) // Router not defined, use void
+    writeLocation(r.loc)
+  }
+
+  // ========== Adaptor Direction Serialization ==========
+
+  def writeInboundAdaptor(ia: InboundAdaptor): Unit = {
+    writer.writeU8(ADAPTOR_INBOUND)
+    writeLocation(ia.loc)
+  }
+
+  def writeOutboundAdaptor(oa: OutboundAdaptor): Unit = {
+    writer.writeU8(ADAPTOR_OUTBOUND)
+    writeLocation(oa.loc)
+  }
+
+  // ========== Container Serialization ==========
+
+  def writeSimpleContainer(sc: SimpleContainer[?]): Unit = {
+    writer.writeU8(NODE_NEBULA) // Containers like nebula
+    writeLocation(sc.loc)
+    writeContents(sc.contents)
+  }
+
+  // ========== Type Expression Serialization ==========
+
+  def writeTypeExpression(te: TypeExpression): Unit = {
+    te match {
+      // Aggregate types
+      case a: Aggregation =>
+        writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(255) // Subtype marker for plain Aggregation (vs AggregateUseCaseTypeExpression)
+        writeLocation(a.loc)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(a.contents.length)
+        a.contents.toSeq.foreach { item =>
+          writeNode(item)
+          // Fields have metadata that needs to be written
+          item match {
+            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case _ => ()
+          }
+        }
+
+      case a: AggregateUseCaseTypeExpression =>
+        writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(a.usecase.ordinal.toByte)
+        writeLocation(a.loc)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(a.contents.length)
+        a.contents.toSeq.foreach { item =>
+          writeNode(item)
+          item match {
+            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case _ => ()
+          }
+        }
+
+      case e: EntityReferenceTypeExpression =>
+        writer.writeU8(TYPE_REF)
+        writer.writeU8(10) // Entity ref type
+        writeLocation(e.loc)
+        writePathIdentifier(e.entity)
+
+      // Collection types
+      case alt: Alternation =>
+        writer.writeU8(TYPE_ALTERNATION)
+        writeLocation(alt.loc)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(alt.of.length)
+        alt.of.toSeq.foreach { item =>
+          writeNode(item)
+          item match {
+            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case _ => ()
+          }
+        }
+
+      case enumeration: Enumeration =>
+        writer.writeU8(TYPE_ENUMERATION)
+        writeLocation(enumeration.loc)
+        // Write count and items inline (TypeExpressions are not traversed)
+        writer.writeVarInt(enumeration.enumerators.length)
+        enumeration.enumerators.toSeq.foreach { item =>
+          writeNode(item)
+          // Enumerators always have metadata
+          writeMetadataCount(item.metadata)
+        }
+
+      case seq: Sequence =>
+        writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(20) // Sequence subtype
+        writeLocation(seq.loc)
+        writeTypeExpression(seq.of)
+
+      case m: Mapping =>
+        writer.writeU8(TYPE_MAPPING)
+        writeLocation(m.loc)
+        writeTypeExpression(m.from)
+        writeTypeExpression(m.to)
+
+      case s: Set =>
+        writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(21) // Set subtype
+        writeLocation(s.loc)
+        writeTypeExpression(s.of)
+
+      case g: Graph =>
+        writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(22) // Graph subtype
+        writeLocation(g.loc)
+        writeTypeExpression(g.of)
+
+      case t: Table =>
+        writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(23) // Table subtype
+        writeLocation(t.loc)
+        writeTypeExpression(t.of)
+        writeSeq(t.dimensions)((d: Long) => writer.writeVarLong(d))
+
+      case r: Replica =>
+        writer.writeU8(TYPE_AGGREGATION)
+        writer.writeU8(24) // Replica subtype
+        writeLocation(r.loc)
+        writeTypeExpression(r.of)
+
+      // Cardinality types
+      case opt: Optional =>
+        writer.writeU8(TYPE_OPTIONAL)
+        writeLocation(opt.loc)
+        writeTypeExpression(opt.typeExp)
+
+      case zom: ZeroOrMore =>
+        writer.writeU8(TYPE_ZERO_OR_MORE)
+        writeLocation(zom.loc)
+        writeTypeExpression(zom.typeExp)
+
+      case oom: OneOrMore =>
+        writer.writeU8(TYPE_ONE_OR_MORE)
+        writeLocation(oom.loc)
+        writeTypeExpression(oom.typeExp)
+
+      case sr: SpecificRange =>
+        writer.writeU8(TYPE_RANGE)
+        writeLocation(sr.loc)
+        writeTypeExpression(sr.typeExp)
+        writer.writeVarLong(sr.min)
+        writer.writeVarLong(sr.max)
+
+      // Aliased type
+      case ate: AliasedTypeExpression =>
+        writer.writeU8(TYPE_REF)
+        writer.writeU8(0) // AliasedTypeExpression subtype (0 = aliased, 10 = entity ref, 99 = abstract, 100 = nothing)
+        writeLocation(ate.loc)
+        writeString(ate.keyword)
+        writePathIdentifier(ate.pathId)
+
+      // Predefined types - String
+      case s: String_ =>
+        writer.writeU8(TYPE_STRING)
+        writer.writeU8(0) // String_ subtype (0 = plain String, 1 = URI, 2 = Blob)
+        writeLocation(s.loc)
+        writeOption(s.min)((v: Long) => writer.writeVarLong(v))
+        writeOption(s.max)((v: Long) => writer.writeVarLong(v))
+
+      case p: Pattern =>
+        writer.writeU8(TYPE_PATTERN)
+        writeLocation(p.loc)
+        writeSeq(p.pattern)(writeLiteralString)
+
+      case u: UniqueId =>
+        writer.writeU8(TYPE_UNIQUE_ID)
+        writer.writeU8(0) // UniqueId subtype (0 = UniqueId, 1 = UUID, 2 = UserId)
+        writeLocation(u.loc)
+        writePathIdentifier(u.entityPath)
+
+      case c: Currency =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(50) // Currency subtype
+        writeLocation(c.loc)
+        writeString(c.country)
+
+      // Predefined types - Boolean and Numbers
+      case b: Bool =>
+        writer.writeU8(TYPE_BOOL)
+        writeLocation(b.loc)
+
+      case n: Number =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(0) // Generic number
+        writeLocation(n.loc)
+
+      case i: Integer =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(1) // Integer
+        writeLocation(i.loc)
+
+      case w: Whole =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(2) // Whole
+        writeLocation(w.loc)
+
+      case n: Natural =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(3) // Natural
+        writeLocation(n.loc)
+
+      case rt: RangeType =>
+        writer.writeU8(TYPE_RANGE)
+        writeLocation(rt.loc)
+        writer.writeVarLong(rt.min)
+        writer.writeVarLong(rt.max)
+
+      case d: Decimal =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(10) // Decimal
+        writeLocation(d.loc)
+        writer.writeVarLong(d.whole)
+        writer.writeVarLong(d.fractional)
+
+      case r: Real =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(11) // Real
+        writeLocation(r.loc)
+
+      // SI units
+      case c: Current =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(20) // Current
+        writeLocation(c.loc)
+
+      case l: Length =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(21) // Length
+        writeLocation(l.loc)
+
+      case l: Luminosity =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(22) // Luminosity
+        writeLocation(l.loc)
+
+      case m: Mass =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(23) // Mass
+        writeLocation(m.loc)
+
+      case m: Mole =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(24) // Mole
+        writeLocation(m.loc)
+
+      case t: Temperature =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(25) // Temperature
+        writeLocation(t.loc)
+
+      // Time types
+      case d: Date =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(30) // Date
+        writeLocation(d.loc)
+
+      case t: Time =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(31) // Time
+        writeLocation(t.loc)
+
+      case dt: DateTime =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(32) // DateTime
+        writeLocation(dt.loc)
+
+      case zd: ZonedDate =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(33) // ZonedDate
+        writeLocation(zd.loc)
+        writeOption(zd.zone)(writeLiteralString)
+
+      case zdt: ZonedDateTime =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(34) // ZonedDateTime
+        writeLocation(zdt.loc)
+        writeOption(zdt.zone)(writeLiteralString)
+
+      case ts: TimeStamp =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(35) // TimeStamp
+        writeLocation(ts.loc)
+
+      case d: Duration =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(36) // Duration
+        writeLocation(d.loc)
+
+      // Other predefined types
+      case u: UUID =>
+        writer.writeU8(TYPE_UNIQUE_ID)
+        writer.writeU8(1) // UUID
+        writeLocation(u.loc)
+
+      case u: URI =>
+        writer.writeU8(TYPE_STRING)
+        writer.writeU8(1) // URI
+        writeLocation(u.loc)
+        writeOption(u.scheme)(writeLiteralString)
+
+      case l: Location =>
+        writer.writeU8(TYPE_NUMBER)
+        writer.writeU8(40) // Location
+        writeLocation(l.loc)
+
+      case b: Blob =>
+        writer.writeU8(TYPE_STRING)
+        writer.writeU8(2) // Blob
+        writeLocation(b.loc)
+        writer.writeU8(b.blobKind.ordinal.toByte)
+
+      case a: Abstract =>
+        writer.writeU8(TYPE_REF)
+        writer.writeU8(99) // Abstract
+        writeLocation(a.loc)
+
+      case u: UserId =>
+        writer.writeU8(TYPE_UNIQUE_ID)
+        writer.writeU8(2) // UserId
+        writeLocation(u.loc)
+
+      case n: Nothing =>
+        writer.writeU8(TYPE_REF)
+        writer.writeU8(100) // Nothing
+        writeLocation(n.loc)
+
+      case _ =>
+        println(s"Unhandled type expression: ${te.getClass.getSimpleName} at ${te.loc}")
+    }
+  }
+
+  // ========== Helper Serialization Methods ==========
+
+  def writeLocation(loc: At): Unit = {
+    // Delta encoding: store differences from previous location
+    if lastLocation.isEmpty then
+      // First location: write full data
+      // Use origin (path) instead of toExternalForm to preserve relative paths
+      writeString(loc.source.origin)
+      writer.writeVarInt(loc.offset)
+      writer.writeVarInt(loc.line)
+      writer.writeVarInt(loc.col)
+    else
+      // Subsequent locations: write deltas
+      // Treat 'empty' origin as same source (identifiers often have empty origin)
+      val sameSource = loc.source.origin == lastLocation.source.origin || loc.source.origin == "empty"
+      if !sameSource then
+        writer.writeU8(1) // Flag: new source file
+        writeString(loc.source.origin) // Use origin to preserve relative paths
+      else
+        writer.writeU8(0) // Flag: same source file
+      end if
+
+      // Write deltas (handle negative values by adding offset)
+      val offsetDelta = loc.offset - lastLocation.offset
+      val lineDelta = loc.line - lastLocation.line
+      val colDelta = loc.col - lastLocation.col
+
+      writer.writeVarInt(offsetDelta + 1000000) // Add offset to ensure positive
+      writer.writeVarInt(lineDelta + 1000)
+      writer.writeVarInt(colDelta + 1000)
+    end if
+
+    // Only update lastLocation if this location has a real origin (not 'empty')
+    // This prevents corrupting delta encoding when identifiers have placeholder locations
+    if loc.source.origin != "empty" then
+      lastLocation = loc
+    end if
+  }
+
+  def writeIdentifier(id: Identifier): Unit = {
+    writer.writeU8(NODE_IDENTIFIER)
+    writeLocation(id.loc)
+    writeString(id.value)
+  }
+
+  def writePathIdentifier(pid: PathIdentifier): Unit = {
+    writer.writeU8(NODE_PATH_IDENTIFIER)
+    writeLocation(pid.loc)
+    writeSeq(pid.value)(writeString)
+  }
+
+  def writeString(str: String): Unit = {
+    val index = stringTable.intern(str)
+    writer.writeVarInt(index)
+  }
+
+  def writeURL(url: URL): Unit = {
+    writeString(url.toExternalForm)
+  }
+
+  def writeOption[T](opt: Option[T])(writeValue: T => Unit): Unit = {
+    if opt.isDefined then
+      writer.writeBoolean(true)
+      writeValue(opt.get)
+    else
+      writer.writeBoolean(false)
+    end if
+  }
+
+  def writeSeq[T](seq: Seq[T])(writeElement: T => Unit): Unit = {
+    writer.writeVarInt(seq.length)
+    seq.foreach(writeElement)
+  }
+
+  def writeContents[T <: RiddlValue](contents: Contents[T]): Unit = {
+    writer.writeVarInt(contents.length)
+    // Note: Individual elements are written by the Pass's traverse() method
+  }
+
+  /** Write metadata count and items (called by BASTWriterPass during traversal) */
+  def writeMetadataCount(metadata: Contents[MetaData]): Unit = {
+    writer.writeVarInt(metadata.length)
+    // Write each metadata item inline
+    metadata.toSeq.foreach { item =>
+      writeNode(item)
+    }
+  }
+}
+
+/** Companion object for BASTWriter */
+object BASTWriter {
+  /** Create a new BASTWriter with fresh buffers */
+  def apply(): BASTWriter = {
+    new BASTWriter(new ByteBufferWriter(), StringTable())
+  }
+
+  /** Create a BASTWriter with provided buffers */
+  def apply(writer: ByteBufferWriter, stringTable: StringTable): BASTWriter = {
+    new BASTWriter(writer, stringTable)
+  }
+}

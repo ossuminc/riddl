@@ -6,11 +6,10 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.bast.{BASTOutput, BASTWriter}
 import com.ossuminc.riddl.command.{CommandOptions, PassCommand, PassCommandOptions}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{PassCreators, PassesResult}
+import com.ossuminc.riddl.passes.{BASTOutput, BASTWriterPass, PassCreators, PassesResult}
 import com.ossuminc.riddl.utils.PlatformContext
 import org.ekrich.config.Config
 import scopt.OParser
@@ -72,7 +71,7 @@ class BastGenCommand(using pc: PlatformContext) extends PassCommand[BastGenComma
   }
 
   override def getPasses(options: Options): PassCreators = {
-    Seq(BASTWriter.creator())
+    Seq(BASTWriterPass.creator())
   }
 
   override def replaceInputFile(opts: Options, inputFile: Path): Options = {
@@ -88,7 +87,7 @@ class BastGenCommand(using pc: PlatformContext) extends PassCommand[BastGenComma
       case Left(errors) => Left(errors)
       case Right(result) =>
         // Get the BAST output
-        result.outputOf[BASTOutput](BASTWriter.name) match {
+        result.outputOf[BASTOutput](BASTWriterPass.name) match {
           case None =>
             Left(Messages.errors("BASTWriter did not produce output"))
           case Some(bastOutput) =>

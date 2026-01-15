@@ -2,9 +2,13 @@
 
 ## Current Status
 
-**BAST (Binary AST) serialization and import integration is complete through Phase 4.**
+**BAST (Binary AST) serialization is fully integrated into the language and passes modules.**
 
-The `bast/` module provides efficient binary serialization/deserialization of RIDDL AST nodes, enabling fast `import "module.bast"` functionality. All 19 tests pass.
+As of Jan 15, 2026, the standalone `bast/` module has been **removed from build.sbt** and the code has been reorganized:
+- **Utility code** → `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`
+- **BASTWriterPass** → `passes/shared/src/main/scala/com/ossuminc/riddl/passes/`
+
+This enables BAST to work like Python's `.pyc` files - automatic loading from cache when available.
 
 ## Work Completed (Recent)
 
@@ -16,12 +20,21 @@ The `bast/` module provides efficient binary serialization/deserialization of RI
   - [x] Support imports at root level AND inside domains
   - [x] BASTLoader utility to load and populate contents
   - [x] Path resolution verified: `ImportedDomain.SomeType` resolves correctly
+- [x] Phase 5: Module Reorganization & Auto-Generation (Jan 15, 2026)
+  - [x] Removed standalone `bast/` module from build.sbt
+  - [x] Split BASTWriter: utility class in `language/bast/`, Pass wrapper in `passes/`
+  - [x] Added `BASTUtils.scala` with `checkForBastFile()`, `loadBAST()`, `tryLoadBastOrParseRiddl()`
+  - [x] Integrated automatic BAST loading into `TopLevelParser.parseURL()` and `parseInput()`
+  - [x] Added `--auto-generate-bast` / `-B` CLI option to riddlc
+  - [x] Added `auto-generate-bast` config file option
+  - [x] Implemented auto-generation in `Riddl.parse()` when option enabled
 
-## In Progress
+## Completed
 
-**Phase 5: CLI & Testing**
+**Phase 5: CLI & Auto-Generation**
 - [x] Add `riddlc bast-gen` command - 77ba7544
-- [ ] Add `--use-bast-cache` flag (auto-generate BAST during parsing)
+- [x] Add `--auto-generate-bast` flag (auto-generate BAST during parsing)
+- [x] Automatic BAST loading when .bast file exists and is newer than .riddl
 - [ ] Performance benchmarks (parse RIDDL vs load BAST)
 - [ ] Cross-platform tests (JS, Native)
 
@@ -46,7 +59,7 @@ The `bast/` module provides efficient binary serialization/deserialization of RI
 
 ## Open Questions
 
-- Should BAST files be auto-generated as a build cache, or explicitly created by users?
+- ~~Should BAST files be auto-generated as a build cache, or explicitly created by users?~~ **RESOLVED**: Both options available - explicit via `bast-gen` command, automatic via `--auto-generate-bast` flag
 - How should BAST versioning handle breaking format changes?
 
 ## Test Status
@@ -61,12 +74,23 @@ The `bast/` module provides efficient binary serialization/deserialization of RI
 
 ## Key Code Locations
 
+**Language Module** (`language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`):
 - `package.scala` - Constants, node type tags (1-255)
 - `BinaryFormat.scala` - Header spec, file structure
-- `BASTWriter.scala` - Serialization pass
+- `BASTWriter.scala` - Serialization utility class (non-Pass)
 - `BASTReader.scala` - Deserialization
 - `BASTLoader.scala` - Import loading utility
+- `BASTUtils.scala` - File checking, BAST loading helpers
+
+**Passes Module** (`passes/shared/src/main/scala/com/ossuminc/riddl/passes/`):
+- `BASTWriterPass.scala` - Pass wrapper using AST traversal framework
+
+**Commands Module** (`commands/jvm/src/main/scala/com/ossuminc/riddl/commands/`):
+- `BastGenCommand.scala` - `riddlc bast-gen` command
+
+**Tests** (`passes/jvm/src/test/scala/com/ossuminc/riddl/passes/`):
 - `BASTLoaderTest.scala` - Import integration tests
+- `BASTRoundTripTest.scala` - Serialization round-trip tests
 
 ## Git Information
 

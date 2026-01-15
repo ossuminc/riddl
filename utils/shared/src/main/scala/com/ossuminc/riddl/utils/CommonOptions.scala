@@ -48,6 +48,10 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   default is 5 seconds.
   * @param warningsAreFatal
   *   When set to true, any warnings are handled as if they were errors and terminate riddlc with a non-zero status
+  * @param autoGenerateBAST
+  *   When set to true, automatically generate .bast files next to .riddl files after successful parsing. The .bast
+  *   files serve as a cache (like Python's .pyc files) - if the .bast is newer than the .riddl, it will be loaded
+  *   instead of parsing the .riddl file.
   */
 @JSExportTopLevel("CommonOptions")
 case class CommonOptions(
@@ -67,7 +71,8 @@ case class CommonOptions(
   noANSIMessages: Boolean = false,
   maxParallelParsing: Int = Runtime.getRuntime.availableProcessors,
   maxIncludeWait: FiniteDuration = 10.second,
-  warningsAreFatal: Boolean = false
+  warningsAreFatal: Boolean = false,
+  autoGenerateBAST: Boolean = false
 )
 
 @JSExportTopLevel("CommonOptions$")

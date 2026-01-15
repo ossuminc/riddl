@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.bast.{BASTReader, BASTOutput, HEADER_SIZE}
+import com.ossuminc.riddl.language.bast.HEADER_SIZE
 import com.ossuminc.riddl.language.AST.Domain
 import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.matchers.must.Matchers

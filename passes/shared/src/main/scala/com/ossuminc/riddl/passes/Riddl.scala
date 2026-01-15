@@ -9,6 +9,7 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl
 import com.ossuminc.riddl.language.AST.{Branch, Root, Token}
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.bast.BASTUtils
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.PassCreators
@@ -16,6 +17,7 @@ import com.ossuminc.riddl.passes.prettify.PrettifyOutput
 import com.ossuminc.riddl.passes.prettify.PrettifyPass
 import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 
+import java.nio.file.{Files, Paths}
 import scala.collection.IndexedSeqView
 
 /** Primary Interface to Riddl Language parsing and validating */
@@ -29,7 +31,55 @@ object Riddl {
     * @return
     */
   def parse(input: RiddlParserInput)(using io: PlatformContext): Either[Messages, Root] = {
-    TopLevelParser.parseInput(input)
+    TopLevelParser.parseInput(input) match {
+      case Left(errors) => Left(errors)
+      case Right(root) =>
+        // Auto-generate BAST if option is set
+        if io.options.autoGenerateBAST then
+          maybeGenerateBAST(root, input.root)
+        end if
+        Right(root)
+    }
+  }
+
+  /** Optionally generate a BAST file for the parsed root.
+    *
+    * This is called when `CommonOptions.autoGenerateBAST` is true.
+    * The BAST file is written next to the source file with .bast extension.
+    *
+    * @param root The parsed AST root
+    * @param sourceUrl The URL of the source file
+    * @param io The platform context
+    */
+  private def maybeGenerateBAST(root: Root, sourceUrl: URL)(using io: PlatformContext): Unit = {
+    // Only generate for file:// URLs
+    if !sourceUrl.isFileScheme then return
+
+    try {
+      val bastUrl = BASTUtils.getBastUrlFor(sourceUrl)
+      val bastPath = Paths.get(bastUrl.toFullPathString)
+
+      // Run BASTWriterPass to serialize
+      val passInput = PassInput(root)
+      val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+      writerResult.outputOf[BASTOutput](BASTWriterPass.name) match {
+        case Some(output) =>
+          // Create parent directories if needed
+          val parent = bastPath.getParent
+          if parent != null && !Files.exists(parent) then
+            Files.createDirectories(parent)
+          end if
+
+          Files.write(bastPath, output.bytes)
+          io.log.info(s"Auto-generated BAST: ${bastPath} (${output.bytes.length} bytes)")
+
+        case None =>
+          io.log.warn(s"Failed to generate BAST for ${sourceUrl.toExternalForm}")
+      }
+    } catch {
+      case ex: Exception =>
+        io.log.warn(s"Failed to auto-generate BAST: ${ex.getMessage}")
+    }
   }
 
   /** Run the standard passes after parsing

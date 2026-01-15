@@ -53,6 +53,7 @@ object CommonOptionsHelper:
   private inline def max_parallel_parsing = "max-parallel-parsing"
   private inline def max_include_wait = "max-include-wait"
   private inline def warnings_are_fatal = "warnings-are-fatal"
+  private inline def auto_generate_bast = "auto-generate-bast"
 
   lazy val commonOptionsParser: OParser[Unit, CommonOptions] = {
     val builder: OParserBuilder[CommonOptions] = OParser.builder[CommonOptions]
@@ -144,6 +145,12 @@ object CommonOptionsHelper:
         .action((_, c) => c.copy(warningsAreFatal = true))
         .text(
           "Makes validation warnings fatal to encourage code perfection"
+        ),
+      opt[Unit]('B', auto_generate_bast)
+        .optional()
+        .action((_, c) => c.copy(autoGenerateBAST = true))
+        .text(
+          "Automatically generate .bast files next to .riddl files after parsing (like Python's .pyc)"
         )
     )
   }
@@ -226,6 +233,8 @@ object CommonOptionsHelper:
       else default.maxIncludeWait
     val warningsAreFatal =
       if obj.hasPath(warnings_are_fatal) then obj.getBoolean(warnings_are_fatal) else default.warningsAreFatal
+    val autoGenerateBAST =
+      if obj.hasPath(auto_generate_bast) then obj.getBoolean(auto_generate_bast) else default.autoGenerateBAST
 
     CommonOptions(
       showTimes,
@@ -244,7 +253,8 @@ object CommonOptionsHelper:
       noANSIMessages,
       maxParallelParsing,
       maxIncludeWait,
-      warningsAreFatal
+      warningsAreFatal,
+      autoGenerateBAST
     )
   end commonOptionsReader
 
