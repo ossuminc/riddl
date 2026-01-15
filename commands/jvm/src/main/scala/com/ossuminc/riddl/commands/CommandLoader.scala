@@ -24,6 +24,7 @@ object CommandLoader:
     if io.options.verbose then io.log.info(s"Loading command: $name") else ()
     name match
       case "about"    => Right(AboutCommand())
+      case "bast-gen" => Right(BastGenCommand())
       case "dump"     => Right(DumpCommand())
       case "flatten"  => Right(FlattenCommand())
       case "from"     => Right(FromCommand())
@@ -44,6 +45,7 @@ object CommandLoader:
   def commandOptionsParser(using io: PlatformContext): OParser[Unit, ?] = {
     val optionParsers = Seq(
       AboutCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
+      BastGenCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FlattenCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FromCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
