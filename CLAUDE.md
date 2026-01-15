@@ -353,50 +353,32 @@ sbt riddlc/stage
 - [x] Implement ByteBufferReader (`ByteBufferReader.scala`)
 - [x] Update to sbt-ossuminc 1.0.0
 
-**Phase 2: Core Serialization (NEXT - IN PROGRESS)** 🚧
-- [ ] Implement StringTable class for string interning
-  - Pre-populate with RIDDL keywords and predefined types
-  - Build during serialization, reference by varint index
-- [ ] Implement BASTWriter as Pass subclass (extends `HierarchyPass`)
-  - Use ByteBufferWriter for output
-  - Pattern match all AST node types
-  - Write node type tags + serialized data
-  - Track offsets for backpatching
-- [ ] Write node serializers for:
-  - [ ] Core: Nebula, Domain, Context, Entity, Type, Function
-  - [ ] Streaming: Processor, Projector, Repository, Adaptor, Streamlet
-  - [ ] Epics: Epic, Saga, Story, UseCase
-  - [ ] Types: Aggregation, Enumeration, Alternation, Mapping
-  - [ ] Common: Identifier, PathIdentifier, Location (delta-encoded)
-  - [ ] Metadata: Descriptions, Comments, Options
-- [ ] Implement header writing with checksum
-- [ ] Write unit tests for each node type
+**Phase 2: Core Serialization (COMPLETED)** ✅
+- [x] Implement StringTable class for string interning
+- [x] Implement BASTWriter as Pass subclass
+- [x] Write node serializers for all AST node types
+- [x] Implement header writing with checksum
+- [x] Write unit tests for each node type (7 tests in BASTWriterSpec)
 
-**Phase 3: Deserialization (PENDING)** ⏳
-- [ ] Implement BASTReader class
-- [ ] Header parsing and version validation
-- [ ] String table loading
-- [ ] Node deserializers (mirror of Phase 2)
-- [ ] Reconstruct AST relationships (parent-child)
-- [ ] Error handling for corrupted files
-- [ ] Round-trip tests (write → read → compare)
+**Phase 3: Deserialization (COMPLETED)** ✅
+- [x] Implement BASTReader class
+- [x] Header parsing and version validation
+- [x] String table loading
+- [x] Node deserializers (mirror of Phase 2)
+- [x] Reconstruct AST relationships (parent-child)
+- [x] Error handling for corrupted files
+- [x] Round-trip tests (3 tests in BASTRoundTripTest)
+- [x] Performance benchmarks (4 tests in BASTPerformanceTest)
 
-**Phase 4: Import Integration (PENDING)** ⏳
-- [ ] Update import syntax parser in `CommonParser.scala`
-  - Parse: `import "file.bast" as namespace`
-  - Validate: Must be top-level, before any definitions
-- [ ] Implement `doImport()` in `ParsingContext.scala` (currently stub)
-  - Load BAST file using BASTReader
-  - Get Nebula from BAST
-  - Return Nebula wrapped with namespace info
-- [ ] Implement namespace resolution in path resolution
-  - Extend `PathIdentifier` to support namespace prefix
-  - Update `ReferenceMap` to resolve namespaced references
-  - Example: `utils.UUID` resolves to imported `utils` namespace
-- [ ] Add `.bast` file detection to `TopLevelParser`
-- [ ] Implement BAST cache invalidation (check mtime)
+**Phase 4: Import Integration (COMPLETED)** ✅
+- [x] Import syntax: `import "file.bast"` (simplified - no namespace clause)
+- [x] Imports supported at root level AND inside domains
+- [x] BASTLoader utility loads BAST files and populates BASTImport.contents
+- [x] Path resolution works naturally (BASTImport is a Container)
+- [x] Test: references like `ImportedDomain.SomeType` resolve correctly
+- [x] 5 tests in BASTLoaderTest
 
-**Phase 5: CLI & Testing (PENDING)** ⏳
+**Phase 5: CLI & Testing (NEXT)** 🚧
 - [ ] Add `riddlc bast-gen` command to generate BAST from RIDDL
 - [ ] Add command-line flags:
   - `--use-bast-cache` - Auto-generate/use BAST files
@@ -418,40 +400,47 @@ sbt riddlc/stage
 
 #### Design Decisions Made
 
-1. **Namespaced imports (Option C)** - Chosen over flat or targeted imports
-   - Syntax: `import "utils.bast" as utils`
-   - No namespace collisions
-   - Clear provenance
-   - Qualified references: `utils.DomainName.TypeName`
+1. **Simple import syntax** - `import "file.bast"` (no namespace clause)
+   - RIDDL uses nested domains for namespacing, not a separate namespace concept
+   - Reference imported definitions via domain paths: `ImportedDomain.SomeType`
+   - Duplicate definitions produce errors
 
-2. **Top-level only** - Imports must occur before any definitions
-   - Not inside domains (unlike the stub implementation)
-   - Simpler, cleaner semantics
-   - Easier to implement and reason about
+2. **Imports at root AND inside domains** - Two valid locations
+   - Root level: for shared libraries
+   - Inside domains: for domain-specific imports
+   - Not allowed elsewhere (contexts, entities, etc.)
 
 3. **Writer as Pass** - BASTWriter extends `HierarchyPass`
    - Idiomatic RIDDL architecture
    - Automatic traversal infrastructure
    - Minimal performance overhead
 
-4. **No targeted imports** - Keep it simple for MVP
-   - No `import "x.bast" into domain Y` syntax
-   - Can add later if needed
+4. **BASTImport as Container** - Resolution works naturally
+   - ResolutionPass traverses Container.contents automatically
+   - No special handling needed in resolution pass
 
 #### Files Created
 
-**Completed**:
+**Infrastructure (Phase 1)**:
 - `bast/shared/src/main/scala/com/ossuminc/riddl/bast/package.scala` - Constants, node tags, flags
 - `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BinaryFormat.scala` - Format spec, Header
 - `bast/shared/src/main/scala/com/ossuminc/riddl/bast/VarIntCodec.scala` - LEB128 encoding/decoding
 - `bast/shared/src/main/scala/com/ossuminc/riddl/bast/ByteBufferWriter.scala` - Binary writer
 - `bast/shared/src/main/scala/com/ossuminc/riddl/bast/ByteBufferReader.scala` - Binary reader
 
-**Next to create**:
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/StringTable.scala`
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTWriter.scala`
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTReader.scala`
-- `bast/shared/src/test/scala/com/ossuminc/riddl/bast/VarIntCodecTest.scala`
+**Serialization/Deserialization (Phases 2-3)**:
+- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/StringTable.scala` - String interning
+- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTWriter.scala` - Serialization pass
+- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTReader.scala` - Deserialization
+
+**Import Integration (Phase 4)**:
+- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTLoader.scala` - Import loading utility
+
+**Tests**:
+- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTWriterSpec.scala` - Serialization tests
+- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTRoundTripTest.scala` - Round-trip tests
+- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTPerformanceTest.scala` - Performance tests
+- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTLoaderTest.scala` - Import integration tests
 
 #### Key Implementation Notes
 
@@ -594,6 +583,68 @@ object InfoFormatter {
   }
 }
 ```
+
+## Working with riddlc CLI
+
+After staging (`sbt riddlc/stage`), the `riddlc` executable provides:
+
+```bash
+riddlc help              # Show all available commands
+riddlc version           # Version information
+riddlc info              # Build information
+riddlc parse <file>      # Parse RIDDL file
+riddlc validate <file>   # Validate RIDDL file
+```
+
+Commands can load options from HOCON config files.
+
+**Executable location**: `riddlc/jvm/target/universal/stage/bin/riddlc`
+
+---
+
+## Development Patterns
+
+### Adding a New Module
+
+```scala
+lazy val mymodule_cp = CrossModule("mymodule", "riddl-mymodule")(JVM, JS, Native)
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp))
+  .configure(With.typical, With.GithubPublishing)
+  .settings(
+    description := "Description here"
+  )
+  .jvmConfigure(With.coverage(50))
+  .jsConfigure(With.ScalaJS("RIDDL: mymodule", withCommonJSModule = true))
+  .nativeConfigure(With.Native(mode = "fast"))
+
+lazy val mymodule = mymodule_cp.jvm
+lazy val mymoduleJS = mymodule_cp.js
+lazy val mymoduleNative = mymodule_cp.native
+```
+
+Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNative)`
+
+**Note**: Use `With.ScalaJS(...)` for sbt-ossuminc 1.0.0+, not `With.Javascript(...)`
+
+### Adding a New Pass
+
+1. Extend `Pass`, `DepthFirstPass`, or `HierarchyPass`
+2. Implement `process()` method for each AST node type
+3. Declare dependencies via `def requires(): Seq[Pass] = Seq(...)`
+4. Override `result()` to return your `PassOutput` subclass
+5. Add to standard passes or invoke explicitly
+
+### Adding a New Command
+
+1. Define options: `case class MyOptions(...) extends CommandOptions`
+2. Define command: `class MyCommand extends Command[MyOptions]`
+3. Implement:
+   - `def name: String`
+   - `def getOptionsParser: OptionParser[MyOptions]`
+   - `def run(options: MyOptions, context: PlatformContext): Either[Messages, PassesResult]`
+4. Register with `CommandLoader` if using plugin system
+
+---
 
 ## Notes for Future Sessions
 
