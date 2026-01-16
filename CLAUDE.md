@@ -242,7 +242,8 @@ When implementing new code:
 ### Version Management
 - **sbt-dynver** generates versions from git tags
 - Format: `MAJOR.MINOR.PATCH-commits-hash-YYYYMMDD-HHMM`
-- Clean tag: `git tag -a v1.0.0 -m "Release 1.0.0"`
+- Clean tag: `git tag -a 1.0.0 -m "Release 1.0.0"` (no `v` prefix - it interferes with sbt-dynver)
+- **Always run `sbt publishLocal` after tagging** to make the new version available locally
 
 ### Commit Message Format
 ```
