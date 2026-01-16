@@ -102,10 +102,10 @@ Benchmark on `dokn.riddl` (7.5KB, 167 nodes):
 |----------|--------|-------|
 | JVM | ✅ Passing | 6 tests in SharedBASTTest |
 | Native | ✅ Passing | 6 tests in SharedBASTTest |
-| JS | ⚠️ Known limitation | No local file I/O on browser platform |
+| JS | ✅ Passing | 6 tests in SharedBASTTest |
 
-**Note**: JS cannot support BAST file loading because `DOMPlatformContext` throws `FileNotFoundException`
-for `file://` URLs. This is an inherent platform limitation, not a bug. BAST import loading is a JVM/Native feature.
+**Note**: BAST serialization/deserialization works on all platforms. BAST *file import loading* is
+JVM/Native only (JS returns error message since browser can't do local file I/O).
 
 ### Next Steps
 
@@ -140,13 +140,13 @@ for `file://` URLs. This is an inherent platform limitation, not a bug. BAST imp
 **Completed**:
 - Created `SharedBASTTest.scala` in `passes/shared/src/test/` with 6 tests
 - Tests build AST programmatically (avoid parser's BAST import loading)
-- JVM: All 6 tests pass ✅
-- Native: All 6 tests pass ✅
-- JS: Known platform limitation (no local file I/O)
+- Made `BASTLoader` platform-aware with `BASTLoaderPlatform`:
+  - JVM/Native: Uses blocking `Await.result()` for file loading
+  - JS: Returns error message (file I/O not supported)
+- All platforms pass: JVM ✅, Native ✅, JS ✅
 
-**Conclusion**: BAST serialization/deserialization works correctly on JVM and Native.
-JS cannot support BAST file loading because `DOMPlatformContext` throws `FileNotFoundException`
-for `file://` URLs - this is an inherent browser platform limitation, not a bug.
+**Key insight**: Separated blocking I/O code into `BASTLoaderPlatform` (in `jvm-native/` and `js/`)
+to allow JS linker to succeed while maintaining full functionality on JVM/Native.
 
 ### January 16, 2026 (Cleanup & Benchmarking)
 
