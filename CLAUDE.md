@@ -58,20 +58,23 @@ utils → language → bast → passes → diagrams → commands → riddlc
                   testkit
 ```
 
-### New Module: bast/
-**Purpose**: Binary AST (BAST) serialization for fast module imports
+### BAST Module (Binary AST)
+**Purpose**: Binary AST serialization for fast module imports
 
-- **Location**: `bast/` (top-level directory)
-- **Dependencies**: `language`, `passes`
+- **Location**: `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/` (inside language module)
+- **Package**: `com.ossuminc.riddl.language.bast`
 - **Cross-platform**: JVM, JS, Native
-- **Status**: In development (as of Jan 2026)
+- **Status**: Core functionality complete (as of Jan 2026)
 
-**Key files**:
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/package.scala` - Constants and node type tags
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BinaryFormat.scala` - Format specification
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/VarIntCodec.scala` - LEB128 varint encoding
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/ByteBufferWriter.scala` - Binary writer
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/ByteBufferReader.scala` - Binary reader
+**Note**: There is a legacy standalone `bast/` directory at the project root. This is deprecated - all authoritative BAST code lives in the `language` module's `bast` package.
+
+**Key files** (all in `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`):
+- `package.scala` - Constants and node type tags (NODE_*, TYPE_*, STREAMLET_*, etc.)
+- `BASTWriter.scala` - Serialization pass (extends HierarchyPass)
+- `BASTReader.scala` - Deserialization
+- `BASTLoader.scala` - Import loading utility
+- `BASTUtils.scala` - Shared utilities
+- `StringTable.scala` - String interning for compression
 
 ## NPM Packaging (JavaScript/TypeScript API)
 
@@ -162,9 +165,9 @@ class MyPass extends HierarchyPass {
 ```
 
 **BAST Writer Pattern**:
-- BASTWriter will be a Pass subclass
+- `BASTWriterPass` (in passes module) extends `HierarchyPass`
+- Uses `BASTWriter` utilities (in language module) for byte writing
 - Sacrifice write speed for read speed
-- Use `ByteBufferWriter` for output
 - String interning for deduplication
 
 ## GitHub Workflows
@@ -410,10 +413,10 @@ sbt riddlc/stage
    - Inside domains: for domain-specific imports
    - Not allowed elsewhere (contexts, entities, etc.)
 
-3. **Writer as Pass** - BASTWriter extends `HierarchyPass`
+3. **Writer as Pass** - `BASTWriterPass` (in passes module) extends `HierarchyPass`
    - Idiomatic RIDDL architecture
    - Automatic traversal infrastructure
-   - Minimal performance overhead
+   - Uses `BASTWriter` utilities from language module for actual byte writing
 
 4. **BASTImport as Container** - Resolution works naturally
    - ResolutionPass traverses Container.contents automatically
@@ -421,26 +424,33 @@ sbt riddlc/stage
 
 #### Files Created
 
-**Infrastructure (Phase 1)**:
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/package.scala` - Constants, node tags, flags
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BinaryFormat.scala` - Format spec, Header
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/VarIntCodec.scala` - LEB128 encoding/decoding
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/ByteBufferWriter.scala` - Binary writer
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/ByteBufferReader.scala` - Binary reader
+All BAST source files are in `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`:
 
-**Serialization/Deserialization (Phases 2-3)**:
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/StringTable.scala` - String interning
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTWriter.scala` - Serialization pass
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTReader.scala` - Deserialization
+**Core** (in `language/shared/.../bast/`):
+- `package.scala` - Constants, node tags (NODE_*, TYPE_*), flags
+- `StringTable.scala` - String interning for compression
+- `BASTWriter.scala` - Writing utilities (not a Pass)
+- `BASTReader.scala` - Deserialization with `readNode()` and `readTypeExpression()`
+- `BASTLoader.scala` - Import loading utility
+- `BASTUtils.scala` - Shared utilities
 
-**Import Integration (Phase 4)**:
-- `bast/shared/src/main/scala/com/ossuminc/riddl/bast/BASTLoader.scala` - Import loading utility
+**Pass** (in `passes/shared/.../passes/`):
+- `BASTWriterPass.scala` - Serialization pass (extends HierarchyPass)
 
-**Tests**:
-- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTWriterSpec.scala` - Serialization tests
-- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTRoundTripTest.scala` - Round-trip tests
-- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTPerformanceTest.scala` - Performance tests
-- `bast/jvm/src/test/scala/com/ossuminc/riddl/bast/BASTLoaderTest.scala` - Import integration tests
+**Tests** (in `passes/jvm/src/test/scala/com/ossuminc/riddl/passes/`):
+- `BASTMinimalTest.scala` - Basic serialization test (1 test)
+- `BASTIncrementalTest.scala` - 37 incremental round-trip tests covering all AST structures
+- `BASTWriterSpec.scala` - Serialization tests (5 tests)
+- `BASTRoundTripTest.scala` - Round-trip tests (3 tests)
+- `BASTPerformanceBenchmark.scala` - Performance benchmarks comparing parse vs load (3 tests)
+- `BASTLoaderTest.scala` - Import integration tests (4 tests)
+- `BASTDebugTest.scala` - Byte-level debugging test (1 test)
+- `BASTBenchmarkRunner.scala` - Standalone benchmark runner (runMain)
+- `DeepASTComparison.scala` - AST comparison utility for round-trip verification
+
+**Total: 54 BAST tests** (as of Jan 2026)
+
+**DEPRECATED**: The `bast/jvm/src/test/` directory contains older test files that use the deprecated `BASTWriter.creator()` instead of `BASTWriterPass.creator()`. These should NOT be used - all authoritative tests are in the passes module.
 
 #### Key Implementation Notes
 
@@ -464,6 +474,14 @@ sbt riddlc/stage
    - Version checking in header (major version changes = breaking)
    - Checksum validation on load
    - Graceful degradation for unknown node types
+
+5. **CRITICAL: readNode() vs readTypeExpression() in BASTReader**:
+   - `readNode()` handles **definition-level tags**: NODE_TYPE, NODE_DOMAIN, NODE_CONTEXT, NODE_ENTITY, NODE_FIELD, NODE_ENUMERATOR, etc.
+   - `readTypeExpression()` handles **type expression tags**: TYPE_REF, TYPE_ALTERNATION, TYPE_AGGREGATION, TYPE_STRING, TYPE_NUMBER, etc.
+   - **These are DISJOINT sets** - readNode() does NOT handle TYPE_* tags!
+   - When reading contents that contain type expressions (e.g., `Alternation.of` which contains `AliasedTypeExpression`), you MUST use `readTypeExpression()`, not `readNode()` via `readContentsDeferred()`
+   - **Bug pattern**: If you see "Invalid string table index" errors with huge counts like `metadata[1000009]`, it usually means the reader is misaligned because it tried to read a TYPE_* tag as a NODE_* tag
+   - **Fix pattern**: Create specialized reader methods like `readTypeExpressionContents()` that read count + call `readTypeExpression()` for each item
 
 #### Related Issues & TODOs
 
@@ -658,3 +676,5 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 8. **RiddlAPI origin parameters must be URLs** - Use `originToURL()` helper for String origins
 9. **Scala 3 lambda syntax required** - `foreach(line => func(line))` not `foreach(func)`
 10. **Share code via utils/shared/** - For code used by both JVM and JS variants
+11. **BAST code lives in language module** - `language/shared/.../bast/`, NOT the standalone `bast/` directory
+12. **BAST readNode() vs readTypeExpression()** - Disjoint tag sets; see "Key Implementation Notes" for details on avoiding deserialization bugs
