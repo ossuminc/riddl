@@ -96,10 +96,21 @@ Benchmark on `dokn.riddl` (7.5KB, 167 nodes):
 
 **Conclusion**: BAST loading achieves ~9x speedup, close to the 10x target.
 
+### Cross-Platform Status (January 16, 2026)
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| JVM | ✅ Passing | 6 tests in SharedBASTTest |
+| Native | ✅ Passing | 6 tests in SharedBASTTest |
+| JS | ⚠️ Known limitation | No local file I/O on browser platform |
+
+**Note**: JS cannot support BAST file loading because `DOMPlatformContext` throws `FileNotFoundException`
+for `file://` URLs. This is an inherent platform limitation, not a bug. BAST import loading is a JVM/Native feature.
+
 ### Next Steps
 
-1. Cross-platform testing (JS, Native variants)
-2. Consider larger test corpus for comprehensive benchmarks
+1. Consider larger test corpus for comprehensive benchmarks
+2. Document BAST format specification
 
 ### Open Questions
 
@@ -121,6 +132,21 @@ Benchmark on `dokn.riddl` (7.5KB, 167 nodes):
 ---
 
 ## Session Log
+
+### January 16, 2026 (Cross-Platform Testing)
+
+**Focus**: Cross-platform BAST testing (JS, Native)
+
+**Completed**:
+- Created `SharedBASTTest.scala` in `passes/shared/src/test/` with 6 tests
+- Tests build AST programmatically (avoid parser's BAST import loading)
+- JVM: All 6 tests pass ✅
+- Native: All 6 tests pass ✅
+- JS: Known platform limitation (no local file I/O)
+
+**Conclusion**: BAST serialization/deserialization works correctly on JVM and Native.
+JS cannot support BAST file loading because `DOMPlatformContext` throws `FileNotFoundException`
+for `file://` URLs - this is an inherent browser platform limitation, not a bug.
 
 ### January 16, 2026 (Cleanup & Benchmarking)
 
