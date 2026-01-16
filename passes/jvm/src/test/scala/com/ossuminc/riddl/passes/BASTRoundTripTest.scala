@@ -72,6 +72,44 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize dokn.riddl" in { (td: TestData) =>
+      System.err.println("=== DOKN TEST STARTING ===")
+      val url = URL.fromCwdPath("language/input/dokn.riddl")
+      val inputFuture = RiddlParserInput.fromURL(url, td.name)
+
+      val result = Await.result(inputFuture.map { input =>
+        val parseResult = TopLevelParser.parseInput(input, true)
+        parseResult match {
+          case Right(originalRoot: Root) =>
+            println(s"\n=== Round Trip Test: dokn.riddl ===")
+            println(s"Original AST with ${originalRoot.contents.toSeq.size} items")
+
+            val passInput = PassInput(originalRoot)
+            val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+            val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+
+            println(f"BAST written: ${output.bytes.length}%,d bytes (${output.nodeCount}%,d nodes)")
+
+            System.err.println(s"=== ABOUT TO READ BAST (${output.bytes.length} bytes) ===")
+            throw new RuntimeException(s"DEBUG: bytes.length = ${output.bytes.length}")
+            BASTReader.read(output.bytes) match {
+              case Right(reconstructedNebula) =>
+                System.err.println(s"BAST read: Nebula with ${reconstructedNebula.contents.toSeq.size} items")
+                true
+              case Left(errors) =>
+                System.err.println(s"[FAIL] Deserialization failed: ${errors.format}")
+                false
+            }
+
+          case Left(messages) =>
+            println(s"Parse failed: ${messages.format}")
+            false
+        }
+      }, 30.seconds)
+
+      assert(result, "Round trip test failed for dokn.riddl")
+    }
+
     "serialize and deserialize everything.riddl" in { (td: TestData) =>
       val url = URL.fromCwdPath("language/input/everything.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td.name)

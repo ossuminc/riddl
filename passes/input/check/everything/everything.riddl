@@ -50,7 +50,7 @@ domain Everything is {
       function whenUnderTheInfluence is {
         requires { n: Nothing }
         returns { b: Boolean }
-        "some pseudo-code"
+        prompt "some pseudo-code"
       }
 
       handler foo is {

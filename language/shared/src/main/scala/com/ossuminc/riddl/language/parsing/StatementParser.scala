@@ -11,13 +11,16 @@ import com.ossuminc.riddl.language.At
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-/** StatementParser Define actions that various constructs can take for modelling behavior in a message-passing system
+/** StatementParser
+  *
+  * Parse the declarative statements per riddlsim specification:
+  * send, tell, morph, become, when, match, error, let, set, prompt, code
   */
 private[parsing] trait StatementParser {
   this: ReferenceParser & CommonParser =>
 
-  private def arbitraryStatement[u: P]: P[ArbitraryStatement] = {
-    P(Index ~ literalString ~/ Index)./ map { case (start, str, end) => ArbitraryStatement(at(start, end), str) }
+  private def promptStatement[u: P]: P[PromptStatement] = {
+    P(Index ~ Keywords.prompt ~ literalString ~/ Index)./ map { case (start, str, end) => PromptStatement(at(start, end), str) }
   }
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
@@ -44,45 +47,6 @@ private[parsing] trait StatementParser {
     )./.map { (start, msg, proc, end) => TellStatement(at(start, end), msg, proc) }
   }
 
-  private def forEachStatement[u: P](set: StatementsSet): P[ForEachStatement] = {
-    P(
-      Index ~ Keywords.foreach ~/ (fieldRef | inletRef | outletRef) ~ Keywords.do_ ~/
-        pseudoCodeBlock(set) ~ Keywords.end_ ~/ Index
-    )./.map { case (start, ref, statements, end) =>
-      val loc = at(start, end)
-      ref match
-        case fr: FieldRef  => ForEachStatement(loc, fr, statements.toContents)
-        case ir: InletRef  => ForEachStatement(loc, ir, statements.toContents)
-        case or: OutletRef => ForEachStatement(loc, or, statements.toContents)
-        case r: Reference[?] =>
-          error(loc, "Failed match case", "parsing a foreach statement") // shouldn't happen!
-          ForEachStatement(loc, FieldRef(r.loc, r.pathId), statements.toContents)
-    }
-  }
-
-  private def ifThenElseStatement[u: P](set: StatementsSet): P[IfThenElseStatement] = {
-    P(
-      Index ~ Keywords.`if` ~/ literalString ~ Keywords.`then` ~/ pseudoCodeBlock(set) ~ (
-        Keywords.else_ ~ pseudoCodeBlock(set) ~/ Keywords.end_
-      ).? ~ Index
-    )./.map { case (start, cond, thens, maybeElses, end) =>
-      val elses = maybeElses.getOrElse(Seq.empty[Statements])
-      IfThenElseStatement(at(start, end), cond, thens.toContents, elses.toContents)
-    }
-  }
-
-  private def callStatement[u: P]: P[CallStatement] = {
-    P(Index ~ Keywords.call ~/ functionRef ~/ Index)./.map { case (start, ref, end) =>
-      CallStatement(at(start, end), ref)
-    }
-  }
-
-  private def stopStatement[u: P]: P[StopStatement] = {
-    P(
-      Index ~ Keywords.stop ~/ Index
-    )./.map { case (start, end) => StopStatement(at(start, end)) }
-  }
-
   enum StatementsSet:
     case AllStatements,
       AdaptorStatements,
@@ -107,39 +71,39 @@ private[parsing] trait StatementParser {
     )./.map { case (start, eRef, hRef, end) => BecomeStatement(at(start, end), eRef, hRef) }
   }
 
-  private def focusStatement[u: P]: P[FocusStatement] = {
-    P(Index ~ Keywords.focus ~/ Keywords.on ~ groupRef ~~ Index).map { case (start, ref, end) =>
-      FocusStatement(at(start, end), ref)
+  private def whenStatement[u: P](set: StatementsSet): P[WhenStatement] = {
+    P(
+      Index ~ Keywords.when ~/ literalString ~ Keywords.`then` ~/ pseudoCodeBlock(set) ~/ Keywords.end_ ~/ Index
+    )./.map { case (start, cond, statements, end) =>
+      WhenStatement(at(start, end), cond, statements.toContents)
     }
   }
 
-  private def replyStatement[u: P]: P[ReplyStatement] = {
-    P(Index ~ Keywords.reply ~/ `with`.?./ ~ messageRef ~~ Index).map { case (start, ref, end) =>
-      ReplyStatement(at(start, end), ref)
+  private def matchCase[u: P](set: StatementsSet): P[MatchCase] = {
+    P(
+      Index ~ Keywords.case_ ~/ literalString ~ open ~/ setOfStatements(set) ~ close ~/ Index
+    )./.map { case (start, pattern, statements, end) =>
+      MatchCase(at(start, end), pattern, statements.toContents)
     }
   }
 
-  private def returnStatement[u: P]: P[ReturnStatement] = {
+  private def matchStatement[u: P](set: StatementsSet): P[MatchStatement] = {
     P(
-      Index ~ Keywords.`return` ~ literalString ~~ Index
-    ).map { case (start, str, end) => ReturnStatement(at(start, end), str) }
-  }
-
-  private def readStatement[u: P]: P[ReadStatement] = {
-    P(
-      Index ~ StringIn("read", "get", "query", "find", "select").! ~ literalString ~
-        from ~ typeRef ~ Keywords.where ~ literalString ~~ Index
-    ).map { case (start, keyword, what, from, where, end) =>
-      ReadStatement(at(start, end), keyword, what, from, where)
+      Index ~ Keywords.`match` ~/ literalString ~ open ~/
+        matchCase(set).rep(1) ~
+        (Keywords.default ~ open ~/ setOfStatements(set) ~ close).? ~/
+        close ~/ Index
+    )./.map { case (start, expr, cases, maybeDefault, end) =>
+      val default = maybeDefault.getOrElse(Seq.empty[Statements])
+      MatchStatement(at(start, end), expr, cases.toSeq, default.toContents)
     }
   }
 
-  private def writeStatement[u: P]: P[WriteStatement] = {
+  private def letStatement[u: P]: P[LetStatement] = {
     P(
-      Index ~ StringIn("write", "put", "create", "update", "delete", "remove", "append", "insert", "modify").! ~
-        literalString ~ to ~ typeRef ~ Index
-    ).map { case (start, keyword, what, to, end) =>
-      WriteStatement(at(start, end), keyword, what, to)
+      Index ~ Keywords.let ~/ identifier ~ Punctuation.equalsSign ~/ literalString ~/ Index
+    )./.map { case (start, id, expr, end) =>
+      LetStatement(at(start, end), id, expr)
     }
   }
 
@@ -156,31 +120,29 @@ private[parsing] trait StatementParser {
 
   private def anyDefStatements[u: P](set: StatementsSet): P[Statements] = {
     P(
-      // GROUP 1: Most common control flow (40-50%)
-      ifThenElseStatement(set) | forEachStatement(set) |
-      // GROUP 2: Common message operations (30-35%)
+      // GROUP 1: Control flow statements
+      whenStatement(set) | matchStatement(set) |
+      // GROUP 2: Common message operations
       sendStatement | tellStatement |
-      // GROUP 3: Common function operations (10-15%)
-      callStatement | theSetStatement |
-      // GROUP 4: Less common (5-10%)
-      arbitraryStatement | codeStatement |
-      // GROUP 5: Rare (1-5%)
-      errorStatement | stopStatement | comment
+      // GROUP 3: Variable operations
+      theSetStatement | letStatement |
+      // GROUP 4: General statements
+      promptStatement | codeStatement |
+      // GROUP 5: Error handling
+      errorStatement | comment
     ).asInstanceOf[P[Statements]]
   }
 
   def statement[u: P](set: StatementsSet): P[Statements] = {
     set match {
-      case StatementsSet.AdaptorStatements     => anyDefStatements(set) | replyStatement
-      case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement | focusStatement
-      case StatementsSet.EntityStatements =>
-        anyDefStatements(set) | morphStatement | becomeStatement | replyStatement
-      case StatementsSet.FunctionStatements  => anyDefStatements(set) | returnStatement
-      case StatementsSet.ProjectorStatements => anyDefStatements(set)
-      case StatementsSet.RepositoryStatements =>
-        anyDefStatements(set) | replyStatement | readStatement | writeStatement
-      case StatementsSet.SagaStatements   => anyDefStatements(set) | returnStatement
-      case StatementsSet.StreamStatements => anyDefStatements(set)
+      case StatementsSet.AdaptorStatements     => anyDefStatements(set)
+      case StatementsSet.ContextStatements     => anyDefStatements(set)
+      case StatementsSet.EntityStatements      => anyDefStatements(set) | morphStatement | becomeStatement
+      case StatementsSet.FunctionStatements    => anyDefStatements(set)
+      case StatementsSet.ProjectorStatements   => anyDefStatements(set)
+      case StatementsSet.RepositoryStatements  => anyDefStatements(set)
+      case StatementsSet.SagaStatements        => anyDefStatements(set)
+      case StatementsSet.StreamStatements      => anyDefStatements(set)
     }
   }
 

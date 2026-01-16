@@ -63,7 +63,7 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
   }
 
   // Override traverse to write metadata count AFTER contents items
-  // and to handle nodes with multiple Contents fields (SagaStep, IfThenElseStatement)
+  // and to handle nodes with multiple Contents fields (SagaStep, WhenStatement, MatchStatement)
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case root: Root =>
@@ -88,24 +88,23 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         // Write metadata
         bastWriter.writeMetadataCount(ss.metadata)
 
-      // IfThenElseStatement has TWO Contents fields: thens and elses
-      // Must write count-items, count-items to match reader expectations
-      // IfThenElseStatement is not a Branch, so no push/pop needed
-      case ite: IfThenElseStatement =>
-        process(ite, parents)
-        // Write thens count then items
-        bastWriter.writeContents(ite.thens)
-        ite.thens.toSeq.foreach { value => traverse(value, parents) }
-        // Write elses count then items
-        bastWriter.writeContents(ite.elses)
-        ite.elses.toSeq.foreach { value => traverse(value, parents) }
-        // IfThenElseStatement is a Statement, no metadata
+      // WhenStatement has a thenStatements Contents field that must be traversed
+      case ws: WhenStatement =>
+        process(ws, parents)
+        bastWriter.writeContents(ws.thenStatements)
+        ws.thenStatements.toSeq.foreach { value => traverse(value, parents) }
+        // WhenStatement is a Statement, no metadata
 
-      // ForEachStatement has a do_ Contents field that must be traversed
-      case fe: ForEachStatement =>
-        process(fe, parents)
-        fe.do_.toSeq.foreach { value => traverse(value, parents) }
-        // ForEachStatement is a Statement, no metadata
+      // MatchStatement has cases and default Contents that must be traversed
+      case ms: MatchStatement =>
+        process(ms, parents)
+        // Write each case's statements
+        ms.cases.foreach { mc =>
+          mc.statements.toSeq.foreach { value => traverse(value, parents) }
+        }
+        // Write default statements
+        ms.default.toSeq.foreach { value => traverse(value, parents) }
+        // MatchStatement is a Statement, no metadata
 
       // Handler extends Branch[HandlerContents] but NOT WithMetaData, so handle separately
       case h: Handler =>

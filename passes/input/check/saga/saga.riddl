@@ -23,11 +23,11 @@ domain ignore1 is {
         described as "First saga step"
       }
       step Two is {
-        call function AnotherThing
-        "Pass 42 to AnotherThing function"
-        "Return AnotherThing's output"
+        prompt "call function AnotherThing"
+        prompt "Pass 42 to AnotherThing function"
+        prompt "Return AnotherThing's output"
       } reverted by {
-        call function UndoAnotherThing
+        prompt "call function UndoAnotherThing"
       } with {
         described as "Second saga step"
       }

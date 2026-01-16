@@ -154,6 +154,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case cg: ContainedGroup =>
         associateUsage(cg, resolveARef[Group](cg.group, parents))
       case _: BASTImport                 => () // BAST imports are resolved in BASTLoadingPass
+      case _: MatchCase                  => () // MatchCase statements contain references handled in resolveStatement
       case _: NonReferencableDefinitions => () // These can't be referenced
       case _: NonDefinitionValues        => () // Neither can these values
       case _: Definition                 => () // abstract definition, can't be referenced
@@ -237,17 +238,6 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case BecomeStatement(_, entity, handler) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[Handler](parents.head, resolveARef[Handler](handler, parents))
-      case FocusStatement(_, group) =>
-        associateUsage[Group](parents.head, resolveARef[Group](group, parents))
-      case ForEachStatement(_, ref, _) =>
-        ref match {
-          case ir: InletRef =>
-            associateUsage[Inlet](parents.head, resolveAPathId[Inlet](ir.pathId, parents))
-          case or: OutletRef =>
-            associateUsage[Outlet](parents.head, resolveAPathId[Outlet](or.pathId, parents))
-          case fr: FieldRef =>
-            associateUsage[Type](parents.head, resolveAPathId[Type](fr.pathId, parents))
-        }
       case SendStatement(_, msg, portlet) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
         associateUsage[Portlet](parents.head, resolveARef[Portlet](portlet, parents))
@@ -258,18 +248,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case TellStatement(_, msg, processorRef) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
         associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
-      case CallStatement(_, func) =>
-        associateUsage[Function](parents.head, resolveARef[Function](func, parents))
-      case ReplyStatement(_, message) =>
-        associateUsage[Type](parents.head, resolveARef[Type](message, parents))
-      case _: CodeStatement       => () // no references
-      case _: ReadStatement       => () // no references
-      case _: WriteStatement      => () // no references
-      case _: ArbitraryStatement  => () // no references
-      case _: ErrorStatement      => () // no references
-      case _: ReturnStatement     => () // no references
-      case _: IfThenElseStatement => () // no references
-      case _: StopStatement       => () // no references
+      case _: PromptStatement => () // no references
+      case _: ErrorStatement  => () // no references
+      case _: WhenStatement   => () // no references (condition is a literal string)
+      case _: MatchStatement  => () // no references (expression/patterns are literal strings)
+      case _: LetStatement    => () // no references (expression is a literal string)
+      case _: CodeStatement   => () // no references (code body is a string)
     }
   }
 

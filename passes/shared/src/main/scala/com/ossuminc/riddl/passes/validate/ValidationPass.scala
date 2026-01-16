@@ -151,6 +151,7 @@ case class ValidationPass(
         validateInclude(include)
       case bi: BASTImport =>
         validateBASTImport(bi, parentsAsSeq)
+      case _: MatchCase           => () // Validated through MatchStatement
       case _: Definition          => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
@@ -206,17 +207,15 @@ case class ValidationPass(
   ): Unit =
     val onClause: Branch[?] = parents.head
     statement match
-      case ArbitraryStatement(loc, what) =>
+      case PromptStatement(loc, what) =>
         checkNonEmptyValue(
           what,
-          "arbitrary statement",
+          "prompt statement",
           onClause,
           loc,
           MissingWarning,
           required = true
         )
-      case FocusStatement(_, group) =>
-        checkRef[Group](group, parents)
       case ErrorStatement(loc, message) =>
         checkNonEmptyValue(
           message,
@@ -229,13 +228,9 @@ case class ValidationPass(
       case SetStatement(loc, field, value) =>
         checkRef[Field](field, parents)
         checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
-      case ReturnStatement(loc, value) =>
-        checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
       case SendStatement(_, msg, portlet) =>
         checkRef[Type](msg, parents)
         checkRef[Portlet](portlet, parents)
-      case ReplyStatement(_, message) =>
-        checkRef[Type](message, parents)
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
         checkRef[State](state, parents)
@@ -256,37 +251,26 @@ case class ValidationPass(
         maybeType.foreach { typ =>
           checkCrossContextReference(msg.pathId, typ, onClause)
         }
-      case CallStatement(_, funcRef) =>
-        checkRef[Function](funcRef, parents).foreach { function =>
-          checkCrossContextReference(funcRef.pathId, function, onClause)
+      case WhenStatement(loc, condition, thenStatements) =>
+        checkNonEmptyValue(condition, "condition", onClause, loc, MissingWarning, required = true)
+        checkNonEmpty(thenStatements.toSeq, "statements", onClause, loc, MissingWarning, required = true)
+      case MatchStatement(loc, expression, cases, default) =>
+        checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
+        checkNonEmpty(cases, "cases", onClause, loc, MissingWarning, required = true)
+        cases.foreach { mc =>
+          checkNonEmptyValue(mc.pattern, "case pattern", onClause, mc.loc, MissingWarning, required = true)
         }
-
-      case ForEachStatement(loc, ref, do_) =>
-        checkPathRef[Type](ref.pathId, parents).foreach { typ =>
-          checkCrossContextReference(ref.pathId, typ, onClause)
-          check(
-            typ.typEx.hasCardinality,
-            s"The foreach statement requires a type with cardinality but ${ref.pathId.format} does not",
-            Messages.Error,
-            loc
-          )
-        }
-        checkNonEmpty(do_.toSeq, "statement list", onClause, MissingWarning)
-      case IfThenElseStatement(loc, cond, thens, elses) =>
-        checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
-        checkNonEmpty(thens.toSeq, "statements", onClause, loc, MissingWarning, required = true)
-        checkNonEmpty(elses.toSeq, "statements", onClause, loc, MissingWarning, required = false)
-      case ReadStatement(loc, keyword, what, from, where) =>
-        checkNonEmpty(keyword, "read keyword", onClause, loc, Messages.Error, required = true)
-        checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-        checkTypeRef(from, parents)
-        checkNonEmptyValue(where, "where", onClause, loc, MissingWarning, required = false)
-      case WriteStatement(loc, keyword, what, to) =>
-        checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
-        checkTypeRef(to, parents)
-        checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-      case _: CodeStatement => ()
-      case _: StopStatement => ()
+      case LetStatement(loc, identifier, expression) =>
+        check(
+          identifier.value.length >= 3,
+          s"Identifier '${identifier.value}' is too short",
+          MissingWarning,
+          identifier.loc
+        )
+        checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
+      case CodeStatement(loc, language, body) =>
+        checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true)
+        check(body.nonEmpty, "Code statement body cannot be empty", MissingWarning, loc)
     end match
   end validateStatement
 

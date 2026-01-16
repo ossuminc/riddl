@@ -297,16 +297,27 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   def emitStatement(statement: Statements): Unit =
     statement match
-      case IfThenElseStatement(_, cond, thens, elses) =>
-        addIndent(s"if ${cond.format} then").nl.incr
-        if (thens.isEmpty) then addLine("???") else thens.foreach(emitStatement)
-        decr.addLine("else").incr
-        if elses.isEmpty then addLine("???") else elses.foreach(emitStatement)
+      case WhenStatement(_, cond, thenStatements) =>
+        addIndent(s"when ${cond.format} then").nl.incr
+        if thenStatements.isEmpty then addLine("???") else thenStatements.toSeq.foreach(emitStatement)
         decr.addLine("end")
-      case ForEachStatement(_, ref, statements) =>
-        addIndent(s"foreach ${ref.format} do").incr
-        statements.foreach(emitStatement)
-        decr.addLine("end")
+      case MatchStatement(_, expr, cases, default) =>
+        addIndent(s"match ${expr.format} {").nl.incr
+        cases.foreach { mc =>
+          addIndent(s"case ${mc.pattern.format} {").nl.incr
+          mc.statements.toSeq.foreach(emitStatement)
+          decr.addLine("}")
+        }
+        if default.nonEmpty then
+          addIndent("default {").nl.incr
+          default.toSeq.foreach(emitStatement)
+          decr.addLine("}")
+        end if
+        decr.addLine("}")
+      case LetStatement(_, id, expr) =>
+        addLine(s"let ${id.format} = ${expr.format}")
+      case PromptStatement(_, what) =>
+        addLine(s"prompt ${what.format}")
       case SendStatement(_, msg, portlet) =>
         addLine(s"send ${msg.format} to ${portlet.format}")
       case TellStatement(_, msg, to) =>

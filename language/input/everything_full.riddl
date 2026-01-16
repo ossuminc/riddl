@@ -37,7 +37,7 @@ context full is {
 
     handler Putter is {
       on command ACommand {
-        put "something" to type agg
+        prompt "store something in agg"
       }
     }
   } with {
@@ -85,17 +85,17 @@ context full is {
     handler foo is {
       // Handle the ACommand
       on command ACommand {
-        if "Something arrives" then {
+        when "Something arrives" then
           // we want to send an event
           send event Inebriated to outlet APlant.Source.Commands
-        }
+        end
       }
     }
 
     function whenUnderTheInfluence is {
       requires { n: Nothing }
       returns  { b: Boolean }
-      "aribtrary statement"
+      prompt "aribtrary statement"
       ```scala
         // Simulate a creative state
         val randomFactor = Math.random() // A random value between 0 and 1

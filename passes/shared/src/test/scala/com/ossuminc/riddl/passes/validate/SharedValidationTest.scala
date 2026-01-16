@@ -87,9 +87,9 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    event event is { at: TimeStamp }
           |    handler handler is {
           |      on event event {
-          |        if "there is an error" then {
+          |        when "there is an error" then
           |          error "This is an error"
-          |        }
+          |        end
           |      }
           |    }
           |    repository repository is { ??? }
@@ -100,14 +100,14 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    split split is { ??? }
           |    saga saga is {
           |     step a is {
-          |       "a.1"
+          |       prompt "a.1"
           |     } reverted by {
-          |       "a_r.1"
+          |       prompt "a_r.1"
           |     }
           |     step b is {
-          |       "b.1"
+          |       prompt "b.1"
           |     } reverted by {
-          |       "b_r.1"
+          |       prompt "b_r.1"
           |     }
           |   }
           |  } with {

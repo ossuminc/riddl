@@ -25,25 +25,18 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
     s.isProcessor must be(false)
   }
   "Statements" must {
-    "check Arbitrary Statements" in { td =>
+    "check Prompt Statements" in { td =>
       val comment = LiteralString(At.empty, "foo")
-      val arb = ArbitraryStatement(At.empty, comment)
-      arb.kind must be("Arbitrary Statement")
-      arb.format must be(comment.format)
-      checkStatement(arb)
+      val prompt = PromptStatement(At.empty, comment)
+      prompt.kind must be("Prompt Statement")
+      prompt.format must be(comment.format)
+      checkStatement(prompt)
     }
     "check Error Statement" in { td =>
       val comment = LiteralString(At.empty, "foo")
       val s = ErrorStatement(At.empty, comment)
       s.kind must be("Error Statement")
       s.format must be(s"error ${comment.format}")
-      checkStatement(s)
-    }
-    "check Focus Statement" in { td =>
-      val groupRef = GroupRef(At.empty, "group", PathIdentifier(At.empty, Seq("foo")))
-      val s = FocusStatement(At.empty, groupRef)
-      s.kind must be("Focus Statement")
-      s.format must be(s"focus on ${groupRef.format}")
       checkStatement(s)
     }
     "check Set Statement" in { td =>
@@ -54,13 +47,6 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       s.format must be(s"set ${fieldRef.format} to ${value.format}")
       checkStatement(s)
     }
-    "check Return Statement" in { td =>
-      val value = LiteralString(At.empty, "foo")
-      val s = ReturnStatement(At.empty, value)
-      s.kind must be("Return Statement")
-      s.format must be(s"return ${value.format}")
-      checkStatement(s)
-    }
     "check Send Statement" in { td =>
       val pathId = PathIdentifier(At.empty, Seq("foo"))
       val msgRef = CommandRef(At.empty, pathId)
@@ -68,14 +54,6 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       val s = SendStatement(At.empty, msgRef, portletRef)
       s.kind must be("Send Statement")
       s.format must be(s"send command foo to inlet foo")
-      checkStatement(s)
-    }
-    "check Reply Statement" in { td =>
-      val pathId = PathIdentifier(At.empty, Seq("foo"))
-      val msgRef = CommandRef(At.empty, pathId)
-      val s = ReplyStatement(At.empty, msgRef)
-      s.kind must be("Reply Statement")
-      s.format must be(s"reply command foo")
       checkStatement(s)
     }
     "check Morph Statement" in { td =>
@@ -106,52 +84,27 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       s.format must be(s"tell ${value.format} to ${entityRef.format}")
       checkStatement(s)
     }
-    "check Call Statement" in { td =>
-      val pathId = PathIdentifier(At.empty, Seq("foo"))
-      val functionRef = FunctionRef(At.empty, pathId)
-      val s = CallStatement(At.empty, functionRef)
-      s.kind must be("Call Statement")
-      s.format must be(s"call function foo")
+    "check When Statement" in { td =>
+      val condition = LiteralString(At.empty, "condition")
+      val s = WhenStatement(At.empty, condition, Contents.empty())
+      s.kind must be("When Statement")
+      s.format must be(s"when ${condition.format} then\n\n  end")
       checkStatement(s)
     }
-    "check Foreach Statement" in { td =>
-      val pathId = PathIdentifier(At.empty, Seq("foo"))
-      val fieldRef = FieldRef(At.empty, pathId)
-      val s = ForEachStatement(At.empty, fieldRef, Contents.empty())
-      s.kind must be("Foreach Statement")
-      s.format must be(s"foreach field foo do\n\n  end")
+    "check Match Statement" in { td =>
+      val expression = LiteralString(At.empty, "expression")
+      val pattern = LiteralString(At.empty, "pattern")
+      val mc = MatchCase(At.empty, pattern, Contents.empty())
+      val s = MatchStatement(At.empty, expression, Seq(mc), Contents.empty())
+      s.kind must be("Match Statement")
       checkStatement(s)
     }
-    "check If-Then-Else Statement" in { td =>
-      val condition = LiteralString(At.empty, "foo")
-      val s = IfThenElseStatement(At.empty, condition, Contents.empty(), Contents.empty())
-      s.kind must be("IfThenElse Statement")
-      s.format must be(s"if ${condition.format} then {\n  \n} else {\n  \n}\nend")
-      checkStatement(s)
-    }
-    "check Stop Statement" in { td =>
-      val s = StopStatement(At.empty)
-      s.kind must be("Stop Statement")
-      s.format must be(s"stop")
-      checkStatement(s)
-    }
-    "check Read Statement" in { td =>
-      val what = LiteralString(At.empty, "foo")
-      val pid = PathIdentifier(At.empty, Seq("foo"))
-      val from = TypeRef(At.empty, "type", pid)
-      val where = LiteralString(At.empty, "bar")
-      val s = ReadStatement(At.empty, "read", what, from, where)
-      s.kind must be("Read Statement")
-      s.format must be(s"read ${what.format} from ${from.format} where ${where.format}")
-      checkStatement(s)
-    }
-    "check Write Statement" in { td =>
-      val what = LiteralString(At.empty, "foo")
-      val pid = PathIdentifier(At.empty, Seq("foo"))
-      val to = TypeRef(At.empty, "type", pid)
-      val s = WriteStatement(At.empty, "put", what, to)
-      s.kind must be("Write Statement")
-      s.format must be(s"put ${what.format} to ${to.format}")
+    "check Let Statement" in { td =>
+      val id = Identifier(At.empty, "foo")
+      val expr = LiteralString(At.empty, "value")
+      val s = LetStatement(At.empty, id, expr)
+      s.kind must be("Let Statement")
+      s.format must be(s"let ${id.format} = ${expr.format}")
       checkStatement(s)
     }
     "check Code Statement" in { td =>

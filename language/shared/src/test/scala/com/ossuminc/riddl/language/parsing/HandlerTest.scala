@@ -106,17 +106,15 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
         case Right(_) => fail("Test case should have failed")
       }
     }
-    "accept an if statement " in { (td: TestData) =>
+    "accept a when statement " in { (td: TestData) =>
       val input = RiddlParserInput(
         """entity DistributionItem is {
           |  type ArbitraryState is { value: String }
           |  state DistributionState of ArbitraryState
           |  handler FromContainer  is {
           |    on event ContainerNestedInContainer {
-          |      if  "==(field ContainerNestedInContainer.id, parentContainer)" then
+          |      when "==(field ContainerNestedInContainer.id, parentContainer)" then
           |        set field DistributionItem.lastKnownWOrkCenter to "field ContainerNestedInContainer.workCenter"
-          |      else
-          |        "nothing required"
           |      end
           |    } with {
           |      described as "Helps update this item's location"
@@ -144,9 +142,9 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |  state DistributionState of ArbitraryState
           | handler FromContainer  is {
           |    on event ContainerNestedInContainer {
-          |      "if ==(field ContainerNestedInContainer.id,parentContainer) then"
+          |      when "==(field ContainerNestedInContainer.id,parentContainer)" then
           |        set field DistributionItem.workCenter to "lastKnownWorkCenter"
-          |      "end"
+          |      end
           |    } with {
           |      described as "Helps update this item's location"
           |    }
@@ -167,43 +165,43 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           |      send event DistributionItem.ItemInducted to inlet DistributionItem.incoming
           |    }
           |    on command SortItem {
-          |      "if rue == empty(timeOfFirstScan()) then"
+          |      when "rue == empty(timeOfFirstScan())" then
           |        set field timeOfFirstScan to "field SortItem.originTimeStamp"
           |        set field journey to "field Sorted"
-          |        "execute Unnest"
-          |      "end"
+          |        prompt "execute Unnest"
+          |      end
           |    }
           |    on command RemoveItemFromContainer {
           |      set field journey to "field AtWorkCenter // ??? what's the correct journey?"
           |      set field parentContainer to "empty"
           |    }
           |    on command NestItem {
-          |      "if ==(true,empty(timeOfFirstScan())) then"
+          |      when "==(true,empty(timeOfFirstScan()))" then
           |        set field timeOfFirstScan to "field NestItem.originTimeStamp"
           |        set field parentContainer to "field NestItem.container"
           |        send command AddItemToContainer to inlet incoming
-          |      "end"
+          |      end
           |    }
           |    on command TransportItem {
-          |      "if ==(true,empty(timeOfFirstScan())) then"
+          |      when "==(true,empty(timeOfFirstScan()))" then
           |        set field timeOfFirstScan to "field TransportItem.originTimeStamp"
           |        set field journey to "field TransportItem.InTransit"
           |        set field lastKnownWorkCenter to "field TransportItem.workCenter"
-          |      "end"
+          |      end
           |    }
           |    on command ReceiveItem {
-          |      "if ==(true,empty(timeOfFirstScan())) then"
+          |      when "==(true,empty(timeOfFirstScan()))" then
           |         set field timeOfFirstScan to "field ReceiveItem.originTimeStamp"
           |         set field journey to "true"
-          |         "execute Unnest"
-          |      "end"
+          |         prompt "execute Unnest"
+          |      end
           |    }
           |    on command MarkItemOutForDelivery {
           |      set field journey to "field OutForDelivery"
           |    }
           |    on command DeliverItem {
-          |      "set field journey to field Delivered"
-          |      "execute Unnest"
+          |      prompt "set field journey to field Delivered"
+          |      prompt "execute Unnest"
           |    }
           |    on command MachineMissort {
           |      set field journey to "unknown()"

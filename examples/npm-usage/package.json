@@ -1,0 +1,14 @@
+{
+  "name": "riddl-npm-example",
+  "version": "1.0.0",
+  "description": "Example project using local RIDDL npm packages",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@ossuminc/riddl-lib": "file:../../npm-packages/ossuminc-riddl-lib-1.0.1-6-4aea8145.tgz",
+    "@ossuminc/riddl-utils": "file:../../npm-packages/ossuminc-riddl-utils-1.0.1-6-4aea8145.tgz"
+  }
+}

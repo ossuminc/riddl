@@ -133,21 +133,17 @@ class ASTTest extends AbstractTestingBasis {
   val fieldRef: FieldRef = FieldRef(At(), PathIdentifier(At(), Seq("command", "foo")))
   val messageRef: CommandRef = CommandRef(At(), PathIdentifier(At(), Seq("command")))
   val statements: Contents[Statements] = Contents(
-    ArbitraryStatement(At.empty, LiteralString(At.empty, "arbitrary")),
+    PromptStatement(At.empty, LiteralString(At.empty, "prompt")),
     BecomeStatement(At.empty, entityRef, HandlerRef(At(), PathIdentifier(At(), Seq("Entity")))),
-    CallStatement(At.empty, FunctionRef(At(), PathIdentifier(At(), Seq("Lambda")))),
     CodeStatement(At.empty, language = LiteralString(At.empty, "scala"), body = "def f[A](x: A): A"),
     ErrorStatement(At.empty, LiteralString(At.empty, "error message")),
-    FocusStatement(At.empty, GroupRef(At.empty, "panel", PathIdentifier(At.empty, Seq("panel")))),
-    ForEachStatement(At.empty, fieldRef, Contents.empty()),
-    IfThenElseStatement(At.empty, LiteralString.empty, Contents.empty(), Contents.empty()),
+    LetStatement(At.empty, Identifier(At.empty, "varName"), LiteralString(At.empty, "value")),
+    MatchStatement(At.empty, LiteralString(At.empty, "expr"), Seq(MatchCase(At.empty, LiteralString(At.empty, "pattern"), Contents.empty())), Contents.empty()),
     MorphStatement(At.empty, entityRef, StateRef(At.empty, PathIdentifier(At(), Seq("state"))), messageRef),
-    ReadStatement(At.empty, "read", LiteralString(At(), "something"), typeRef, LiteralString(At(), "foo")),
-    ReplyStatement(At.empty, messageRef),
-    ReturnStatement(At.empty, LiteralString(At(), "result")),
-    StopStatement(At.empty),
+    SendStatement(At.empty, messageRef, InletRef(At.empty, PathIdentifier(At.empty, Seq("inlet")))),
+    SetStatement(At.empty, fieldRef, LiteralString(At.empty, "value")),
     TellStatement(At.empty, messageRef, entityRef),
-    WriteStatement(At.empty, "put", LiteralString(At(), "what"), typeRef)
+    WhenStatement(At.empty, LiteralString(At.empty, "condition"), Contents.empty())
   )
   val function: Function =
     Function(

@@ -62,23 +62,22 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
       }
 
     }
-    "validate function empty statements" in { (td: TestData) =>
+    "validate function prompt statements" in { (td: TestData) =>
       val input =
         """
         |  function AnAspect is {
-        |    "if and(everybody hates me, I'm depressed) then"
-        |      "I go fishing"
-        |      "I'll just eat worms"
-        |    "else"
-        |      "I'm happy"
-        |    "end"
+        |    when "and(everybody hates me, I'm depressed)" then
+        |      prompt "I go fishing"
+        |      prompt "I'll just eat worms"
+        |    end
+        |    prompt "I'm happy"
         |  } with { described as "foo" }
         |""".stripMargin
 
       parseAndValidateInContext[Function](input, shouldFailOnErrors = false) {
         case (function, _, msgs) =>
           function.id.value mustBe "AnAspect"
-          function.statements.size mustBe 6
+          function.statements.size mustBe 2
           msgs mustNot be(empty)
           val text = msgs.format
           text must include("Function 'AnAspect' is unused")

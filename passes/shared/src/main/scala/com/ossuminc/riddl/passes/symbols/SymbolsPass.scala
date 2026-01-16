@@ -56,6 +56,7 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
     definition match {
       case _: Root                          => // Root doesn't have a name
       case _: BASTImport                    => // BAST imports don't go in symbol table
+      case _: MatchCase                     => // MatchCase is handled within MatchStatement
       case _: NonDefinitionValues           => // none of these can have names
       case nv: Definition if nv.isAnonymous => // Nameless things, like includes, aren't stored
       case nv: Definition if nv.id.isEmpty  => // Empty names are not stored

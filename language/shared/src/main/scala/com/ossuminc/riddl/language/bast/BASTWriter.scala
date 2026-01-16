@@ -161,23 +161,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case input: Input => writeInput(input)
       case output: Output => writeOutput(output)
 
-      // Statements
-      case s: ArbitraryStatement => writeArbitraryStatement(s)
+      // Statements (10 declarative statements per riddlsim spec)
+      case s: PromptStatement => writePromptStatement(s)
       case s: ErrorStatement => writeErrorStatement(s)
-      case s: FocusStatement => writeFocusStatement(s)
       case s: SetStatement => writeSetStatement(s)
-      case s: ReturnStatement => writeReturnStatement(s)
       case s: SendStatement => writeSendStatement(s)
-      case s: ReplyStatement => writeReplyStatement(s)
       case s: MorphStatement => writeMorphStatement(s)
       case s: BecomeStatement => writeBecomeStatement(s)
       case s: TellStatement => writeTellStatement(s)
-      case s: CallStatement => writeCallStatement(s)
-      case s: ForEachStatement => writeForEachStatement(s)
-      case s: IfThenElseStatement => writeIfThenElseStatement(s)
-      case s: StopStatement => writeStopStatement(s)
-      case s: ReadStatement => writeReadStatement(s)
-      case s: WriteStatement => writeWriteStatement(s)
+      case s: WhenStatement => writeWhenStatement(s)
+      case s: MatchStatement => writeMatchStatement(s)
+      case s: LetStatement => writeLetStatement(s)
       case s: CodeStatement => writeCodeStatement(s)
 
       // References
@@ -771,6 +765,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   // ========== Statement Serialization ==========
+  // 10 declarative statements per riddlsim specification:
+  // send, tell, morph, become, when, match, error, let, set, arbitrary
 
   // Marker value to distinguish statements from handlers
   // Statements: NODE_HANDLER, 0xFF, subtype, loc, ...
@@ -778,10 +774,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // Using 255 (0xFF) as it's distinct from valid location/string data
   private val STATEMENT_MARKER: Int = 255
 
-  def writeArbitraryStatement(s: ArbitraryStatement): Unit = {
+  def writePromptStatement(s: PromptStatement): Unit = {
     writer.writeU8(NODE_HANDLER) // Statements within handlers
     writer.writeU8(STATEMENT_MARKER) // Marker to identify as statement
-    writer.writeU8(0) // Arbitrary statement type
+    writer.writeU8(0) // Prompt statement type
     writeLocation(s.loc)
     writeLiteralString(s.what)
   }
@@ -794,28 +790,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLiteralString(s.message)
   }
 
-  def writeFocusStatement(s: FocusStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(2) // Focus statement
-    writeLocation(s.loc)
-    writeGroupRef(s.group)
-  }
-
   def writeSetStatement(s: SetStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
     writer.writeU8(STATEMENT_MARKER)
     writer.writeU8(3) // Set statement
     writeLocation(s.loc)
     writeFieldRef(s.field)
-    writeLiteralString(s.value)
-  }
-
-  def writeReturnStatement(s: ReturnStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(4) // Return statement
-    writeLocation(s.loc)
     writeLiteralString(s.value)
   }
 
@@ -826,14 +806,6 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeMessageRef(s.msg)
     writePortletRef(s.portlet)
-  }
-
-  def writeReplyStatement(s: ReplyStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(6) // Reply statement
-    writeLocation(s.loc)
-    writeMessageRef(s.message)
   }
 
   def writeMorphStatement(s: MorphStatement): Unit = {
@@ -864,76 +836,46 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeProcessorRef(s.processorRef)
   }
 
-  def writeCallStatement(s: CallStatement): Unit = {
+  def writeWhenStatement(s: WhenStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
     writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(10) // Call statement
+    writer.writeU8(10) // When statement
     writeLocation(s.loc)
-    writeFunctionRef(s.func)
+    writeLiteralString(s.condition)
+    // NOTE: thenStatements count/items are written by the Pass's traverse() override
   }
 
-  def writeForEachStatement(s: ForEachStatement): Unit = {
+  def writeMatchStatement(s: MatchStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
     writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(11) // ForEach statement
+    writer.writeU8(11) // Match statement
     writeLocation(s.loc)
-    // Handle union type: FieldRef | OutletRef | InletRef
-    s.ref match {
-      case fr: FieldRef =>
-        writer.writeU8(0)
-        writeFieldRef(fr)
-      case or: OutletRef =>
-        writer.writeU8(1)
-        writeOutletRef(or)
-      case ir: InletRef =>
-        writer.writeU8(2)
-        writeInletRef(ir)
+    writeLiteralString(s.expression)
+    // Write cases
+    writer.writeVarInt(s.cases.size)
+    s.cases.foreach { mc =>
+      writeLocation(mc.loc)
+      writeLiteralString(mc.pattern)
+      writeContents(mc.statements)
     }
-    writeContents(s.do_)
+    // Write default
+    writeContents(s.default)
+    // NOTE: case and default statement items are written by the Pass's traverse() override
   }
 
-  def writeIfThenElseStatement(s: IfThenElseStatement): Unit = {
+  def writeLetStatement(s: LetStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
     writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(12) // IfThenElse statement
+    writer.writeU8(12) // Let statement
     writeLocation(s.loc)
-    writeLiteralString(s.cond)
-    // NOTE: thens and elses counts/items are written by the Pass's traverse() override
-    // to properly interleave count-items, count-items
-  }
-
-  def writeStopStatement(s: StopStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(13) // Stop statement
-    writeLocation(s.loc)
-  }
-
-  def writeReadStatement(s: ReadStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(14) // Read statement
-    writeLocation(s.loc)
-    writeString(s.keyword)
-    writeLiteralString(s.what)
-    writeTypeRef(s.from)
-    writeLiteralString(s.where)
-  }
-
-  def writeWriteStatement(s: WriteStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(15) // Write statement
-    writeLocation(s.loc)
-    writeString(s.keyword)
-    writeLiteralString(s.what)
-    writeTypeRef(s.to)
+    writeIdentifier(s.identifier)
+    writeLiteralString(s.expression)
   }
 
   def writeCodeStatement(s: CodeStatement): Unit = {
     writer.writeU8(NODE_HANDLER)
     writer.writeU8(STATEMENT_MARKER)
-    writer.writeU8(16) // Code statement
+    writer.writeU8(13) // Code statement
     writeLocation(s.loc)
     writeLiteralString(s.language)
     writeString(s.body)
@@ -1659,11 +1601,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       writer.writeVarInt(colDelta + 1000)
     end if
 
-    // Only update lastLocation if this location has a real origin (not 'empty')
-    // This prevents corrupting delta encoding when identifiers have placeholder locations
-    if loc.source.origin != "empty" then
-      lastLocation = loc
-    end if
+    // Always update lastLocation to stay in sync with reader
+    // The reader has no way to know if an origin was "empty", so we must update symmetrically
+    lastLocation = loc
   }
 
   def writeIdentifier(id: Identifier): Unit = {

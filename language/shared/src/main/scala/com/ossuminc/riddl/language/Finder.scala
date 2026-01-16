@@ -71,11 +71,13 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
         child match
           case c: Container[?] =>
             c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
-          case IfThenElseStatement(_, _, thens, elses) =>
-            val r1 = thens.foldLeft(list) { case (next, child) => consider(next, child) }
-            elses.foldLeft(r1) { case (next, child) => consider(next, child) }
-          case ForEachStatement(_, _, do_) =>
-            do_.foldLeft(list) { case (next, child) => consider(next, child) }
+          case WhenStatement(_, _, thenStatements) =>
+            thenStatements.foldLeft(list) { case (next, child) => consider(next, child) }
+          case MatchStatement(_, _, cases, default) =>
+            val r1 = cases.foldLeft(list) { case (next, mc) =>
+              mc.statements.foldLeft(next) { case (next2, child) => consider(next2, child) }
+            }
+            default.foldLeft(r1) { case (next, child) => consider(next, child) }
           case SagaStep(_, _, dos, undos, _) =>
             val r2 = dos.foldLeft(list) { case (next, child) => consider(next, child) }
             undos.foldLeft(r2) { case (next, child) => consider(next, child) }

@@ -47,6 +47,60 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private var lastLocation: At = At.empty
   private val messages = ArrayBuffer[Messages.Message]()
 
+  // AST context stack for better error messages
+  // Tracks what we're currently deserializing (e.g., "Domain(MyDomain) -> Context(MyContext) -> Entity")
+  private val contextStack = ArrayBuffer[String]()
+
+  /** Push a context entry when entering a node */
+  private def pushContext(nodeType: String, name: String = ""): Unit = {
+    val entry = if name.nonEmpty then s"$nodeType($name)" else nodeType
+    contextStack += entry
+  }
+
+  /** Pop context when leaving a node */
+  private def popContext(): Unit = {
+    if contextStack.nonEmpty then contextStack.remove(contextStack.length - 1)
+  }
+
+  /** Update the current context entry to include a name */
+  private def updateContextName(name: String): Unit = {
+    if contextStack.nonEmpty && name.nonEmpty then
+      val last = contextStack.last
+      // Only update if not already named (no parentheses)
+      if !last.contains("(") then
+        contextStack(contextStack.length - 1) = s"$last($name)"
+      end if
+    end if
+  }
+
+  /** Get current context path as string */
+  private def contextPath: String = {
+    if contextStack.isEmpty then "<root>"
+    else contextStack.mkString(" -> ")
+  }
+
+  /** Generate a detailed deserialization error message */
+  private def deserializationError(
+    message: String,
+    expectedValue: Option[String] = None,
+    actualValue: Option[String] = None
+  ): String = {
+    val sb = new StringBuilder()
+    sb.append(s"BAST deserialization error: $message\n")
+    sb.append(s"  Byte position: ${reader.position}\n")
+    sb.append(s"  AST context: $contextPath\n")
+    expectedValue.foreach(v => sb.append(s"  Expected: $v\n"))
+    actualValue.foreach(v => sb.append(s"  Actual: $v\n"))
+    sb.append(s"  String table size: ${if stringTable != null then stringTable.size else "not loaded"}\n")
+    // Show surrounding bytes for debugging
+    val pos = reader.position
+    val start = math.max(0, pos - 8)
+    val end = math.min(bytes.length, pos + 8)
+    val hexBytes = bytes.slice(start, end).map(b => f"${b & 0xFF}%02X").mkString(" ")
+    sb.append(s"  Bytes around position [$start-$end]: $hexBytes")
+    sb.toString()
+  }
+
   /** Read and deserialize the BAST file
     *
     * @return Either errors or the deserialized Nebula root
@@ -131,89 +185,157 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   // ========== Node Deserialization ==========
 
+  /** Convert node type tag to human-readable name */
+  private def nodeTypeName(nodeType: Int): String = nodeType match {
+    case NODE_NEBULA => "Nebula"
+    case NODE_DOMAIN => "Domain"
+    case NODE_CONTEXT => "Context"
+    case NODE_ENTITY => "Entity"
+    case NODE_MODULE => "Module"
+    case NODE_INCLUDE => "Include"
+    case NODE_BAST_IMPORT => "BASTImport"
+    case NODE_TYPE => "Type"
+    case NODE_FIELD => "Field"
+    case NODE_ENUMERATOR => "Enumerator"
+    case NODE_ADAPTOR => "Adaptor"
+    case NODE_FUNCTION => "Function"
+    case NODE_PROJECTOR => "Projector"
+    case NODE_REPOSITORY => "Repository"
+    case NODE_SCHEMA => "Schema"
+    case NODE_STREAMLET => "Streamlet"
+    case NODE_SAGA => "Saga"
+    case NODE_HANDLER => "Handler"
+    case NODE_SAGA_STEP => "SagaStep"
+    case NODE_STATE => "State"
+    case NODE_INVARIANT => "Invariant"
+    case NODE_ON_CLAUSE => "OnClause"
+    case NODE_INLET => "Inlet"
+    case NODE_OUTLET => "Outlet"
+    case NODE_CONNECTOR => "Connector"
+    case NODE_EPIC => "Epic"
+    case NODE_USER => "User"
+    case NODE_PIPE => "Pipe"
+    case NODE_GROUP => "Group"
+    case NODE_INPUT => "Input"
+    case NODE_OUTPUT => "Output"
+    case NODE_DESCRIPTION => "Description"
+    case NODE_BLOCK_DESCRIPTION => "BlockDescription"
+    case NODE_COMMENT => "Comment"
+    case NODE_BLOCK_COMMENT => "BlockComment"
+    case NODE_IDENTIFIER => "Identifier"
+    case NODE_PATH_IDENTIFIER => "PathIdentifier"
+    case NODE_LITERAL_STRING => "LiteralString"
+    case NODE_AUTHOR => "Author"
+    case NODE_TERM => "Term"
+    case STREAMLET_VOID => "Void"
+    case STREAMLET_SOURCE => "Source"
+    case STREAMLET_SINK => "Sink"
+    case STREAMLET_FLOW => "Flow"
+    case STREAMLET_MERGE => "Merge"
+    case STREAMLET_SPLIT => "Split"
+    case ADAPTOR_INBOUND => "InboundAdaptor"
+    case ADAPTOR_OUTBOUND => "OutboundAdaptor"
+    case _ => s"Unknown($nodeType)"
+  }
+
   /** Read a RiddlValue node based on its type tag */
   private def readNode(): RiddlValue = {
+    val posBeforeNode = reader.position
     val nodeType = reader.readU8()
+    val nodeName = nodeTypeName(nodeType)
+    pushContext(nodeName)
 
-    nodeType match {
-      // Root containers
-      case NODE_NEBULA => readNebulaNode()
-      case NODE_DOMAIN => readDomainNode()
-      case NODE_CONTEXT => readContextNode()
-      case NODE_ENTITY => readEntityNode()
-      case NODE_MODULE => readModuleNode()
-      case NODE_INCLUDE => readIncludeNode()
-      case NODE_BAST_IMPORT => readBASTImportNode()
+    try {
+      val result = nodeType match {
+        // Root containers
+        case NODE_NEBULA => readNebulaNode()
+        case NODE_DOMAIN => readDomainNode()
+        case NODE_CONTEXT => readContextNode()
+        case NODE_ENTITY => readEntityNode()
+        case NODE_MODULE => readModuleNode()
+        case NODE_INCLUDE => readIncludeNode()
+        case NODE_BAST_IMPORT => readBASTImportNode()
 
-      // Types
-      case NODE_TYPE => readTypeNode()
-      case NODE_FIELD => readFieldOrConstantOrMethod()
-      case NODE_ENUMERATOR => readEnumeratorNode()
+        // Types
+        case NODE_TYPE => readTypeNode()
+        case NODE_FIELD => readFieldOrConstantOrMethod()
+        case NODE_ENUMERATOR => readEnumeratorNode()
 
-      // Processors
-      case NODE_ADAPTOR => readAdaptorNode()
-      case NODE_FUNCTION => readFunctionNode()
-      case NODE_PROJECTOR => readProjectorNode()
-      case NODE_REPOSITORY => readRepositoryNode()
-      case NODE_SCHEMA => readSchemaNode()
-      case NODE_STREAMLET => readStreamletNode()
-      case NODE_SAGA => readSagaNode()
+        // Processors
+        case NODE_ADAPTOR => readAdaptorNode()
+        case NODE_FUNCTION => readFunctionNode()
+        case NODE_PROJECTOR => readProjectorNode()
+        case NODE_REPOSITORY => readRepositoryNode()
+        case NODE_SCHEMA => readSchemaNode()
+        case NODE_STREAMLET => readStreamletNode()
+        case NODE_SAGA => readSagaNode()
 
-      // Handler components
-      case NODE_HANDLER => readHandlerOrStatement()
-      case NODE_SAGA_STEP => readSagaStepNode()
-      case NODE_STATE => readStateNode()
-      case NODE_INVARIANT => readInvariantNode()
-      case NODE_ON_CLAUSE => readOnClauseNode()
+        // Handler components
+        case NODE_HANDLER => readHandlerOrStatement()
+        case NODE_SAGA_STEP => readSagaStepNode()
+        case NODE_STATE => readStateNode()
+        case NODE_INVARIANT => readInvariantNode()
+        case NODE_ON_CLAUSE => readOnClauseNode()
 
-      // Streamlet components
-      case NODE_INLET => readInletNode()
-      case NODE_OUTLET => readOutletOrShownByNode()
-      case NODE_CONNECTOR => readConnectorNode()
+        // Streamlet components
+        case NODE_INLET => readInletNode()
+        case NODE_OUTLET => readOutletOrShownByNode()
+        case NODE_CONNECTOR => readConnectorNode()
 
-      // Epic components
-      case NODE_EPIC => readEpicOrUseCaseNode()
-      case NODE_USER => readUserOrUserStoryNode()
+        // Epic components
+        case NODE_EPIC => readEpicOrUseCaseNode()
+        case NODE_USER => readUserOrUserStoryNode()
 
-      // Interactions
-      case NODE_PIPE => readPipeOrRelationshipOrInteraction()
+        // Interactions
+        case NODE_PIPE => readPipeOrRelationshipOrInteraction()
 
-      // UI Components
-      case NODE_GROUP => readGroupOrContainedGroupNode()
-      case NODE_INPUT => readInputNode()
-      case NODE_OUTPUT => readOutputNode()
+        // UI Components
+        case NODE_GROUP => readGroupOrContainedGroupNode()
+        case NODE_INPUT => readInputNode()
+        case NODE_OUTPUT => readOutputNode()
 
-      // Metadata
-      case NODE_DESCRIPTION => readDescriptionOrOptionOrAttachment()
-      case NODE_BLOCK_DESCRIPTION => readBlockDescriptionNode()
-      case NODE_COMMENT => readLineCommentNode()
-      case NODE_BLOCK_COMMENT => readInlineCommentNode()
+        // Metadata
+        case NODE_DESCRIPTION => readDescriptionOrOptionOrAttachment()
+        case NODE_BLOCK_DESCRIPTION => readBlockDescriptionNode()
+        case NODE_COMMENT => readLineCommentNode()
+        case NODE_BLOCK_COMMENT => readInlineCommentNode()
 
-      // Simple values
-      case NODE_IDENTIFIER => readIdentifierNode()
-      case NODE_PATH_IDENTIFIER => readPathIdentifierNode()
-      case NODE_LITERAL_STRING => readLiteralStringNode()
+        // Simple values
+        case NODE_IDENTIFIER => readIdentifierNode()
+        case NODE_PATH_IDENTIFIER => readPathIdentifierNode()
+        case NODE_LITERAL_STRING => readLiteralStringNode()
 
-      // Authors
-      case NODE_AUTHOR => readAuthorOrAuthorRefNode()
-      case NODE_TERM => readTermNode()
+        // Authors
+        case NODE_AUTHOR => readAuthorOrAuthorRefNode()
+        case NODE_TERM => readTermNode()
 
-      // Streamlet shapes
-      case STREAMLET_VOID => readVoidNode()
-      case STREAMLET_SOURCE => readSourceNode()
-      case STREAMLET_SINK => readSinkNode()
-      case STREAMLET_FLOW => readFlowNode()
-      case STREAMLET_MERGE => readMergeNode()
-      case STREAMLET_SPLIT => readSplitNode()
+        // Streamlet shapes
+        case STREAMLET_VOID => readVoidNode()
+        case STREAMLET_SOURCE => readSourceNode()
+        case STREAMLET_SINK => readSinkNode()
+        case STREAMLET_FLOW => readFlowNode()
+        case STREAMLET_MERGE => readMergeNode()
+        case STREAMLET_SPLIT => readSplitNode()
 
-      // Adaptor directions
-      case ADAPTOR_INBOUND => readInboundAdaptorNode()
-      case ADAPTOR_OUTBOUND => readOutboundAdaptorNode()
+        // Adaptor directions
+        case ADAPTOR_INBOUND => readInboundAdaptorNode()
+        case ADAPTOR_OUTBOUND => readOutboundAdaptorNode()
 
-      case _ =>
-        addError(s"Unknown node type: $nodeType at position ${reader.position}")
-        // Return a placeholder to continue parsing
-        LiteralString(At.empty, s"<unknown node type $nodeType>")
+        case _ =>
+          addError(deserializationError(
+            s"Unknown node type tag",
+            expectedValue = Some("valid node type (1-255)"),
+            actualValue = Some(s"$nodeType at byte $posBeforeNode")
+          ))
+          // Return a placeholder to continue parsing
+          LiteralString(At.empty, s"<unknown node type $nodeType>")
+      }
+      popContext()
+      result
+    } catch {
+      case e: Exception =>
+        popContext()
+        throw e // Re-throw with context already in error message
     }
   }
 
@@ -485,35 +607,23 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readStatement(loc: At, stmtType: Int): Statement = {
     stmtType match {
-      case 0 => // Arbitrary
+      case 0 => // Prompt
         val what = readLiteralString()
-        ArbitraryStatement(loc, what)
+        PromptStatement(loc, what)
 
       case 1 => // Error
         val message = readLiteralString()
         ErrorStatement(loc, message)
-
-      case 2 => // Focus
-        val group = readGroupRef()
-        FocusStatement(loc, group)
 
       case 3 => // Set
         val field = readFieldRef()
         val value = readLiteralString()
         SetStatement(loc, field, value)
 
-      case 4 => // Return
-        val value = readLiteralString()
-        ReturnStatement(loc, value)
-
       case 5 => // Send
         val msg = readMessageRef()
         val portlet = readPortletRef()
         SendStatement(loc, msg, portlet)
-
-      case 6 => // Reply
-        val message = readMessageRef()
-        ReplyStatement(loc, message)
 
       case 7 => // Morph
         val entity = readEntityRef()
@@ -531,50 +641,35 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val processorRef = readProcessorRef()
         TellStatement(loc, msg, processorRef)
 
-      case 10 => // Call
-        val func = readFunctionRef()
-        CallStatement(loc, func)
+      case 10 => // When
+        val condition = readLiteralString()
+        val thenStatements = readContentsDeferred[Statements]()
+        WhenStatement(loc, condition, thenStatements)
 
-      case 11 => // ForEach
-        val refType = reader.readU8()
-        val ref: FieldRef | OutletRef | InletRef = refType match {
-          case 0 => readFieldRef()
-          case 1 => readOutletRef()
-          case 2 => readInletRef()
-          case _ => readFieldRef()
-        }
-        val do_ = readContentsDeferred[Statements]()
-        ForEachStatement(loc, ref, do_)
+      case 11 => // Match
+        val expression = readLiteralString()
+        val numCases = reader.readVarInt()
+        val cases = (0 until numCases).map { _ =>
+          val caseLoc = readLocation()
+          val pattern = readLiteralString()
+          val statements = readContentsDeferred[Statements]()
+          MatchCase(caseLoc, pattern, statements)
+        }.toSeq
+        val default = readContentsDeferred[Statements]()
+        MatchStatement(loc, expression, cases, default)
 
-      case 12 => // IfThenElse
-        val cond = readLiteralString()
-        val thens = readContentsDeferred[Statements]()
-        val elses = readContentsDeferred[Statements]()
-        IfThenElseStatement(loc, cond, thens, elses)
+      case 12 => // Let
+        val identifier = readIdentifier()
+        val expression = readLiteralString()
+        LetStatement(loc, identifier, expression)
 
-      case 13 => // Stop
-        StopStatement(loc)
-
-      case 14 => // Read
-        val keyword = readString()
-        val what = readLiteralString()
-        val from = readTypeRef()
-        val where = readLiteralString()
-        ReadStatement(loc, keyword, what, from, where)
-
-      case 15 => // Write
-        val keyword = readString()
-        val what = readLiteralString()
-        val to = readTypeRef()
-        WriteStatement(loc, keyword, what, to)
-
-      case 16 => // Code
+      case 13 => // Code
         val language = readLiteralString()
         val body = readString()
         CodeStatement(loc, language, body)
 
       case _ =>
-        ArbitraryStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))
+        PromptStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))
     }
   }
 
@@ -1058,7 +1153,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
       case TYPE_ALTERNATION =>
         val loc = readLocation()
-        val of = readContentsDeferred[AliasedTypeExpression]()
+        // Alternation items are AliasedTypeExpression which are written as TYPE_REF
+        // We must use readTypeExpression() not readNode() since TYPE_REF is a type tag, not a node tag
+        val of = readTypeExpressionContents()
         Alternation(loc, of)
 
       case TYPE_ENUMERATION =>
@@ -1637,9 +1734,15 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readString(): String = {
+    val posBeforeRead = reader.position
     val index = reader.readVarInt()
     if index >= stringTable.size then
-      throw new IllegalArgumentException(s"Invalid string table index: $index (table size: ${stringTable.size})")
+      throw new IllegalArgumentException(
+        deserializationError(
+          s"Invalid string table index",
+          expectedValue = Some(s"index < ${stringTable.size}"),
+          actualValue = Some(s"index = $index (read at byte $posBeforeRead)")
+        ))
     end if
     stringTable.lookup(index)
   }
@@ -1659,12 +1762,42 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     (0 until count).map(_ => readElement())
   }
 
+  /** Read type expressions as contents
+    *
+    * Used for Alternation which contains AliasedTypeExpression items.
+    * These are written with TYPE_REF tags which readTypeExpression() handles,
+    * but readNode() does not handle type expression tags.
+    */
+  private def readTypeExpressionContents(): Contents[AliasedTypeExpression] = {
+    val count = reader.readVarInt()
+    val buffer = ArrayBuffer[AliasedTypeExpression]()
+
+    var i = 0
+    while i < count do
+      val typeExp = readTypeExpression()
+      // Alternation items are always AliasedTypeExpression
+      typeExp match {
+        case ate: AliasedTypeExpression =>
+          buffer += ate
+        case other =>
+          // If we get something else, wrap it in an error and continue
+          addError(s"Expected AliasedTypeExpression in Alternation, got ${other.getClass.getSimpleName}")
+          buffer += AliasedTypeExpression(other.loc, "", PathIdentifier.empty)
+      }
+      i += 1
+    end while
+
+    Contents(buffer.toSeq: _*)
+  }
+
   /** Read contents count but defer reading elements
     *
     * Elements are read by the main traversal loop
     */
   private def readContentsDeferred[T <: RiddlValue](): Contents[T] = {
+    val countPos = reader.position
     val count = reader.readVarInt()
+    pushContext(s"contents[$count]")
     val buffer = ArrayBuffer[T]()
 
     // Read the actual nodes
@@ -1675,12 +1808,25 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       i += 1
     end while
 
+    popContext()
     Contents(buffer.toSeq: _*)
   }
 
   private def readMetadataDeferred(): Contents[MetaData] = {
-    // Read metadata items - writer writes count + inline items
-    readContentsDeferred[MetaData]()
+    val countPos = reader.position
+    val count = reader.readVarInt()
+    pushContext(s"metadata[$count]")
+    val buffer = ArrayBuffer[MetaData]()
+
+    var i = 0
+    while i < count do
+      val node = readNode().asInstanceOf[MetaData]
+      buffer += node
+      i += 1
+    end while
+
+    popContext()
+    Contents(buffer.toSeq: _*)
   }
 
   private def addError(message: String): Unit = {

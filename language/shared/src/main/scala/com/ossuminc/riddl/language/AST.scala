@@ -2314,20 +2314,20 @@ object AST:
   /** Base trait of all Statements that can occur in [[OnClause]]s */
   sealed trait Statement extends RiddlValue
 
-  /** A statement whose behavior is specified as a text string allowing an arbitrary action to be
-    * specified handled by RIDDL's syntax.
+  /** A statement whose behavior is specified as a text string allowing a prompt for
+    * AI-based simulation to be specified.
     *
     * @param loc
     *   The location where the action occurs in the source
     * @param what
-    *   The action to take (emitted as pseudo-code)
+    *   The prompt text to provide to an AI simulator
     */
-  @JSExportTopLevel("ArbitraryStatement")
-  case class ArbitraryStatement(
+  @JSExportTopLevel("PromptStatement")
+  case class PromptStatement(
     loc: At,
     what: LiteralString
   ) extends Statement {
-    override def kind: String = "Arbitrary Statement"
+    override def kind: String = "Prompt Statement"
     def format: String = what.format
   }
 
@@ -2348,21 +2348,6 @@ object AST:
     def format: String = s"error ${message.format}"
   }
 
-  /** A statement that changes the focus of input in an application to a specific group
-    *
-    * @param loc
-    *   The location of the statement
-    * @param group
-    *   The group that is the target of the input focus
-    */
-  @JSExportTopLevel("FocusStatement")
-  case class FocusStatement(
-    loc: At,
-    group: GroupRef
-  ) extends Statement {
-    override def kind: String = "Focus Statement"
-    def format: String = s"focus on ${group.format}"
-  }
 
   /** A statement that sets a value of a field
     *
@@ -2383,21 +2368,6 @@ object AST:
     def format: String = s"set ${field.format} to ${value.format}"
   }
 
-  /** A statement that returns a value from a function
-    *
-    * @param loc
-    *   The location in the source of the publish action
-    * @param value
-    *   The value to be returned
-    */
-  @JSExportTopLevel("ReturnStatement")
-  case class ReturnStatement(
-    loc: At,
-    value: LiteralString
-  ) extends Statement {
-    override def kind: String = "Return Statement"
-    def format: String = s"return ${value.format}"
-  }
 
   /** An action that sends a message to an [[Inlet]] or [[Outlet]].
     *
@@ -2418,21 +2388,6 @@ object AST:
     def format: String = s"send ${msg.format} to ${portlet.format}"
   }
 
-  /** A statement that replies in a handler to a query
-    *
-    * @param loc
-    *   The location in the source of the publish action
-    * @param message
-    *   The message to be returned
-    */
-  @JSExportTopLevel("ReplyStatement")
-  case class ReplyStatement(
-    loc: At,
-    message: MessageRef
-  ) extends Statement {
-    override def kind: String = "Reply Statement"
-    def format: String = s"reply ${message.format}"
-  }
 
   /** An statement that morphs the state of an entity to a new structure
     *
@@ -2497,132 +2452,89 @@ object AST:
     def format: String = s"tell ${msg.format} to ${processorRef.format}"
   }
 
-  /** A statement that calls a function
+  /** A guard clause statement for conditional early exit with validation
     *
     * @param loc
     *   The location of the statement in the model
-    * @param func
-    *   The function to be called
+    * @param condition
+    *   The boolean expression to evaluate (as a string, evaluated at runtime)
+    * @param thenStatements
+    *   The statements to execute if the condition is true
     */
-  @JSExportTopLevel("CallStatement")
-  case class CallStatement(
+  @JSExportTopLevel("WhenStatement")
+  case class WhenStatement(
     loc: At,
-    func: FunctionRef
+    condition: LiteralString,
+    thenStatements: Contents[Statements]
   ) extends Statement {
-    override def kind: String = "Call Statement"
-    def format: String = s"call ${func.format}"
+    override def kind: String = "When Statement"
+    def format: String = s"when ${condition.format} then\n${thenStatements.toSeq.map(_.format).mkString("\n  ")}\n  end"
   }
 
-  /** A statement that suggests looping over the contents of a field with a non-zero cardinality, an
-    * Inlet or an outlet
-    * @param loc
-    *   The location of the statement in the model
-    * @param ref
-    *   The reference to the Field, outlet or Inlet
-    * @param do_
-    *   The set of statements to execute for each iteration_
-    */
-  @JSExportTopLevel("ForEachStatement")
-  case class ForEachStatement(
+  /** A case clause within a match statement */
+  @JSExportTopLevel("MatchCase")
+  case class MatchCase(
     loc: At,
-    ref: FieldRef | OutletRef | InletRef,
-    do_ : Contents[Statements]
-  ) extends Statement {
-    override def kind: String = "Foreach Statement"
-    def format: String = s"foreach ${ref.format} do\n" +
-      do_.map(_.format).mkString("\n") + "\n  end"
+    pattern: LiteralString,
+    statements: Contents[Statements]
+  ) extends RiddlValue {
+    override def kind: String = "Match Case"
+    def format: String = s"case ${pattern.format} {\n${statements.toSeq.map(_.format).mkString("\n  ")}\n}"
   }
 
-  /** A statement that represents a class if-condition-then-A-else-B construct for logic decitions.
+  /** A pattern matching statement for value-based branching
     *
     * @param loc
     *   The location of the statement in the model
-    * @param cond
-    *   The conditional part of the if-then-else
-    * @param thens
-    *   The statements to execute if `cond` is true
-    * @param elses
-    *   The tsatements to execute if `cond` is false
+    * @param expression
+    *   The expression to match against
+    * @param cases
+    *   The case clauses (pattern -> statements)
+    * @param default
+    *   The default statements if no case matches (required)
     */
-  @JSExportTopLevel("IfThenElseStatement")
-  case class IfThenElseStatement(
+  @JSExportTopLevel("MatchStatement")
+  case class MatchStatement(
     loc: At,
-    cond: LiteralString,
-    thens: Contents[Statements],
-    elses: Contents[Statements]
+    expression: LiteralString,
+    cases: Seq[MatchCase],
+    default: Contents[Statements]
   ) extends Statement {
-    override def kind: String = "IfThenElse Statement"
-
-    def format: String =
-      s"if ${cond.format} then {${thens.map(_.format).mkString("\n  ", "\n  ", "\n}") +
-          (" else {" + elses.map(_.format).mkString("\n  ", "\n  ", "\n}\nend"))}"
+    override def kind: String = "Match Statement"
+    def format: String = {
+      val casesStr = cases.map(_.format).mkString("\n")
+      val defaultStr = s"default {\n${default.toSeq.map(_.format).mkString("\n  ")}\n}"
+      s"match ${expression.format} {\n$casesStr\n$defaultStr\n}"
+    }
   }
 
-  /** A statement that terminates the On Clause */
-  @JSExportTopLevel("StopStatement")
-  case class StopStatement(
-    loc: At
-  ) extends Statement {
-    override def kind: String = "Stop Statement"
-    def format: String = "stop"
-  }
-
-  /** A statement that reads data from a Repository
+  /** A local immutable value binding statement
     *
     * @param loc
     *   The location of the statement in the model
-    * @param keyword
-    *   The keyword used to color the nature of the read operation
-    * @param what
-    *   A string describing what should be read
-    * @param from
-    *   A reference to the type from which the value should be read in the repository
-    * @param where
-    *   A string describing the conditions on the read (like a SQL WHERE clause)
+    * @param identifier
+    *   The name of the local variable
+    * @param expression
+    *   The expression to bind to the variable
     */
-  @JSExportTopLevel("ReadStatement")
-  case class ReadStatement(
+  @JSExportTopLevel("LetStatement")
+  case class LetStatement(
     loc: At,
-    keyword: String,
-    what: LiteralString,
-    from: TypeRef,
-    where: LiteralString
+    identifier: Identifier,
+    expression: LiteralString
   ) extends Statement {
-    override def kind: String = "Read Statement"
-    def format: String = s"$keyword ${what.format} from ${from.format} where ${where.format}"
+    override def kind: String = "Let Statement"
+    def format: String = s"let ${identifier.format} = ${expression.format}"
   }
 
-  /** A statement that describes a write to a repository
+  /** A code statement that contains arbitrary code in a specified language
     *
     * @param loc
     *   The location of the statement in the model
-    * @param keyword
-    *   The keyword used to color the nature of teh write operation (e.g. update, append, etc.)
-    * @param what
-    *   A description of the data that should be written to the repository
-    * @param to
-    *   The [[TypeRef]] to the component of the Repository
-    */
-  @JSExportTopLevel("WriteStatement")
-  case class WriteStatement(
-    loc: At,
-    keyword: String,
-    what: LiteralString,
-    to: TypeRef
-  ) extends Statement {
-    override def kind: String = "Write Statement"
-    def format: String = s"$keyword ${what.format} to ${to.format}"
-  }
-
-  /** A statement that provides a definition of the computation to execute in a specific programming
-    * language
-    *
-    * @param loc
-    *   The location of the statement
     * @param language
-    *   The name of the programming language in which the `body` is written
+    *   The programming language of the code
     * @param body
-    *   The code that should be executed by this statement.
+    *   The code body
     */
   @JSExportTopLevel("CodeStatement")
   case class CodeStatement(
@@ -2633,6 +2545,7 @@ object AST:
     def format: String = s"```${language.s}\n$body```"
     override def kind: String = "Code Statement"
   }
+
 
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 

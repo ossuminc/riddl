@@ -28,7 +28,7 @@ class RepositoryTest extends AbstractValidatingTest {
           |      command AddThis is { what: String }
           |      handler Only is {
           |        on command AddThis {
-          |          "add 'what' to the list"
+          |          prompt "add 'what' to the list"
           |        }
           |        on query GetOne {
           |          send result fubar.Reply to outlet hereyougo
