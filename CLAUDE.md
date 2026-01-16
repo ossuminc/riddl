@@ -66,7 +66,7 @@ utils → language → bast → passes → diagrams → commands → riddlc
 - **Cross-platform**: JVM, JS, Native
 - **Status**: Core functionality complete (as of Jan 2026)
 
-**Note**: There is a legacy standalone `bast/` directory at the project root. This is deprecated - all authoritative BAST code lives in the `language` module's `bast` package.
+**Note**: The legacy standalone `bast/` directory has been removed (Jan 16, 2026). All BAST code lives in the `language` module's `bast` package.
 
 **Key files** (all in `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`):
 - `package.scala` - Constants and node type tags (NODE_*, TYPE_*, STREAMLET_*, etc.)
@@ -450,8 +450,6 @@ All BAST source files are in `language/shared/src/main/scala/com/ossuminc/riddl/
 
 **Total: 54 BAST tests** (as of Jan 2026)
 
-**DEPRECATED**: The `bast/jvm/src/test/` directory contains older test files that use the deprecated `BASTWriter.creator()` instead of `BASTWriterPass.creator()`. These should NOT be used - all authoritative tests are in the passes module.
-
 #### Key Implementation Notes
 
 1. **String Table Strategy**:
@@ -536,7 +534,6 @@ git add unrelated/files
 Files that often appear staged but may not be related to your work:
 - `CLAUDE.md` - Documentation updates
 - `build.sbt.bak` - Backup files (should be in .gitignore)
-- `bast/` - BAST development work
 - `examples/` - Example code
 - `language/.../Keywords.scala` - Keyword updates
 - `passes/.../ValidationPass.scala` - Validation rule updates

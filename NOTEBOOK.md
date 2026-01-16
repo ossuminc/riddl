@@ -68,7 +68,7 @@ This enables BAST to work like Python's `.pyc` files - automatic loading from ca
 | BASTLoaderTest | 4 |
 | BASTDebugTest | 1 |
 
-**Note**: All tests are in `passes/jvm/src/test/`. The `bast/jvm/src/test/` directory contains deprecated duplicates using old API.
+**Note**: All tests are in `passes/jvm/src/test/`. The deprecated `bast/` directory has been removed.
 
 ### Key Code Locations
 
@@ -85,11 +85,21 @@ This enables BAST to work like Python's `.pyc` files - automatic loading from ca
 **Commands Module** (`commands/jvm/.../commands/`):
 - `BastGenCommand.scala` - `riddlc bast-gen` command
 
+### Performance Results (January 16, 2026)
+
+Benchmark on `dokn.riddl` (7.5KB, 167 nodes):
+
+| Metric | Parse (text→AST) | Load (binary→AST) | Speedup |
+|--------|------------------|-------------------|---------|
+| Cold run | 141.15 ms | 16.97 ms | **8.3x** |
+| Warm avg (50 iter) | 6.21 ms | 0.67 ms | **9.3x** |
+
+**Conclusion**: BAST loading achieves ~9x speedup, close to the 10x target.
+
 ### Next Steps
 
-1. Performance benchmarking (parse RIDDL vs load BAST)
-2. Cross-platform testing (JS, Native variants)
-3. Clean up deprecated `bast/jvm/src/test/` directory
+1. Cross-platform testing (JS, Native variants)
+2. Consider larger test corpus for comprehensive benchmarks
 
 ### Open Questions
 
@@ -111,6 +121,15 @@ This enables BAST to work like Python's `.pyc` files - automatic loading from ca
 ---
 
 ## Session Log
+
+### January 16, 2026 (Cleanup & Benchmarking)
+
+**Focus**: Cleanup deprecated files and verify performance
+
+**Completed**:
+- Removed deprecated `bast/` directory (no longer in build.sbt, all code migrated)
+- Ran performance benchmarks showing **9.3x speedup** (warmed up)
+- Updated documentation with benchmark results
 
 ### January 16, 2026 (Continuation)
 
