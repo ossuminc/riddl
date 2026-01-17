@@ -33,13 +33,15 @@ package com.ossuminc.riddl.language
   */
 package object bast {
 
-  /** BAST format version (major.minor)
+  /** BAST format version - single monotonically incrementing integer.
     *
-    * Major version changes indicate breaking format changes.
-    * Minor version changes are backward compatible.
+    * TODO: Finalize BAST schema before releasing to users. Until then,
+    * version stays at 1 even as format evolves during development.
+    *
+    * When finalizing, document the schema and increment version for
+    * any future breaking changes.
     */
-  val VERSION_MAJOR: Short = 1
-  val VERSION_MINOR: Short = 0
+  val VERSION: Int = 1
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

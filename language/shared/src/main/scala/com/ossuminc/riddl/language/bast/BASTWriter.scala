@@ -63,14 +63,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
     val header = BinaryFormat.Header(
       magic = MAGIC_BYTES,
-      versionMajor = VERSION_MAJOR,
-      versionMinor = VERSION_MINOR,
+      version = VERSION,
       flags = 0,
       stringTableOffset = stringTableOffset,
       rootOffset = HEADER_SIZE,
       fileSize = writer.size,
       checksum = checksum,
-      reserved = Array.fill(8)(0.toByte)
+      reserved = Array.fill(4)(0.toByte)
     )
 
     // Write header at the beginning
@@ -1572,37 +1571,36 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Helper Serialization Methods ==========
 
   def writeLocation(loc: At): Unit = {
-    // Delta encoding: store differences from previous location
+    // Optimized location encoding:
+    // - Removed line/col (computed from offset via At class)
+    // - Added endOffset for accurate source spans
+    // - Use zigzag encoding for signed deltas (more efficient than +1000000 hack)
     if lastLocation.isEmpty then
       // First location: write full data
       // Use origin (path) instead of toExternalForm to preserve relative paths
       writeString(loc.source.origin)
       writer.writeVarInt(loc.offset)
-      writer.writeVarInt(loc.line)
-      writer.writeVarInt(loc.col)
+      writer.writeVarInt(loc.endOffset)
     else
-      // Subsequent locations: write deltas
+      // Subsequent locations: write deltas with zigzag encoding
       // Treat 'empty' origin as same source (identifiers often have empty origin)
       val sameSource = loc.source.origin == lastLocation.source.origin || loc.source.origin == "empty"
       if !sameSource then
         writer.writeU8(1) // Flag: new source file
         writeString(loc.source.origin) // Use origin to preserve relative paths
+        writer.writeVarInt(loc.offset)
+        writer.writeVarInt(loc.endOffset)
       else
         writer.writeU8(0) // Flag: same source file
+        // Write deltas using zigzag encoding (handles negative values efficiently)
+        val offsetDelta = loc.offset - lastLocation.offset
+        val endOffsetDelta = loc.endOffset - lastLocation.endOffset
+        writer.writeZigzagInt(offsetDelta)
+        writer.writeZigzagInt(endOffsetDelta)
       end if
-
-      // Write deltas (handle negative values by adding offset)
-      val offsetDelta = loc.offset - lastLocation.offset
-      val lineDelta = loc.line - lastLocation.line
-      val colDelta = loc.col - lastLocation.col
-
-      writer.writeVarInt(offsetDelta + 1000000) // Add offset to ensure positive
-      writer.writeVarInt(lineDelta + 1000)
-      writer.writeVarInt(colDelta + 1000)
     end if
 
     // Always update lastLocation to stay in sync with reader
-    // The reader has no way to know if an origin was "empty", so we must update symmetrically
     lastLocation = loc
   }
 

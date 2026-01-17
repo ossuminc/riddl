@@ -1,8 +1,7 @@
 // Medium test file for performance benchmarking
-// ~1000 lines, 100 definitions, 50 references
+// ~350 lines, 6 contexts, 50 definitions
 
 domain MediumDomain is {
-  // Common types used throughout
   type EntityId is Id(Entity)
   type UserId is Id(User)
   type ProductId is Id(Product)
@@ -12,17 +11,30 @@ domain MediumDomain is {
   type ShipmentId is Id(Shipment)
   type InvoiceId is Id(Invoice)
 
-  type EmailAddress is Pattern("\w+@\w+\.\w+")
-  type PhoneNumber is Pattern("\d{3}-\d{3}-\d{4}")
-  type PostalCode is Pattern("\d{5}")
+  type EmailAddress is String
+  type PhoneNumber is String
+  type PostalCode is String
   type Money is Number
   type Quantity is Number
 
   context CustomerManagement is {
     entity Customer is {
-      option aggregate
+      type CreateCustomer is command { name: String, email: EmailAddress, phone: PhoneNumber }
+      type UpdateCustomer is command { customerId: CustomerId, name: String }
+      type DeleteCustomer is command { customerId: CustomerId }
 
-      state CustomerData is {
+      event CustomerCreated is { customerId: CustomerId, name: String }
+      event CustomerUpdated is { customerId: CustomerId, name: String }
+      event CustomerDeleted is { customerId: CustomerId }
+
+      record Address is {
+        street: String,
+        city: String,
+        state: String,
+        postal: PostalCode
+      }
+
+      record CustomerData is {
         id: CustomerId,
         name: String,
         email: EmailAddress,
@@ -30,37 +42,40 @@ domain MediumDomain is {
         address: Address
       }
 
-      type Address is {
-        street: String,
-        city: String,
-        state: String,
-        postal: PostalCode
-      }
+      state CustomerActive of Customer.CustomerData
 
       handler CustomerHandler is {
-        on command CreateCustomer is {
-          morph entity Customer to state CustomerData
+        on command CreateCustomer {
+          send event CustomerCreated to outlet CustomerEvents_out
         }
-        on command UpdateCustomer is {
-          morph entity Customer to state CustomerData
+        on command UpdateCustomer {
+          send event CustomerUpdated to outlet CustomerEvents_out
         }
-        on command DeleteCustomer is {
-          become entity Customer to state CustomerDeleted
+        on command DeleteCustomer {
+          send event CustomerDeleted to outlet CustomerEvents_out
         }
       }
+    }
 
-      state CustomerDeleted is {
-        id: CustomerId,
-        deletedAt: TimeStamp
-      }
+    flow CustomerEvents is {
+      inlet CustomerEvents_in is event Customer.CustomerCreated
+      outlet CustomerEvents_out is event Customer.CustomerCreated
     }
   }
 
   context ProductCatalog is {
     entity Product is {
-      option aggregate
+      type CreateProduct is command { name: String, description: String, price: Money }
+      type UpdateProduct is command { productId: ProductId, name: String, price: Money }
+      type AdjustInventory is command { productId: ProductId, quantity: Quantity }
+      type DiscontinueProduct is command { productId: ProductId }
 
-      state ProductData is {
+      event ProductCreated is { productId: ProductId, name: String }
+      event ProductUpdated is { productId: ProductId, name: String }
+      event InventoryAdjusted is { productId: ProductId, quantity: Quantity }
+      event ProductDiscontinued is { productId: ProductId }
+
+      record ProductData is {
         id: ProductId,
         name: String,
         description: String,
@@ -68,125 +83,136 @@ domain MediumDomain is {
         inventory: Quantity
       }
 
-      handler ProductHandler is {
-        on command CreateProduct is {
-          morph entity Product to state ProductData
-        }
-        on command UpdateProduct is {
-          morph entity Product to state ProductData
-        }
-        on command AdjustInventory is {
-          morph entity Product to state ProductData
-        }
-        on command DiscontinueProduct is {
-          become entity Product to state ProductDiscontinued
-        }
-      }
+      state ProductActive of Product.ProductData
 
-      state ProductDiscontinued is {
-        id: ProductId,
-        discontinuedAt: TimeStamp
+      handler ProductHandler is {
+        on command CreateProduct {
+          send event ProductCreated to outlet ProductEvents_out
+        }
+        on command UpdateProduct {
+          send event ProductUpdated to outlet ProductEvents_out
+        }
+        on command AdjustInventory {
+          send event InventoryAdjusted to outlet ProductEvents_out
+        }
+        on command DiscontinueProduct {
+          send event ProductDiscontinued to outlet ProductEvents_out
+        }
       }
     }
 
     entity Category is {
-      option aggregate
+      type CreateCategory is command { name: String, description: String }
+      type AddProductToCategory is command { categoryId: Id(Category), productId: ProductId }
+      type RemoveProductFromCategory is command { categoryId: Id(Category), productId: ProductId }
 
-      state CategoryData is {
+      event CategoryCreated is { categoryId: Id(Category), name: String }
+      event ProductAddedToCategory is { categoryId: Id(Category), productId: ProductId }
+      event ProductRemovedFromCategory is { categoryId: Id(Category), productId: ProductId }
+
+      record CategoryData is {
         id: Id(Category),
         name: String,
         description: String,
         products: ProductId*
       }
 
+      state CategoryActive of Category.CategoryData
+
       handler CategoryHandler is {
-        on command CreateCategory is {
-          morph entity Category to state CategoryData
+        on command CreateCategory {
+          send event CategoryCreated to outlet CategoryEvents_out
         }
-        on command AddProduct is {
-          morph entity Category to state CategoryData
+        on command AddProductToCategory {
+          send event ProductAddedToCategory to outlet CategoryEvents_out
         }
-        on command RemoveProduct is {
-          morph entity Category to state CategoryData
+        on command RemoveProductFromCategory {
+          send event ProductRemovedFromCategory to outlet CategoryEvents_out
         }
       }
+    }
+
+    flow ProductEvents is {
+      inlet ProductEvents_in is event Product.ProductCreated
+      outlet ProductEvents_out is event Product.ProductCreated
+    }
+
+    flow CategoryEvents is {
+      inlet CategoryEvents_in is event Category.CategoryCreated
+      outlet CategoryEvents_out is event Category.CategoryCreated
     }
   }
 
   context OrderManagement is {
     entity Order is {
-      option aggregate
+      type CreateOrder is command { customerId: CustomerId, items: OrderItem* }
+      type ConfirmOrder is command { orderId: OrderId }
+      type ShipOrder is command { orderId: OrderId, shipmentId: ShipmentId }
+      type DeliverOrder is command { orderId: OrderId }
+      type CancelOrder is command { orderId: OrderId, reason: String }
 
-      state OrderPending is {
-        id: OrderId,
-        customerId: CustomerId,
-        items: OrderItem*,
-        totalAmount: Money,
-        createdAt: TimeStamp
-      }
+      event OrderCreated is { orderId: OrderId, customerId: CustomerId }
+      event OrderConfirmed is { orderId: OrderId }
+      event OrderShipped is { orderId: OrderId, shipmentId: ShipmentId }
+      event OrderDelivered is { orderId: OrderId }
+      event OrderCancelled is { orderId: OrderId, reason: String }
 
-      type OrderItem is {
+      record OrderItem is {
         productId: ProductId,
         quantity: Quantity,
         price: Money
       }
 
-      state OrderConfirmed is {
+      record OrderData is {
         id: OrderId,
         customerId: CustomerId,
         items: OrderItem*,
         totalAmount: Money,
-        confirmedAt: TimeStamp
+        createdAt: TimeStamp
       }
 
-      state OrderShipped is {
-        id: OrderId,
-        customerId: CustomerId,
-        items: OrderItem*,
-        totalAmount: Money,
-        shipmentId: ShipmentId,
-        shippedAt: TimeStamp
-      }
-
-      state OrderDelivered is {
-        id: OrderId,
-        customerId: CustomerId,
-        totalAmount: Money,
-        deliveredAt: TimeStamp
-      }
-
-      state OrderCancelled is {
-        id: OrderId,
-        customerId: CustomerId,
-        cancelledAt: TimeStamp,
-        reason: String
-      }
+      state OrderPending of Order.OrderData
 
       handler OrderHandler is {
-        on command CreateOrder is {
-          morph entity Order to state OrderPending
+        on command CreateOrder {
+          send event OrderCreated to outlet OrderEvents_out
         }
-        on command ConfirmOrder is {
-          become entity Order from state OrderPending to state OrderConfirmed
+        on command ConfirmOrder {
+          send event OrderConfirmed to outlet OrderEvents_out
         }
-        on command ShipOrder is {
-          become entity Order from state OrderConfirmed to state OrderShipped
+        on command ShipOrder {
+          send event OrderShipped to outlet OrderEvents_out
         }
-        on command DeliverOrder is {
-          become entity Order from state OrderShipped to state OrderDelivered
+        on command DeliverOrder {
+          send event OrderDelivered to outlet OrderEvents_out
         }
-        on command CancelOrder is {
-          become entity Order to state OrderCancelled
+        on command CancelOrder {
+          send event OrderCancelled to outlet OrderEvents_out
         }
       }
+    }
+
+    flow OrderEvents is {
+      inlet OrderEvents_in is event Order.OrderCreated
+      outlet OrderEvents_out is event Order.OrderCreated
     }
   }
 
   context PaymentProcessing is {
     entity Payment is {
-      option aggregate
+      type InitiatePayment is command { orderId: OrderId, amount: Money, method: PaymentMethod }
+      type ProcessPayment is command { paymentId: PaymentId }
+      type CompletePayment is command { paymentId: PaymentId, transactionId: String }
+      type FailPayment is command { paymentId: PaymentId, errorMessage: String }
 
-      state PaymentPending is {
+      event PaymentInitiated is { paymentId: PaymentId, orderId: OrderId, amount: Money }
+      event PaymentProcessing is { paymentId: PaymentId }
+      event PaymentCompleted is { paymentId: PaymentId, transactionId: String }
+      event PaymentFailed is { paymentId: PaymentId, errorMessage: String }
+
+      type PaymentMethod is one of { CreditCard, DebitCard, PayPal, BankTransfer }
+
+      record PaymentData is {
         id: PaymentId,
         orderId: OrderId,
         amount: Money,
@@ -194,105 +220,94 @@ domain MediumDomain is {
         createdAt: TimeStamp
       }
 
-      type PaymentMethod is one of {
-        CreditCard, DebitCard, PayPal, BankTransfer
-      }
-
-      state PaymentProcessing is {
-        id: PaymentId,
-        orderId: OrderId,
-        amount: Money,
-        method: PaymentMethod,
-        processingAt: TimeStamp
-      }
-
-      state PaymentCompleted is {
-        id: PaymentId,
-        orderId: OrderId,
-        amount: Money,
-        method: PaymentMethod,
-        completedAt: TimeStamp,
-        transactionId: String
-      }
-
-      state PaymentFailed is {
-        id: PaymentId,
-        orderId: OrderId,
-        amount: Money,
-        method: PaymentMethod,
-        failedAt: TimeStamp,
-        errorMessage: String
-      }
+      state PaymentPending of Payment.PaymentData
 
       handler PaymentHandler is {
-        on command InitiatePayment is {
-          morph entity Payment to state PaymentPending
+        on command InitiatePayment {
+          send event PaymentInitiated to outlet PaymentEvents_out
         }
-        on command ProcessPayment is {
-          become entity Payment from state PaymentPending to state PaymentProcessing
+        on command ProcessPayment {
+          send event PaymentProcessing to outlet PaymentEvents_out
         }
-        on command CompletePayment is {
-          become entity Payment from state PaymentProcessing to state PaymentCompleted
+        on command CompletePayment {
+          send event PaymentCompleted to outlet PaymentEvents_out
         }
-        on command FailPayment is {
-          become entity Payment from state PaymentProcessing to state PaymentFailed
+        on command FailPayment {
+          send event PaymentFailed to outlet PaymentEvents_out
         }
       }
+    }
+
+    flow PaymentEvents is {
+      inlet PaymentEvents_in is event Payment.PaymentInitiated
+      outlet PaymentEvents_out is event Payment.PaymentInitiated
     }
   }
 
   context ShippingManagement is {
     entity Shipment is {
-      option aggregate
+      type CreateShipment is command { orderId: OrderId, customerId: CustomerId, items: ShipmentItem* }
+      type ShipPackage is command { shipmentId: ShipmentId, trackingNumber: String, carrier: String }
+      type DeliverPackage is command { shipmentId: ShipmentId, signedBy: String }
 
-      state ShipmentCreated is {
-        id: ShipmentId,
-        orderId: OrderId,
-        customerId: CustomerId,
-        address: CustomerManagement.Customer.Address,
-        items: ShipmentItem*,
-        createdAt: TimeStamp
-      }
+      event ShipmentCreated is { shipmentId: ShipmentId, orderId: OrderId }
+      event ShipmentInTransit is { shipmentId: ShipmentId, trackingNumber: String }
+      event ShipmentDelivered is { shipmentId: ShipmentId, signedBy: String }
 
-      type ShipmentItem is {
+      record ShipmentItem is {
         productId: ProductId,
         quantity: Quantity
       }
 
-      state ShipmentInTransit is {
+      record ShipmentData is {
         id: ShipmentId,
         orderId: OrderId,
-        trackingNumber: String,
-        carrier: String,
-        shippedAt: TimeStamp
+        customerId: CustomerId,
+        items: ShipmentItem*,
+        createdAt: TimeStamp
       }
 
-      state ShipmentDelivered is {
-        id: ShipmentId,
-        orderId: OrderId,
-        deliveredAt: TimeStamp,
-        signedBy: String
-      }
+      state ShipmentPending of Shipment.ShipmentData
 
       handler ShipmentHandler is {
-        on command CreateShipment is {
-          morph entity Shipment to state ShipmentCreated
+        on command CreateShipment {
+          send event ShipmentCreated to outlet ShipmentEvents_out
         }
-        on command ShipPackage is {
-          become entity Shipment from state ShipmentCreated to state ShipmentInTransit
+        on command ShipPackage {
+          send event ShipmentInTransit to outlet ShipmentEvents_out
         }
-        on command DeliverPackage is {
-          become entity Shipment from state ShipmentInTransit to state ShipmentDelivered
+        on command DeliverPackage {
+          send event ShipmentDelivered to outlet ShipmentEvents_out
         }
       }
+    }
+
+    flow ShipmentEvents is {
+      inlet ShipmentEvents_in is event Shipment.ShipmentCreated
+      outlet ShipmentEvents_out is event Shipment.ShipmentCreated
     }
   }
 
   context InvoiceManagement is {
     entity Invoice is {
-      option aggregate
+      type CreateInvoice is command { orderId: OrderId, customerId: CustomerId, amount: Money, items: InvoiceItem* }
+      type SendInvoice is command { invoiceId: InvoiceId }
+      type MarkInvoicePaid is command { invoiceId: InvoiceId, paymentId: PaymentId }
+      type VoidInvoice is command { invoiceId: InvoiceId, reason: String }
 
-      state InvoiceCreated is {
+      event InvoiceCreated is { invoiceId: InvoiceId, orderId: OrderId, amount: Money }
+      event InvoiceSent is { invoiceId: InvoiceId }
+      event InvoicePaid is { invoiceId: InvoiceId, paymentId: PaymentId }
+      event InvoiceVoided is { invoiceId: InvoiceId, reason: String }
+
+      record InvoiceItem is {
+        description: String,
+        quantity: Quantity,
+        price: Money,
+        totalAmount: Money
+      }
+
+      record InvoiceData is {
         id: InvoiceId,
         orderId: OrderId,
         customerId: CustomerId,
@@ -301,72 +316,27 @@ domain MediumDomain is {
         createdAt: TimeStamp
       }
 
-      type InvoiceItem is {
-        description: String,
-        quantity: Quantity,
-        price: Money,
-        totalAmount: Money
-      }
-
-      state InvoiceSent is {
-        id: InvoiceId,
-        orderId: OrderId,
-        customerId: CustomerId,
-        amount: Money,
-        sentAt: TimeStamp
-      }
-
-      state InvoicePaid is {
-        id: InvoiceId,
-        orderId: OrderId,
-        paymentId: PaymentId,
-        paidAt: TimeStamp
-      }
+      state InvoicePending of Invoice.InvoiceData
 
       handler InvoiceHandler is {
-        on command CreateInvoice is {
-          morph entity Invoice to state InvoiceCreated
+        on command CreateInvoice {
+          send event InvoiceCreated to outlet InvoiceEvents_out
         }
-        on command SendInvoice is {
-          become entity Invoice from state InvoiceCreated to state InvoiceSent
+        on command SendInvoice {
+          send event InvoiceSent to outlet InvoiceEvents_out
         }
-        on command MarkPaid is {
-          become entity Invoice from state InvoiceSent to state InvoicePaid
+        on command MarkInvoicePaid {
+          send event InvoicePaid to outlet InvoiceEvents_out
+        }
+        on command VoidInvoice {
+          send event InvoiceVoided to outlet InvoiceEvents_out
         }
       }
     }
-  }
 
-  // Adaptors for context integration
-  context Integration is {
-    adaptor CustomerToOrder is {
-      from context CustomerManagement to context OrderManagement is {
-        direction out
-      }
-    }
-
-    adaptor OrderToPayment is {
-      from context OrderManagement to context PaymentProcessing is {
-        direction out
-      }
-    }
-
-    adaptor OrderToShipping is {
-      from context OrderManagement to context ShippingManagement is {
-        direction out
-      }
-    }
-
-    adaptor OrderToInvoice is {
-      from context OrderManagement to context InvoiceManagement is {
-        direction out
-      }
-    }
-
-    adaptor PaymentToInvoice is {
-      from context PaymentProcessing to context InvoiceManagement is {
-        direction out
-      }
+    flow InvoiceEvents is {
+      inlet InvoiceEvents_in is event Invoice.InvoiceCreated
+      outlet InvoiceEvents_out is event Invoice.InvoiceCreated
     }
   }
 }

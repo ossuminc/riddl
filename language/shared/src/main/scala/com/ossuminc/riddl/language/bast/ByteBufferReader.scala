@@ -93,6 +93,20 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
     value
   }
 
+  /** Read a signed integer using zigzag decoding */
+  def readZigzagInt(): Int = {
+    val (value, bytesRead) = VarIntCodec.decodeZigzag(bytes, pos)
+    pos += bytesRead
+    value
+  }
+
+  /** Read a signed long using zigzag decoding */
+  def readZigzagLong(): Long = {
+    val (value, bytesRead) = VarIntCodec.decodeZigzagLong(bytes, pos)
+    pos += bytesRead
+    value
+  }
+
   /** Read a byte array with length prefix */
   def readBytes(): Array[Byte] = {
     val length = readVarInt()

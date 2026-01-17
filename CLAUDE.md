@@ -665,7 +665,7 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 ## Notes for Future Sessions
 
 1. **Always check sbt-ossuminc version** - API may have changed
-2. **BAST format is versioned** - Header includes major/minor version
+2. **BAST version is single integer** - `VERSION: Int = 1`, stays at 1 until schema finalized for users
 3. **Import stub exists but not implemented** - See ParsingContext.scala:81-89, TODO issue #72
 4. **npm packages are versioned by git** - Rebuild after commits to get new version
 5. **Workflow improvements made** - Check .github/workflows/ for latest patterns
@@ -676,3 +676,4 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 10. **Share code via utils/shared/** - For code used by both JVM and JS variants
 11. **BAST code lives in language module** - `language/shared/.../bast/`, NOT the standalone `bast/` directory
 12. **BAST readNode() vs readTypeExpression()** - Disjoint tag sets; see "Key Implementation Notes" for details on avoiding deserialization bugs
+13. **BAST Hugo documentation is outdated** - `doc/src/main/hugo/content/future-work/bast.md` needs complete rewrite

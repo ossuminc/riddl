@@ -13,14 +13,14 @@ package com.ossuminc.riddl.language.bast
   * ┌─────────────────────────────────────┐
   * │ Header (32 bytes)                   │
   * │  - Magic: "BAST" (4 bytes)          │
-  * │  - Version Major: u16               │
-  * │  - Version Minor: u16               │
+  * │  - Version: u32                     │
   * │  - Flags: u16                       │
+  * │  - Reserved1: u16                   │
   * │  - String Table Offset: u32         │
   * │  - Root Offset: u32                 │
   * │  - File Size: u32                   │
   * │  - Checksum: u32                    │
-  * │  - Reserved: (8 bytes)              │
+  * │  - Reserved2: (4 bytes)             │
   * ├─────────────────────────────────────┤
   * │ String Interning Table              │
   * │  - Count: varint                    │
@@ -39,29 +39,27 @@ package com.ossuminc.riddl.language.bast
   * - Values 128-16383: 2 bytes
   * - Etc.
   *
-  * Location encoding (delta-compressed):
-  * - Source ID: varint (string table index)
-  * - Line delta: varint (difference from previous line)
-  * - Column delta: varint (difference from previous column)
-  * - Offset delta: varint (difference from previous offset)
+  * Location encoding (zigzag delta-compressed):
+  * - Source path: string table index
+  * - Offset delta: zigzag varint (difference from previous offset)
+  * - EndOffset delta: zigzag varint (difference from previous endOffset)
   */
 object BinaryFormat {
 
   /** BAST file header structure */
   case class Header(
     magic: Array[Byte],           // Must equal MAGIC_BYTES
-    versionMajor: Short,
-    versionMinor: Short,
+    version: Int,                 // Single monotonically incrementing version
     flags: Short,
     stringTableOffset: Int,
     rootOffset: Int,
     fileSize: Int,
     checksum: Int,
-    reserved: Array[Byte]         // 8 bytes reserved for future use
+    reserved: Array[Byte]         // 4 bytes reserved for future use
   ) {
     def isValid: Boolean = {
       magic.sameElements(MAGIC_BYTES) &&
-      versionMajor == VERSION_MAJOR &&
+      version == VERSION &&
       fileSize > 0 &&
       fileSize <= MAX_BAST_SIZE
     }
@@ -81,14 +79,13 @@ object BinaryFormat {
     ): Header = {
       Header(
         magic = MAGIC_BYTES,
-        versionMajor = VERSION_MAJOR,
-        versionMinor = VERSION_MINOR,
+        version = VERSION,
         flags = flags,
         stringTableOffset = stringTableOffset,
         rootOffset = rootOffset,
         fileSize = fileSize,
         checksum = checksum,
-        reserved = new Array[Byte](8)
+        reserved = new Array[Byte](4)
       )
     }
   }
@@ -112,15 +109,15 @@ object BinaryFormat {
     */
   def serializeHeader(header: Header): Array[Byte] = {
     val writer = new ByteBufferWriter()
-    writer.writeRawBytes(header.magic)
-    writer.writeShort(header.versionMajor)
-    writer.writeShort(header.versionMinor)
-    writer.writeShort(header.flags)
-    writer.writeInt(header.stringTableOffset)
-    writer.writeInt(header.rootOffset)
-    writer.writeInt(header.fileSize)
-    writer.writeInt(header.checksum)
-    writer.writeRawBytes(header.reserved)
+    writer.writeRawBytes(header.magic)       // 4 bytes
+    writer.writeInt(header.version)           // 4 bytes
+    writer.writeShort(header.flags)           // 2 bytes
+    writer.writeShort(0)                      // 2 bytes reserved
+    writer.writeInt(header.stringTableOffset) // 4 bytes
+    writer.writeInt(header.rootOffset)        // 4 bytes
+    writer.writeInt(header.fileSize)          // 4 bytes
+    writer.writeInt(header.checksum)          // 4 bytes
+    writer.writeRawBytes(header.reserved)     // 4 bytes reserved
     writer.toByteArray
   }
 }

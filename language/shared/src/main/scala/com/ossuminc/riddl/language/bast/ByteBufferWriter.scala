@@ -68,6 +68,20 @@ class ByteBufferWriter {
     buffer ++= bytes
   }
 
+  /** Write a signed integer using zigzag encoding
+    * More efficient than adding large offsets for signed deltas
+    */
+  def writeZigzagInt(value: Int): Unit = {
+    val bytes = VarIntCodec.encodeZigzag(value)
+    buffer ++= bytes
+  }
+
+  /** Write a signed long using zigzag encoding */
+  def writeZigzagLong(value: Long): Unit = {
+    val bytes = VarIntCodec.encodeZigzagLong(value)
+    buffer ++= bytes
+  }
+
   /** Write a byte array with length prefix */
   def writeBytes(bytes: Array[Byte]): Unit = {
     writeVarInt(bytes.length)

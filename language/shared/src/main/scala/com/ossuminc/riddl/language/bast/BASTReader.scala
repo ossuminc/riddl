@@ -145,19 +145,18 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readHeader(): BinaryFormat.Header = {
     val magic = reader.readRawBytes(4)
-    val versionMajor = reader.readShort()
-    val versionMinor = reader.readShort()
+    val version = reader.readInt()
     val flags = reader.readShort()
+    reader.readShort() // reserved1
     val stringTableOffset = reader.readInt()
     val rootOffset = reader.readInt()
     val fileSize = reader.readInt()
     val checksum = reader.readInt()
-    val reserved = reader.readRawBytes(8)
+    val reserved = reader.readRawBytes(4)
 
     BinaryFormat.Header(
       magic = magic,
-      versionMajor = versionMajor,
-      versionMinor = versionMinor,
+      version = version,
       flags = flags,
       stringTableOffset = stringTableOffset,
       rootOffset = rootOffset,
@@ -1666,12 +1665,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== Helper Methods ==========
 
   private def readLocation(): At = {
+    // Optimized location format (BAST v1.1+):
+    // - Stores offset and endOffset directly (no line/col)
+    // - Uses zigzag encoding for signed deltas
     if lastLocation.isEmpty then
       // First location: read full data
       val originPath = readString()
       val offset = reader.readVarInt()
-      val line = reader.readVarInt()
-      val col = reader.readVarInt()
+      val endOffset = reader.readVarInt()
 
       // Reconstruct URL from origin path
       // If path starts with / it's absolute, otherwise treat as relative from cwd
@@ -1679,37 +1680,41 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
                 else if originPath.startsWith("/") then URL.fromFullPath(originPath)
                 else URL.fromCwdPath(originPath)
 
-      // Create BASTParserInput with synthetic line numbering, passing originPath for origin
+      // Create BASTParserInput with synthetic line numbering
       val source = BASTParserInput(url, originPath, 10000)
 
-      // Use createAt to get location with correct line/col
-      val loc = source.createAt(line, col)
+      // Create At directly from offsets
+      val loc = source.createAtFromOffsets(offset, endOffset)
       lastLocation = loc
       loc
     else
-      // Subsequent locations: read deltas
+      // Subsequent locations: read deltas with zigzag decoding
       val sourceFlag = reader.readU8()
-      val source = if sourceFlag == 1 then
+      if sourceFlag == 1 then
+        // New source file - read full location
         val originPath = readString()
         val url = if originPath.isEmpty then URL.empty
                   else if originPath.startsWith("/") then URL.fromFullPath(originPath)
                   else URL.fromCwdPath(originPath)
-        BASTParserInput(url, originPath, 10000)
+        val source = BASTParserInput(url, originPath, 10000)
+        val offset = reader.readVarInt()
+        val endOffset = reader.readVarInt()
+        val loc = source.createAtFromOffsets(offset, endOffset)
+        lastLocation = loc
+        loc
       else
-        lastLocation.source.asInstanceOf[BASTParserInput]
+        // Same source file - read deltas
+        val source = lastLocation.source.asInstanceOf[BASTParserInput]
+        val offsetDelta = reader.readZigzagInt()
+        val endOffsetDelta = reader.readZigzagInt()
 
-      val offsetDelta = reader.readVarInt() - 1000000
-      val lineDelta = reader.readVarInt() - 1000
-      val colDelta = reader.readVarInt() - 1000
+        val offset = lastLocation.offset + offsetDelta
+        val endOffset = lastLocation.endOffset + endOffsetDelta
 
-      val line = lastLocation.line + lineDelta
-      val col = lastLocation.col + colDelta
-
-
-      // Use createAt to get location with correct line/col
-      val loc = source.createAt(line, col)
-      lastLocation = loc
-      loc
+        val loc = source.createAtFromOffsets(offset, endOffset)
+        lastLocation = loc
+        loc
+      end if
   }
 
   private def readIdentifier(): Identifier = {

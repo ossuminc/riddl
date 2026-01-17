@@ -176,4 +176,61 @@ object VarIntCodec {
 
     size
   }
+
+  // ========== Zigzag Encoding for Signed Integers ==========
+  //
+  // Zigzag encoding maps signed integers to unsigned integers so that
+  // small magnitude numbers (positive or negative) use fewer bytes:
+  //   0 → 0, -1 → 1, 1 → 2, -2 → 3, 2 → 4, ...
+  //
+  // This is more efficient than adding a large offset (like +1000000)
+  // which wastes bytes for small deltas.
+
+  /** Encode a signed integer using zigzag encoding, then varint
+    *
+    * @param value Any signed integer (positive or negative)
+    * @return Array of bytes representing the zigzag-encoded varint
+    */
+  def encodeZigzag(value: Int): Array[Byte] = {
+    // Zigzag encode: (n << 1) ^ (n >> 31)
+    val zigzag = (value << 1) ^ (value >> 31)
+    encode(zigzag)
+  }
+
+  /** Decode a zigzag-encoded varint from a byte array
+    *
+    * @param bytes The byte array containing the zigzag-encoded varint
+    * @param offset Starting offset in the array
+    * @return Tuple of (decoded signed value, number of bytes consumed)
+    */
+  def decodeZigzag(bytes: Array[Byte], offset: Int): (Int, Int) = {
+    val (unsigned, bytesRead) = decode(bytes, offset)
+    // Zigzag decode: (n >>> 1) ^ -(n & 1)
+    val signed = (unsigned >>> 1) ^ -(unsigned & 1)
+    (signed, bytesRead)
+  }
+
+  /** Encode a signed long using zigzag encoding, then varint
+    *
+    * @param value Any signed long (positive or negative)
+    * @return Array of bytes representing the zigzag-encoded varint
+    */
+  def encodeZigzagLong(value: Long): Array[Byte] = {
+    // Zigzag encode: (n << 1) ^ (n >> 63)
+    val zigzag = (value << 1) ^ (value >> 63)
+    encodeLong(zigzag)
+  }
+
+  /** Decode a zigzag-encoded long varint from a byte array
+    *
+    * @param bytes The byte array containing the zigzag-encoded varint
+    * @param offset Starting offset in the array
+    * @return Tuple of (decoded signed value, number of bytes consumed)
+    */
+  def decodeZigzagLong(bytes: Array[Byte], offset: Int): (Long, Int) = {
+    val (unsigned, bytesRead) = decodeLong(bytes, offset)
+    // Zigzag decode: (n >>> 1) ^ -(n & 1)
+    val signed = (unsigned >>> 1) ^ -(unsigned & 1)
+    (signed, bytesRead)
+  }
 }

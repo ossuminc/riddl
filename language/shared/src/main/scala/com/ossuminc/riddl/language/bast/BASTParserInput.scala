@@ -67,10 +67,28 @@ private[bast] class BASTParserInput(
     *
     * Calculates synthetic offset: (line-1) * CHARS_PER_LINE + (col-1)
     * This offset will produce correct line/col when At.line and At.col are called.
+    *
+    * @deprecated Use createAtFromOffsets instead - line/col are no longer stored in BAST
     */
   def createAt(line: Int, col: Int): At = {
     val offset = (line - 1) * CHARS_PER_LINE + (col - 1)
     At(this, offset, offset)
+  }
+
+  /** Create an At location directly from offset values.
+    *
+    * This is the preferred method for BAST v1.1+ where we store offsets directly
+    * instead of line/col. The At.line and At.col properties will compute
+    * approximate values based on the synthetic line scheme (10000 chars per line).
+    *
+    * @param offset The start offset in the source
+    * @param endOffset The end offset in the source
+    * @return An At location with the given offsets
+    */
+  def createAtFromOffsets(offset: Int, endOffset: Int): At = {
+    // Ensure endOffset >= offset to satisfy At's requirement
+    val safeEndOffset = if endOffset < offset then offset else endOffset
+    At(this, offset, safeEndOffset)
   }
 }
 

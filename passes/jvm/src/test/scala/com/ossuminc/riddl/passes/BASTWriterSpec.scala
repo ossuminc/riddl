@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.{Root, Nebula}
-import com.ossuminc.riddl.language.bast.{ByteBufferReader, MAGIC_BYTES, VERSION_MAJOR, VERSION_MINOR, HEADER_SIZE, Flags}
+import com.ossuminc.riddl.language.bast.{ByteBufferReader, MAGIC_BYTES, VERSION, HEADER_SIZE, Flags}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, BASTWriterPass, BASTOutput}
 import com.ossuminc.riddl.passes.AbstractRunPassTest
@@ -83,15 +83,14 @@ class BASTWriterSpec extends AbstractRunPassTest {
             val magic = reader.readRawBytes(4)
             magic must equal (MAGIC_BYTES)
 
-            // Version
-            val majorVersion = reader.readShort()
-            val minorVersion = reader.readShort()
-            majorVersion must equal (VERSION_MAJOR)
-            minorVersion must equal (VERSION_MINOR)
+            // Version (single 32-bit integer)
+            val version = reader.readInt()
+            version must equal (VERSION)
 
             // Flags
             val flags = reader.readShort()
             (flags & Flags.WITH_LOCATIONS) must not equal (0)
+            reader.readShort() // reserved
 
             // Offsets
             val stringTableOffset = reader.readInt()
@@ -102,7 +101,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
             rootOffset must be > stringTableOffset
             fileSize must equal (bytes.length)
 
-            info(s"Header validated: v$majorVersion.$minorVersion, ${bytes.length} bytes")
+            info(s"Header validated: v$version, ${bytes.length} bytes")
             succeed
 
           case Left(messages) =>
@@ -256,9 +255,9 @@ class BASTWriterSpec extends AbstractRunPassTest {
 
     // Parse header
     reader.skip(4) // magic
-    val majorVersion = reader.readShort()
-    val minorVersion = reader.readShort()
+    val version = reader.readInt()
     val flags = reader.readShort()
+    reader.readShort() // reserved
     val stringTableOffset = reader.readInt()
     val rootOffset = reader.readInt()
     val fileSize = reader.readInt()
@@ -271,6 +270,6 @@ class BASTWriterSpec extends AbstractRunPassTest {
     fileSize must equal (bytes.length)
 
     // Validate version
-    majorVersion must equal (VERSION_MAJOR)
+    version must equal (VERSION)
   }
 }
