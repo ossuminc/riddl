@@ -33,6 +33,18 @@ jobs:
       - name: Coursier Caching
         uses: coursier/cache-action@v6
 
+      - name: Configure sbt GitHub Packages credentials
+        run: |
+          mkdir -p ~/.sbt/1.0
+          cat > ~/.sbt/1.0/github.sbt << 'EOF'
+          credentials += Credentials(
+            "GitHub Package Registry",
+            "maven.pkg.github.com",
+            "x-access-token",
+            sys.env.getOrElse("GITHUB_TOKEN", "")
+          )
+          EOF
+
       - name: Coverage For JVM projects only
         run: |
           sbt clean coverage \
