@@ -71,8 +71,7 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.push(root)
         root.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        // Write metadata count for Root (always 0)
-        bastWriter.writeMetadataCount(Contents.empty[MetaData]())
+        // Root has no metadata - nothing to write (flag was false)
 
       // SagaStep has TWO Contents fields: doStatements and undoStatements
       // Must write count-items, count-items to match reader expectations
@@ -85,8 +84,8 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         // Write undoStatements count then items
         bastWriter.writeContents(ss.undoStatements)
         ss.undoStatements.toSeq.foreach { value => traverse(value, parents) }
-        // Write metadata
-        bastWriter.writeMetadataCount(ss.metadata)
+        // Phase 7: Only write metadata if non-empty (flag was set)
+        if ss.metadata.nonEmpty then bastWriter.writeMetadataCount(ss.metadata)
 
       // WhenStatement has a thenStatements Contents field that must be traversed
       case ws: WhenStatement =>
@@ -112,7 +111,8 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.push(h)
         h.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(h.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if h.metadata.nonEmpty then bastWriter.writeMetadataCount(h.metadata)
 
       // OnClauses extend Branch[Statements] but NOT WithMetaData, so handle separately
       // They have metadata fields that need to be written
@@ -121,34 +121,39 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.push(oc)
         oc.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(oc.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if oc.metadata.nonEmpty then bastWriter.writeMetadataCount(oc.metadata)
 
       case oc: OnTerminationClause =>
         process(oc, parents)
         parents.push(oc)
         oc.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(oc.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if oc.metadata.nonEmpty then bastWriter.writeMetadataCount(oc.metadata)
 
       case oc: OnMessageClause =>
         process(oc, parents)
         parents.push(oc)
         oc.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(oc.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if oc.metadata.nonEmpty then bastWriter.writeMetadataCount(oc.metadata)
 
       case oc: OnOtherClause =>
         process(oc, parents)
         parents.push(oc)
         oc.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(oc.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if oc.metadata.nonEmpty then bastWriter.writeMetadataCount(oc.metadata)
 
       // Type extends Branch[TypeContents] but NOT WithMetaData
       // Its contents are computed from typEx, not stored, so no traversal needed
       case t: Type =>
         process(t, parents)
-        bastWriter.writeMetadataCount(t.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if t.metadata.nonEmpty then bastWriter.writeMetadataCount(t.metadata)
 
       // UseCase extends Branch[UseCaseContents] but NOT WithMetaData
       case uc: UseCase =>
@@ -156,7 +161,8 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.push(uc)
         uc.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(uc.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if uc.metadata.nonEmpty then bastWriter.writeMetadataCount(uc.metadata)
 
       // Group extends Branch[OccursInGroup] but NOT WithMetaData
       case g: Group =>
@@ -164,7 +170,8 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.push(g)
         g.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(g.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if g.metadata.nonEmpty then bastWriter.writeMetadataCount(g.metadata)
 
       // Output extends Branch[OccursInOutput] but NOT WithMetaData
       case o: Output =>
@@ -172,7 +179,8 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.push(o)
         o.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(o.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if o.metadata.nonEmpty then bastWriter.writeMetadataCount(o.metadata)
 
       // Input extends Branch[OccursInInput] but NOT WithMetaData
       case i: Input =>
@@ -180,21 +188,23 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.push(i)
         i.contents.foreach { value => traverse(value, parents) }
         parents.pop()
-        bastWriter.writeMetadataCount(i.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if i.metadata.nonEmpty then bastWriter.writeMetadataCount(i.metadata)
 
       case branch: Branch[?] with WithMetaData =>
         process(branch, parents) // Writes node data + contents count
         parents.push(branch)
         branch.contents.foreach { value => traverse(value, parents) } // Write contents items
         parents.pop()
-        // Now write metadata count and items AFTER contents items
-        bastWriter.writeMetadataCount(branch.metadata)
+        // Phase 7: Only write metadata if non-empty (flag was set in writer)
+        if branch.metadata.nonEmpty then bastWriter.writeMetadataCount(branch.metadata)
 
       // Non-Branch leaf definitions with metadata (Author, User, Term, State, Invariant, etc.)
       // These need their metadata written but have no contents to traverse
       case wm: WithMetaData =>
         process(wm, parents)
-        bastWriter.writeMetadataCount(wm.metadata)
+        // Phase 7: Only write metadata if non-empty
+        if wm.metadata.nonEmpty then bastWriter.writeMetadataCount(wm.metadata)
 
       case _ =>
         super.traverse(definition, parents) // Use default traversal for non-branches

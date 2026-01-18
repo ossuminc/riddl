@@ -24,7 +24,15 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
       case Right(root: Root) =>
         val passInput = PassInput(root)
         val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
-        val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+
+        // Check for pass errors first
+        if writerResult.messages.nonEmpty then
+          fail(s"BAST write failed for '$name': ${writerResult.messages.format}")
+        end if
+
+        val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).getOrElse {
+          fail(s"No BAST output for '$name' - pass may have thrown an exception")
+        }
         val bastBytes = output.bytes
 
         BASTReader.read(bastBytes) match {

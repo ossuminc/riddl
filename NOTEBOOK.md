@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: January 17, 2026
+**Last Updated**: January 18, 2026
 
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. Recent work has focused on BAST (Binary AST) serialization for fast module imports.
 
@@ -86,33 +86,39 @@ This enables BAST to work like Python's `.pyc` files - automatic loading from ca
 **Commands Module** (`commands/jvm/.../commands/`):
 - `BastGenCommand.scala` - `riddlc bast-gen` command
 
-### Performance Results (January 17, 2026)
+### Performance Results (January 18, 2026)
 
-**BAST Format v1** - Latest optimizations include FILE_CHANGE_MARKER (Phase 7):
+**BAST Format v1** - Latest optimizations include all Phase 7 features:
 
-| File | Source | BAST (Phase 6) | BAST (Phase 7) | Size Change |
-|------|--------|----------------|----------------|-------------|
-| small.riddl | 2KB | 2.4KB (117%) | 2.2KB (108%) | **-9%** |
-| medium.riddl | 11KB | 10KB (88%) | 8.6KB (75%) | **-15%** |
-| large.riddl | 43KB | 36.6KB (85%) | 31KB (72%) | **-15%** |
+| File | Source | BAST (Phase 6) | BAST (Phase 7a) | BAST (Phase 7b) |
+|------|--------|----------------|-----------------|-----------------|
+| small.riddl | 2KB | 2.4KB (117%) | 2.2KB (108%) | 2.1KB (**104%**) |
+| medium.riddl | 11KB | 10KB (88%) | 8.6KB (75%) | 8.1KB (**71%**) |
+| large.riddl | 43KB | 36.6KB (85%) | 31KB (72%) | 29KB (**67.5%**) |
 
-**Key achievement**: Phase 7 FILE_CHANGE_MARKER optimization achieved **~15% additional reduction**, bringing large files to **72% of source size**!
+**Phase 7 Optimizations Applied:**
+- **Phase 7a**: FILE_CHANGE_MARKER (tag 0) - wrote source path only when it changes (~15% savings)
+- **Phase 7b**: Metadata flag + predefined types (Jan 18) - additional ~5% savings:
+  - Used high bit of tag byte for metadata presence (skips empty metadata writes)
+  - Added 11 predefined type tags (TYPE_INTEGER, TYPE_STRING_DEFAULT, etc.)
+
+**Key achievement**: Large files now at **67.5% of source size** (was 72% after 7a, 85% before)!
 
 **Speed benchmarks** (50 iterations each):
 
 | File | Nodes | Cold Speed | Warm Speed |
 |------|-------|------------|------------|
-| small.riddl | 60 | **9.7x** | 3.6x |
-| medium.riddl | 335 | **14.4x** | 12.9x |
-| large.riddl | 1,354 | **4.0x** | 6.2x |
-| **Average** | | **9.4x** | **7.6x** |
+| small.riddl | 60 | **7.8x** | 3.1x |
+| medium.riddl | 331 | **10.3x** | 10.4x |
+| large.riddl | 1,296 | **6.5x** | 9.0x |
+| **Average** | | **8.2x** | **7.5x** |
 
 **Test files** (`testkit/jvm/src/test/resources/performance/`):
-- `small.riddl` - 73 lines, 2 contexts (user management)
-- `medium.riddl` - 342 lines, 6 contexts (e-commerce)
-- `large.riddl` - 1313 lines, 10 contexts (enterprise platform)
+- `small.riddl` - ~60 lines, 2 contexts (user management)
+- `medium.riddl` - ~370 lines, 7 contexts (e-commerce)
+- `large.riddl` - ~1450 lines, 10 contexts (enterprise platform)
 
-**Conclusion**: BAST v1.1 achieves **6-12x speedup** with files **smaller than source**. Cold runs show higher speedup due to JVM warmup effects on the parser.
+**Conclusion**: BAST v1 achieves **6-10x speedup** with files **67-71% of source size** for non-trivial inputs. Small files have minimal overhead due to fixed header/string table costs.
 
 ### Cross-Platform Status (January 16, 2026)
 
@@ -128,18 +134,99 @@ JVM/Native only (JS returns error message since browser can't do local file I/O)
 ### Next Steps
 
 1. ~~Consider larger test corpus for comprehensive benchmarks~~ ✅ Done - created small/medium/large.riddl
-2. Rewrite `doc/src/main/hugo/content/future-work/bast.md` - the existing document is outdated
-3. Finalize BAST schema before release to users (TODO in package.scala)
-4. **Phase 7 Optimizations** (see `/Users/reid/.claude/plans/bast-phase7-optimizations.md`):
+2. Finalize BAST schema before release to users (TODO in package.scala)
+3. **Phase 7 Optimizations** ✅ **ALL COMPLETE** (January 18, 2026):
    - ✅ **Bug Fix**: Fixed nodes with `At.empty` - ULIDAttachment, BASTReader fallbacks now use valid locations
-   - ✅ **Source file change markers**: FILE_CHANGE_MARKER (tag 0) written only when source changes (**15% savings achieved**)
-   - ⏳ **Empty metadata flag bit** (optional): Use tag high bit for metadata presence (~3% additional savings) - requires touching 60+ methods
-   - ⏳ **Predefined type expressions** (optional): Single-byte encoding for common types (~2-5% additional savings)
-   - **Current result**: Large files at **72% of source** (exceeded original 70-75% target)
+   - ✅ **Source file change markers**: FILE_CHANGE_MARKER (tag 0) written only when source changes (**15% savings**)
+   - ✅ **Empty metadata flag bit**: Use tag high bit (0x80) for metadata presence, fixed signed byte overflow bug (**~2% savings**)
+   - ✅ **Predefined type expressions**: 11 new tags (TYPE_INTEGER, TYPE_STRING_DEFAULT, TYPE_UUID, etc.) (**~3% savings**)
+   - **Final result**: Large files at **67.5% of source** (exceeded 70-75% target by significant margin!)
 
 ### Open Questions
 
 - ~~How should BAST versioning handle breaking format changes?~~ **Resolved**: Single monotonically incrementing 32-bit integer, stays at 1 during development, increment only after schema finalization for users
+
+---
+
+## Planned: AsciiDoc Generation Module
+
+### Overview
+
+Create a new pass or module that converts the RIDDL AST into AsciiDoc format, enabling generation of PDFs, static websites, and other standard documentation formats via Maven tooling.
+
+### Motivation
+
+The existing Hugo-based documentation generation (`HugoPass`) produces Markdown for Hugo static sites. While effective, this approach:
+- Requires Hugo toolchain knowledge
+- Limited to web output
+- Custom theme dependencies
+
+AsciiDoc with Maven provides:
+- **Multiple output formats**: PDF, HTML, EPUB, DocBook, man pages
+- **Industry-standard tooling**: Maven/Gradle integration, CI/CD friendly
+- **Rich formatting**: Tables, admonitions, cross-references, includes
+- **Professional PDFs**: Via Asciidoctor PDF with customizable themes
+- **Single source**: One AsciiDoc source generates all formats
+
+### Proposed Architecture
+
+```
+passes/
+  └── AsciiDocPass.scala      # Main pass converting AST → AsciiDoc
+
+asciidoc/                     # New module (or part of passes)
+  ├── AsciiDocWriter.scala    # AsciiDoc syntax generation
+  ├── AsciiDocTheme.scala     # Theming/styling configuration
+  ├── MavenProjectGenerator.scala  # Generate pom.xml for builds
+  └── templates/              # AsciiDoc templates per definition type
+```
+
+### Key Features
+
+1. **AST → AsciiDoc Conversion**
+   - Domain/Context/Entity documentation pages
+   - Type definitions with cross-references
+   - Handler/Saga/Workflow documentation
+   - Auto-generated diagrams (PlantUML/Mermaid embedded)
+
+2. **Maven Integration**
+   - Generate `pom.xml` with Asciidoctor Maven Plugin
+   - Configure PDF, HTML5, DocBook backends
+   - Support for custom themes/stylesheets
+
+3. **Output Formats** (via Maven build)
+   - HTML5 static site
+   - PDF documentation
+   - EPUB for e-readers
+   - DocBook XML for further processing
+
+4. **Cross-Reference Support**
+   - Inter-document links
+   - Glossary generation
+   - Index generation
+
+### Implementation Phases
+
+- [ ] **Phase 1**: Core AsciiDocWriter with basic AST node rendering
+- [ ] **Phase 2**: AsciiDocPass extending HierarchyPass
+- [ ] **Phase 3**: Maven project generation (pom.xml templates)
+- [ ] **Phase 4**: Theme/styling system
+- [ ] **Phase 5**: `riddlc asciidoc` command integration
+- [ ] **Phase 6**: Documentation and examples
+
+### Open Questions
+
+- Should this replace or complement Hugo support?
+- What level of diagram integration (PlantUML, Mermaid, Graphviz)?
+- Support for custom AsciiDoc templates per organization?
+- Integration with existing `diagrams` module?
+
+### References
+
+- [Asciidoctor](https://asciidoctor.org/)
+- [Asciidoctor Maven Plugin](https://docs.asciidoctor.org/maven-tools/latest/)
+- [Asciidoctor PDF](https://docs.asciidoctor.org/pdf-converter/latest/)
+- Existing Hugo pass: `passes/jvm/src/main/scala/com/ossuminc/riddl/passes/hugo/`
 
 ---
 
@@ -335,6 +422,14 @@ to allow JS linker to succeed while maintaining full functionality on JVM/Native
 - Reader's `readContentsDeferred()` called `readNode()`
 - `readNode()` only handles NODE_* tags, not TYPE_* tags
 - This caused byte misinterpretation leading to invalid string table indices
+
+---
+
+## Deferred Tasks
+
+Tasks intentionally deferred to the end of the current work list:
+
+1. Rewrite `doc/src/main/hugo/content/future-work/bast.md` - the existing BAST documentation is outdated and needs a complete rewrite reflecting the current implementation
 
 ---
 

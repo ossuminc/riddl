@@ -50,6 +50,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private var currentSource: RiddlParserInput = RiddlParserInput.empty
   private val messages = ArrayBuffer[Messages.Message]()
 
+  /** Phase 7 optimization: Track whether current node has metadata
+    *
+    * Set by readNode() before dispatching to specific node reader.
+    * Node readers check this to know if they should read metadata.
+    */
+  private var currentNodeHasMetadata: Boolean = false
+
   // AST context stack for better error messages
   // Tracks what we're currently deserializing (e.g., "Domain(MyDomain) -> Context(MyContext) -> Entity")
   private val contextStack = ArrayBuffer[String]()
@@ -240,6 +247,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     case NODE_IDENTIFIER => "Identifier"
     case NODE_PATH_IDENTIFIER => "PathIdentifier"
     case NODE_LITERAL_STRING => "LiteralString"
+    case NODE_STATEMENT => "Statement"
     case NODE_AUTHOR => "Author"
     case NODE_TERM => "Term"
     case NODE_COMMAND_REF => "CommandRef"
@@ -261,10 +269,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   /** Read a RiddlValue node based on its type tag */
   private def readNode(): RiddlValue = {
     val posBeforeNode = reader.position
-    var nodeType = reader.readU8()
+    var tagByte = reader.readU8()
 
     // Check for FILE_CHANGE_MARKER - indicates source file transition
-    if nodeType == FILE_CHANGE_MARKER then
+    if tagByte == FILE_CHANGE_MARKER then
       val newPath = readString()
       currentSourcePath = newPath
       // Reconstruct URL and create BASTParserInput
@@ -275,8 +283,12 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       val originStr = if newPath.isEmpty then "empty" else newPath
       currentSource = BASTParserInput(url, originStr, 10000)
       // Now read the actual node tag
-      nodeType = reader.readU8()
+      tagByte = reader.readU8()
     end if
+
+    // Phase 7 optimization: Extract metadata flag from high bit
+    currentNodeHasMetadata = (tagByte & HAS_METADATA_FLAG) != 0
+    val nodeType = (tagByte & 0x7F).toByte
 
     val nodeName = nodeTypeName(nodeType)
     pushContext(nodeName)
@@ -307,7 +319,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         case NODE_SAGA => readSagaNode()
 
         // Handler components
-        case NODE_HANDLER => readHandlerOrStatement()
+        case NODE_HANDLER => readHandlerNode()
+        case NODE_STATEMENT => readStatementNode()
         case NODE_SAGA_STEP => readSagaStepNode()
         case NODE_STATE => readStateNode()
         case NODE_INVARIANT => readInvariantNode()
@@ -393,33 +406,41 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readDomainNode(): Domain = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents (children overwrite flag)
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInDomain]().asInstanceOf[Contents[DomainContents]]
-    val metadata = readMetadataDeferred() // Returns empty now
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
+    val metadata = readMetadataDeferred()
     Domain(loc, id, contents, metadata)
   }
 
   private def readContextNode(): Context = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Context(loc, id, contents, metadata)
   }
 
   private def readEntityNode(): Entity = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Entity(loc, id, contents, metadata)
   }
 
   private def readModuleNode(): Module = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[Domain | Author | Comment]().asInstanceOf[Contents[ModuleContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Module(loc, id, contents, metadata)
   }
@@ -482,6 +503,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== Processor Definitions ==========
 
   private def readAdaptorNode(): Adaptor = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val directionTag = reader.readU8()
@@ -492,42 +514,51 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     }
     val referent = readContextRef()
     val contents = readContentsDeferred[OccursInProcessor]().asInstanceOf[Contents[AdaptorContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Adaptor(loc, id, direction, referent, contents, metadata)
   }
 
   private def readFunctionNode(): Function = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val input = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val output = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val contents = readContentsDeferred[OccursInVitalDefinition | Statement | Function]().asInstanceOf[Contents[FunctionContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Function(loc, id, input, output, contents, metadata)
   }
 
   private def readSagaNode(): Saga = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val input = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val output = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val contents = readContentsDeferred[OccursInVitalDefinition | SagaStep]().asInstanceOf[Contents[SagaContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Saga(loc, id, input, output, contents, metadata)
   }
 
   private def readProjectorNode(): Projector = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]().asInstanceOf[Contents[ProjectorContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Projector(loc, id, contents, metadata)
   }
 
   private def readRepositoryNode(): Repository = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Repository(loc, id, contents, metadata)
   }
@@ -570,6 +601,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readStreamletNode(): Streamlet = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val shapeTag = reader.readU8()
@@ -583,6 +615,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case _ => Void(loc)
     }
     val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]().asInstanceOf[Contents[StreamletContents]]
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Streamlet(loc, id, shape, contents, metadata)
   }
@@ -590,6 +623,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== Epic Definitions ==========
 
   private def readEpicOrUseCaseNode(): RiddlValue = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
 
@@ -601,12 +635,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     if nextTag == NODE_USER then
       val userStory = readUserStoryNode()
       val contents = readContentsDeferred[OccursInVitalDefinition | ShownBy | UseCase]().asInstanceOf[Contents[EpicContents]]
+      currentNodeHasMetadata = hasMetadata  // Restore for metadata read
       val metadata = readMetadataDeferred()
       Epic(loc, id, userStory, contents, metadata)
     else
       // UseCase
       val userStory = readUserStoryNode()
       val contents = readContentsDeferred[UseCaseContents]()
+      currentNodeHasMetadata = hasMetadata  // Restore for metadata read
       val metadata = readMetadataDeferred()
       UseCase(loc, id, userStory, contents, metadata)
     end if
@@ -614,29 +650,22 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   // ========== Handler Components ==========
 
-  // Marker value used by writer to distinguish statements from handlers
-  // Using 255 (0xFF) as it's distinct from valid location/string data
-  private val STATEMENT_MARKER: Int = 255
+  /** Read a Handler node (Phase 7: handlers have dedicated NODE_HANDLER tag) */
+  private def readHandlerNode(): Handler = {
+    val hasMetadata = currentNodeHasMetadata  // Save before contents
+    val loc = readLocation()
+    val id = readIdentifierInline()  // Inline - no tag
+    val contents = readContentsDeferred[HandlerContents]()
+    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
+    val metadata = readMetadataDeferred()
+    Handler(loc, id, contents, metadata)
+  }
 
-  private def readHandlerOrStatement(): RiddlValue = {
-    // After NODE_HANDLER tag is consumed, check the first byte:
-    // - For statements: first byte is STATEMENT_MARKER (0xFF), then stmtType, then location
-    // - For handlers: first byte is start of location data (no marker)
-    val firstByte = reader.peekU8()
-
-    if firstByte == STATEMENT_MARKER then
-      reader.readU8() // Consume marker
-      val stmtType = reader.readU8()
-      val loc = readLocation()
-      readStatement(loc, stmtType)
-    else
-      // Handler: location, identifier, contents, metadata
-      val loc = readLocation()
-      val id = readIdentifierInline()  // Inline - no tag
-      val contents = readContentsDeferred[HandlerContents]()
-      val metadata = readMetadataDeferred()
-      Handler(loc, id, contents, metadata)
-    end if
+  /** Read a Statement node (Phase 7: statements have dedicated NODE_STATEMENT tag) */
+  private def readStatementNode(): Statement = {
+    val stmtType = reader.readU8()
+    val loc = readLocation()
+    readStatement(loc, stmtType)
   }
 
   private def readSagaStepNode(): SagaStep = {
@@ -1388,6 +1417,51 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           val loc = readLocation()
           Number(loc)
 
+      // Phase 7 optimization: Predefined type tags
+      case TYPE_INTEGER =>
+        val loc = readLocation()
+        Integer(loc)
+
+      case TYPE_NATURAL =>
+        val loc = readLocation()
+        Natural(loc)
+
+      case TYPE_WHOLE =>
+        val loc = readLocation()
+        Whole(loc)
+
+      case TYPE_REAL =>
+        val loc = readLocation()
+        Real(loc)
+
+      case TYPE_STRING_DEFAULT =>
+        val loc = readLocation()
+        String_(loc, None, None)
+
+      case TYPE_UUID =>
+        val loc = readLocation()
+        UUID(loc)
+
+      case TYPE_DATE =>
+        val loc = readLocation()
+        Date(loc)
+
+      case TYPE_TIME =>
+        val loc = readLocation()
+        Time(loc)
+
+      case TYPE_DATETIME =>
+        val loc = readLocation()
+        DateTime(loc)
+
+      case TYPE_TIMESTAMP =>
+        val loc = readLocation()
+        TimeStamp(loc)
+
+      case TYPE_DURATION =>
+        val loc = readLocation()
+        Duration(loc)
+
       case _ =>
         addError(s"Unknown type expression tag: $typeTag at position ${reader.position}")
         // Use lastLocation for best-effort location on error
@@ -1867,6 +1941,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readMetadataDeferred(): Contents[MetaData] = {
+    // Phase 7 optimization: Only read metadata if flag was set
+    if !currentNodeHasMetadata then
+      return Contents.empty[MetaData]()
+    end if
+
     val countPos = reader.position
     val count = reader.readVarInt()
     pushContext(s"metadata[$count]")

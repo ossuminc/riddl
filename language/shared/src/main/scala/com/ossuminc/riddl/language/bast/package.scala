@@ -143,6 +143,36 @@ package object bast {
   val NODE_PATH_IDENTIFIER: Byte = 66
   val NODE_LITERAL_STRING: Byte = 67
 
+  // Statement node (68) - Phase 7: dedicated tag for statements
+  // Distinguishes statements from handlers without needing a peek-ahead marker
+  val NODE_STATEMENT: Byte = 68
+
+  // Predefined type expressions (69-79) - Phase 7 optimization
+  // These are common types with no parameters that save the subtype byte
+  val TYPE_INTEGER: Byte = 69      // Saves: TYPE_NUMBER + subtype(1)
+  val TYPE_NATURAL: Byte = 70      // Saves: TYPE_NUMBER + subtype(3)
+  val TYPE_WHOLE: Byte = 71        // Saves: TYPE_NUMBER + subtype(2)
+  val TYPE_REAL: Byte = 72         // Saves: TYPE_NUMBER + subtype(11)
+  val TYPE_STRING_DEFAULT: Byte = 73 // Saves: TYPE_STRING + subtype(0) + 2 option bytes
+  val TYPE_UUID: Byte = 74         // Saves: TYPE_UNIQUE_ID + subtype(1)
+  val TYPE_DATE: Byte = 75         // Saves: TYPE_NUMBER + subtype(30)
+  val TYPE_TIME: Byte = 76         // Saves: TYPE_NUMBER + subtype(31)
+  val TYPE_DATETIME: Byte = 77     // Saves: TYPE_NUMBER + subtype(32)
+  val TYPE_TIMESTAMP: Byte = 78    // Saves: TYPE_NUMBER + subtype(35)
+  val TYPE_DURATION: Byte = 79     // Saves: TYPE_NUMBER + subtype(36)
+
+  /** Flag bit indicating metadata presence in node tag
+    *
+    * Phase 7 optimization: Use high bit (0x80) of tag byte to indicate
+    * whether a node has metadata. If set, metadata count follows;
+    * if not set, no metadata is present (saves 1 byte per empty metadata).
+    *
+    * Tag encoding:
+    * - Bits 0-6: Node type (0-127, we only use 0-67)
+    * - Bit 7: Has metadata flag (1 = has metadata, 0 = no metadata)
+    */
+  val HAS_METADATA_FLAG: Byte = 0x80.toByte
+
   /** Flags for header */
   object Flags {
     val COMPRESSED: Short = 0x0001       // Reserved for future compression

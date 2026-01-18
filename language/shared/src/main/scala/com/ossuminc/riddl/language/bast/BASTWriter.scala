@@ -36,6 +36,22 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   /** Get the total number of nodes written */
   def getNodeCount: Int = nodeCount
 
+  /** Write a node tag with optional metadata flag
+    *
+    * Phase 7 optimization: Uses high bit of tag to indicate metadata presence.
+    * If hasMetadata is true, sets bit 7 (0x80) to indicate metadata follows.
+    *
+    * @param tag The base node type tag (0-127)
+    * @param hasMetadata Whether this node has non-empty metadata
+    */
+  def writeNodeTag(tag: Byte, hasMetadata: Boolean): Unit = {
+    if hasMetadata then
+      // Use & 0xFF to treat bytes as unsigned, avoiding negative values
+      writer.writeU8((tag & 0xFF) | 0x80)
+    else
+      writer.writeU8(tag & 0xFF)
+  }
+
   /** Reset location tracking (called at start of serialization) */
   def resetLocationTracking(): Unit = {
     lastLocation = At.empty
@@ -318,43 +334,43 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Definition Serialization ==========
 
   def writeDomain(d: Domain): Unit = {
-    writer.writeU8(NODE_DOMAIN)
+    writeNodeTag(NODE_DOMAIN, d.metadata.nonEmpty)
     writeLocation(d.loc)
     writeIdentifierInline(d.id)  // Inline - no tag needed
     writeContents(d.contents)
-    // Metadata will be written by traverse() after contents items
+    // Metadata written by traverse() if flag is set
   }
 
   def writeContext(c: Context): Unit = {
-    writer.writeU8(NODE_CONTEXT)
+    writeNodeTag(NODE_CONTEXT, c.metadata.nonEmpty)
     writeLocation(c.loc)
     writeIdentifierInline(c.id)  // Inline - no tag needed
     writeContents(c.contents)
   }
 
   def writeEntity(e: Entity): Unit = {
-    writer.writeU8(NODE_ENTITY)
+    writeNodeTag(NODE_ENTITY, e.metadata.nonEmpty)
     writeLocation(e.loc)
     writeIdentifierInline(e.id)  // Inline - no tag needed
     writeContents(e.contents)
   }
 
   def writeModule(m: Module): Unit = {
-    writer.writeU8(NODE_MODULE)
+    writeNodeTag(NODE_MODULE, m.metadata.nonEmpty)
     writeLocation(m.loc)
     writeIdentifierInline(m.id)  // Inline - no tag needed
     writeContents(m.contents)
   }
 
   def writeType(t: Type): Unit = {
-    writer.writeU8(NODE_TYPE)
+    writeNodeTag(NODE_TYPE, t.metadata.nonEmpty)
     writeLocation(t.loc)
     writeIdentifierInline(t.id)  // Inline - no tag needed
     writeTypeExpression(t.typEx)
   }
 
   def writeFunction(f: Function): Unit = {
-    writer.writeU8(NODE_FUNCTION)
+    writeNodeTag(NODE_FUNCTION, f.metadata.nonEmpty)
     writeLocation(f.loc)
     writeIdentifierInline(f.id)  // Inline - no tag needed
     writeOption(f.input)((agg: Aggregation) => writeTypeExpression(agg))
@@ -363,7 +379,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeAdaptor(a: Adaptor): Unit = {
-    writer.writeU8(NODE_ADAPTOR)
+    writeNodeTag(NODE_ADAPTOR, a.metadata.nonEmpty)
     writeLocation(a.loc)
     writeIdentifierInline(a.id)  // Inline - no tag needed
     a.direction match {
@@ -375,7 +391,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeSaga(s: Saga): Unit = {
-    writer.writeU8(NODE_SAGA)
+    writeNodeTag(NODE_SAGA, s.metadata.nonEmpty)
     writeLocation(s.loc)
     writeIdentifierInline(s.id)  // Inline - no tag needed
     writeOption(s.input)((agg: Aggregation) => writeTypeExpression(agg))
@@ -384,21 +400,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeProjector(p: Projector): Unit = {
-    writer.writeU8(NODE_PROJECTOR)
+    writeNodeTag(NODE_PROJECTOR, p.metadata.nonEmpty)
     writeLocation(p.loc)
     writeIdentifierInline(p.id)  // Inline - no tag needed
     writeContents(p.contents)
   }
 
   def writeRepository(r: Repository): Unit = {
-    writer.writeU8(NODE_REPOSITORY)
+    writeNodeTag(NODE_REPOSITORY, r.metadata.nonEmpty)
     writeLocation(r.loc)
     writeIdentifierInline(r.id)  // Inline - no tag needed
     writeContents(r.contents)
   }
 
   def writeStreamlet(s: Streamlet): Unit = {
-    writer.writeU8(NODE_STREAMLET)
+    writeNodeTag(NODE_STREAMLET, s.metadata.nonEmpty)
     writeLocation(s.loc)
     writeIdentifierInline(s.id)  // Inline - no tag needed
     // Write shape tag
@@ -415,7 +431,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeEpic(e: Epic): Unit = {
-    writer.writeU8(NODE_EPIC)
+    writeNodeTag(NODE_EPIC, e.metadata.nonEmpty)
     writeLocation(e.loc)
     writeIdentifierInline(e.id)  // Inline - no tag needed
     writeUserStory(e.userStory)
@@ -425,7 +441,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Leaf Definition Serialization ==========
 
   def writeAuthor(a: Author): Unit = {
-    writer.writeU8(NODE_AUTHOR)
+    writeNodeTag(NODE_AUTHOR, a.metadata.nonEmpty)
     writeLocation(a.loc)
     writeIdentifierInline(a.id)  // Inline - no tag needed
     writeLiteralString(a.name)
@@ -436,13 +452,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeUser(u: User): Unit = {
-    writer.writeU8(NODE_USER)
+    writeNodeTag(NODE_USER, u.metadata.nonEmpty)
     writeLocation(u.loc)
     writeIdentifier(u.id)  // Keep tag to distinguish from UserRef/UserStory
     writeLiteralString(u.is_a)
   }
 
   def writeTerm(t: Term): Unit = {
+    // Term has no metadata field, use simple tag
     writer.writeU8(NODE_TERM)
     writeLocation(t.loc)
     writeIdentifierInline(t.id)  // Inline - no tag needed
@@ -450,7 +467,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeRelationship(r: Relationship): Unit = {
-    writer.writeU8(NODE_PIPE) // Reusing PIPE tag for relationship
+    writeNodeTag(NODE_PIPE, r.metadata.nonEmpty) // Reusing PIPE tag for relationship
     writeLocation(r.loc)
     writeIdentifierInline(r.id)  // Inline - no tag needed
     writeProcessorRef(r.withProcessor)
@@ -459,7 +476,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeConstant(c: Constant): Unit = {
-    writer.writeU8(NODE_FIELD) // Constants similar to fields
+    writeNodeTag(NODE_FIELD, c.metadata.nonEmpty) // Constants similar to fields
     writeLocation(c.loc)
     writeIdentifierInline(c.id)  // Inline - no tag needed
     writeTypeExpression(c.typeEx)
@@ -469,21 +486,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Type Component Serialization ==========
 
   def writeField(f: Field): Unit = {
-    writer.writeU8(NODE_FIELD)
+    writeNodeTag(NODE_FIELD, f.metadata.nonEmpty)
     writeLocation(f.loc)
     writeIdentifier(f.id)  // Keep tag to distinguish from MethodArgument
     writeTypeExpression(f.typeEx)
   }
 
   def writeEnumerator(e: Enumerator): Unit = {
-    writer.writeU8(NODE_ENUMERATOR)
+    writeNodeTag(NODE_ENUMERATOR, e.metadata.nonEmpty)
     writeLocation(e.loc)
     writeIdentifierInline(e.id)  // Inline - no tag needed
     writeOption(e.enumVal)((v: Long) => writer.writeVarLong(v))
   }
 
   def writeMethod(m: Method): Unit = {
-    writer.writeU8(NODE_FIELD) // Methods similar to fields
+    writeNodeTag(NODE_FIELD, m.metadata.nonEmpty) // Methods similar to fields
     writeLocation(m.loc)
     writeIdentifierInline(m.id)  // Inline - no tag needed
     writeTypeExpression(m.typeEx)
@@ -500,21 +517,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Handler Component Serialization ==========
 
   def writeHandler(h: Handler): Unit = {
-    writer.writeU8(NODE_HANDLER)
+    writeNodeTag(NODE_HANDLER, h.metadata.nonEmpty)
     writeLocation(h.loc)
     writeIdentifierInline(h.id)  // Inline - no tag needed
     writeContents(h.contents)
   }
 
   def writeState(s: State): Unit = {
-    writer.writeU8(NODE_STATE)
+    writeNodeTag(NODE_STATE, s.metadata.nonEmpty)
     writeLocation(s.loc)
     writeIdentifierInline(s.id)  // Inline - no tag needed
     writeTypeRefInline(s.typ)    // Inline - position known
   }
 
   def writeInvariant(i: Invariant): Unit = {
-    writer.writeU8(NODE_INVARIANT)
+    writeNodeTag(NODE_INVARIANT, i.metadata.nonEmpty)
     writeLocation(i.loc)
     writeIdentifierInline(i.id)  // Inline - no tag needed
     writeOption(i.condition)(writeLiteralString)
@@ -523,21 +540,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== OnClause Serialization ==========
 
   def writeOnInitializationClause(oc: OnInitializationClause): Unit = {
-    writer.writeU8(NODE_ON_CLAUSE)
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(0) // Init clause type
     writeLocation(oc.loc)
     writeContents(oc.contents)
   }
 
   def writeOnTerminationClause(oc: OnTerminationClause): Unit = {
-    writer.writeU8(NODE_ON_CLAUSE)
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(1) // Term clause type
     writeLocation(oc.loc)
     writeContents(oc.contents)
   }
 
   def writeOnMessageClause(oc: OnMessageClause): Unit = {
-    writer.writeU8(NODE_ON_CLAUSE)
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(2) // Message clause type
     writeLocation(oc.loc)
     writeMessageRef(oc.msg)
@@ -550,7 +567,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeOnOtherClause(oc: OnOtherClause): Unit = {
-    writer.writeU8(NODE_ON_CLAUSE)
+    writeNodeTag(NODE_ON_CLAUSE, oc.metadata.nonEmpty)
     writer.writeU8(3) // Other clause type
     writeLocation(oc.loc)
     writeContents(oc.contents)
@@ -559,21 +576,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Streamlet Component Serialization ==========
 
   def writeInlet(i: Inlet): Unit = {
-    writer.writeU8(NODE_INLET)
+    writeNodeTag(NODE_INLET, i.metadata.nonEmpty)
     writeLocation(i.loc)
     writeIdentifierInline(i.id)  // Inline - no tag needed
     writeTypeRefInline(i.type_)  // Inline - position known
   }
 
   def writeOutlet(o: Outlet): Unit = {
-    writer.writeU8(NODE_OUTLET)
+    writeNodeTag(NODE_OUTLET, o.metadata.nonEmpty)
     writeLocation(o.loc)
     writeIdentifier(o.id)  // Keep tag to distinguish from ShownBy
     writeTypeRefInline(o.type_)  // Inline - position known
   }
 
   def writeConnector(c: Connector): Unit = {
-    writer.writeU8(NODE_CONNECTOR)
+    writeNodeTag(NODE_CONNECTOR, c.metadata.nonEmpty)
     writeLocation(c.loc)
     writeIdentifierInline(c.id)  // Inline - no tag needed
     writeOutletRef(c.from)
@@ -583,7 +600,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Repository Component Serialization ==========
 
   def writeSchema(s: Schema): Unit = {
-    writer.writeU8(NODE_SCHEMA)
+    writeNodeTag(NODE_SCHEMA, s.metadata.nonEmpty)
     writer.writeU8(s.schemaKind.ordinal) // Subtype: 0=Relational, 1=Document, 2=Graphical
     writeLocation(s.loc)
     writeIdentifierInline(s.id)  // Inline - no tag needed
@@ -607,7 +624,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Epic/UseCase Component Serialization ==========
 
   def writeUseCase(uc: UseCase): Unit = {
-    writer.writeU8(NODE_EPIC) // UseCase similar to Epic
+    writeNodeTag(NODE_EPIC, uc.metadata.nonEmpty) // UseCase similar to Epic
     writeLocation(uc.loc)
     writeIdentifierInline(uc.id)  // Inline - no tag needed
     writeUserStory(uc.userStory)
@@ -615,6 +632,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeUserStory(us: UserStory): Unit = {
+    // UserStory has no metadata field, use simple tag
     writer.writeU8(NODE_USER) // User story relates to user
     writeLocation(us.loc)
     writeUserRef(us.user)
@@ -623,13 +641,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeShownBy(sb: ShownBy): Unit = {
+    // ShownBy has no metadata field, use simple tag
     writer.writeU8(NODE_OUTLET) // Reusing outlet tag
     writeLocation(sb.loc)
     writeSeq(sb.urls)(writeURL)
   }
 
   def writeSagaStep(ss: SagaStep): Unit = {
-    writer.writeU8(NODE_SAGA_STEP)
+    writeNodeTag(NODE_SAGA_STEP, ss.metadata.nonEmpty)
     writeLocation(ss.loc)
     writeIdentifierInline(ss.id)  // Inline - no tag needed
     // NOTE: doStatements and undoStatements are written by the Pass's traverse() override
@@ -639,28 +658,28 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Interaction Serialization ==========
 
   def writeParallelInteractions(pi: ParallelInteractions): Unit = {
-    writer.writeU8(NODE_PIPE) // Interactions like connectors
+    writeNodeTag(NODE_PIPE, pi.metadata.nonEmpty) // Interactions like connectors
     writer.writeU8(0) // Parallel type
     writeLocation(pi.loc)
     writeContents(pi.contents)
   }
 
   def writeSequentialInteractions(si: SequentialInteractions): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, si.metadata.nonEmpty)
     writer.writeU8(1) // Sequential type
     writeLocation(si.loc)
     writeContents(si.contents)
   }
 
   def writeOptionalInteractions(oi: OptionalInteractions): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, oi.metadata.nonEmpty)
     writer.writeU8(2) // Optional type
     writeLocation(oi.loc)
     writeContents(oi.contents)
   }
 
   def writeVagueInteraction(vi: VagueInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, vi.metadata.nonEmpty)
     writer.writeU8(10) // Vague interaction type
     writeLocation(vi.loc)
     writeLiteralString(vi.from)
@@ -669,7 +688,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeSendMessageInteraction(smi: SendMessageInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, smi.metadata.nonEmpty)
     writer.writeU8(11) // Send message interaction
     writeLocation(smi.loc)
     writeReference(smi.from)
@@ -678,7 +697,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeArbitraryInteraction(ai: ArbitraryInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, ai.metadata.nonEmpty)
     writer.writeU8(12) // Arbitrary interaction
     writeLocation(ai.loc)
     writeReference(ai.from)
@@ -687,7 +706,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeSelfInteraction(si: SelfInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, si.metadata.nonEmpty)
     writer.writeU8(13) // Self interaction
     writeLocation(si.loc)
     writeReference(si.from)
@@ -695,7 +714,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeFocusOnGroupInteraction(fgi: FocusOnGroupInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, fgi.metadata.nonEmpty)
     writer.writeU8(14) // Focus on group
     writeLocation(fgi.loc)
     writeUserRef(fgi.from)
@@ -703,7 +722,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeDirectUserToURLInteraction(dui: DirectUserToURLInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, dui.metadata.nonEmpty)
     writer.writeU8(15) // Direct to URL
     writeLocation(dui.loc)
     writeUserRef(dui.from)
@@ -711,7 +730,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeShowOutputInteraction(soi: ShowOutputInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, soi.metadata.nonEmpty)
     writer.writeU8(16) // Show output
     writeLocation(soi.loc)
     writeOutputRef(soi.from)
@@ -720,7 +739,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeSelectInputInteraction(sii: SelectInputInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, sii.metadata.nonEmpty)
     writer.writeU8(17) // Select input
     writeLocation(sii.loc)
     writeUserRef(sii.from)
@@ -728,7 +747,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeTakeInputInteraction(tii: TakeInputInteraction): Unit = {
-    writer.writeU8(NODE_PIPE)
+    writeNodeTag(NODE_PIPE, tii.metadata.nonEmpty)
     writer.writeU8(18) // Take input
     writeLocation(tii.loc)
     writeUserRef(tii.from)
@@ -738,7 +757,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== UI Component Serialization ==========
 
   def writeGroup(g: Group): Unit = {
-    writer.writeU8(NODE_GROUP)
+    writeNodeTag(NODE_GROUP, g.metadata.nonEmpty)
     writeLocation(g.loc)
     writeString(g.alias)
     writeIdentifier(g.id)  // Keep tag to distinguish from ContainedGroup
@@ -746,14 +765,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeContainedGroup(cg: ContainedGroup): Unit = {
-    writer.writeU8(NODE_GROUP)
+    writeNodeTag(NODE_GROUP, cg.metadata.nonEmpty)
     writeLocation(cg.loc)
     writeIdentifier(cg.id)  // Keep tag to distinguish from Group
     writeGroupRef(cg.group)
   }
 
   def writeInput(i: Input): Unit = {
-    writer.writeU8(NODE_INPUT)
+    writeNodeTag(NODE_INPUT, i.metadata.nonEmpty)
     writeLocation(i.loc)
     writeString(i.nounAlias)
     writeIdentifierInline(i.id)  // Inline - no tag needed
@@ -763,7 +782,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeOutput(o: Output): Unit = {
-    writer.writeU8(NODE_OUTPUT)
+    writeNodeTag(NODE_OUTPUT, o.metadata.nonEmpty)
     writeLocation(o.loc)
     writeString(o.nounAlias)
     writeIdentifierInline(o.id)  // Inline - no tag needed
@@ -786,32 +805,24 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Statement Serialization ==========
   // 10 declarative statements per riddlsim specification:
   // send, tell, morph, become, when, match, error, let, set, arbitrary
-
-  // Marker value to distinguish statements from handlers
-  // Statements: NODE_HANDLER, 0xFF, subtype, loc, ...
-  // Handlers: NODE_HANDLER, loc (no 0xFF marker), ...
-  // Using 255 (0xFF) as it's distinct from valid location/string data
-  private val STATEMENT_MARKER: Int = 255
+  // Phase 7: Statements use NODE_STATEMENT tag to distinguish from handlers
 
   def writePromptStatement(s: PromptStatement): Unit = {
-    writer.writeU8(NODE_HANDLER) // Statements within handlers
-    writer.writeU8(STATEMENT_MARKER) // Marker to identify as statement
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(0) // Prompt statement type
     writeLocation(s.loc)
     writeLiteralString(s.what)
   }
 
   def writeErrorStatement(s: ErrorStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(1) // Error statement
     writeLocation(s.loc)
     writeLiteralString(s.message)
   }
 
   def writeSetStatement(s: SetStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(3) // Set statement
     writeLocation(s.loc)
     writeFieldRef(s.field)
@@ -819,8 +830,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeSendStatement(s: SendStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(5) // Send statement
     writeLocation(s.loc)
     writeMessageRef(s.msg)
@@ -828,8 +838,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeMorphStatement(s: MorphStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(7) // Morph statement
     writeLocation(s.loc)
     writeEntityRef(s.entity)
@@ -838,8 +847,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeBecomeStatement(s: BecomeStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(8) // Become statement
     writeLocation(s.loc)
     writeEntityRef(s.entity)
@@ -847,8 +855,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeTellStatement(s: TellStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(9) // Tell statement
     writeLocation(s.loc)
     writeMessageRef(s.msg)
@@ -856,8 +863,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeWhenStatement(s: WhenStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(10) // When statement
     writeLocation(s.loc)
     writeLiteralString(s.condition)
@@ -865,8 +871,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeMatchStatement(s: MatchStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(11) // Match statement
     writeLocation(s.loc)
     writeLiteralString(s.expression)
@@ -883,8 +888,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeLetStatement(s: LetStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(12) // Let statement
     writeLocation(s.loc)
     writeIdentifier(s.identifier)
@@ -892,8 +896,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeCodeStatement(s: CodeStatement): Unit = {
-    writer.writeU8(NODE_HANDLER)
-    writer.writeU8(STATEMENT_MARKER)
+    writer.writeU8(NODE_STATEMENT)
     writer.writeU8(13) // Code statement
     writeLocation(s.loc)
     writeLiteralString(s.language)
@@ -1290,9 +1293,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeVarInt(a.contents.length)
         a.contents.toSeq.foreach { item =>
           writeNode(item)
-          // Fields have metadata that needs to be written
+          // Phase 7: Only write metadata if non-empty (flag was set in tag)
           item match {
-            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case wm: WithMetaData if wm.metadata.nonEmpty => writeMetadataCount(wm.metadata)
             case _ => ()
           }
         }
@@ -1305,8 +1308,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeVarInt(a.contents.length)
         a.contents.toSeq.foreach { item =>
           writeNode(item)
+          // Phase 7: Only write metadata if non-empty (flag was set in tag)
           item match {
-            case wm: WithMetaData => writeMetadataCount(wm.metadata)
+            case wm: WithMetaData if wm.metadata.nonEmpty => writeMetadataCount(wm.metadata)
             case _ => ()
           }
         }
@@ -1334,8 +1338,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeVarInt(enumeration.enumerators.length)
         enumeration.enumerators.toSeq.foreach { item =>
           writeNode(item)
-          // Enumerators always have metadata
-          writeMetadataCount(item.metadata)
+          // Phase 7: Only write metadata if non-empty (flag was set in tag)
+          if item.metadata.nonEmpty then writeMetadataCount(item.metadata)
         }
 
       case seq: Sequence =>
@@ -1408,11 +1412,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
       // Predefined types - String
       case s: String_ =>
-        writer.writeU8(TYPE_STRING)
-        writer.writeU8(0) // String_ subtype (0 = plain String, 1 = URI, 2 = Blob)
-        writeLocation(s.loc)
-        writeOption(s.min)((v: Long) => writer.writeVarLong(v))
-        writeOption(s.max)((v: Long) => writer.writeVarLong(v))
+        // Phase 7 optimization: Use predefined tag for String with no min/max
+        if s.min.isEmpty && s.max.isEmpty then
+          writer.writeU8(TYPE_STRING_DEFAULT)
+          writeLocation(s.loc)
+        else
+          writer.writeU8(TYPE_STRING)
+          writer.writeU8(0) // String_ subtype (0 = plain String, 1 = URI, 2 = Blob)
+          writeLocation(s.loc)
+          writeOption(s.min)((v: Long) => writer.writeVarLong(v))
+          writeOption(s.max)((v: Long) => writer.writeVarLong(v))
+        end if
 
       case p: Pattern =>
         writer.writeU8(TYPE_PATTERN)
@@ -1442,18 +1452,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeLocation(n.loc)
 
       case i: Integer =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(1) // Integer
+        // Phase 7 optimization: Predefined tag saves subtype byte
+        writer.writeU8(TYPE_INTEGER)
         writeLocation(i.loc)
 
       case w: Whole =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(2) // Whole
+        // Phase 7 optimization: Predefined tag saves subtype byte
+        writer.writeU8(TYPE_WHOLE)
         writeLocation(w.loc)
 
       case n: Natural =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(3) // Natural
+        // Phase 7 optimization: Predefined tag saves subtype byte
+        writer.writeU8(TYPE_NATURAL)
         writeLocation(n.loc)
 
       case rt: RangeType =>
@@ -1470,8 +1480,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeVarLong(d.fractional)
 
       case r: Real =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(11) // Real
+        // Phase 7 optimization: Predefined tag saves subtype byte
+        writer.writeU8(TYPE_REAL)
         writeLocation(r.loc)
 
       // SI units
@@ -1505,20 +1515,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(25) // Temperature
         writeLocation(t.loc)
 
-      // Time types
+      // Time types - Phase 7 optimization: Predefined tags save subtype byte
       case d: Date =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(30) // Date
+        writer.writeU8(TYPE_DATE)
         writeLocation(d.loc)
 
       case t: Time =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(31) // Time
+        writer.writeU8(TYPE_TIME)
         writeLocation(t.loc)
 
       case dt: DateTime =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(32) // DateTime
+        writer.writeU8(TYPE_DATETIME)
         writeLocation(dt.loc)
 
       case zd: ZonedDate =>
@@ -1534,19 +1541,19 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writeOption(zdt.zone)(writeLiteralString)
 
       case ts: TimeStamp =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(35) // TimeStamp
+        // Phase 7 optimization: Predefined tag saves subtype byte
+        writer.writeU8(TYPE_TIMESTAMP)
         writeLocation(ts.loc)
 
       case d: Duration =>
-        writer.writeU8(TYPE_NUMBER)
-        writer.writeU8(36) // Duration
+        // Phase 7 optimization: Predefined tag saves subtype byte
+        writer.writeU8(TYPE_DURATION)
         writeLocation(d.loc)
 
       // Other predefined types
       case u: UUID =>
-        writer.writeU8(TYPE_UNIQUE_ID)
-        writer.writeU8(1) // UUID
+        // Phase 7 optimization: Predefined tag saves subtype byte
+        writer.writeU8(TYPE_UUID)
         writeLocation(u.loc)
 
       case u: URI =>
