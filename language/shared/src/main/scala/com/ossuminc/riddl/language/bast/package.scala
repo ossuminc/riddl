@@ -54,6 +54,13 @@ package object bast {
 
   // Node type tags - compact sequential numbering (1-67)
   // Must fit in single byte (0-255)
+  // Tag 0 is reserved for FILE_CHANGE_MARKER
+
+  /** Special marker indicating source file change (tag 0, unused as node tag)
+    * Written before a node when its source file differs from the current one.
+    * Format: FILE_CHANGE_MARKER (0) + path string
+    */
+  val FILE_CHANGE_MARKER: Byte = 0
 
   // Definitions (1-33)
   val NODE_NEBULA: Byte = 1

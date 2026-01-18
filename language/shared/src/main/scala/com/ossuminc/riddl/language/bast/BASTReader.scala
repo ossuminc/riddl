@@ -45,6 +45,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private val reader = new ByteBufferReader(bytes)
   private var stringTable: StringTable = _
   private var lastLocation: At = At.empty
+  private var firstLocationRead: Boolean = false
+  private var currentSourcePath: String = ""
+  private var currentSource: RiddlParserInput = RiddlParserInput.empty
   private val messages = ArrayBuffer[Messages.Message]()
 
   // AST context stack for better error messages
@@ -169,7 +172,20 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== Root Node Reading ==========
 
   private def readRootNode(): Nebula = {
-    val nodeType = reader.readU8()
+    var nodeType = reader.readU8()
+
+    // Handle FILE_CHANGE_MARKER at the start
+    if nodeType == FILE_CHANGE_MARKER then
+      val newPath = readString()
+      currentSourcePath = newPath
+      val url = if newPath.isEmpty then URL.empty
+                else if newPath.startsWith("/") then URL.fromFullPath(newPath)
+                else URL.fromCwdPath(newPath)
+      val originStr = if newPath.isEmpty then "empty" else newPath
+      currentSource = BASTParserInput(url, originStr, 10000)
+      nodeType = reader.readU8()
+    end if
+
     if nodeType != NODE_NEBULA then
       throw new IllegalArgumentException(s"Expected Nebula root node, got node type $nodeType")
     end if
@@ -245,7 +261,23 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   /** Read a RiddlValue node based on its type tag */
   private def readNode(): RiddlValue = {
     val posBeforeNode = reader.position
-    val nodeType = reader.readU8()
+    var nodeType = reader.readU8()
+
+    // Check for FILE_CHANGE_MARKER - indicates source file transition
+    if nodeType == FILE_CHANGE_MARKER then
+      val newPath = readString()
+      currentSourcePath = newPath
+      // Reconstruct URL and create BASTParserInput
+      // Empty path means synthetic/test locations - still need a BASTParserInput
+      val url = if newPath.isEmpty then URL.empty
+                else if newPath.startsWith("/") then URL.fromFullPath(newPath)
+                else URL.fromCwdPath(newPath)
+      val originStr = if newPath.isEmpty then "empty" else newPath
+      currentSource = BASTParserInput(url, originStr, 10000)
+      // Now read the actual node tag
+      nodeType = reader.readU8()
+    end if
+
     val nodeName = nodeTypeName(nodeType)
     pushContext(nodeName)
 
@@ -338,8 +370,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
             expectedValue = Some("valid node type (1-255)"),
             actualValue = Some(s"$nodeType at byte $posBeforeNode")
           ))
-          // Return a placeholder to continue parsing
-          LiteralString(At.empty, s"<unknown node type $nodeType>")
+          // Return a placeholder with lastLocation for best-effort location on error
+          LiteralString(lastLocation, s"<unknown node type $nodeType>")
       }
       popContext()
       result
@@ -1358,7 +1390,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
       case _ =>
         addError(s"Unknown type expression tag: $typeTag at position ${reader.position}")
-        Abstract(At.empty)
+        // Use lastLocation for best-effort location on error
+        Abstract(lastLocation)
     }
   }
 
@@ -1399,7 +1432,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case _ =>
         reader.readU8() // consume the unknown tag
         addError(s"Unknown reference tag: $refTag")
-        TypeRef(At.empty, "", PathIdentifier.empty)
+        // Use lastLocation for best-effort location on error
+        TypeRef(lastLocation, "", PathIdentifier(lastLocation, Seq.empty))
     }
   }
 
@@ -1655,7 +1689,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_RECORD_REF => readRecordRefNode()
       case _ =>
         addError(s"Unknown message ref tag: $refTag")
-        RecordRef(At.empty, PathIdentifier.empty)
+        // Use lastLocation for best-effort location on error
+        RecordRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
     }
   }
 
@@ -1669,8 +1704,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_CONTEXT => readContextRef()
       case NODE_STREAMLET => readStreamletRef()
       case _ =>
-        // Fallback
-        EntityRef(At.empty, PathIdentifier.empty)
+        // Fallback - use lastLocation for best-effort location on error
+        EntityRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
     }
   }
 
@@ -1680,64 +1715,41 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_INLET => readInletRef()
       case NODE_OUTLET => readOutletRef()
       case _ =>
-        // Fallback
-        InletRef(At.empty, PathIdentifier.empty)
+        // Fallback - use lastLocation for best-effort location on error
+        InletRef(lastLocation, PathIdentifier(lastLocation, Seq.empty))
     }
   }
 
   // ========== Helper Methods ==========
 
   private def readLocation(): At = {
-    // Optimized location format (BAST v1.1+):
-    // - Stores offset and endOffset directly (no line/col)
+    // Optimized location format (Phase 7):
+    // - Source file changes are handled by FILE_CHANGE_MARKER before node tags
+    // - Locations just store offset deltas (no flag byte)
     // - Uses zigzag encoding for signed deltas
-    if lastLocation.isEmpty then
-      // First location: read full data
-      val originPath = readString()
+    val source = currentSource.asInstanceOf[BASTParserInput]
+
+    if !firstLocationRead then
+      // First location: read absolute offsets
       val offset = reader.readVarInt()
       val endOffset = reader.readVarInt()
-
-      // Reconstruct URL from origin path
-      // If path starts with / it's absolute, otherwise treat as relative from cwd
-      val url = if originPath.isEmpty then URL.empty
-                else if originPath.startsWith("/") then URL.fromFullPath(originPath)
-                else URL.fromCwdPath(originPath)
-
-      // Create BASTParserInput with synthetic line numbering
-      val source = BASTParserInput(url, originPath, 10000)
 
       // Create At directly from offsets
       val loc = source.createAtFromOffsets(offset, endOffset)
       lastLocation = loc
+      firstLocationRead = true
       loc
     else
       // Subsequent locations: read deltas with zigzag decoding
-      val sourceFlag = reader.readU8()
-      if sourceFlag == 1 then
-        // New source file - read full location
-        val originPath = readString()
-        val url = if originPath.isEmpty then URL.empty
-                  else if originPath.startsWith("/") then URL.fromFullPath(originPath)
-                  else URL.fromCwdPath(originPath)
-        val source = BASTParserInput(url, originPath, 10000)
-        val offset = reader.readVarInt()
-        val endOffset = reader.readVarInt()
-        val loc = source.createAtFromOffsets(offset, endOffset)
-        lastLocation = loc
-        loc
-      else
-        // Same source file - read deltas
-        val source = lastLocation.source.asInstanceOf[BASTParserInput]
-        val offsetDelta = reader.readZigzagInt()
-        val endOffsetDelta = reader.readZigzagInt()
+      val offsetDelta = reader.readZigzagInt()
+      val endOffsetDelta = reader.readZigzagInt()
 
-        val offset = lastLocation.offset + offsetDelta
-        val endOffset = lastLocation.endOffset + endOffsetDelta
+      val offset = lastLocation.offset + offsetDelta
+      val endOffset = lastLocation.endOffset + endOffsetDelta
 
-        val loc = source.createAtFromOffsets(offset, endOffset)
-        lastLocation = loc
-        loc
-      end if
+      val loc = source.createAtFromOffsets(offset, endOffset)
+      lastLocation = loc
+      loc
   }
 
   private def readIdentifier(): Identifier = {

@@ -29,6 +29,8 @@ import wvlet.airframe.ulid.ULID
 class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   private var lastLocation: At = At.empty
+  private var firstLocationWritten: Boolean = false
+  private var currentSourcePath: String = ""
   private var nodeCount: Int = 0
 
   /** Get the total number of nodes written */
@@ -37,6 +39,29 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   /** Reset location tracking (called at start of serialization) */
   def resetLocationTracking(): Unit = {
     lastLocation = At.empty
+    firstLocationWritten = false
+    currentSourcePath = ""
+  }
+
+  /** Write a FILE_CHANGE_MARKER if the source file changed.
+    * Call this before writing any node to handle source file transitions.
+    * @param loc The location of the node being written
+    */
+  private def writeSourceChangeIfNeeded(loc: At): Unit = {
+    val origin = loc.source.origin
+    // For the first node, always write the marker to establish the initial source
+    // For subsequent nodes, skip if origin is "empty" (synthetic locations use same source)
+    if currentSourcePath.isEmpty then
+      // First node - always write marker to establish source
+      writer.writeU8(FILE_CHANGE_MARKER)
+      writeString(if origin == "empty" then "" else origin)
+      currentSourcePath = if origin == "empty" then "" else origin
+    else if origin != "empty" && origin != currentSourcePath then
+      // Source changed - write marker
+      writer.writeU8(FILE_CHANGE_MARKER)
+      writeString(origin)
+      currentSourcePath = origin
+    end if
   }
 
   /** Reserve space for header at the beginning of the buffer */
@@ -85,6 +110,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     * @param value The node to write
     */
   def writeNode(value: RiddlValue): Unit = {
+    // Check if source file changed - write marker before the node tag
+    writeSourceChangeIfNeeded(value.loc)
     nodeCount += 1
     value match {
       // Root containers
@@ -1294,14 +1321,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case alt: Alternation =>
         writer.writeU8(TYPE_ALTERNATION)
         writeLocation(alt.loc)
-        // Write count and items inline (TypeExpressions are not traversed)
+        // Write count and items using writeTypeExpression (NOT writeNode - no FILE_CHANGE_MARKERs)
         writer.writeVarInt(alt.of.length)
         alt.of.toSeq.foreach { item =>
-          writeNode(item)
-          item match {
-            case wm: WithMetaData => writeMetadataCount(wm.metadata)
-            case _ => ()
-          }
+          writeTypeExpression(item)
         }
 
       case enumeration: Enumeration =>
@@ -1566,33 +1589,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Helper Serialization Methods ==========
 
   def writeLocation(loc: At): Unit = {
-    // Optimized location encoding:
-    // - Removed line/col (computed from offset via At class)
-    // - Added endOffset for accurate source spans
-    // - Use zigzag encoding for signed deltas (more efficient than +1000000 hack)
-    if lastLocation.isEmpty then
-      // First location: write full data
-      // Use origin (path) instead of toExternalForm to preserve relative paths
-      writeString(loc.source.origin)
+    // Optimized location encoding (Phase 7):
+    // - Source file changes are handled by FILE_CHANGE_MARKER before node tags
+    // - Locations just store offset deltas (no flag byte needed)
+    // - Use zigzag encoding for signed deltas
+    if !firstLocationWritten then
+      // First location: write absolute offsets
       writer.writeVarInt(loc.offset)
       writer.writeVarInt(loc.endOffset)
+      firstLocationWritten = true
     else
-      // Subsequent locations: write deltas with zigzag encoding
-      // Treat 'empty' origin as same source (identifiers often have empty origin)
-      val sameSource = loc.source.origin == lastLocation.source.origin || loc.source.origin == "empty"
-      if !sameSource then
-        writer.writeU8(1) // Flag: new source file
-        writeString(loc.source.origin) // Use origin to preserve relative paths
-        writer.writeVarInt(loc.offset)
-        writer.writeVarInt(loc.endOffset)
-      else
-        writer.writeU8(0) // Flag: same source file
-        // Write deltas using zigzag encoding (handles negative values efficiently)
-        val offsetDelta = loc.offset - lastLocation.offset
-        val endOffsetDelta = loc.endOffset - lastLocation.endOffset
-        writer.writeZigzagInt(offsetDelta)
-        writer.writeZigzagInt(endOffsetDelta)
-      end if
+      // Subsequent locations: write deltas using zigzag encoding
+      val offsetDelta = loc.offset - lastLocation.offset
+      val endOffsetDelta = loc.endOffset - lastLocation.endOffset
+      writer.writeZigzagInt(offsetDelta)
+      writer.writeZigzagInt(endOffsetDelta)
     end if
 
     // Always update lastLocation to stay in sync with reader

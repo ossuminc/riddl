@@ -558,7 +558,8 @@ object AST:
         case Some(ulid: ULIDAttachment) => ulid.ulid
         case _ =>
           val result = ULID.newULID
-          metadata += ULIDAttachment(At.empty, result)
+          // Use the node's location rather than At.empty
+          metadata += ULIDAttachment(this.loc, result)
           result
       end match
     end ulid
