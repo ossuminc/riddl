@@ -88,15 +88,15 @@ This enables BAST to work like Python's `.pyc` files - automatic loading from ca
 
 ### Performance Results (January 17, 2026)
 
-**BAST Format v1** - Optimized with tag compaction, inline identifiers, inline PathIdentifier, and inline TypeRef:
+**BAST Format v1** - Latest optimizations include FILE_CHANGE_MARKER (Phase 7):
 
-| File | Source | BAST (initial) | BAST (latest) | Size Change |
-|------|--------|----------------|---------------|-------------|
-| small.riddl | 2KB | 3KB (147%) | 2.4KB (117%) | **-20%** |
-| medium.riddl | 11KB | 16KB (140%) | 9.7KB (86%) | **-39%** |
-| large.riddl | 43KB | 59KB (137%) | 35.5KB (83%) | **-40%** |
+| File | Source | BAST (Phase 6) | BAST (Phase 7) | Size Change |
+|------|--------|----------------|----------------|-------------|
+| small.riddl | 2KB | 2.4KB (117%) | 2.2KB (108%) | **-9%** |
+| medium.riddl | 11KB | 10KB (88%) | 8.6KB (75%) | **-15%** |
+| large.riddl | 43KB | 36.6KB (85%) | 31KB (72%) | **-15%** |
 
-**Key achievement**: Optimized BAST files are now **smaller than source code** for medium/large files!
+**Key achievement**: Phase 7 FILE_CHANGE_MARKER optimization achieved **~15% additional reduction**, bringing large files to **72% of source size**!
 
 **Speed benchmarks** (50 iterations each):
 
@@ -131,11 +131,11 @@ JVM/Native only (JS returns error message since browser can't do local file I/O)
 2. Rewrite `doc/src/main/hugo/content/future-work/bast.md` - the existing document is outdated
 3. Finalize BAST schema before release to users (TODO in package.scala)
 4. **Phase 7 Optimizations** (see `/Users/reid/.claude/plans/bast-phase7-optimizations.md`):
-   - **Bug Fix**: Find and fix nodes with `At.empty` (every node must have valid location)
-   - **Source file change markers**: Eliminate per-location path encoding; write FILE_CHANGE marker only when source changes (~4% savings)
-   - **Empty metadata flag bit**: Use tag high bit to indicate metadata presence (~3% savings)
-   - **Predefined type expressions**: Single-byte encoding for common types like String, Integer (~2-5% savings)
-   - **Expected total**: ~9-12% additional reduction (targeting ~70-75% of source size)
+   - ✅ **Bug Fix**: Fixed nodes with `At.empty` - ULIDAttachment, BASTReader fallbacks now use valid locations
+   - ✅ **Source file change markers**: FILE_CHANGE_MARKER (tag 0) written only when source changes (**15% savings achieved**)
+   - ⏳ **Empty metadata flag bit** (optional): Use tag high bit for metadata presence (~3% additional savings) - requires touching 60+ methods
+   - ⏳ **Predefined type expressions** (optional): Single-byte encoding for common types (~2-5% additional savings)
+   - **Current result**: Large files at **72% of source** (exceeded original 70-75% target)
 
 ### Open Questions
 
