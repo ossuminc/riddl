@@ -293,7 +293,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeDomain(d: Domain): Unit = {
     writer.writeU8(NODE_DOMAIN)
     writeLocation(d.loc)
-    writeIdentifier(d.id)
+    writeIdentifierInline(d.id)  // Inline - no tag needed
     writeContents(d.contents)
     // Metadata will be written by traverse() after contents items
   }
@@ -301,35 +301,35 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeContext(c: Context): Unit = {
     writer.writeU8(NODE_CONTEXT)
     writeLocation(c.loc)
-    writeIdentifier(c.id)
+    writeIdentifierInline(c.id)  // Inline - no tag needed
     writeContents(c.contents)
   }
 
   def writeEntity(e: Entity): Unit = {
     writer.writeU8(NODE_ENTITY)
     writeLocation(e.loc)
-    writeIdentifier(e.id)
+    writeIdentifierInline(e.id)  // Inline - no tag needed
     writeContents(e.contents)
   }
 
   def writeModule(m: Module): Unit = {
     writer.writeU8(NODE_MODULE)
     writeLocation(m.loc)
-    writeIdentifier(m.id)
+    writeIdentifierInline(m.id)  // Inline - no tag needed
     writeContents(m.contents)
   }
 
   def writeType(t: Type): Unit = {
     writer.writeU8(NODE_TYPE)
     writeLocation(t.loc)
-    writeIdentifier(t.id)
+    writeIdentifierInline(t.id)  // Inline - no tag needed
     writeTypeExpression(t.typEx)
   }
 
   def writeFunction(f: Function): Unit = {
     writer.writeU8(NODE_FUNCTION)
     writeLocation(f.loc)
-    writeIdentifier(f.id)
+    writeIdentifierInline(f.id)  // Inline - no tag needed
     writeOption(f.input)((agg: Aggregation) => writeTypeExpression(agg))
     writeOption(f.output)((agg: Aggregation) => writeTypeExpression(agg))
     writeContents(f.contents)
@@ -338,7 +338,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeAdaptor(a: Adaptor): Unit = {
     writer.writeU8(NODE_ADAPTOR)
     writeLocation(a.loc)
-    writeIdentifier(a.id)
+    writeIdentifierInline(a.id)  // Inline - no tag needed
     a.direction match {
       case _: InboundAdaptor => writer.writeU8(ADAPTOR_INBOUND)
       case _: OutboundAdaptor => writer.writeU8(ADAPTOR_OUTBOUND)
@@ -350,37 +350,30 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeSaga(s: Saga): Unit = {
     writer.writeU8(NODE_SAGA)
     writeLocation(s.loc)
-    writeIdentifier(s.id)
+    writeIdentifierInline(s.id)  // Inline - no tag needed
     writeOption(s.input)((agg: Aggregation) => writeTypeExpression(agg))
     writeOption(s.output)((agg: Aggregation) => writeTypeExpression(agg))
     writeContents(s.contents)
   }
 
-  def writeProcessor(p: Processor[?]): Unit = {
-    writer.writeU8(NODE_PROCESSOR)
-    writeLocation(p.loc)
-    writeIdentifier(p.id)
-    writeContents(p.contents)
-  }
-
   def writeProjector(p: Projector): Unit = {
     writer.writeU8(NODE_PROJECTOR)
     writeLocation(p.loc)
-    writeIdentifier(p.id)
+    writeIdentifierInline(p.id)  // Inline - no tag needed
     writeContents(p.contents)
   }
 
   def writeRepository(r: Repository): Unit = {
     writer.writeU8(NODE_REPOSITORY)
     writeLocation(r.loc)
-    writeIdentifier(r.id)
+    writeIdentifierInline(r.id)  // Inline - no tag needed
     writeContents(r.contents)
   }
 
   def writeStreamlet(s: Streamlet): Unit = {
     writer.writeU8(NODE_STREAMLET)
     writeLocation(s.loc)
-    writeIdentifier(s.id)
+    writeIdentifierInline(s.id)  // Inline - no tag needed
     // Write shape tag
     s.shape match {
       case _: Void => writer.writeU8(STREAMLET_VOID)
@@ -397,7 +390,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeEpic(e: Epic): Unit = {
     writer.writeU8(NODE_EPIC)
     writeLocation(e.loc)
-    writeIdentifier(e.id)
+    writeIdentifierInline(e.id)  // Inline - no tag needed
     writeUserStory(e.userStory)
     writeContents(e.contents)
   }
@@ -407,7 +400,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeAuthor(a: Author): Unit = {
     writer.writeU8(NODE_AUTHOR)
     writeLocation(a.loc)
-    writeIdentifier(a.id)
+    writeIdentifierInline(a.id)  // Inline - no tag needed
     writeLiteralString(a.name)
     writeLiteralString(a.email)
     writeOption(a.organization)(writeLiteralString)
@@ -418,21 +411,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeUser(u: User): Unit = {
     writer.writeU8(NODE_USER)
     writeLocation(u.loc)
-    writeIdentifier(u.id)
+    writeIdentifier(u.id)  // Keep tag to distinguish from UserRef/UserStory
     writeLiteralString(u.is_a)
   }
 
   def writeTerm(t: Term): Unit = {
     writer.writeU8(NODE_TERM)
     writeLocation(t.loc)
-    writeIdentifier(t.id)
+    writeIdentifierInline(t.id)  // Inline - no tag needed
     writeSeq(t.definition)(writeLiteralString)
   }
 
   def writeRelationship(r: Relationship): Unit = {
     writer.writeU8(NODE_PIPE) // Reusing PIPE tag for relationship
     writeLocation(r.loc)
-    writeIdentifier(r.id)
+    writeIdentifierInline(r.id)  // Inline - no tag needed
     writeProcessorRef(r.withProcessor)
     writer.writeU8(r.cardinality.ordinal.toByte)
     writeOption(r.label)(writeLiteralString)
@@ -441,7 +434,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeConstant(c: Constant): Unit = {
     writer.writeU8(NODE_FIELD) // Constants similar to fields
     writeLocation(c.loc)
-    writeIdentifier(c.id)
+    writeIdentifierInline(c.id)  // Inline - no tag needed
     writeTypeExpression(c.typeEx)
     writeLiteralString(c.value)
   }
@@ -451,21 +444,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeField(f: Field): Unit = {
     writer.writeU8(NODE_FIELD)
     writeLocation(f.loc)
-    writeIdentifier(f.id)
+    writeIdentifier(f.id)  // Keep tag to distinguish from MethodArgument
     writeTypeExpression(f.typeEx)
   }
 
   def writeEnumerator(e: Enumerator): Unit = {
     writer.writeU8(NODE_ENUMERATOR)
     writeLocation(e.loc)
-    writeIdentifier(e.id)
+    writeIdentifierInline(e.id)  // Inline - no tag needed
     writeOption(e.enumVal)((v: Long) => writer.writeVarLong(v))
   }
 
   def writeMethod(m: Method): Unit = {
     writer.writeU8(NODE_FIELD) // Methods similar to fields
     writeLocation(m.loc)
-    writeIdentifier(m.id)
+    writeIdentifierInline(m.id)  // Inline - no tag needed
     writeTypeExpression(m.typeEx)
     writeSeq(m.args)(writeMethodArgument)
   }
@@ -482,21 +475,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeHandler(h: Handler): Unit = {
     writer.writeU8(NODE_HANDLER)
     writeLocation(h.loc)
-    writeIdentifier(h.id)
+    writeIdentifierInline(h.id)  // Inline - no tag needed
     writeContents(h.contents)
   }
 
   def writeState(s: State): Unit = {
     writer.writeU8(NODE_STATE)
     writeLocation(s.loc)
-    writeIdentifier(s.id)
-    writeTypeRef(s.typ)
+    writeIdentifierInline(s.id)  // Inline - no tag needed
+    writeTypeRefInline(s.typ)    // Inline - position known
   }
 
   def writeInvariant(i: Invariant): Unit = {
     writer.writeU8(NODE_INVARIANT)
     writeLocation(i.loc)
-    writeIdentifier(i.id)
+    writeIdentifierInline(i.id)  // Inline - no tag needed
     writeOption(i.condition)(writeLiteralString)
   }
 
@@ -541,21 +534,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeInlet(i: Inlet): Unit = {
     writer.writeU8(NODE_INLET)
     writeLocation(i.loc)
-    writeIdentifier(i.id)
-    writeTypeRef(i.type_)
+    writeIdentifierInline(i.id)  // Inline - no tag needed
+    writeTypeRefInline(i.type_)  // Inline - position known
   }
 
   def writeOutlet(o: Outlet): Unit = {
     writer.writeU8(NODE_OUTLET)
     writeLocation(o.loc)
-    writeIdentifier(o.id)
-    writeTypeRef(o.type_)
+    writeIdentifier(o.id)  // Keep tag to distinguish from ShownBy
+    writeTypeRefInline(o.type_)  // Inline - position known
   }
 
   def writeConnector(c: Connector): Unit = {
     writer.writeU8(NODE_CONNECTOR)
     writeLocation(c.loc)
-    writeIdentifier(c.id)
+    writeIdentifierInline(c.id)  // Inline - no tag needed
     writeOutletRef(c.from)
     writeInletRef(c.to)
   }
@@ -566,7 +559,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_SCHEMA)
     writer.writeU8(s.schemaKind.ordinal) // Subtype: 0=Relational, 1=Document, 2=Graphical
     writeLocation(s.loc)
-    writeIdentifier(s.id)
+    writeIdentifierInline(s.id)  // Inline - no tag needed
     // Write data map
     writer.writeVarInt(s.data.size)
     s.data.foreach { case (id, tref) =>
@@ -589,7 +582,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeUseCase(uc: UseCase): Unit = {
     writer.writeU8(NODE_EPIC) // UseCase similar to Epic
     writeLocation(uc.loc)
-    writeIdentifier(uc.id)
+    writeIdentifierInline(uc.id)  // Inline - no tag needed
     writeUserStory(uc.userStory)
     writeContents(uc.contents)
   }
@@ -611,7 +604,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeSagaStep(ss: SagaStep): Unit = {
     writer.writeU8(NODE_SAGA_STEP)
     writeLocation(ss.loc)
-    writeIdentifier(ss.id)
+    writeIdentifierInline(ss.id)  // Inline - no tag needed
     // NOTE: doStatements and undoStatements are written by the Pass's traverse() override
     // to properly interleave count-items, count-items
   }
@@ -721,14 +714,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_GROUP)
     writeLocation(g.loc)
     writeString(g.alias)
-    writeIdentifier(g.id)
+    writeIdentifier(g.id)  // Keep tag to distinguish from ContainedGroup
     writeContents(g.contents)
   }
 
   def writeContainedGroup(cg: ContainedGroup): Unit = {
     writer.writeU8(NODE_GROUP)
     writeLocation(cg.loc)
-    writeIdentifier(cg.id)
+    writeIdentifier(cg.id)  // Keep tag to distinguish from Group
     writeGroupRef(cg.group)
   }
 
@@ -736,9 +729,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_INPUT)
     writeLocation(i.loc)
     writeString(i.nounAlias)
-    writeIdentifier(i.id)
+    writeIdentifierInline(i.id)  // Inline - no tag needed
     writeString(i.verbAlias)
-    writeTypeRef(i.takeIn)
+    writeTypeRefInline(i.takeIn)  // Inline - position known
     writeContents(i.contents)
   }
 
@@ -746,13 +739,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_OUTPUT)
     writeLocation(o.loc)
     writeString(o.nounAlias)
-    writeIdentifier(o.id)
+    writeIdentifierInline(o.id)  // Inline - no tag needed
     writeString(o.verbAlias)
     // Handle union type: TypeRef | ConstantRef | LiteralString
     o.putOut match {
       case tr: TypeRef =>
         writer.writeU8(0)
-        writeTypeRef(tr)
+        writeTypeRefInline(tr)  // Inline - discriminator identifies type
       case cr: ConstantRef =>
         writer.writeU8(1)
         writeConstantRef(cr)
@@ -885,173 +878,175 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeAuthorRef(r: AuthorRef): Unit = {
     writer.writeU8(NODE_AUTHOR)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeTypeRef(r: TypeRef): Unit = {
     writer.writeU8(NODE_TYPE)
     writeLocation(r.loc)
     writeString(r.keyword)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
+  }
+
+  /** Write TypeRef without tag - used when type is known from position */
+  def writeTypeRefInline(r: TypeRef): Unit = {
+    writeLocation(r.loc)
+    writeString(r.keyword)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeFieldRef(r: FieldRef): Unit = {
     writer.writeU8(NODE_FIELD)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeConstantRef(r: ConstantRef): Unit = {
     writer.writeU8(NODE_FIELD)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeCommandRef(r: CommandRef): Unit = {
-    writer.writeU8(NODE_TYPE)
-    writer.writeU8(0) // Command type
+    writer.writeU8(NODE_COMMAND_REF)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeEventRef(r: EventRef): Unit = {
-    writer.writeU8(NODE_TYPE)
-    writer.writeU8(1) // Event type
+    writer.writeU8(NODE_EVENT_REF)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeQueryRef(r: QueryRef): Unit = {
-    writer.writeU8(NODE_TYPE)
-    writer.writeU8(2) // Query type
+    writer.writeU8(NODE_QUERY_REF)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeResultRef(r: ResultRef): Unit = {
-    writer.writeU8(NODE_TYPE)
-    writer.writeU8(3) // Result type
+    writer.writeU8(NODE_RESULT_REF)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeRecordRef(r: RecordRef): Unit = {
-    writer.writeU8(NODE_TYPE)
-    writer.writeU8(4) // Record type
+    writer.writeU8(NODE_RECORD_REF)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeAdaptorRef(r: AdaptorRef): Unit = {
     writer.writeU8(NODE_ADAPTOR)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeFunctionRef(r: FunctionRef): Unit = {
     writer.writeU8(NODE_FUNCTION)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeHandlerRef(r: HandlerRef): Unit = {
     writer.writeU8(NODE_HANDLER)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeStateRef(r: StateRef): Unit = {
     writer.writeU8(NODE_STATE)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeEntityRef(r: EntityRef): Unit = {
     writer.writeU8(NODE_ENTITY)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeRepositoryRef(r: RepositoryRef): Unit = {
     writer.writeU8(NODE_REPOSITORY)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeProjectorRef(r: ProjectorRef): Unit = {
     writer.writeU8(NODE_PROJECTOR)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeContextRef(r: ContextRef): Unit = {
     writer.writeU8(NODE_CONTEXT)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeStreamletRef(r: StreamletRef): Unit = {
     writer.writeU8(NODE_STREAMLET)
     writeLocation(r.loc)
     writeString(r.keyword)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeInletRef(r: InletRef): Unit = {
     writer.writeU8(NODE_INLET)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeOutletRef(r: OutletRef): Unit = {
     writer.writeU8(NODE_OUTLET)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeSagaRef(r: SagaRef): Unit = {
     writer.writeU8(NODE_SAGA)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeUserRef(r: UserRef): Unit = {
     writer.writeU8(NODE_USER)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeEpicRef(r: EpicRef): Unit = {
     writer.writeU8(NODE_EPIC)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeGroupRef(r: GroupRef): Unit = {
     writer.writeU8(NODE_GROUP)
     writeLocation(r.loc)
     writeString(r.keyword)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeInputRef(r: InputRef): Unit = {
     writer.writeU8(NODE_INPUT)
     writeLocation(r.loc)
     writeString(r.keyword)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeOutputRef(r: OutputRef): Unit = {
     writer.writeU8(NODE_OUTPUT)
     writeLocation(r.loc)
     writeString(r.keyword)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   def writeDomainRef(r: DomainRef): Unit = {
     writer.writeU8(NODE_DOMAIN)
     writeLocation(r.loc)
-    writePathIdentifier(r.pathId)
+    writePathIdentifierInline(r.pathId)
   }
 
   // Generic reference writer for polymorphic cases
@@ -1293,7 +1288,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(TYPE_REF)
         writer.writeU8(10) // Entity ref type
         writeLocation(e.loc)
-        writePathIdentifier(e.entity)
+        writePathIdentifierInline(e.entity)
 
       // Collection types
       case alt: Alternation =>
@@ -1386,7 +1381,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(0) // AliasedTypeExpression subtype (0 = aliased, 10 = entity ref, 99 = abstract, 100 = nothing)
         writeLocation(ate.loc)
         writeString(ate.keyword)
-        writePathIdentifier(ate.pathId)
+        writePathIdentifierInline(ate.pathId)
 
       // Predefined types - String
       case s: String_ =>
@@ -1405,7 +1400,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
         writer.writeU8(TYPE_UNIQUE_ID)
         writer.writeU8(0) // UniqueId subtype (0 = UniqueId, 1 = UUID, 2 = UserId)
         writeLocation(u.loc)
-        writePathIdentifier(u.entityPath)
+        writePathIdentifierInline(u.entityPath)
 
       case c: Currency =>
         writer.writeU8(TYPE_NUMBER)
@@ -1610,8 +1605,20 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeString(id.value)
   }
 
+  /** Write identifier without tag - used when identifier position is known (e.g., after definition tag) */
+  def writeIdentifierInline(id: Identifier): Unit = {
+    writeLocation(id.loc)
+    writeString(id.value)
+  }
+
   def writePathIdentifier(pid: PathIdentifier): Unit = {
     writer.writeU8(NODE_PATH_IDENTIFIER)
+    writeLocation(pid.loc)
+    writeSeq(pid.value)(writeString)
+  }
+
+  /** Write PathIdentifier without tag - position is always known within references */
+  def writePathIdentifierInline(pid: PathIdentifier): Unit = {
     writeLocation(pid.loc)
     writeSeq(pid.value)(writeString)
   }

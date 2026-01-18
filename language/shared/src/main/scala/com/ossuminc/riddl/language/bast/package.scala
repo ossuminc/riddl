@@ -52,8 +52,10 @@ package object bast {
   /** Header size in bytes */
   val HEADER_SIZE: Int = 32
 
-  // Node type tags - must fit in single byte (0-255)
-  // Core AST nodes
+  // Node type tags - compact sequential numbering (1-67)
+  // Must fit in single byte (0-255)
+
+  // Definitions (1-33)
   val NODE_NEBULA: Byte = 1
   val NODE_DOMAIN: Byte = 2
   val NODE_CONTEXT: Byte = 3
@@ -63,73 +65,76 @@ package object bast {
   val NODE_ADAPTOR: Byte = 7
   val NODE_SAGA: Byte = 8
   val NODE_EPIC: Byte = 9
-  val NODE_PROCESSOR: Byte = 10
-  val NODE_PROJECTOR: Byte = 11
-  val NODE_REPOSITORY: Byte = 12
-  val NODE_STREAMLET: Byte = 13
-  val NODE_CONNECTOR: Byte = 14
-  val NODE_HANDLER: Byte = 15
-  val NODE_STATE: Byte = 16
-  val NODE_INVARIANT: Byte = 17
-  val NODE_TERM: Byte = 18
-  val NODE_AUTHOR: Byte = 19
-  val NODE_USER: Byte = 20
-  val NODE_GROUP: Byte = 21
-  val NODE_INPUT: Byte = 22
-  val NODE_OUTPUT: Byte = 23
-  val NODE_INLET: Byte = 24
-  val NODE_OUTLET: Byte = 25
-  val NODE_PIPE: Byte = 26
-  val NODE_PLANT: Byte = 27
-  val NODE_APPLICATION: Byte = 28
-  val NODE_MODULE: Byte = 29
-  val NODE_FIELD: Byte = 30
-  val NODE_ENUMERATOR: Byte = 31
-  val NODE_ON_CLAUSE: Byte = 32
-  val NODE_INCLUDE: Byte = 33
-  val NODE_SAGA_STEP: Byte = 34
-  val NODE_SCHEMA: Byte = 35
-  val NODE_BAST_IMPORT: Byte = 36
+  val NODE_PROJECTOR: Byte = 10
+  val NODE_REPOSITORY: Byte = 11
+  val NODE_STREAMLET: Byte = 12
+  val NODE_CONNECTOR: Byte = 13
+  val NODE_HANDLER: Byte = 14
+  val NODE_STATE: Byte = 15
+  val NODE_INVARIANT: Byte = 16
+  val NODE_TERM: Byte = 17
+  val NODE_AUTHOR: Byte = 18
+  val NODE_USER: Byte = 19
+  val NODE_GROUP: Byte = 20
+  val NODE_INPUT: Byte = 21
+  val NODE_OUTPUT: Byte = 22
+  val NODE_INLET: Byte = 23
+  val NODE_OUTLET: Byte = 24
+  val NODE_PIPE: Byte = 25
+  val NODE_MODULE: Byte = 26
+  val NODE_FIELD: Byte = 27
+  val NODE_ENUMERATOR: Byte = 28
+  val NODE_ON_CLAUSE: Byte = 29
+  val NODE_INCLUDE: Byte = 30
+  val NODE_SAGA_STEP: Byte = 31
+  val NODE_SCHEMA: Byte = 32
+  val NODE_BAST_IMPORT: Byte = 33
 
-  // Metadata nodes
-  val NODE_DESCRIPTION: Byte = 40
-  val NODE_BLOCK_DESCRIPTION: Byte = 41
-  val NODE_COMMENT: Byte = 42
-  val NODE_BLOCK_COMMENT: Byte = 43
+  // Metadata nodes (34-37)
+  val NODE_DESCRIPTION: Byte = 34
+  val NODE_BLOCK_DESCRIPTION: Byte = 35
+  val NODE_COMMENT: Byte = 36
+  val NODE_BLOCK_COMMENT: Byte = 37
 
-  // Type expressions
-  val TYPE_STRING: Byte = 50
-  val TYPE_BOOL: Byte = 51
-  val TYPE_NUMBER: Byte = 52
-  val TYPE_PATTERN: Byte = 53
-  val TYPE_AGGREGATION: Byte = 54
-  val TYPE_ALTERNATION: Byte = 55
-  val TYPE_ENUMERATION: Byte = 56
-  val TYPE_MAPPING: Byte = 57
-  val TYPE_REF: Byte = 58
-  val TYPE_OPTIONAL: Byte = 59
-  val TYPE_ONE_OR_MORE: Byte = 60
-  val TYPE_ZERO_OR_MORE: Byte = 61
-  val TYPE_RANGE: Byte = 62
-  val TYPE_UNIQUE_ID: Byte = 63
+  // Message References - dedicated tags (38-42)
+  val NODE_COMMAND_REF: Byte = 38
+  val NODE_EVENT_REF: Byte = 39
+  val NODE_QUERY_REF: Byte = 40
+  val NODE_RESULT_REF: Byte = 41
+  val NODE_RECORD_REF: Byte = 42
 
-  // Adaptor directions
-  val ADAPTOR_INBOUND: Byte = 70
-  val ADAPTOR_OUTBOUND: Byte = 71
+  // Type expressions (43-56)
+  val TYPE_STRING: Byte = 43
+  val TYPE_BOOL: Byte = 44
+  val TYPE_NUMBER: Byte = 45
+  val TYPE_PATTERN: Byte = 46
+  val TYPE_AGGREGATION: Byte = 47
+  val TYPE_ALTERNATION: Byte = 48
+  val TYPE_ENUMERATION: Byte = 49
+  val TYPE_MAPPING: Byte = 50
+  val TYPE_REF: Byte = 51
+  val TYPE_OPTIONAL: Byte = 52
+  val TYPE_ONE_OR_MORE: Byte = 53
+  val TYPE_ZERO_OR_MORE: Byte = 54
+  val TYPE_RANGE: Byte = 55
+  val TYPE_UNIQUE_ID: Byte = 56
 
-  // Streamlet shapes
-  val STREAMLET_SOURCE: Byte = 80
-  val STREAMLET_SINK: Byte = 81
-  val STREAMLET_FLOW: Byte = 82
-  val STREAMLET_MERGE: Byte = 83
-  val STREAMLET_SPLIT: Byte = 84
-  val STREAMLET_VOID: Byte = 85
+  // Adaptor directions (57-58)
+  val ADAPTOR_INBOUND: Byte = 57
+  val ADAPTOR_OUTBOUND: Byte = 58
 
-  // Other nodes
-  val NODE_IDENTIFIER: Byte = 100
-  val NODE_PATH_IDENTIFIER: Byte = 101
-  val NODE_LOCATION: Byte = 102
-  val NODE_LITERAL_STRING: Byte = 103
+  // Streamlet shapes (59-64)
+  val STREAMLET_SOURCE: Byte = 59
+  val STREAMLET_SINK: Byte = 60
+  val STREAMLET_FLOW: Byte = 61
+  val STREAMLET_MERGE: Byte = 62
+  val STREAMLET_SPLIT: Byte = 63
+  val STREAMLET_VOID: Byte = 64
+
+  // Simple values (65-67) - kept for polymorphic cases
+  val NODE_IDENTIFIER: Byte = 65
+  val NODE_PATH_IDENTIFIER: Byte = 66
+  val NODE_LITERAL_STRING: Byte = 67
 
   /** Flags for header */
   object Flags {

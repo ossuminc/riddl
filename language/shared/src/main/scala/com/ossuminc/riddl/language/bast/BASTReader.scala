@@ -226,6 +226,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     case NODE_LITERAL_STRING => "LiteralString"
     case NODE_AUTHOR => "Author"
     case NODE_TERM => "Term"
+    case NODE_COMMAND_REF => "CommandRef"
+    case NODE_EVENT_REF => "EventRef"
+    case NODE_QUERY_REF => "QueryRef"
+    case NODE_RESULT_REF => "ResultRef"
+    case NODE_RECORD_REF => "RecordRef"
     case STREAMLET_VOID => "Void"
     case STREAMLET_SOURCE => "Source"
     case STREAMLET_SINK => "Sink"
@@ -308,6 +313,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         case NODE_AUTHOR => readAuthorOrAuthorRefNode()
         case NODE_TERM => readTermNode()
 
+        // Message References (dedicated tags)
+        case NODE_COMMAND_REF => readCommandRefNode()
+        case NODE_EVENT_REF => readEventRefNode()
+        case NODE_QUERY_REF => readQueryRefNode()
+        case NODE_RESULT_REF => readResultRefNode()
+        case NODE_RECORD_REF => readRecordRefNode()
+
         // Streamlet shapes
         case STREAMLET_VOID => readVoidNode()
         case STREAMLET_SOURCE => readSourceNode()
@@ -350,7 +362,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readDomainNode(): Domain = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInDomain]().asInstanceOf[Contents[DomainContents]]
     val metadata = readMetadataDeferred() // Returns empty now
     Domain(loc, id, contents, metadata)
@@ -358,7 +370,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readContextNode(): Context = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
     val metadata = readMetadataDeferred()
     Context(loc, id, contents, metadata)
@@ -366,7 +378,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readEntityNode(): Entity = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
     val metadata = readMetadataDeferred()
     Entity(loc, id, contents, metadata)
@@ -374,7 +386,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readModuleNode(): Module = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[Domain | Author | Comment]().asInstanceOf[Contents[ModuleContents]]
     val metadata = readMetadataDeferred()
     Module(loc, id, contents, metadata)
@@ -399,7 +411,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readTypeNode(): Type = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val typEx = readTypeExpression()
     val metadata = readMetadataDeferred()
     Type(loc, id, typEx, metadata)
@@ -429,7 +441,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readEnumeratorNode(): Enumerator = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val enumVal = readOption(reader.readVarLong())
     val metadata = readMetadataDeferred()
     Enumerator(loc, id, enumVal, metadata)
@@ -439,7 +451,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readAdaptorNode(): Adaptor = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val directionTag = reader.readU8()
     val direction: AdaptorDirection = directionTag match {
       case ADAPTOR_INBOUND => InboundAdaptor(loc)
@@ -454,7 +466,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readFunctionNode(): Function = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val input = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val output = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val contents = readContentsDeferred[OccursInVitalDefinition | Statement | Function]().asInstanceOf[Contents[FunctionContents]]
@@ -464,7 +476,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readSagaNode(): Saga = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val input = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val output = readOption(readTypeExpression()).map(_.asInstanceOf[Aggregation])
     val contents = readContentsDeferred[OccursInVitalDefinition | SagaStep]().asInstanceOf[Contents[SagaContents]]
@@ -474,7 +486,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readProjectorNode(): Projector = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]().asInstanceOf[Contents[ProjectorContents]]
     val metadata = readMetadataDeferred()
     Projector(loc, id, contents, metadata)
@@ -482,7 +494,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readRepositoryNode(): Repository = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
     val metadata = readMetadataDeferred()
     Repository(loc, id, contents, metadata)
@@ -492,7 +504,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     // Read schemaKind subtype: 0=Relational, 1=Document, 2=Graphical
     val subtype = reader.readU8()
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
 
     val schemaKind = subtype match {
       case 0 => RepositorySchemaKind.Relational
@@ -501,7 +513,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case _ => RepositorySchemaKind.Relational
     }
 
-    // Read data map
+    // Read data map - keys use writeIdentifier (with tag)
     val dataCount = reader.readVarInt()
     val data = (0 until dataCount).map { _ =>
       val dataId = readIdentifier()
@@ -509,7 +521,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       (dataId, tref)
     }.toMap
 
-    // Read links map
+    // Read links map - keys use writeIdentifier (with tag)
     val linksCount = reader.readVarInt()
     val links = (0 until linksCount).map { _ =>
       val linkId = readIdentifier()
@@ -527,7 +539,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readStreamletNode(): Streamlet = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val shapeTag = reader.readU8()
     val shape: StreamletShape = shapeTag match {
       case STREAMLET_VOID => Void(loc)
@@ -547,7 +559,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readEpicOrUseCaseNode(): RiddlValue = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
 
     // Check if next is UserStory (NODE_USER tag) or Contents
     val saved = reader.position
@@ -588,7 +600,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     else
       // Handler: location, identifier, contents, metadata
       val loc = readLocation()
-      val id = readIdentifier()
+      val id = readIdentifierInline()  // Inline - no tag
       val contents = readContentsDeferred[HandlerContents]()
       val metadata = readMetadataDeferred()
       Handler(loc, id, contents, metadata)
@@ -597,7 +609,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readSagaStepNode(): SagaStep = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val doStatements = readContentsDeferred[Statements]()
     val undoStatements = readContentsDeferred[Statements]()
     val metadata = readMetadataDeferred()
@@ -674,15 +686,15 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readStateNode(): State = {
     val loc = readLocation()
-    val id = readIdentifier()
-    val typ = readTypeRef()
+    val id = readIdentifierInline()  // Inline - no tag
+    val typ = readTypeRefInline()    // Inline - position known
     val metadata = readMetadataDeferred()
     State(loc, id, typ, metadata)
   }
 
   private def readInvariantNode(): Invariant = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val condition = readOption(readLiteralString())
     val metadata = readMetadataDeferred()
     Invariant(loc, id, condition, metadata)
@@ -728,8 +740,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readInletNode(): Inlet = {
     val loc = readLocation()
-    val id = readIdentifier()
-    val type_ = readTypeRef()
+    val id = readIdentifierInline()  // Inline - no tag
+    val type_ = readTypeRefInline()  // Inline - position known
     val metadata = readMetadataDeferred()
     Inlet(loc, id, type_, metadata)
   }
@@ -744,7 +756,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
     if nextTag == NODE_IDENTIFIER then
       val id = readIdentifier()
-      val type_ = readTypeRef()
+      val type_ = readTypeRefInline()  // Inline - position known
       val metadata = readMetadataDeferred()
       Outlet(loc, id, type_, metadata)
     else
@@ -756,7 +768,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readConnectorNode(): Connector = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val from = readOutletRef()
     val to = readInletRef()
     val metadata = readMetadataDeferred()
@@ -844,7 +856,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         TakeInputInteraction(loc, from, to, metadata)
 
       case _ => // Relationship (default)
-        val id = readIdentifier()
+        val id = readIdentifierInline()  // Inline - no tag
         val withProcessor = readProcessorRef()
         val cardinality = RelationshipCardinality.fromOrdinal(reader.readU8())
         val label = readOption(readLiteralString())
@@ -884,9 +896,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readInputNode(): Input = {
     val loc = readLocation()
     val nounAlias = readString()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val verbAlias = readString()
-    val takeIn = readTypeRef()
+    val takeIn = readTypeRefInline()  // Inline - position known
     val contents = readContentsDeferred[OccursInInput]()
     val metadata = readMetadataDeferred()
     Input(loc, nounAlias, id, verbAlias, takeIn, contents, metadata)
@@ -895,16 +907,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readOutputNode(): Output = {
     val loc = readLocation()
     val nounAlias = readString()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val verbAlias = readString()
 
     // Read union type
     val putOutType = reader.readU8()
     val putOut: TypeRef | ConstantRef | LiteralString = putOutType match {
-      case 0 => readTypeRef()
+      case 0 => readTypeRefInline()  // Inline - discriminator identifies type
       case 1 => readConstantRef()
       case 2 => readLiteralString()
-      case _ => readTypeRef()
+      case _ => readTypeRefInline()  // Inline - discriminator identifies type
     }
 
     val contents = readContentsDeferred[OccursInOutput]()
@@ -924,11 +936,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
     if nextTag == NODE_PATH_IDENTIFIER then
       // AuthorRef
-      val pathId = readPathIdentifier()
+      val pathId = readPathIdentifierInline()
       AuthorRef(loc, pathId)
     else
       // Author
-      val id = readIdentifier()
+      val id = readIdentifierInline()  // Inline - no tag
       val name = readLiteralString()
       val email = readLiteralString()
       val organization = readOption(readLiteralString())
@@ -949,7 +961,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
     if nextTag == NODE_PATH_IDENTIFIER then
       // UserRef
-      val pathId = readPathIdentifier()
+      val pathId = readPathIdentifierInline()
       UserRef(loc, pathId)
     else if nextTag == NODE_IDENTIFIER then
       // User
@@ -977,7 +989,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readTermNode(): Term = {
     val loc = readLocation()
-    val id = readIdentifier()
+    val id = readIdentifierInline()  // Inline - no tag
     val definition = readSeq(() => readLiteralString())
     Term(loc, id, definition)
   }
@@ -1211,11 +1223,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         subtype match {
           case 0 => // AliasedTypeExpression
             val keyword = readString()
-            val pathId = readPathIdentifier()
+            val pathId = readPathIdentifierInline()
             AliasedTypeExpression(loc, keyword, pathId)
 
           case 10 => // EntityReference
-            val entity = readPathIdentifier()
+            val entity = readPathIdentifierInline()
             EntityReferenceTypeExpression(loc, entity)
 
           case 99 => // Abstract
@@ -1264,7 +1276,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
         subtype match {
           case 0 => // UniqueId
-            val entityPath = readPathIdentifier()
+            val entityPath = readPathIdentifierInline()
             UniqueId(loc, entityPath)
 
           case 1 => // UUID
@@ -1358,7 +1370,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
     refTag match {
       case NODE_AUTHOR => readAuthorRef()
-      case NODE_TYPE => readTypeRefOrMessageRef()
+      case NODE_TYPE => readTypeRef()
       case NODE_FIELD => readFieldRefOrConstantRef()
       case NODE_ADAPTOR => readAdaptorRef()
       case NODE_FUNCTION => readFunctionRef()
@@ -1378,6 +1390,12 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case NODE_INPUT => readInputRef()
       case NODE_OUTPUT => readOutputRef()
       case NODE_DOMAIN => readDomainRef()
+      // Message References (dedicated tags)
+      case NODE_COMMAND_REF => readCommandRefNode()
+      case NODE_EVENT_REF => readEventRefNode()
+      case NODE_QUERY_REF => readQueryRefNode()
+      case NODE_RESULT_REF => readResultRefNode()
+      case NODE_RECORD_REF => readRecordRefNode()
       case _ =>
         reader.readU8() // consume the unknown tag
         addError(s"Unknown reference tag: $refTag")
@@ -1388,54 +1406,30 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readAuthorRef(): AuthorRef = {
     val tag = reader.readU8() // Read NODE_AUTHOR tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     AuthorRef(loc, pathId)
-  }
-
-  private def readTypeRefOrMessageRef(): TypeRef | MessageRef = {
-    val tag = reader.readU8() // Read NODE_TYPE tag
-    val saved = reader.position
-    val loc = readLocation()
-
-    // Check if this has a subtype (message ref) or keyword (type ref)
-    val nextByte = reader.peekU8()
-    reader.seek(saved)
-
-    if nextByte < 10 then
-      // Message ref (has subtype)
-      val loc = readLocation()
-      val subtype = reader.readU8()
-      val pathId = readPathIdentifier()
-
-      subtype match {
-        case 0 => CommandRef(loc, pathId)
-        case 1 => EventRef(loc, pathId)
-        case 2 => QueryRef(loc, pathId)
-        case 3 => ResultRef(loc, pathId)
-        case 4 => RecordRef(loc, pathId)
-        case _ => RecordRef(loc, pathId)
-      }
-    else
-      // TypeRef
-      val loc = readLocation()
-      val keyword = readString()
-      val pathId = readPathIdentifier()
-      TypeRef(loc, keyword, pathId)
-    end if
   }
 
   private def readTypeRef(): TypeRef = {
     val tag = reader.readU8() // Read NODE_TYPE tag
     val loc = readLocation()
     val keyword = readString()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
+    TypeRef(loc, keyword, pathId)
+  }
+
+  /** Read TypeRef without tag - used when type is known from position */
+  private def readTypeRefInline(): TypeRef = {
+    val loc = readLocation()
+    val keyword = readString()
+    val pathId = readPathIdentifierInline()
     TypeRef(loc, keyword, pathId)
   }
 
   private def readFieldRefOrConstantRef(): FieldRef | ConstantRef = {
     val tag = reader.readU8() // Read NODE_FIELD tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     // For now, default to FieldRef
     FieldRef(loc, pathId)
   }
@@ -1443,100 +1437,137 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readFieldRef(): FieldRef = {
     val tag = reader.readU8() // Read NODE_FIELD tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     FieldRef(loc, pathId)
   }
 
   private def readConstantRef(): ConstantRef = {
     val tag = reader.readU8() // Read NODE_FIELD tag (constants use same tag as fields)
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     ConstantRef(loc, pathId)
   }
 
+  // Message Ref Node readers - consume the dedicated tag
+  private def readCommandRefNode(): CommandRef = {
+    reader.readU8() // consume NODE_COMMAND_REF tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    CommandRef(loc, pathId)
+  }
+
+  private def readEventRefNode(): EventRef = {
+    reader.readU8() // consume NODE_EVENT_REF tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    EventRef(loc, pathId)
+  }
+
+  private def readQueryRefNode(): QueryRef = {
+    reader.readU8() // consume NODE_QUERY_REF tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    QueryRef(loc, pathId)
+  }
+
+  private def readResultRefNode(): ResultRef = {
+    reader.readU8() // consume NODE_RESULT_REF tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    ResultRef(loc, pathId)
+  }
+
+  private def readRecordRefNode(): RecordRef = {
+    reader.readU8() // consume NODE_RECORD_REF tag
+    val loc = readLocation()
+    val pathId = readPathIdentifierInline()
+    RecordRef(loc, pathId)
+  }
+
+  // Internal methods for message refs (called after tag is consumed)
   private def readCommandRef(): CommandRef = {
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     CommandRef(loc, pathId)
   }
 
   private def readEventRef(): EventRef = {
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     EventRef(loc, pathId)
   }
 
   private def readQueryRef(): QueryRef = {
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     QueryRef(loc, pathId)
   }
 
   private def readResultRef(): ResultRef = {
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     ResultRef(loc, pathId)
   }
 
   private def readRecordRef(): RecordRef = {
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     RecordRef(loc, pathId)
   }
 
   private def readAdaptorRef(): AdaptorRef = {
     val tag = reader.readU8() // Read NODE_ADAPTOR tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     AdaptorRef(loc, pathId)
   }
 
   private def readFunctionRef(): FunctionRef = {
     val tag = reader.readU8() // Read NODE_FUNCTION tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     FunctionRef(loc, pathId)
   }
 
   private def readHandlerRef(): HandlerRef = {
     val tag = reader.readU8() // Read NODE_HANDLER tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     HandlerRef(loc, pathId)
   }
 
   private def readStateRef(): StateRef = {
     val tag = reader.readU8() // Read NODE_STATE tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     StateRef(loc, pathId)
   }
 
   private def readEntityRef(): EntityRef = {
     val tag = reader.readU8() // Read NODE_ENTITY tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     EntityRef(loc, pathId)
   }
 
   private def readRepositoryRef(): RepositoryRef = {
     val tag = reader.readU8() // Read NODE_REPOSITORY tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     RepositoryRef(loc, pathId)
   }
 
   private def readProjectorRef(): ProjectorRef = {
     val tag = reader.readU8() // Read NODE_PROJECTOR tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     ProjectorRef(loc, pathId)
   }
 
   private def readContextRef(): ContextRef = {
     val tag = reader.readU8() // Read NODE_CONTEXT tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     ContextRef(loc, pathId)
   }
 
@@ -1544,42 +1575,42 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val tag = reader.readU8() // Read NODE_STREAMLET tag
     val loc = readLocation()
     val keyword = readString()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     StreamletRef(loc, keyword, pathId)
   }
 
   private def readInletRef(): InletRef = {
     val tag = reader.readU8() // Read NODE_INLET tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     InletRef(loc, pathId)
   }
 
   private def readOutletRef(): OutletRef = {
     val tag = reader.readU8() // Read NODE_OUTLET tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     OutletRef(loc, pathId)
   }
 
   private def readSagaRef(): SagaRef = {
     val tag = reader.readU8() // Read NODE_SAGA tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     SagaRef(loc, pathId)
   }
 
   private def readUserRef(): UserRef = {
     val nodeType = reader.readU8() // Should be NODE_USER
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     UserRef(loc, pathId)
   }
 
   private def readEpicRef(): EpicRef = {
     val tag = reader.readU8() // Read NODE_EPIC tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     EpicRef(loc, pathId)
   }
 
@@ -1587,7 +1618,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val tag = reader.readU8() // Read NODE_GROUP tag
     val loc = readLocation()
     val keyword = readString()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     GroupRef(loc, keyword, pathId)
   }
 
@@ -1595,7 +1626,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val tag = reader.readU8() // Read NODE_INPUT tag
     val loc = readLocation()
     val keyword = readString()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     InputRef(loc, keyword, pathId)
   }
 
@@ -1603,35 +1634,27 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val tag = reader.readU8() // Read NODE_OUTPUT tag
     val loc = readLocation()
     val keyword = readString()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     OutputRef(loc, keyword, pathId)
   }
 
   private def readDomainRef(): DomainRef = {
     val tag = reader.readU8() // Read NODE_DOMAIN tag
     val loc = readLocation()
-    val pathId = readPathIdentifier()
+    val pathId = readPathIdentifierInline()
     DomainRef(loc, pathId)
   }
 
   private def readMessageRef(): MessageRef = {
     val refTag = reader.peekU8()
     refTag match {
-      case NODE_TYPE =>
-        reader.readU8() // consume tag
-        val subtype = reader.readU8() // subtype comes BEFORE location
-        val loc = readLocation()
-        val pathId = readPathIdentifier()
-        subtype match {
-          case 0 => CommandRef(loc, pathId)
-          case 1 => EventRef(loc, pathId)
-          case 2 => QueryRef(loc, pathId)
-          case 3 => ResultRef(loc, pathId)
-          case 4 => RecordRef(loc, pathId)
-          case _ => RecordRef(loc, pathId)
-        }
+      case NODE_COMMAND_REF => readCommandRefNode()
+      case NODE_EVENT_REF => readEventRefNode()
+      case NODE_QUERY_REF => readQueryRefNode()
+      case NODE_RESULT_REF => readResultRefNode()
+      case NODE_RECORD_REF => readRecordRefNode()
       case _ =>
-        // Fallback
+        addError(s"Unknown message ref tag: $refTag")
         RecordRef(At.empty, PathIdentifier.empty)
     }
   }
@@ -1724,8 +1747,22 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     Identifier(loc, value)
   }
 
+  /** Read identifier without tag - used when identifier position is known */
+  private def readIdentifierInline(): Identifier = {
+    val loc = readLocation()
+    val value = readString()
+    Identifier(loc, value)
+  }
+
   private def readPathIdentifier(): PathIdentifier = {
     val nodeType = reader.readU8() // Should be NODE_PATH_IDENTIFIER
+    val loc = readLocation()
+    val value = readSeq(() => readString())
+    PathIdentifier(loc, value)
+  }
+
+  /** Read PathIdentifier without tag - position is always known within references */
+  private def readPathIdentifierInline(): PathIdentifier = {
     val loc = readLocation()
     val value = readSeq(() => readString())
     PathIdentifier(loc, value)
