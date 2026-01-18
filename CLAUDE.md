@@ -326,13 +326,13 @@ sbt riddlc/stage
 ┌─────────────────────────────────────┐
 │ Header (32 bytes)                   │
 │  - Magic: "BAST" (4 bytes)          │
-│  - Version: u16 major + u16 minor   │
+│  - Version: u32 (single integer)    │
 │  - Flags: u16                       │
 │  - String Table Offset: u32         │
 │  - Root Offset: u32                 │
 │  - File Size: u32                   │
 │  - Checksum: u32                    │
-│  - Reserved: (8 bytes)              │
+│  - Reserved: (4 bytes)              │
 ├─────────────────────────────────────┤
 │ String Interning Table              │
 │  - Count: varint                    │
@@ -449,7 +449,7 @@ All BAST source files are in `language/shared/src/main/scala/com/ossuminc/riddl/
 - `BASTBenchmarkRunner.scala` - Standalone benchmark runner (runMain)
 - `DeepASTComparison.scala` - AST comparison utility for round-trip verification
 
-**Total: 54 BAST tests** (as of Jan 2026)
+**Total: 60 BAST tests** (as of Jan 2026)
 
 #### Key Implementation Notes
 
@@ -481,6 +481,13 @@ All BAST source files are in `language/shared/src/main/scala/com/ossuminc/riddl/
    - When reading contents that contain type expressions (e.g., `Alternation.of` which contains `AliasedTypeExpression`), you MUST use `readTypeExpression()`, not `readNode()` via `readContentsDeferred()`
    - **Bug pattern**: If you see "Invalid string table index" errors with huge counts like `metadata[1000009]`, it usually means the reader is misaligned because it tried to read a TYPE_* tag as a NODE_* tag
    - **Fix pattern**: Create specialized reader methods like `readTypeExpressionContents()` that read count + call `readTypeExpression()` for each item
+
+6. **Inline Methods for Size Optimization** (Jan 2026):
+   - `writeIdentifierInline()` / `readIdentifierInline()` - Used after definition tags when identifier position is known
+   - `writePathIdentifierInline()` / `readPathIdentifierInline()` - Used in all reference types since PathIdentifier position is always known
+   - `writeTypeRefInline()` / `readTypeRefInline()` - Used in State, Inlet, Outlet, Input where TypeRef position is fixed
+   - Inline methods omit the tag byte, saving ~1 byte per usage
+   - Tags are still needed for: polymorphic cases (Field/MethodArgument, Outlet/ShownBy, User/UserStory, Group/ContainedGroup)
 
 #### Related Issues & TODOs
 

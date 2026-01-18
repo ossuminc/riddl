@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: January 16, 2026
+**Last Updated**: January 17, 2026
 
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. Recent work has focused on BAST (Binary AST) serialization for fast module imports.
 
@@ -86,15 +86,15 @@ This enables BAST to work like Python's `.pyc` files - automatic loading from ca
 **Commands Module** (`commands/jvm/.../commands/`):
 - `BastGenCommand.scala` - `riddlc bast-gen` command
 
-### Performance Results (January 16, 2026)
+### Performance Results (January 17, 2026)
 
-**BAST Format v1** - Optimized with zigzag-encoded deltas and removed redundant line/col:
+**BAST Format v1** - Optimized with tag compaction, inline identifiers, inline PathIdentifier, and inline TypeRef:
 
-| File | Source | BAST (initial) | BAST (optimized) | Size Change |
-|------|--------|----------------|------------------|-------------|
-| small.riddl | 2KB | 3KB (147%) | 2.4KB (120%) | **-18%** |
-| medium.riddl | 11KB | 16KB (140%) | 10KB (89%) | **-36%** |
-| large.riddl | 43KB | 59KB (137%) | 37KB (86%) | **-37%** |
+| File | Source | BAST (initial) | BAST (latest) | Size Change |
+|------|--------|----------------|---------------|-------------|
+| small.riddl | 2KB | 3KB (147%) | 2.4KB (117%) | **-20%** |
+| medium.riddl | 11KB | 16KB (140%) | 9.7KB (86%) | **-39%** |
+| large.riddl | 43KB | 59KB (137%) | 35.5KB (83%) | **-40%** |
 
 **Key achievement**: Optimized BAST files are now **smaller than source code** for medium/large files!
 
@@ -102,10 +102,10 @@ This enables BAST to work like Python's `.pyc` files - automatic loading from ca
 
 | File | Nodes | Cold Speed | Warm Speed |
 |------|-------|------------|------------|
-| small.riddl | 60 | **9.8x** | 2.9x |
-| medium.riddl | 335 | **18.1x** | 8.8x |
-| large.riddl | 1,354 | **7.9x** | 6.2x |
-| **Average** | | **11.9x** | **6.0x** |
+| small.riddl | 60 | **9.7x** | 3.6x |
+| medium.riddl | 335 | **14.4x** | 12.9x |
+| large.riddl | 1,354 | **4.0x** | 6.2x |
+| **Average** | | **9.4x** | **7.6x** |
 
 **Test files** (`testkit/jvm/src/test/resources/performance/`):
 - `small.riddl` - 73 lines, 2 contexts (user management)
@@ -130,6 +130,12 @@ JVM/Native only (JS returns error message since browser can't do local file I/O)
 1. ~~Consider larger test corpus for comprehensive benchmarks~~ ✅ Done - created small/medium/large.riddl
 2. Rewrite `doc/src/main/hugo/content/future-work/bast.md` - the existing document is outdated
 3. Finalize BAST schema before release to users (TODO in package.scala)
+4. **Phase 7 Optimizations** (see `/Users/reid/.claude/plans/bast-phase7-optimizations.md`):
+   - **Bug Fix**: Find and fix nodes with `At.empty` (every node must have valid location)
+   - **Source file change markers**: Eliminate per-location path encoding; write FILE_CHANGE marker only when source changes (~4% savings)
+   - **Empty metadata flag bit**: Use tag high bit to indicate metadata presence (~3% savings)
+   - **Predefined type expressions**: Single-byte encoding for common types like String, Integer (~2-5% savings)
+   - **Expected total**: ~9-12% additional reduction (targeting ~70-75% of source size)
 
 ### Open Questions
 
@@ -151,10 +157,64 @@ JVM/Native only (JS returns error message since browser can't do local file I/O)
 | Remove line/col from BAST | Computed from offset; saves ~4 bytes/node | Store redundantly | 2026-01-16 |
 | HTTP compression vs library | HTTP handles transport; focus on base format | LZ4/Zstd library | 2026-01-16 |
 | Single version integer | Simpler; increment only on schema finalization | Major.minor semver | 2026-01-16 |
+| Compact tag numbering (1-67) | Eliminates gaps, easier maintenance | Sparse numbering | 2026-01-17 |
+| Dedicated message ref tags | Eliminates polymorphism, saves 1 byte/ref | Shared NODE_TYPE + subtype | 2026-01-17 |
+| Inline PathIdentifier | Position always known in refs, saves 1 byte | Tag every PathIdentifier | 2026-01-17 |
+| Inline TypeRef for known positions | Inlet/Outlet/State/Input always have TypeRef | Tag every TypeRef | 2026-01-17 |
+| Source file change markers | Only mark when source changes, not per-location | Per-location path index | 2026-01-17 (planned) |
+| Metadata flag in tag high bit | Tags 1-67 fit in 7 bits; saves 1 byte for empty metadata | Separate count byte | 2026-01-17 (planned) |
 
 ---
 
 ## Session Log
+
+### January 17, 2026 (Phase 7 Planning)
+
+**Focus**: Plan further BAST size optimizations
+
+**Discussion**: Identified 4 potential optimizations for next phase:
+1. **Source file change markers** - User refined initial idea: instead of 1-byte "same as previous" per location, write FILE_CHANGE marker only when source actually changes. All locations become just offset+endOffset. Must handle include stack properly (mark when returning to parent file). Estimated ~4% savings.
+2. **Empty metadata flag bit** - Use high bit of tag byte (tags 1-67 fit in 7 bits). Estimated ~3% savings.
+3. **Predefined type expressions** - Single-byte encoding for common default-parameter types. Estimated ~2-5% savings.
+4. **Compression** - Rejected (HTTP gzip is sufficient for WAN).
+
+**Bug identified**: Some nodes may have `At.empty` which is invalid. Need to find and fix these.
+
+**Plan created**: `/Users/reid/.claude/plans/bast-phase7-optimizations.md`
+
+**Target**: ~70-75% of source size (currently ~82-85% for medium/large files)
+
+### January 17, 2026 (BAST Tag Refactoring & Inline Optimization)
+
+**Focus**: Optimize BAST format by compacting tags and eliminating redundant tag bytes
+
+**Completed**:
+- **Phase 1**: Tag Cleanup and Reorganization
+  - Removed 4 unused tags: `NODE_PROCESSOR`, `NODE_PLANT`, `NODE_APPLICATION`, `NODE_LOCATION`
+  - Added 5 dedicated message ref tags: `NODE_COMMAND_REF`, `NODE_EVENT_REF`, `NODE_QUERY_REF`, `NODE_RESULT_REF`, `NODE_RECORD_REF`
+  - Compacted tag numbering from sparse (1-103 with gaps) to sequential (1-67)
+- **Phase 2-3**: Message Ref Tag Updates
+  - Updated BASTWriter to use dedicated message ref tags (eliminates subtype byte)
+  - Updated BASTReader dispatch tables
+  - Removed polymorphic `readTypeRefOrMessageRef()` in favor of direct tag dispatch
+  - Simplified `readMessageRef()` to use dedicated tags
+- **Phase 4**: Inline PathIdentifier
+  - Added `writePathIdentifierInline()` / `readPathIdentifierInline()` methods
+  - Updated all 29+ reference write/read methods to use inline (no tag)
+  - Updated type expressions (AliasedTypeExpression, EntityReferenceTypeExpression, UniqueId)
+- **Phase 5**: Inline TypeRef for Known Positions
+  - Added `writeTypeRefInline()` / `readTypeRefInline()` methods
+  - Updated State, Inlet, Outlet, Input, Output to use inline TypeRef
+
+**Results**: All 60 BAST tests pass. Size reduction of ~3% from this session:
+- small: 2,424 → 2,383 bytes (1.7% reduction)
+- medium: 10,035 → 9,739 bytes (2.9% reduction)
+- large: 36,580 → 35,541 bytes (2.8% reduction)
+
+**Key Files Modified**:
+- `language/shared/.../bast/package.scala` - New compact tag scheme
+- `language/shared/.../bast/BASTWriter.scala` - Inline methods, message ref tags
+- `language/shared/.../bast/BASTReader.scala` - Inline methods, message ref dispatch
 
 ### January 16, 2026 (BAST Version Simplification)
 
