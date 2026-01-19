@@ -63,10 +63,10 @@ domain Everything is {
       record fields is { field:  SomeType }
       state someState of Something.fields
       handler foo is {
-        on command ACommand {
-          "if and(Something arrives, misc()) then"
-            send event Inebriated to inlet Everything.full.Sink.input
-          "end"
+        on command ACommand is {
+          // if and(Something arrives, misc()) then
+          send event Inebriated to inlet Everything.full.Sink.input
+          // end
         }
       }
 
@@ -84,8 +84,8 @@ domain Everything is {
       record fields is { field: String }
       state otherThingState of SomeOtherThing.fields
       handler fee is {
-        on event ItHappened {
-           set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
+        on event ItHappened is {
+          set field SomeOtherThing.otherThingState.field to "field ItHappened.field"
         }
       }
     }

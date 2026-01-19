@@ -253,6 +253,88 @@ Reasons:
 
 ---
 
+## Future Considerations: Phase 8 Size Optimizations
+
+Analysis performed January 18, 2026 on `large.riddl` (43KB source → 29KB BAST at 67.5%)
+
+### Optimization 1: PathIdentifier Value Interning (Recommended)
+
+**Current encoding** for PathIdentifier (e.g., `TenantId` or `Entity.StateRecord`):
+```
+Location (2-4 bytes) + Count (1 byte) + N × StringIndex (1-2 bytes each)
+```
+
+**Observation**: Identifiers repeat frequently in RIDDL models:
+- `UserId`: 65 occurrences
+- `TenantId`: 52 occurrences
+- `String`: 181 occurrences
+- Total: 2,069 identifier references, only 529 unique
+- **Repetition rate: 74.4%**
+
+**Proposed optimization**: Create a PathValueTable (similar to StringTable):
+```
+First occurrence: Location + PathValueIndex + [PathValue in table]
+Subsequent:       Location + PathValueIndex
+```
+
+**Estimated savings**:
+- Current path bytes: ~6,200 bytes (in large.riddl)
+- With interning: ~4,700 bytes
+- **Savings: ~1,500 bytes (5% of total BAST)**
+
+**Implementation complexity**: Medium
+- Add PathValueTable to BASTWriter/BASTReader
+- Modify `writePathIdentifierInline()` to check table first
+- First bit of index indicates: 0 = table lookup, 1 = inline path
+
+### Optimization 2: Location Delta Run-Length Encoding (Potential)
+
+**Observation**: Many consecutive definitions share the same source file and have sequential line numbers.
+
+**Current**: Each location is delta-encoded from the previous.
+
+**Potential enhancement**: Use run-length encoding for sequences of "same file, next line":
+- Flag byte indicates: "increment line by 1, same file"
+- Saves offset/endOffset bytes for simple sequential definitions
+
+**Estimated savings**: 500-1,000 bytes (2-3%)
+**Implementation complexity**: Medium-High
+
+### Optimization 3: SagaStep Structure (Not Recommended)
+
+**Observation**: SagaSteps always have exactly 2 Contents fields (doStatements, undoStatements).
+
+**Current encoding**: Writes count for each Contents field.
+
+**Potential**: Could eliminate counts since always 2 fields.
+
+**Assessment**: **Not worth implementing**
+- Typical RIDDL models have very few SagaSteps (0-5)
+- Savings: ~5-10 bytes per SagaStep
+- Total savings: <50 bytes in typical models
+- Adds special-case complexity for minimal gain
+
+### Optimization 4: Reference Kind Consolidation (Potential)
+
+**Observation**: We have 20+ reference types (TypeRef, StateRef, EntityRef, etc.) each with their own tag.
+
+**Current**: Each reference type has a dedicated NODE_* tag.
+
+**Potential**: Could use a single REFERENCE tag + subtype byte for less common references, keeping dedicated tags only for the most frequent (TypeRef, FieldRef, StateRef).
+
+**Assessment**: Marginal benefit, increases code complexity.
+
+### Summary Recommendation
+
+**Phase 8 should focus on PathIdentifier Value Interning**:
+- Clearest win with ~5% additional size reduction
+- Well-understood implementation pattern (mirrors StringTable)
+- Benefits grow with model size and reference density
+
+**Target after Phase 8**: Large files at ~63-64% of source size (from current 67.5%)
+
+---
+
 ## Planned: AsciiDoc Generation Module
 
 ### Overview
@@ -358,7 +440,74 @@ asciidoc/                     # New module (or part of passes)
 
 ---
 
+## Known Parser Issues
+
+### PseudoCodeBlock with ??? and Comments
+
+**Status**: ✅ FIXED January 19, 2026
+
+The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
+- `{ ??? }`
+- `{ ??? // comment }`
+- `{ // comment ??? }`
+- `{ // c1 ??? // c2 }`
+
+**Fix applied** in `StatementParser.scala`:
+```scala
+(open ~ comment.rep(0) ~ undefined(Seq.empty[Statements]) ~ comment.rep(0) ~ close).map {
+  case (before, _, after) => before ++ after
+}
+```
+
+---
+
 ## Session Log
+
+### January 19, 2026 (CI Build Fixes Complete)
+
+**Focus**: Complete CI build fixes from previous session
+
+**Tasks Completed**:
+1. ✅ **AdaptorWriterTest expected output update** - Updated byte positions and removed string literal from expected output
+2. ✅ **Hugo CI environment fix** - Added `isHugoInstalled` check to skip Hugo binary execution when not available
+3. ✅ **Parser fix for `{ ??? // comment }`** - Extended `pseudoCodeBlock` to allow comments before/after `???`
+
+**Files Modified**:
+- `commands/jvm/src/test/scala/.../AdaptorWriterTest.scala` - Updated expected positions
+- `commands/jvm/src/test/scala/.../HugoPassTest.scala` - Added Hugo installation check
+- `language/shared/src/main/scala/.../StatementParser.scala` - Extended pseudoCodeBlock grammar
+
+**Test Results**: All 75 commands tests pass, all 280 language tests pass
+
+---
+
+### January 18, 2026 (CI Build Failures - Initial Investigation)
+
+**Focus**: Investigate and fix CI build failures
+
+**Context**: CI builds started failing after statement syntax changes in the parser. 5 tests were failing due to test input files using old or invalid statement syntax.
+
+**Tests Failing**:
+1. `RootOverviewDiagramTest` - context-relationships.riddl parse errors
+2. `ContextMapDiagramTest` - same file
+3. `ToDoPassListTest` - everything.riddl parse errors
+4. `AdaptorWriterTest` - adaptors.riddl parse errors
+5. `HugoPassTest` (example sources) - Hugo not installed in CI
+
+**Root Causes Identified**:
+1. On clauses missing `is` keyword (e.g., `on command X {` → `on command X is {`)
+2. Statements missing type keywords (e.g., `tell X to Y` → `tell command X to entity Y`)
+3. Bare string literals not valid in handler bodies (pseudo-code strings)
+4. Hugo binary not available in CI (separate environmental issue)
+
+**Completed**:
+- [x] Fixed `commands/input/hugo/context-relationships.riddl` - added `is` keyword to on clauses, fixed statement syntax
+- [x] Fixed `commands/input/everything.riddl` - added `is` keyword, fixed send/set statements
+- [x] Fixed `commands/input/adaptors.riddl` - converted string literal to comment
+
+**Discovered Parser Issue**: `{ ??? // comment }` is not allowed by grammar - documented for next session.
+
+---
 
 ### January 17, 2026 (Phase 7 Planning)
 

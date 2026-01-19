@@ -153,7 +153,10 @@ private[parsing] trait StatementParser {
   def pseudoCodeBlock[u: P](set: StatementsSet): P[Seq[Statements]] = {
     P(
       undefined(Seq.empty[Statements]) |
-        (open ~ undefined(Seq.empty[Statements]) ~ close) |
+        // Allow { ??? }, { // comment ??? }, { ??? // comment }, { // c1 ??? // c2 }
+        (open ~ comment.rep(0) ~ undefined(Seq.empty[Statements]) ~ comment.rep(0) ~ close).map {
+          case (before, _, after) => before ++ after
+        } |
         (statement(set) | comment)./.rep(1) |
         (open ~ (statement(set) | comment)./.rep(1) ~ close)
     )
