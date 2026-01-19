@@ -1,21 +1,108 @@
 ---
-title: "Condition"
+title: "Conditionals"
 draft: false
 ---
 
-A condition is a logical (boolean) expression resulting in true or false.
+Conditionals in RIDDL allow handlers to branch execution based on conditions.
+RIDDL provides two conditional constructs: `when` for simple conditions and
+`match` for multiple cases.
 
-## Arbitrary Conditional (#arbitrary)
-* just a string
+## When Statement
 
-## Numeric Expressions (#numeric)
-TBD
+The `when` statement executes a block of statements when a condition is true:
 
-## Conditions (Boolean Expressions) {#condition}
-TBD
+```riddl
+handler MyHandler is {
+  on command DoSomething {
+    let authorized = "user has permission"
+    when authorized then
+      send event ActionCompleted to outlet Events
+    end
+    when !authorized then
+      error "User not authorized"
+    end
+  }
+}
+```
+
+### Using Let with When
+
+The `let` statement binds a condition to a name for reuse:
+
+```riddl
+let condition = "some boolean expression"
+when condition then
+  // executed when true
+end
+when !condition then
+  // executed when false (note the ! negation)
+end
+```
+
+## Match Statement
+
+The `match` statement handles multiple cases with pattern matching:
+
+```riddl
+handler ValidationHandler is {
+  on command CreateUser {
+    match "user validation" {
+      case "email already exists" {
+        error "Email address is already in use"
+      }
+      case "invalid email format" {
+        error "Email format is invalid"
+      }
+      case "password too weak" {
+        error "Password does not meet requirements"
+      }
+      default {
+        send event UserCreated to outlet UserEvents
+        morph entity User to state ActiveUser with record ActiveUserState
+      }
+    }
+  }
+}
+```
+
+### Match Structure
+
+- `match "description" { ... }` - The description explains the scenario
+- `case "condition" { ... }` - Handles a specific condition
+- `default { ... }` - Handles the case when no other cases match
+
+## Conditions
+
+Conditions in RIDDL are expressed as quoted strings that describe the
+boolean expression in natural language:
+
+```riddl
+"user is authenticated"
+"order total exceeds threshold"
+"item is in stock"
+```
+
+These conditions are implemented by the code generator or human developer.
+RIDDL focuses on capturing the intent and flow, not the implementation details.
+
+## Best Practices
+
+1. **Use match for multiple error conditions**: When validating input with
+   several possible error cases, use `match` with error cases and a `default`
+   for the success path.
+
+2. **Use when for simple branches**: For a single condition with two outcomes,
+   use `let` + `when` + `when !`.
+
+3. **Descriptive conditions**: Write conditions as clear, readable statements
+   that document the business logic.
 
 ## Occurs In
+
 * [Statements]({{< relref "statement.md" >}})
+* [On Clauses]({{< relref "onclause.md" >}})
 
 ## Contains
-Nothing
+
+* Condition strings
+* Nested statements
