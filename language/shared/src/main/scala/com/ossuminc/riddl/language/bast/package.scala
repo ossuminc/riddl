@@ -14,17 +14,26 @@ package com.ossuminc.riddl.language
   *
   * Key features:
   * - Compact binary format with string interning
-  * - Delta-encoded location data
-  * - Variable-length integer encoding
+  * - Path identifier interning for repeated paths (Phase 8)
+  * - Delta-encoded location data with zigzag encoding
+  * - Variable-length integer encoding (LEB128)
   * - Cross-platform compatible (JVM, JS, Native)
   * - Versioned format for schema evolution
   *
+  * File Structure:
+  * {{{
+  *   Header (32 bytes)
+  *   String Table (varint count + strings)
+  *   Path Table (varint count + path entries)  <- Phase 8
+  *   Root Nebula Node (tree of nodes)
+  * }}}
+  *
   * Usage:
   * {{{
-  *   // Writing BAST
+  *   // Writing BAST (via BASTWriterPass)
   *   val nebula: Nebula = ...
-  *   val writer = new BASTWriter()
-  *   val bytes = writer.write(nebula)
+  *   val pass = new BASTWriterPass()
+  *   val bytes = pass.run(nebula)
   *
   *   // Reading BAST
   *   val reader = new BASTReader(bytes)

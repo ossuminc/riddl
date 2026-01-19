@@ -33,6 +33,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   private var currentSourcePath: String = ""
   private var nodeCount: Int = 0
 
+  /** Path table for Phase 8 PathIdentifier interning */
+  val pathTable: PathTable = PathTable(stringTable)
+
   /** Get the total number of nodes written */
   def getNodeCount: Int = nodeCount
 
@@ -85,12 +88,17 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeRawBytes(new Array[Byte](HEADER_SIZE))
   }
 
-  /** Write the string table to the buffer
+  /** Write the string table and path table to the buffer
+    *
+    * Phase 8: Path table is written immediately after string table.
+    *
     * @return The offset where the string table was written
     */
   def writeStringTable(): Int = {
     val offset = writer.position
     stringTable.writeTo(writer)
+    // Phase 8: Write path table immediately after string table
+    pathTable.writeTo(writer)
     offset
   }
 
@@ -1635,10 +1643,27 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeSeq(pid.value)(writeString)
   }
 
-  /** Write PathIdentifier without tag - position is always known within references */
+  /** Write PathIdentifier without tag - position is always known within references
+    *
+    * Phase 8 optimization: Uses path table interning for repeated paths.
+    * Encoding:
+    * - If count > 0: inline path (count + N string indices)
+    * - If count == 0: next varint is path table index
+    */
   def writePathIdentifierInline(pid: PathIdentifier): Unit = {
     writeLocation(pid.loc)
-    writeSeq(pid.value)(writeString)
+
+    // Try to intern the path (only paths with 2+ elements are interned)
+    val pathIndex = pathTable.intern(pid.value)
+
+    if pathIndex >= 0 then
+      // Path is interned - write count=0 followed by table index
+      writer.writeVarInt(0)
+      writer.writeVarInt(pathIndex)
+    else
+      // Path not interned (empty or single element) - write inline
+      writeSeq(pid.value)(writeString)
+    end if
   }
 
   def writeString(str: String): Unit = {

@@ -44,6 +44,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private val reader = new ByteBufferReader(bytes)
   private var stringTable: StringTable = _
+  private var pathTable: PathTable = _  // Phase 8: Path table for path interning
   private var lastLocation: At = At.empty
   private var firstLocationRead: Boolean = false
   private var currentSourcePath: String = ""
@@ -135,6 +136,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       // Load string table
       reader.seek(header.stringTableOffset)
       stringTable = StringTable.readFrom(reader)
+
+      // Phase 8: Load path table (immediately follows string table)
+      pathTable = PathTable.readFrom(reader, stringTable)
 
       // Read root Nebula from root offset
       reader.seek(header.rootOffset)
@@ -1847,10 +1851,27 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     PathIdentifier(loc, value)
   }
 
-  /** Read PathIdentifier without tag - position is always known within references */
+  /** Read PathIdentifier without tag - position is always known within references
+    *
+    * Phase 8 optimization: Uses path table interning for repeated paths.
+    * Encoding:
+    * - If count > 0: inline path (read count string indices)
+    * - If count == 0: next varint is path table index
+    */
   private def readPathIdentifierInline(): PathIdentifier = {
     val loc = readLocation()
-    val value = readSeq(() => readString())
+    val count = reader.readVarInt()
+
+    val value =
+      if count == 0 then
+        // Path table lookup
+        val pathIndex = reader.readVarInt()
+        pathTable.lookup(pathIndex)
+      else
+        // Inline path - read count string indices
+        (0 until count).map(_ => readString())
+      end if
+
     PathIdentifier(loc, value)
   }
 
