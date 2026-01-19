@@ -87,6 +87,7 @@ jobs:
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
+      continue-on-error: true  # Prevent workflow failure from permissions issues on PRs
       with:
         files: |
           **/target/test-reports/*.xml
