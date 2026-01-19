@@ -57,7 +57,8 @@ class RunRiddlcOnRemoteTest extends RunCommandSpecBase {
   }
 
   "riddlc" should {
-    "validate on ossuminc/institutional-commerce" in {
+    // TODO: Re-enable when institutional-commerce repo is updated with new RIDDL statement syntax
+    "validate on ossuminc/institutional-commerce" ignore {
       runOnGitHubProject(
         "ossuminc",
         "institutional-commerce",

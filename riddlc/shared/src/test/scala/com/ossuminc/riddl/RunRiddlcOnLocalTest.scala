@@ -45,7 +45,8 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       val config = "src/riddl/FooBarSuccess/FooBar.conf"
       runOnLocalProject(cwd, config, "validate")
     }
-    "validate on ossuminc/institutional-commerce" in {
+    // TODO: Re-enable when institutional-commerce repo is updated with new RIDDL statement syntax
+    "validate on ossuminc/institutional-commerce" ignore {
       val cwd = "/Users/reid/Code/ossuminc/institutional-commerce"
       val config = "src/main/riddl/ImprovingApp.conf"
       runOnLocalProject(cwd, config, "validate")
