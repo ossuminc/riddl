@@ -146,6 +146,111 @@ JVM/Native only (JS returns error message since browser can't do local file I/O)
 
 - ~~How should BAST versioning handle breaking format changes?~~ **Resolved**: Single monotonically incrementing 32-bit integer, stays at 1 during development, increment only after schema finalization for users
 
+### Design Decisions
+
+**Compression: Will NOT be implemented**
+
+The `Flags.COMPRESSED` flag in the header is reserved but will never be used. Rationale:
+- BAST's primary use case is HTTP transport (web-based tools, APIs)
+- HTTP already provides transparent gzip/brotli compression
+- Adding compression at the BAST layer would be redundant
+- Would add CPU overhead on both ends for no benefit
+- Simpler format = easier debugging and cross-platform compatibility
+
+**Incremental Updates: Future consideration**
+
+Supporting partial BAST updates when source changes slightly could be valuable for:
+- Large projects where only one file changes
+- IDE integrations that need fast refresh
+- CI/CD pipelines with incremental builds
+
+This is **not currently planned** but noted as an area of potential future interest.
+
+**Lazy Loading: Under evaluation**
+
+See "Future Considerations: Lazy Loading" section below for analysis.
+
+---
+
+## Future Considerations: Lazy Loading
+
+### What is Lazy Loading?
+
+Instead of deserializing the entire BAST file into memory on load, lazy loading would:
+1. Memory-map the BAST file (or keep bytes in memory)
+2. Parse only the header and string table upfront
+3. Deserialize individual nodes on-demand when accessed
+4. Cache deserialized nodes for subsequent access
+
+### Current Implementation
+
+The current `BASTReader.read()` approach:
+```
+1. Read header (32 bytes)
+2. Validate checksum
+3. Load entire string table into memory
+4. Recursively deserialize ALL nodes starting from root
+5. Return complete Nebula AST in memory
+```
+
+### Potential Lazy Implementation
+
+```
+1. Read header (32 bytes)
+2. Keep byte array reference (or mmap file)
+3. Load string table (required for any node access)
+4. Return LazyNebula proxy with root offset
+5. On first access to contents: deserialize children
+6. Cache deserialized nodes in WeakHashMap
+```
+
+### Benefits
+
+| Benefit | Impact | Use Case |
+|---------|--------|----------|
+| Faster initial load | High | Large BAST files where only part is needed |
+| Lower memory peak | Medium | Memory-constrained environments |
+| Incremental parsing | Medium | IDE features that only need specific nodes |
+| Partial file access | Low | Extracting single definition from large module |
+
+### Drawbacks
+
+| Drawback | Severity | Mitigation |
+|----------|----------|------------|
+| More complex code | High | Significant refactoring of reader |
+| Random access overhead | Medium | Cache frequently accessed nodes |
+| Memory mapping complexity | Medium | Platform-specific (JS has no mmap) |
+| Debugging difficulty | Medium | Harder to trace deserialization issues |
+| Thread safety concerns | Low | Need synchronization for cache |
+
+### Performance Analysis
+
+**Current approach** (eager loading):
+- large.riddl (43KB source → 29KB BAST): ~0.78ms warm load
+- All 1,296 nodes deserialized upfront
+- Memory: ~full AST size in heap
+
+**Lazy approach** (estimated):
+- Initial load: ~0.1-0.2ms (header + string table only)
+- Per-node access: ~0.001-0.01ms (amortized with caching)
+- Full traversal: Similar to eager (~0.8-1.0ms with cache overhead)
+
+### Recommendation
+
+**Do not implement lazy loading at this time.**
+
+Reasons:
+1. Current load times are already excellent (sub-millisecond for typical files)
+2. RIDDL files are typically small enough to fit entirely in memory
+3. Most use cases need the full AST anyway (validation, transformation)
+4. Implementation complexity is significant
+5. Cross-platform concerns (JS cannot memory-map)
+
+**When to reconsider:**
+- If BAST files regularly exceed 10MB
+- If use cases emerge that only need partial AST access
+- If memory constraints become a real issue
+
 ---
 
 ## Planned: AsciiDoc Generation Module
