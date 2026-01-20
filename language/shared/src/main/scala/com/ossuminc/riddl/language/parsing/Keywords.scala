@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,7 +16,9 @@ import java.lang.Character.{isLetter, isWhitespace}
   */
 object Keywords {
 
-  private val nonKeywordChars = (c: Char) => !isLetter(c)
+  // A keyword must be followed by a non-identifier character (not a letter, digit, hyphen, or underscore)
+  // This prevents "event" from matching in "event-sourced" or "type_id"
+  private val nonKeywordChars = (c: Char) => !isLetter(c) && c != '-' && c != '_' && !c.isDigit
 
   // Succeeds if the next character (look ahead without consuming) is not an
   // identifier character. This is used with keywords to make sure the keyword
@@ -100,6 +102,8 @@ object Keywords {
 
   def create[u: P]: P[Unit] = keyword(Keyword.create)
 
+  def default[u: P]: P[Unit] = keyword(Keyword.default_)
+
   def direct[u: P]: P[Unit] = keyword(Keyword.direct)
 
   def described[u: P]: P[Unit] = keywords(
@@ -176,11 +180,15 @@ object Keywords {
 
   def label[u: P]: P[Unit] = keyword(Keyword.label)
 
+  def let[u: P]: P[Unit] = keyword(Keyword.let)
+
   def link[u: P]: P[Unit] = keyword(Keyword.link)
 
   def many[u: P]: P[Unit] = keyword(Keyword.many)
 
   def mapping[u: P]: P[Unit] = keyword(Keyword.mapping)
+
+  def `match`[u: P]: P[Unit] = keyword(Keyword.match_)
 
   def merge[u: P]: P[Unit] = keyword(Keyword.merge)
 
@@ -231,6 +239,8 @@ object Keywords {
   def presents[u: P]: P[Unit] = keyword(Keyword.presents)
 
   def projector[u: P]: P[Unit] = keyword(Keyword.projector)
+
+  def prompt[u: P]: P[Unit] = keyword(Keyword.prompt)
 
   def query[u: P]: P[Unit] = keyword(Keyword.query)
 
@@ -495,6 +505,7 @@ object Keyword {
   final val contains = "contains"
   final val context = "context"
   final val create = "create"
+  final val default_ = "default"
   final val described = "described"
   final val description = "description"
   final val details = "details"
@@ -537,8 +548,10 @@ object Keyword {
   final val invariant = "invariant"
   final val items = "items"
   final val label = "label"
+  final val let = "let"
   final val link = "link"
   final val many = "many"
+  final val match_ = "match"
   final val mapping = "mapping"
   final val merge = "merge"
   final val message = "message"
@@ -561,6 +574,7 @@ object Keyword {
   final val pipe = "pipe"
   final val plant = "plant"
   final val projector = "projector"
+  final val prompt = "prompt"
   final val query = "query"
   final val range = "range"
   final val reference = "reference"
@@ -635,6 +649,7 @@ object Keyword {
     contains,
     context,
     create,
+    default_,
     described,
     description,
     details,
@@ -677,9 +692,11 @@ object Keyword {
     invariant,
     items,
     label,
+    let,
     link,
     many,
     mapping,
+    match_,
     merge,
     message,
     module,
@@ -701,6 +718,7 @@ object Keyword {
     pipe,
     plant,
     projector,
+    prompt,
     query,
     range,
     reference,

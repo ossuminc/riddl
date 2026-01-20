@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,7 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.Token.{Comment, Readability}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.language.{AST, At, AST as rpi}
+import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.language.AST.{Token, *}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{Await, PlatformContext, Timer, URL}
@@ -636,7 +636,7 @@ abstract class TokenParserTest(using pc: PlatformContext) extends AbstractParsin
         case Left(messages) =>
           fail(messages.format)
         case Right(tokens) =>
-          tokens.length must be(404)
+          tokens.length must be(401)
           val tasStr = tokens.toString
           tokens.head must be(AST.Token.Keyword(At(rpi, 0, 6)))
           tasStr must include("LiteralCode")

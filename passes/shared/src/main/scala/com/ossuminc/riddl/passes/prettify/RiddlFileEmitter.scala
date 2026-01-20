@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -297,16 +297,35 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   def emitStatement(statement: Statements): Unit =
     statement match
-      case IfThenElseStatement(_, cond, thens, elses) =>
-        addIndent(s"if ${cond.format} then").nl.incr
-        if (thens.isEmpty) then addLine("???") else thens.foreach(emitStatement)
-        decr.addLine("else").incr
-        if elses.isEmpty then addLine("???") else elses.foreach(emitStatement)
+      case WhenStatement(_, cond, thenStatements, elseStatements, negated) =>
+        val condStr = cond match {
+          case ls: LiteralString => ls.format
+          case id: Identifier    => if negated then s"!${id.format}" else id.format
+        }
+        addIndent(s"when $condStr then").nl.incr
+        if thenStatements.isEmpty then addLine("???") else thenStatements.toSeq.foreach(emitStatement)
+        if elseStatements.nonEmpty then
+          decr.addLine("else").incr
+          elseStatements.toSeq.foreach(emitStatement)
+        end if
         decr.addLine("end")
-      case ForEachStatement(_, ref, statements) =>
-        addIndent(s"foreach ${ref.format} do").incr
-        statements.foreach(emitStatement)
-        decr.addLine("end")
+      case MatchStatement(_, expr, cases, default) =>
+        addIndent(s"match ${expr.format} {").nl.incr
+        cases.foreach { mc =>
+          addIndent(s"case ${mc.pattern.format} {").nl.incr
+          mc.statements.toSeq.foreach(emitStatement)
+          decr.addLine("}")
+        }
+        if default.nonEmpty then
+          addIndent("default {").nl.incr
+          default.toSeq.foreach(emitStatement)
+          decr.addLine("}")
+        end if
+        decr.addLine("}")
+      case LetStatement(_, id, expr) =>
+        addLine(s"let ${id.format} = ${expr.format}")
+      case PromptStatement(_, what) =>
+        addLine(s"prompt ${what.format}")
       case SendStatement(_, msg, portlet) =>
         addLine(s"send ${msg.format} to ${portlet.format}")
       case TellStatement(_, msg, to) =>

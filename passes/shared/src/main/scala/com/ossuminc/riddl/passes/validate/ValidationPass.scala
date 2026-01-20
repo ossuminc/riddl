@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -147,6 +147,11 @@ case class ValidationPass(
         validateContainedGroup(cg, parentsAsSeq)
       case root: Root =>
         checkContents(root, parentsAsSeq)
+      case include: Include[?] =>
+        validateInclude(include)
+      case bi: BASTImport =>
+        validateBASTImport(bi, parentsAsSeq)
+      case _: MatchCase           => () // Validated through MatchStatement
       case _: Definition          => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
       // NOTE: Never put a catch-all here, every Definition type must be handled
@@ -202,17 +207,15 @@ case class ValidationPass(
   ): Unit =
     val onClause: Branch[?] = parents.head
     statement match
-      case ArbitraryStatement(loc, what) =>
+      case PromptStatement(loc, what) =>
         checkNonEmptyValue(
           what,
-          "arbitrary statement",
+          "prompt statement",
           onClause,
           loc,
           MissingWarning,
           required = true
         )
-      case FocusStatement(_, group) =>
-        checkRef[Group](group, parents)
       case ErrorStatement(loc, message) =>
         checkNonEmptyValue(
           message,
@@ -225,13 +228,9 @@ case class ValidationPass(
       case SetStatement(loc, field, value) =>
         checkRef[Field](field, parents)
         checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
-      case ReturnStatement(loc, value) =>
-        checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
       case SendStatement(_, msg, portlet) =>
         checkRef[Type](msg, parents)
         checkRef[Portlet](portlet, parents)
-      case ReplyStatement(_, message) =>
-        checkRef[Type](message, parents)
       case MorphStatement(_, entity, state, value) =>
         checkRef[Entity](entity, parents)
         checkRef[State](state, parents)
@@ -252,37 +251,32 @@ case class ValidationPass(
         maybeType.foreach { typ =>
           checkCrossContextReference(msg.pathId, typ, onClause)
         }
-      case CallStatement(_, funcRef) =>
-        checkRef[Function](funcRef, parents).foreach { function =>
-          checkCrossContextReference(funcRef.pathId, function, onClause)
+      case WhenStatement(loc, condition, thenStatements, elseStatements, _) =>
+        condition match {
+          case ls: LiteralString =>
+            checkNonEmptyValue(ls, "condition", onClause, loc, MissingWarning, required = true)
+          case id: Identifier =>
+            checkNonEmptyValue(id, "condition", onClause, loc, MissingWarning, required = true)
         }
-
-      case ForEachStatement(loc, ref, do_) =>
-        checkPathRef[Type](ref.pathId, parents).foreach { typ =>
-          checkCrossContextReference(ref.pathId, typ, onClause)
-          check(
-            typ.typEx.hasCardinality,
-            s"The foreach statement requires a type with cardinality but ${ref.pathId.format} does not",
-            Messages.Error,
-            loc
-          )
+        checkNonEmpty(thenStatements.toSeq, "statements", onClause, loc, MissingWarning, required = true)
+        // elseStatements is optional, so no check needed
+      case MatchStatement(loc, expression, cases, default) =>
+        checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
+        checkNonEmpty(cases, "cases", onClause, loc, MissingWarning, required = true)
+        cases.foreach { mc =>
+          checkNonEmptyValue(mc.pattern, "case pattern", onClause, mc.loc, MissingWarning, required = true)
         }
-        checkNonEmpty(do_.toSeq, "statement list", onClause, MissingWarning)
-      case IfThenElseStatement(loc, cond, thens, elses) =>
-        checkNonEmptyValue(cond, "condition", onClause, loc, MissingWarning, required = true)
-        checkNonEmpty(thens.toSeq, "statements", onClause, loc, MissingWarning, required = true)
-        checkNonEmpty(elses.toSeq, "statements", onClause, loc, MissingWarning, required = false)
-      case ReadStatement(loc, keyword, what, from, where) =>
-        checkNonEmpty(keyword, "read keyword", onClause, loc, Messages.Error, required = true)
-        checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-        checkTypeRef(from, parents)
-        checkNonEmptyValue(where, "where", onClause, loc, MissingWarning, required = false)
-      case WriteStatement(loc, keyword, what, to) =>
-        checkNonEmpty(keyword, "write keyword", onClause, loc, Messages.Error, required = true)
-        checkTypeRef(to, parents)
-        checkNonEmptyValue(what, "what", onClause, loc, MissingWarning, required = false)
-      case _: CodeStatement => ()
-      case _: StopStatement => ()
+      case LetStatement(loc, identifier, expression) =>
+        check(
+          identifier.value.length >= 3,
+          s"Identifier '${identifier.value}' is too short",
+          MissingWarning,
+          identifier.loc
+        )
+        checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
+      case CodeStatement(loc, language, body) =>
+        checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true)
+        check(body.nonEmpty, "Code statement body cannot be empty", MissingWarning, loc)
     end match
   end validateStatement
 
@@ -335,7 +329,7 @@ case class ValidationPass(
         messages.add(
           Messages.style(
             "Method argument names should begin with a lower case letter",
-            m.id.loc
+            arg.loc  // Fixed: use argument location, not method identifier location
           )
         )
     checkMetadata(m)
@@ -431,7 +425,7 @@ case class ValidationPass(
       t.id.value.head.isUpper,
       s"${t.identify} should start with a capital letter",
       StyleWarning,
-      t.errorLoc
+      t.id.loc  // Fixed: use identifier location, not type keyword location
     )
     if !t.typEx.isInstanceOf[AggregateTypeExpression] then {
       checkTypeExpression(t.typEx, t, parents)
@@ -500,6 +494,11 @@ case class ValidationPass(
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
     check(i.contents.nonEmpty, "Include has no included content", Messages.Error, i.loc)
     check(i.origin.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
+  }
+
+  private def validateBASTImport(bi: BASTImport, parents: Parents): Unit = {
+    check(bi.path.s.nonEmpty, "BAST import has no path specified", Messages.Error, bi.loc)
+    check(bi.path.s.endsWith(".bast"), s"BAST import path '${bi.path.s}' should end with .bast", Messages.Warning, bi.loc)
   }
 
   private def validateEntity(
@@ -770,29 +769,18 @@ case class ValidationPass(
             )
           }
         case gi: GenericInteraction =>
+          // Use comprehensive validateInteraction instead of inline validation
+          validateInteraction(gi, parents)
+          // Additional checks for specific interaction types
           gi match {
-            case vi: VagueInteraction =>
-              check(
-                vi.relationship.nonEmpty,
-                "Vague Interactions should have a non-empty description",
-                Messages.MissingWarning,
-                vi.relationship.loc
-              )
-            case smi: SendMessageInteraction =>
-              checkPathRef[Definition](smi.from.pathId, parents)
-              checkMessageRef(smi.message, parents, Seq(smi.message.messageKind))
-              checkPathRef[Definition](smi.to.pathId, parents)
-            case fou: DirectUserToURLInteraction =>
-              checkPathRef[User](fou.from.pathId, parents)
             case is: TwoReferenceInteraction =>
-              checkPathRef[Definition](is.from.pathId, parents)
-              checkPathRef[Definition](is.to.pathId, parents)
               if is.relationship.isEmpty then {
                 messages.addMissing(
                   is.loc,
                   s"Interactions must have a non-empty relationship"
                 )
               }
+            case _ => // Other interaction types handled by validateInteraction
           }
         case _: BriefDescription | _: Description | _: Term | _: Comment | _: AuthorRef => ()
       }

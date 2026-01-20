@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,6 +24,10 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
 
   import scala.reflect.ClassTag
 
+  // Cache for findByType results - maps Class to previously found Seq of that type
+  // This avoids repeated full tree traversals for the same type
+  private val findByTypeCache: mutable.Map[Class[?], Seq[RiddlValue]] = mutable.Map.empty
+
   /** Search the `root` for a [[AST.RiddlValue]] that matches the boolean expression
     *
     * @param select
@@ -45,8 +49,18 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
   def findByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
     import scala.reflect.classTag
     val lookingFor = classTag[T].runtimeClass
-    val result = find { (value: RiddlValue) => lookingFor.isAssignableFrom(value.getClass) }
-    result.asInstanceOf[Seq[T]]
+
+    // Check cache first
+    findByTypeCache.get(lookingFor) match {
+      case Some(cached) =>
+        // Return cached result
+        cached.asInstanceOf[Seq[T]]
+      case None =>
+        // Cache miss - compute and store result
+        val result = find { (value: RiddlValue) => lookingFor.isAssignableFrom(value.getClass) }
+        findByTypeCache(lookingFor) = result
+        result.asInstanceOf[Seq[T]]
+    }
   end findByType
 
   def recursiveFindByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
@@ -57,11 +71,14 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
         child match
           case c: Container[?] =>
             c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
-          case IfThenElseStatement(_, _, thens, elses) =>
-            val r1 = thens.foldLeft(list) { case (next, child) => consider(next, child) }
-            elses.foldLeft(r1) { case (next, child) => consider(next, child) }
-          case ForEachStatement(_, _, do_) =>
-            do_.foldLeft(list) { case (next, child) => consider(next, child) }
+          case WhenStatement(_, _, thenStatements, elseStatements, _) =>
+            val r1 = thenStatements.foldLeft(list) { case (next, child) => consider(next, child) }
+            elseStatements.foldLeft(r1) { case (next, child) => consider(next, child) }
+          case MatchStatement(_, _, cases, default) =>
+            val r1 = cases.foldLeft(list) { case (next, mc) =>
+              mc.statements.foldLeft(next) { case (next2, child) => consider(next2, child) }
+            }
+            default.foldLeft(r1) { case (next, child) => consider(next, child) }
           case SagaStep(_, _, dos, undos, _) =>
             val r2 = dos.foldLeft(list) { case (next, child) => consider(next, child) }
             undos.foldLeft(r2) { case (next, child) => consider(next, child) }
@@ -92,17 +109,22 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
   ): DefWithParents[T] =
     import scala.collection.mutable
     val lookingFor = classTag[T].runtimeClass
-    Folding.foldLeftWithStack[Seq[(T, Parents)], CV](
-      Seq.empty[(T, Parents)],
+    // Use ArrayBuffer for O(1) amortized append instead of O(n) :+ operator
+    val buffer = mutable.ArrayBuffer.empty[(T, Parents)]
+    Folding.foldLeftWithStack[mutable.ArrayBuffer[(T, Parents)], CV](
+      buffer,
       root,
       ParentStack.empty
     ) { case (state, definition: CV, parents) =>
       if lookingFor.isAssignableFrom(definition.getClass) then
         val value: T = definition.asInstanceOf[T]
-        if select(value) then state :+ (value -> parents)
+        if select(value) then
+          state += (value -> parents)  // O(1) amortized instead of O(n)
+          state
         else state
       else state
     }
+    buffer.toSeq  // Convert to immutable Seq at the end
   end findWithParents
 
   /** Find the Parents for a given node in the root

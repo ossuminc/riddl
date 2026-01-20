@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -58,6 +58,7 @@ class ContextValidationTest extends JVMAbstractValidatingTest {
                   Seq(LiteralString(At(rpi, 129, 135), "http"))
                 )
               )
+            case None => fail("No technology option")
           }
       }
     }

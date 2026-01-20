@@ -1,0 +1,1312 @@
+// Large test file for performance benchmarking
+// ~1000 lines, 10 contexts, 200+ definitions
+// Enterprise platform domain with comprehensive bounded contexts
+
+domain EnterprisePlatform is {
+
+  // Common types used throughout the system
+  type TenantId is Id(Tenant)
+  type UserId is Id(User)
+  type RoleId is Id(Role)
+  type PermissionId is Id(Permission)
+  type SessionId is Id(Session)
+  type ApiKeyId is Id(ApiKey)
+  type AuditId is Id(AuditEntry)
+  type FileId is Id(File)
+  type FolderId is Id(Folder)
+  type CommentId is Id(Comment)
+  type TagId is Id(Tag)
+  type WorkflowId is Id(Workflow)
+  type TaskId is Id(Task)
+  type ProjectId is Id(Project)
+  type TeamId is Id(Team)
+  type ChannelId is Id(Channel)
+  type MessageId is Id(Message)
+  type NotificationId is Id(Notification)
+  type WebhookId is Id(Webhook)
+  type SubscriptionId is Id(Subscription)
+  type CustomerId is Id(Customer)
+  type InvoiceId is Id(Invoice)
+  type PaymentId is Id(Payment)
+  type ProductId is Id(Product)
+
+  type EmailAddress is String
+  type PhoneNumber is String
+  type PostalCode is String
+  type Money is Number
+  type Quantity is Number
+  type Percentage is Number
+  type MarkdownText is String
+  type JSONData is String
+
+  // ===== Identity & Access Management Context =====
+  context IdentityManagement is {
+
+    entity Tenant is {
+      type CreateTenant is command { name: String, plan: TenantPlan }
+      type UpdateTenant is command { tenantId: TenantId, name: String }
+      type SuspendTenant is command { tenantId: TenantId, reason: String }
+      type ReactivateTenant is command { tenantId: TenantId }
+      type DeleteTenant is command { tenantId: TenantId }
+
+      event TenantCreated is { tenantId: TenantId, name: String, plan: TenantPlan }
+      event TenantUpdated is { tenantId: TenantId, name: String }
+      event TenantSuspended is { tenantId: TenantId, reason: String }
+      event TenantReactivated is { tenantId: TenantId }
+      event TenantDeleted is { tenantId: TenantId }
+
+      type TenantPlan is one of { Free, Starter, Professional, Enterprise }
+
+      record TenantSettings is {
+        maxUsers: Number,
+        maxStorage: Number,
+        features: String*,
+        ssoEnabled: Boolean
+      }
+
+      record TenantData is {
+        id: TenantId,
+        name: String,
+        slug: String,
+        plan: TenantPlan,
+        settings: TenantSettings,
+        createdAt: TimeStamp
+      }
+
+      state TenantActive of Tenant.TenantData
+
+      handler TenantHandler is {
+        on command CreateTenant {
+          send event TenantCreated to outlet TenantEvents_out
+        }
+        on command UpdateTenant {
+          send event TenantUpdated to outlet TenantEvents_out
+        }
+        on command SuspendTenant {
+          send event TenantSuspended to outlet TenantEvents_out
+        }
+        on command ReactivateTenant {
+          send event TenantReactivated to outlet TenantEvents_out
+        }
+        on command DeleteTenant {
+          send event TenantDeleted to outlet TenantEvents_out
+        }
+      }
+    }
+
+    entity User is {
+      type InviteUser is command { tenantId: TenantId, email: EmailAddress, roles: RoleId* }
+      type AcceptInvite is command { userId: UserId, password: String }
+      type UpdateUser is command { userId: UserId, profile: UserProfile }
+      type LockUser is command { userId: UserId, reason: String }
+      type UnlockUser is command { userId: UserId }
+      type DeleteUser is command { userId: UserId }
+
+      event UserInvited is { userId: UserId, tenantId: TenantId, email: EmailAddress }
+      event UserActivated is { userId: UserId }
+      event UserUpdated is { userId: UserId }
+      event UserLocked is { userId: UserId, reason: String }
+      event UserUnlocked is { userId: UserId }
+      event UserDeleted is { userId: UserId }
+
+      record UserProfile is {
+        firstName: String,
+        lastName: String,
+        displayName: String,
+        avatar: String,
+        timezone: String,
+        locale: String
+      }
+
+      record UserPreferences is {
+        theme: String,
+        emailDigest: String,
+        notifyEmail: Boolean,
+        notifyPush: Boolean
+      }
+
+      record UserData is {
+        id: UserId,
+        tenantId: TenantId,
+        email: EmailAddress,
+        profile: UserProfile,
+        preferences: UserPreferences,
+        roles: RoleId*,
+        mfaEnabled: Boolean,
+        lastLoginAt: TimeStamp
+      }
+
+      state UserActive of User.UserData
+
+      handler UserHandler is {
+        on command InviteUser {
+          send event UserInvited to outlet UserEvents_out
+        }
+        on command AcceptInvite {
+          send event UserActivated to outlet UserEvents_out
+        }
+        on command UpdateUser {
+          send event UserUpdated to outlet UserEvents_out
+        }
+        on command LockUser {
+          send event UserLocked to outlet UserEvents_out
+        }
+        on command UnlockUser {
+          send event UserUnlocked to outlet UserEvents_out
+        }
+        on command DeleteUser {
+          send event UserDeleted to outlet UserEvents_out
+        }
+      }
+    }
+
+    entity Role is {
+      type CreateRole is command { tenantId: TenantId, name: String, permissions: PermissionId* }
+      type UpdateRole is command { roleId: RoleId, name: String, permissions: PermissionId* }
+      type DeleteRole is command { roleId: RoleId }
+
+      event RoleCreated is { roleId: RoleId, name: String }
+      event RoleUpdated is { roleId: RoleId, name: String }
+      event RoleDeleted is { roleId: RoleId }
+
+      record RoleData is {
+        id: RoleId,
+        tenantId: TenantId,
+        name: String,
+        description: String,
+        permissions: PermissionId*,
+        isSystem: Boolean
+      }
+
+      state RoleActive of Role.RoleData
+
+      handler RoleHandler is {
+        on command CreateRole {
+          send event RoleCreated to outlet RoleEvents_out
+        }
+        on command UpdateRole {
+          send event RoleUpdated to outlet RoleEvents_out
+        }
+        on command DeleteRole {
+          send event RoleDeleted to outlet RoleEvents_out
+        }
+      }
+    }
+
+    entity Session is {
+      type CreateSession is command { userId: UserId, tenantId: TenantId, ipAddress: String }
+      type RefreshSession is command { sessionId: SessionId }
+      type RevokeSession is command { sessionId: SessionId, reason: String }
+
+      event SessionCreated is { sessionId: SessionId, userId: UserId }
+      event SessionRefreshed is { sessionId: SessionId }
+      event SessionRevoked is { sessionId: SessionId, reason: String }
+
+      record SessionData is {
+        id: SessionId,
+        userId: UserId,
+        tenantId: TenantId,
+        ipAddress: String,
+        userAgent: String,
+        createdAt: TimeStamp,
+        expiresAt: TimeStamp
+      }
+
+      state SessionActive of Session.SessionData
+
+      handler SessionHandler is {
+        on command CreateSession {
+          send event SessionCreated to outlet SessionEvents_out
+        }
+        on command RefreshSession {
+          send event SessionRefreshed to outlet SessionEvents_out
+        }
+        on command RevokeSession {
+          send event SessionRevoked to outlet SessionEvents_out
+        }
+      }
+    }
+
+    entity ApiKey is {
+      type CreateApiKey is command { tenantId: TenantId, userId: UserId, name: String, scopes: String* }
+      type RevokeApiKey is command { apiKeyId: ApiKeyId }
+
+      event ApiKeyCreated is { apiKeyId: ApiKeyId, name: String }
+      event ApiKeyRevoked is { apiKeyId: ApiKeyId }
+
+      record ApiKeyData is {
+        id: ApiKeyId,
+        tenantId: TenantId,
+        userId: UserId,
+        name: String,
+        keyHash: String,
+        scopes: String*,
+        lastUsedAt: TimeStamp,
+        expiresAt: TimeStamp
+      }
+
+      state ApiKeyActive of ApiKey.ApiKeyData
+
+      handler ApiKeyHandler is {
+        on command CreateApiKey {
+          send event ApiKeyCreated to outlet ApiKeyEvents_out
+        }
+        on command RevokeApiKey {
+          send event ApiKeyRevoked to outlet ApiKeyEvents_out
+        }
+      }
+    }
+
+    flow TenantEvents is {
+      inlet TenantEvents_in is event Tenant.TenantCreated
+      outlet TenantEvents_out is event Tenant.TenantCreated
+    }
+
+    flow UserEvents is {
+      inlet UserEvents_in is event User.UserInvited
+      outlet UserEvents_out is event User.UserInvited
+    }
+
+    flow RoleEvents is {
+      inlet RoleEvents_in is event Role.RoleCreated
+      outlet RoleEvents_out is event Role.RoleCreated
+    }
+
+    flow SessionEvents is {
+      inlet SessionEvents_in is event Session.SessionCreated
+      outlet SessionEvents_out is event Session.SessionCreated
+    }
+
+    flow ApiKeyEvents is {
+      inlet ApiKeyEvents_in is event ApiKey.ApiKeyCreated
+      outlet ApiKeyEvents_out is event ApiKey.ApiKeyCreated
+    }
+  }
+
+  // ===== Audit & Compliance Context =====
+  context AuditCompliance is {
+
+    entity AuditEntry is {
+      type RecordAudit is command {
+        tenantId: TenantId,
+        userId: UserId,
+        action: String,
+        resource: String,
+        resourceId: String,
+        oldValue: JSONData,
+        newValue: JSONData
+      }
+
+      event AuditRecorded is {
+        auditId: AuditId,
+        tenantId: TenantId,
+        userId: UserId,
+        action: String,
+        resource: String
+      }
+
+      record AuditData is {
+        id: AuditId,
+        tenantId: TenantId,
+        userId: UserId,
+        action: String,
+        resource: String,
+        resourceId: String,
+        oldValue: JSONData,
+        newValue: JSONData,
+        ipAddress: String,
+        timestamp: TimeStamp
+      }
+
+      state AuditActive of AuditEntry.AuditData
+
+      handler AuditHandler is {
+        on command RecordAudit {
+          send event AuditRecorded to outlet AuditEvents_out
+        }
+      }
+    }
+
+    entity ComplianceReport is {
+      type RequestReport is command { tenantId: TenantId, reportType: ReportType, startDate: Date, endDate: Date }
+      type GenerateReport is command { reportId: Id(ComplianceReport) }
+      type CompleteReport is command { reportId: Id(ComplianceReport), fileId: FileId }
+      type FailReport is command { reportId: Id(ComplianceReport), errorMessage: String }
+
+      event ReportRequested is { reportId: Id(ComplianceReport), reportType: ReportType }
+      event ReportGenerating is { reportId: Id(ComplianceReport), progress: Percentage }
+      event ReportCompleted is { reportId: Id(ComplianceReport), fileId: FileId }
+      event ReportFailed is { reportId: Id(ComplianceReport), errorMessage: String }
+
+      type ReportType is one of { GDPR, SOC2, HIPAA, PCI, Custom }
+
+      record ReportSummary is {
+        totalRecords: Number,
+        findings: Number,
+        recommendations: Number
+      }
+
+      record ComplianceReportData is {
+        id: Id(ComplianceReport),
+        tenantId: TenantId,
+        reportType: ReportType,
+        startDate: Date,
+        endDate: Date,
+        requestedBy: UserId,
+        requestedAt: TimeStamp
+      }
+
+      state ReportPending of ComplianceReport.ComplianceReportData
+
+      handler ComplianceReportHandler is {
+        on command RequestReport {
+          send event ReportRequested to outlet ReportEvents_out
+        }
+        on command GenerateReport {
+          send event ReportGenerating to outlet ReportEvents_out
+        }
+        on command CompleteReport {
+          send event ReportCompleted to outlet ReportEvents_out
+        }
+        on command FailReport {
+          send event ReportFailed to outlet ReportEvents_out
+        }
+      }
+    }
+
+    flow AuditEvents is {
+      inlet AuditEvents_in is event AuditEntry.AuditRecorded
+      outlet AuditEvents_out is event AuditEntry.AuditRecorded
+    }
+
+    flow ReportEvents is {
+      inlet ReportEvents_in is event ComplianceReport.ReportRequested
+      outlet ReportEvents_out is event ComplianceReport.ReportRequested
+    }
+  }
+
+  // ===== File Management Context =====
+  context FileManagement is {
+
+    entity File is {
+      type UploadFile is command { tenantId: TenantId, folderId: FolderId, name: String, mimeType: String, size: Number }
+      type UpdateFile is command { fileId: FileId, name: String }
+      type MoveFile is command { fileId: FileId, targetFolderId: FolderId }
+      type ShareFile is command { fileId: FileId, userId: UserId, access: AccessLevel }
+      type DeleteFile is command { fileId: FileId }
+
+      event FileUploaded is { fileId: FileId, name: String, size: Number }
+      event FileUpdated is { fileId: FileId, name: String }
+      event FileMoved is { fileId: FileId, targetFolderId: FolderId }
+      event FileShared is { fileId: FileId, userId: UserId, access: AccessLevel }
+      event FileDeleted is { fileId: FileId }
+
+      type AccessLevel is one of { Read, Write, Admin }
+
+      record FileVersion is {
+        versionNumber: Number,
+        storageKey: String,
+        size: Number,
+        createdAt: TimeStamp,
+        createdBy: UserId
+      }
+
+      record FilePermission is {
+        userId: UserId,
+        access: AccessLevel
+      }
+
+      record FileData is {
+        id: FileId,
+        tenantId: TenantId,
+        folderId: FolderId,
+        name: String,
+        mimeType: String,
+        size: Number,
+        storageKey: String,
+        checksum: String,
+        versions: FileVersion*,
+        tags: TagId*,
+        permissions: FilePermission*,
+        uploadedBy: UserId,
+        createdAt: TimeStamp
+      }
+
+      state FileActive of File.FileData
+
+      handler FileHandler is {
+        on command UploadFile {
+          send event FileUploaded to outlet FileEvents_out
+        }
+        on command UpdateFile {
+          send event FileUpdated to outlet FileEvents_out
+        }
+        on command MoveFile {
+          send event FileMoved to outlet FileEvents_out
+        }
+        on command ShareFile {
+          send event FileShared to outlet FileEvents_out
+        }
+        on command DeleteFile {
+          send event FileDeleted to outlet FileEvents_out
+        }
+      }
+    }
+
+    entity Folder is {
+      type CreateFolder is command { tenantId: TenantId, parentId: FolderId, name: String }
+      type RenameFolder is command { folderId: FolderId, name: String }
+      type MoveFolder is command { folderId: FolderId, targetParentId: FolderId }
+      type DeleteFolder is command { folderId: FolderId }
+
+      event FolderCreated is { folderId: FolderId, name: String }
+      event FolderRenamed is { folderId: FolderId, name: String }
+      event FolderMoved is { folderId: FolderId, targetParentId: FolderId }
+      event FolderDeleted is { folderId: FolderId }
+
+      record FolderData is {
+        id: FolderId,
+        tenantId: TenantId,
+        parentId: FolderId,
+        name: String,
+        path: String,
+        createdBy: UserId,
+        createdAt: TimeStamp
+      }
+
+      state FolderActive of Folder.FolderData
+
+      handler FolderHandler is {
+        on command CreateFolder {
+          send event FolderCreated to outlet FolderEvents_out
+        }
+        on command RenameFolder {
+          send event FolderRenamed to outlet FolderEvents_out
+        }
+        on command MoveFolder {
+          send event FolderMoved to outlet FolderEvents_out
+        }
+        on command DeleteFolder {
+          send event FolderDeleted to outlet FolderEvents_out
+        }
+      }
+    }
+
+    flow FileEvents is {
+      inlet FileEvents_in is event File.FileUploaded
+      outlet FileEvents_out is event File.FileUploaded
+    }
+
+    flow FolderEvents is {
+      inlet FolderEvents_in is event Folder.FolderCreated
+      outlet FolderEvents_out is event Folder.FolderCreated
+    }
+  }
+
+  // ===== Collaboration Context =====
+  context Collaboration is {
+
+    entity Comment is {
+      type AddComment is command { tenantId: TenantId, resourceType: String, resourceId: String, authorId: UserId, content: MarkdownText }
+      type EditComment is command { commentId: CommentId, content: MarkdownText }
+      type AddReaction is command { commentId: CommentId, userId: UserId, emoji: String }
+      type DeleteComment is command { commentId: CommentId }
+
+      event CommentAdded is { commentId: CommentId, resourceType: String, resourceId: String }
+      event CommentEdited is { commentId: CommentId }
+      event ReactionAdded is { commentId: CommentId, userId: UserId, emoji: String }
+      event CommentDeleted is { commentId: CommentId }
+
+      record CommentReaction is {
+        userId: UserId,
+        emoji: String,
+        timestamp: TimeStamp
+      }
+
+      record CommentData is {
+        id: CommentId,
+        tenantId: TenantId,
+        parentId: CommentId,
+        resourceType: String,
+        resourceId: String,
+        authorId: UserId,
+        content: MarkdownText,
+        mentions: UserId*,
+        reactions: CommentReaction*,
+        edited: Boolean,
+        createdAt: TimeStamp
+      }
+
+      state CommentActive of Comment.CommentData
+
+      handler CommentHandler is {
+        on command AddComment {
+          send event CommentAdded to outlet CommentEvents_out
+        }
+        on command EditComment {
+          send event CommentEdited to outlet CommentEvents_out
+        }
+        on command AddReaction {
+          send event ReactionAdded to outlet CommentEvents_out
+        }
+        on command DeleteComment {
+          send event CommentDeleted to outlet CommentEvents_out
+        }
+      }
+    }
+
+    entity Tag is {
+      type CreateTag is command { tenantId: TenantId, name: String, color: String }
+      type UpdateTag is command { tagId: TagId, name: String, color: String }
+      type DeleteTag is command { tagId: TagId }
+
+      event TagCreated is { tagId: TagId, name: String }
+      event TagUpdated is { tagId: TagId, name: String }
+      event TagDeleted is { tagId: TagId }
+
+      record TagData is {
+        id: TagId,
+        tenantId: TenantId,
+        name: String,
+        color: String,
+        description: String,
+        usageCount: Number,
+        createdBy: UserId
+      }
+
+      state TagActive of Tag.TagData
+
+      handler TagHandler is {
+        on command CreateTag {
+          send event TagCreated to outlet TagEvents_out
+        }
+        on command UpdateTag {
+          send event TagUpdated to outlet TagEvents_out
+        }
+        on command DeleteTag {
+          send event TagDeleted to outlet TagEvents_out
+        }
+      }
+    }
+
+    flow CommentEvents is {
+      inlet CommentEvents_in is event Comment.CommentAdded
+      outlet CommentEvents_out is event Comment.CommentAdded
+    }
+
+    flow TagEvents is {
+      inlet TagEvents_in is event Tag.TagCreated
+      outlet TagEvents_out is event Tag.TagCreated
+    }
+  }
+
+  // ===== Workflow & Task Management Context =====
+  context WorkflowManagement is {
+
+    entity Workflow is {
+      type CreateWorkflow is command { tenantId: TenantId, name: String, stages: WorkflowStage* }
+      type UpdateWorkflow is command { workflowId: WorkflowId, name: String, stages: WorkflowStage* }
+      type ArchiveWorkflow is command { workflowId: WorkflowId }
+
+      event WorkflowCreated is { workflowId: WorkflowId, name: String }
+      event WorkflowUpdated is { workflowId: WorkflowId, name: String }
+      event WorkflowArchived is { workflowId: WorkflowId }
+
+      record WorkflowStage is {
+        stageId: String,
+        name: String,
+        order: Number,
+        conditions: JSONData
+      }
+
+      type TriggerType is one of { Manual, Scheduled, Event, Webhook }
+
+      record WorkflowTrigger is {
+        triggerType: TriggerType,
+        config: JSONData
+      }
+
+      record WorkflowData is {
+        id: WorkflowId,
+        tenantId: TenantId,
+        name: String,
+        description: String,
+        stages: WorkflowStage*,
+        triggers: WorkflowTrigger*,
+        isTemplate: Boolean,
+        version: Number,
+        createdBy: UserId
+      }
+
+      state WorkflowActive of Workflow.WorkflowData
+
+      handler WorkflowHandler is {
+        on command CreateWorkflow {
+          send event WorkflowCreated to outlet WorkflowEvents_out
+        }
+        on command UpdateWorkflow {
+          send event WorkflowUpdated to outlet WorkflowEvents_out
+        }
+        on command ArchiveWorkflow {
+          send event WorkflowArchived to outlet WorkflowEvents_out
+        }
+      }
+    }
+
+    entity Task is {
+      type CreateTask is command { tenantId: TenantId, projectId: ProjectId, title: String, description: MarkdownText, priority: TaskPriority }
+      type UpdateTask is command { taskId: TaskId, title: String, description: MarkdownText }
+      type AssignTask is command { taskId: TaskId, assigneeId: UserId }
+      type StartTask is command { taskId: TaskId }
+      type CompleteTask is command { taskId: TaskId }
+      type CancelTask is command { taskId: TaskId, reason: String }
+
+      event TaskCreated is { taskId: TaskId, projectId: ProjectId, title: String }
+      event TaskUpdated is { taskId: TaskId, title: String }
+      event TaskAssigned is { taskId: TaskId, assigneeId: UserId }
+      event TaskStarted is { taskId: TaskId }
+      event TaskCompleted is { taskId: TaskId }
+      event TaskCancelled is { taskId: TaskId, reason: String }
+
+      type TaskPriority is one of { Critical, High, Medium, Low }
+
+      record TaskData is {
+        id: TaskId,
+        tenantId: TenantId,
+        projectId: ProjectId,
+        workflowId: WorkflowId,
+        title: String,
+        description: MarkdownText,
+        priority: TaskPriority,
+        assigneeId: UserId,
+        reporterId: UserId,
+        labels: TagId*,
+        dueDate: Date,
+        estimatedHours: Number,
+        attachments: FileId*
+      }
+
+      state TaskOpen of Task.TaskData
+
+      handler TaskHandler is {
+        on command CreateTask {
+          send event TaskCreated to outlet TaskEvents_out
+        }
+        on command UpdateTask {
+          send event TaskUpdated to outlet TaskEvents_out
+        }
+        on command AssignTask {
+          send event TaskAssigned to outlet TaskEvents_out
+        }
+        on command StartTask {
+          send event TaskStarted to outlet TaskEvents_out
+        }
+        on command CompleteTask {
+          send event TaskCompleted to outlet TaskEvents_out
+        }
+        on command CancelTask {
+          send event TaskCancelled to outlet TaskEvents_out
+        }
+      }
+    }
+
+    entity Project is {
+      type CreateProject is command { tenantId: TenantId, teamId: TeamId, name: String, description: MarkdownText }
+      type UpdateProject is command { projectId: ProjectId, name: String, description: MarkdownText }
+      type AddProjectMember is command { projectId: ProjectId, userId: UserId, role: ProjectRole }
+      type RemoveProjectMember is command { projectId: ProjectId, userId: UserId }
+      type ArchiveProject is command { projectId: ProjectId }
+
+      event ProjectCreated is { projectId: ProjectId, teamId: TeamId, name: String }
+      event ProjectUpdated is { projectId: ProjectId, name: String }
+      event ProjectMemberAdded is { projectId: ProjectId, userId: UserId, role: ProjectRole }
+      event ProjectMemberRemoved is { projectId: ProjectId, userId: UserId }
+      event ProjectArchived is { projectId: ProjectId }
+
+      type ProjectStatus is one of { Planning, Active, OnHold, Completed, Cancelled }
+      type ProjectRole is one of { Owner, Admin, Member, Viewer }
+
+      record ProjectMember is {
+        userId: UserId,
+        role: ProjectRole,
+        addedAt: TimeStamp
+      }
+
+      record ProjectSettings is {
+        visibility: String,
+        defaultWorkflowId: WorkflowId,
+        taskPrefix: String,
+        enableTimeTracking: Boolean
+      }
+
+      record ProjectData is {
+        id: ProjectId,
+        tenantId: TenantId,
+        teamId: TeamId,
+        name: String,
+        description: MarkdownText,
+        status: ProjectStatus,
+        startDate: Date,
+        endDate: Date,
+        budget: Money,
+        settings: ProjectSettings,
+        members: ProjectMember*,
+        createdBy: UserId
+      }
+
+      state ProjectActive of Project.ProjectData
+
+      handler ProjectHandler is {
+        on command CreateProject {
+          send event ProjectCreated to outlet ProjectEvents_out
+        }
+        on command UpdateProject {
+          send event ProjectUpdated to outlet ProjectEvents_out
+        }
+        on command AddProjectMember {
+          send event ProjectMemberAdded to outlet ProjectEvents_out
+        }
+        on command RemoveProjectMember {
+          send event ProjectMemberRemoved to outlet ProjectEvents_out
+        }
+        on command ArchiveProject {
+          send event ProjectArchived to outlet ProjectEvents_out
+        }
+      }
+    }
+
+    flow WorkflowEvents is {
+      inlet WorkflowEvents_in is event Workflow.WorkflowCreated
+      outlet WorkflowEvents_out is event Workflow.WorkflowCreated
+    }
+
+    flow TaskEvents is {
+      inlet TaskEvents_in is event Task.TaskCreated
+      outlet TaskEvents_out is event Task.TaskCreated
+    }
+
+    flow ProjectEvents is {
+      inlet ProjectEvents_in is event Project.ProjectCreated
+      outlet ProjectEvents_out is event Project.ProjectCreated
+    }
+  }
+
+  // ===== Communication Context =====
+  context Communication is {
+
+    entity Team is {
+      type CreateTeam is command { tenantId: TenantId, name: String, description: String }
+      type UpdateTeam is command { teamId: TeamId, name: String, description: String }
+      type AddTeamMember is command { teamId: TeamId, userId: UserId, role: TeamRole }
+      type RemoveTeamMember is command { teamId: TeamId, userId: UserId }
+      type ArchiveTeam is command { teamId: TeamId }
+
+      event TeamCreated is { teamId: TeamId, name: String }
+      event TeamUpdated is { teamId: TeamId, name: String }
+      event TeamMemberAdded is { teamId: TeamId, userId: UserId, role: TeamRole }
+      event TeamMemberRemoved is { teamId: TeamId, userId: UserId }
+      event TeamArchived is { teamId: TeamId }
+
+      type TeamRole is one of { Owner, Admin, Member }
+
+      record TeamMember is {
+        userId: UserId,
+        role: TeamRole,
+        joinedAt: TimeStamp
+      }
+
+      record TeamSettings is {
+        visibility: String,
+        joinPolicy: String,
+        defaultChannel: ChannelId
+      }
+
+      record TeamData is {
+        id: TeamId,
+        tenantId: TenantId,
+        name: String,
+        description: String,
+        avatar: String,
+        members: TeamMember*,
+        channels: ChannelId*,
+        settings: TeamSettings,
+        createdBy: UserId
+      }
+
+      state TeamActive of Team.TeamData
+
+      handler TeamHandler is {
+        on command CreateTeam {
+          send event TeamCreated to outlet TeamEvents_out
+        }
+        on command UpdateTeam {
+          send event TeamUpdated to outlet TeamEvents_out
+        }
+        on command AddTeamMember {
+          send event TeamMemberAdded to outlet TeamEvents_out
+        }
+        on command RemoveTeamMember {
+          send event TeamMemberRemoved to outlet TeamEvents_out
+        }
+        on command ArchiveTeam {
+          send event TeamArchived to outlet TeamEvents_out
+        }
+      }
+    }
+
+    entity Channel is {
+      type CreateChannel is command { teamId: TeamId, name: String, channelType: ChannelType }
+      type UpdateChannel is command { channelId: ChannelId, name: String, description: String }
+      type AddChannelMember is command { channelId: ChannelId, userId: UserId }
+      type RemoveChannelMember is command { channelId: ChannelId, userId: UserId }
+      type ArchiveChannel is command { channelId: ChannelId }
+
+      event ChannelCreated is { channelId: ChannelId, teamId: TeamId, name: String }
+      event ChannelUpdated is { channelId: ChannelId, name: String }
+      event ChannelMemberAdded is { channelId: ChannelId, userId: UserId }
+      event ChannelMemberRemoved is { channelId: ChannelId, userId: UserId }
+      event ChannelArchived is { channelId: ChannelId }
+
+      type ChannelType is one of { Public, Private, DirectMessage }
+
+      record ChannelSettings is {
+        allowThreads: Boolean,
+        allowReactions: Boolean,
+        allowFiles: Boolean,
+        retentionDays: Number
+      }
+
+      record ChannelData is {
+        id: ChannelId,
+        teamId: TeamId,
+        name: String,
+        description: String,
+        channelType: ChannelType,
+        members: UserId*,
+        pinnedMessages: MessageId*,
+        settings: ChannelSettings,
+        createdBy: UserId
+      }
+
+      state ChannelActive of Channel.ChannelData
+
+      handler ChannelHandler is {
+        on command CreateChannel {
+          send event ChannelCreated to outlet ChannelEvents_out
+        }
+        on command UpdateChannel {
+          send event ChannelUpdated to outlet ChannelEvents_out
+        }
+        on command AddChannelMember {
+          send event ChannelMemberAdded to outlet ChannelEvents_out
+        }
+        on command RemoveChannelMember {
+          send event ChannelMemberRemoved to outlet ChannelEvents_out
+        }
+        on command ArchiveChannel {
+          send event ChannelArchived to outlet ChannelEvents_out
+        }
+      }
+    }
+
+    entity Message is {
+      type SendMessage is command { channelId: ChannelId, authorId: UserId, content: MarkdownText }
+      type EditMessage is command { messageId: MessageId, content: MarkdownText }
+      type AddMessageReaction is command { messageId: MessageId, userId: UserId, emoji: String }
+      type DeleteMessage is command { messageId: MessageId }
+
+      event MessageSent is { messageId: MessageId, channelId: ChannelId, authorId: UserId }
+      event MessageEdited is { messageId: MessageId }
+      event MessageReactionAdded is { messageId: MessageId, userId: UserId, emoji: String }
+      event MessageDeleted is { messageId: MessageId }
+
+      record MessageReaction is {
+        userId: UserId,
+        emoji: String,
+        timestamp: TimeStamp
+      }
+
+      record MessageData is {
+        id: MessageId,
+        channelId: ChannelId,
+        threadId: MessageId,
+        authorId: UserId,
+        content: MarkdownText,
+        attachments: FileId*,
+        mentions: UserId*,
+        reactions: MessageReaction*,
+        edited: Boolean,
+        createdAt: TimeStamp
+      }
+
+      state MessageActive of Message.MessageData
+
+      handler MessageHandler is {
+        on command SendMessage {
+          send event MessageSent to outlet MessageEvents_out
+        }
+        on command EditMessage {
+          send event MessageEdited to outlet MessageEvents_out
+        }
+        on command AddMessageReaction {
+          send event MessageReactionAdded to outlet MessageEvents_out
+        }
+        on command DeleteMessage {
+          send event MessageDeleted to outlet MessageEvents_out
+        }
+      }
+    }
+
+    flow TeamEvents is {
+      inlet TeamEvents_in is event Team.TeamCreated
+      outlet TeamEvents_out is event Team.TeamCreated
+    }
+
+    flow ChannelEvents is {
+      inlet ChannelEvents_in is event Channel.ChannelCreated
+      outlet ChannelEvents_out is event Channel.ChannelCreated
+    }
+
+    flow MessageEvents is {
+      inlet MessageEvents_in is event Message.MessageSent
+      outlet MessageEvents_out is event Message.MessageSent
+    }
+  }
+
+  // ===== Notification Service Context =====
+  context NotificationService is {
+
+    entity Notification is {
+      type CreateNotification is command { tenantId: TenantId, userId: UserId, notificationType: NotificationType, title: String, body: String }
+      type DeliverNotification is command { notificationId: NotificationId }
+      type MarkNotificationRead is command { notificationId: NotificationId }
+
+      event NotificationCreated is { notificationId: NotificationId, userId: UserId, notificationType: NotificationType }
+      event NotificationDelivered is { notificationId: NotificationId }
+      event NotificationRead is { notificationId: NotificationId }
+
+      type NotificationType is one of { TaskAssigned, TaskCompleted, CommentMention, MessageReceived, FileShared, InviteReceived, SystemAlert }
+      type DeliveryChannel is one of { InApp, Email, Push, SMS, Slack }
+      type NotificationPriority is one of { Urgent, High, Normal, Low }
+
+      record NotificationData is {
+        id: NotificationId,
+        tenantId: TenantId,
+        userId: UserId,
+        notificationType: NotificationType,
+        title: String,
+        body: String,
+        data: JSONData,
+        channels: DeliveryChannel*,
+        priority: NotificationPriority,
+        createdAt: TimeStamp
+      }
+
+      state NotificationPending of Notification.NotificationData
+
+      handler NotificationHandler is {
+        on command CreateNotification {
+          send event NotificationCreated to outlet NotificationEvents_out
+        }
+        on command DeliverNotification {
+          send event NotificationDelivered to outlet NotificationEvents_out
+        }
+        on command MarkNotificationRead {
+          send event NotificationRead to outlet NotificationEvents_out
+        }
+      }
+    }
+
+    entity Webhook is {
+      type CreateWebhook is command { tenantId: TenantId, url: String, events: String*, secret: String }
+      type UpdateWebhook is command { webhookId: WebhookId, url: String, events: String* }
+      type DisableWebhook is command { webhookId: WebhookId, reason: String }
+      type EnableWebhook is command { webhookId: WebhookId }
+
+      event WebhookCreated is { webhookId: WebhookId, url: String }
+      event WebhookUpdated is { webhookId: WebhookId, url: String }
+      event WebhookDisabled is { webhookId: WebhookId, reason: String }
+      event WebhookEnabled is { webhookId: WebhookId }
+
+      record WebhookHeader is {
+        name: String,
+        value: String
+      }
+
+      record RetryPolicy is {
+        maxRetries: Number,
+        backoffSeconds: Number
+      }
+
+      record WebhookData is {
+        id: WebhookId,
+        tenantId: TenantId,
+        url: String,
+        events: String*,
+        secret: String,
+        headers: WebhookHeader*,
+        retryPolicy: RetryPolicy,
+        isActive: Boolean,
+        createdBy: UserId
+      }
+
+      state WebhookActive of Webhook.WebhookData
+
+      handler WebhookHandler is {
+        on command CreateWebhook {
+          send event WebhookCreated to outlet WebhookEvents_out
+        }
+        on command UpdateWebhook {
+          send event WebhookUpdated to outlet WebhookEvents_out
+        }
+        on command DisableWebhook {
+          send event WebhookDisabled to outlet WebhookEvents_out
+        }
+        on command EnableWebhook {
+          send event WebhookEnabled to outlet WebhookEvents_out
+        }
+      }
+    }
+
+    flow NotificationEvents is {
+      inlet NotificationEvents_in is event Notification.NotificationCreated
+      outlet NotificationEvents_out is event Notification.NotificationCreated
+    }
+
+    flow WebhookEvents is {
+      inlet WebhookEvents_in is event Webhook.WebhookCreated
+      outlet WebhookEvents_out is event Webhook.WebhookCreated
+    }
+  }
+
+  // ===== Billing & Payments Context =====
+  context BillingManagement is {
+
+    entity Customer is {
+      type CreateBillingCustomer is command { tenantId: TenantId, name: String, email: EmailAddress }
+      type UpdateBillingCustomer is command { customerId: CustomerId, name: String, email: EmailAddress }
+      type AddPaymentMethod is command { customerId: CustomerId, methodType: PaymentMethodType, last4: String }
+      type RemovePaymentMethod is command { customerId: CustomerId, methodId: String }
+
+      event BillingCustomerCreated is { customerId: CustomerId, name: String }
+      event BillingCustomerUpdated is { customerId: CustomerId, name: String }
+      event PaymentMethodAdded is { customerId: CustomerId, methodId: String }
+      event PaymentMethodRemoved is { customerId: CustomerId, methodId: String }
+
+      type PaymentMethodType is one of { CreditCard, DebitCard, BankAccount, PayPal }
+
+      record BillingAddress is {
+        line1: String,
+        line2: String,
+        city: String,
+        state: String,
+        postalCode: PostalCode,
+        country: String
+      }
+
+      record PaymentMethod is {
+        methodId: String,
+        methodType: PaymentMethodType,
+        last4: String,
+        expiryMonth: Number,
+        expiryYear: Number,
+        isDefault: Boolean
+      }
+
+      record CustomerData is {
+        id: CustomerId,
+        tenantId: TenantId,
+        name: String,
+        email: EmailAddress,
+        billingAddress: BillingAddress,
+        paymentMethods: PaymentMethod*,
+        defaultPaymentMethodId: String,
+        taxId: String,
+        currency: String
+      }
+
+      state CustomerActive of Customer.CustomerData
+
+      handler CustomerHandler is {
+        on command CreateBillingCustomer {
+          send event BillingCustomerCreated to outlet CustomerEvents_out
+        }
+        on command UpdateBillingCustomer {
+          send event BillingCustomerUpdated to outlet CustomerEvents_out
+        }
+        on command AddPaymentMethod {
+          send event PaymentMethodAdded to outlet CustomerEvents_out
+        }
+        on command RemovePaymentMethod {
+          send event PaymentMethodRemoved to outlet CustomerEvents_out
+        }
+      }
+    }
+
+    entity Invoice is {
+      type CreateInvoice is command { tenantId: TenantId, customerId: CustomerId, items: InvoiceLineItem* }
+      type SendInvoice is command { invoiceId: InvoiceId }
+      type MarkInvoicePaid is command { invoiceId: InvoiceId, paymentId: PaymentId }
+      type VoidInvoice is command { invoiceId: InvoiceId, reason: String }
+
+      event InvoiceCreated is { invoiceId: InvoiceId, customerId: CustomerId, total: Money }
+      event InvoiceSent is { invoiceId: InvoiceId }
+      event InvoicePaid is { invoiceId: InvoiceId, paymentId: PaymentId }
+      event InvoiceVoided is { invoiceId: InvoiceId, reason: String }
+
+      record InvoiceLineItem is {
+        description: String,
+        quantity: Quantity,
+        unitPrice: Money,
+        amount: Money,
+        productId: ProductId
+      }
+
+      record InvoiceData is {
+        id: InvoiceId,
+        tenantId: TenantId,
+        customerId: CustomerId,
+        invoiceNumber: String,
+        lineItems: InvoiceLineItem*,
+        subtotal: Money,
+        tax: Money,
+        total: Money,
+        currency: String,
+        dueDate: Date,
+        notes: String,
+        createdAt: TimeStamp
+      }
+
+      state InvoiceDraft of Invoice.InvoiceData
+
+      handler InvoiceHandler is {
+        on command CreateInvoice {
+          send event InvoiceCreated to outlet InvoiceEvents_out
+        }
+        on command SendInvoice {
+          send event InvoiceSent to outlet InvoiceEvents_out
+        }
+        on command MarkInvoicePaid {
+          send event InvoicePaid to outlet InvoiceEvents_out
+        }
+        on command VoidInvoice {
+          send event InvoiceVoided to outlet InvoiceEvents_out
+        }
+      }
+    }
+
+    entity Payment is {
+      type InitiatePayment is command { tenantId: TenantId, customerId: CustomerId, invoiceId: InvoiceId, amount: Money }
+      type ProcessPayment is command { paymentId: PaymentId }
+      type ConfirmPayment is command { paymentId: PaymentId, transactionId: String }
+      type FailPayment is command { paymentId: PaymentId, failureCode: String, failureMessage: String }
+      type RefundPayment is command { paymentId: PaymentId, amount: Money, reason: String }
+
+      event PaymentInitiated is { paymentId: PaymentId, customerId: CustomerId, amount: Money }
+      event PaymentProcessing is { paymentId: PaymentId }
+      event PaymentConfirmed is { paymentId: PaymentId, transactionId: String }
+      event PaymentFailed is { paymentId: PaymentId, failureCode: String }
+      event PaymentRefunded is { paymentId: PaymentId, amount: Money }
+
+      record PaymentData is {
+        id: PaymentId,
+        tenantId: TenantId,
+        customerId: CustomerId,
+        invoiceId: InvoiceId,
+        amount: Money,
+        currency: String,
+        paymentMethodId: String,
+        createdAt: TimeStamp
+      }
+
+      state PaymentPending of Payment.PaymentData
+
+      handler PaymentHandler is {
+        on command InitiatePayment {
+          send event PaymentInitiated to outlet PaymentEvents_out
+        }
+        on command ProcessPayment {
+          send event PaymentProcessing to outlet PaymentEvents_out
+        }
+        on command ConfirmPayment {
+          send event PaymentConfirmed to outlet PaymentEvents_out
+        }
+        on command FailPayment {
+          send event PaymentFailed to outlet PaymentEvents_out
+        }
+        on command RefundPayment {
+          send event PaymentRefunded to outlet PaymentEvents_out
+        }
+      }
+    }
+
+    entity Product is {
+      type CreateProduct is command { tenantId: TenantId, name: String, description: String }
+      type UpdateProduct is command { productId: ProductId, name: String, description: String }
+      type AddPricing is command { productId: ProductId, amount: Money, interval: BillingInterval }
+      type ArchiveProduct is command { productId: ProductId }
+
+      event ProductCreated is { productId: ProductId, name: String }
+      event ProductUpdated is { productId: ProductId, name: String }
+      event PricingAdded is { productId: ProductId, priceId: String }
+      event ProductArchived is { productId: ProductId }
+
+      type BillingInterval is one of { Monthly, Yearly, OneTime }
+
+      record ProductPricing is {
+        priceId: String,
+        amount: Money,
+        currency: String,
+        interval: BillingInterval,
+        trialDays: Number
+      }
+
+      record ProductData is {
+        id: ProductId,
+        tenantId: TenantId,
+        name: String,
+        description: String,
+        pricing: ProductPricing*,
+        features: String*,
+        isActive: Boolean
+      }
+
+      state ProductActive of Product.ProductData
+
+      handler ProductHandler is {
+        on command CreateProduct {
+          send event ProductCreated to outlet ProductEvents_out
+        }
+        on command UpdateProduct {
+          send event ProductUpdated to outlet ProductEvents_out
+        }
+        on command AddPricing {
+          send event PricingAdded to outlet ProductEvents_out
+        }
+        on command ArchiveProduct {
+          send event ProductArchived to outlet ProductEvents_out
+        }
+      }
+    }
+
+    flow CustomerEvents is {
+      inlet CustomerEvents_in is event Customer.BillingCustomerCreated
+      outlet CustomerEvents_out is event Customer.BillingCustomerCreated
+    }
+
+    flow InvoiceEvents is {
+      inlet InvoiceEvents_in is event Invoice.InvoiceCreated
+      outlet InvoiceEvents_out is event Invoice.InvoiceCreated
+    }
+
+    flow PaymentEvents is {
+      inlet PaymentEvents_in is event Payment.PaymentInitiated
+      outlet PaymentEvents_out is event Payment.PaymentInitiated
+    }
+
+    flow ProductEvents is {
+      inlet ProductEvents_in is event Product.ProductCreated
+      outlet ProductEvents_out is event Product.ProductCreated
+    }
+  }
+}

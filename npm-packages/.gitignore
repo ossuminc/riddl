@@ -1,0 +1,5 @@
+# Ignore all generated npm packages
+*.tgz
+
+# But allow this .gitignore file
+!.gitignore

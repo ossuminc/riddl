@@ -1,12 +1,12 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{map => _, *}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.At
 import scalajs.js.annotation.*
@@ -20,8 +20,10 @@ trait RootParser { this: ModuleParser & CommonParser & ParsingContext =>
     include[u, RootContents](rootContents(_))
   }
 
+  // bastImport is inherited from CommonParser
+
   private def rootContent[u: P]: P[RootContents] = {
-    P(moduleContent | module | rootInclude[u]).asInstanceOf[P[RootContents]]
+    P(bastImport | moduleContent | module | rootInclude[u]).asInstanceOf[P[RootContents]]
   }
 
   private def rootContents[u: P]: P[Seq[RootContents]] =

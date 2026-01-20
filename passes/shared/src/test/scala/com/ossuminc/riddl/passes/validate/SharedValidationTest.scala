@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -87,9 +87,9 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    event event is { at: TimeStamp }
           |    handler handler is {
           |      on event event {
-          |        if "there is an error" then {
+          |        when "there is an error" then
           |          error "This is an error"
-          |        }
+          |        end
           |      }
           |    }
           |    repository repository is { ??? }
@@ -100,14 +100,14 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
           |    split split is { ??? }
           |    saga saga is {
           |     step a is {
-          |       "a.1"
+          |       prompt "a.1"
           |     } reverted by {
-          |       "a_r.1"
+          |       prompt "a_r.1"
           |     }
           |     step b is {
-          |       "b.1"
+          |       prompt "b.1"
           |     } reverted by {
-          |       "b_r.1"
+          |       prompt "b_r.1"
           |     }
           |   }
           |  } with {
@@ -125,6 +125,8 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
         case Left(errors) if errors.hasErrors =>
           println(errors.format)
           fail(errors.justErrors.format)
+        case Left(errors) =>
+          fail(s"Parse failed but no errors: ${errors.format}")
         case Right(result) =>
           sharedRoot = result.root
           succeed

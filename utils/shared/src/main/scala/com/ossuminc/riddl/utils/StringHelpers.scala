@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,7 +19,7 @@ object StringHelpers {
       }
     def dropRightWhile(f: Char => Boolean): String =
       var result = s
-      while f(result.last) do result = result.dropRight(1)
+      while result.nonEmpty && f(result.last) do result = result.dropRight(1)
       result
 
   def toPrettyString(
@@ -38,6 +38,7 @@ object StringHelpers {
       val indent = "  " * depth
       val prettyName = name.fold("")(x => s"$x: ")
       val ptype = obj match {
+        case null             => "null"
         case _: Iterable[Any] => ""
         case obj: Product     => obj.productPrefix
         case _                => obj.toString
@@ -46,6 +47,7 @@ object StringHelpers {
       buf.append(s"$indent$prettyName$ptype$nl")
 
       obj match {
+        case null => // Don't iterate over null
         case seq: Iterable[Any] => seq.foreach(doIt(_, depth + 1, None))
         case obj: Product =>
           obj.productIterator

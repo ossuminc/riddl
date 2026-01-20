@@ -1,0 +1,72 @@
+// Small test file for performance benchmarking
+// ~60 lines, 2 contexts, 10 definitions
+
+domain SmallDomain is {
+  type UserId is Id(User)
+  type UserName is String
+  type EmailAddress is String
+
+  context UserManagement is {
+    entity User is {
+      type CreateUser is command { name: UserName, email: EmailAddress }
+      type UpdateUser is command { userId: UserId, name: UserName }
+      type DeleteUser is command { userId: UserId }
+
+      event UserCreated is { userId: UserId, name: UserName }
+      event UserUpdated is { userId: UserId, name: UserName }
+      event UserDeleted is { userId: UserId }
+
+      record UserData is {
+        id: UserId,
+        name: UserName,
+        email: EmailAddress
+      }
+
+      state UserActive of User.UserData
+
+      handler UserHandler is {
+        on command CreateUser {
+          send event UserCreated to outlet UserEvents_out
+        }
+        on command UpdateUser {
+          send event UserUpdated to outlet UserEvents_out
+        }
+        on command DeleteUser {
+          send event UserDeleted to outlet UserEvents_out
+        }
+      }
+    }
+
+    flow UserEvents is {
+      inlet UserEvents_in is event User.UserCreated
+      outlet UserEvents_out is event User.UserCreated
+    }
+  }
+
+  context NotificationService is {
+    entity Notification is {
+      type SendNotification is command { userId: UserId, message: String }
+      event NotificationSent is { userId: UserId, message: String }
+
+      record NotificationData is {
+        id: Id(Notification),
+        userId: UserId,
+        message: String,
+        sentAt: TimeStamp
+      }
+
+      state NotificationActive of Notification.NotificationData
+
+      handler NotificationHandler is {
+        on command SendNotification {
+          send event NotificationSent to outlet NotificationEvents_out
+        }
+      }
+    }
+
+    flow NotificationEvents is {
+      inlet NotificationEvents_in is event Notification.NotificationSent
+      outlet NotificationEvents_out is event Notification.NotificationSent
+    }
+  }
+}

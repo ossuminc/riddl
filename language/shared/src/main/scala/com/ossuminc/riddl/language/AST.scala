@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,11 +14,13 @@ import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
 
 import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.{classTag, ClassTag}
 import scala.annotation.{tailrec, targetName, unused}
 import scala.io.{BufferedSource, Codec}
 import scala.scalajs.js.annotation.*
 import wvlet.airframe.ulid.ULID
+
+import scala.collection.SeqFactory
 
 /** Abstract Syntax Tree This object defines the model for representing RIDDL as an Abstract Syntax
   * Tree. This raw AST has no referential integrity, it just results from applying the parsing rules
@@ -115,7 +117,7 @@ object AST:
     ): Contents[T] =
       new mutable.ArrayBuffer[T](initialSize)
     def apply[T <: RiddlValue](items: T*): Contents[T] = mutable.ArrayBuffer[T](items: _*)
-    def unapply[T <: RiddlValue](contents: Contents[T]) =
+    def unapply[T <: RiddlValue](contents: Contents[T]): SeqFactory.UnapplySeqWrapper[T] =
       mutable.ArrayBuffer.unapplySeq[T](contents)
   end Contents
 
@@ -556,7 +558,8 @@ object AST:
         case Some(ulid: ULIDAttachment) => ulid.ulid
         case _ =>
           val result = ULID.newULID
-          metadata += ULIDAttachment(At.empty, result)
+          // Use the node's location rather than At.empty
+          metadata += ULIDAttachment(this.loc, result)
           result
       end match
     end ulid
@@ -796,8 +799,8 @@ object AST:
   /** Type of definitions that can occur in a [[Module]] */
   type ModuleContents = OccursInModule | Include[OccursInModule]
 
-  /** The root is a module that can have other modules */
-  type RootContents = ModuleContents | Module
+  /** The root is a module that can have other modules and BAST imports */
+  type RootContents = ModuleContents | Module | BASTImport
 
   /** Things that can occur in the "With" section of a leaf definition */
   type MetaData =
@@ -814,8 +817,8 @@ object AST:
   /** Type of definitions that occur in a [[Domain]] without [[Include]] */
   type OccursInDomain = OccursInVitalDefinition | Author | Context | Domain | User | Epic | Saga
 
-  /** Type of definitions that occur in a [[Domain]] with [[Include]] */
-  type DomainContents = OccursInDomain | Include[OccursInDomain]
+  /** Type of definitions that occur in a [[Domain]] with [[Include]] and [[BASTImport]] */
+  type DomainContents = OccursInDomain | Include[OccursInDomain] | BASTImport
 
   /** Type of definitions that occur in a [[Context]] without [[Include]] */
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Group | Saga | Projector |
@@ -934,7 +937,7 @@ object AST:
   /** The Base trait for a definition that contains some unrestricted kind of content, RiddlValue */
   sealed trait Branch[CV <: RiddlValue] extends Definition with Container[CV]:
     override def isParent: Boolean = true
-    override def hasDefinitions: Boolean = !contents.isEmpty
+    override def hasDefinitions: Boolean = contents.nonEmpty
     opaque type ContentType <: RiddlValue = CV
   end Branch
 
@@ -950,7 +953,9 @@ object AST:
     def empty: Definitions = Seq.empty[Definition]
   end Definitions
 
-  /** A simple sequence of Parents from the closest all the way up to the Root */
+  /** A simple sequence of Parents from the closest all the way up to the Root.
+    * Contains only Branch (Definition) nodes - Include nodes are tracked separately via includeContext.
+    */
   type Parents = Seq[Branch[?]]
 
   object Parents:
@@ -958,8 +963,10 @@ object AST:
     def apply(contents: Branch[?]*) = Seq(contents: _*)
   end Parents
 
-  /** A mutable stack of Branch[?] for keeping track of the parent hierarchy */
-  type ParentStack = mutable.Stack[Branch[?]] // TODO: Make this opaque some day
+  /** A mutable stack of Branch[?] for keeping track of the parent hierarchy.
+    * Contains only Branch (Definition) nodes - Include nodes are tracked separately via includeContext in Pass.
+    */
+  type ParentStack = mutable.Stack[Branch[?]]
 
   /** Extension methods for the ParentStack type */
   extension (ps: ParentStack)
@@ -1051,6 +1058,34 @@ object AST:
     def format: String = s"include \"$origin\""
     override def toString: String = format
   end Include
+
+  /** An import of a BAST (Binary AST) file.
+    *
+    * Imports bring in pre-compiled definitions from .bast files. Can appear at the root level
+    * or inside a domain. The imported definitions become children of the containing scope and
+    * are accessible via normal domain path resolution.
+    *
+    * Syntax: `import "path/to/file.bast"`
+    *
+    * @param loc
+    *   The location of the import statement in the source
+    * @param path
+    *   The path to the .bast file to import
+    * @param contents
+    *   The loaded Nebula contents from the BAST file (populated by BASTLoader)
+    */
+  case class BASTImport(
+    loc: At = At.empty,
+    path: LiteralString,
+    contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
+  ) extends Container[NebulaContents]:
+    type ContentType = NebulaContents
+
+    override def isRootContainer: Boolean = false
+
+    def format: String = s"""import "${path.s}""""
+    override def toString: String = format
+  end BASTImport
 
   /** Base trait of a reference to definitions that can accept a message directly via a reference
     *
@@ -1167,10 +1202,8 @@ object AST:
     *   The name (role) of the user
     * @param is_a
     *   What kind of thing the user is
-    * @param brief
-    *   A brief description of the user
-    * @param description
-    *   A longer description of the user and its role
+    * @param metadata
+    *   The metadata for the User
     */
   case class User(
     loc: At,
@@ -1188,10 +1221,8 @@ object AST:
     *   The [[At]] at which this glossary term occurs
     * @param id
     *   The term being defined
-    * @param brief
-    *   The short definition of the term
-    * @param description
-    *   The longer definition of the term.
+    * @param definition
+    *   The definition of the term
     */
   case class Term(
     loc: At,
@@ -1218,10 +1249,8 @@ object AST:
     *   The author's title within the organization
     * @param url
     *   A URL associated with the author
-    * @param brief
-    *   A optional short description of the author
-    * @param description
-    *   An optional long description of the author
+    * @param metadata
+    *   The metadata for the Author
     */
   case class Author(
     loc: At,
@@ -1569,10 +1598,8 @@ object AST:
     *   The name of the field
     * @param typeEx
     *   The type of the field
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the field.
+    * @param metadata
+    *   The metadata for the Field
     */
   @JSExportTopLevel("Field")
   case class Field(
@@ -1611,10 +1638,8 @@ object AST:
     *   The name of the field
     * @param args
     *   The type of the field
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the field.
+    * @param metadata
+    *   The metadata for the Method
     */
   @JSExportTopLevel("Method")
   case class Method(
@@ -2190,10 +2215,8 @@ object AST:
     *   The name of the type being defined
     * @param typEx
     *   The type expression of the type being defined
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the type.
+    * @param metadata
+    *   The metadata for the Type
     */
   @JSExportTopLevel("Type")
   case class Type(
@@ -2262,10 +2285,8 @@ object AST:
     *   The type expression goverining the range of values the constant can have
     * @param value
     *   The value of the constant
-    * @param brief
-    *   A brief descriptin of the constant
-    * @param description
-    *   A detailed description of the constant
+    * @param metadata
+    *   The metadata for the Constant
     */
   @JSExportTopLevel("Constant")
   case class Constant(
@@ -2294,20 +2315,20 @@ object AST:
   /** Base trait of all Statements that can occur in [[OnClause]]s */
   sealed trait Statement extends RiddlValue
 
-  /** A statement whose behavior is specified as a text string allowing an arbitrary action to be
-    * specified handled by RIDDL's syntax.
+  /** A statement whose behavior is specified as a text string allowing a prompt for
+    * AI-based simulation to be specified.
     *
     * @param loc
     *   The location where the action occurs in the source
     * @param what
-    *   The action to take (emitted as pseudo-code)
+    *   The prompt text to provide to an AI simulator
     */
-  @JSExportTopLevel("ArbitraryStatement")
-  case class ArbitraryStatement(
+  @JSExportTopLevel("PromptStatement")
+  case class PromptStatement(
     loc: At,
     what: LiteralString
   ) extends Statement {
-    override def kind: String = "Arbitrary Statement"
+    override def kind: String = "Prompt Statement"
     def format: String = what.format
   }
 
@@ -2328,21 +2349,6 @@ object AST:
     def format: String = s"error ${message.format}"
   }
 
-  /** A statement that changes the focus of input in an application to a specific group
-    *
-    * @param loc
-    *   The location of the statement
-    * @param group
-    *   The group that is the target of the input focus
-    */
-  @JSExportTopLevel("FocusStatement")
-  case class FocusStatement(
-    loc: At,
-    group: GroupRef
-  ) extends Statement {
-    override def kind: String = "Focus Statement"
-    def format: String = s"focus on ${group.format}"
-  }
 
   /** A statement that sets a value of a field
     *
@@ -2363,21 +2369,6 @@ object AST:
     def format: String = s"set ${field.format} to ${value.format}"
   }
 
-  /** A statement that returns a value from a function
-    *
-    * @param loc
-    *   The location in the source of the publish action
-    * @param value
-    *   The value to be returned
-    */
-  @JSExportTopLevel("ReturnStatement")
-  case class ReturnStatement(
-    loc: At,
-    value: LiteralString
-  ) extends Statement {
-    override def kind: String = "Return Statement"
-    def format: String = s"return ${value.format}"
-  }
 
   /** An action that sends a message to an [[Inlet]] or [[Outlet]].
     *
@@ -2398,21 +2389,6 @@ object AST:
     def format: String = s"send ${msg.format} to ${portlet.format}"
   }
 
-  /** A statement that replies in a handler to a query
-    *
-    * @param loc
-    *   The location in the source of the publish action
-    * @param message
-    *   The message to be returned
-    */
-  @JSExportTopLevel("ReplyStatement")
-  case class ReplyStatement(
-    loc: At,
-    message: MessageRef
-  ) extends Statement {
-    override def kind: String = "Reply Statement"
-    def format: String = s"reply ${message.format}"
-  }
 
   /** An statement that morphs the state of an entity to a new structure
     *
@@ -2477,132 +2453,105 @@ object AST:
     def format: String = s"tell ${msg.format} to ${processorRef.format}"
   }
 
-  /** A statement that calls a function
+  /** A conditional statement for branching logic
     *
     * @param loc
     *   The location of the statement in the model
-    * @param func
-    *   The function to be called
+    * @param condition
+    *   The boolean expression to evaluate - either a literal string description
+    *   or an identifier referencing a let binding
+    * @param thenStatements
+    *   The statements to execute if the condition is true
+    * @param elseStatements
+    *   The statements to execute if the condition is false (optional)
     */
-  @JSExportTopLevel("CallStatement")
-  case class CallStatement(
+  @JSExportTopLevel("WhenStatement")
+  case class WhenStatement(
     loc: At,
-    func: FunctionRef
+    condition: LiteralString | Identifier,
+    thenStatements: Contents[Statements],
+    elseStatements: Contents[Statements] = Contents.empty[Statements](0),
+    negated: Boolean = false
   ) extends Statement {
-    override def kind: String = "Call Statement"
-    def format: String = s"call ${func.format}"
+    override def kind: String = "When Statement"
+    def format: String = {
+      val condStr = condition match {
+        case ls: LiteralString => ls.format
+        case id: Identifier    => if negated then s"!${id.format}" else id.format
+      }
+      val thenStr = if thenStatements.isEmpty then "" else thenStatements.toSeq.map(_.format).mkString("\n  ")
+      if elseStatements.isEmpty then s"when $condStr then\n$thenStr\n  end"
+      else {
+        val elseStr = if elseStatements.isEmpty then "" else elseStatements.toSeq.map(_.format).mkString("\n  ")
+        s"when $condStr then\n$thenStr\nelse\n$elseStr\n  end"
+      }
+    }
   }
 
-  /** A statement that suggests looping over the contents of a field with a non-zero cardinality, an
-    * Inlet or an outlet
-    * @param loc
-    *   The location of the statement in the model
-    * @param ref
-    *   The reference to the Field, outlet or Inlet
-    * @param do_
-    *   The set of statements to execute for each iteration_
-    */
-  @JSExportTopLevel("ForEachStatement")
-  case class ForEachStatement(
+  /** A case clause within a match statement */
+  @JSExportTopLevel("MatchCase")
+  case class MatchCase(
     loc: At,
-    ref: FieldRef | OutletRef | InletRef,
-    do_ : Contents[Statements]
-  ) extends Statement {
-    override def kind: String = "Foreach Statement"
-    def format: String = s"foreach ${ref.format} do\n" +
-      do_.map(_.format).mkString("\n") + "\n  end"
+    pattern: LiteralString,
+    statements: Contents[Statements]
+  ) extends RiddlValue {
+    override def kind: String = "Match Case"
+    def format: String = s"case ${pattern.format} {\n${statements.toSeq.map(_.format).mkString("\n  ")}\n}"
   }
 
-  /** A statement that represents a class if-condition-then-A-else-B construct for logic decitions.
+  /** A pattern matching statement for value-based branching
     *
     * @param loc
     *   The location of the statement in the model
-    * @param cond
-    *   The conditional part of the if-then-else
-    * @param thens
-    *   The statements to execute if `cond` is true
-    * @param elses
-    *   The tsatements to execute if `cond` is false
+    * @param expression
+    *   The expression to match against
+    * @param cases
+    *   The case clauses (pattern -> statements)
+    * @param default
+    *   The default statements if no case matches (required)
     */
-  @JSExportTopLevel("IfThenElseStatement")
-  case class IfThenElseStatement(
+  @JSExportTopLevel("MatchStatement")
+  case class MatchStatement(
     loc: At,
-    cond: LiteralString,
-    thens: Contents[Statements],
-    elses: Contents[Statements]
+    expression: LiteralString,
+    cases: Seq[MatchCase],
+    default: Contents[Statements]
   ) extends Statement {
-    override def kind: String = "IfThenElse Statement"
-
-    def format: String =
-      s"if ${cond.format} then {${thens.map(_.format).mkString("\n  ", "\n  ", "\n}") +
-          (" else {" + elses.map(_.format).mkString("\n  ", "\n  ", "\n}\nend"))}"
+    override def kind: String = "Match Statement"
+    def format: String = {
+      val casesStr = cases.map(_.format).mkString("\n")
+      val defaultStr = s"default {\n${default.toSeq.map(_.format).mkString("\n  ")}\n}"
+      s"match ${expression.format} {\n$casesStr\n$defaultStr\n}"
+    }
   }
 
-  /** A statement that terminates the On Clause */
-  @JSExportTopLevel("StopStatement")
-  case class StopStatement(
-    loc: At
-  ) extends Statement {
-    override def kind: String = "Stop Statement"
-    def format: String = "stop"
-  }
-
-  /** A statement that reads data from a Repository
+  /** A local immutable value binding statement
     *
     * @param loc
     *   The location of the statement in the model
-    * @param keyword
-    *   The keyword used to color the nature of the read operation
-    * @param what
-    *   A string describing what should be read
-    * @param from
-    *   A reference to the type from which the value should be read in the repository
-    * @param where
-    *   A string describing the conditions on the read (like a SQL WHERE clause)
+    * @param identifier
+    *   The name of the local variable
+    * @param expression
+    *   The expression to bind to the variable
     */
-  @JSExportTopLevel("ReadStatement")
-  case class ReadStatement(
+  @JSExportTopLevel("LetStatement")
+  case class LetStatement(
     loc: At,
-    keyword: String,
-    what: LiteralString,
-    from: TypeRef,
-    where: LiteralString
+    identifier: Identifier,
+    expression: LiteralString
   ) extends Statement {
-    override def kind: String = "Read Statement"
-    def format: String = s"$keyword ${what.format} from ${from.format} where ${where.format}"
+    override def kind: String = "Let Statement"
+    def format: String = s"let ${identifier.format} = ${expression.format}"
   }
 
-  /** A statement that describes a write to a repository
+  /** A code statement that contains arbitrary code in a specified language
     *
     * @param loc
     *   The location of the statement in the model
-    * @param keyword
-    *   The keyword used to color the nature of teh write operation (e.g. update, append, etc.)
-    * @param what
-    *   A description of the data that should be written to the repository
-    * @param to
-    *   The [[TypeRef]] to the component of the Repository
-    */
-  @JSExportTopLevel("WriteStatement")
-  case class WriteStatement(
-    loc: At,
-    keyword: String,
-    what: LiteralString,
-    to: TypeRef
-  ) extends Statement {
-    override def kind: String = "Write Statement"
-    def format: String = s"$keyword ${what.format} to ${to.format}"
-  }
-
-  /** A statement that provides a definition of the computation to execute in a specific programming
-    * language
-    *
-    * @param loc
-    *   The location of the statement
     * @param language
-    *   The name of the programming language in which the `body` is written
+    *   The programming language of the code
     * @param body
-    *   The code that should be executed by this statement.
+    *   The code body
     */
   @JSExportTopLevel("CodeStatement")
   case class CodeStatement(
@@ -2613,6 +2562,7 @@ object AST:
     def format: String = s"```${language.s}\n$body```"
     override def kind: String = "Code Statement"
   }
+
 
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
@@ -3131,10 +3081,8 @@ object AST:
     *   The name of the inlet
     * @param type_
     *   The type of the data that is received from the inlet
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the Inlet
+    * @param metadata
+    *   The metadata for the Inlet
     */
   @JSExportTopLevel("Inlet")
   case class Inlet(
@@ -3154,10 +3102,8 @@ object AST:
     *   The name of the outlet
     * @param type_
     *   The type expression for the kind of data put out
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the Outlet.
+    * @param metadata
+    *   The metadata for the Outlet
     */
   @JSExportTopLevel("Outlet")
   case class Outlet(
@@ -3180,8 +3126,6 @@ object AST:
     *   The origin Outlet of the connector
     * @param to
     *   The destination Inlet of the connector
-    * @param options
-    *   The options for this connector
     * @param metadata
     *   The meta data for this connector
     */
@@ -3378,10 +3322,8 @@ object AST:
     *   The command to be done.
     * @param undoStatements
     *   The command that undoes [[doStatements]]
-    * @param brief
-    *   A brief description (one sentence) for use in documentation
-    * @param description
-    *   An optional description of the saga action
+    * @param metadata
+    *   The metadata for the SagaStep
     */
   @JSExportTopLevel("SagaStep")
   case class SagaStep(
@@ -3408,6 +3350,8 @@ object AST:
     *   A definition of the aggregate output values resulting from invoking the saga, if any.
     * @param contents
     *   The definitional content for this Context
+    * @param metadata
+    *   The metadata for the Saga
     */
   @JSExportTopLevel("Saga")
   case class Saga(
@@ -3474,8 +3418,8 @@ object AST:
     *   Location of the parallel group
     * @param contents
     *   The expressions to execute in parallel
-    * @param brief
-    *   A brief description of the parallel group
+    * @param metadata
+    *   The metadata for this ParallelInteractions
     */
   @JSExportTopLevel("ParallelInteractions")
   case class ParallelInteractions(
@@ -3494,10 +3438,8 @@ object AST:
     *   Location of the sequence
     * @param contents
     *   The interactions to execute in sequence
-    * @param brief
-    *   A brief description of the sequence group
-    * @param description
-    *   A longer description of the sequence
+    * @param metadata
+    *   The metadata for this SequentialInteractions
     */
   @JSExportTopLevel("SequentialInteractions")
   case class SequentialInteractions(
@@ -3515,8 +3457,8 @@ object AST:
     *   The location of the optional group
     * @param contents
     *   The optional expressions
-    * @param brief
-    *   A brief description of the optional group
+    * @param metadata
+    *   The metadata for this OptionalInteractions
     */
   @JSExportTopLevel("OptionalInteractions")
   case class OptionalInteractions(
@@ -3528,7 +3470,18 @@ object AST:
     override def kind: String = "Optional Interaction"
   }
 
-  /** An [[GenericInteraction]] that is vaguely written as a textual description */
+  /** An [[GenericInteraction]] that is vaguely written as a textual description
+   *
+   * @param loc
+   *   The location of the interaction definition
+   * @param from
+   *   A [[LiteralString]] for the originating end of the relationship
+   * @param relationship
+   *   The relationship between the from and to
+   * @param to
+   *   A [[LiteralString]] for the receiving end of the relationship
+   * @param metadata
+   */
   @JSExportTopLevel("VagueInteraction")
   case class VagueInteraction(
     loc: At,
@@ -3551,10 +3504,8 @@ object AST:
     *   The message that is sent to the `to` component
     * @param to
     *   A [[Reference]] to the [[Processor]] that receives the sent `message`
-    * @param brief
-    *   A brief description of this interaction
-    * @param description
-    *   A full description of this interaction
+    * @param metadata
+    *   The metadata for this SendMessageInteraction
     */
   @JSExportTopLevel("SendMessageInteraction")
   case class SendMessageInteraction(
@@ -3582,8 +3533,8 @@ object AST:
     *   A literal spring that specifies the arbitrary relationship
     * @param to
     *   A reference to the destination of the interaction
-    * @param brief
-    *   A brief description of the interaction step
+    * @param metadata
+    *   The metadata for this ArbitraryInteraction
     */
   @JSExportTopLevel("ArbitraryInteraction")
   case class ArbitraryInteraction(
@@ -3607,10 +3558,8 @@ object AST:
     *   A reference to a [[Definition]] from which the relationship extends and to which it returns.
     * @param relationship
     *   A textual description of the relationship
-    * @param brief
-    *   A brief description of the interaction for documentation purposes
-    * @param description
-    *   A full description of the interaction for documentation purposes
+    * @param metadata
+    *   The metadata for this SelfInteraction
     */
   @JSExportTopLevel("SelfInteraction")
   case class SelfInteraction(
@@ -3632,8 +3581,8 @@ object AST:
     *   The User that is being focused
     * @param to
     *   The Group that is the target of the focus
-    * @param brief
-    *   A brief description of this interaction
+    * @param metadata
+    *   The metadata for this FocsOnGroupInteraction
     */
   @JSExportTopLevel("FocusOnGroupInteraction")
   case class FocusOnGroupInteraction(
@@ -3655,10 +3604,8 @@ object AST:
     *   The user from which the interaction emanates
     * @param url
     *   The URL towards which the user is directed
-    * @param brief
-    *   A brief description for documentation purposes
-    * @param description
-    *   A more full description of the interaction for documentation purposes
+    * @param metadata
+    *   The metadata for this DirectUserToURLInteraction
     */
   @JSExportTopLevel("DirectUserToURLInteraction")
   case class DirectUserToURLInteraction(
@@ -3681,9 +3628,9 @@ object AST:
     * @param relationship
     *   THe name of the relationship
     * @param to
-    *   THe user that receives the output
-    * @param brief
-    *   A brief description of this interaction
+    *   The user that receives the output
+    * @param metadata
+    *   The metadata for this ShowoutputInteraction
     */
   @JSExportTopLevel("ShowOutputInteraction")
   case class ShowOutputInteraction(
@@ -3705,8 +3652,8 @@ object AST:
     *   The user providing the input
     * @param to
     *   The input definition that receives the input
-    * @param brief
-    *   A description of this interaction step
+    * @param metadata
+    *   The metadata for this SelectInputInteraction
     */
   @JSExportTopLevel("SelectInputInteraction")
   case class SelectInputInteraction(
@@ -3728,8 +3675,8 @@ object AST:
     *   The user providing the input
     * @param to
     *   The input definition that receives the input
-    * @param brief
-    *   A description of this interaction step
+    * @param metadata
+    *   The metadata for this TakeInputInteraction
     */
   @JSExportTopLevel("TakeInputInteraction")
   case class TakeInputInteraction(
@@ -4056,7 +4003,7 @@ object AST:
 
   /** Find the authors for some definition
     *
-    * @param defn
+    * @param definition
     *   The definition whose [[AST.Author]]s we are seeking
     * @param parents
     *   The parents of the definition whose [[AST.Author]]s we are seeking

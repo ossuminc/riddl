@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,7 +26,8 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
 
   import fastparse.P
 
-  private val urlSeen: mutable.ListBuffer[URL] = mutable.ListBuffer[URL]()
+  // Use HashSet for O(1) duplicate detection instead of O(n) ListBuffer search
+  private val urlSeen: mutable.HashSet[URL] = mutable.HashSet.empty[URL]
   def getURLs: Seq[URL] = urlSeen.toSeq
 
   protected def parse[RESULT](
@@ -87,6 +88,28 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     // importDomain(url)
   }
 
+  /** Parse a BAST import statement.
+    *
+    * This creates a BASTImport node with the path and namespace. The actual BAST
+    * file loading happens later during a loading pass, avoiding circular dependencies
+    * between language and bast modules.
+    *
+    * @param loc The location of the import statement
+    * @param path The path to the .bast file
+    * @return A BASTImport node (contents populated later by BASTLoader)
+    */
+  def doBASTImport(
+    loc: At,
+    path: LiteralString
+  )(implicit ctx: P[?]): BASTImport = {
+    // Validate the path ends with .bast
+    if !path.s.endsWith(".bast") then
+      warning(loc, s"Import path '${path.s}' should end with .bast extension")
+    end if
+    // Create the BASTImport node - actual loading happens by BASTLoader
+    BASTImport(loc, path)
+  }
+
   def doIncludeParsing[CT <: RiddlValue](loc: At, path: String, rule: P[?] => P[Seq[CT]])(implicit
     ctx: P[?]
   ): Include[CT] = {
@@ -94,13 +117,16 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
     val newURL = if URL.isValid(path) then {
       URL(path)
     } else {
-      val name: String = {
-        if path.endsWith(".riddl") then path
-        else path + ".riddl"
+      // Use StringBuilder for path concatenation to avoid intermediate String allocation
+      val name: String = if path.endsWith(".riddl") then {
+        path
+      } else {
+        val sb = new StringBuilder(path.length + 6)  // ".riddl" = 6 chars
+        sb.append(path).append(".riddl").toString
       }
       ctx.input.asInstanceOf[RiddlParserInput].root.parent.resolve(name)
     }
-    urlSeen.append(newURL)
+    urlSeen += newURL  // O(1) add to HashSet
     try {
       import com.ossuminc.riddl.utils.Await
       implicit val ec: ExecutionContext = pc.ec
@@ -136,14 +162,13 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
   def checkForDuplicateIncludes[CT <: RiddlValue](contents: Seq[CT]): Unit = {
     import com.ossuminc.riddl.language.Finder
     val allIncludes = Finder(contents.toContents).findByType[Include[?]]
-    val distinctIncludes = allIncludes.distinctBy(_.origin)
-    for {
-      incl <- distinctIncludes
-      copies = allIncludes.filter(_.origin == incl.origin) if copies.size > 1
-    } yield {
-      val copyList = copies.map(i => i.origin.toExternalForm + i.loc.toShort).mkString(", ")
-      val message = s"Duplicate include origin detected in $copyList"
-      warning(incl.loc, message, "while merging includes")
+    // Use groupBy for O(n) instead of O(n²) with filter inside loop
+    val grouped = allIncludes.groupBy(_.origin)
+    grouped.foreach { case (origin, includes) =>
+      if includes.size > 1 then
+        val copyList = includes.map(i => i.origin.toExternalForm + i.loc.toShort).mkString(", ")
+        val message = s"Duplicate include origin detected in $copyList"
+        warning(includes.head.loc, message, "while merging includes")
     }
   }
 }

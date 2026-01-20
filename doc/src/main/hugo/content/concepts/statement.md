@@ -3,26 +3,26 @@ title: "Statement"
 draft: false
 ---
 
-A Statement is an action that can be taken in response to a message. Statements 
-form the body of an [on clause]({{<relref "onclause.md">}}) which is what 
-[handlers]({{relref "handlers.md">}}] are composed of. There are many 
+A Statement is an action that can be taken in response to a message. Statements
+form the body of an [on clause]({{<relref "onclause.md">}}) which is what
+[handlers]({{<relref "handler.md">}}) are composed of. There are many
 kinds of statements, described in the table below.
 
-|     Name     | Description                                                  |
-|:------------:|:-------------------------------------------------------------|
-|  Arbitrary   | A textually described arbitrary statement                    |
-|     Ask      | Send a message to an entity, asynchronously process result   |
-|    Become    | Instructs an entity change to a new handler                  |
-|    Error     | Produce an error with a message                              |
-|   ForEach    | Invoke statements on each item of a multi-valued field       |
-|  IfThenElse  | Evaluate a condition and choose execute a statement set      |
-| FunctionCall | Call a function to get a result                              |
-|    Morph     | Morph the state of an entity to a new state                  |
-|   Publish    | Publish a message to a pipe                                  |
-|    Reply     | Provide the reply message to the entity that invoked a query |
-|    Return    | Return a value from a function                               |
-|     Set      | Set a field value                                            |
-|     Tell     | Send a message to an entity directly, do not wait for result |
+|     Name     | Syntax Example                                               | Description                                                  |
+|:------------:|:-------------------------------------------------------------|:-------------------------------------------------------------|
+|    Become    | `become entity E to handler H`                               | Instructs an entity to change to a new handler               |
+|    Call      | `call function F(args)`                                      | Call a function to get a result                              |
+|    Error     | `error "message"`                                            | Produce an error with a message                              |
+|   ForEach    | `foreach item in collection { ... }`                         | Invoke statements on each item of a multi-valued field       |
+|     Let      | `let x = "condition"`                                        | Bind a name to a condition for use in when statements        |
+|    Match     | `match "scenario" { case "cond1" { } default { } }`          | Select from multiple conditions/cases                        |
+|    Morph     | `morph entity E to state S with record R`                    | Morph the state of an entity to a new state                  |
+|   Prompt     | `prompt "description of action"`                             | A textually described action to be implemented               |
+|    Return    | `return value`                                               | Return a value from a function                               |
+|    Send      | `send event E to outlet O`                                   | Send a message to an outlet (asynchronous)                   |
+|     Set      | `set field S.f to "value"`                                   | Set a field value                                            |
+|    Tell      | `tell command C to entity E`                                 | Send a message to an entity directly                         |
+|    When      | `when cond then ... [else ...] end`                          | Execute statements conditionally with optional else          |
 
 ## Level of Detail
 

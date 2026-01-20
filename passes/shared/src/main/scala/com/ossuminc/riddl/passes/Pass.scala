@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -174,8 +174,36 @@ object PassesResult {
   *   The input to the pass. This provides the data over which the pass is executed
   * @param out
   *   The output from previous runs of OTHER passes, which is a form of input to the pass, perhaps.
+  * @param withIncludes
+  *   When true, Include nodes are treated as regular containers:
+  *   - process() is called for the Include node itself
+  *   - Include is pushed onto the parent stack
+  *   - Include appears in the parent hierarchy
+  *
+  *   When false (default), Include nodes are transparent:
+  *   - Include contents are traversed directly
+  *   - Include does NOT appear in parent stack
+  *   - Include is semantically invisible to the pass
+  *
+  *   WARNING: Setting this to true breaks semantic transparency of Include nodes.
+  *   Only use when you need to preserve Include structure (e.g., serialization, AST transformation).
+  *   DO NOT use for passes that perform path resolution or reference lookup - these depend on
+  *   Include being transparent to maintain correct naming hierarchy.
+  *
+  *   Example usage:
+  *   {{{
+  *   // For serialization that must preserve Include nodes:
+  *   case class BASTWriter(...) extends Pass(input, outputs, withIncludes = true)
+  *
+  *   // For normal passes (default - Include is transparent):
+  *   case class ValidationPass(...) extends Pass(input, outputs)
+  *   }}}
   */
-abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: PlatformContext) {
+abstract class Pass(
+  @unused val in: PassInput,
+  val out: PassesOutput,
+  protected val withIncludes: Boolean = false
+)(using io: PlatformContext) {
 
   /** The messages collected during the pass */
   protected val messages: Messages.Accumulator = Messages.Accumulator()
@@ -264,8 +292,15 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
         root.contents.foreach { value => traverse(value, parents) }
         parents.pop()
       case include: Include[?] =>
-        // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
-        include.contents.foreach { value => traverse(value, parents) }
+        if withIncludes then
+          // Process the Include node itself, but don't add to parent stack
+          // Include contents logically belong to the parent container, not the Include
+          process(include, parents)
+          include.contents.foreach { value => traverse(value, parents) }
+        else
+          // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
+          include.contents.foreach { value => traverse(value, parents) }
+        end if
       case leaf: Leaf =>
         process(leaf, parents)
       case branch: Branch[?] =>
@@ -282,9 +317,10 @@ abstract class Pass(@unused val in: PassInput, val out: PassesOutput)(using io: 
 
 abstract class DepthFirstPass(
   input: PassInput,
-  outputs: PassesOutput
+  outputs: PassesOutput,
+  withIncludes: Boolean = false
 )(using pc: PlatformContext)
-    extends Pass(input, outputs) {
+    extends Pass(input, outputs, withIncludes) {
 
   /** A method for the traversal of the AST hierarchy. This implementation traverses nodes in a
     * depth first fashion.
@@ -302,6 +338,7 @@ abstract class DepthFirstPass(
         parents.pop()
         process(root, parents)
       case include: Include[?] =>
+        // Depth-first: process children first, then parent
         // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
         include.contents.foreach { value => traverse(value, parents) }
         process(include, parents)
@@ -339,8 +376,12 @@ abstract class DepthFirstPass(
   * @param outputs
   *   The outputs of previous passes in case this pass needs it
   */
-abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using PlatformContext)
-    extends Pass(input, outputs) {
+abstract class HierarchyPass(
+  input: PassInput,
+  outputs: PassesOutput,
+  withIncludes: Boolean = false
+)(using PlatformContext)
+    extends Pass(input, outputs, withIncludes) {
 
   /** not required in this kind of pass, final override it as a result
     *
@@ -400,9 +441,12 @@ abstract class HierarchyPass(input: PassInput, outputs: PassesOutput)(using Plat
   override protected def traverse(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match {
       case include: Include[?] => // treat includes specially
-        openInclude(include, parents.toParents)
+        val def_parents = parents.toParents
+        openInclude(include, def_parents)
+        // Never add Include to parent stack - contents logically belong to parent container
+        // HierarchyPass always calls openInclude/closeInclude to give subclasses visibility
         include.contents.foreach { item => traverse(item, parents) }
-        closeInclude(include, parents.toParents)
+        closeInclude(include, def_parents)
       case container: Branch[?] => // must be a container so descend
         val def_parents = parents.toParents // save this for the closeContainer below
         openContainer(container, def_parents)

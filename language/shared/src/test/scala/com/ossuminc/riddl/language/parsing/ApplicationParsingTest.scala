@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -36,15 +36,15 @@ abstract class ApplicationParsingTest(using PlatformContext) extends AbstractPar
           succeed
       }
     }
-    "supports using the focus statement" in { (td: TestData) =>
+    "supports using the prompt statement" in { (td: TestData) =>
       val input = RiddlParserInput(
         """
           |domain foo {
           |context foo2 {
-          |  command GoHome {???} with { briefly as "Directive to focus on going to the home page" }
+          |  command GoHome {???} with { briefly as "Directive to navigate to the home page" }
           |  handler foo3 is {
           |    on command GoHome {
-          |      focus on group g2
+          |      prompt "navigate to home page"
           |    }
           |  }
           |  group g2 is { ??? }

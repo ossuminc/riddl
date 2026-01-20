@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.URL
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{map => _, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 

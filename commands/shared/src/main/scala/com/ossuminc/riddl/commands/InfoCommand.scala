@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -40,16 +40,12 @@ class InfoCommand(using pc: PlatformContext) extends Command[InfoCommand.Options
     options: InfoCommand.Options,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    pc.log.info("About riddlc:")
-    pc.log.info(s"           name: riddlc")
-    pc.log.info(s"        version: ${RiddlBuildInfo.version}")
-    pc.log.info(s"  documentation: https://riddl.tech")
-    pc.log.info(s"      copyright: ${RiddlBuildInfo.copyright}")
-    pc.log.info(s"       built at: ${RiddlBuildInfo.builtAtString}")
-    pc.log.info(s"       licenses: ${RiddlBuildInfo.licenses}")
-    pc.log.info(s"   organization: ${RiddlBuildInfo.organizationName}")
-    pc.log.info(s"  scala version: ${RiddlBuildInfo.scalaVersion}")
-    pc.log.info(s"    sbt version: ${RiddlBuildInfo.sbtVersion}")
+    import com.ossuminc.riddl.utils.InfoFormatter
+
+    // Use the shared InfoFormatter utility
+    InfoFormatter.formatInfo.split("\n").foreach(line => pc.log.info(line))
+
+    // Add JVM-specific info (only available on JVM platform)
     pc.log.info(s"       jvm name: ${System.getProperty("java.vm.name")}")
     pc.log.info(s"    jvm version: ${System.getProperty("java.runtime.version")}")
     pc.log.info(s"  operating sys: ${System.getProperty("os.name")}")

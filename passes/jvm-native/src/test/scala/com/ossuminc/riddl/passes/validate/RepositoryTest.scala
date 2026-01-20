@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,7 +28,7 @@ class RepositoryTest extends AbstractValidatingTest {
           |      command AddThis is { what: String }
           |      handler Only is {
           |        on command AddThis {
-          |          "add 'what' to the list"
+          |          prompt "add 'what' to the list"
           |        }
           |        on query GetOne {
           |          send result fubar.Reply to outlet hereyougo

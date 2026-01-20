@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,7 @@ import scala.concurrent.duration.DurationInt
 import scala.io.Source
 
 class RiddlParserInputTest extends AbstractTestingBasis {
+  import RiddlParserInputTest.*
 
   val fullPath = "/ossuminc/riddl-examples/main/src/riddl/dokn/dokn.riddl"
   val src = s"https://raw.githubusercontent.com$fullPath"
@@ -27,7 +28,7 @@ class RiddlParserInputTest extends AbstractTestingBasis {
     val expected = getFromURI(url)
     rpi.data.mustBe(expected)
     val exception = intercept[ArrayIndexOutOfBoundsException] { rpi.offsetOf(-1) }
-    rpi.offsetOf(2) mustBe 38
+    rpi.offsetOf(2) mustBe EXPECTED_OFFSET_AT_POSITION_2
     rpi.lineOf(38) mustBe 2
     rpi.rangeOf(0) mustBe (0, 17)
     val loc = rpi.location(0)
@@ -53,4 +54,9 @@ class RiddlParserInputTest extends AbstractTestingBasis {
       checkRPI(rpi2, url)
     }
   }
+}
+
+object RiddlParserInputTest {
+  // Expected offset at position 2 for dokn.riddl test file
+  val EXPECTED_OFFSET_AT_POSITION_2: Int = 38
 }

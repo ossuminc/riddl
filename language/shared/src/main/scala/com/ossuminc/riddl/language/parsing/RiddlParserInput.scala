@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -114,6 +114,11 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
   private lazy val lineNumberLookup: Array[Int] =
     Util.lineNumberLookup(data).appended(data.length)
 
+  // Simple LRU cache for line lookups: stores (index, lineNumber) pairs
+  // Parsing is mostly sequential, so recent lookups predict future lookups
+  private val lineCache: Array[(Int, Int)] = Array.fill(4)((-1, -1))
+  private var lineCachePos: Int = 0
+
   private[language] def offsetOf(line: Int): Int = {
     if line < 0 then { lineNumberLookup(line) }
     else if line < lineNumberLookup.length then { lineNumberLookup(line) }
@@ -121,12 +126,26 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
   }
 
   private[language] def lineOf(index: Int): Int = {
+    // Check cache first - O(1) for recent lookups
+    var i = 0
+    while i < lineCache.length do
+      if lineCache(i)._1 == index then
+        return lineCache(i)._2
+      i += 1
+
+    // Cache miss - do binary search
     val result = lineNumberLookup.search(index)
-    result match {
+    val lineNum = result match {
       case Searching.Found(foundIndex) => foundIndex
       case Searching.InsertionPoint(insertionPoint) =>
         if insertionPoint > 0 then insertionPoint - 1 else insertionPoint
     }
+
+    // Update cache with new result (circular buffer)
+    lineCache(lineCachePos) = (index, lineNum)
+    lineCachePos = (lineCachePos + 1) % lineCache.length
+
+    lineNum
   }
 
   def rangeOf(index: Int): (Int, Int) = {
@@ -223,6 +242,6 @@ protected[parsing] case class StringParserInput(
   override val purpose: String = ""
 ) extends RiddlParserInput {
   override def toString: String = {
-    super.toString ++ s", data: ${data.length} chars, root: $root"
+    super.toString ++ s", data: ${data.length} chars, origin: $origin"
   }
 }

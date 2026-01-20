@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -46,7 +46,7 @@ class ParserTest extends ParsingTest with org.scalatest.Inside {
         case Left(errors) =>
           errors must not be empty
           errors.head.message must include(
-            "Expected one of (\"/*\" | \"//\" | \"author\" | \"include\" | \"module\""
+            "Expected one of (\"/*\" | \"//\" | \"author\" | \"import\" | \"include\" | \"module\""
           )
         case Right(_) => fail("'domainfoois' should not be recognized")
       }

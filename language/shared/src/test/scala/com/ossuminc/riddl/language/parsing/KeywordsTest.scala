@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,7 +12,7 @@ class KeywordsTest extends AbstractTestingBasis {
 
   "Keyword" should {
     "produce all keywords" in {
-      Keyword.allKeywords.size must be(138)
+      Keyword.allKeywords.size must be(142)
     }
   }
 

@@ -3,8 +3,8 @@ domain Adaptors is {
     command TwoIsDone is { ??? }
     adaptor FromTwo from context Two is {
       handler Adaptation is {
-        on event  Adaptors.Two.DidIt from context Two {
-          "convert Two.DidIt to One.TwoIsDone"
+        on event Adaptors.Two.DidIt {
+          // convert Two.DidIt to One.TwoIsDone
           tell command Adaptors.One.TwoIsDone to context One
         }
       }

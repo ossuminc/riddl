@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{map => _, *}
 import com.ossuminc.riddl.utils.Await
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
@@ -33,7 +33,7 @@ private[parsing] trait DomainParser {
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
     P(
       vitalDefinitionContents |
-        author | context | domain | user | epic | saga | importDef | domainInclude | comment
+        author | context | domain | user | epic | saga | importDef | bastImport | domainInclude | comment
     ).asInstanceOf[P[DomainContents]]./.rep(1)
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -151,6 +151,7 @@ class StreamValidatorTest extends AbstractValidatingTest {
               message.message must include("The persistence option on Connector 'c1' is not")
               succeed
             case Nil => fail("Missing message")
+            case _ => fail("Unexpected message count")
         }
       }
     }

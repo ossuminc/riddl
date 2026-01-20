@@ -12,6 +12,8 @@ import scala.collection.Seq
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass, maintainer)
 
+Global / scalaVersion := "3.7.4"
+
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
@@ -92,7 +94,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
       )
     }
   )
-  .jsConfigure(With.Javascript("RIDDL: utils", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsConfigure(
     With.BuildInfo.withKeys(
@@ -173,7 +175,7 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
       Dep.commons_io % Test
     )
   )
-  .jsConfigure(With.Javascript("RIDDL: language", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
     libraryDependencies ++= Seq(Dep.fastparse_nojvm.value, Dep.airframe_ulid_nojvm.value)
@@ -234,7 +236,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
       )
     }
   )
-  .jsConfigure(With.Javascript("RIDDL: passes", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: passes", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
@@ -255,7 +257,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
     )
   )
   .jvmConfigure(With.MiMa("0.57.0"))
-  .jsConfigure(With.Javascript("RIDDL: language", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
     // scalacOptions ++= Seq("-rewrite", "-source", "3.4-migration"),
@@ -287,7 +289,7 @@ lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(J
   .jvmConfigure(With.coverage(50))
   .jvmConfigure(With.MiMa("0.57.0"))
   .jvmSettings(coverageExcludedFiles := """<empty>;$anon""")
-  .jsConfigure(With.Javascript("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
@@ -319,7 +321,7 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
-  .jsConfigure(With.Javascript("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: diagrams", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)

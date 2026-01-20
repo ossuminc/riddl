@@ -68,9 +68,9 @@ domain Everything is {
       state someState of Something.fields
       handler foo is {
         on command ACommand {
-          "if and(Something arrives, misc()) then"
+          when "and(Something arrives, misc())" then
             send event Inebriated to inlet Everything.full.input
-          "end"
+          end
         }
       }
 

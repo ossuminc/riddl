@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.{PlatformContext, URL}
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{map => _, *}
 import com.ossuminc.riddl.language.At
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
@@ -64,6 +64,14 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
       Index ~ Keywords.import_ ~ Keywords.domain ~ identifier ~ from ~ literalString ~ Index
     ).map { case (off1, id, litStr, off2) =>
       doImport(at(off1, off2), id, litStr)
+    }
+  }
+
+  /** Parse a BAST import statement: `import "path/to/file.bast"` */
+  def bastImport[u: P]: P[BASTImport] = {
+    P(Index ~ Keywords.import_ ~ literalString ~ Index).map {
+      case (start, path, end) =>
+        doBASTImport(at(start, end), path)
     }
   }
 

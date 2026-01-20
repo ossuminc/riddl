@@ -9,7 +9,7 @@ domain foo {
       record AData is { a01: Integer, a02: String }
       state AState of record AData
       handler AHandler is {
-        on command ACommand {
+        on command ACommand is {
           set field B.BEntity.BData.b01 to "initial value"
           send event A.AEvent1 to inlet B.Flow.bInlet
           tell command C.CCommand to entity C.CEntity
@@ -31,8 +31,8 @@ domain foo {
       record BData is { b01: Integer, b02: String }
       state BState of record BData
       handler BHandler is {
-        on command BCommand {
-          "do nothing for now"
+        on command BCommand is {
+          // do nothing for now
         }
       }
     }
@@ -47,7 +47,7 @@ domain foo {
       record CData is { c01: Integer, c02: String }
       state BState of record BData
       handler CHandler is {
-        on command CCommand {
+        on command CCommand is {
           send event C.CEvent to inlet A.Sink.aInlet
         }
       }

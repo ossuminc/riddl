@@ -1,12 +1,12 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{map => _, *}
 import com.ossuminc.riddl.language.{AST, At}
 
 import fastparse.*
@@ -315,8 +315,14 @@ private[parsing] trait TypeParser {
 
   private def predefinedTypes[u: P]: P[TypeExpression] = {
     P(
-      stringType | currencyType | urlType | integerPredefTypes | realPredefTypes | timePredefTypes |
-        zonedPredefTypes | decimalType | otherPredefTypes
+      // GROUP 1: Most common primitive types (70-80%)
+      stringType | integerPredefTypes | realPredefTypes |
+      // GROUP 2: Common temporal types (10-15%)
+      timePredefTypes |
+      // GROUP 3: Less common types (5-10%)
+      otherPredefTypes | decimalType |
+      // GROUP 4: Rare specialized types (1-5%)
+      currencyType | urlType | zonedPredefTypes
     )./
   }
 
@@ -395,9 +401,20 @@ private[parsing] trait TypeParser {
   private def fieldTypeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType | mappingFromTo | aSetType |
-          graphType | tableType | replicaType | rangeType | decimalType | alternation | aggregation |
-          aliasedTypeExpression | entityReferenceType
+        // GROUP 1: Most common in field definitions (60-70%)
+        predefinedTypes |
+        // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
+        // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
+        // get matched as type names)
+        enumeration | alternation | sequenceType | aSetType | mappingFromTo | graphType | tableType | rangeType | replicaType |
+        // GROUP 3: Specific patterns must come before general aliasedTypeExpression
+        uniqueIdType | entityReferenceType | patternType |
+        // GROUP 4: Very common - general type references (30-40%)
+        aliasedTypeExpression |
+        // GROUP 5: Common structured types (20-25%)
+        aggregation |
+        // GROUP 6: Less common - decimal type (3-5%)
+        decimalType
       )
     )
   }
@@ -573,9 +590,18 @@ private[parsing] trait TypeParser {
   private def typeExpression[u: P]: P[TypeExpression] = {
     P(
       cardinality(
-        predefinedTypes | patternType | uniqueIdType | enumeration | sequenceType | mappingFromTo | aSetType |
-          graphType | tableType | replicaType | aggregateUseCaseTypeExpression | rangeType | decimalType |
-          alternation | entityReferenceType | aggregation | aggregateUseCaseTypeExpression | aliasedTypeExpression
+        // GROUP 1: Most common - cheap predefined types (40-50% of cases)
+        predefinedTypes |
+        // GROUP 2: Keyword-based constructs MUST come before aliasedTypeExpression
+        // (otherwise keywords like "any", "one", "mapping", "set", "sequence", "graph", "table", "range", "replica"
+        // get matched as type names)
+        enumeration | alternation | sequenceType | aSetType | mappingFromTo | graphType | tableType | rangeType | replicaType |
+        // GROUP 3: Other specific patterns before general type references
+        uniqueIdType | entityReferenceType | patternType |
+        // GROUP 4: Very common - general type references and aggregations (30-40%)
+        aliasedTypeExpression | aggregation | aggregateUseCaseTypeExpression |
+        // GROUP 5: Less common - decimal type (5-10%)
+        decimalType
       )
     )
   }

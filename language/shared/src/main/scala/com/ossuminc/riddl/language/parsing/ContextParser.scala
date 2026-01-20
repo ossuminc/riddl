@@ -1,12 +1,12 @@
 /*
- * Copyright 2019-2025 Ossum, Inc.
+ * Copyright 2019-2026 Ossum, Inc.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.AST.{map => _, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -21,8 +21,16 @@ private[parsing] trait ContextParser {
 
   private def contextDefinition[u: P]: P[ContextContents] = {
     P(
+      // GROUP 1: Most common - core DDD entities (40-50%)
+      entity | repository |
+      // GROUP 2: Common - types and functions (15-20%)
       processorDefinitionContents(StatementsSet.ContextStatements) |
-        entity | adaptor | group | saga | streamlet | projector | repository | connector | contextInclude | comment
+      // GROUP 3: Common - integration components (15-20%)
+      adaptor | projector |
+      // GROUP 4: Moderate - orchestration and streaming (10-15%)
+      saga | streamlet |
+      // GROUP 5: Less common - UI, connectivity, includes (5-10%)
+      group | connector | contextInclude | comment
     ).asInstanceOf[P[ContextContents]]
   }
 
