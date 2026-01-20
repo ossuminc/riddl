@@ -338,16 +338,10 @@ abstract class DepthFirstPass(
         parents.pop()
         process(root, parents)
       case include: Include[?] =>
-        if withIncludes then
-          // Depth-first: process children first, then parent
-          // Don't add Include to parent stack - contents belong to parent container
-          include.contents.foreach { value => traverse(value, parents) }
-          process(include, parents)
-        else
-          // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
-          include.contents.foreach { value => traverse(value, parents) }
-          process(include, parents)
-        end if
+        // Depth-first: process children first, then parent
+        // NOTE: no push/pop here because include is an unnamed container and does not participate in parent stack
+        include.contents.foreach { value => traverse(value, parents) }
+        process(include, parents)
       case leaf: Leaf =>
         process(leaf, parents)
       case branch: Branch[?] =>
