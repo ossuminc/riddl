@@ -107,12 +107,22 @@ jobs:
           riddlc/stage \
           sbt-riddl/scripted
 
-    - name: Package Release Artifacts
+    - name: Package JVM Release Artifacts
       if: matrix.platform == 'JVM'
       run: |
-        sbt packageArtifacts
+        sbt "riddlc/Universal/packageBin" "riddlLib/Universal/packageBin"
 
-    - name: Collect Release Artifacts
+    - name: Package Native Release Artifacts
+      if: matrix.platform == 'Native'
+      run: |
+        sbt riddlcNative/nativeLink riddlLibNative/nativeLink
+
+    - name: Package JS Release Artifacts
+      if: matrix.platform == 'JS'
+      run: |
+        sbt riddlLibJS/fullLinkJS
+
+    - name: Collect Release Artifacts (JVM)
       if: matrix.platform == 'JVM'
       uses: actions/upload-artifact@v4
       with:
