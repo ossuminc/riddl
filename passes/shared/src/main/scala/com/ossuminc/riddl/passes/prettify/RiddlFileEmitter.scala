@@ -297,9 +297,17 @@ case class RiddlFileEmitter(url: URL) extends FileBuilder {
 
   def emitStatement(statement: Statements): Unit =
     statement match
-      case WhenStatement(_, cond, thenStatements) =>
-        addIndent(s"when ${cond.format} then").nl.incr
+      case WhenStatement(_, cond, thenStatements, elseStatements, negated) =>
+        val condStr = cond match {
+          case ls: LiteralString => ls.format
+          case id: Identifier    => if negated then s"!${id.format}" else id.format
+        }
+        addIndent(s"when $condStr then").nl.incr
         if thenStatements.isEmpty then addLine("???") else thenStatements.toSeq.foreach(emitStatement)
+        if elseStatements.nonEmpty then
+          decr.addLine("else").incr
+          elseStatements.toSeq.foreach(emitStatement)
+        end if
         decr.addLine("end")
       case MatchStatement(_, expr, cases, default) =>
         addIndent(s"match ${expr.format} {").nl.incr

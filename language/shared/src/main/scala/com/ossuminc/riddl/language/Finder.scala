@@ -71,8 +71,9 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
         child match
           case c: Container[?] =>
             c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
-          case WhenStatement(_, _, thenStatements) =>
-            thenStatements.foldLeft(list) { case (next, child) => consider(next, child) }
+          case WhenStatement(_, _, thenStatements, elseStatements, _) =>
+            val r1 = thenStatements.foldLeft(list) { case (next, child) => consider(next, child) }
+            elseStatements.foldLeft(r1) { case (next, child) => consider(next, child) }
           case MatchStatement(_, _, cases, default) =>
             val r1 = cases.foldLeft(list) { case (next, mc) =>
               mc.statements.foldLeft(next) { case (next2, child) => consider(next2, child) }

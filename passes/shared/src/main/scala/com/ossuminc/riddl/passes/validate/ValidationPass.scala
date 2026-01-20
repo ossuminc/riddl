@@ -251,9 +251,15 @@ case class ValidationPass(
         maybeType.foreach { typ =>
           checkCrossContextReference(msg.pathId, typ, onClause)
         }
-      case WhenStatement(loc, condition, thenStatements) =>
-        checkNonEmptyValue(condition, "condition", onClause, loc, MissingWarning, required = true)
+      case WhenStatement(loc, condition, thenStatements, elseStatements, _) =>
+        condition match {
+          case ls: LiteralString =>
+            checkNonEmptyValue(ls, "condition", onClause, loc, MissingWarning, required = true)
+          case id: Identifier =>
+            checkNonEmptyValue(id, "condition", onClause, loc, MissingWarning, required = true)
+        }
         checkNonEmpty(thenStatements.toSeq, "statements", onClause, loc, MissingWarning, required = true)
+        // elseStatements is optional, so no check needed
       case MatchStatement(loc, expression, cases, default) =>
         checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
         checkNonEmpty(cases, "cases", onClause, loc, MissingWarning, required = true)

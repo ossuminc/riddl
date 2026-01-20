@@ -874,8 +874,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(10) // When statement
     writeLocation(s.loc)
-    writeLiteralString(s.condition)
-    // NOTE: thenStatements count/items are written by the Pass's traverse() override
+    // Write condition with type flag (0=LiteralString, 1=Identifier)
+    s.condition match {
+      case ls: LiteralString =>
+        writer.writeU8(0)
+        writeLiteralString(ls)
+      case id: Identifier =>
+        writer.writeU8(1)
+        writeIdentifierInline(id)
+    }
+    // Write negated flag (0=not negated, 1=negated)
+    writer.writeU8(if s.negated then 1 else 0)
+    // NOTE: thenStatements and elseStatements counts/items are written by the Pass's traverse() override
   }
 
   def writeMatchStatement(s: MatchStatement): Unit = {

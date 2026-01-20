@@ -87,11 +87,13 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         // Phase 7: Only write metadata if non-empty (flag was set)
         if ss.metadata.nonEmpty then bastWriter.writeMetadataCount(ss.metadata)
 
-      // WhenStatement has a thenStatements Contents field that must be traversed
+      // WhenStatement has thenStatements and elseStatements Contents fields that must be traversed
       case ws: WhenStatement =>
         process(ws, parents)
         bastWriter.writeContents(ws.thenStatements)
         ws.thenStatements.toSeq.foreach { value => traverse(value, parents) }
+        bastWriter.writeContents(ws.elseStatements)
+        ws.elseStatements.toSeq.foreach { value => traverse(value, parents) }
         // WhenStatement is a Statement, no metadata
 
       // MatchStatement has cases and default Contents that must be traversed

@@ -9,7 +9,9 @@ RIDDL provides two conditional constructs: `when` for simple conditions and
 
 ## When Statement
 
-The `when` statement executes a block of statements when a condition is true:
+The `when` statement executes a block of statements when a condition is true.
+Conditions can be literal strings or identifier references (from `let` bindings).
+An optional `else` block handles the false case:
 
 ```riddl
 handler MyHandler is {
@@ -17,17 +19,55 @@ handler MyHandler is {
     let authorized = "user has permission"
     when authorized then
       send event ActionCompleted to outlet Events
-    end
-    when !authorized then
+    else
       error "User not authorized"
     end
   }
 }
 ```
 
-### Using Let with When
+### Condition Types
 
-The `let` statement binds a condition to a name for reuse:
+The `when` statement accepts three forms of conditions:
+
+1. **Literal string**: A quoted condition description
+   ```riddl
+   when "user is authenticated" then
+     // actions
+   end
+   ```
+
+2. **Identifier reference**: Reference a condition bound with `let`
+   ```riddl
+   let valid = "input passes validation"
+   when valid then
+     // actions
+   end
+   ```
+
+3. **Negated identifier**: Use `!` to negate an identifier
+   ```riddl
+   when !valid then
+     error "Validation failed"
+   end
+   ```
+
+### Using Else Blocks
+
+The `else` block is optional and executes when the condition is false:
+
+```riddl
+let condition = "some boolean expression"
+when condition then
+  // executed when true
+else
+  // executed when false
+end
+```
+
+### Alternative: Multiple When Statements
+
+You can also use separate `when` statements with negation:
 
 ```riddl
 let condition = "some boolean expression"
@@ -35,9 +75,12 @@ when condition then
   // executed when true
 end
 when !condition then
-  // executed when false (note the ! negation)
+  // executed when false
 end
 ```
+
+Both approaches are valid. Use `else` when the two blocks are closely related,
+and separate `when` statements when they represent distinct scenarios.
 
 ## Match Statement
 

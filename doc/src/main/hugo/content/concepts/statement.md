@@ -18,13 +18,11 @@ kinds of statements, described in the table below.
 |    Match     | `match "scenario" { case "cond1" { } default { } }`          | Select from multiple conditions/cases                        |
 |    Morph     | `morph entity E to state S with record R`                    | Morph the state of an entity to a new state                  |
 |   Prompt     | `prompt "description of action"`                             | A textually described action to be implemented               |
-|    Reply     | `reply result R` or `reply record R`                         | Provide the reply to a query                                 |
 |    Return    | `return value`                                               | Return a value from a function                               |
 |    Send      | `send event E to outlet O`                                   | Send a message to an outlet (asynchronous)                   |
 |     Set      | `set field S.f to "value"`                                   | Set a field value                                            |
-|    Stop      | `stop`                                                       | Stop processing further statements                           |
 |    Tell      | `tell command C to entity E`                                 | Send a message to an entity directly                         |
-|    When      | `when condition then ... end`                                | Execute statements when a condition is true                  |
+|    When      | `when cond then ... [else ...] end`                          | Execute statements conditionally with optional else          |
 
 ## Level of Detail
 

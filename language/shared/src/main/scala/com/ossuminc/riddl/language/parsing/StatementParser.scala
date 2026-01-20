@@ -71,11 +71,23 @@ private[parsing] trait StatementParser {
     )./.map { case (start, eRef, hRef, end) => BecomeStatement(at(start, end), eRef, hRef) }
   }
 
+  private def whenCondition[u: P]: P[(LiteralString | Identifier, Boolean)] = {
+    P(
+      literalString.map(ls => (ls, false)) |
+      (Punctuation.exclamation ~ identifier).map { case id => (id, true) } |
+      identifier.map(id => (id, false))
+    )
+  }
+
   private def whenStatement[u: P](set: StatementsSet): P[WhenStatement] = {
     P(
-      Index ~ Keywords.when ~/ literalString ~ Keywords.`then` ~/ pseudoCodeBlock(set) ~/ Keywords.end_ ~/ Index
-    )./.map { case (start, cond, statements, end) =>
-      WhenStatement(at(start, end), cond, statements.toContents)
+      Index ~ Keywords.when ~/ whenCondition ~ Keywords.`then` ~/
+        pseudoCodeBlock(set) ~/
+        (Keywords.else_ ~/ pseudoCodeBlock(set)).? ~/
+        Keywords.end_ ~/ Index
+    )./.map { case (start, (cond, negated), thenStmts, elseStmtsOpt, end) =>
+      val elseStmts = elseStmtsOpt.getOrElse(Seq.empty[Statements])
+      WhenStatement(at(start, end), cond, thenStmts.toContents, elseStmts.toContents, negated)
     }
   }
 

@@ -2453,23 +2453,39 @@ object AST:
     def format: String = s"tell ${msg.format} to ${processorRef.format}"
   }
 
-  /** A guard clause statement for conditional early exit with validation
+  /** A conditional statement for branching logic
     *
     * @param loc
     *   The location of the statement in the model
     * @param condition
-    *   The boolean expression to evaluate (as a string, evaluated at runtime)
+    *   The boolean expression to evaluate - either a literal string description
+    *   or an identifier referencing a let binding
     * @param thenStatements
     *   The statements to execute if the condition is true
+    * @param elseStatements
+    *   The statements to execute if the condition is false (optional)
     */
   @JSExportTopLevel("WhenStatement")
   case class WhenStatement(
     loc: At,
-    condition: LiteralString,
-    thenStatements: Contents[Statements]
+    condition: LiteralString | Identifier,
+    thenStatements: Contents[Statements],
+    elseStatements: Contents[Statements] = Contents.empty[Statements](0),
+    negated: Boolean = false
   ) extends Statement {
     override def kind: String = "When Statement"
-    def format: String = s"when ${condition.format} then\n${thenStatements.toSeq.map(_.format).mkString("\n  ")}\n  end"
+    def format: String = {
+      val condStr = condition match {
+        case ls: LiteralString => ls.format
+        case id: Identifier    => if negated then s"!${id.format}" else id.format
+      }
+      val thenStr = if thenStatements.isEmpty then "" else thenStatements.toSeq.map(_.format).mkString("\n  ")
+      if elseStatements.isEmpty then s"when $condStr then\n$thenStr\n  end"
+      else {
+        val elseStr = if elseStatements.isEmpty then "" else elseStatements.toSeq.map(_.format).mkString("\n  ")
+        s"when $condStr then\n$thenStr\nelse\n$elseStr\n  end"
+      }
+    }
   }
 
   /** A case clause within a match statement */

@@ -718,9 +718,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         TellStatement(loc, msg, processorRef)
 
       case 10 => // When
-        val condition = readLiteralString()
+        val conditionType = reader.readU8()
+        val condition: LiteralString | Identifier = conditionType match {
+          case 0 => readLiteralString()
+          case 1 => readIdentifierInline()
+          case _ => throw new RuntimeException(s"Invalid when condition type: $conditionType")
+        }
+        val negated = reader.readU8() != 0
         val thenStatements = readContentsDeferred[Statements]()
-        WhenStatement(loc, condition, thenStatements)
+        val elseStatements = readContentsDeferred[Statements]()
+        WhenStatement(loc, condition, thenStatements, elseStatements, negated)
 
       case 11 => // Match
         val expression = readLiteralString()
