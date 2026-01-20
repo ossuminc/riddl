@@ -16,58 +16,53 @@ import scopt.OParser
 
 import java.nio.file.{Files, Path}
 
-object BastGenCommand {
-  val cmdName = "bast-gen"
+object BastifyCommand {
+  val cmdName = "bastify"
 
   case class Options(
     inputFile: Option[Path] = None,
-    outputDir: Option[Path] = None,
-    outputFile: Option[Path] = None,
     command: String = cmdName
   ) extends PassCommandOptions {
+    def outputDir: Option[Path] = inputFile.map(_.getParent).orElse(Some(Path.of(".")))
+
     override def check: Messages = {
-      val msgs1 = if inputFile.isEmpty then {
-        Messages.errors("An input file was not provided.")
-      } else Messages.empty
-      // outputDir check is optional for bast-gen since we allow -o for direct file output
-      msgs1
+      if inputFile.isEmpty then
+        Messages.errors("A .riddl input file is required.")
+      else if !inputFile.get.toString.endsWith(".riddl") then
+        Messages.errors("Input file must have .riddl extension.")
+      else
+        Messages.empty
     }
   }
 }
 
 /** A command to generate BAST (Binary AST) files from RIDDL input.
   *
+  * The output .bast file is placed next to the input .riddl file.
+  *
   * Usage:
-  *   riddlc bast-gen <input.riddl> -o <output.bast>
-  *   riddlc bast-gen <input.riddl> --output-dir <dir>
+  *   riddlc bastify <input.riddl>
   */
-class BastGenCommand(using pc: PlatformContext) extends PassCommand[BastGenCommand.Options](BastGenCommand.cmdName) {
-  import BastGenCommand.Options
+class BastifyCommand(using pc: PlatformContext) extends PassCommand[BastifyCommand.Options](BastifyCommand.cmdName) {
+  import BastifyCommand.Options
 
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
     import builder.*
-    cmd(BastGenCommand.cmdName)
-      .text("Generate a BAST (Binary AST) file from RIDDL input")
+    cmd(BastifyCommand.cmdName)
+      .text("Convert a RIDDL file to BAST (Binary AST) format")
       .children(
-        inputFile((v, c) => c.copy(inputFile = Some(v.toPath))),
-        opt[java.io.File]('o', "output")
-          .optional()
-          .action((v, c) => c.copy(outputFile = Some(v.toPath)))
-          .text("The output BAST file path"),
-        outputDir((v, c) => c.copy(outputDir = Some(v.toPath)))
+        inputFile((v, c) => c.copy(inputFile = Some(v.toPath)))
       ) -> Options()
   }
 
   override def interpretConfig(config: Config): Options = {
     val obj = config.getObject(commandName).toConfig
     val inputFile = Path.of(obj.getString("input-file"))
-    val outputDir = if obj.hasPath("output-dir") then Some(Path.of(obj.getString("output-dir"))) else None
-    val outputFile = if obj.hasPath("output") then Some(Path.of(obj.getString("output"))) else None
-    Options(Some(inputFile), outputDir, outputFile, commandName)
+    Options(Some(inputFile), commandName)
   }
 
   override def overrideOptions(options: Options, newOutputDir: Path): Options = {
-    options.copy(outputDir = Some(newOutputDir))
+    options // outputDir is derived from inputFile, so no override needed
   }
 
   override def getPasses(options: Options): PassCreators = {
@@ -82,28 +77,22 @@ class BastGenCommand(using pc: PlatformContext) extends PassCommand[BastGenComma
     options: Options,
     outputDirOverride: Option[Path]
   ): Either[Messages, PassesResult] = {
-    // First run the passes to generate the BAST
     super.run(options, outputDirOverride) match {
       case Left(errors) => Left(errors)
       case Right(result) =>
-        // Get the BAST output
         result.outputOf[BASTOutput](BASTWriterPass.name) match {
           case None =>
             Left(Messages.errors("BASTWriter did not produce output"))
           case Some(bastOutput) =>
-            // Determine the output path
-            val outputPath = determineOutputPath(options, outputDirOverride)
-
-            // Write the BAST file
+            val outputPath = determineOutputPath(options)
             try {
-              // Create parent directories if needed
               val parent = outputPath.getParent
               if parent != null && !Files.exists(parent) then
                 Files.createDirectories(parent)
               end if
 
               Files.write(outputPath, bastOutput.bytes)
-              pc.log.info(s"Generated BAST file: $outputPath (${bastOutput.bytes.length} bytes, ${bastOutput.nodeCount} nodes)")
+              pc.log.info(s"Generated: $outputPath (${bastOutput.bytes.length} bytes, ${bastOutput.nodeCount} nodes)")
               Right(result)
             } catch {
               case ex: Exception =>
@@ -113,25 +102,15 @@ class BastGenCommand(using pc: PlatformContext) extends PassCommand[BastGenComma
     }
   }
 
-  private def determineOutputPath(options: Options, outputDirOverride: Option[Path]): Path = {
-    // Priority: explicit output file > output dir + default (next to input)
-    options.outputFile match {
-      case Some(path) => path
-      case None =>
-        val inputPath = options.inputFile.get.toAbsolutePath
-        val inputName = inputPath.getFileName.toString
-        val bastName = inputName.replaceAll("\\.(riddl|RIDDL)$", "") + ".bast"
-
-        // Default: place .bast file next to the source .riddl file
-        val dir = outputDirOverride
-          .orElse(options.outputDir)
-          .getOrElse(inputPath.getParent match {
-            case null => Path.of(".")
-            case p => p
-          })
-
-        dir.resolve(bastName)
+  private def determineOutputPath(options: Options): Path = {
+    val inputPath = options.inputFile.get.toAbsolutePath
+    val inputName = inputPath.getFileName.toString
+    val bastName = inputName.replaceAll("\\.riddl$", ".bast")
+    val dir = inputPath.getParent match {
+      case null => Path.of(".")
+      case p => p
     }
+    dir.resolve(bastName)
   }
 
   override def loadOptionsFrom(configFile: Path): Either[Messages, Options] = {
