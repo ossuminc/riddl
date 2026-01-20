@@ -28,10 +28,10 @@ jobs:
           cache: sbt
 
       - name: Set Up SBT
-        uses: sbt/setup-sbt@v1
+        uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
 
       - name: Coursier Caching
-        uses: coursier/cache-action@v6
+        uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
 
       - name: Configure sbt GitHub Packages credentials
         run: |

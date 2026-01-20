@@ -36,10 +36,10 @@ jobs:
         cache: sbt
 
     - name: Set Up SBT
-      uses: sbt/setup-sbt@v1
+      uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
 
     - name: Coursier Caching
-      uses: coursier/cache-action@v6
+      uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
 
     - name: Configure sbt GitHub Packages credentials
       run: |
@@ -85,7 +85,7 @@ jobs:
         sbt clean c${{ matrix.platform }} t${{ matrix.platform }} 
 
     - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
+      uses: EnricoMi/publish-unit-test-result-action@12fa20e14d449d310778f2d0af1e3b2f57dde2a7 # v2
       if: always()
       continue-on-error: true  # Prevent workflow failure from permissions issues on PRs
       with:
@@ -180,6 +180,6 @@ jobs:
           --enableExperimental
 
     - name: Upload Dependency Check Results
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@a4fda0891d53e117609b7ddb3570638c2c6d7c89 # v3
       with:
         sarif_file: reports/dependency-check-report.sarif

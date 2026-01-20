@@ -73,17 +73,6 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     if contextStack.nonEmpty then contextStack.remove(contextStack.length - 1)
   }
 
-  /** Update the current context entry to include a name */
-  private def updateContextName(name: String): Unit = {
-    if contextStack.nonEmpty && name.nonEmpty then
-      val last = contextStack.last
-      // Only update if not already named (no parentheses)
-      if !last.contains("(") then
-        contextStack(contextStack.length - 1) = s"$last($name)"
-      end if
-    end if
-  }
-
   /** Get current context path as string */
   private def contextPath: String = {
     if contextStack.isEmpty then "<root>"
@@ -1603,37 +1592,6 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     RecordRef(loc, pathId)
   }
 
-  // Internal methods for message refs (called after tag is consumed)
-  private def readCommandRef(): CommandRef = {
-    val loc = readLocation()
-    val pathId = readPathIdentifierInline()
-    CommandRef(loc, pathId)
-  }
-
-  private def readEventRef(): EventRef = {
-    val loc = readLocation()
-    val pathId = readPathIdentifierInline()
-    EventRef(loc, pathId)
-  }
-
-  private def readQueryRef(): QueryRef = {
-    val loc = readLocation()
-    val pathId = readPathIdentifierInline()
-    QueryRef(loc, pathId)
-  }
-
-  private def readResultRef(): ResultRef = {
-    val loc = readLocation()
-    val pathId = readPathIdentifierInline()
-    ResultRef(loc, pathId)
-  }
-
-  private def readRecordRef(): RecordRef = {
-    val loc = readLocation()
-    val pathId = readPathIdentifierInline()
-    RecordRef(loc, pathId)
-  }
-
   private def readAdaptorRef(): AdaptorRef = {
     val tag = reader.readU8() // Read NODE_ADAPTOR tag
     val loc = readLocation()
@@ -1849,13 +1807,6 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val loc = readLocation()
     val value = readString()
     Identifier(loc, value)
-  }
-
-  private def readPathIdentifier(): PathIdentifier = {
-    val nodeType = reader.readU8() // Should be NODE_PATH_IDENTIFIER
-    val loc = readLocation()
-    val value = readSeq(() => readString())
-    PathIdentifier(loc, value)
   }
 
   /** Read PathIdentifier without tag - position is always known within references
