@@ -24,8 +24,9 @@ object CommandLoader:
     if io.options.verbose then io.log.info(s"Loading command: $name") else ()
     name match
       case "about"   => Right(AboutCommand())
-      case "bastify" => Right(BastifyCommand())
-      case "dump"    => Right(DumpCommand())
+      case "bastify"   => Right(BastifyCommand())
+      case "dump"      => Right(DumpCommand())
+      case "unbastify" => Right(UnbastifyCommand())
       case "flatten"  => Right(FlattenCommand())
       case "from"     => Right(FromCommand())
       case "hugo"     => Right(HugoCommand())
@@ -47,6 +48,7 @@ object CommandLoader:
       AboutCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       BastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
+      UnbastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FlattenCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FromCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       HelpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
