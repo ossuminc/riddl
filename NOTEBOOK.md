@@ -6,9 +6,9 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: January 19, 2026
+**Last Updated**: January 20, 2026
 
-The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. Recent work has completed all planned BAST (Binary AST) optimizations through Phase 8. The project is now ready for release preparation.
+The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. BAST serialization is complete through Phase 9, which fixed a critical ref/definition tag collision bug. Version 1.1.2 has been released.
 
 ---
 
@@ -474,6 +474,69 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ## Session Log
 
+### January 20, 2026 (BAST Phase 9: Critical Bug Fix)
+
+**Focus**: Fix BAST ref/definition tag collision causing byte misalignment
+
+**Root Cause Identified**:
+Reference types (RepositoryRef, ProjectorRef, etc.) shared the same tag values as their definition counterparts, but had different binary structures:
+- Definitions: loc, id, contents, metadata
+- References: loc, pathId only
+
+When deserializing a RepositoryRef, the reader thought it was a Repository definition and tried to read contents/metadata, causing byte stream misalignment.
+
+**Tasks Completed**:
+1. ✅ **Added 22 new dedicated REF tags (80-101)** in `package.scala`
+   - NODE_AUTHOR_REF through NODE_DOMAIN_REF
+2. ✅ **Updated BASTWriter** to use new REF tags for all reference writes
+3. ✅ **Added readXxxRefNode() methods** in BASTReader for all new REF tags
+4. ✅ **Updated readReference(), readProcessorRef(), readPortletRef()** to handle new tags
+5. ✅ **Fixed message ref node readers** to not consume tag (readNode already consumed it)
+6. ✅ **Fixed BASTDebugTest** byte order issues in header reading
+7. ✅ **Released version 1.1.2** - Pushed to GitHub and published locally
+8. ✅ **Merged AIHelperPass-DESIGN.md** into NOTEBOOK.md, deleted original file
+
+**Test Results**: 252 tests pass, 2 fail (location line/col reconstruction - separate issue)
+
+**Files Modified**:
+- `language/shared/.../bast/package.scala` - Added 22 REF tags
+- `language/shared/.../bast/BASTWriter.scala` - Updated to use REF tags
+- `language/shared/.../bast/BASTReader.scala` - Added readXxxRefNode() methods, updated dispatchers
+- `passes/jvm/.../BASTDebugTest.scala` - Fixed byte order
+
+**Remaining Issues**:
+- Location line/col reconstruction in BASTParserInput needs fixing (separate bug)
+- unbastify command still pending
+
+---
+
+### January 20, 2026 (Post-Release: bastify/unbastify Commands)
+
+**Focus**: Add CLI commands for BAST generation and reconstitution
+
+**Tasks Completed**:
+1. ✅ **Published release 1.1.1** to GitHub Packages (all platforms)
+2. ✅ **Added `bastify` command** - Converts RIDDL to BAST
+   - Usage: `riddlc bastify <input.riddl>`
+   - Places .bast file next to source
+   - Simplified from original `bast-gen` (removed extra options)
+
+**In Progress**:
+3. 🚧 **Add `unbastify` command** - Converts BAST back to RIDDL
+   - Should produce all included/imported files, not just one file
+   - Will use include information saved during BAST serialization
+   - Target: Reflection test (riddl → bast → riddl should be identical)
+
+**Shelved Tasks** (to do later):
+1. **Critical review of RIDDL language** - Assess completeness for declarative distributed system specification, identify useful idioms, evaluate statement sufficiency
+2. **Compressed documentation table for BAST** - English text (comments, descriptions) compresses well. Could add separate "doc table" using LZ4 or zstd compression for long strings (>50 chars). Estimated 50-70% reduction for documentation-heavy files. Would need cross-platform compression library.
+
+**Files Modified**:
+- `commands/jvm/.../BastifyCommand.scala` - New (renamed from BastGenCommand)
+- `commands/jvm/.../CommandLoader.scala` - Updated to use bastify
+
+---
+
 ### January 19, 2026 (Phase 8 Complete - Release Preparation)
 
 **Focus**: Implement Phase 8 PathIdentifier interning and prepare for release
@@ -727,6 +790,90 @@ to allow JS linker to succeed while maintaining full functionality on JVM/Native
 Tasks intentionally deferred to the end of the current work list:
 
 1. Rewrite `doc/src/main/hugo/content/future-work/bast.md` - the existing BAST documentation is outdated and needs a complete rewrite reflecting the current implementation
+
+---
+
+## Future Work: AIHelperPass
+
+**Status**: Design complete, implementation pending
+
+### Overview
+
+The **AIHelperPass** is a proposed validation pass designed specifically for AI consumers working with RIDDL models. Unlike the standard ValidationPass which focuses on finding errors and warnings, AIHelperPass provides proactive guidance to help AI systems iteratively build and improve RIDDL models.
+
+### Design Goals
+
+1. **Proactive Guidance** - Suggest what to add next, not just what's wrong
+2. **AI-Optimized Output** - Messages formatted for AI consumption
+3. **Lightweight Execution** - No reference resolution dependency (faster, works on incomplete models)
+4. **Iterative Development** - Support incremental model building by an AI
+
+### Key Differences from ValidationPass
+
+| Aspect | ValidationPass | AIHelperPass |
+|--------|----------------|--------------|
+| Purpose | Find problems | Suggest improvements |
+| Dependencies | SymbolsPass + ResolutionPass | SymbolsPass only |
+| Output | Errors, Warnings | Tips (primarily) |
+| Reference checking | Yes | No |
+| Completeness | Requires complete model | Works on incomplete models |
+| Consumer | Humans, CI/CD | AI systems |
+
+### New Message Type: `Tip`
+
+```scala
+case class Tip(
+  loc: At,
+  message: String,
+  category: TipCategory,
+  priority: Int = 5,    // 1-10, higher = more important
+  context: Option[String] = None
+) extends KindOfMessage
+
+enum TipCategory:
+  case Completeness    // Missing but commonly needed elements
+  case Pattern         // Recognized patterns that could be completed
+  case BestPractice    // Conventional RIDDL idioms
+  case Relationship    // Connections between definitions
+  case Documentation   // Description and metadata suggestions
+```
+
+### Tip Generation Rules
+
+1. **Empty Container Tips** - Domain/Context/Entity without contents
+2. **Incomplete Entity Tips** - Missing state, handlers, events
+3. **Context Completeness Tips** - Entities without repository, no adaptors
+4. **Handler Completeness Tips** - Empty on-clauses
+5. **Type Enhancement Tips** - Events missing correlation ID or timestamp
+6. **Documentation Tips** - Missing descriptions on significant definitions
+7. **Relationship Tips** - Isolated contexts with no connections
+
+### MCP Server Integration
+
+AIHelperPass is designed to integrate with the `riddl-mcp-server` for AI-assisted model generation:
+
+```scala
+Tool(
+  name = "validate-partial",
+  inputSchema = JsonSchema(...),
+  description = Some("Analyze RIDDL model and provide AI-friendly tips for improvement")
+)
+```
+
+### Implementation Phases
+
+- [ ] **Phase 1**: Add `Tip` message type to Messages.scala, create AIHelperPass skeleton
+- [ ] **Phase 2**: Entity and handler completeness checks
+- [ ] **Phase 3**: Context and relationship analysis
+- [ ] **Phase 4**: Documentation checks and priority tuning
+
+### Open Questions
+
+1. Should Tips include suggested RIDDL code snippets?
+2. Should there be a "dismiss tip" mechanism?
+3. How to handle tips that become irrelevant after model changes?
+
+*Design Author: Claude (AI Assistant), January 17, 2026*
 
 ---
 
