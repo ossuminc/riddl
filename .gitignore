@@ -26,3 +26,4 @@ target
 /package-lock.json
 /node_modules
 *.bak
+language/input/everything.bast
