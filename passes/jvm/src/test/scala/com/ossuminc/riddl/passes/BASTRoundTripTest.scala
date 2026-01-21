@@ -10,7 +10,6 @@ import com.ossuminc.riddl.language.AST.{Root, Nebula}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{pc, ec, Await, URL}
-import org.scalatest.TestData
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.nio.file.{Files, Paths}
@@ -26,11 +25,10 @@ class BASTRoundTripTest extends AnyWordSpec {
 
   "BAST Round Trip" should {
 
-    "serialize and deserialize simple domain" in { (td: TestData) =>
+    "serialize and deserialize simple domain" in {
       val riddlSource = """domain TestDomain is {
                           |  type MyType is String
-                          |  briefly "A test domain"
-                          |}
+                          |} with { briefly "A test domain" }
                           |""".stripMargin
 
       val input = RiddlParserInput(riddlSource, "test-simple")
@@ -72,10 +70,9 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
-    "serialize and deserialize dokn.riddl" in { (td: TestData) =>
-      System.err.println("=== DOKN TEST STARTING ===")
+    "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
-      val inputFuture = RiddlParserInput.fromURL(url, td.name)
+      val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")
 
       val result = Await.result(inputFuture.map { input =>
         val parseResult = TopLevelParser.parseInput(input, true)
@@ -90,14 +87,12 @@ class BASTRoundTripTest extends AnyWordSpec {
 
             println(f"BAST written: ${output.bytes.length}%,d bytes (${output.nodeCount}%,d nodes)")
 
-            System.err.println(s"=== ABOUT TO READ BAST (${output.bytes.length} bytes) ===")
-            throw new RuntimeException(s"DEBUG: bytes.length = ${output.bytes.length}")
             BASTReader.read(output.bytes) match {
               case Right(reconstructedNebula) =>
-                System.err.println(s"BAST read: Nebula with ${reconstructedNebula.contents.toSeq.size} items")
+                println(s"BAST read: Nebula with ${reconstructedNebula.contents.toSeq.size} items")
                 true
               case Left(errors) =>
-                System.err.println(s"[FAIL] Deserialization failed: ${errors.format}")
+                println(s"[FAIL] Deserialization failed: ${errors.format}")
                 false
             }
 
@@ -110,9 +105,9 @@ class BASTRoundTripTest extends AnyWordSpec {
       assert(result, "Round trip test failed for dokn.riddl")
     }
 
-    "serialize and deserialize everything.riddl" in { (td: TestData) =>
+    "serialize and deserialize everything.riddl" in {
       val url = URL.fromCwdPath("language/input/everything.riddl")
-      val inputFuture = RiddlParserInput.fromURL(url, td.name)
+      val inputFuture = RiddlParserInput.fromURL(url, "everything-test")
 
       val result = Await.result(inputFuture.map { input =>
         // Step 1: Parse RIDDL text -> AST
@@ -130,7 +125,9 @@ class BASTRoundTripTest extends AnyWordSpec {
             println(f"BAST written: ${output.bytes.length}%,d bytes (${output.nodeCount}%,d nodes)")
 
             // Step 3: Deserialize BAST binary -> AST
-            BASTReader.read(output.bytes) match {
+            val bastReader = BASTReader(output.bytes)
+            bastReader.enableDebugTracking()
+            bastReader.read() match {
               case Right(reconstructedNebula) =>
                 println(s"BAST read: Nebula reconstructed")
 
