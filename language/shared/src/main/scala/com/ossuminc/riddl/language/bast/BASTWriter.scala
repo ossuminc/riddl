@@ -33,6 +33,16 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   private var currentSourcePath: String = ""
   private var nodeCount: Int = 0
 
+  // Debug flag - set to true to enable verbose position tracking
+  private var debugPositionTracking: Boolean = false
+
+  /** Enable debug position tracking for this writer */
+  def enableDebugTracking(): Unit = debugPositionTracking = true
+
+  private def debugLog(msg: String): Unit = {
+    if debugPositionTracking then println(msg)
+  }
+
   /** Path table for Phase 8 PathIdentifier interning */
   val pathTable: PathTable = PathTable(stringTable)
 
@@ -72,14 +82,22 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     // For subsequent nodes, skip if origin is "empty" (synthetic locations use same source)
     if currentSourcePath.isEmpty then
       // First node - always write marker to establish source
+      debugLog(f"[WRITER] FILE_CHANGE_MARKER at pos ${writer.position}: first node, path='${if origin == "empty" then "" else origin}'")
       writer.writeU8(FILE_CHANGE_MARKER)
       writeString(if origin == "empty" then "" else origin)
       currentSourcePath = if origin == "empty" then "" else origin
+      // Reset location tracking for new source - first location will be absolute
+      lastLocation = At.empty
+      firstLocationWritten = false
     else if origin != "empty" && origin != currentSourcePath then
       // Source changed - write marker
+      debugLog(f"[WRITER] FILE_CHANGE_MARKER at pos ${writer.position}: source changed from '$currentSourcePath' to '$origin'")
       writer.writeU8(FILE_CHANGE_MARKER)
       writeString(origin)
       currentSourcePath = origin
+      // Reset location tracking for new source - first location will be absolute
+      lastLocation = At.empty
+      firstLocationWritten = false
     end if
   }
 
@@ -134,9 +152,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     * @param value The node to write
     */
   def writeNode(value: RiddlValue): Unit = {
+    val posBeforeNode = writer.position
     // Check if source file changed - write marker before the node tag
     writeSourceChangeIfNeeded(value.loc)
+    val posAfterMarker = writer.position
     nodeCount += 1
+    val nodeTypeName = value.getClass.getSimpleName
+    debugLog(f"[WRITER] writeNode at pos $posAfterMarker: $nodeTypeName (source: ${value.loc.source.origin})")
     value match {
       // Root containers
       case n: Nebula => writeNebula(n)
@@ -325,10 +347,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeInclude[T <: RiddlValue](i: Include[T]): Unit = {
+    debugLog(f"[WRITER] writeInclude: writing NODE_INCLUDE (${NODE_INCLUDE}) at pos ${writer.position}")
     writer.writeU8(NODE_INCLUDE)
     writeLocation(i.loc)
     writeURL(i.origin)
     writeContents(i.contents)
+    debugLog(f"[WRITER] writeInclude: finished at pos ${writer.position}, contents count=${i.contents.length}")
   }
 
   def writeBASTImport(bi: BASTImport): Unit = {
@@ -357,10 +381,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeEntity(e: Entity): Unit = {
+    debugLog(f"[WRITER] writeEntity: writing NODE_ENTITY (${NODE_ENTITY}) at pos ${writer.position}")
     writeNodeTag(NODE_ENTITY, e.metadata.nonEmpty)
     writeLocation(e.loc)
     writeIdentifierInline(e.id)  // Inline - no tag needed
     writeContents(e.contents)
+    debugLog(f"[WRITER] writeEntity: finished at pos ${writer.position}, contents count=${e.contents.length}")
   }
 
   def writeModule(m: Module): Unit = {
@@ -924,13 +950,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Reference Serialization ==========
 
   def writeAuthorRef(r: AuthorRef): Unit = {
-    writer.writeU8(NODE_AUTHOR)
+    writer.writeU8(NODE_AUTHOR_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeTypeRef(r: TypeRef): Unit = {
-    writer.writeU8(NODE_TYPE)
+    writer.writeU8(NODE_TYPE_REF)
     writeLocation(r.loc)
     writeString(r.keyword)
     writePathIdentifierInline(r.pathId)
@@ -944,13 +970,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeFieldRef(r: FieldRef): Unit = {
-    writer.writeU8(NODE_FIELD)
+    writer.writeU8(NODE_FIELD_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeConstantRef(r: ConstantRef): Unit = {
-    writer.writeU8(NODE_FIELD)
+    writer.writeU8(NODE_CONSTANT_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
@@ -986,113 +1012,113 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeAdaptorRef(r: AdaptorRef): Unit = {
-    writer.writeU8(NODE_ADAPTOR)
+    writer.writeU8(NODE_ADAPTOR_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeFunctionRef(r: FunctionRef): Unit = {
-    writer.writeU8(NODE_FUNCTION)
+    writer.writeU8(NODE_FUNCTION_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeHandlerRef(r: HandlerRef): Unit = {
-    writer.writeU8(NODE_HANDLER)
+    writer.writeU8(NODE_HANDLER_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeStateRef(r: StateRef): Unit = {
-    writer.writeU8(NODE_STATE)
+    writer.writeU8(NODE_STATE_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeEntityRef(r: EntityRef): Unit = {
-    writer.writeU8(NODE_ENTITY)
+    writer.writeU8(NODE_ENTITY_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeRepositoryRef(r: RepositoryRef): Unit = {
-    writer.writeU8(NODE_REPOSITORY)
+    writer.writeU8(NODE_REPOSITORY_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeProjectorRef(r: ProjectorRef): Unit = {
-    writer.writeU8(NODE_PROJECTOR)
+    writer.writeU8(NODE_PROJECTOR_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeContextRef(r: ContextRef): Unit = {
-    writer.writeU8(NODE_CONTEXT)
+    writer.writeU8(NODE_CONTEXT_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeStreamletRef(r: StreamletRef): Unit = {
-    writer.writeU8(NODE_STREAMLET)
+    writer.writeU8(NODE_STREAMLET_REF)
     writeLocation(r.loc)
     writeString(r.keyword)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeInletRef(r: InletRef): Unit = {
-    writer.writeU8(NODE_INLET)
+    writer.writeU8(NODE_INLET_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeOutletRef(r: OutletRef): Unit = {
-    writer.writeU8(NODE_OUTLET)
+    writer.writeU8(NODE_OUTLET_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeSagaRef(r: SagaRef): Unit = {
-    writer.writeU8(NODE_SAGA)
+    writer.writeU8(NODE_SAGA_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeUserRef(r: UserRef): Unit = {
-    writer.writeU8(NODE_USER)
+    writer.writeU8(NODE_USER_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeEpicRef(r: EpicRef): Unit = {
-    writer.writeU8(NODE_EPIC)
+    writer.writeU8(NODE_EPIC_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeGroupRef(r: GroupRef): Unit = {
-    writer.writeU8(NODE_GROUP)
+    writer.writeU8(NODE_GROUP_REF)
     writeLocation(r.loc)
     writeString(r.keyword)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeInputRef(r: InputRef): Unit = {
-    writer.writeU8(NODE_INPUT)
+    writer.writeU8(NODE_INPUT_REF)
     writeLocation(r.loc)
     writeString(r.keyword)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeOutputRef(r: OutputRef): Unit = {
-    writer.writeU8(NODE_OUTPUT)
+    writer.writeU8(NODE_OUTPUT_REF)
     writeLocation(r.loc)
     writeString(r.keyword)
     writePathIdentifierInline(r.pathId)
   }
 
   def writeDomainRef(r: DomainRef): Unit = {
-    writer.writeU8(NODE_DOMAIN)
+    writer.writeU8(NODE_DOMAIN_REF)
     writeLocation(r.loc)
     writePathIdentifierInline(r.pathId)
   }

@@ -170,6 +170,31 @@ package object bast {
   val TYPE_TIMESTAMP: Byte = 78    // Saves: TYPE_NUMBER + subtype(35)
   val TYPE_DURATION: Byte = 79     // Saves: TYPE_NUMBER + subtype(36)
 
+  // Reference node tags (80-105) - Distinct from definition tags
+  // Refs have different structure: loc + pathId (no contents or metadata)
+  val NODE_AUTHOR_REF: Byte = 80
+  val NODE_TYPE_REF: Byte = 81
+  val NODE_FIELD_REF: Byte = 82
+  val NODE_CONSTANT_REF: Byte = 83
+  val NODE_ADAPTOR_REF: Byte = 84
+  val NODE_FUNCTION_REF: Byte = 85
+  val NODE_HANDLER_REF: Byte = 86
+  val NODE_STATE_REF: Byte = 87
+  val NODE_ENTITY_REF: Byte = 88
+  val NODE_REPOSITORY_REF: Byte = 89
+  val NODE_PROJECTOR_REF: Byte = 90
+  val NODE_CONTEXT_REF: Byte = 91
+  val NODE_STREAMLET_REF: Byte = 92
+  val NODE_INLET_REF: Byte = 93
+  val NODE_OUTLET_REF: Byte = 94
+  val NODE_SAGA_REF: Byte = 95
+  val NODE_USER_REF: Byte = 96
+  val NODE_EPIC_REF: Byte = 97
+  val NODE_GROUP_REF: Byte = 98
+  val NODE_INPUT_REF: Byte = 99
+  val NODE_OUTPUT_REF: Byte = 100
+  val NODE_DOMAIN_REF: Byte = 101
+
   /** Flag bit indicating metadata presence in node tag
     *
     * Phase 7 optimization: Use high bit (0x80) of tag byte to indicate

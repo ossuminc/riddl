@@ -50,8 +50,8 @@ class BASTDebugTest extends AnyWordSpec with Matchers {
 
           // Dump bytes around the string table
           val header = bytes.slice(0, HEADER_SIZE)
-          val stringTableOffset = ((header(10) & 0xFF) << 24) | ((header(11) & 0xFF) << 16) |
-                                  ((header(12) & 0xFF) << 8) | (header(13) & 0xFF)
+          val stringTableOffset = ((header(12) & 0xFF) << 24) | ((header(13) & 0xFF) << 16) |
+                                  ((header(14) & 0xFF) << 8) | (header(15) & 0xFF)
           println(s"\nString table offset: $stringTableOffset")
 
           // Try to read back
@@ -67,6 +67,55 @@ class BASTDebugTest extends AnyWordSpec with Matchers {
         case Left(messages) =>
           fail(s"Parse failed: ${messages.format}")
       }
+    }
+
+    "analyze bytes around boundary for everything.riddl" in {
+      val url = URL.fromCwdPath("language/input/everything.riddl")
+      val inputFuture = RiddlParserInput.fromURL(url, "debug-test")
+
+      val result = Await.result(inputFuture.map { input =>
+        val parseResult = TopLevelParser.parseInput(input, true)
+        parseResult match {
+          case Right(originalRoot: Root) =>
+            val passInput = PassInput(originalRoot)
+            val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+            val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+            val bytes = output.bytes
+
+            // Get string table offset from header (big-endian at offset 12-15)
+            val stringTableOffset = ((bytes(12) & 0xFF) << 24) |
+                                    ((bytes(13) & 0xFF) << 16) |
+                                    ((bytes(14) & 0xFF) << 8) |
+                                    (bytes(15) & 0xFF)
+
+            println(s"\n=== Debug: everything.riddl ===")
+            println(f"Total bytes: ${bytes.length}%,d")
+            println(f"String table offset: $stringTableOffset (node data boundary)")
+            println(f"Nodes: ${output.nodeCount}")
+
+            // Print last 40 bytes before string table
+            println(s"\n=== Last 40 bytes of node data (before $stringTableOffset) ===")
+            val start = math.max(32, stringTableOffset - 40)
+            for i <- start until stringTableOffset do {
+              val b = bytes(i) & 0xFF
+              println(f"  $i%4d: $b%3d (0x${b}%02X)")
+            }
+
+            // Print first 20 bytes of string table
+            println(s"\n=== First 20 bytes of string table (at $stringTableOffset) ===")
+            for i <- stringTableOffset until math.min(bytes.length, stringTableOffset + 20) do {
+              val b = bytes(i) & 0xFF
+              println(f"  $i%4d: $b%3d (0x${b}%02X) ${if b >= 32 && b < 127 then s"'${b.toChar}'" else ""}")
+            }
+
+            true
+          case Left(messages) =>
+            println(s"Parse failed: ${messages.format}")
+            false
+        }
+      }, 30.seconds)
+
+      assert(result)
     }
   }
 }
