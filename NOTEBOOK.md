@@ -474,6 +474,57 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ## Session Log
 
+### January 27, 2026 (Scala 3.3.7 LTS Migration)
+
+**Focus**: Update riddl to use Scala 3.3.7 LTS and fix test failures
+
+**Tasks Completed**:
+1. ✅ **Scala 3.3.7 LTS Migration**
+   - Added `With.scala3` to Root project configuration in `build.sbt`
+   - Removed hardcoded `Global / scalaVersion := "3.7.4"`
+   - Now uses sbt-ossuminc's default Scala 3.3.7 LTS
+
+2. ✅ **BAST Test Fixes**
+   - `DeepASTComparison.scala` - Changed to compare offsets instead of line/col (BASTParserInput uses synthetic 10000-char lines)
+   - `BASTFileReadTest.scala` - Removed dependency on non-existent `everything.bast` file
+   - `BastGenCommandTest.scala` - Updated command name from "bast-gen" to "bastify"
+
+3. ✅ **Committed changes** to riddl repository
+
+4. 🚧 **External Project Validation** (institutional-commerce)
+   - Ran validation on `/Users/reid/Code/ossuminc/institutional-commerce` with `src/main/riddl/ImprovingApp.conf`
+   - Found 16+ parse errors - all RIDDL syntax issues with string literals in handlers
+   - Fixed `organizationsProjection.riddl` - converted string literals to comments with `???`
+   - Partially fixed `Order.riddl` - 3 handlers done, more remain
+
+**Files Modified**:
+- `build.sbt` - Added `With.scala3` to Root project
+- `passes/jvm/.../DeepASTComparison.scala` - Compare offsets instead of line/col
+- `passes/jvm/.../BASTFileReadTest.scala` - Removed file comparison
+- `commands/jvm/.../BastGenCommandTest.scala` - Changed command name
+
+**Remaining Work** (institutional-commerce RIDDL fixes):
+- `Order/Order.riddl` - ~10 more handlers with string literals
+- `Store/Store.riddl` - Many handlers with string literals
+- `Organization/organization.riddl` - Multiple handlers
+- `Members/members.riddl`, `Tenant/tenant.riddl`, `Events/eventContext.riddl`
+- `Venues/venueContext.riddl`, `Product/product.riddl`
+- Various projection files
+
+**Pattern to Fix**:
+```riddl
+// Invalid:
+on command X { "description" }
+
+// Valid:
+on command X {
+  // description
+  ???
+}
+```
+
+---
+
 ### January 20, 2026 (BAST Phase 9: Critical Bug Fix)
 
 **Focus**: Fix BAST ref/definition tag collision causing byte misalignment

@@ -26,6 +26,9 @@ RIDDL (Reactive Interface to Domain Definition Language) is a specification lang
 
 #### Common Configurations:
 ```scala
+// Scala 3.3.7 LTS (recommended for projects)
+.configure(With.scala3)  // Sets scalaVersion to 3.3.7 LTS
+
 // Scala.js configuration
 .jsConfigure(With.ScalaJS(
   header = "RIDDL: module-name",
@@ -684,3 +687,5 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 11. **BAST code lives in language module** - `language/shared/.../bast/`, NOT the standalone `bast/` directory
 12. **BAST readNode() vs readTypeExpression()** - Disjoint tag sets; see "Key Implementation Notes" for details on avoiding deserialization bugs
 13. **BAST Hugo documentation is outdated** - `doc/src/main/hugo/content/future-work/bast.md` needs complete rewrite
+14. **Use `With.scala3` for Scala version** - Sets Scala 3.3.7 LTS; don't hardcode `scalaVersion` in build.sbt
+15. **BAST location comparisons use offsets** - BASTParserInput uses synthetic 10000-char lines for reconstruction; compare offset/endOffset, not line/col
