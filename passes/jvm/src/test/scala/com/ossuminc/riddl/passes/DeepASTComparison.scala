@@ -97,13 +97,16 @@ object DeepASTComparison {
       results += Failure(path + ".loc.origin", loc1.source.origin, loc2.source.origin)
     end if
 
-    // Compare line/col (may have minor differences due to delta encoding)
-    if loc1.line != loc2.line then
-      results += Failure(path + ".loc.line", loc1.line.toString, loc2.line.toString)
+    // Compare offsets (not line/col) - BAST preserves offsets exactly, but line/col
+    // are computed from offsets using BASTParserInput's synthetic line structure
+    // which differs from the original source's real line breaks.
+    // The actual position data (offsets) is what matters for correctness.
+    if loc1.offset != loc2.offset then
+      results += Failure(path + ".loc.offset", loc1.offset.toString, loc2.offset.toString)
     end if
 
-    if loc1.col != loc2.col then
-      results += Failure(path + ".loc.col", loc1.col.toString, loc2.col.toString)
+    if loc1.endOffset != loc2.endOffset then
+      results += Failure(path + ".loc.endOffset", loc1.endOffset.toString, loc2.endOffset.toString)
     end if
 
     results.toList

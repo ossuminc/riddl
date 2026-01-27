@@ -12,8 +12,6 @@ import scala.collection.Seq
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass, maintainer)
 
-Global / scalaVersion := "3.7.4"
-
 enablePlugins(OssumIncPlugin)
 
 lazy val startYear: Int = 2019
@@ -23,7 +21,7 @@ def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
 def tkDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
 
 lazy val riddl: Project = Root("riddl", startYr = startYear, spdx ="Apache-2.0")
-  .configure(With.noPublishing, With.git, With.dynver, With.noMiMa)
+  .configure(With.scala3, With.noPublishing, With.git, With.dynver, With.noMiMa)
   .settings(concurrentRestrictions += Tags.limit(NativeTags.Link, 1))
   .aggregate(
     utils,
