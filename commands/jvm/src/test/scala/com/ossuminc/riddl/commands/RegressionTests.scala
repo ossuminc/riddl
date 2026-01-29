@@ -20,12 +20,7 @@ class RegressionTests extends ParsingTest {
     "not produce a MatchError" in { (td: TestData) =>
       val source = "match-error.riddl"
       val args = Array(
-        "hugo",
-        "-o",
-        output + "/match-error",
-        "--with-statistics=true",
-        "--with-glossary=true",
-        "--with-todo-list=true",
+        "validate",
         regressionsFolder + source
       )
       Commands.runMainForTest(args) match {

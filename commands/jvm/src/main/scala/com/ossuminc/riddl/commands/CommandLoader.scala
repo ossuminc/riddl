@@ -29,7 +29,6 @@ object CommandLoader:
       case "unbastify" => Right(UnbastifyCommand())
       case "flatten"  => Right(FlattenCommand())
       case "from"     => Right(FromCommand())
-      case "hugo"     => Right(HugoCommand())
       case "help"     => Right(HelpCommand())
       case "info"     => Right(InfoCommand())
       case "onchange" => Right(OnChangeCommand())
@@ -52,7 +51,6 @@ object CommandLoader:
       FlattenCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FromCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       HelpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
-      HugoCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       InfoCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       OnChangeCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       ParseCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],

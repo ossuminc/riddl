@@ -36,9 +36,6 @@ lazy val riddl: Project = Root("riddl", startYr = startYear, spdx ="Apache-2.0")
     testkit,
     testkitNative,
     testkitJS,
-    diagrams,
-    diagramsNative,
-    diagramsJS,
     riddlLib,
     riddlLibNative,
     riddlLibJS,
@@ -277,30 +274,11 @@ val testkit = testkit_cp.jvm
 val testkitJS = testkit_cp.js
 val testkitNative = testkit_cp.native
 
-val Diagrams = config("diagrams")
-lazy val diagrams_cp: CrossProject = CrossModule("diagrams", "riddl-diagrams")(JVM, JS, Native)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
-  .configure(With.typical, With.GithubPublishing)
-  .settings(
-    description := "Implementation of various AST diagrams passes other libraries may use"
-  )
-  .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.57.0"))
-  .jvmSettings(coverageExcludedFiles := """<empty>;$anon""")
-  .jsConfigure(With.ScalaJS("RIDDL: diagrams", withCommonJSModule = true))
-  .jsConfigure(With.noMiMa)
-  .nativeConfigure(With.Native(mode = "fast"))
-  .nativeConfigure(With.noMiMa)
-val diagrams = diagrams_cp.jvm
-val diagramsJS = diagrams_cp.js
-val diagramsNative = diagrams_cp.native
-
 lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JVM, Native)
   .dependsOn(
     cpDep(utils_cp),
     cpDep(language_cp),
-    cpDep(passes_cp),
-    cpDep(diagrams_cp)
+    cpDep(passes_cp)
   )
   .configure(With.typical, With.GithubPublishing)
   .settings(
@@ -319,7 +297,7 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
-  .jsConfigure(With.ScalaJS("RIDDL: diagrams", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: riddl-lib", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
@@ -329,7 +307,7 @@ val riddlLibNative = riddlLib_cp.native
 
 val Commands = config("commands")
 lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(JVM, Native)
-  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(diagrams_cp))
+  .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
   .configure(With.typical, With.GithubPublishing)
   .settings(
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
@@ -392,7 +370,6 @@ lazy val docProjects = List(
   (utils, Utils),
   (language, Language),
   (passes, Passes),
-  (diagrams, Diagrams),
   (commands, Commands),
   (riddlc, Riddlc)
 )
@@ -403,10 +380,10 @@ lazy val docsite = DocSite(
   dirName = "doc",
   apiOutput = file("src") / "main" / "hugo" / "static" / "apidoc",
   baseURL = Some("https://riddl.tech/apidoc"),
-  inclusions = Seq(utils, language, passes, diagrams, commands),
+  inclusions = Seq(utils, language, passes, commands),
   logoPath = Some("doc/src/main/hugo/static/images/RIDDL-Logo-128x128.png")
 )
-  .dependsOn(utils, language, passes, diagrams, commands)
+  .dependsOn(utils, language, passes, commands)
   .configure(With.noMiMa)
   .configure(With.GithubPublishing)
   .settings(
@@ -428,33 +405,33 @@ lazy val plugin = OssumIncPlugin.autoImport.Plugin("sbt-riddl")
 addCommandAlias(
   "cJVM",
   "; utils/Test/compile ; language/Test/compile ; passes/Test/compile; testkit/Test/compile ; " +
-    "diagrams/Test/compile ; commands/Test/compile ; riddlLib/Test/compile ; riddlc/Test/compile"
+    "commands/Test/compile ; riddlLib/Test/compile ; riddlc/Test/compile"
 )
 addCommandAlias(
   "cNative",
   "; utilsNative/Test/compile ; languageNative/Test/compile ;  passesNative/Test/compile ; " +
-    "testkitNative/Test/compile ; diagramsNative/Test/compile ; commandsNative/Test/compile ; " +
+    "testkitNative/Test/compile ; commandsNative/Test/compile ; " +
     "riddlLibNative/Test/compile ;  riddlcNative/Test/compile"
 )
 
 addCommandAlias(
   "cJS",
   "; utilsJS/Test/compile ; languageJS/Test/compile ; passesJS/Test/compile ; " +
-    "testkitJS/Test/compile ; diagramsJS/Test/compile ; riddlLibJS/Test/compile"
+    "testkitJS/Test/compile ; riddlLibJS/Test/compile"
 )
 addCommandAlias(
   "tJVM",
-  "; utils/test ; language/test ; passes/test ; testkit/test ; diagrams/test ; commands/test ; " +
+  "; utils/test ; language/test ; passes/test ; testkit/test ; commands/test ; " +
     "riddlLib/test ; riddlc/test"
 )
 addCommandAlias(
   "tNative",
-  "; utils/test ; language/test ; passesNative/test ; testkit/test ; diagrams/test ; " +
+  "; utils/test ; language/test ; passesNative/test ; testkit/test ; " +
     "commands/test ; riddlLib/test ; riddlcNative/test ; riddlcNative/nativeLink"
 )
 addCommandAlias(
   "tJS",
-  "; utilsJS/test ; languageJS/test ; passesJS/test ; testkitJS/test ; diagramsJS/test ; " +
+  "; utilsJS/test ; languageJS/test ; passesJS/test ; testkitJS/test ; " +
     "riddlLibJS/test"
 )
 addCommandAlias(
