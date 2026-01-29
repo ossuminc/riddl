@@ -6,9 +6,9 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: January 20, 2026
+**Last Updated**: January 28, 2026
 
-The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. BAST serialization is complete through Phase 9, which fixed a critical ref/definition tag collision bug. Version 1.1.2 has been released.
+The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. BAST serialization is complete through Phase 9. Hugo documentation generation and diagrams have been moved to the `riddl-gen` repository.
 
 ---
 
@@ -344,18 +344,15 @@ All planned BAST optimizations are now complete through Phase 8.
 
 ## Deferred: AsciiDoc Generation Module
 
-**Status**: Deferred to a future release
+**Status**: Deferred - consider for riddl-gen repository
 
 ### Overview
 
-Create a new pass or module that converts the RIDDL AST into AsciiDoc format, enabling generation of PDFs, static websites, and other standard documentation formats via Maven tooling.
+Create a pass or module that converts the RIDDL AST into AsciiDoc format, enabling generation of PDFs, static websites, and other standard documentation formats via Maven tooling.
+
+**Note**: Hugo documentation generation and diagrams have been moved to the `riddl-gen` repository. AsciiDoc generation would likely be added there as well.
 
 ### Motivation
-
-The existing Hugo-based documentation generation (`HugoPass`) produces Markdown for Hugo static sites. While effective, this approach:
-- Requires Hugo toolchain knowledge
-- Limited to web output
-- Custom theme dependencies
 
 AsciiDoc with Maven provides:
 - **Multiple output formats**: PDF, HTML, EPUB, DocBook, man pages
@@ -364,65 +361,12 @@ AsciiDoc with Maven provides:
 - **Professional PDFs**: Via Asciidoctor PDF with customizable themes
 - **Single source**: One AsciiDoc source generates all formats
 
-### Proposed Architecture
-
-```
-passes/
-  └── AsciiDocPass.scala      # Main pass converting AST → AsciiDoc
-
-asciidoc/                     # New module (or part of passes)
-  ├── AsciiDocWriter.scala    # AsciiDoc syntax generation
-  ├── AsciiDocTheme.scala     # Theming/styling configuration
-  ├── MavenProjectGenerator.scala  # Generate pom.xml for builds
-  └── templates/              # AsciiDoc templates per definition type
-```
-
-### Key Features
-
-1. **AST → AsciiDoc Conversion**
-   - Domain/Context/Entity documentation pages
-   - Type definitions with cross-references
-   - Handler/Saga/Workflow documentation
-   - Auto-generated diagrams (PlantUML/Mermaid embedded)
-
-2. **Maven Integration**
-   - Generate `pom.xml` with Asciidoctor Maven Plugin
-   - Configure PDF, HTML5, DocBook backends
-   - Support for custom themes/stylesheets
-
-3. **Output Formats** (via Maven build)
-   - HTML5 static site
-   - PDF documentation
-   - EPUB for e-readers
-   - DocBook XML for further processing
-
-4. **Cross-Reference Support**
-   - Inter-document links
-   - Glossary generation
-   - Index generation
-
-### Implementation Phases
-
-- [ ] **Phase 1**: Core AsciiDocWriter with basic AST node rendering
-- [ ] **Phase 2**: AsciiDocPass extending HierarchyPass
-- [ ] **Phase 3**: Maven project generation (pom.xml templates)
-- [ ] **Phase 4**: Theme/styling system
-- [ ] **Phase 5**: `riddlc asciidoc` command integration
-- [ ] **Phase 6**: Documentation and examples
-
-### Open Questions
-
-- Should this replace or complement Hugo support?
-- What level of diagram integration (PlantUML, Mermaid, Graphviz)?
-- Support for custom AsciiDoc templates per organization?
-- Integration with existing `diagrams` module?
-
 ### References
 
 - [Asciidoctor](https://asciidoctor.org/)
 - [Asciidoctor Maven Plugin](https://docs.asciidoctor.org/maven-tools/latest/)
 - [Asciidoctor PDF](https://docs.asciidoctor.org/pdf-converter/latest/)
-- Existing Hugo pass: `passes/jvm/src/main/scala/com/ossuminc/riddl/passes/hugo/`
+- [riddl-gen repository](https://github.com/ossuminc/riddl-gen) - for Hugo and diagram generation
 
 ---
 
@@ -473,6 +417,51 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### January 28, 2026 (Hugo/Diagrams Removal)
+
+**Focus**: Remove Hugo documentation generation and diagrams modules (moved to riddl-gen repository)
+
+**Context**: Hugo documentation generation and diagram generation capabilities have been relocated to the separate `riddl-gen` repository. This session completed the removal from the main RIDDL codebase.
+
+**Tasks Completed**:
+1. ✅ **Remove diagrams module** (12 files, 709 deletions)
+   - Mermaid diagram generators (C4, context maps, data flow, ERD, etc.)
+
+2. ✅ **Remove hugo command code** (28 files, 3070 deletions)
+   - HugoCommand, HugoPass, writers, themes, utilities
+
+3. ✅ **Remove hugo tests and config** (19 files, 1270 deletions)
+   - All hugo-related test files and hugo.conf
+
+4. ✅ **Update build and command loader** (3 files)
+   - Removed diagrams from build.sbt aggregation
+   - Removed HugoCommand from CommandLoader
+   - Updated RegressionTests
+
+5. ✅ **Update documentation** (7 files)
+   - command-line-help.md - current riddlc commands
+   - hugo.md, diagrams.md, translation/_index.md - riddl-gen notices
+   - options.md - current command options
+   - ways-to-use-riddl.md - riddl-gen reference
+   - riddlcExamples.md - deprecation warning
+
+6. ✅ **Update CLAUDE.md and EBNF grammar** (2 files)
+   - Updated dependency pipeline
+   - Updated grammar for current commands
+
+**Commits** (6 cohesive batches):
+- `4edf7a8c` - Remove diagrams module (moved to riddl-gen)
+- `4f9433cc` - Remove hugo command code (moved to riddl-gen)
+- `e963485a` - Remove hugo tests and config (moved to riddl-gen)
+- `3c242dd3` - Update build and command loader for hugo/diagrams removal
+- `cf4e9683` - Update documentation for hugo/diagrams relocation to riddl-gen
+- `7e4462dd` - Update CLAUDE.md and EBNF grammar for hugo/diagrams removal
+
+**Current riddlc Commands**:
+- `about`, `bastify`, `dump`, `unbastify`, `flatten`, `from`, `help`, `info`, `onchange`, `parse`, `prettify`, `repeat`, `stats`, `validate`, `version`
+
+---
 
 ### January 27, 2026 (Scala 3.3.7 LTS Migration)
 
