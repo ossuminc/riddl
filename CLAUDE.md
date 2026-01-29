@@ -24,7 +24,7 @@ RIDDL (Reactive Interface to Domain Definition Language) is a specification lang
 ## Critical Build Information
 
 ### Scala Version & Syntax
-- **Scala 3.7.4** (not Scala 2!)
+- **Scala 3.3.7 LTS** (not Scala 2!)
 - **ALWAYS use Scala 3 syntax**:
   - `while i < end do ... end while` (NOT `while (i < end) { ... }`)
   - No `null` checks - use `Option(x)` instead
@@ -211,6 +211,39 @@ class MyPass extends HierarchyPass {
 - Timeouts: 30min build, 10min deploy
 
 **All workflows use JDK 25** (standardized)
+
+### CRITICAL: Scala Version Change Impact
+
+When the Scala LTS version changes (either directly in build.sbt or when
+sbt-ossuminc updates its default), the following files **MUST** be updated:
+
+**GitHub Workflows** (`.github/workflows/`):
+1. **scala.yml**:
+   - `RIDDLC_PATH` env var: `riddlc/native/target/scala-X.Y.Z/riddlc`
+   - Cache paths: `**/target/scala-X.Y.Z`
+   - Native artifact path: `riddlc/native/target/scala-X.Y.Z/riddlc`
+   - Native artifact path: `riddlLib/native/target/scala-X.Y.Z/libriddl-lib.a`
+   - JS artifact path: `riddlLib/js/target/scala-X.Y.Z/riddl-lib-opt/main.js`
+
+2. **coverage.yml**:
+   - Coverage report paths: `**/target/scala-X.Y.Z/scoverage-report/`
+
+**sbt-ossuminc Version Policy**:
+- sbt-ossuminc always defaults to the latest Scala LTS version
+- When sbt-ossuminc is updated, check if its default Scala version changed
+- Current LTS: **3.3.7** (3.3.x series)
+- Next LTS expected: **3.9.x** (Q2 2026)
+
+**Quick Search to Find All References**:
+```bash
+grep -r "scala-3\." .github/workflows/
+```
+
+**Example Fix** (3.3.7 → 3.9.0):
+```bash
+# In each workflow file, replace all occurrences:
+sed -i 's/scala-3.3.7/scala-3.9.0/g' .github/workflows/*.yml
+```
 
 ## Testing Patterns
 
@@ -706,3 +739,4 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 13. **BAST Hugo documentation is outdated** - `doc/src/main/hugo/content/future-work/bast.md` needs complete rewrite
 14. **Use `With.scala3` for Scala version** - Sets Scala 3.3.7 LTS; don't hardcode `scalaVersion` in build.sbt
 15. **BAST location comparisons use offsets** - BASTParserInput uses synthetic 10000-char lines for reconstruction; compare offset/endOffset, not line/col
+16. **Scala version changes require workflow updates** - When Scala LTS version changes, update all `scala-X.Y.Z` paths in `.github/workflows/*.yml`; see "Scala Version Change Impact" section

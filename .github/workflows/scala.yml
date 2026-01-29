@@ -18,7 +18,7 @@ jobs:
       packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RIDDLC_PATH: riddlc/native/target/scala-3.4.3/riddlc
+      RIDDLC_PATH: riddlc/native/target/scala-3.3.7/riddlc
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -57,9 +57,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          **/target/scala-3.4.3
-          !**/target/scala-3.4.3/src_managed
-          !**/target/scala-3.4.3/resource_managed
+          **/target/scala-3.3.7
+          !**/target/scala-3.3.7/src_managed
+          !**/target/scala-3.3.7/resource_managed
         key: ${{ runner.os }}-sbt-build-${{ matrix.platform }}-${{ hashFiles('**/*.sbt', 'project/**') }}
         restore-keys: |
           ${{ runner.os }}-sbt-build-${{ matrix.platform }}-
@@ -101,7 +101,6 @@ jobs:
           utils/publishLocal \
           language/publishLocal \
           passes/publishLocal \
-          diagrams/publishLocal \
           commands/publishLocal \
           riddlLib/publishLocal \
           riddlc/stage \
@@ -139,8 +138,8 @@ jobs:
         name: collect-release-artifacts-native
         retention-days: 30
         path: |
-          riddlc/native/target/scala-3.4.3/riddlc
-          riddlLib/native/target/scala-3.4.3/libriddl-lib.a
+          riddlc/native/target/scala-3.3.7/riddlc
+          riddlLib/native/target/scala-3.3.7/libriddl-lib.a
 
     - name: Collect Release Artifacts (JS)
       if: matrix.platform == 'JS'
@@ -149,7 +148,7 @@ jobs:
         name: collect-release-artifacts-js
         retention-days: 30
         path: |
-          riddlLib/js/target/scala-3.4.3/riddl-lib-opt/main.js
+          riddlLib/js/target/scala-3.3.7/riddl-lib-opt/main.js
 
     - name: Cleanup Before Caching
       shell: bash
