@@ -19,6 +19,7 @@ The RIDDL project is a mature compiler and toolchain for the Reactive Interface 
 | Date | Task | Notes |
 |------|------|-------|
 | March 1, 2026 | Review and remove `doc/src/main/hugo/content/` | Hugo content migrated to ossum.tech/riddl. Redirect site is in `doc/redirect-site/`. After confirming redirects have been working for ~1 month, the Hugo content directory can be deleted. Keep `doc/redirect-site/` for ongoing redirects. |
+| November 2026 | Upgrade CodeQL Action v3 → v4 | GitHub deprecating CodeQL Action v3 in December 2026. Update `.github/workflows/scala.yml` line 182: `github/codeql-action/upload-sarif@v3` → `@v4`. See [changelog](https://github.blog/changelog/2025-10-28-upcoming-deprecation-of-codeql-action-v3/). |
 
 ---
 
@@ -427,6 +428,70 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### January 29, 2026 (CI Build Fix)
+
+**Focus**: Fix failing GitHub Actions workflows
+
+**Root Causes Identified**:
+1. `diagrams` module referenced in workflows but moved to `riddl-gen` repository
+2. Scala version paths incorrect: `scala-3.4.3` instead of `scala-3.3.7` LTS
+
+**Tasks Completed**:
+1. ✅ **Fixed scala.yml**
+   - Removed `diagrams/publishLocal` (line 104)
+   - Changed all `scala-3.4.3` → `scala-3.3.7` (env var, cache paths, artifact paths)
+2. ✅ **Fixed coverage.yml**
+   - Removed `diagrams/Test/compile` and `diagrams/test`
+   - Changed all `scala-3.4.3` → `scala-3.3.7` in artifact paths
+3. ✅ **Updated CLAUDE.md**
+   - Fixed incorrect "Scala 3.7.4" → "Scala 3.3.7 LTS"
+   - Added "CRITICAL: Scala Version Change Impact" section documenting all files needing updates when Scala version changes
+   - Added note #16 to "Notes for Future Sessions"
+4. ✅ **Scheduled CodeQL v3 → v4 upgrade** for November 2026 (deprecation in December 2026)
+
+**Commits**:
+- `613a0bfd` - Fix CI workflows: remove diagrams module and correct Scala version
+
+**Build Results**: ✅ All jobs passing
+- dependency-check (41s) ✅
+- scala-build (JS) (3m56s) ✅
+- scala-build (JVM) (4m26s) ✅
+- scala-build (Native) (10m21s) ✅
+- coverage (3m14s) ✅
+
+---
+
+### January 29, 2026 (Documentation Migration to ossum.tech)
+
+**Focus**: Migrate riddl.tech documentation to ossum.tech/riddl and set up redirects
+
+**Tasks Completed**:
+1. ✅ **Updated README.md** - Changed all riddl.tech URLs to ossum.tech/riddl
+2. ✅ **Updated CLAUDE.md** - Added Documentation section pointing to ossum.tech/riddl
+3. ✅ **Created redirect site** (`doc/redirect-site/`) - 9 HTML files with meta refresh + JS redirects
+4. ✅ **Updated hugo.yml workflow** - Now deploys redirect site instead of Hugo build
+5. ✅ **Updated .gitignore** - Added `.claude/` and package-lock.json
+
+**Redirect Pages Created**:
+- `index.html` → ossum.tech/riddl/
+- `404.html` → ossum.tech/riddl/
+- `introduction/index.html` → ossum.tech/riddl/introduction/
+- `concepts/index.html` → ossum.tech/riddl/concepts/
+- `guides/index.html` → ossum.tech/riddl/guides/
+- `tooling/index.html` → ossum.tech/riddl/tools/
+- `tooling/riddlc/index.html` → ossum.tech/riddl/tools/riddlc/
+- `tutorial/index.html` → ossum.tech/riddl/tutorials/
+- `tutorial/rbbq/index.html` → ossum.tech/riddl/tutorials/rbbq/
+
+**Commits**:
+- `a30a86a` - Update README.md URLs from riddl.tech to ossum.tech/riddl
+- `7e61c3e` - Add redirect site and update hugo.yml workflow
+- `0f6c1e4` - Update .gitignore and add scheduled removal task
+
+**Note**: Hugo content in `doc/src/main/hugo/content/` retained until March 1, 2026 review (see Scheduled Tasks).
+
+---
 
 ### January 28, 2026 (Hugo/Diagrams Removal)
 
