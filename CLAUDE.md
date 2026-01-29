@@ -2,6 +2,21 @@
 
 This file provides specific guidance for working with the RIDDL project. For general ossuminc organization patterns, see `../CLAUDE.md` (parent directory).
 
+## Documentation
+
+**RIDDL documentation has moved to [ossum.tech/riddl](https://ossum.tech/riddl/)**
+
+The Hugo-based documentation site at riddl.tech has been consolidated into the
+ossum.tech MkDocs site. Key documentation:
+
+- **Language Reference**: https://ossum.tech/riddl/references/language-reference/
+- **EBNF Grammar**: https://ossum.tech/riddl/references/ebnf-grammar/
+- **Tutorials**: https://ossum.tech/riddl/tutorials/
+- **Tools (riddlc)**: https://ossum.tech/riddl/tools/riddlc/
+
+The `doc/` directory in this repository contains legacy Hugo content that
+redirects to ossum.tech. Do not add new documentation here.
+
 ## Project Overview
 
 RIDDL (Reactive Interface to Domain Definition Language) is a specification language for designing distributed, reactive, cloud-native systems using DDD principles. It's a **monorepo** containing multiple cross-platform Scala modules.

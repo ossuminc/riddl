@@ -22,7 +22,9 @@
 # RIDDL
 
 ## Handy Links
-* Full Documentation: https://riddl.tech
+* Full Documentation: https://ossum.tech/riddl/
+* Language Reference: https://ossum.tech/riddl/references/language-reference/
+* Tutorials: https://ossum.tech/riddl/tutorials/
 * Coveralls Code Coverage Report: https://coveralls.io/github/ossuminc/riddl?branch=main
 * SonarCloud Reports: https://sonarcloud.io/project/overview?id=ossuminc_riddl
 
@@ -40,12 +42,12 @@ maintaining infrastructural code through evolution of the system abstractions.
 
 ## Important Documentation Sections
 
-* [Introduction](https://riddl.tech/introduction/) - answer the important initial 
+* [Introduction](https://ossum.tech/riddl/introduction/) - answer the important initial
   questions
-* [Concepts](https://riddl.tech/concepts/) - provides a conceptual understanding 
+* [Concepts](https://ossum.tech/riddl/concepts/) - provides a conceptual understanding
   of RIDDL before diving into the details
-* [Guides](https://riddl.tech/guides/) - four guides for different kinds of RIDDL audiences.
-* [riddlc](https://riddl.tech/tooling/riddlc/) - various ways to obtain the RIDDL compiler
+* [Guides](https://ossum.tech/riddl/guides/) - four guides for different kinds of RIDDL audiences.
+* [riddlc](https://ossum.tech/riddl/tools/riddlc/) - various ways to obtain the RIDDL compiler
 
 ## Install With `brew`
 TBD
