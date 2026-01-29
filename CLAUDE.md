@@ -354,199 +354,56 @@ sbt riddlc/stage
 # Result: riddlc/jvm/target/universal/stage/bin/riddlc
 ```
 
-## Current Work (As of Jan 2026)
+o## Current Work Priorities
 
-### In Progress: BAST (Binary AST) Implementation
-**Goal**: Enable fast `import "module.bast" as namespace` functionality
+### 1. Import Functionality (NEXT)
+**Issue #72** - Implement the `import` statement to load BAST files
 
-#### Design Overview
+- **Stub location**: `ParsingContext.scala:81-89` (`doImport()` method)
+- **Test file**: `language/input/import/import.riddl`
+- **Syntax**: `import "file.bast"` (no namespace clause - RIDDL uses nested domains)
+- **Allowed locations**: Root level and inside domains only
 
-**Format Strategy**: Custom hybrid format inspired by FlatBuffers but optimized for RIDDL
-- **Memory-mappable layout** with offset-based references (32-bit offsets)
-- **String interning** - Deduplicate common strings (keywords, type names)
-- **Variable-length integers** (LEB128/varint) for counts/offsets
-- **Delta-encoded locations** - Store differences from previous location
-- **Lazy deserialization** - Parse nodes on access (not full tree upfront)
-- **Versioned schema** - Header includes version for format evolution
+### 2. AIHelperPass (After Import)
+AI-friendly validation pass for MCP server integration. Design complete in NOTEBOOK.md.
 
-**Performance Goals**:
-- Sacrifice write speed for read speed (10-50x faster loading vs parsing)
-- Compact size with compression
-- Cross-platform compatible (JVM, JS, Native)
+- Provides proactive guidance (Tips) rather than just errors/warnings
+- Works on incomplete models (no ResolutionPass dependency)
+- Designed for iterative AI-driven model building
 
-**File Structure**:
-```
-┌─────────────────────────────────────┐
-│ Header (32 bytes)                   │
-│  - Magic: "BAST" (4 bytes)          │
-│  - Version: u32 (single integer)    │
-│  - Flags: u16                       │
-│  - String Table Offset: u32         │
-│  - Root Offset: u32                 │
-│  - File Size: u32                   │
-│  - Checksum: u32                    │
-│  - Reserved: (4 bytes)              │
-├─────────────────────────────────────┤
-│ String Interning Table              │
-│  - Count: varint                    │
-│  - [Length: varint, UTF-8 bytes]... │
-├─────────────────────────────────────┤
-│ Nebula Root Node                    │
-│  - Node Type: u8 (tag)              │
-│  - Location: delta-compressed       │
-│  - Contents: [Node...]              │
-└─────────────────────────────────────┘
-```
+---
 
-#### Implementation Checklist
+## BAST Module (Binary AST) - COMPLETE ✅
 
-**Phase 1: Infrastructure (COMPLETED)** ✅
-- [x] Create `bast/` module structure with JVM/JS/Native variants
-- [x] Add to `build.sbt` with dependencies on `language` and `passes`
-- [x] Define BAST format specification (`BinaryFormat.scala`)
-- [x] Define node type tags (1-255) (`package.scala`)
-- [x] Implement VarInt codec with LEB128 encoding (`VarIntCodec.scala`)
-- [x] Implement ByteBufferWriter (`ByteBufferWriter.scala`)
-- [x] Implement ByteBufferReader (`ByteBufferReader.scala`)
-- [x] Update to sbt-ossuminc 1.0.0
+BAST serialization is **fully implemented** with 60 tests passing and 6-10x speedup.
 
-**Phase 2: Core Serialization (COMPLETED)** ✅
-- [x] Implement StringTable class for string interning
-- [x] Implement BASTWriter as Pass subclass
-- [x] Write node serializers for all AST node types
-- [x] Implement header writing with checksum
-- [x] Write unit tests for each node type (7 tests in BASTWriterSpec)
+### CLI Commands
+- `riddlc bastify <input.riddl>` - Convert RIDDL to BAST
+- `riddlc unbastify <input.bast>` - Convert BAST back to RIDDL (pending)
 
-**Phase 3: Deserialization (COMPLETED)** ✅
-- [x] Implement BASTReader class
-- [x] Header parsing and version validation
-- [x] String table loading
-- [x] Node deserializers (mirror of Phase 2)
-- [x] Reconstruct AST relationships (parent-child)
-- [x] Error handling for corrupted files
-- [x] Round-trip tests (3 tests in BASTRoundTripTest)
-- [x] Performance benchmarks (4 tests in BASTPerformanceTest)
+### Performance Results
+- **Speed**: 6-10x faster than parsing RIDDL source
+- **Size**: 63-67% of source file size for non-trivial inputs
+- **Cross-platform**: JVM, JS, Native all supported
 
-**Phase 4: Import Integration (COMPLETED)** ✅
-- [x] Import syntax: `import "file.bast"` (simplified - no namespace clause)
-- [x] Imports supported at root level AND inside domains
-- [x] BASTLoader utility loads BAST files and populates BASTImport.contents
-- [x] Path resolution works naturally (BASTImport is a Container)
-- [x] Test: references like `ImportedDomain.SomeType` resolve correctly
-- [x] 5 tests in BASTLoaderTest
+### Key Files
+**Language module** (`language/shared/.../bast/`):
+- `BASTWriter.scala`, `BASTReader.scala` - Serialization/deserialization
+- `BASTLoader.scala`, `BASTUtils.scala` - Loading utilities
+- `StringTable.scala`, `PathTable.scala` - Interning tables
 
-**Phase 5: CLI & Testing (NEXT)** 🚧
-- [ ] Add `riddlc bast-gen` command to generate BAST from RIDDL
-- [ ] Add command-line flags:
-  - `--use-bast-cache` - Auto-generate/use BAST files
-  - `--bast-dir <path>` - BAST cache directory
-- [ ] Comprehensive test suite:
-  - Small Nebula (single type)
-  - Medium Nebula (domain with contexts)
-  - Large Nebula (full real-world example)
-  - Edge cases (empty, nested, references)
-- [ ] Performance benchmarks (parse RIDDL vs load BAST)
-- [ ] Cross-platform tests (JVM, JS, Native)
+**Passes module**: `BASTWriterPass.scala` - Pass wrapper for AST traversal
 
-**Phase 6: Documentation (PENDING)** ⏳
-- [ ] Write BAST format specification document
-- [ ] Document serialization/deserialization API
-- [ ] Add ScalaDoc to all public APIs
-- [ ] Create usage examples
-- [ ] Update main RIDDL documentation
+### Documentation
+BAST format specification and API documentation should be added to
+**ossum.tech/riddl** (not this repository). See the Documentation section above.
 
-#### Design Decisions Made
+### Critical Implementation Notes
 
-1. **Simple import syntax** - `import "file.bast"` (no namespace clause)
-   - RIDDL uses nested domains for namespacing, not a separate namespace concept
-   - Reference imported definitions via domain paths: `ImportedDomain.SomeType`
-   - Duplicate definitions produce errors
-
-2. **Imports at root AND inside domains** - Two valid locations
-   - Root level: for shared libraries
-   - Inside domains: for domain-specific imports
-   - Not allowed elsewhere (contexts, entities, etc.)
-
-3. **Writer as Pass** - `BASTWriterPass` (in passes module) extends `HierarchyPass`
-   - Idiomatic RIDDL architecture
-   - Automatic traversal infrastructure
-   - Uses `BASTWriter` utilities from language module for actual byte writing
-
-4. **BASTImport as Container** - Resolution works naturally
-   - ResolutionPass traverses Container.contents automatically
-   - No special handling needed in resolution pass
-
-#### Files Created
-
-All BAST source files are in `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`:
-
-**Core** (in `language/shared/.../bast/`):
-- `package.scala` - Constants, node tags (NODE_*, TYPE_*), flags
-- `StringTable.scala` - String interning for compression
-- `BASTWriter.scala` - Writing utilities (not a Pass)
-- `BASTReader.scala` - Deserialization with `readNode()` and `readTypeExpression()`
-- `BASTLoader.scala` - Import loading utility
-- `BASTUtils.scala` - Shared utilities
-
-**Pass** (in `passes/shared/.../passes/`):
-- `BASTWriterPass.scala` - Serialization pass (extends HierarchyPass)
-
-**Tests** (in `passes/jvm/src/test/scala/com/ossuminc/riddl/passes/`):
-- `BASTMinimalTest.scala` - Basic serialization test (1 test)
-- `BASTIncrementalTest.scala` - 37 incremental round-trip tests covering all AST structures
-- `BASTWriterSpec.scala` - Serialization tests (5 tests)
-- `BASTRoundTripTest.scala` - Round-trip tests (3 tests)
-- `BASTPerformanceBenchmark.scala` - Performance benchmarks comparing parse vs load (3 tests)
-- `BASTLoaderTest.scala` - Import integration tests (4 tests)
-- `BASTDebugTest.scala` - Byte-level debugging test (1 test)
-- `BASTBenchmarkRunner.scala` - Standalone benchmark runner (runMain)
-- `DeepASTComparison.scala` - AST comparison utility for round-trip verification
-
-**Total: 60 BAST tests** (as of Jan 2026)
-
-#### Key Implementation Notes
-
-1. **String Table Strategy**:
-   - Pre-populate with RIDDL keywords (`domain`, `context`, `type`, etc.)
-   - Pre-populate with predefined types (`String`, `Number`, `Boolean`, etc.)
-   - Add new strings during serialization
-   - Reference by varint index (typically 1-2 bytes)
-
-2. **Location Compression**:
-   - Delta-encode: store differences from previous location
-   - Run-length encode: many nodes have same source file
-   - Saves ~70% space on location data
-
-3. **Node Type Tags**:
-   - Single byte (0-255) covers all AST node types
-   - Allows bit-packing for common flags
-   - Much smaller than class names
-
-4. **Error Handling**:
-   - Version checking in header (major version changes = breaking)
-   - Checksum validation on load
-   - Graceful degradation for unknown node types
-
-5. **CRITICAL: readNode() vs readTypeExpression() in BASTReader**:
-   - `readNode()` handles **definition-level tags**: NODE_TYPE, NODE_DOMAIN, NODE_CONTEXT, NODE_ENTITY, NODE_FIELD, NODE_ENUMERATOR, etc.
-   - `readTypeExpression()` handles **type expression tags**: TYPE_REF, TYPE_ALTERNATION, TYPE_AGGREGATION, TYPE_STRING, TYPE_NUMBER, etc.
-   - **These are DISJOINT sets** - readNode() does NOT handle TYPE_* tags!
-   - When reading contents that contain type expressions (e.g., `Alternation.of` which contains `AliasedTypeExpression`), you MUST use `readTypeExpression()`, not `readNode()` via `readContentsDeferred()`
-   - **Bug pattern**: If you see "Invalid string table index" errors with huge counts like `metadata[1000009]`, it usually means the reader is misaligned because it tried to read a TYPE_* tag as a NODE_* tag
-   - **Fix pattern**: Create specialized reader methods like `readTypeExpressionContents()` that read count + call `readTypeExpression()` for each item
-
-6. **Inline Methods for Size Optimization** (Jan 2026):
-   - `writeIdentifierInline()` / `readIdentifierInline()` - Used after definition tags when identifier position is known
-   - `writePathIdentifierInline()` / `readPathIdentifierInline()` - Used in all reference types since PathIdentifier position is always known
-   - `writeTypeRefInline()` / `readTypeRefInline()` - Used in State, Inlet, Outlet, Input where TypeRef position is fixed
-   - Inline methods omit the tag byte, saving ~1 byte per usage
-   - Tags are still needed for: polymorphic cases (Field/MethodArgument, Outlet/ShownBy, User/UserStory, Group/ContainedGroup)
-
-#### Related Issues & TODOs
-
-- **Issue #72**: Implement import functionality (currently stub)
-- **ParsingContext.scala:81-89**: `doImport()` stub with TODO comment
-- **Test file**: `language/input/import/import.riddl` - Syntax exists but returns "NotImplemented"
+**readNode() vs readTypeExpression()** - These handle DISJOINT tag sets:
+- `readNode()` → NODE_* tags (definitions)
+- `readTypeExpression()` → TYPE_* tags (type expressions)
+- Mixing them causes byte misalignment ("Invalid string table index" errors)
 
 ## Git Workflow & Commit Discipline
 
@@ -726,7 +583,7 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 
 1. **Always check sbt-ossuminc version** - API may have changed
 2. **BAST version is single integer** - `VERSION: Int = 1`, stays at 1 until schema finalized for users
-3. **Import stub exists but not implemented** - See ParsingContext.scala:81-89, TODO issue #72
+3. **Import stub exists but not implemented** - See ParsingContext.scala:81-89, Issue #72
 4. **npm packages are versioned by git** - Rebuild after commits to get new version
 5. **Workflow improvements made** - Check .github/workflows/ for latest patterns
 6. **ONLY commit files related to your current task** - Multiple work streams may be active
@@ -734,9 +591,9 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 8. **RiddlAPI origin parameters must be URLs** - Use `originToURL()` helper for String origins
 9. **Scala 3 lambda syntax required** - `foreach(line => func(line))` not `foreach(func)`
 10. **Share code via utils/shared/** - For code used by both JVM and JS variants
-11. **BAST code lives in language module** - `language/shared/.../bast/`, NOT the standalone `bast/` directory
-12. **BAST readNode() vs readTypeExpression()** - Disjoint tag sets; see "Key Implementation Notes" for details on avoiding deserialization bugs
-13. **BAST Hugo documentation is outdated** - `doc/src/main/hugo/content/future-work/bast.md` needs complete rewrite
-14. **Use `With.scala3` for Scala version** - Sets Scala 3.3.7 LTS; don't hardcode `scalaVersion` in build.sbt
-15. **BAST location comparisons use offsets** - BASTParserInput uses synthetic 10000-char lines for reconstruction; compare offset/endOffset, not line/col
-16. **Scala version changes require workflow updates** - When Scala LTS version changes, update all `scala-X.Y.Z` paths in `.github/workflows/*.yml`; see "Scala Version Change Impact" section
+11. **BAST code lives in language module** - `language/shared/.../bast/`, NOT standalone directory
+12. **BAST readNode() vs readTypeExpression()** - Disjoint tag sets; mixing causes byte misalignment
+13. **Use `With.scala3` for Scala version** - Sets Scala 3.3.7 LTS; don't hardcode `scalaVersion`
+14. **BAST location comparisons use offsets** - Compare offset/endOffset, not line/col
+15. **Scala version changes require workflow updates** - Update `scala-X.Y.Z` paths in workflows
+16. **All RIDDL documentation goes to ossum.tech** - Don't add docs to this repo's `doc/` directory

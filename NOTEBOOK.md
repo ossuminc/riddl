@@ -6,11 +6,29 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: January 28, 2026
+**Last Updated**: January 29, 2026
 
-The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. BAST serialization is complete through Phase 9. Hugo documentation generation and diagrams have been moved to the `riddl-gen` repository.
+The RIDDL project is a mature compiler and toolchain for the Reactive Interface
+to Domain Definition Language. BAST serialization is **complete** (60 tests,
+6-10x speedup). Hugo and diagrams modules moved to `riddl-gen` repository.
 
-**Documentation has moved to [ossum.tech/riddl](https://ossum.tech/riddl/)**. The `doc/` directory now contains only redirect pages.
+**Documentation**: [ossum.tech/riddl](https://ossum.tech/riddl/) - all new docs
+go there, not this repo.
+
+---
+
+## Active Work Queue
+
+### 1. Import Functionality (Issue #72) - NEXT
+Implement the `import` statement to load BAST files into RIDDL models.
+
+- **Stub**: `ParsingContext.scala:81-89` (`doImport()` method)
+- **Test file**: `language/input/import/import.riddl`
+- **Syntax**: `import "file.bast"` (no namespace - use domain paths)
+- **Locations**: Root level and inside domains only
+
+### 2. AIHelperPass - After Import
+AI-friendly validation pass for MCP server integration. See design section below.
 
 ---
 
@@ -23,333 +41,27 @@ The RIDDL project is a mature compiler and toolchain for the Reactive Interface 
 
 ---
 
-## BAST Module (Binary AST Serialization)
+## BAST Module - COMPLETE ✅
 
-### Status
+**Status**: Fully implemented and integrated (60 tests, all passing)
 
-**BAST serialization is fully integrated into the language and passes modules.**
+| Metric | Result |
+|--------|--------|
+| Speed | 6-10x faster than parsing RIDDL |
+| Size | 63-67% of source file size |
+| Platforms | JVM, JS, Native |
+| CLI | `riddlc bastify <file>` |
 
-The standalone `bast/` module has been **removed from build.sbt** and code reorganized:
-- **Utility code** → `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`
-- **BASTWriterPass** → `passes/shared/src/main/scala/com/ossuminc/riddl/passes/`
+**Code locations**:
+- Utilities: `language/shared/.../bast/`
+- Pass: `passes/shared/.../BASTWriterPass.scala`
 
-This enables BAST to work like Python's `.pyc` files - automatic loading from cache when available.
+**Documentation**: BAST format specification goes to ossum.tech/riddl (not here).
 
-### Work Completed
+**Key technical note**: `readNode()` and `readTypeExpression()` handle DISJOINT tag
+sets - mixing them causes byte misalignment. See CLAUDE.md for details.
 
-- [x] **Phase 1**: Infrastructure - Module structure, format spec, varint codec, byte buffer reader/writer
-- [x] **Phase 2**: Core Serialization - BASTWriter pass, all node types, string interning
-- [x] **Phase 3**: Deserialization - BASTReader, round-trip verification, performance tests
-- [x] **Phase 4**: Import Integration (Jan 15, 2026)
-  - Simplified syntax: `import "file.bast"` (removed `as namespace` clause)
-  - Support imports at root level AND inside domains
-  - BASTLoader utility to load and populate contents
-  - Path resolution verified: `ImportedDomain.SomeType` resolves correctly
-- [x] **Phase 5**: Module Reorganization & Auto-Generation (Jan 15, 2026)
-  - Removed standalone `bast/` module from build.sbt
-  - Split BASTWriter: utility class in `language/bast/`, Pass wrapper in `passes/`
-  - Added `BASTUtils.scala` with `checkForBastFile()`, `loadBAST()`, `tryLoadBastOrParseRiddl()`
-  - Integrated automatic BAST loading into `TopLevelParser.parseURL()` and `parseInput()`
-  - Added `--auto-generate-bast` / `-B` CLI option to riddlc
-  - Implemented auto-generation in `Riddl.parse()` when option enabled
-- [x] **Phase 6**: Bug Fixes & Test Consolidation (Jan 16, 2026)
-  - Fixed Alternation deserialization bug (`readTypeExpressionContents` helper)
-  - Created BASTIncrementalTest with 37 test cases
-  - Verified all BAST tests migrated to passes module (54 tests)
-  - Documented deprecated `bast/jvm/src/test/` files
 
-### Key Technical Insight
-
-**CRITICAL: `readNode()` vs `readTypeExpression()` in BASTReader**:
-- `readNode()` handles **definition-level tags**: NODE_TYPE, NODE_DOMAIN, NODE_CONTEXT, etc.
-- `readTypeExpression()` handles **type expression tags**: TYPE_REF, TYPE_ALTERNATION, etc.
-- **These are DISJOINT sets** - readNode() does NOT handle TYPE_* tags!
-- When reading contents containing type expressions (e.g., `Alternation.of`), use `readTypeExpression()`, not `readNode()`
-- **Bug pattern**: "Invalid string table index" with huge counts usually means byte stream misalignment from reading TYPE_* tag as NODE_* tag
-
-### Test Status (60 tests, all passing)
-
-| Test Suite | Tests |
-|------------|-------|
-| BASTMinimalTest | 1 |
-| BASTIncrementalTest | 37 |
-| BASTWriterSpec | 5 |
-| BASTRoundTripTest | 3 |
-| BASTPerformanceBenchmark | 3 |
-| BASTLoaderTest | 4 |
-| BASTDebugTest | 1 |
-| SharedBASTTest | 6 |
-
-**Note**: All tests are in `passes/` module (JVM tests in `jvm/src/test/`, cross-platform in `shared/src/test/`). The deprecated standalone `bast/` directory has been removed.
-
-### Key Code Locations
-
-**Language Module** (`language/shared/.../language/bast/`):
-- `package.scala` - Constants, node type tags (NODE_*, TYPE_*)
-- `BASTWriter.scala` - Serialization utilities
-- `BASTReader.scala` - Deserialization with `readNode()` and `readTypeExpression()`
-- `BASTLoader.scala` - Import loading utility
-- `BASTUtils.scala` - File checking, BAST loading helpers
-
-**Passes Module** (`passes/shared/.../passes/`):
-- `BASTWriterPass.scala` - Pass wrapper using AST traversal framework
-
-**Commands Module** (`commands/jvm/.../commands/`):
-- `BastGenCommand.scala` - `riddlc bast-gen` command
-
-### Performance Results (January 18, 2026)
-
-**BAST Format v1** - Latest optimizations include all Phase 7 features:
-
-| File | Source | BAST (Phase 6) | BAST (Phase 7a) | BAST (Phase 7b) |
-|------|--------|----------------|-----------------|-----------------|
-| small.riddl | 2KB | 2.4KB (117%) | 2.2KB (108%) | 2.1KB (**104%**) |
-| medium.riddl | 11KB | 10KB (88%) | 8.6KB (75%) | 8.1KB (**71%**) |
-| large.riddl | 43KB | 36.6KB (85%) | 31KB (72%) | 29KB (**67.5%**) |
-
-**Phase 7 Optimizations Applied:**
-- **Phase 7a**: FILE_CHANGE_MARKER (tag 0) - wrote source path only when it changes (~15% savings)
-- **Phase 7b**: Metadata flag + predefined types (Jan 18) - additional ~5% savings:
-  - Used high bit of tag byte for metadata presence (skips empty metadata writes)
-  - Added 11 predefined type tags (TYPE_INTEGER, TYPE_STRING_DEFAULT, etc.)
-
-**Key achievement**: Large files now at **67.5% of source size** (was 72% after 7a, 85% before)!
-
-**Speed benchmarks** (50 iterations each):
-
-| File | Nodes | Cold Speed | Warm Speed |
-|------|-------|------------|------------|
-| small.riddl | 60 | **7.8x** | 3.1x |
-| medium.riddl | 331 | **10.3x** | 10.4x |
-| large.riddl | 1,296 | **6.5x** | 9.0x |
-| **Average** | | **8.2x** | **7.5x** |
-
-**Test files** (`testkit/jvm/src/test/resources/performance/`):
-- `small.riddl` - ~60 lines, 2 contexts (user management)
-- `medium.riddl` - ~370 lines, 7 contexts (e-commerce)
-- `large.riddl` - ~1450 lines, 10 contexts (enterprise platform)
-
-**Conclusion**: BAST v1 achieves **6-10x speedup** with files **67-71% of source size** for non-trivial inputs. Small files have minimal overhead due to fixed header/string table costs.
-
-### Cross-Platform Status (January 16, 2026)
-
-| Platform | Status | Notes |
-|----------|--------|-------|
-| JVM | ✅ Passing | 6 tests in SharedBASTTest |
-| Native | ✅ Passing | 6 tests in SharedBASTTest |
-| JS | ✅ Passing | 6 tests in SharedBASTTest |
-
-**Note**: BAST serialization/deserialization works on all platforms. BAST *file import loading* is
-JVM/Native only (JS returns error message since browser can't do local file I/O).
-
-### Next Steps
-
-1. ~~Consider larger test corpus for comprehensive benchmarks~~ ✅ Done - created small/medium/large.riddl
-2. Finalize BAST schema before release to users (TODO in package.scala)
-3. **Phase 7 Optimizations** ✅ **ALL COMPLETE** (January 18, 2026):
-   - ✅ **Bug Fix**: Fixed nodes with `At.empty` - ULIDAttachment, BASTReader fallbacks now use valid locations
-   - ✅ **Source file change markers**: FILE_CHANGE_MARKER (tag 0) written only when source changes (**15% savings**)
-   - ✅ **Empty metadata flag bit**: Use tag high bit (0x80) for metadata presence, fixed signed byte overflow bug (**~2% savings**)
-   - ✅ **Predefined type expressions**: 11 new tags (TYPE_INTEGER, TYPE_STRING_DEFAULT, TYPE_UUID, etc.) (**~3% savings**)
-   - **Final result**: Large files at **67.5% of source** (exceeded 70-75% target by significant margin!)
-
-### Open Questions
-
-- ~~How should BAST versioning handle breaking format changes?~~ **Resolved**: Single monotonically incrementing 32-bit integer, stays at 1 during development, increment only after schema finalization for users
-
-### Design Decisions
-
-**Compression: Will NOT be implemented**
-
-The `Flags.COMPRESSED` flag in the header is reserved but will never be used. Rationale:
-- BAST's primary use case is HTTP transport (web-based tools, APIs)
-- HTTP already provides transparent gzip/brotli compression
-- Adding compression at the BAST layer would be redundant
-- Would add CPU overhead on both ends for no benefit
-- Simpler format = easier debugging and cross-platform compatibility
-
-**Incremental Updates: Future consideration**
-
-Supporting partial BAST updates when source changes slightly could be valuable for:
-- Large projects where only one file changes
-- IDE integrations that need fast refresh
-- CI/CD pipelines with incremental builds
-
-This is **not currently planned** but noted as an area of potential future interest.
-
-**Lazy Loading: Under evaluation**
-
-See "Future Considerations: Lazy Loading" section below for analysis.
-
----
-
-## Future Considerations: Lazy Loading
-
-### What is Lazy Loading?
-
-Instead of deserializing the entire BAST file into memory on load, lazy loading would:
-1. Memory-map the BAST file (or keep bytes in memory)
-2. Parse only the header and string table upfront
-3. Deserialize individual nodes on-demand when accessed
-4. Cache deserialized nodes for subsequent access
-
-### Current Implementation
-
-The current `BASTReader.read()` approach:
-```
-1. Read header (32 bytes)
-2. Validate checksum
-3. Load entire string table into memory
-4. Recursively deserialize ALL nodes starting from root
-5. Return complete Nebula AST in memory
-```
-
-### Potential Lazy Implementation
-
-```
-1. Read header (32 bytes)
-2. Keep byte array reference (or mmap file)
-3. Load string table (required for any node access)
-4. Return LazyNebula proxy with root offset
-5. On first access to contents: deserialize children
-6. Cache deserialized nodes in WeakHashMap
-```
-
-### Benefits
-
-| Benefit | Impact | Use Case |
-|---------|--------|----------|
-| Faster initial load | High | Large BAST files where only part is needed |
-| Lower memory peak | Medium | Memory-constrained environments |
-| Incremental parsing | Medium | IDE features that only need specific nodes |
-| Partial file access | Low | Extracting single definition from large module |
-
-### Drawbacks
-
-| Drawback | Severity | Mitigation |
-|----------|----------|------------|
-| More complex code | High | Significant refactoring of reader |
-| Random access overhead | Medium | Cache frequently accessed nodes |
-| Memory mapping complexity | Medium | Platform-specific (JS has no mmap) |
-| Debugging difficulty | Medium | Harder to trace deserialization issues |
-| Thread safety concerns | Low | Need synchronization for cache |
-
-### Performance Analysis
-
-**Current approach** (eager loading):
-- large.riddl (43KB source → 29KB BAST): ~0.78ms warm load
-- All 1,296 nodes deserialized upfront
-- Memory: ~full AST size in heap
-
-**Lazy approach** (estimated):
-- Initial load: ~0.1-0.2ms (header + string table only)
-- Per-node access: ~0.001-0.01ms (amortized with caching)
-- Full traversal: Similar to eager (~0.8-1.0ms with cache overhead)
-
-### Recommendation
-
-**Do not implement lazy loading at this time.**
-
-Reasons:
-1. Current load times are already excellent (sub-millisecond for typical files)
-2. RIDDL files are typically small enough to fit entirely in memory
-3. Most use cases need the full AST anyway (validation, transformation)
-4. Implementation complexity is significant
-5. Cross-platform concerns (JS cannot memory-map)
-
-**When to reconsider:**
-- If BAST files regularly exceed 10MB
-- If use cases emerge that only need partial AST access
-- If memory constraints become a real issue
-
----
-
-## Phase 8: PathIdentifier Interning (COMPLETED)
-
-**Implemented**: January 19, 2026
-
-Analysis performed January 18, 2026 on `large.riddl` (43KB source → 29KB BAST at 67.5%)
-
-### Optimization 1: PathIdentifier Value Interning ✅ IMPLEMENTED
-
-**Current encoding** for PathIdentifier (e.g., `TenantId` or `Entity.StateRecord`):
-```
-Location (2-4 bytes) + Count (1 byte) + N × StringIndex (1-2 bytes each)
-```
-
-**Observation**: Identifiers repeat frequently in RIDDL models:
-- `UserId`: 65 occurrences
-- `TenantId`: 52 occurrences
-- `String`: 181 occurrences
-- Total: 2,069 identifier references, only 529 unique
-- **Repetition rate: 74.4%**
-
-**Proposed optimization**: Create a PathValueTable (similar to StringTable):
-```
-First occurrence: Location + PathValueIndex + [PathValue in table]
-Subsequent:       Location + PathValueIndex
-```
-
-**Estimated savings**:
-- Current path bytes: ~6,200 bytes (in large.riddl)
-- With interning: ~4,700 bytes
-- **Savings: ~1,500 bytes (5% of total BAST)**
-
-**Implementation**: Completed January 19, 2026
-- Created `PathTable.scala` class (mirrors StringTable pattern)
-- Updated `BASTWriter.writePathIdentifierInline()` to use path table
-- Updated `BASTReader.readPathIdentifierInline()` to handle both modes
-- Encoding: count==0 means next varint is table index, count>0 means inline
-- Path table written immediately after string table in file format
-- All 60 BAST tests pass
-
-### Optimization 2: Location Delta Run-Length Encoding (Potential)
-
-**Observation**: Many consecutive definitions share the same source file and have sequential line numbers.
-
-**Current**: Each location is delta-encoded from the previous.
-
-**Potential enhancement**: Use run-length encoding for sequences of "same file, next line":
-- Flag byte indicates: "increment line by 1, same file"
-- Saves offset/endOffset bytes for simple sequential definitions
-
-**Estimated savings**: 500-1,000 bytes (2-3%)
-**Implementation complexity**: Medium-High
-
-### Optimization 3: SagaStep Structure (Not Recommended)
-
-**Observation**: SagaSteps always have exactly 2 Contents fields (doStatements, undoStatements).
-
-**Current encoding**: Writes count for each Contents field.
-
-**Potential**: Could eliminate counts since always 2 fields.
-
-**Assessment**: **Not worth implementing**
-- Typical RIDDL models have very few SagaSteps (0-5)
-- Savings: ~5-10 bytes per SagaStep
-- Total savings: <50 bytes in typical models
-- Adds special-case complexity for minimal gain
-
-### Optimization 4: Reference Kind Consolidation (Potential)
-
-**Observation**: We have 20+ reference types (TypeRef, StateRef, EntityRef, etc.) each with their own tag.
-
-**Current**: Each reference type has a dedicated NODE_* tag.
-
-**Potential**: Could use a single REFERENCE tag + subtype byte for less common references, keeping dedicated tags only for the most frequent (TypeRef, FieldRef, StateRef).
-
-**Assessment**: Marginal benefit, increases code complexity.
-
-### Summary
-
-**Phase 8 PathIdentifier Interning is COMPLETE** (January 19, 2026):
-- PathTable created mirroring StringTable pattern
-- ~5% additional size reduction achieved
-- Benefits grow with model size and reference density
-
-**Result**: Large files now at ~63-64% of source size (from 67.5% before Phase 8)!
-
-All planned BAST optimizations are now complete through Phase 8.
 
 ---
 
@@ -555,37 +267,15 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 3. ✅ **Committed changes** to riddl repository
 
-4. 🚧 **External Project Validation** (institutional-commerce)
-   - Ran validation on `/Users/reid/Code/ossuminc/institutional-commerce` with `src/main/riddl/ImprovingApp.conf`
-   - Found 16+ parse errors - all RIDDL syntax issues with string literals in handlers
-   - Fixed `organizationsProjection.riddl` - converted string literals to comments with `???`
-   - Partially fixed `Order.riddl` - 3 handlers done, more remain
+4. ✅ **External Project Validation** (institutional-commerce) - Completed
+   - Validated `/Users/reid/Code/ossuminc/institutional-commerce`
+   - All RIDDL syntax issues fixed, project now validates properly
 
 **Files Modified**:
 - `build.sbt` - Added `With.scala3` to Root project
 - `passes/jvm/.../DeepASTComparison.scala` - Compare offsets instead of line/col
 - `passes/jvm/.../BASTFileReadTest.scala` - Removed file comparison
 - `commands/jvm/.../BastGenCommandTest.scala` - Changed command name
-
-**Remaining Work** (institutional-commerce RIDDL fixes):
-- `Order/Order.riddl` - ~10 more handlers with string literals
-- `Store/Store.riddl` - Many handlers with string literals
-- `Organization/organization.riddl` - Multiple handlers
-- `Members/members.riddl`, `Tenant/tenant.riddl`, `Events/eventContext.riddl`
-- `Venues/venueContext.riddl`, `Product/product.riddl`
-- Various projection files
-
-**Pattern to Fix**:
-```riddl
-// Invalid:
-on command X { "description" }
-
-// Valid:
-on command X {
-  // description
-  ???
-}
-```
 
 ---
 
@@ -897,14 +587,6 @@ to allow JS linker to succeed while maintaining full functionality on JVM/Native
 - Reader's `readContentsDeferred()` called `readNode()`
 - `readNode()` only handles NODE_* tags, not TYPE_* tags
 - This caused byte misinterpretation leading to invalid string table indices
-
----
-
-## Deferred Tasks
-
-Tasks intentionally deferred to the end of the current work list:
-
-1. Rewrite `doc/src/main/hugo/content/future-work/bast.md` - the existing BAST documentation is outdated and needs a complete rewrite reflecting the current implementation
 
 ---
 
