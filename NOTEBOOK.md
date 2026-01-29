@@ -10,6 +10,16 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface to Domain Definition Language. BAST serialization is complete through Phase 9. Hugo documentation generation and diagrams have been moved to the `riddl-gen` repository.
 
+**Documentation has moved to [ossum.tech/riddl](https://ossum.tech/riddl/)**. The `doc/` directory now contains only redirect pages.
+
+---
+
+## Scheduled Tasks
+
+| Date | Task | Notes |
+|------|------|-------|
+| March 1, 2026 | Review and remove `doc/src/main/hugo/content/` | Hugo content migrated to ossum.tech/riddl. Redirect site is in `doc/redirect-site/`. After confirming redirects have been working for ~1 month, the Hugo content directory can be deleted. Keep `doc/redirect-site/` for ongoing redirects. |
+
 ---
 
 ## BAST Module (Binary AST Serialization)
