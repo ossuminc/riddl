@@ -5,6 +5,12 @@ draft: true
 weight: 20
 ---
 
+{{% hint warning %}}
+**Note**: This page references the `hugo` and `hugo-git-check` commands which
+have been moved to the [riddl-gen](https://github.com/ossuminc/riddl-gen)
+repository. The examples below need to be updated for current `riddlc` commands.
+{{% /hint %}}
+
 Because riddlc is a very rich command, we thought it might be useful to provide
 some examples. We use these commands in our day to day work and hope that these
 examples give you ideas on how to adapt riddlc to your particular work style

@@ -6,19 +6,29 @@ draft: "false"
 weight: 50
 ---
 
-The RIDDL compiler, `riddlc` is able to translate RIDDL into a variety of other
-document types, after the input passes the 
-[compilation phases]({{< relref "../compilation.md" >}}).  
+{{% hint warning %}}
+**Moved to riddl-gen**
 
-The various kinds of output from `riddlc` are described in the following 
-sections:
+The RIDDL translation commands (Hugo documentation generation and diagram
+generation) have been moved to the
+[riddl-gen](https://github.com/ossuminc/riddl-gen) repository.
 
-* [_Hugo_]({{< relref "hugo.md" >}}) - Hugo source input for producing an 
-  HTML website where diagrams are all automatically deduced from the RIDDL 
-  model
+Please use `riddl-gen` for:
+- Generating Hugo-based documentation websites from RIDDL models
+- Generating various diagram types (context maps, data flow diagrams, etc.)
 
-{{% hint ok %}}
-It is recommended that you become familiar with the `riddlc`command line and 
-configuration [options]({{< relref "options" >}}) as these control the kind of 
-output generated.
+The core `riddlc` compiler focuses on parsing, validation, and BAST
+serialization.
 {{% /hint %}}
+
+## What riddlc Can Do
+
+The `riddlc` compiler provides these core capabilities:
+
+- **Parse** - Parse RIDDL source files and report syntax errors
+- **Validate** - Validate RIDDL models for semantic correctness
+- **Prettify** - Reformat RIDDL source to a standard layout
+- **BAST** - Convert between RIDDL and Binary AST format for faster loading
+- **Stats** - Generate statistics about RIDDL models
+
+See the [command-line help]({{< relref "command-line-help.md" >}}) for details.

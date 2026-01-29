@@ -6,8 +6,8 @@ draft: false
 weight: 10
 ---
 
-riddlc is the command that makes all the magic happen. As you will see, riddlc 
-is a rich and powerful tool for processing RIDDL input. 
+riddlc is the command that makes all the magic happen. As you will see, riddlc
+is a rich and powerful tool for processing RIDDL input.
 
 ## Command Syntax overview
 `riddlc` uses a sub-command structure. At a high level, the command line syntax
@@ -16,125 +16,129 @@ is very simple:
 > riddlc [common options] command-name [command-options]
 ```
 
+## Available Commands
+
+The following commands are available in `riddlc`:
+
+| Command | Description |
+|---------|-------------|
+| `about` | Print out information about RIDDL |
+| `bastify` | Convert a RIDDL file to BAST (Binary AST) format |
+| `dump` | Dump the AST of the input file |
+| `unbastify` | Convert a BAST file back to RIDDL source files |
+| `flatten` | Flatten all includes into a single file |
+| `from` | Load a configuration file and execute a command from it |
+| `help` | Print out how to use this program |
+| `info` | Print out build information about this program |
+| `onchange` | Watch a directory and run a command when changes occur |
+| `parse` | Parse the input file and report any errors |
+| `prettify` | Reformat RIDDL source to a standard layout |
+| `repeat` | Repeatedly run a command for edit-build-check cycles |
+| `stats` | Generate statistics about a RIDDL model |
+| `validate` | Parse and validate the input file |
+| `version` | Print the version of riddlc and exit |
+
+{{% hint info %}}
+**Note**: Hugo documentation generation and diagram generation have been moved
+to the [riddl-gen](https://github.com/ossuminc/riddl-gen) repository. Use that
+tool if you need to generate Hugo sites or diagrams from RIDDL models.
+{{% /hint %}}
+
 ## Info Command Output
 For this version of `riddlc`:
 ```shell
-> content % riddlc info
+> riddlc info
 [info] About riddlc:
 [info]            name: riddlc
-[info]         version: 0.14.0
+[info]         version: 1.1.2
 [info]   documentation: https://riddl.tech
-[info]       copyright: © 2019-2022 Ossum Inc.
-[info]        built at: 2022-09-09 11:28:07.485-0400
+[info]       copyright: © 2019-2026 Ossum Inc.
 [info]        licenses: Apache License, Version 2.0
 [info]    organization: Ossum Inc.
-[info]   scala version: 2.13.8
-[info]     sbt version: 1.7.1
+[info]   scala version: 3.3.7
 ```
-the help text shows the commands and options available:
+
+## Common Options
+
+The following options apply to all commands:
 
 ```
-RIDDL Compiler © 2019-2022 Ossum Inc. All rights reserved."
-Version: 0.13.3-2-49ff0a59-20220909-1104-SNAPSHOT
-
-This program parses, validates and translates RIDDL sources to other kinds
-of documents. RIDDL is a language for system specification based on Domain
-Drive Design, Reactive Architecture, and distributed system principles.
-
-
-Usage: riddlc [options]
-
   -t | --show-times
-        Show compilation phase execution times 
+        Show parsing phase execution times
+  -I | --show-include-times
+        Show parsing of included files execution times
   -d | --dry-run
         go through the motions but don't write any changes
   -v | --verbose
-        Provide verbose output detailing riddlc's actions
+        Provide verbose output detailing actions taken by riddlc
   -D | --debug
         Enable debug output. Only useful for riddlc developers
   -q | --quiet
         Do not print out any output, just do the requested command
-  -w | --suppress-warnings
+  -a | --no-ansi-messages
+        Do not print messages with ANSI formatting
+  -w <value> | --show-warnings <value>
         Suppress all warning messages so only errors are shown
-  -m | --suppress-missing-warnings
-        Show warnings about things that are missing
-  -s | --suppress-style-warnings
-        Show warnings about questionable input style. 
-  -P <value> | --plugins-dir <value>
-        Load riddlc command extension plugins from this directory.
+  -m <value> | --show-missing-warnings <value>
+        Suppress warnings about things that are missing
+  -s <value> | --show-style-warnings <value>
+        Suppress warnings about questionable input style
+  -u <value> | --show-usage-warnings <value>
+        Suppress warnings about usage of definitions
+  -i <value> | --show-info-messages <value>
+        Suppress information output
+  -S <value> | --sort-messages-by-location <value>
+        Print all messages sorted by file name and line number
+  -G <value> | --group-messages-by-kind <value>
+        Print all messages grouped by severity
+  -x <value> | --max-parallel-parsing <value>
+        Maximum number of include files parsed in parallel
+  --max-include-wait <value>
+        Maximum time to wait for include file parsing
+  --warnings-are-fatal <value>
+        Makes validation warnings fatal
+  -B | --auto-generate-bast
+        Automatically generate .bast files after parsing
+```
 
-Usage:  [about|dump|from|help|hugo|info|parse|repeat|validate|version] <args>...
+## Command Details
 
-Command: about
-  Print out information about RIDDL
+### bastify
+Convert a RIDDL file to BAST (Binary AST) format for faster loading:
+```shell
+riddlc bastify input-file.riddl
+```
+Creates a `.bast` file next to the input file.
 
-Command: dump input-file
-    input-file
+### unbastify
+Convert a BAST file back to RIDDL source:
+```shell
+riddlc unbastify input-file.bast -o output-dir
+```
 
-Command: from config-file target-command
-  Loads a configuration file and executes the command in it
-    config-file
-          A HOCON configuration file with riddlc options in it.
-    target-command
-          The name of the command to select from the configuration file
+### from
+Load options from a HOCON configuration file:
+```shell
+riddlc from config-file.conf target-command
+```
 
-Command: help
-  Print out how to use this program
+### prettify
+Reformat RIDDL source to a standard layout:
+```shell
+riddlc prettify input-file.riddl -o output-dir
+```
+Options:
+- `--project-name <value>` - Project name for the output
+- `-s | --single-file <value>` - Resolve all includes into a single file
 
-Command: hugo [options] input-file
-  Parse and validate the input-file and then translate it into the input
-  needed for hugo to translate it to a functioning web site.
-    input-file
-          required riddl input file to read
-    -o <value> | --output-dir <value>
-          required output directory for the generated output
-    -p <value> | --project-name <value>
-          optional project name to associate with the generated output
-    -e <value> | --erase-output <value>
-          Erase entire output directory before putting out files
-    -b <value> | --base-url <value>
-          Optional base URL for root of generated http URLs
-    -t <value> | --themes <value>
-          Add theme name/url pairs to use alternative Hugo themes
-    -s <value> | --source-url <value>
-          URL to the input file's Git Repository
-    -h <value> | --edit-path <value>
-          Path to add to source-url to allow editing
-    -m <value> | --site-logo-path <value>
-          Path, in 'static' directory to placement and use
-          of the site logo.
-    -n <value> | --site-logo-url <value>
-          URL from which to copy the site logo.
+### validate
+Parse and validate a RIDDL file:
+```shell
+riddlc validate input-file.riddl
+```
 
-Command: info
-  Print out build information about this program
-
-Command: parse input-file
-    input-file
-
-Command: repeat [options] config-file target-command [refresh-rate] [max-cycles]
-  This command supports the edit-build-check cycle. It doesn't end
-  until <max-cycles> has completed or EOF is reached on standard
-  input. During that time, the selected subcommands are repeated.
-    config-file
-          The path to the configuration file that should be repeated
-    target-command
-          The name of the command to select from the configuration file
-    refresh-rate
-          Specifies the rate at which the <git-clone-dir> is checked
-  for updates so the process to regenerate the hugo site is
-  started
-    max-cycles
-          Limit the number of check cycles that will be repeated.
-    -n | --interactive
-          This option causes the repeat command to read from the standard
-          input and when it reaches EOF (Ctrl-D is entered) then it cancels
-          the loop to exit.
-
-Command: validate input-file
-    input-file
-
-Command: version
-  Print the version of riddlc and exits
-
+### stats
+Generate statistics about a RIDDL model:
+```shell
+riddlc stats -I input-file.riddl
 ```
