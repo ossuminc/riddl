@@ -21,7 +21,7 @@ def pDep(p: Project): ClasspathDependency = p % "compile->compile;test->test"
 def tkDep(cp: CrossProject): CrossClasspathDependency = cp % "compile->compile;test->test"
 
 lazy val riddl: Project = Root("riddl", startYr = startYear, spdx ="Apache-2.0")
-  .configure(With.scala3, With.noPublishing, With.git, With.dynver, With.noMiMa)
+  .configure(With.Scala3, With.noPublishing, With.Git, With.DynVer, With.noMiMa)
   .settings(concurrentRestrictions += Tags.limit(NativeTags.Link, 1))
   .aggregate(
     utils,
@@ -55,7 +55,7 @@ lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, N
     description := "Various utilities used throughout riddl libraries"
   )
   .jvmConfigure(With.coverage(70))
-  .jvmConfigure(With.build_info)
+  .jvmConfigure(With.BuildInfo)
   .jvmConfigure(With.MiMa("0.57.0", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
@@ -393,7 +393,7 @@ lazy val docsite = DocSite(
   )
 
 lazy val plugin = OssumIncPlugin.autoImport.Plugin("sbt-riddl")
-  .configure(With.scala2, With.build_info, With.noMiMa, With.GithubPublishing)
+  .configure(With.Scala2, With.BuildInfo, With.noMiMa, With.GithubPublishing)
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",
     buildInfoObject := "SbtRiddlPluginBuildInfo",
