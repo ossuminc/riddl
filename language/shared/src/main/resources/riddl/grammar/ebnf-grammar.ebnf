@@ -1,5 +1,5 @@
 (* RIDDL Grammar in EBNF *)
-(* Last updated: January 17, 2026 *)
+(* Last updated: January 28, 2026 *)
 (* This grammar is automatically included in the riddl language module *)
 (* and can be loaded from the classpath at: riddl/grammar/ebnf-grammar.ebnf *)
 
@@ -16,6 +16,10 @@ hexEscape = "\\x" digit digit [digit [digit [digit [digit [digit [digit]]]]]] ;
 unicodeEscape = "\\u" digit digit digit digit ;
 integer = ["+"|"-"] digit {digit} ;
 
+(* Readability Keywords - these are always optional *)
+is = ["is" | "are" | ":" | "="] ;  (* optional readability word for definitions *)
+byAs = ["by" | "as"] ;  (* optional readability word for attribution *)
+
 (* Comments *)
 comment = inline_comment | end_of_line_comment ;
 inline_comment = "/*" {any_char_except_end_comment} "*/" ;
@@ -29,11 +33,11 @@ root_include = "include" literal_string ;
 bast_import = "import" literal_string ;  (* path must end with .bast *)
 
 (* Module *)
-module = "module" identifier "is" "{" {module_content | module_include}+ "}" [with_metadata] ;
+module = "module" identifier is "{" {module_content | module_include}+ "}" [with_metadata] ;
 module_include = "include" literal_string ;
 
 (* Domain *)
-domain = "domain" identifier "is" "{" domain_body "}" [with_metadata] ;
+domain = "domain" identifier is "{" domain_body "}" [with_metadata] ;
 domain_body = domain_definitions | "???" ;
 domain_definitions = {domain_content}+ ;
 domain_content = vital_definition_contents | author | context | domain | user | epic | saga | import_def | bast_import | domain_include | comment ;
@@ -41,18 +45,18 @@ import_def = "import" "domain" identifier "from" literal_string ;
 domain_include = "include" literal_string ;
 
 (* Context *)
-context = "context" identifier "is" "{" context_body "}" [with_metadata] ;
+context = "context" identifier is "{" context_body "}" [with_metadata] ;
 context_body = context_definitions | "???" ;
 context_definitions = {context_definition}+ ;
 context_definition = processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | context_include | comment ;
 context_include = "include" literal_string ;
 
 (* Entity *)
-entity = "entity" identifier "is" "{" entity_body "}" [with_metadata] ;
+entity = "entity" identifier is "{" entity_body "}" [with_metadata] ;
 entity_body = entity_definitions | "???" ;
 entity_definitions = {entity_content}+ ;
 entity_content = processor_definition_contents | state | entity_include ;
-state = "state" identifier ("of" | "is") type_ref [with_metadata] ;
+state = "state" identifier ("of" | is) type_ref [with_metadata] ;
 entity_include = "include" literal_string ;
 
 (* Processor Definition Contents *)
@@ -61,8 +65,8 @@ vital_definition_contents = type_def | comment ;
 
 (* Type Definition *)
 type_def = def_of_type | def_of_type_kind_type ;
-def_of_type = "type" identifier "is" type_expression [with_metadata] ;
-def_of_type_kind_type = aggregate_use_case identifier (scala_aggregate_definition | ("is" (aliased_type_expression | aggregation))) [with_metadata] ;
+def_of_type = "type" identifier is type_expression [with_metadata] ;
+def_of_type_kind_type = aggregate_use_case identifier (scala_aggregate_definition | (is (aliased_type_expression | aggregation))) [with_metadata] ;
 aggregate_use_case = "type" | "command" | "query" | "event" | "result" | "record" | "graph" | "table" ;
 
 (* Type Expressions *)
@@ -115,8 +119,8 @@ aliased_type_expression = [aggregate_use_case] path_identifier ;
 scala_aggregate_definition = "(" {field [","]} ")" ;
 
 (* Fields and Methods *)
-field = identifier "is" field_type_expression [with_metadata] ;
-method = identifier "(" [arguments] ")" "is" field_type_expression [with_metadata] ;
+field = identifier is field_type_expression [with_metadata] ;
+method = identifier "(" [arguments] ")" is field_type_expression [with_metadata] ;
 arguments = {method_argument [","]} ;
 method_argument = identifier ":" field_type_expression ;
 field_type_expression = cardinality(
@@ -126,7 +130,7 @@ field_type_expression = cardinality(
 ) ;
 
 (* Functions *)
-function = "function" identifier "is" "{" function_body "}" [with_metadata] ;
+function = "function" identifier is "{" function_body "}" [with_metadata] ;
 function_body = [func_input] [func_output] function_definitions ;
 func_input = "requires" aggregation ;
 func_output = "returns" aggregation ;
@@ -165,14 +169,14 @@ processor_ref = adaptor_ref | context_ref | entity_ref | projector_ref | reposit
 any_interaction_ref = processor_ref | saga_ref | input_ref | output_ref | group_ref | user_ref ;
 
 (* Handlers *)
-handler = "handler" identifier "is" "{" handler_body "}" [with_metadata] ;
+handler = "handler" identifier is "{" handler_body "}" [with_metadata] ;
 handler_body = {"???" | handler_contents} ;
 handler_contents = {on_clause | comment} ;
 on_clause = on_init_clause | on_other_clause | on_term_clause | on_message_clause ;
-on_init_clause = "on init" "is" pseudo_code_block [with_metadata] ;
-on_other_clause = "on other" "is" pseudo_code_block [with_metadata] ;
-on_term_clause = "on term" "is" pseudo_code_block [with_metadata] ;
-on_message_clause = "on" message_ref ["from" [identifier ":"] message_origins] "is" pseudo_code_block [with_metadata] ;
+on_init_clause = "on" "init" is pseudo_code_block [with_metadata] ;
+on_other_clause = "on" "other" is pseudo_code_block [with_metadata] ;
+on_term_clause = "on" "term" is pseudo_code_block [with_metadata] ;
+on_message_clause = "on" message_ref ["from" [identifier ":"] message_origins] is pseudo_code_block [with_metadata] ;
 message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 
 (* Statements *)
@@ -185,7 +189,7 @@ statement = when_statement | match_statement | send_statement | tell_statement |
 entity_statement = statement | morph_statement | become_statement ;
 
 (* Control flow *)
-when_statement = "when" literal_string "then" pseudo_code_block "end" ;
+when_statement = "when" literal_string "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
 match_statement = "match" literal_string "{" {match_case}+ ["default" "{" {statement} "}"] "}" ;
 match_case = "case" literal_string "{" {statement} "}" ;
 
@@ -211,38 +215,38 @@ become_statement = "become" entity_ref "to" handler_ref ;
 pseudo_code_block = "???" | {statement} | "{" {statement} "}" ;
 
 (* Constants and Invariants *)
-constant = "constant" identifier "is" type_expression "=" literal_string [with_metadata] ;
-invariant = "invariant" identifier "is" [literal_string] [with_metadata] ;
+constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
+invariant = "invariant" identifier is [literal_string] [with_metadata] ;
 
 (* Relationship *)
-relationship = "relationship" identifier "to" processor_ref "as" relationship_cardinality ["label" "as" literal_string] [with_metadata] ;
+relationship = "relationship" identifier "to" processor_ref byAs relationship_cardinality ["label" byAs literal_string] [with_metadata] ;
 relationship_cardinality = "1:1" | "1:N" | "N:1" | "N:N" ;
 
 (* Streamlet-related *)
 streamlet = source | sink | flow | merge | split | router | void ;
-source = "source" identifier "is" "{" streamlet_body "}" [with_metadata] ;
-sink = "sink" identifier "is" "{" streamlet_body "}" [with_metadata] ;
-flow = "flow" identifier "is" "{" streamlet_body "}" [with_metadata] ;
-merge = "merge" identifier "is" "{" streamlet_body "}" [with_metadata] ;
-split = "split" identifier "is" "{" streamlet_body "}" [with_metadata] ;
-router = "router" identifier "is" "{" streamlet_body "}" [with_metadata] ;
-void = "void" identifier "is" "{" streamlet_body "}" [with_metadata] ;
+source = "source" identifier is "{" streamlet_body "}" [with_metadata] ;
+sink = "sink" identifier is "{" streamlet_body "}" [with_metadata] ;
+flow = "flow" identifier is "{" streamlet_body "}" [with_metadata] ;
+merge = "merge" identifier is "{" streamlet_body "}" [with_metadata] ;
+split = "split" identifier is "{" streamlet_body "}" [with_metadata] ;
+router = "router" identifier is "{" streamlet_body "}" [with_metadata] ;
+void = "void" identifier is "{" streamlet_body "}" [with_metadata] ;
 streamlet_body = {"???" | streamlet_definition} ;
 streamlet_definition = {inlet | outlet | streamlet_include | processor_definition_contents} ;
 streamlet_include = "include" literal_string ;
-inlet = "inlet" identifier "is" type_ref [with_metadata] ;
-outlet = "outlet" identifier "is" type_ref [with_metadata] ;
-connector = "connector" identifier "is" connector_definitions [with_metadata] ;
+inlet = "inlet" identifier is type_ref [with_metadata] ;
+outlet = "outlet" identifier is type_ref [with_metadata] ;
+connector = "connector" identifier is connector_definitions [with_metadata] ;
 connector_definitions = ["(" "from" outlet_ref "to" inlet_ref ")" | "from" outlet_ref "to" inlet_ref] ;
 
 (* Group-related *)
-group = group_aliases identifier "is" "{" {"???" | group_definitions} "}" [with_metadata] ;
+group = group_aliases identifier is "{" {"???" | group_definitions} "}" [with_metadata] ;
 group_definitions = {group | contained_group | shown_by | group_output | group_input | comment} ;
-contained_group = "contains" identifier "as" group_ref [with_metadata] ;
+contained_group = "contains" identifier byAs group_ref [with_metadata] ;
 group_output = output_aliases identifier presentation_aliases (literal_string | constant_ref | type_ref) [output_definitions] [with_metadata] ;
 group_input = input_aliases identifier acquisition_aliases type_ref [input_definitions] [with_metadata] ;
-output_definitions = ["is" "{" {"???" | (group_output | type_ref)} "}"] ;
-input_definitions = ["is" "{" {"???" | group_input} "}"] ;
+output_definitions = [is "{" {"???" | (group_output | type_ref)} "}"] ;
+input_definitions = [is "{" {"???" | group_input} "}"] ;
 group_aliases = "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block" ;
 output_aliases = "output" | "document" | "list" | "table" | "graph" | "animation" | "picture" ;
 input_aliases = "input" | "form" | "text" | "button" | "picklist" | "selector" | "item" ;
@@ -250,43 +254,43 @@ presentation_aliases = "presents" | "shows" | "displays" | "writes" | "emits" ;
 acquisition_aliases = "acquires" | "reads" | "takes" | "accepts" | "admits" | "initiates" | "submits" | "triggers" | "activates" | "starts" ;
 
 (* Repository-related *)
-repository = "repository" identifier "is" "{" repository_body "}" [with_metadata] ;
+repository = "repository" identifier is "{" repository_body "}" [with_metadata] ;
 repository_body = {"???" | repository_definitions} ;
 repository_definitions = {processor_definition_contents | schema | repository_include} ;
 repository_include = "include" literal_string ;
-schema = "schema" identifier "is" schema_kind {data} {link} {index} [with_metadata] ;
+schema = "schema" identifier is schema_kind {data} {link} {index} [with_metadata] ;
 schema_kind = "flat" | "relational" | "time-series" | "graphical" | "hierarchical" | "star" | "document" | "columnar" | "vector" | "other" ;
-data = "of" identifier "as" type_ref ;
-link = "link" identifier "as" field_ref "to" field_ref ;
+data = "of" identifier byAs type_ref ;
+link = "link" identifier byAs field_ref "to" field_ref ;
 index = "index" "on" field_ref ;
 
 (* Adaptor-related *)
-adaptor = "adaptor" identifier adaptor_direction context_ref "is" "{" adaptor_body "}" [with_metadata] ;
+adaptor = "adaptor" identifier adaptor_direction context_ref is "{" adaptor_body "}" [with_metadata] ;
 adaptor_direction = "from" | "to" ;
 adaptor_body = {"???" | adaptor_contents} ;
 adaptor_contents = {processor_definition_contents | handler | adaptor_include} ;
 adaptor_include = "include" literal_string ;
 
 (* Projector-related *)
-projector = "projector" identifier "is" "{" projector_body "}" [with_metadata] ;
+projector = "projector" identifier is "{" projector_body "}" [with_metadata] ;
 projector_body = {"???" | projector_definitions} ;
 projector_definitions = {processor_definition_contents | updates | projector_include} ;
 projector_include = "include" literal_string ;
 updates = "updates" repository_ref ;
 
 (* Saga-related *)
-saga = "saga" identifier "is" "{" saga_body "}" [with_metadata] ;
+saga = "saga" identifier is "{" saga_body "}" [with_metadata] ;
 saga_body = [func_input] [func_output] {saga_definitions} ;
 saga_definitions = {saga_step | inlet | outlet | function | term | saga_include | option} ;
 saga_include = "include" literal_string ;
-saga_step = "step" identifier "is" pseudo_code_block "reverted" ["by"] pseudo_code_block [with_metadata] ;
+saga_step = "step" identifier is pseudo_code_block "reverted" ["by"] pseudo_code_block [with_metadata] ;
 
 (* Epic-related *)
-epic = "epic" identifier "is" "{" epic_body "}" [with_metadata] ;
+epic = "epic" identifier is "{" epic_body "}" [with_metadata] ;
 epic_body = user_story {epic_definitions} ;
 epic_definitions = {vital_definition_contents | use_case | shown_by | epic_include} ;
 epic_include = "include" literal_string ;
-use_case = "case" identifier "is" "{" user_story {"???" | interactions} "}" [with_metadata] ;
+use_case = "case" identifier is "{" user_story {"???" | interactions} "}" [with_metadata] ;
 user_story = user_ref "wants" ["to"] literal_string "so" ["that"] literal_string ;
 interactions = {interaction} ;
 interaction = parallel_interactions | optional_interactions | sequential_interactions | step_interactions ;
@@ -300,17 +304,17 @@ direct_user_to_url = "direct" user_ref "to" http_url [with_metadata] ;
 select_input_step = user_ref "selects" input_ref [with_metadata] ;
 take_input_step = "take" input_ref "from" user_ref [with_metadata] ;
 show_output_step = "show" output_ref "to" user_ref [with_metadata] ;
-self_processing_step = "for" any_interaction_ref "is" literal_string [with_metadata] ;
+self_processing_step = "for" any_interaction_ref is literal_string [with_metadata] ;
 send_message_step = "send" message_ref "from" any_interaction_ref "to" processor_ref [with_metadata] ;
 arbitrary_step = "from" any_interaction_ref literal_string ["to"] any_interaction_ref [with_metadata] ;
-vague_step = "is" literal_string literal_string literal_string [with_metadata] ;
+vague_step = is literal_string literal_string literal_string [with_metadata] ;
 
 (* User-related *)
-user = "user" identifier "is" literal_string [with_metadata] ;
+user = "user" identifier is literal_string [with_metadata] ;
 
 (* Author-related *)
-author = "author" identifier "is" "{" [("???" | ("name" "is" literal_string "email" "is" literal_string
-        ["organization" "is" literal_string] ["title" "is" literal_string] ["url" "is" http_url]))] "}" [with_metadata] ;
+author = "author" identifier is "{" [("???" | ("name" is literal_string "email" is literal_string
+        ["organization" is literal_string] ["title" is literal_string] ["url" is http_url]))] "}" [with_metadata] ;
 
 (* URLs *)
 http_url = ("http" | "https") "://" host_string [":" port_num] "/" [url_path] ;
@@ -321,13 +325,13 @@ url_path = {letter | digit | "-" | "_" | "." | "~" | "!" | "$" | "&" | "'" | "("
 (* Metadata *)
 with_metadata = ["with" "{" {"???" | {meta_data}} "}"] ;
 meta_data = brief_description | description | term | option | author_ref | attachment | ulid_attachment | comment ;
-brief_description = "briefly" ["by" | "as"] literal_string ;
-description = "described" (("by" | "as") doc_block | ("at" http_url) | ("in" "file" literal_string)) ;
-term = "term" identifier "is" doc_block ;
-option = "option" ["is"] option_name ["(" {literal_string} ")"] ;
+brief_description = "briefly" byAs literal_string ;
+description = "described" (byAs doc_block | ("at" http_url) | ("in" "file" literal_string)) ;
+term = "term" identifier is doc_block ;
+option = "option" is option_name ["(" {literal_string} ")"] ;
 option_name = {lower_letter | digit | "_" | "-"} ;
-attachment = "attachment" identifier "is" mime_type (("in" "file" literal_string) | ("as" literal_string)) ;
-ulid_attachment = "attachment" "ULID" "is" literal_string ;
+attachment = "attachment" identifier is mime_type (("in" "file" literal_string) | (byAs literal_string)) ;
+ulid_attachment = "attachment" "ULID" is literal_string ;
 doc_block = "{" {markdown_lines | literal_strings | "???"} "}" | literal_string ;
 markdown_lines = {markdown_line}+ ;
 markdown_line = "|" {any_char_except_newline} ;

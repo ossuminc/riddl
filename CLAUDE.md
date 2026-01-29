@@ -56,10 +56,12 @@ RIDDL (Reactive Interface to Domain Definition Language) is a specification lang
 
 ### Dependency Pipeline
 ```
-utils → language → bast → passes → diagrams → commands → riddlc
+utils → language → passes → commands → riddlc
                      ↓
                   testkit
 ```
+
+**Note**: The `diagrams` and `hugo` modules have been moved to the `riddl-gen` repository.
 
 ### BAST Module (Binary AST)
 **Purpose**: Binary AST serialization for fast module imports
