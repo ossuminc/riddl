@@ -359,6 +359,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_BAST_IMPORT)
     writeLocation(bi.loc)
     writeLiteralString(bi.path)
+    // Write selective import fields
+    writeOption(bi.kind)((k: String) => writeString(k))
+    writeOption(bi.selector)((s: Identifier) => writeIdentifierInline(s))
+    writeOption(bi.alias)((a: Identifier) => writeIdentifierInline(a))
     // Contents are not serialized - they're loaded dynamically
     // by BASTLoader when this import is encountered
   }
