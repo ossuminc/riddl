@@ -15,7 +15,7 @@ private[parsing] trait ProjectorParser {
   this: ProcessorParser & StreamingParser =>
 
   private def projectorInclude[u: P]: P[Include[ProjectorContents]] = {
-    include[u, ProjectorContents](projectorDefinitions(_))
+    include[u, ProjectorContents](p => projectorDefinitions(using p))
   }
 
   private def updates[u: P]: P[RepositoryRef] =

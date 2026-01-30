@@ -147,7 +147,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicInclude[u: P]: P[Include[EpicContents]] = {
-    include[u, EpicContents](epicDefinitions(_))
+    include[u, EpicContents](p => epicDefinitions(using p))
   }
 
   private def epicDefinitions[u: P]: P[Seq[EpicContents]] = {

@@ -16,7 +16,7 @@ import com.ossuminc.riddl.utils.PlatformContext
 private[parsing] trait AdaptorParser(using PlatformContext) { this: ProcessorParser =>
 
   private def adaptorInclude[u: P]: P[Include[AdaptorContents]] = {
-    include[u, AdaptorContents](adaptorContents(_))
+    include[u, AdaptorContents](p => adaptorContents(using p))
   }
 
   private def adaptorContents[u: P]: P[Seq[AdaptorContents]] = {

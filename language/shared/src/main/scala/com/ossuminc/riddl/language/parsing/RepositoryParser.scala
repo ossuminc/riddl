@@ -15,7 +15,7 @@ private[parsing] trait RepositoryParser {
   this: ProcessorParser & StreamingParser & Readability =>
 
   private def repositoryInclude[u: P]: P[Include[RepositoryContents]] = {
-    include[u, RepositoryContents](repositoryDefinitions(_))
+    include[u, RepositoryContents](p => repositoryDefinitions(using p))
   }
 
   private def schemaKind[u: P]: P[RepositorySchemaKind] = {

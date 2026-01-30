@@ -21,7 +21,7 @@ private[parsing] trait ModuleParser {
   this: DomainParser & CommonParser =>
 
   private def moduleInclude[u: P]: P[Include[ModuleContents]] = {
-    include[u, ModuleContents](moduleContents(_))
+    include[u, ModuleContents](p => moduleContents(using p))
   }
 
   def moduleContent[u: P]: P[ModuleContents] =

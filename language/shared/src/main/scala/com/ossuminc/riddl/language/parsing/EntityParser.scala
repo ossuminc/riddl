@@ -23,7 +23,7 @@ private[parsing] trait EntityParser {
   }
 
   private def entityInclude[u: P]: P[Include[EntityContents]] = {
-    include[u, EntityContents](entityDefinitions(_))
+    include[u, EntityContents](p => entityDefinitions(using p))
   }
 
   private def entityDefinitions[u: P]: P[Seq[EntityContents]] = {

@@ -40,11 +40,11 @@ class JVMPlatformContext extends PlatformContext {
             else if url.basis.nonEmpty && url.path.isEmpty then Path.of("/" + url.basis)
             else throw new IllegalStateException("URL is invalid!")
             end if
-          if Files.exists(path) then Source.fromFile(path.toFile)(Codec.UTF8)
+          if Files.exists(path) then Source.fromFile(path.toFile)(using Codec.UTF8)
           else throw FileNotFoundException(s"While loading $path")
         case _ =>
           val jurl = java.net.URI(url.toExternalForm).toURL
-          Source.fromURL(jurl)(Codec.UTF8)
+          Source.fromURL(jurl)(using Codec.UTF8)
       }
     }
     implicit val ec: ExecutionContext = this.ec

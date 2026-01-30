@@ -25,12 +25,12 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaInclude[u: P]: P[Include[SagaContents]] = {
-    include[u, SagaContents](sagaDefinitions(_))
+    include[u, SagaContents](p => sagaDefinitions(using p))
   }
 
   private def sagaDefinitions[u: P]: P[Seq[SagaContents]] = {
     P(
-      sagaStep | inlet | outlet | function | term | sagaInclude | option
+      sagaStep | inlet | outlet | function | sagaInclude
     ).asInstanceOf[P[SagaContents]]./.rep(2)
   }
 

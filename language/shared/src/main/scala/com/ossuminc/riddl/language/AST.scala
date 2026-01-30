@@ -110,6 +110,11 @@ object AST:
     */
   opaque type Contents[CV <: RiddlValue] = mutable.ArrayBuffer[CV]
 
+  /** Companion object for Contents opaque type.
+    * ONLY the apply(n: Int) extension is here to prevent AST.apply from polluting
+    * the namespace and interfering with Scala 3.7's extension method resolution
+    * for fastparse's underscore syntax.
+    */
   object Contents:
     def dempty[T <: RiddlValue]: Contents[T] = new mutable.ArrayBuffer[T](2)
     def empty[T <: RiddlValue](
@@ -119,6 +124,10 @@ object AST:
     def apply[T <: RiddlValue](items: T*): Contents[T] = mutable.ArrayBuffer[T](items: _*)
     def unapply[T <: RiddlValue](contents: Contents[T]): SeqFactory.UnapplySeqWrapper[T] =
       mutable.ArrayBuffer.unapplySeq[T](contents)
+
+    /** ONLY apply goes in companion to avoid AST.apply polluting namespace */
+    extension [CV <: RiddlValue](container: Contents[CV])
+      inline def apply(n: Int): CV = container.apply(n)
   end Contents
 
   extension [CV <: RiddlValue](sequence: Seq[CV])
@@ -128,14 +137,12 @@ object AST:
         d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name
       )
 
-  /** The extension of a mutable ArrayBuffer of [[RiddlValue]] for ease of manipulating that content
-    */
-  extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
+  /** Extension methods for Contents - at top level so they're available within AST */
+  extension [CV <: RiddlValue](container: Contents[CV])
 
     inline def length: Int = container.length
     inline def size: Int = container.length
-    inline def apply(n: Int): CV = container.apply(n)
-    inline def head: CV = container.apply(0)
+    inline def head: CV = container(0)
     inline def indexOf[B >: CV](elem: B): Int = container.indexOf[B](elem, 0)
     inline def splitAt(n: Int): (Contents[CV], Contents[CV]) = container.splitAt(n)
     inline def indices: Range = Range(0, container.length)
@@ -162,15 +169,6 @@ object AST:
     inline def prepend(elem: CV): Unit = container.prepend(elem)
     inline def ++(suffix: IterableOnce[CV]): Contents[CV] =
       container.concat[CV](suffix).asInstanceOf[Contents[CV]]
-
-    // @`inline` final def ++ [B >: A](xs: => IterableOnce[B]): Iterator[B] = concat(xs)
-    /** Merge to Contents of varying upper bound constraints into a single combined container */
-    def merge(other: Contents[CV2]): Contents[CV & CV2] =
-      val result = Contents.empty[CV & CV2](container.size + other.size)
-      result ++= container.asInstanceOf[Contents[CV & CV2]]
-      result ++= other.asInstanceOf[Contents[CV & CV2]]
-      result
-    end merge
 
     /** Extract the elements of the [[Contents]] that have identifiers (are definitions,
       * essentially)
@@ -218,6 +216,17 @@ object AST:
     /** find the elemetns of the [[Contents]] that are [[Branch]]s */
     def parents: Seq[Branch[CV]] = container.filter[Branch[CV]]
 
+  end extension
+
+  /** Extension for merging two Contents with different type bounds */
+  extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
+    /** Merge two Contents of varying upper bound constraints into a single combined container */
+    def merge(other: Contents[CV2]): Contents[CV & CV2] =
+      val result = Contents.empty[CV & CV2](container.size + other.size)
+      result ++= container.asInstanceOf[Contents[CV & CV2]]
+      result ++= other.asInstanceOf[Contents[CV & CV2]]
+      result
+    end merge
   end extension
 
   /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
@@ -824,8 +833,8 @@ object AST:
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Group | Saga | Projector |
     Repository
 
-  /** Type of definitions that occur in a [[Context]] with [[Include]] */
-  type ContextContents = OccursInContext | Include[OccursInContext]
+  /** Type of definitions that occur in a [[Context]] with [[Include]] and [[BASTImport]] */
+  type ContextContents = OccursInContext | Include[OccursInContext] | BASTImport
 
   /** Type of definitions that occur in a [[Group]] */
   type OccursInGroup = Group | ContainedGroup | Input | Output
@@ -1061,29 +1070,51 @@ object AST:
 
   /** An import of a BAST (Binary AST) file.
     *
-    * Imports bring in pre-compiled definitions from .bast files. Can appear at the root level
-    * or inside a domain. The imported definitions become children of the containing scope and
-    * are accessible via normal domain path resolution.
+    * Imports bring in pre-compiled definitions from .bast files. Can appear at the root level,
+    * inside a domain, or inside a context. The imported definitions become children of the
+    * containing scope and are accessible via normal domain path resolution.
     *
-    * Syntax: `import "path/to/file.bast"`
+    * Syntax variants:
+    *   - Full import: `import "path/to/file.bast"`
+    *   - Selective import: `import domain X from "file.bast"`
+    *   - Aliased import: `import type T from "file.bast" as MyT`
     *
     * @param loc
     *   The location of the import statement in the source
     * @param path
     *   The path to the .bast file to import
+    * @param kind
+    *   Optional: the kind of definition to import ("domain", "context", "type", etc.)
+    * @param selector
+    *   Optional: the name of the specific definition to import
+    * @param alias
+    *   Optional: an alternate name for the imported definition
     * @param contents
     *   The loaded Nebula contents from the BAST file (populated by BASTLoader)
     */
   case class BASTImport(
     loc: At = At.empty,
     path: LiteralString,
+    kind: Option[String] = None,
+    selector: Option[Identifier] = None,
+    alias: Option[Identifier] = None,
     contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
   ) extends Container[NebulaContents]:
     type ContentType = NebulaContents
 
     override def isRootContainer: Boolean = false
 
-    def format: String = s"""import "${path.s}""""
+    /** Check if this is a selective import (imports a specific definition) */
+    def isSelective: Boolean = kind.isDefined && selector.isDefined
+
+    def format: String =
+      if isSelective then
+        val kindStr = kind.getOrElse("")
+        val selectorStr = selector.map(_.value).getOrElse("")
+        val aliasStr = alias.map(a => s" as ${a.value}").getOrElse("")
+        s"""import $kindStr $selectorStr from "${path.s}"$aliasStr"""
+      else
+        s"""import "${path.s}""""
     override def toString: String = format
   end BASTImport
 

@@ -17,7 +17,7 @@ import fastparse.MultiLineWhitespace.*
 trait RootParser { this: ModuleParser & CommonParser & ParsingContext =>
 
   private def rootInclude[u: P]: P[Include[RootContents]] = {
-    include[u, RootContents](rootContents(_))
+    include[u, RootContents](p => rootContents(using p))
   }
 
   // bastImport is inherited from CommonParser

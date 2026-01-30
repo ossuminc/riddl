@@ -53,7 +53,7 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Include[StreamletContents]] = {
     include[u, StreamletContents](
-      streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
+      p => streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(using p)
     )
   }
 

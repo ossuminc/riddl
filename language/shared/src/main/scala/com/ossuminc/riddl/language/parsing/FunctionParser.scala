@@ -15,7 +15,7 @@ private[parsing] trait FunctionParser {
   this: VitalDefinitionParser & StatementParser =>
 
   private def functionInclude[u: P]: P[Include[FunctionContents]] = {
-    include[u, FunctionContents](functionDefinitions(_))
+    include[u, FunctionContents](p => functionDefinitions(using p))
   }
 
   def funcInput[u: P]: P[Aggregation] = {

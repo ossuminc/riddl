@@ -27,7 +27,7 @@ private[parsing] trait DomainParser {
   }
 
   private def domainInclude[u: P]: P[Include[DomainContents]] = {
-    include[u, DomainContents](domainDefinitions(_))
+    include[u, DomainContents](p => domainDefinitions(using p))
   }
 
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {
