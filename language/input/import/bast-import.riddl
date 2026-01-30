@@ -1,9 +1,10 @@
 // Test file for BAST import syntax
-import "utils/common-types.bast" as utils
-import "models/shared-domain.bast" as shared
+// Full import (brings in entire BAST file)
+import "utils/common-types.bast"
+import "models/shared-domain.bast"
 
 domain MyApp is {
-  // This domain would use imported types like:
-  // type UserId is utils.UUID
+  // This domain would use imported types
+} with {
   briefly "Application domain using imported BAST modules"
 }
