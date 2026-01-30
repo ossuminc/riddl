@@ -6,7 +6,11 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: January 29, 2026
+**Last Updated**: January 30, 2026
+
+**BLOCKED**: Scala version upgrade blocked by compiler infinite loop bug. See
+January 30, 2026 session log for details. The `merge` method's intersection type
+`Contents[CV & CV2]` triggers infinite recursion in the compiler's type system.
 
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface
 to Domain Definition Language. BAST serialization is **complete** (60 tests,
@@ -140,6 +144,66 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### January 30, 2026 (Scala Version Upgrade - BLOCKED)
+
+**Focus**: Upgrade from Scala 3.3.7 LTS to newer version to fix compiler issues
+
+**Goal**: Needed to upgrade Scala to avoid issues with Scala 3.7's changed underscore syntax
+for fastparse context-bound methods (`methodName(_)` → `p => methodName(using p)`).
+
+**Work Completed**:
+1. ✅ **Updated parser files to use explicit lambda syntax** - All parser files updated from
+   `include[u, XxxContents](xxxDefinitions(_))` to `include[u, XxxContents](p => xxxDefinitions(using p))`
+2. ✅ **Restructured AST.scala extension methods** - Moved `apply(n: Int)` extension into Contents
+   companion object to prevent namespace pollution affecting fastparse's method resolution
+3. ✅ **Created isolated test cases** - Verified fixes work in standalone Scala-CLI tests
+
+**Parser Files Modified** (explicit lambda syntax):
+- AdaptorParser.scala, ContextParser.scala, DomainParser.scala, EntityParser.scala
+- EpicParser.scala, FunctionParser.scala, ModuleParser.scala, ProjectorParser.scala
+- RepositoryParser.scala, RootParser.scala, SagaParser.scala, StreamingParser.scala
+- ExtensibleTopLevelParser.scala, GroupParser.scala
+
+**BLOCKER: Scala Compiler Infinite Loop**
+
+Both Scala 3.7.4 and 3.6.3 exhibit an infinite loop in the compiler's type system when
+compiling AST.scala. The jstack shows:
+
+```
+at dotty.tools.dotc.core.Types$Type.hasClassSymbol(Types.scala:648)
+at dotty.tools.dotc.core.Types$Type.hasClassSymbol(Types.scala:648)
+...
+at dotty.tools.dotc.core.SymDenotations$ClassDenotation.computeAndOrType$1
+```
+
+The `computeAndOrType` indicates the intersection type `Contents[CV & CV2]` in the `merge`
+extension method is triggering the bug. The compiler recurses infinitely when computing
+the type for:
+
+```scala
+extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
+  def merge(other: Contents[CV2]): Contents[CV & CV2] = ...
+```
+
+**Current State**:
+- `build.sbt` set to Scala 3.7.4 (7 modules)
+- Parser files updated with explicit lambda syntax
+- AST.scala extension methods restructured
+- Compilation hangs indefinitely due to compiler bug
+
+**Next Steps** (for user to research):
+1. Check if there's a Scala compiler issue filed for this specific pattern
+2. Try alternative formulations of the merge method that avoid the intersection type
+3. Test with Scala 3.5.x or earlier versions
+4. Consider if the merge method can use a different type strategy
+
+**Files with uncommitted changes**:
+- `build.sbt` - Scala 3.7.4 version settings
+- `language/shared/.../AST.scala` - Extension method restructuring
+- `language/shared/.../parsing/*.scala` - Explicit lambda syntax
+
+---
 
 ### January 29, 2026 (CI Build Fix)
 
