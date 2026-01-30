@@ -90,24 +90,30 @@ trait ParsingContext(using pc: PlatformContext) extends ParsingErrors {
 
   /** Parse a BAST import statement.
     *
-    * This creates a BASTImport node with the path and namespace. The actual BAST
-    * file loading happens later during a loading pass, avoiding circular dependencies
-    * between language and bast modules.
+    * This creates a BASTImport node with the path, optional selector, and optional alias.
+    * The actual BAST file loading happens later during a loading pass, avoiding circular
+    * dependencies between language and bast modules.
     *
     * @param loc The location of the import statement
     * @param path The path to the .bast file
+    * @param kind Optional: the kind of definition to import ("domain", "context", etc.)
+    * @param selector Optional: the name of the specific definition to import
+    * @param alias Optional: an alternate name for the imported definition
     * @return A BASTImport node (contents populated later by BASTLoader)
     */
   def doBASTImport(
     loc: At,
-    path: LiteralString
+    path: LiteralString,
+    kind: Option[String] = None,
+    selector: Option[Identifier] = None,
+    alias: Option[Identifier] = None
   )(implicit ctx: P[?]): BASTImport = {
     // Validate the path ends with .bast
     if !path.s.endsWith(".bast") then
       warning(loc, s"Import path '${path.s}' should end with .bast extension")
     end if
     // Create the BASTImport node - actual loading happens by BASTLoader
-    BASTImport(loc, path)
+    BASTImport(loc, path, kind, selector, alias)
   }
 
   def doIncludeParsing[CT <: RiddlValue](loc: At, path: String, rule: P[?] => P[Seq[CT]])(implicit

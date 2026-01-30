@@ -67,12 +67,49 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   }
 
-  /** Parse a BAST import statement: `import "path/to/file.bast"` */
-  def bastImport[u: P]: P[BASTImport] = {
+  /** Parse importable definition kinds for selective imports */
+  private def importableKind[u: P]: P[String] = {
+    P(
+      Keywords.keywords(
+        StringIn(
+          "domain", "context", "entity", "type", "epic", "saga",
+          "adaptor", "function", "projector", "repository", "streamlet",
+          "author", "module", "user", "connector", "constant", "invariant"
+        ).!
+      )
+    )
+  }
+
+  /** Keyword "as" for aliasing in selective imports */
+  private def as_[u: P]: P[Unit] = Keywords.keyword("as")
+
+  /** Parse a selective BAST import: `import domain X from "file.bast" [as Alias]` */
+  private def selectiveBastImport[u: P]: P[BASTImport] = {
+    P(
+      Index ~ Keywords.import_ ~ importableKind ~ identifier ~
+        from ~ literalString ~ (as_ ~ identifier).? ~ Index
+    ).map { case (start, kind, selector, path, alias, end) =>
+      doBASTImport(at(start, end), path, Some(kind), Some(selector), alias)
+    }
+  }
+
+  /** Parse a full BAST import: `import "path/to/file.bast"` */
+  private def fullBastImport[u: P]: P[BASTImport] = {
     P(Index ~ Keywords.import_ ~ literalString ~ Index).map {
       case (start, path, end) =>
         doBASTImport(at(start, end), path)
     }
+  }
+
+  /** Parse a BAST import statement (selective or full import)
+    *
+    * Syntax variants:
+    *   - Full import: `import "path/to/file.bast"`
+    *   - Selective import: `import domain X from "file.bast"`
+    *   - Aliased import: `import type T from "file.bast" as MyT`
+    */
+  def bastImport[u: P]: P[BASTImport] = {
+    P(selectiveBastImport | fullBastImport)
   }
 
   def undefined[u: P, RT](f: => RT): P[RT] = {
