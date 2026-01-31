@@ -198,10 +198,17 @@ extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
 3. Test with Scala 3.5.x or earlier versions
 4. Consider if the merge method can use a different type strategy
 
-**Files with uncommitted changes**:
-- `build.sbt` - Scala 3.7.4 version settings
-- `language/shared/.../AST.scala` - Extension method restructuring
-- `language/shared/.../parsing/*.scala` - Explicit lambda syntax
+**Commits** (pushed to GitHub):
+
+*development branch* (selective BAST imports, EBNF work):
+- `fd58e5a3` - Update NOTEBOOK.md with January 30 session status
+- `cfb38395` - Update EBNF grammar for selective BAST imports
+- `bc8faa6d` - Add selective import support to BAST module
+- `53fa68be` - Add selective BAST import parsing
+- `f153c508` - Add test files for BAST imports and EBNF validation
+
+*feature/scala-bug branch* (Scala 3.7.4 upgrade work - WIP):
+- `2ec7cc82` - WIP: Scala 3.7.4 upgrade - parser and AST changes
 
 ---
 
