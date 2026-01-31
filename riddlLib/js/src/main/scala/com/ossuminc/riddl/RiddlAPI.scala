@@ -7,6 +7,7 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.Pass
