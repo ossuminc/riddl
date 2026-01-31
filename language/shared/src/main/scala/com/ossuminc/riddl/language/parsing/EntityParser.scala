@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -23,7 +24,7 @@ private[parsing] trait EntityParser {
   }
 
   private def entityInclude[u: P]: P[Include[EntityContents]] = {
-    include[u, EntityContents](p => entityDefinitions(using p))
+    include[u, EntityContents]((p: P[?]) => entityDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   private def entityDefinitions[u: P]: P[Seq[EntityContents]] = {

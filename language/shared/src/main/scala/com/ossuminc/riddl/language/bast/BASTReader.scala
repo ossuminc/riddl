@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.bast
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{PlatformContext, URL}

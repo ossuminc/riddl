@@ -8,6 +8,7 @@ package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.{ExceptionUtils, CommonOptions}
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.At
 import fastparse.Parsed.{Failure, Success}

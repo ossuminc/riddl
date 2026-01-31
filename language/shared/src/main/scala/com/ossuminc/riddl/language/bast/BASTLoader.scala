@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.language.bast
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.{PlatformContext, URL}
@@ -93,7 +94,7 @@ object BASTLoader {
     BASTLoaderPlatform.loadSingleImport(bi, baseURL).flatMap { nebula =>
       if bi.isSelective then
         // Selective import: find the specific definition
-        val kind = bi.kind.get
+        val kind = bi.kindOpt.get
         val selectorName = bi.selector.get.value
         findDefinition(nebula, kind, selectorName) match {
           case Some(defn) =>

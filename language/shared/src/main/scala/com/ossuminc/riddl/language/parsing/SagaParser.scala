@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -25,7 +26,7 @@ private[parsing] trait SagaParser {
   }
 
   private def sagaInclude[u: P]: P[Include[SagaContents]] = {
-    include[u, SagaContents](p => sagaDefinitions(using p))
+    include[u, SagaContents]((p: P[?]) => sagaDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   private def sagaDefinitions[u: P]: P[Seq[SagaContents]] = {

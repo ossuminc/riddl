@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.language.bast
 
 import com.ossuminc.riddl.language.AST.Nebula
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.utils.{PlatformContext, URL}

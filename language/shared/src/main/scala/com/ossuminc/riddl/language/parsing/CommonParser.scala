@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.{PlatformContext, URL}
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
 import fastparse.*
 import fastparse.MultiLineWhitespace.*

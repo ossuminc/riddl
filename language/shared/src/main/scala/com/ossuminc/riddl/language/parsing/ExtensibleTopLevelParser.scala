@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Timer, URL}
@@ -145,9 +146,9 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     *   files parsed.
     */
   def parseRootWithURLs: Either[(Messages, Seq[URL]), (Root, Seq[URL])] = {
-    doParse[Root](p => root(using p)) match {
-      case l @ Left(messages) => Left(messages -> this.getURLs)
-      case r @ Right(root)    => Right(root -> this.getURLs)
+    doParse[Root]( (u: P[?])  => root(using u.asInstanceOf[P[Any]])) match {
+      case l @ Left(msgs) => Left(msgs -> this.getURLs)
+      case r @ Right(rt)    => Right(rt -> this.getURLs)
     }
   }
 

@@ -6,17 +6,19 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.utils.PlatformContext
 
 /** Parser rules for Adaptors */
 private[parsing] trait AdaptorParser(using PlatformContext) { this: ProcessorParser =>
 
   private def adaptorInclude[u: P]: P[Include[AdaptorContents]] = {
-    include[u, AdaptorContents](p => adaptorContents(using p))
+    include[u, AdaptorContents]((p: P[?]) => adaptorContents(using p.asInstanceOf[P[u]]))
   }
 
   private def adaptorContents[u: P]: P[Seq[AdaptorContents]] = {

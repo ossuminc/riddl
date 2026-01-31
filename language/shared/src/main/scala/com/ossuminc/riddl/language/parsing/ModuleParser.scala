@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -21,7 +22,7 @@ private[parsing] trait ModuleParser {
   this: DomainParser & CommonParser =>
 
   private def moduleInclude[u: P]: P[Include[ModuleContents]] = {
-    include[u, ModuleContents](p => moduleContents(using p))
+    include[u, ModuleContents]((p: P[?]) => moduleContents(using p.asInstanceOf[P[u]]))
   }
 
   def moduleContent[u: P]: P[ModuleContents] =

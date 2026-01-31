@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -15,7 +16,7 @@ private[parsing] trait FunctionParser {
   this: VitalDefinitionParser & StatementParser =>
 
   private def functionInclude[u: P]: P[Include[FunctionContents]] = {
-    include[u, FunctionContents](p => functionDefinitions(using p))
+    include[u, FunctionContents]((p: P[?]) => functionDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   def funcInput[u: P]: P[Aggregation] = {
