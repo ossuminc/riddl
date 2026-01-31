@@ -48,7 +48,6 @@ lazy val riddl: Project = Root("riddl", startYr = startYear, spdx ="Apache-2.0")
     commandsNative,
     riddlc,
     riddlcNative,
-    docsite,
     plugin
   )
 
