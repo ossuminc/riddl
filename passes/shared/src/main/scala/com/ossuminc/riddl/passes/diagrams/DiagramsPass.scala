@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.diagrams
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST, Messages}
+import com.ossuminc.riddl.language.{AST, Contents, Messages, *}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass

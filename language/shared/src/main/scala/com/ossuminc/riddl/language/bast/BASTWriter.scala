@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.bast
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.utils.URL
 import wvlet.airframe.ulid.ULID
@@ -359,6 +360,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_BAST_IMPORT)
     writeLocation(bi.loc)
     writeLiteralString(bi.path)
+    // Write selective import fields
+    writeOption(bi.kindOpt)((k: String) => writeString(k))
+    writeOption(bi.selector)((s: Identifier) => writeIdentifierInline(s))
+    writeOption(bi.alias)((a: Identifier) => writeIdentifierInline(a))
     // Contents are not serialized - they're loaded dynamically
     // by BASTLoader when this import is encountered
   }

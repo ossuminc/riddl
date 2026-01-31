@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, Timer, URL}
@@ -103,27 +104,27 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   /** Obtain the parser for any of the main AST definition types */
   protected def parserFor[T <: Definition: ClassTag]: P[?] => P[T] = {
     val parser: P[?] => P[?] = classTag[T].runtimeClass match {
-      case x if x == classOf[Adaptor]      => adaptor(_)
-      case x if x == classOf[Author]       => author(_)
-      case x if x == classOf[Connector]    => connector(_)
-      case x if x == classOf[Constant]     => constant(_)
-      case x if x == classOf[Context]      => context(_)
-      case x if x == classOf[Domain]       => domain(_)
-      case x if x == classOf[Entity]       => entity(_)
-      case x if x == classOf[Epic]         => epic(_)
-      case x if x == classOf[Function]     => function(_)
-      case x if x == classOf[Group]        => group(_)
-      case x if x == classOf[Invariant]    => invariant(_)
-      case x if x == classOf[Module]       => module(_)
-      case x if x == classOf[Nebula]       => nebula(_)
-      case x if x == classOf[Projector]    => projector(_)
-      case x if x == classOf[Relationship] => relationship(_)
-      case x if x == classOf[Repository]   => repository(_)
-      case x if x == classOf[Root]         => root(_)
-      case x if x == classOf[Saga]         => saga(_)
-      case x if x == classOf[Streamlet]    => streamlet(_)
-      case x if x == classOf[Type]         => typeDef(_)
-      case x if x == classOf[User]         => user(_)
+      case x if x == classOf[Adaptor]      => p => adaptor(using p)
+      case x if x == classOf[Author]       => p => author(using p)
+      case x if x == classOf[Connector]    => p => connector(using p)
+      case x if x == classOf[Constant]     => p => constant(using p)
+      case x if x == classOf[Context]      => p => context(using p)
+      case x if x == classOf[Domain]       => p => domain(using p)
+      case x if x == classOf[Entity]       => p => entity(using p)
+      case x if x == classOf[Epic]         => p => epic(using p)
+      case x if x == classOf[Function]     => p => function(using p)
+      case x if x == classOf[Group]        => p => group(using p)
+      case x if x == classOf[Invariant]    => p => invariant(using p)
+      case x if x == classOf[Module]       => p => module(using p)
+      case x if x == classOf[Nebula]       => p => nebula(using p)
+      case x if x == classOf[Projector]    => p => projector(using p)
+      case x if x == classOf[Relationship] => p => relationship(using p)
+      case x if x == classOf[Repository]   => p => repository(using p)
+      case x if x == classOf[Root]         => p => root(using p)
+      case x if x == classOf[Saga]         => p => saga(using p)
+      case x if x == classOf[Streamlet]    => p => streamlet(using p)
+      case x if x == classOf[Type]         => p => typeDef(using p)
+      case x if x == classOf[User]         => p => user(using p)
       case _ =>
         throw new RuntimeException(
           s"No parser defined for ${classTag[T].runtimeClass}"
@@ -136,7 +137,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     * @return
     *   Either the failure error messages or the Root parsed
     */
-  def parseRoot: Either[Messages, Root] = doParse[Root](root(_))
+  def parseRoot: Either[Messages, Root] = doParse[Root](p => root(using p))
 
   /** Parse the input expecting the contents of a Root node but also return the list of files that
     * were read
@@ -145,9 +146,9 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     *   files parsed.
     */
   def parseRootWithURLs: Either[(Messages, Seq[URL]), (Root, Seq[URL])] = {
-    doParse[Root](root(_)) match {
-      case l @ Left(messages) => Left(messages -> this.getURLs)
-      case r @ Right(root)    => Right(root -> this.getURLs)
+    doParse[Root]( (u: P[?])  => root(using u.asInstanceOf[P[Any]])) match {
+      case l @ Left(msgs) => Left(msgs -> this.getURLs)
+      case r @ Right(rt)    => Right(rt -> this.getURLs)
     }
   }
 
@@ -157,7 +158,7 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     * @return
     *   Either the failure messages or the Nebula of definitions
     */
-  def parseNebula: Either[Messages, Nebula] = doParse[Nebula](nebula(_))
+  def parseNebula: Either[Messages, Nebula] = doParse[Nebula](p => nebula(using p))
 
   /** Parse the input expecting definitions in any order, a nebula. Each definition must be
     * syntactically correct but the top level definitions do not require the hierarchical structure
@@ -167,21 +168,21 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     *   the list of parsed URLs
     */
   def parseNebulaWithURLs: Either[(Messages, Seq[URL]), (Nebula, Seq[URL])] = {
-    doParse[Nebula](nebula(_)) match {
+    doParse[Nebula](p => nebula(using p)) match {
       case l @ Left(messages) => Left(messages -> this.getURLs)
       case r @ Right(nebula)  => Right(nebula -> this.getURLs)
     }
   }
 
   def parseTokens: Either[Messages, List[Token]] = {
-    parse[List[Token]](input, parseAllTokens(_)) match
+    parse[List[Token]](input, p => parseAllTokens(using p)) match
       case Left((messages, _)) => Left(messages)
       case Right((list, _))    => Right(list)
     end match
   }
 
   def parseTokensAndText: Either[Messages, List[(Token, String)]] = {
-    parse[List[Token]](input, parseAllTokens(_)) match
+    parse[List[Token]](input, p => parseAllTokens(using p)) match
       case Left((messages, _)) => Left(messages)
       case Right((list, _)) =>
         Right(list.map { token => token -> token.loc.toText })

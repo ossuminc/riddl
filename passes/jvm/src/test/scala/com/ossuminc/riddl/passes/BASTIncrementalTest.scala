@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.Root
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.pc

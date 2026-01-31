@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -15,7 +16,7 @@ private[parsing] trait ProjectorParser {
   this: ProcessorParser & StreamingParser =>
 
   private def projectorInclude[u: P]: P[Include[ProjectorContents]] = {
-    include[u, ProjectorContents](projectorDefinitions(_))
+    include[u, ProjectorContents]((p: P[?]) => projectorDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   private def updates[u: P]: P[RepositoryRef] =

@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.{At, Contents, *}
 import com.ossuminc.riddl.passes.{Pass, PassesResult}
 import com.ossuminc.riddl.utils.PlatformContext
 

@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes
 import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.language.{AST, At, Contents, *}
 import com.ossuminc.riddl.passes.PassCreator
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}

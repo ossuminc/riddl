@@ -1,0 +1,542 @@
+// RIDDL Grammar in Lark format
+// Derived from ebnf-grammar.ebnf for automated regression testing
+// Last updated: January 30, 2026
+
+// NOTE: This file uses Lark syntax. Comments use // but rules use specific Lark notation.
+
+// Whitespace
+%import common.WS
+%ignore WS
+
+// Comments as ignored tokens
+INLINE_COMMENT: /\/\*([^*]|\*[^\/])*\*\//
+LINE_COMMENT: /\/\/[^\n]*/
+%ignore INLINE_COMMENT
+%ignore LINE_COMMENT
+
+// String literal - matches "..." with escape sequences
+LITERAL_STRING: /"([^"\\]|\\[\\\"aefnrt]|\\x[0-9a-fA-F]{2,8}|\\u[0-9a-fA-F]{4})*"/
+
+// Identifiers
+SIMPLE_IDENTIFIER: /[a-zA-Z][a-zA-Z0-9_-]*/
+QUOTED_IDENTIFIER: /'[^']+'/
+
+// Numbers
+INTEGER: /[+-]?[0-9]+/
+WHOLE_NUMBER: /[0-9]+/
+
+// Undefined marker
+UNDEFINED: "???"
+
+// Code block content (everything between triple backticks)
+CODE_CONTENT: /```(scala|java|python|mojo)[^`]*```/
+
+// Markdown line
+MARKDOWN_LINE: /\|[^\n]*/
+
+// URL components
+HOST_STRING: /[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*/
+URL_PATH: /[a-zA-Z0-9_.~!$&'()*+,;=\/-]+/
+
+// MIME type chars
+MIME_TYPE_CHARS: /[a-z.\-*]+/
+
+// Option name
+OPTION_NAME: /[a-z0-9_-]+/
+
+// ISO country code
+ISO_COUNTRY_CODE: /[A-Z]{3}/
+
+// Zone for zoned date/time
+ZONE: /[a-zA-Z0-9:.+-]+/
+
+// =============================================================================
+// BASIC ELEMENTS
+// =============================================================================
+
+identifier: SIMPLE_IDENTIFIER | QUOTED_IDENTIFIER
+
+path_identifier: identifier ("." identifier)*
+
+literal_string: LITERAL_STRING
+
+integer: INTEGER
+
+// Readability keywords (always optional)
+is: ("is" | "are" | ":" | "=")?
+by_as: "by" | "as"
+
+// =============================================================================
+// MAIN STRUCTURE
+// =============================================================================
+
+start: root_content+
+
+root_content: bast_import | module_content | module | root_include
+
+module_content: domain | author | riddl_comment
+
+root_include: "include" literal_string
+
+// BAST Import - supports both full and selective imports
+bast_import: selective_bast_import | full_bast_import
+full_bast_import: "import" literal_string
+selective_bast_import: "import" importable_kind identifier "from" literal_string ("as" identifier)?
+importable_kind: "domain" | "context" | "entity" | "type" | "epic" | "saga" | "adaptor" | "function" | "projector" | "repository" | "streamlet" | "author" | "module" | "user" | "connector" | "constant" | "invariant"
+
+// =============================================================================
+// MODULE
+// =============================================================================
+
+module: "module" identifier is "{" (module_content | module_include)+ "}" with_metadata?
+module_include: "include" literal_string
+
+// =============================================================================
+// DOMAIN
+// =============================================================================
+
+domain: "domain" identifier is "{" domain_body "}" with_metadata?
+domain_body: domain_definitions | UNDEFINED
+domain_definitions: domain_content+
+domain_content: vital_definition_contents | author | context | domain | user | epic | saga | import_def | bast_import | domain_include | riddl_comment
+
+import_def: "import" "domain" identifier "from" literal_string
+domain_include: "include" literal_string
+
+// =============================================================================
+// CONTEXT
+// =============================================================================
+
+context: "context" identifier is "{" context_body "}" with_metadata?
+context_body: context_definitions | UNDEFINED
+context_definitions: context_definition+
+context_definition: processor_definition_contents | entity | adaptor | group | saga | streamlet | projector | repository | connector | context_include | riddl_comment
+
+context_include: "include" literal_string
+
+// =============================================================================
+// ENTITY
+// =============================================================================
+
+entity: "entity" identifier is "{" entity_body "}" with_metadata?
+entity_body: entity_definitions | UNDEFINED
+entity_definitions: entity_content+
+entity_content: processor_definition_contents | state | entity_include
+
+state: "state" identifier ("of" | is) type_ref with_metadata?
+entity_include: "include" literal_string
+
+// =============================================================================
+// PROCESSOR DEFINITION CONTENTS
+// =============================================================================
+
+processor_definition_contents: vital_definition_contents | constant | invariant | function | handler | streamlet | connector | relationship
+
+vital_definition_contents: type_def | riddl_comment
+
+// =============================================================================
+// TYPE DEFINITION
+// =============================================================================
+
+type_def: def_of_type | def_of_type_kind_type
+
+def_of_type: "type" identifier is type_expression with_metadata?
+
+def_of_type_kind_type: aggregate_use_case identifier (scala_aggregate_definition | (is (aliased_type_expression | aggregation))) with_metadata?
+
+aggregate_use_case: "type" | "command" | "query" | "event" | "result" | "record" | "graph" | "table"
+
+// =============================================================================
+// TYPE EXPRESSIONS
+// =============================================================================
+
+type_expression: cardinality
+
+cardinality: "many"? "optional"? type_expression_base ("?" | "*" | "+")?
+
+type_expression_base: predefined_types
+    | pattern_type
+    | unique_id_type
+    | enumeration
+    | sequence_type
+    | mapping_from_to
+    | a_set_type
+    | graph_type
+    | table_type
+    | replica_type
+    | range_type
+    | decimal_type
+    | alternation
+    | entity_reference_type
+    | aggregation
+    | aggregate_use_case_type_expression
+    | aliased_type_expression
+
+// =============================================================================
+// PREDEFINED TYPES
+// =============================================================================
+
+predefined_types: string_type
+    | currency_type
+    | url_type
+    | integer_predef_types
+    | real_predef_types
+    | time_predef_types
+    | zoned_predef_types
+    | decimal_type
+    | other_predef_types
+
+string_type: "String" ("(" integer? "," integer? ")")?
+
+currency_type: "Currency" "(" ISO_COUNTRY_CODE ")"
+
+url_type: "URL" ("(" literal_string ")")?
+
+integer_predef_types: "Boolean" | "Integer" | "Natural" | "Whole"
+
+real_predef_types: "Current" | "Length" | "Luminosity" | "Mass" | "Mole" | "Number" | "Real" | "Temperature"
+
+time_predef_types: "Duration" | "DateTime" | "Date" | "TimeStamp" | "Time"
+
+zoned_predef_types: ("ZonedDate" | "ZonedDateTime") "(" ZONE? ")"
+
+other_predef_types: "Abstract" | "Location" | "Nothing" | "UUID" | "UserId"
+
+// =============================================================================
+// TYPE EXPRESSION VARIANTS
+// =============================================================================
+
+pattern_type: "Pattern" "(" (literal_string+ | UNDEFINED)? ")"
+
+unique_id_type: "Id" "(" "entity"? path_identifier ")"
+
+enumeration: "any" "of"? "{" enumerators "}"
+enumerators: (enumerator ","?)* | UNDEFINED
+enumerator: identifier enum_value? with_metadata?
+enum_value: "(" integer ")"
+
+sequence_type: "sequence" "of" type_expression
+
+mapping_from_to: "mapping" "from" type_expression "to" type_expression
+
+a_set_type: "set" "of" type_expression
+
+graph_type: "graph" "of" type_expression
+
+table_type: "table" "of" type_expression "of" "[" integer ("," integer)* "]"
+
+replica_type: "replica" "of" replica_type_expression
+replica_type_expression: integer_predef_types | mapping_from_to | a_set_type
+
+range_type: "range" "(" integer? "," integer? ")"
+
+decimal_type: "Decimal" "(" integer "," integer ")"
+
+alternation: "one" "of"? "{" (aliased_type_expression (("or" | "|" | ",") aliased_type_expression)* | UNDEFINED)? "}"
+
+entity_reference_type: "reference" "to"? "entity"? path_identifier
+
+aggregation: "{" aggregate_definitions "}"
+aggregate_definitions: (aggregate_content ","?)* | UNDEFINED
+aggregate_content: field | method | riddl_comment
+
+aggregate_use_case_type_expression: aggregate_use_case aggregation
+
+aliased_type_expression: aggregate_use_case? path_identifier
+
+scala_aggregate_definition: "(" (field ","?)* ")"
+
+// =============================================================================
+// FIELDS AND METHODS
+// =============================================================================
+
+field: identifier is field_type_expression with_metadata?
+
+method: identifier "(" arguments? ")" is field_type_expression with_metadata?
+
+arguments: method_argument ("," method_argument)*
+method_argument: identifier ":" field_type_expression
+
+field_type_expression: cardinality
+
+// =============================================================================
+// FUNCTION
+// =============================================================================
+
+function: "function" identifier is "{" function_body "}" with_metadata?
+function_body: func_input? func_output? function_definitions
+func_input: "requires" aggregation
+func_output: "returns" aggregation
+function_definitions: (UNDEFINED | (vital_definition_contents | function | function_include | statement))*
+function_include: "include" literal_string
+
+// =============================================================================
+// REFERENCES
+// =============================================================================
+
+type_ref: aggregate_use_case? path_identifier
+field_ref: "field" path_identifier
+constant_ref: "constant" path_identifier
+message_ref: command_ref | event_ref | query_ref | result_ref | record_ref
+command_ref: "command" path_identifier
+event_ref: "event" path_identifier
+query_ref: "query" path_identifier
+result_ref: "result" path_identifier
+record_ref: "record" path_identifier
+adaptor_ref: "adaptor" path_identifier
+entity_ref: "entity" path_identifier
+function_ref: "function" path_identifier
+handler_ref: "handler" path_identifier
+state_ref: "state" path_identifier
+context_ref: "context" path_identifier
+outlet_ref: "outlet" path_identifier
+inlet_ref: "inlet" path_identifier
+streamlet_ref: ("source" | "sink" | "flow" | "merge" | "split" | "router" | "void") path_identifier
+projector_ref: "projector" path_identifier
+repository_ref: "repository" path_identifier
+saga_ref: "saga" path_identifier
+epic_ref: "epic" path_identifier
+user_ref: "user" path_identifier
+output_ref: output_aliases path_identifier
+input_ref: input_aliases path_identifier
+group_ref: group_aliases path_identifier
+author_ref: "by" "author" path_identifier
+processor_ref: adaptor_ref | context_ref | entity_ref | projector_ref | repository_ref | streamlet_ref
+any_interaction_ref: processor_ref | saga_ref | input_ref | output_ref | group_ref | user_ref
+
+// =============================================================================
+// HANDLERS
+// =============================================================================
+
+handler: "handler" identifier is "{" handler_body "}" with_metadata?
+handler_body: (UNDEFINED | handler_contents)?
+handler_contents: (on_clause | riddl_comment)*
+on_clause: on_init_clause | on_other_clause | on_term_clause | on_message_clause
+on_init_clause: "on" "init" is pseudo_code_block with_metadata?
+on_other_clause: "on" "other" is pseudo_code_block with_metadata?
+on_term_clause: "on" "term" is pseudo_code_block with_metadata?
+on_message_clause: "on" message_ref ("from" (identifier ":")? message_origins)? is pseudo_code_block with_metadata?
+message_origins: inlet_ref | processor_ref | user_ref | epic_ref
+
+// =============================================================================
+// STATEMENTS
+// =============================================================================
+
+statement: when_statement
+    | match_statement
+    | send_statement
+    | tell_statement
+    | the_set_statement
+    | let_statement
+    | prompt_statement
+    | code_statement
+    | error_statement
+    | riddl_comment
+
+entity_statement: statement | morph_statement | become_statement
+
+// Control flow
+when_statement: "when" when_condition "then" pseudo_code_block ("else" pseudo_code_block)? "end"
+when_condition: literal_string | ("!"? identifier)
+match_statement: "match" literal_string "{" match_case+ ("default" "{" statement* "}")? "}"
+match_case: "case" literal_string "{" statement* "}"
+
+// Message operations
+send_statement: "send" message_ref "to" (outlet_ref | inlet_ref)
+tell_statement: "tell" message_ref "to" processor_ref
+
+// Variable operations
+the_set_statement: "set" field_ref "to" literal_string
+let_statement: "let" identifier "=" literal_string
+
+// General statements
+prompt_statement: "prompt" literal_string
+code_statement: CODE_CONTENT
+error_statement: "error" literal_string
+
+// Entity state transitions
+morph_statement: "morph" entity_ref "to" state_ref "with" message_ref
+become_statement: "become" entity_ref "to" handler_ref
+
+// Pseudo code block
+pseudo_code_block: UNDEFINED | statement+ | ("{" statement* "}")
+
+// =============================================================================
+// CONSTANTS AND INVARIANTS
+// =============================================================================
+
+constant: "constant" identifier is type_expression "=" literal_string with_metadata?
+invariant: "invariant" identifier is (UNDEFINED | literal_string)? with_metadata?
+
+// =============================================================================
+// RELATIONSHIP
+// =============================================================================
+
+relationship: "relationship" identifier "to" processor_ref by_as relationship_cardinality ("label" by_as literal_string)? with_metadata?
+relationship_cardinality: "1:1" | "1:N" | "N:1" | "N:N"
+
+// =============================================================================
+// STREAMLETS
+// =============================================================================
+
+streamlet: source | sink | flow | merge | split | router | void_streamlet
+
+source: "source" identifier is "{" streamlet_body "}" with_metadata?
+sink: "sink" identifier is "{" streamlet_body "}" with_metadata?
+flow: "flow" identifier is "{" streamlet_body "}" with_metadata?
+merge: "merge" identifier is "{" streamlet_body "}" with_metadata?
+split: "split" identifier is "{" streamlet_body "}" with_metadata?
+router: "router" identifier is "{" streamlet_body "}" with_metadata?
+void_streamlet: "void" identifier is "{" streamlet_body "}" with_metadata?
+
+streamlet_body: (UNDEFINED | streamlet_definition)?
+streamlet_definition: (inlet | outlet | streamlet_include | processor_definition_contents)*
+streamlet_include: "include" literal_string
+
+inlet: "inlet" identifier is type_ref with_metadata?
+outlet: "outlet" identifier is type_ref with_metadata?
+
+connector: "connector" identifier is connector_definitions with_metadata?
+connector_definitions: (("{" "from" outlet_ref "to" inlet_ref "}") | ("(" "from" outlet_ref "to" inlet_ref ")") | ("from" outlet_ref "to" inlet_ref))?
+
+// =============================================================================
+// GROUPS (UI)
+// =============================================================================
+
+group: group_aliases identifier is "{" (UNDEFINED | group_definitions)? "}" with_metadata?
+group_definitions: (group | contained_group | shown_by | group_output | group_input | riddl_comment)*
+contained_group: "contains" identifier by_as group_ref with_metadata?
+
+group_output: output_aliases identifier presentation_aliases (literal_string | constant_ref | type_ref) output_definitions? with_metadata?
+group_input: input_aliases identifier acquisition_aliases type_ref input_definitions? with_metadata?
+output_definitions: (is "{" (UNDEFINED | (group_output | type_ref)*) "}")?
+input_definitions: (is "{" (UNDEFINED | group_input*) "}")?
+
+group_aliases: "group" | "page" | "pane" | "dialog" | "menu" | "popup" | "frame" | "column" | "window" | "section" | "tab" | "flow" | "block"
+output_aliases: "output" | "document" | "list" | "table" | "graph" | "animation" | "picture"
+input_aliases: "input" | "form" | "text" | "button" | "picklist" | "selector" | "item"
+presentation_aliases: "presents" | "shows" | "displays" | "writes" | "emits"
+acquisition_aliases: "acquires" | "reads" | "takes" | "accepts" | "admits" | "initiates" | "submits" | "triggers" | "activates" | "starts"
+
+// =============================================================================
+// REPOSITORY
+// =============================================================================
+
+repository: "repository" identifier is "{" repository_body "}" with_metadata?
+repository_body: (UNDEFINED | repository_definitions)?
+repository_definitions: (processor_definition_contents | schema | repository_include)*
+repository_include: "include" literal_string
+
+schema: "schema" identifier is schema_kind data* link* index* with_metadata?
+schema_kind: "flat" | "relational" | "time-series" | "graphical" | "hierarchical" | "star" | "document" | "columnar" | "vector" | "other"
+data: "of" identifier by_as type_ref
+link: "link" identifier by_as field_ref "to" field_ref
+index: "index" "on" field_ref
+
+// =============================================================================
+// ADAPTOR
+// =============================================================================
+
+adaptor: "adaptor" identifier adaptor_direction context_ref is "{" adaptor_body "}" with_metadata?
+adaptor_direction: "from" | "to"
+adaptor_body: (UNDEFINED | adaptor_contents)?
+adaptor_contents: (processor_definition_contents | handler | adaptor_include)*
+adaptor_include: "include" literal_string
+
+// =============================================================================
+// PROJECTOR
+// =============================================================================
+
+projector: "projector" identifier is "{" projector_body "}" with_metadata?
+projector_body: (UNDEFINED | projector_definitions)?
+projector_definitions: (processor_definition_contents | updates | projector_include)*
+projector_include: "include" literal_string
+updates: "updates" repository_ref
+
+// =============================================================================
+// SAGA
+// =============================================================================
+
+saga: "saga" identifier is "{" saga_body "}" with_metadata?
+saga_body: func_input? func_output? saga_definitions*
+saga_definitions: saga_step | inlet | outlet | function | saga_include
+saga_include: "include" literal_string
+saga_step: "step" identifier is pseudo_code_block "reverted" "by"? pseudo_code_block with_metadata?
+
+// =============================================================================
+// EPIC
+// =============================================================================
+
+epic: "epic" identifier is "{" epic_body "}" with_metadata?
+epic_body: user_story epic_definitions*
+epic_definitions: vital_definition_contents | use_case | shown_by | epic_include
+epic_include: "include" literal_string
+
+use_case: "case" identifier is "{" user_story (UNDEFINED | interactions)? "}" with_metadata?
+user_story: user_ref "wants" "to"? literal_string "so" "that"? literal_string
+interactions: interaction+
+interaction: parallel_interactions | optional_interactions | sequential_interactions | step_interactions
+
+parallel_interactions: "parallel" "{" interactions "}"
+optional_interactions: "optional" "{" interactions "}"
+sequential_interactions: "sequence" "{" interactions "}"
+step_interactions: "step" (focus_on_group_step | direct_user_to_url | select_input_step | take_input_step | show_output_step | self_processing_step | send_message_step | arbitrary_step | vague_step)
+
+focus_on_group_step: "focus" user_ref "on" group_ref with_metadata?
+direct_user_to_url: "direct" user_ref "to" http_url with_metadata?
+select_input_step: user_ref "selects" input_ref with_metadata?
+take_input_step: "take" input_ref "from" user_ref with_metadata?
+show_output_step: "show" output_ref "to" user_ref with_metadata?
+self_processing_step: "for" any_interaction_ref is literal_string with_metadata?
+send_message_step: "send" message_ref "from" any_interaction_ref "to" processor_ref with_metadata?
+arbitrary_step: "from" any_interaction_ref literal_string "to"? any_interaction_ref with_metadata?
+vague_step: is literal_string literal_string literal_string with_metadata?
+
+// =============================================================================
+// USER
+// =============================================================================
+
+user: "user" identifier is literal_string with_metadata?
+
+// =============================================================================
+// AUTHOR
+// =============================================================================
+
+author: "author" identifier is "{" author_body? "}" with_metadata?
+author_body: UNDEFINED | ("name" is literal_string "email" is literal_string ("organization" is literal_string)? ("title" is literal_string)? ("url" is http_url)?)
+
+// =============================================================================
+// URLs
+// =============================================================================
+
+http_url: ("http" | "https") "://" HOST_STRING (":" WHOLE_NUMBER)? "/" URL_PATH?
+
+// =============================================================================
+// METADATA
+// =============================================================================
+
+with_metadata: ("with" "{" (UNDEFINED | meta_data*) "}")?
+meta_data: brief_description | description | term | option | author_ref | attachment | ulid_attachment | riddl_comment
+
+brief_description: ("briefly" | "brief") by_as? literal_string
+description: ("described" | "explained" | "description" | "explanation") ((by_as doc_block) | ("at" http_url) | ("in" "file" literal_string))
+
+term: "term" identifier is doc_block
+option: "option" is? OPTION_NAME ("(" (literal_string ("," literal_string)*)? ")")?
+
+attachment: "attachment" identifier is mime_type (("in" "file" literal_string) | (by_as literal_string))
+ulid_attachment: "attachment" "ULID" is literal_string
+
+doc_block: ("{" (markdown_lines | literal_strings | UNDEFINED)? "}") | literal_string
+markdown_lines: MARKDOWN_LINE+
+literal_strings: literal_string+
+
+shown_by: "shown" "by" "{" http_url+ "}"
+
+mime_type: ("application" | "audio" | "example" | "font" | "image" | "model" | "text" | "video") "/" MIME_TYPE_CHARS
+
+// =============================================================================
+// COMMENTS (as syntax elements, kept in parse tree)
+// =============================================================================
+
+riddl_comment: INLINE_COMMENT | LINE_COMMENT

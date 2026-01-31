@@ -6,8 +6,8 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.AST.Contents.unapply
 import com.ossuminc.riddl.language.AST.{WithContexts, WithDomains, WithModules}
+import com.ossuminc.riddl.language.{Contents, given}
 import com.ossuminc.riddl.utils.{Await, PlatformContext, URL}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{Keyword, RiddlParserInput}
@@ -104,121 +104,7 @@ object AST:
 
   end RiddlValue
 
-  /** A representation of the editable contents of a definition
-    * @tparam CV
-    *   The upper bound of the values that can be contained (RiddlValue)
-    */
-  opaque type Contents[CV <: RiddlValue] = mutable.ArrayBuffer[CV]
-
-  object Contents:
-    def dempty[T <: RiddlValue]: Contents[T] = new mutable.ArrayBuffer[T](2)
-    def empty[T <: RiddlValue](
-      initialSize: Int = mutable.ArrayBuffer.DefaultInitialSize
-    ): Contents[T] =
-      new mutable.ArrayBuffer[T](initialSize)
-    def apply[T <: RiddlValue](items: T*): Contents[T] = mutable.ArrayBuffer[T](items: _*)
-    def unapply[T <: RiddlValue](contents: Contents[T]): SeqFactory.UnapplySeqWrapper[T] =
-      mutable.ArrayBuffer.unapplySeq[T](contents)
-  end Contents
-
-  extension [CV <: RiddlValue](sequence: Seq[CV])
-    def toContents: Contents[CV] = Contents[CV](sequence: _*)
-    def find(name: String): Option[CV] =
-      sequence.find(d =>
-        d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name
-      )
-
-  /** The extension of a mutable ArrayBuffer of [[RiddlValue]] for ease of manipulating that content
-    */
-  extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
-
-    inline def length: Int = container.length
-    inline def size: Int = container.length
-    inline def apply(n: Int): CV = container.apply(n)
-    inline def head: CV = container.apply(0)
-    inline def indexOf[B >: CV](elem: B): Int = container.indexOf[B](elem, 0)
-    inline def splitAt(n: Int): (Contents[CV], Contents[CV]) = container.splitAt(n)
-    inline def indices: Range = Range(0, container.length)
-    inline def foreach[T](f: CV => T): Unit = container.foreach(f)
-    inline def forall(p: CV => Boolean): Boolean = container.forall(p)
-    inline def update(index: Int, elem: CV): Unit = container.update(index, elem)
-    inline def foldLeft[B](z: B)(op: (B, CV) => B): B = container.foldLeft[B](z)(op)
-    inline def isEmpty: Boolean = container.isEmpty
-    inline def nonEmpty: Boolean = !isEmpty
-    inline def map[B <: RiddlValue](f: CV => B): Contents[B] = container.map[B](f)
-    inline def flatMap[B <: RiddlValue](f: CV => IterableOnce[B]): Contents[B] =
-      container.flatMap[B](f)
-
-    inline def startsWith[B >: CV](that: IterableOnce[B], offset: Int = 0): Boolean =
-      container.startsWith[B](that)
-
-    def toSet[B >: CV <: RiddlValue]: immutable.Set[B] = immutable.Set.from(container)
-    def toSeq: immutable.Seq[CV] = container.toSeq
-    def toIterator: Iterator[CV] = container.toIterator
-
-    inline def dropRight(howMany: Int): Contents[CV] = container.dropRight(howMany)
-    inline def drop(howMany: Int): Contents[CV] = container.drop(howMany)
-    inline def append(elem: CV): Unit = container.append(elem)
-    inline def prepend(elem: CV): Unit = container.prepend(elem)
-    inline def ++(suffix: IterableOnce[CV]): Contents[CV] =
-      container.concat[CV](suffix).asInstanceOf[Contents[CV]]
-
-    // @`inline` final def ++ [B >: A](xs: => IterableOnce[B]): Iterator[B] = concat(xs)
-    /** Merge to Contents of varying upper bound constraints into a single combined container */
-    def merge(other: Contents[CV2]): Contents[CV & CV2] =
-      val result = Contents.empty[CV & CV2](container.size + other.size)
-      result ++= container.asInstanceOf[Contents[CV & CV2]]
-      result ++= other.asInstanceOf[Contents[CV & CV2]]
-      result
-    end merge
-
-    /** Extract the elements of the [[Contents]] that have identifiers (are definitions,
-      * essentially)
-      */
-    private def identified: Contents[CV] = container.filter(_.isIdentified)
-
-    /** Extract the elements of the [[Contents]] that are the type of the type parameter T
-      *
-      * @tparam T
-      *   THe kind of [[RiddlValue]] sought in the [[Contents]]
-      *
-      * @return
-      *   The Seq of type `T` found in the [[Contents]]
-      */
-    def filter[T <: RiddlValue: ClassTag]: Seq[T] =
-      val theClass = classTag[T].runtimeClass
-      container.filter(x => theClass.isAssignableFrom(x.getClass)).map(_.asInstanceOf[T]).toSeq
-    end filter
-
-    /** Returns the elements of the [[Contents]] that are [[VitalDefinition]]s */
-    def vitals: Seq[VitalDefinition[?]] = container.filter[VitalDefinition[?]]
-
-    /** Returns the elememts of the [[Contents]] that are [[Processor]]s */
-    def processors: Seq[Processor[?]] = container.filter[Processor[?]]
-
-    /** Find the first element of the [[Contents]] that has the provided `name` */
-    def find(name: String): Option[CV] =
-      identified.find(d =>
-        d.isInstanceOf[WithIdentifier] && d.asInstanceOf[WithIdentifier].id.value == name
-      )
-
-    /** Find the first element of the [[Contents]] that have identifiers */
-    def identifiedValues: Seq[WithIdentifier] =
-      container
-        .filter(d => d.isInstanceOf[WithIdentifier])
-        .map(_.asInstanceOf[WithIdentifier])
-        .toSeq
-
-    /** Returns the [[Include]] elements of [[Contents]] */
-    def includes: Seq[Include[?]] = container.filter[Include[?]].map(_.asInstanceOf[Include[?]])
-
-    /** find the elements of the [[Contents]] that are [[Definition]]s */
-    def definitions: Definitions = container.filter[Definition].map(_.asInstanceOf[Definition])
-
-    /** find the elemetns of the [[Contents]] that are [[Branch]]s */
-    def parents: Seq[Branch[CV]] = container.filter[Branch[CV]]
-
-  end extension
+  // Contents type and extensions defined in Contents.scala (package level)
 
   /** Base trait of any [[RiddlValue]] that Contains other [[RiddlValue]]
     *
@@ -824,8 +710,8 @@ object AST:
   type OccursInContext = OccursInProcessor | Entity | Adaptor | Group | Saga | Projector |
     Repository
 
-  /** Type of definitions that occur in a [[Context]] with [[Include]] */
-  type ContextContents = OccursInContext | Include[OccursInContext]
+  /** Type of definitions that occur in a [[Context]] with [[Include]] and [[BASTImport]] */
+  type ContextContents = OccursInContext | Include[OccursInContext] | BASTImport
 
   /** Type of definitions that occur in a [[Group]] */
   type OccursInGroup = Group | ContainedGroup | Input | Output
@@ -1061,29 +947,52 @@ object AST:
 
   /** An import of a BAST (Binary AST) file.
     *
-    * Imports bring in pre-compiled definitions from .bast files. Can appear at the root level
-    * or inside a domain. The imported definitions become children of the containing scope and
-    * are accessible via normal domain path resolution.
+    * Imports bring in pre-compiled definitions from .bast files. Can appear at the root level,
+    * inside a domain, or inside a context. The imported definitions become children of the
+    * containing scope and are accessible via normal domain path resolution.
     *
-    * Syntax: `import "path/to/file.bast"`
+    * Syntax variants:
+    *   - Full import: `import "path/to/file.bast"`
+    *   - Selective import: `import domain X from "file.bast"`
+    *   - Aliased import: `import type T from "file.bast" as MyT`
     *
     * @param loc
     *   The location of the import statement in the source
     * @param path
     *   The path to the .bast file to import
+    * @param kind
+    *   Optional: the kind of definition to import ("domain", "context", "type", etc.)
+    * @param selector
+    *   Optional: the name of the specific definition to import
+    * @param alias
+    *   Optional: an alternate name for the imported definition
     * @param contents
     *   The loaded Nebula contents from the BAST file (populated by BASTLoader)
     */
   case class BASTImport(
     loc: At = At.empty,
     path: LiteralString,
+    kindOpt: Option[String] = None,
+    selector: Option[Identifier] = None,
+    alias: Option[Identifier] = None,
     contents: Contents[NebulaContents] = Contents.empty[NebulaContents]()
   ) extends Container[NebulaContents]:
     type ContentType = NebulaContents
 
+    override def kind: String = kindOpt.getOrElse(super.kind)
     override def isRootContainer: Boolean = false
 
-    def format: String = s"""import "${path.s}""""
+    /** Check if this is a selective import (imports a specific definition) */
+    def isSelective: Boolean = kindOpt.isDefined && selector.isDefined
+
+    def format: String =
+      if isSelective then
+        val kindStr = kindOpt.getOrElse("")
+        val selectorStr = selector.map(_.value).getOrElse("")
+        val aliasStr = alias.map(a => s" as ${a.value}").getOrElse("")
+        s"""import $kindStr $selectorStr from "${path.s}"$aliasStr"""
+      else
+        s"""import "${path.s}""""
     override def toString: String = format
   end BASTImport
 
@@ -1127,7 +1036,7 @@ object AST:
   object Root:
 
     /** The value to use for an empty [[Root]] instance */
-    val empty: Root = apply(At.empty, mutable.ArrayBuffer.empty[RootContents])
+    def empty: Root = Root(At.empty, Contents.apply[RootContents]())
   end Root
   ////////////////////////////////////////////////////////////////////////////////////////// NEBULA
 
@@ -1478,7 +1387,7 @@ object AST:
   @JSExportTopLevel("Enumeration")
   case class Enumeration(loc: At, enumerators: Contents[Enumerator]) extends IntegerTypeExpression:
     override def format: String = "{ " + enumerators
-      .map(_.format)
+      .toSeq.map(_.format)
       .mkString(",") + " }"
   end Enumeration
 
@@ -1493,7 +1402,7 @@ object AST:
   @JSExportTopLevel("Alternation")
   case class Alternation(loc: At, of: Contents[AliasedTypeExpression]) extends TypeExpression:
     override def format: String =
-      s"one of { ${of.map(_.format).mkString(", ")} }"
+      s"one of { ${of.toSeq.map(_.format).mkString(", ")} }"
   end Alternation
 
   /** A type expression for a sequence of some other type expression
@@ -1669,7 +1578,7 @@ object AST:
     /** Thelist of aggregated [[Method]] */
     def methods: Seq[Method] = contents.filter[Method]
 
-    override def format: String = s"{ ${contents.map(_.format).mkString(", ")} }"
+    override def format: String = s"{ ${contents.toSeq.map(_.format).mkString(", ")} }"
     override def isAssignmentCompatible(other: TypeExpression): Boolean =
       other match
         case oate: AggregateTypeExpression =>

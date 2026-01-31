@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.{Root, Nebula}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.bast.{ByteBufferReader, MAGIC_BYTES, VERSION, HEADER_SIZE, Flags}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{Pass, PassInput, PassesResult, BASTWriterPass, BASTOutput}

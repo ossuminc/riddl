@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.utils.FileBuilder
 import fastparse.ParserInputSource.fromReadable

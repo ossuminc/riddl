@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.utils.pc
 import com.ossuminc.riddl.language.AST.{Root, Parents, RootContents}
 import com.ossuminc.riddl.language.parsing.{

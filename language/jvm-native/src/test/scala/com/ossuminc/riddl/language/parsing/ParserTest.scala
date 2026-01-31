@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.utils.{Await, PathUtils, PlatformContext, ec, pc}

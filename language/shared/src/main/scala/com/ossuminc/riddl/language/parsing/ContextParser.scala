@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -16,7 +17,7 @@ private[parsing] trait ContextParser {
     StreamingParser & GroupParser =>
 
   private def contextInclude[u: P]: P[Include[ContextContents]] = {
-    include[u, ContextContents](contextDefinitions(_))
+    include[u, ContextContents]((p: P[?]) => contextDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   private def contextDefinition[u: P]: P[ContextContents] = {
@@ -29,8 +30,8 @@ private[parsing] trait ContextParser {
       adaptor | projector |
       // GROUP 4: Moderate - orchestration and streaming (10-15%)
       saga | streamlet |
-      // GROUP 5: Less common - UI, connectivity, includes (5-10%)
-      group | connector | contextInclude | comment
+      // GROUP 5: Less common - UI, connectivity, includes, imports (5-10%)
+      group | connector | contextInclude | bastImport | comment
     ).asInstanceOf[P[ContextContents]]
   }
 

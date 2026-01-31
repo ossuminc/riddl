@@ -281,7 +281,7 @@ updates = "updates" repository_ref ;
 (* Saga-related *)
 saga = "saga" identifier is "{" saga_body "}" [with_metadata] ;
 saga_body = [func_input] [func_output] {saga_definitions} ;
-saga_definitions = {saga_step | inlet | outlet | function | term | saga_include | option} ;
+saga_definitions = {saga_step | inlet | outlet | function | saga_include} ;
 saga_include = "include" literal_string ;
 saga_step = "step" identifier is pseudo_code_block "reverted" ["by"] pseudo_code_block [with_metadata] ;
 

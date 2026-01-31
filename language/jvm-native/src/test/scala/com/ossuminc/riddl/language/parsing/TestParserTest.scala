@@ -25,7 +25,7 @@ class TestParserTest extends ParsingTest {
     val tp = TestParser(input)
 
     "provide expect" in { (td: TestData) =>
-      tp.expect[Root](tp.root) match {
+      tp.expect[Root](p => tp.root(using p)) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root: Root) =>
           val domains = AST.getTopLevelDomains(root)
@@ -36,7 +36,7 @@ class TestParserTest extends ParsingTest {
     }
 
     "provide parse" in { (td: TestData) =>
-      tp.parse[Root, Domain](tp.root, AST.getTopLevelDomains(_).head) match {
+      tp.parse[Root, Domain](p => tp.root(using p), AST.getTopLevelDomains(_).head) match {
         case Left(messages) => fail(messages.justErrors.format)
         case Right((domain: Domain, rpi: RiddlParserInput)) =>
           rpi must be(input)

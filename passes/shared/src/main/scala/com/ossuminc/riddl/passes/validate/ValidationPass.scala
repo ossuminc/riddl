@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.{Finder, Messages}
+import com.ossuminc.riddl.language.{Contents, Finder, Messages, *}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.*

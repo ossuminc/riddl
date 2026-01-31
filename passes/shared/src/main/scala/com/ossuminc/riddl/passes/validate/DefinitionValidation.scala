@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.language.{AST, At, Contents, *}
 import com.ossuminc.riddl.language.Messages.*
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.utils.PlatformContext

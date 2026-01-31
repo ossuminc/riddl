@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
 
 /** Deep structural comparison utilities for AST nodes

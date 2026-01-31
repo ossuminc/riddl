@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -46,7 +47,8 @@ private[parsing] trait GroupParser extends CommonParser :
 
   private def outputDefinitions[u: P]: P[Seq[OccursInOutput]] = {
     P(
-      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) | (groupOutput | typeRef).rep(1)) ~ close
+      is ~ open ~ (undefined(Seq.empty[OccursInOutput]) |
+        (groupOutput | typeRef).asInstanceOf[P[OccursInOutput]].rep(1)) ~ close
     ).?.map {
       case Some(definitions: Seq[OccursInOutput]) => definitions
       case None                                   => Seq.empty[OccursInOutput]

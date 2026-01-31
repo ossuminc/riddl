@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST.LiteralString
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.utils.URL
 import fastparse.*
 import fastparse.NoWhitespace.*

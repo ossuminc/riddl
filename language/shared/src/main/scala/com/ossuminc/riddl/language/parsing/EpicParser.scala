@@ -7,7 +7,8 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.utils.URL
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
@@ -147,7 +148,7 @@ private[parsing] trait EpicParser {
   }
 
   private def epicInclude[u: P]: P[Include[EpicContents]] = {
-    include[u, EpicContents](epicDefinitions(_))
+    include[u, EpicContents]((p: P[?]) => epicDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   private def epicDefinitions[u: P]: P[Seq[EpicContents]] = {

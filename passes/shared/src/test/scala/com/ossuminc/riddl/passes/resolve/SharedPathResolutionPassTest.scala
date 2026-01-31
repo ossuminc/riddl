@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.resolve
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.{At, Contents, Messages, *}
 import com.ossuminc.riddl.passes.{PassInput, PassesOutput}
 import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.{Assertion, TestData}

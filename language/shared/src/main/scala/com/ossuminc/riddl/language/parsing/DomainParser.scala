@@ -7,7 +7,9 @@
 package com.ossuminc.riddl.language.parsing
 
 import com.ossuminc.riddl.language.AST
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.{Contents, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.utils.Await
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
@@ -27,7 +29,7 @@ private[parsing] trait DomainParser {
   }
 
   private def domainInclude[u: P]: P[Include[DomainContents]] = {
-    include[u, DomainContents](domainDefinitions(_))
+    include[u, DomainContents]((p: P[?]) => domainDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   private def domainDefinitions[u: P]: P[Seq[DomainContents]] = {

@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 import com.ossuminc.riddl.language.At
@@ -53,7 +54,8 @@ private[parsing] trait StreamingParser {
     maxOutlets: Int
   ): P[Include[StreamletContents]] = {
     include[u, StreamletContents](
-      streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(_)
+      (p: P[?]) => streamletDefinition(minInlets, maxInlets, minOutlets, maxOutlets)(using p
+        .asInstanceOf[P[u]])
     )
   }
 

@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
@@ -15,7 +16,7 @@ private[parsing] trait RepositoryParser {
   this: ProcessorParser & StreamingParser & Readability =>
 
   private def repositoryInclude[u: P]: P[Include[RepositoryContents]] = {
-    include[u, RepositoryContents](repositoryDefinitions(_))
+    include[u, RepositoryContents]((p: P[?]) => repositoryDefinitions(using p.asInstanceOf[P[u]]))
   }
 
   private def schemaKind[u: P]: P[RepositorySchemaKind] = {

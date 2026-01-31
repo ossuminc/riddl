@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.bast
 
-import com.ossuminc.riddl.language.AST.{map => _, *}
+import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.{At, Messages}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{PlatformContext, URL}
@@ -544,9 +545,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readBASTImportNode(): BASTImport = {
     val loc = readLocation()
     val path = readLiteralString()
+    // Read selective import fields
+    val kind = readOption(readString())
+    val selector = readOption(readIdentifierInline())
+    val alias = readOption(readIdentifierInline())
     // Contents are not stored in BAST - they're loaded dynamically
     // by BASTLoader when this import is encountered
-    BASTImport(loc, path)
+    BASTImport(loc, path, kind, selector, alias)
   }
 
   // ========== Type Definitions ==========
