@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.utils.{PlatformContext, URL}
@@ -24,7 +25,7 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
       val text = s""""$content""""
       val input = RiddlParserInput(text, td)
       val testParser = TestParser(input)
-      testParser.expect[LiteralString](testParser.literalString(_)) match
+      testParser.expect[LiteralString](p => testParser.literalString(using p)) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(ls)      => ls.s must be(content)
     }
@@ -74,7 +75,7 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
       )
       parse[LiteralString, LiteralString](
         input,
-        StringParser("").literalString(_),
+        p => StringParser("").literalString(using p),
         identity
       ) match {
         case Left(errors) =>
@@ -122,7 +123,7 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
       val input = RiddlParserInput(""""\\b\\n\\r\\t\\f\\x04\\u000a"""".stripMargin, td)
       parse[LiteralString, LiteralString](
         input,
-        StringParser("").literalString(_),
+        p => StringParser("").literalString(using p),
         identity
       ) match {
         case Left(errors) =>
@@ -135,7 +136,7 @@ abstract class CommonParserTest(using PlatformContext) extends AbstractParsingTe
   "NoWhiteSpaceParsers" should {
     "handle a URL" in { (td: TestData) =>
       val input = RiddlParserInput("https://www.wordnik.com/words/phi", td)
-      parse[URL, URL](input, StringParser("").httpUrl(_), identity) match {
+      parse[URL, URL](input, p => StringParser("").httpUrl(using p), identity) match {
         case Left(errors) =>
           fail(errors.format)
         case Right((actual, _)) =>

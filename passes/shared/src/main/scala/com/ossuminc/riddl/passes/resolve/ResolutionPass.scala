@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.{Entity, *}
 import com.ossuminc.riddl.language.parsing.Keyword
-import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.{At, Contents, Messages, *}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.symbols.Symbols.*
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}

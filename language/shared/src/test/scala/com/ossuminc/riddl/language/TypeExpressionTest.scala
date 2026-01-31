@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.PredefType
 import com.ossuminc.riddl.language.{AST, At}

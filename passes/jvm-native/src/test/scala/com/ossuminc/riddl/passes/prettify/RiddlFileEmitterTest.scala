@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.prettify
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.prettify.RiddlFileEmitter
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, URL}

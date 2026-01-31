@@ -47,7 +47,7 @@ class NativePlatformContext extends PlatformContext:
           end if
         if Files.exists(path) then
           Future {
-            val source = Source.fromFile(path.toFile)(Codec.UTF8)
+            val source = Source.fromFile(path.toFile)(using Codec.UTF8)
             try {
               source.getLines().mkString("\n")
             } finally {

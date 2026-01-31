@@ -8,6 +8,7 @@ package com.ossuminc.riddl
 
 package object language:
 
+  import com.ossuminc.riddl.language.{Contents, *}
   import com.ossuminc.riddl.language.AST.*
   import org.scalatest.enablers.Emptiness
 

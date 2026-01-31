@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.{AST, At}
+import com.ossuminc.riddl.language.{AST, At, Contents, *}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.utils.{pc, ec}
 import org.scalatest.{Inside, TestData}

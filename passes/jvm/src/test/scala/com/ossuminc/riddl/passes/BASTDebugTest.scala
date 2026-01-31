@@ -6,8 +6,8 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.{Nebula, Root, Domain, Identifier, Contents}
-import com.ossuminc.riddl.language.At
+import com.ossuminc.riddl.language.AST.{Nebula, Root, Domain, Identifier}
+import com.ossuminc.riddl.language.{At, Contents, *}
 import com.ossuminc.riddl.language.bast.{BASTReader, BASTWriter, ByteBufferWriter, StringTable, NODE_NEBULA, NODE_DOMAIN, NODE_IDENTIFIER, HEADER_SIZE}
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.utils.{pc, ec, Await, URL}

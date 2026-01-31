@@ -8,7 +8,7 @@ package com.ossuminc.riddl.passes.stats
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.language.AST
+import com.ossuminc.riddl.language.{AST, Contents, *}
 import com.ossuminc.riddl.passes.*
 import com.ossuminc.riddl.passes.resolve.ResolutionPass
 import com.ossuminc.riddl.passes.symbols.SymbolsPass

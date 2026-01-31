@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.bast.{BASTWriter, ByteBufferWriter, StringTable, HEADER_SIZE}
 import com.ossuminc.riddl.utils.PlatformContext
 
@@ -96,7 +97,7 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         if t.metadata.nonEmpty then bastWriter.writeMetadataCount(t.metadata)
 
       // Standard Branch with WithMetaData
-      case branch: Branch[?] with WithMetaData =>
+      case branch: (Branch[?] & WithMetaData) =>
         process(branch, parents)
         parents.push(branch)
         branch.contents.foreach { value => traverse(value, parents) }

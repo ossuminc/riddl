@@ -6,6 +6,7 @@
 
 package com.ossuminc.riddl.language
 
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST.RelationshipCardinality.OneToOne
 import com.ossuminc.riddl.language.parsing.Keyword

@@ -7,6 +7,7 @@
 package com.ossuminc.riddl.passes.bast
 
 import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.passes.{BASTOutput, BASTWriterPass, Pass, PassInput}

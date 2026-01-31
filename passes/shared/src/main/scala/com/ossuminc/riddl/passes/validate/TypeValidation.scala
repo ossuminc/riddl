@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.utils.PlatformContext
 
 import java.util.regex.PatternSyntaxException

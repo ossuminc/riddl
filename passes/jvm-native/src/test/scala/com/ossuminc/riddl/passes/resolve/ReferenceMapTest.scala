@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.resolve
 
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.{At, Contents, Messages, *}
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.PassesResult
 import com.ossuminc.riddl.passes.validate.AbstractValidatingTest
@@ -48,7 +48,6 @@ class ReferenceMapTest extends AbstractValidatingTest {
       refMap.definitionOf[Author]("Reid") match {
         case None                 => fail("Expected to find Author 'Reid'")
         case Some(author: Author) => author.name.s mustBe "Reid"
-        case x                    => fail(s"Unexpected result: ${x.toString}")
       }
     }
 
@@ -77,10 +76,8 @@ class ReferenceMapTest extends AbstractValidatingTest {
               val expected = streamlet.inlets.head
               actual mustBe expected
             case None => fail("Didn't find streamlets 'Sink'")
-            case x    => fail(s"Unexpected result: ${x.toString}")
           }
         case None => fail("Expected to find 'Source'")
-        case x    => fail(s"Unexpected result: ${x.toString}")
       }
     }
 
@@ -96,7 +93,6 @@ class ReferenceMapTest extends AbstractValidatingTest {
           actual mustBe expected
           actual.id.value mustBe ("someData")
         case None => fail("Expected to find 'Something'")
-        case x    => fail(s"Unexpected result: ${x.toString}")
       }
     }
   }

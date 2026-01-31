@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.transforms
 
-import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.{At, Contents, Messages, *}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.AST.ParentStack
 import com.ossuminc.riddl.passes.*

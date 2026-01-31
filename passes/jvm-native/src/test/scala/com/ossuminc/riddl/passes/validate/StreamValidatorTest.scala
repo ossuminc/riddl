@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.passes.validate
 
-import com.ossuminc.riddl.language.{At, Messages}
+import com.ossuminc.riddl.language.{At, Contents, Messages, *}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.passes.Riddl
