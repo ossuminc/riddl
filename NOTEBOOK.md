@@ -8,13 +8,12 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 **Last Updated**: January 31, 2026
 
-**Scala 3.7.4 Upgrade Complete**: All 714 JVM tests pass. Fixed compiler infinite
-loop (Contents opaque type), context function syntax in tests, and added wildcard
-imports for Contents extension methods across all modules.
+**Release 1.2.0 Published**: Scala 3.7.4 upgrade complete. All tests pass. Published
+to GitHub Packages.
 
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface
 to Domain Definition Language. BAST serialization is **complete** (60 tests,
-6-10x speedup). Hugo and diagrams modules moved to `riddl-gen` repository.
+6-10x speedup). Hugo and diagrams modules moved to another repository.
 
 **Documentation**: [ossum.tech/riddl](https://ossum.tech/riddl/) - all new docs
 go there, not this repo.
@@ -66,34 +65,6 @@ AI-friendly validation pass for MCP server integration. See design section below
 sets - mixing them causes byte misalignment. See CLAUDE.md for details.
 
 
-
----
-
-## Deferred: AsciiDoc Generation Module
-
-**Status**: Deferred - consider for riddl-gen repository
-
-### Overview
-
-Create a pass or module that converts the RIDDL AST into AsciiDoc format, enabling generation of PDFs, static websites, and other standard documentation formats via Maven tooling.
-
-**Note**: Hugo documentation generation and diagrams have been moved to the `riddl-gen` repository. AsciiDoc generation would likely be added there as well.
-
-### Motivation
-
-AsciiDoc with Maven provides:
-- **Multiple output formats**: PDF, HTML, EPUB, DocBook, man pages
-- **Industry-standard tooling**: Maven/Gradle integration, CI/CD friendly
-- **Rich formatting**: Tables, admonitions, cross-references, includes
-- **Professional PDFs**: Via Asciidoctor PDF with customizable themes
-- **Single source**: One AsciiDoc source generates all formats
-
-### References
-
-- [Asciidoctor](https://asciidoctor.org/)
-- [Asciidoctor Maven Plugin](https://docs.asciidoctor.org/maven-tools/latest/)
-- [Asciidoctor PDF](https://docs.asciidoctor.org/pdf-converter/latest/)
-- [riddl-gen repository](https://github.com/ossuminc/riddl-gen) - for Hugo and diagram generation
 
 ---
 
@@ -805,5 +776,5 @@ Tool(
 
 ## Git Information
 
-**Branch**: `development`
-**Main branch**: `main`
+**Branch**: `main`
+**Latest release**: 1.2.0 (January 31, 2026)
