@@ -158,6 +158,13 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 **Test Results**: All 715 tests pass across all modules
 
+**Task #10 Verification** (metadata with-block requirement):
+- Confirmed fastparse already correctly enforces `with { }` wrapper for metadata
+- `} briefly "..."` (after close, no with) → Rejected ✅
+- `{ briefly "..." }` (inside body) → Rejected ✅
+- `} with { briefly "..." }` (correct syntax) → Accepted ✅
+- No code changes needed - task was already satisfied
+
 **Files Modified**:
 - `language/shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
 - `language/shared/src/main/scala/com/ossuminc/riddl/language/parsing/TypeParser.scala`
