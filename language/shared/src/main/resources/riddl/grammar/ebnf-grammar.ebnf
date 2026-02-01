@@ -28,10 +28,10 @@ byAs = ["by" | "as"] ;  (* optional readability word for attribution *)
 briefly = "briefly" | "brief" ;
 described = "description" | "explanation" | "described" | "explained" ;
 
-(* Comments *)
+(* Comments - using single regex tokens to avoid whitespace-skipping issues *)
 comment = inline_comment | end_of_line_comment ;
-inline_comment = "/*" {any_char_except_end_comment} "*/" ;
-end_of_line_comment = "//" {any_char_except_newline} (newline | $) ;
+inline_comment = /\/\*(?:[^*]|\*(?!\/))*\*\// ;
+end_of_line_comment = /\/\/[^\n]*/ ;
 
 (* Main Structure *)
 root = {root_content}+ ;
@@ -189,10 +189,7 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | send_statement | tell_statement |
     the_set_statement | let_statement | prompt_statement | code_statement |
-    error_statement | comment ;
-
-(* Entity-specific statements *)
-entity_statement = statement | morph_statement | become_statement ;
+    error_statement | morph_statement | become_statement | comment ;
 
 (* Control flow *)
 when_statement = "when" literal_string "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
@@ -218,7 +215,8 @@ morph_statement = "morph" entity_ref "to" state_ref "with" message_ref ;
 become_statement = "become" entity_ref "to" handler_ref ;
 
 (* Pseudo Code Block *)
-pseudo_code_block = "???" | "{" {statement} "}" | {statement} ;
+pseudo_code_block = "???" | "{" pseudo_code_contents "}" | {statement} ;
+pseudo_code_contents = ["???"] {statement} ;
 
 (* Constants and Invariants *)
 constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
@@ -298,7 +296,7 @@ epic_definitions = {vital_definition_contents | use_case | shown_by | epic_inclu
 epic_include = "include" literal_string ;
 use_case = "case" identifier is "{" user_story {"???" | interactions} "}" [with_metadata] ;
 user_story = user_ref "wants" ["to"] literal_string "so" ["that"] literal_string ;
-interactions = {interaction} ;
+interactions = {interaction | comment} ;
 interaction = parallel_interactions | optional_interactions | sequential_interactions | step_interactions ;
 parallel_interactions = "parallel" "{" interactions "}" ;
 optional_interactions = "optional" "{" interactions "}" ;

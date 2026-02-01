@@ -52,10 +52,14 @@ INCLUDE_FRAGMENTS = {
     "foo.riddl",                     # Fragment in issues/584/Foo/
 }
 
-# Files that are intentionally invalid for testing error handling
+# Files that are intentionally invalid for testing error handling.
+# Can be just filename (matches any path) or relative path from RIDDL_ROOT.
 EXPECTED_FAILURES = {
-    "invalid.riddl",      # Intentionally invalid RIDDL for testing
-    "empty-case.riddl",   # Missing required user stories in epic and use case
+    "invalid.riddl",                 # Intentionally invalid RIDDL for testing
+    "empty-case.riddl",              # Missing required user stories in epic and use case
+    "435_oops.riddl",                # Intentional typo: "contest" instead of "context"
+    "486.riddl",                     # Typo: "showsksoTemplateApp" instead of "shows"
+    "passes/input/everything.riddl", # Invalid RIDDL: option in entity body (fastparse also rejects this)
 }
 
 
@@ -103,8 +107,19 @@ def is_include_fragment(filepath: Path) -> bool:
 
 
 def is_expected_failure(filepath: Path) -> bool:
-    """Check if file is expected to fail validation."""
-    return filepath.name in EXPECTED_FAILURES
+    """Check if file is expected to fail validation.
+
+    Supports both simple filenames and relative paths from RIDDL_ROOT.
+    """
+    # Check if filename matches
+    if filepath.name in EXPECTED_FAILURES:
+        return True
+    # Check if relative path matches
+    try:
+        rel_path = str(filepath.relative_to(RIDDL_ROOT))
+        return rel_path in EXPECTED_FAILURES
+    except ValueError:
+        return False
 
 
 def validate_file(parser, filepath: Path, verbose: bool = False) -> Tuple[bool, Optional[str]]:
