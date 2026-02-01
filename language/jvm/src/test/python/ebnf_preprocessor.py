@@ -69,36 +69,10 @@ start = {root_content}+ $ ;
 
 """
 
-    # 6. Terminal definitions that TatSu needs
-    terminals = """
-# Terminal patterns
-letter = /[a-zA-Z]/ ;
-digit = /[0-9]/ ;
-lower_letter = /[a-z]/ ;
-any_char_except_newline = /[^\\n]/ ;
-any_char_except_end_comment = /(?:[^*]|\\*(?!\\/))/ ;
-any_char_except_triple_backtick = /(?:[^`]|`(?!``)|``(?!`))/ ;
-newline = /\\n/ ;
-string_char = /[^"\\\\]/ ;
-
-# Missing terminals from EBNF that need explicit definitions
-iso_country_code = /[A-Z]{3}/ ;
-
-"""
-
-    # Remove lines that define letter, digit, etc. as they're handled by terminals
-    rules_to_remove = [
-        'letter', 'digit', 'lower_letter', 'any_char_except_newline',
-        'any_char_except_end_comment', 'any_char_except_triple_backtick',
-        'newline', 'string_char'
-    ]
-    for rule in rules_to_remove:
-        result = re.sub(rf'^{rule}\s*=\s*[^;]+;\s*$', '', result, flags=re.MULTILINE)
-
-    # 7. Clean up any empty lines left over
+    # 6. Clean up any empty lines left over
     result = re.sub(r'\n{3,}', '\n\n', result)
 
-    return header + terminals + result
+    return header + result
 
 
 def _convert_comment(match: re.Match) -> str:

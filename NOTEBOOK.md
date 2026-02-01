@@ -14,6 +14,15 @@ to GitHub Packages.
 **In Progress**: TatSu-based EBNF validation (branch: `feature/tatsu-ebnf-validation`).
 Fixing EBNF grammar drift from fastparse implementation.
 
+**EBNF Validation Progress** (Feb 1, 2026):
+- Started with ~48 test file failures, now at 12
+- Fixed: regex patterns for terminals, cardinality modifiers, keyword variants,
+  PEG ordering issues, connector syntax, alternation separators, markdown lines
+- Remaining 12 failures include: handler/pseudo_code_block issues, block comments
+  in epics, morph statement syntax, 2 expected test file typos
+- Created tasks #7-10 for fastparse fixes needed (hex escapes, cardinality
+  mutual exclusivity, metadata with-block requirement)
+
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface
 to Domain Definition Language. BAST serialization is **complete** (60 tests,
 6-10x speedup). Hugo and diagrams modules moved to another repository.
