@@ -6,10 +6,13 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: January 31, 2026
+**Last Updated**: February 1, 2026
 
 **Release 1.2.0 Published**: Scala 3.7.4 upgrade complete. All tests pass. Published
 to GitHub Packages.
+
+**In Progress**: TatSu-based EBNF validation (branch: `feature/tatsu-ebnf-validation`).
+Fixing EBNF grammar drift from fastparse implementation.
 
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface
 to Domain Definition Language. BAST serialization is **complete** (60 tests,
@@ -115,6 +118,66 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 1, 2026 (TatSu EBNF Validation - In Progress)
+
+**Focus**: Implement automated EBNF grammar validation in CI using TatSu
+
+**Branch**: `feature/tatsu-ebnf-validation`
+
+**Context**: The EBNF grammar at `language/shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf` documents RIDDL syntax but can drift from the actual fastparse implementation. This work adds CI validation to catch drift.
+
+**Work Completed**:
+1. ✅ **Created TatSu-based validator framework**
+   - `language/jvm/src/test/python/ebnf_preprocessor.py` - Converts EBNF to TatSu format
+   - `language/jvm/src/test/python/ebnf_tatsu_validator.py` - Validates RIDDL files
+   - Updated `requirements.txt` with TatSu>=5.12.0
+
+2. ✅ **Updated CI workflow** (`.github/workflows/scala.yml`)
+   - Changed from Lark-based to TatSu-based validation
+
+3. ✅ **Updated CLAUDE.md**
+   - Added "Parser/EBNF Synchronization Requirement" section
+
+4. ✅ **Fixed EBNF Issue #1: `???` placeholder ordering**
+   - Problem: PEG parsers try alternatives in order; closures matching zero items shadow `???`
+   - Fixed `enumerators` (line 100): `{enumerator [","]} | "???"` → `"???" | {enumerator [","]}`
+   - Fixed `aggregate_definitions` (line 115): same pattern
+
+5. 🚧 **Discovered EBNF Issue #2: `simple_identifier` consuming whitespace**
+   - TatSu skips whitespace between tokens, even inside closures
+   - `simple_identifier = letter { letter | digit | "_" | "-" }` causes "A from context Two" to parse as single identifier
+   - **Proposed fix**: `simple_identifier = /[a-zA-Z][a-zA-Z0-9_-]*/` (regex pattern)
+
+**Current Validation Results**:
+- 14/77 files pass
+- 13 skipped (include fragments)
+- 2 expected failures
+- 48 unexpected failures (EBNF/parser drift to fix)
+
+**Key Learning**: TatSu uses PEG semantics where:
+- Alternatives are tried in order (put specific literals before general patterns)
+- Whitespace is skipped between token matches (lexical rules need regex patterns)
+- Closures matching zero items "succeed" and don't try next alternative
+
+**Files Created**:
+- `language/jvm/src/test/python/ebnf_preprocessor.py`
+- `language/jvm/src/test/python/ebnf_tatsu_validator.py`
+
+**Files Modified**:
+- `language/jvm/src/test/python/requirements.txt`
+- `language/shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf` (2 fixes)
+- `.github/workflows/scala.yml`
+- `.gitignore` (added .venv)
+- `CLAUDE.md`
+
+**Next Steps**:
+1. Fix `simple_identifier` to use regex pattern (prevents whitespace consumption)
+2. Fix `quoted_identifier` similarly
+3. Review and fix other lexical rules (zone, option_name, etc.)
+4. Work through remaining 48 failures systematically
+
+---
 
 ### January 31, 2026 (Scala 3.7.4 Compiler Bug - RESOLVED)
 

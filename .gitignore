@@ -28,3 +28,5 @@ target
 *.bak
 language/input/everything.bast
 .claude/
+language/jvm/src/test/python/.venv/
+__pycache__/

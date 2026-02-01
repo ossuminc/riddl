@@ -176,10 +176,10 @@ jobs:
       run: |
         pip install -r language/jvm/src/test/python/requirements.txt
 
-    - name: Validate EBNF Grammar
+    - name: Validate EBNF Grammar with TatSu
       run: |
         cd language/jvm/src/test/python
-        python ebnf_validator.py --verbose
+        python ebnf_tatsu_validator.py --verbose
 
   dependency-check:
     timeout-minutes: 15
