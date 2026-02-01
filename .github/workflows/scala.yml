@@ -158,6 +158,29 @@ jobs:
         find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
         find $HOME/.sbt                              -name "*.lock"               -delete || true
 
+  ebnf-grammar-validation:
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set Up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        pip install -r language/jvm/src/test/python/requirements.txt
+
+    - name: Validate EBNF Grammar
+      run: |
+        cd language/jvm/src/test/python
+        python ebnf_validator.py --verbose
+
   dependency-check:
     timeout-minutes: 15
     permissions:
