@@ -14,13 +14,16 @@ to GitHub Packages.
 **In Progress**: TatSu-based EBNF validation (branch: `feature/tatsu-ebnf-validation`).
 Fixing EBNF grammar drift from fastparse implementation.
 
-**EBNF Validation Progress** (Feb 1, 2026):
-- Started with ~48 test file failures, now at 12
-- Fixed: regex patterns for terminals, cardinality modifiers, keyword variants,
-  PEG ordering issues, connector syntax, alternation separators, markdown lines
-- Remaining 12 failures include: handler/pseudo_code_block issues, block comments
-  in epics, morph statement syntax, 2 expected test file typos
-- Created tasks #7-10 for fastparse fixes needed (hex escapes, cardinality
+**EBNF Validation Complete** (Feb 1, 2026):
+- Internal test files: 59/77 passed, 13 include fragments skipped, 5 expected
+  failures (all have bugs that fastparse also rejects)
+- External test files (riddl-examples): 8/9 passed, 1 expected failure (Trello
+  needs AI regeneration)
+- Key fixes made: comment regex tokens (avoid whitespace-skipping issues),
+  statement rule (added morph/become), pseudo_code_contents rule, interactions
+  rule (added comment support)
+- CI updated to validate against riddl-examples repository
+- Tasks #7-10 created for fastparse fixes to match EBNF (hex escapes, cardinality
   mutual exclusivity, metadata with-block requirement)
 
 The RIDDL project is a mature compiler and toolchain for the Reactive Interface
