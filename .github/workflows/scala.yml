@@ -176,10 +176,21 @@ jobs:
       run: |
         pip install -r language/jvm/src/test/python/requirements.txt
 
-    - name: Validate EBNF Grammar
+    - name: Validate EBNF Grammar with TatSu (internal test files)
       run: |
         cd language/jvm/src/test/python
-        python ebnf_validator.py --verbose
+        python ebnf_tatsu_validator.py --verbose
+
+    - name: Checkout riddl-examples
+      uses: actions/checkout@v4
+      with:
+        repository: ossuminc/riddl-examples
+        path: riddl-examples
+
+    - name: Validate EBNF Grammar against riddl-examples
+      run: |
+        cd language/jvm/src/test/python
+        python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-examples
 
   dependency-check:
     timeout-minutes: 15

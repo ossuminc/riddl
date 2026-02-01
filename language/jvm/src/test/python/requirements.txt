@@ -1,2 +1,3 @@
 # RIDDL EBNF Grammar Validator Dependencies
 lark>=1.1.0
+TatSu>=5.12.0

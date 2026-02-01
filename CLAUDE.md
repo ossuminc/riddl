@@ -247,6 +247,27 @@ sed -i 's/scala-3.3.7/scala-3.9.0/g' .github/workflows/*.yml
 
 ## Testing Patterns
 
+### Parser/EBNF Synchronization Requirement
+
+**Any change to the fastparse parser MUST have a corresponding change to the EBNF grammar.**
+
+The EBNF grammar at `language/shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
+is the canonical specification of RIDDL syntax. It is validated by a TatSu-based parser
+that runs in CI on all `**/input/**/*.riddl` test files.
+
+When modifying the fastparse parser:
+1. Update the corresponding rule(s) in `ebnf-grammar.ebnf`
+2. Run the EBNF validator locally:
+   ```bash
+   cd language/jvm/src/test/python
+   pip install -r requirements.txt  # first time only
+   python ebnf_tatsu_validator.py
+   ```
+3. Ensure both parsers accept the same inputs
+4. CI will fail if the EBNF parser cannot parse test files that fastparse accepts
+
+This ensures the documented grammar stays in sync with the actual implementation.
+
 ### Compilation After Every Change
 When implementing new code:
 1. Write the code

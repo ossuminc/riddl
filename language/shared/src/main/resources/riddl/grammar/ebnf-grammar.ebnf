@@ -4,26 +4,34 @@
 (* and can be loaded from the classpath at: riddl/grammar/ebnf-grammar.ebnf *)
 
 (* Basic Elements *)
-letter = "A" | "B" | ... | "Z" | "a" | "b" | ... | "z" ;
-digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+letter = /[A-Za-z]/ ;
+digit = /[0-9]/ ;
+iso_country_code = /[A-Z]{3}/ ;
+string_char = /[^"\\]/ ;
+newline = /\n/ ;
+any_char_except_newline = /[^\n]/ ;
+any_char_except_end_comment = /(?:[^*]|\*(?!\/))+/ ;
+any_char_except_triple_backtick = /(?:[^`]|`(?!``)|``(?!`))+/ ;
 identifier = simple_identifier | quoted_identifier ;
-simple_identifier = letter { letter | digit | "_" | "-" } ;
-quoted_identifier = "'" { letter | digit | "_" | "+" | "\\" | "-" | "|" | "/" | "@" | "$" | "%" | "&" | "," | ":" | " " }+ "'" ;
+simple_identifier = /[A-Za-z][A-Za-z0-9_-]*/ ;
+quoted_identifier = /'[-A-Za-z0-9_+\\|\/@$%&,: ]+'/ ;
 path_identifier = identifier { "." identifier } ;
 literal_string = '"' { string_char | escape_sequence } '"' ;
-escape_sequence = "\\" ( "\\" | '"' | "a" | "e" | "f" | "n" | "r" | "t" | hexEscape | unicodeEscape ) ;
-hexEscape = "\\x" digit digit [digit [digit [digit [digit [digit [digit]]]]]] ;
-unicodeEscape = "\\u" digit digit digit digit ;
-integer = ["+"|"-"] digit {digit} ;
+escape_sequence = /\\[\\\"aefnrt]/ | hexEscape | unicodeEscape ;
+hexEscape = /\\x[0-9a-fA-F]{2,8}/ ;
+unicodeEscape = /\\u[0-9a-fA-F]{4}/ ;
+integer = /[+-]?[0-9]+/ ;
 
 (* Readability Keywords - these are always optional *)
 is = ["is" | "are" | ":" | "="] ;  (* optional readability word for definitions *)
 byAs = ["by" | "as"] ;  (* optional readability word for attribution *)
+briefly = "briefly" | "brief" ;
+described = "description" | "explanation" | "described" | "explained" ;
 
-(* Comments *)
+(* Comments - using single regex tokens to avoid whitespace-skipping issues *)
 comment = inline_comment | end_of_line_comment ;
-inline_comment = "/*" {any_char_except_end_comment} "*/" ;
-end_of_line_comment = "//" {any_char_except_newline} newline ;
+inline_comment = /\/\*(?:[^*]|\*(?!\/))*\*\// ;
+end_of_line_comment = /\/\/[^\n]*/ ;
 
 (* Main Structure *)
 root = {root_content}+ ;
@@ -70,14 +78,10 @@ def_of_type_kind_type = aggregate_use_case identifier (scala_aggregate_definitio
 aggregate_use_case = "type" | "command" | "query" | "event" | "result" | "record" | "graph" | "table" ;
 
 (* Type Expressions *)
-type_expression = cardinality(
-    predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
-    graph_type | table_type | replica_type | range_type | decimal_type | alternation | entity_reference_type |
-    aggregation | aggregate_use_case_type_expression | aliased_type_expression
-) ;
-
-cardinality = ["many"] ["optional"] type_expression_base ["?" | "*" | "+"] ;
-type_expression_base = predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
+type_expression =
+    ("many" ["optional"] | "optional") type_expression_alternatives |
+    type_expression_alternatives ["?" | "*" | "+"] ;
+type_expression_alternatives = predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | entity_reference_type |
     aggregation | aggregate_use_case_type_expression | aliased_type_expression ;
 
@@ -91,13 +95,13 @@ real_predef_types = "Current" | "Length" | "Luminosity" | "Mass" | "Mole" | "Num
 time_predef_types = "Duration" | "DateTime" | "Date" | "TimeStamp" | "Time" ;
 zoned_predef_types = ("ZonedDate" | "ZonedDateTime") "(" [zone] ")" ;
 other_predef_types = "Abstract" | "Location" | "Nothing" | "UUID" | "UserId" ;
-zone = {letter | digit | ":" | "." | "+" | "-"} ;
+zone = /[A-Za-z0-9:.+-]*/ ;
 
 (* Type Expressions *)
 pattern_type = "Pattern" "(" {literal_string} ")" ;
 unique_id_type = "Id" "(" ["entity"] path_identifier ")" ;
 enumeration = "any" ["of"] "{" enumerators "}" ;
-enumerators = {enumerator [","]} | "???" ;
+enumerators = "???" | {enumerator [","]} ;
 enumerator = identifier [enum_value] [with_metadata] ;
 enum_value = "(" integer ")" ;
 sequence_type = "sequence" "of" type_expression ;
@@ -109,10 +113,11 @@ replica_type = "replica" "of" replica_type_expression ;
 replica_type_expression = integer_predef_types | mapping_from_to | a_set_type ;
 range_type = "range" "(" [integer] "," [integer] ")" ;
 decimal_type = "Decimal" "(" integer "," integer ")" ;
-alternation = "one" ["of"] "{" {aliased_type_expression} "}" ;
+alternation = "one" ["of"] "{" alternation_contents "}" ;
+alternation_contents = "???" | [aliased_type_expression {("|" | "or" | ",") aliased_type_expression}] ;
 entity_reference_type = "reference" ["to"] ["entity"] path_identifier ;
 aggregation = "{" aggregate_definitions "}" ;
-aggregate_definitions = {aggregate_content [","]} | "???" ;
+aggregate_definitions = "???" | {aggregate_content [","]} ;
 aggregate_content = field | method | comment ;
 aggregate_use_case_type_expression = aggregate_use_case aggregation ;
 aliased_type_expression = [aggregate_use_case] path_identifier ;
@@ -123,11 +128,12 @@ field = identifier is field_type_expression [with_metadata] ;
 method = identifier "(" [arguments] ")" is field_type_expression [with_metadata] ;
 arguments = {method_argument [","]} ;
 method_argument = identifier ":" field_type_expression ;
-field_type_expression = cardinality(
-    predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
+field_type_expression =
+    ("many" ["optional"] | "optional") field_type_alternatives |
+    field_type_alternatives ["?" | "*" | "+"] ;
+field_type_alternatives = predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | aggregation |
-    aliased_type_expression | entity_reference_type
-) ;
+    aliased_type_expression | entity_reference_type ;
 
 (* Functions *)
 function = "function" identifier is "{" function_body "}" [with_metadata] ;
@@ -183,10 +189,7 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | send_statement | tell_statement |
     the_set_statement | let_statement | prompt_statement | code_statement |
-    error_statement | comment ;
-
-(* Entity-specific statements *)
-entity_statement = statement | morph_statement | become_statement ;
+    error_statement | morph_statement | become_statement | comment ;
 
 (* Control flow *)
 when_statement = "when" literal_string "then" pseudo_code_block ["else" pseudo_code_block] "end" ;
@@ -212,7 +215,8 @@ morph_statement = "morph" entity_ref "to" state_ref "with" message_ref ;
 become_statement = "become" entity_ref "to" handler_ref ;
 
 (* Pseudo Code Block *)
-pseudo_code_block = "???" | {statement} | "{" {statement} "}" ;
+pseudo_code_block = "???" | "{" pseudo_code_contents "}" | {statement} ;
+pseudo_code_contents = ["???"] {statement} ;
 
 (* Constants and Invariants *)
 constant = "constant" identifier is type_expression "=" literal_string [with_metadata] ;
@@ -237,7 +241,7 @@ streamlet_include = "include" literal_string ;
 inlet = "inlet" identifier is type_ref [with_metadata] ;
 outlet = "outlet" identifier is type_ref [with_metadata] ;
 connector = "connector" identifier is connector_definitions [with_metadata] ;
-connector_definitions = ["(" "from" outlet_ref "to" inlet_ref ")" | "from" outlet_ref "to" inlet_ref] ;
+connector_definitions = ["{" "from" outlet_ref "to" inlet_ref "}" | "from" outlet_ref "to" inlet_ref] ;
 
 (* Group-related *)
 group = group_aliases identifier is "{" {"???" | group_definitions} "}" [with_metadata] ;
@@ -292,7 +296,7 @@ epic_definitions = {vital_definition_contents | use_case | shown_by | epic_inclu
 epic_include = "include" literal_string ;
 use_case = "case" identifier is "{" user_story {"???" | interactions} "}" [with_metadata] ;
 user_story = user_ref "wants" ["to"] literal_string "so" ["that"] literal_string ;
-interactions = {interaction} ;
+interactions = {interaction | comment} ;
 interaction = parallel_interactions | optional_interactions | sequential_interactions | step_interactions ;
 parallel_interactions = "parallel" "{" interactions "}" ;
 optional_interactions = "optional" "{" interactions "}" ;
@@ -318,24 +322,23 @@ author = "author" identifier is "{" [("???" | ("name" is literal_string "email" 
 
 (* URLs *)
 http_url = ("http" | "https") "://" host_string [":" port_num] "/" [url_path] ;
-host_string = {letter | digit | "-"} {"." {letter | digit | "-"}} ;
-port_num = digit {digit} ;
-url_path = {letter | digit | "-" | "_" | "." | "~" | "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";" | "="} ;
+host_string = /[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*/ ;
+port_num = /[0-9]+/ ;
+url_path = /[A-Za-z0-9_.~!$&'()*+,;=\/-]*/ ;
 
 (* Metadata *)
 with_metadata = ["with" "{" {"???" | {meta_data}} "}"] ;
 meta_data = brief_description | description | term | option | author_ref | attachment | ulid_attachment | comment ;
-brief_description = "briefly" byAs literal_string ;
-description = "described" (byAs doc_block | ("at" http_url) | ("in" "file" literal_string)) ;
+brief_description = briefly byAs literal_string ;
+description = described (byAs doc_block | ("at" http_url) | ("in" "file" literal_string)) ;
 term = "term" identifier is doc_block ;
 option = "option" is option_name ["(" {literal_string} ")"] ;
-option_name = {lower_letter | digit | "_" | "-"} ;
+option_name = /[a-z0-9_-]*/ ;
 attachment = "attachment" identifier is mime_type (("in" "file" literal_string) | (byAs literal_string)) ;
 ulid_attachment = "attachment" "ULID" is literal_string ;
 doc_block = "{" {markdown_lines | literal_strings | "???"} "}" | literal_string ;
 markdown_lines = {markdown_line}+ ;
-markdown_line = "|" {any_char_except_newline} ;
+markdown_line = "|" /[^\n]*\n?/ ;
 literal_strings = {literal_string}+ ;
 shown_by = "shown" "by" "{" {http_url} "}" ;
-mime_type = ("application" | "audio" | "example" | "font" | "image" | "model" | "text" | "video") "/" {mime_type_chars} ;
-mime_type_chars = lower_letter | "." | "-" | "*" ;
+mime_type = ("application" | "audio" | "example" | "font" | "image" | "model" | "text" | "video") "/" /[a-z.*-]*/ ;

@@ -84,7 +84,7 @@ domain ReactiveBBQ is {
       record Fields is {
         id is CustomerId,
         points is Number,
-        rewardEvents is many optional RewardEvent
+        rewardEvents is RewardEvent*
       }
       state RewardState of RewardsAccount.Fields
       handler Inputs is { ??? }
