@@ -50,6 +50,14 @@ AI-friendly validation pass for MCP server integration. See design section below
 
 ---
 
+## Blocked Tasks
+
+| Task | Blocked By | Notes |
+|------|------------|-------|
+| Add EBNF validation for riddl-models repository | riddl-models needs to be populated with RIDDL models | Similar to riddl-examples validation in CI; will validate against external repository once content exists |
+
+---
+
 ## Scheduled Tasks
 
 | Date | Task | Notes |
@@ -130,6 +138,32 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 1, 2026 (Cardinality Fix)
+
+**Focus**: Fix cardinality prefix/suffix mutual exclusivity
+
+**Branch**: `feature/parsing-fixes`
+
+**Work Completed**:
+1. ✅ **Updated EBNF grammar** to allow `many optional` as valid prefix combination
+   - `type_expression` and `field_type_expression` now accept `("many" ["optional"] | "optional")`
+2. ✅ **Updated TypeParser.scala** to enforce mutual exclusivity
+   - Allows prefix only: `many` (=+), `optional` (=?), `many optional` (=*)
+   - Allows suffix only: `?`, `+`, `*`
+   - Rejects prefix AND suffix together with clear error message
+3. ✅ **Restored rbbq.riddl** to use `many optional RewardEvent` syntax
+   - Demonstrates valid cardinality prefix usage
+   - Fixes TokenParserTest expected offsets
+
+**Test Results**: All 715 tests pass across all modules
+
+**Files Modified**:
+- `language/shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
+- `language/shared/src/main/scala/com/ossuminc/riddl/language/parsing/TypeParser.scala`
+- `language/input/rbbq.riddl`
+
+---
 
 ### February 1, 2026 (TatSu EBNF Validation - In Progress)
 

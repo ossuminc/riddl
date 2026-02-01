@@ -562,6 +562,10 @@ private[parsing] trait TypeParser {
   }
 
   private def cardinality[u: P](p: => P[TypeExpression]): P[TypeExpression] = {
+    // Cardinality can be specified with:
+    // - Prefix: "many" (=+), "optional" (=?), or "many optional" (=*)
+    // - Suffix: ? (optional), + (one-or-more), * (zero-or-more)
+    // - But NOT both prefix and suffix together (ambiguous)
     P(
       Index ~
         Keywords.many.!.? ~ Keywords.optional.!.? ~ p ~ StringIn(
@@ -570,20 +574,24 @@ private[parsing] trait TypeParser {
           Punctuation.plus
         ).!.? ~/ Index
     ).map {
-      case (start, None, None, typ, Some("?"), end)        => Optional(at(start, end), typ)
-      case (start, None, None, typ, Some("+"), end)        => OneOrMore(at(start, end), typ)
-      case (start, None, None, typ, Some("*"), end)        => ZeroOrMore(at(start, end), typ)
+      // Suffix only (no prefix)
+      case (start, None, None, typ, Some("?"), end) => Optional(at(start, end), typ)
+      case (start, None, None, typ, Some("+"), end) => OneOrMore(at(start, end), typ)
+      case (start, None, None, typ, Some("*"), end) => ZeroOrMore(at(start, end), typ)
+      // Prefix only (no suffix)
       case (start, Some("many"), None, typ, None, end)     => OneOrMore(at(start, end), typ)
       case (start, None, Some("optional"), typ, None, end) => Optional(at(start, end), typ)
-      case (start, Some("many"), Some("optional"), typ, None, end) =>
-        ZeroOrMore(at(start, end), typ)
-      case (start, None, Some("optional"), typ, Some("?"), end) => Optional(at(start, end), typ)
-      case (start, Some("many"), None, typ, Some("+"), end)     => OneOrMore(at(start, end), typ)
-      case (start, Some("many"), Some("optional"), typ, Some("*"), end) =>
-        ZeroOrMore(at(start, end), typ)
+      case (start, Some("many"), Some("optional"), typ, None, end) => ZeroOrMore(at(start, end), typ)
+      // No cardinality modifier
       case (_, None, None, typ, None, _) => typ
-      case (start, _, _, typ, _, end) =>
-        error(at(start, end), s"Cannot determine cardinality for $typ")
+      // Invalid: prefix and suffix together
+      case (start, prefix, optPrefix, typ, Some(suffix), end) =>
+        val prefixStr = (prefix, optPrefix) match
+          case (Some("many"), Some("optional")) => "many optional"
+          case (Some("many"), None) => "many"
+          case (None, Some("optional")) => "optional"
+          case _ => ""
+        error(at(start, end), s"Cannot combine cardinality prefix '$prefixStr' with suffix '$suffix' for $typ; use one or the other")
         typ
     }
   }

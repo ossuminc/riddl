@@ -79,7 +79,7 @@ aggregate_use_case = "type" | "command" | "query" | "event" | "result" | "record
 
 (* Type Expressions *)
 type_expression =
-    ("many" | "optional") type_expression_alternatives |
+    ("many" ["optional"] | "optional") type_expression_alternatives |
     type_expression_alternatives ["?" | "*" | "+"] ;
 type_expression_alternatives = predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | entity_reference_type |
@@ -129,7 +129,7 @@ method = identifier "(" [arguments] ")" is field_type_expression [with_metadata]
 arguments = {method_argument [","]} ;
 method_argument = identifier ":" field_type_expression ;
 field_type_expression =
-    ("many" | "optional") field_type_alternatives |
+    ("many" ["optional"] | "optional") field_type_alternatives |
     field_type_alternatives ["?" | "*" | "+"] ;
 field_type_alternatives = predefined_types | pattern_type | unique_id_type | enumeration | sequence_type | mapping_from_to | a_set_type |
     graph_type | table_type | replica_type | range_type | decimal_type | alternation | aggregation |
