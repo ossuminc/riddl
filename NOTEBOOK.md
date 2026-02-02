@@ -8,8 +8,8 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 **Last Updated**: February 1, 2026
 
-**Release 1.2.0 Published**: Scala 3.7.4 upgrade complete. All tests pass. Published
-to GitHub Packages.
+**Release 1.2.1 Published**: Cardinality fix and EBNF validation improvements. All
+715 tests pass. Published to GitHub Packages.
 
 **In Progress**: TatSu-based EBNF validation (branch: `feature/tatsu-ebnf-validation`).
 Fixing EBNF grammar drift from fastparse implementation.
@@ -164,6 +164,13 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 - `{ briefly "..." }` (inside body) → Rejected ✅
 - `} with { briefly "..." }` (correct syntax) → Accepted ✅
 - No code changes needed - task was already satisfied
+
+**Release 1.2.1** (February 1, 2026):
+- Merged `feature/parsing-fixes` to `main`
+- Tagged and pushed `1.2.1`
+- All 715 tests passed
+- Published to GitHub Packages
+- Created GitHub release: https://github.com/ossuminc/riddl/releases/tag/1.2.1
 
 **Files Modified**:
 - `language/shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
@@ -893,4 +900,4 @@ Tool(
 ## Git Information
 
 **Branch**: `main`
-**Latest release**: 1.2.0 (January 31, 2026)
+**Latest release**: 1.2.1 (February 1, 2026)
