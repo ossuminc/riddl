@@ -59,6 +59,6 @@ jobs:
           name: code-coverage-report
           retention-days: 30
           path: |
-            **/jvm/target/scala-3.3.7/scoverage-report/scoverage.xml
-            **/target/scala-3.3.7/scoverage-report/scoverage.xml
-            target/scala-3.3.7/scoverage-report/scoverage.xml
+            **/jvm/target/scala-3.7.4/scoverage-report/scoverage.xml
+            **/target/scala-3.7.4/scoverage-report/scoverage.xml
+            target/scala-3.7.4/scoverage-report/scoverage.xml
