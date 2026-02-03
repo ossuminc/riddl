@@ -108,8 +108,10 @@ object Messages {
     def severity = 6
   }
 
-  /** The system's notion of a newline for sensible error message termination */
-  @JSExport val nl: String = System.lineSeparator()
+  /** The system's notion of a newline for sensible error message termination.
+    * Uses "\n" directly since System.lineSeparator() returns null in Scala.js.
+    */
+  @JSExport val nl: String = "\n"
 
   /** A Message instance. There are helper functions below to help you create these.
     *

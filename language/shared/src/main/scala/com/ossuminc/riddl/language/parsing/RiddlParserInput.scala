@@ -187,7 +187,8 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
 
   def prettyIndex(index: Int): String = { location(index).toString }
 
-  val nl: String = System.getProperty("line.separator")
+  // Use "\n" directly since System.getProperty returns null in Scala.js
+  val nl: String = "\n"
 
   def annotateErrorLine(index: At): String = {
     require(index.source == this)
