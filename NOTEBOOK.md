@@ -13,8 +13,8 @@ message truncation in synapify. All 715 tests pass. Published to GitHub Packages
 
 **Homebrew Tap Created**: `ossuminc/homebrew-tap` provides `brew install riddlc`.
 
-**In Progress**: TatSu-based EBNF validation (branch: `feature/tatsu-ebnf-validation`).
-Fixing EBNF grammar drift from fastparse implementation.
+**Branch Cleanup Complete**: All stale feature/bugfix branches deleted. Only `main`
+and `development` branches remain.
 
 **EBNF Validation Complete** (Feb 1, 2026):
 - Internal test files: 59/77 passed, 13 include fragments skipped, 5 expected
@@ -170,6 +170,18 @@ of newlines, resulting in truncated/malformed output.
 - Added `Formula/riddlc.rb` formula with openjdk@21 dependency
 - Added README.md with installation instructions
 - No registration needed - Homebrew auto-discovers `username/homebrew-tap` repos
+
+**Branch Cleanup** (also completed this session):
+- Deleted merged branches: `feature/parsing-fixes`, `feature/tatsu-ebnf-validation`,
+  `591-create-brew-packager`, `664-feature-add-timing-data-to-parsing-results`,
+  `feature/scala-bug`
+- Closed Issue #38 (BAST complete), deleted branch `38-implement-bast-file-read-write`
+- Closed Issue #608 (moved to riddl-gen), deleted branch
+- Deleted `OSS-275-Prompt-Generation` branch (moved to riddl-gen)
+- Deleted `367-auto-entity-id` branch (issue already closed, feature not implemented)
+- Deleted `304-get-code-coverage--80` branch (stale, 9 months old)
+- Deleted `consistent-output` branch (stale, 16 months old)
+- Only `main` and `development` branches remain
 
 ---
 
