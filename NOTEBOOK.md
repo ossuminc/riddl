@@ -6,10 +6,12 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 1, 2026
+**Last Updated**: February 3, 2026
 
-**Release 1.2.1 Published**: Cardinality fix and EBNF validation improvements. All
-715 tests pass. Published to GitHub Packages.
+**Release 1.2.2 Published**: Fixed Scala.js null newline bug that was causing error
+message truncation in synapify. All 715 tests pass. Published to GitHub Packages.
+
+**Homebrew Tap Created**: `ossuminc/homebrew-tap` provides `brew install riddlc`.
 
 **In Progress**: TatSu-based EBNF validation (branch: `feature/tatsu-ebnf-validation`).
 Fixing EBNF grammar drift from fastparse implementation.
@@ -138,6 +140,38 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 3, 2026 (Release 1.2.2 - Scala.js Bugfix)
+
+**Focus**: Fix Scala.js error message truncation blocking synapify
+
+**Root Cause**: `System.lineSeparator()` and `System.getProperty("line.separator")`
+both return `null` in Scala.js, causing error messages to include "null" instead
+of newlines, resulting in truncated/malformed output.
+
+**Work Completed**:
+1. ✅ **Fixed Messages.scala** - Changed `System.lineSeparator()` to `"\n"`
+2. ✅ **Fixed RiddlParserInput.scala** - Changed `System.getProperty("line.separator")` to `"\n"`
+3. ✅ **Created bugfix branch** `bugfix/js-newline-null`, merged to development
+4. ✅ **Waited for CI** - Both Scala Build and Coverage passed
+5. ✅ **Released 1.2.2** - Tagged, pushed, published to GitHub Packages
+6. ✅ **Created GitHub release** - https://github.com/ossuminc/riddl/releases/tag/1.2.2
+7. ✅ **Updated Homebrew formula** - ossuminc/homebrew-tap updated to 1.2.2
+8. ✅ **Cleaned up** - Deleted bugfix branch (local and remote)
+
+**Files Modified**:
+- `language/shared/src/main/scala/com/ossuminc/riddl/language/Messages.scala`
+- `language/shared/src/main/scala/com/ossuminc/riddl/language/parsing/RiddlParserInput.scala`
+
+**Test Results**: All 715 JVM tests pass
+
+**Homebrew Tap** (also completed this session):
+- Created `ossuminc/homebrew-tap` repository
+- Added `Formula/riddlc.rb` formula with openjdk@21 dependency
+- Added README.md with installation instructions
+- No registration needed - Homebrew auto-discovers `username/homebrew-tap` repos
+
+---
 
 ### February 1, 2026 (Cardinality Fix)
 
@@ -900,4 +934,4 @@ Tool(
 ## Git Information
 
 **Branch**: `main`
-**Latest release**: 1.2.1 (February 1, 2026)
+**Latest release**: 1.2.2 (February 3, 2026)
