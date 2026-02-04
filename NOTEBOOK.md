@@ -153,6 +153,43 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ## Session Log
 
+### February 3, 2026 (Packaging Infrastructure)
+
+**Focus**: Packaging infrastructure for Docker, npm, TypeScript, and
+sbt-ossuminc plan document
+
+**Work Completed**:
+1. ✅ **Wrote sbt-ossuminc PACKAGING-PLAN.md** — Comprehensive design
+   document for new `With.Packaging.npm()`, `With.Publishing.npm()`,
+   `With.Packaging.homebrew()`, `With.Packaging.linux()`, and
+   `With.Packaging.windowsMsi()` helpers. Includes API signatures,
+   implementation approach, scripted test strategy, 6-phase plan,
+   migration guide for riddl, and design decisions.
+2. ✅ **Updated CLAUDE.md for Scala 3.7.4** — All version references
+   corrected from 3.3.7 to 3.7.4 with compiler bug explanation
+3. ✅ **Committed workflow path updates** — `scala.yml` and
+   `coverage.yml` paths updated from `scala-3.3.7` to `scala-3.7.4`
+4. ✅ **Committed Docker packaging** — `Dockerfile` (multi-stage with
+   jlink custom JRE), `docker-publish.yml` workflow, `build.sbt`
+   docker configuration
+5. ✅ **Committed npm/TypeScript packaging** — Enhanced
+   `package.json.template`, updated `pack-npm-modules.sh` with TS
+   integration, added `riddlLib/js/types/index.d.ts` (392 lines),
+   added `npm-publish.yml` workflow
+6. ✅ **Pushed all to development** — 4 commits pushed
+
+**Commits** (pushed to development):
+- `6faa01eb` - Update workflow paths for Scala 3.7.4
+- `2f63be1d` - Add Docker packaging infrastructure for riddlc
+- `ba185b99` - Add npm packaging improvements and TypeScript support
+- `ae6f8342` - Update CLAUDE.md and NOTEBOOK.md for Scala 3.7.4 and
+  packaging
+
+**Cross-project artifact**: `sbt-ossuminc/PACKAGING-PLAN.md` created
+for another worker to implement in sbt-ossuminc 1.3.0
+
+---
+
 ### February 3, 2026 (Release 1.2.2 - Scala.js Bugfix)
 
 **Focus**: Fix Scala.js error message truncation blocking synapify
