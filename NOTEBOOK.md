@@ -8,8 +8,20 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 **Last Updated**: February 3, 2026
 
+**Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS default due to
+compiler infinite loop bug with opaque types/intersection types in 3.3.x).
+All workflow paths updated to `scala-3.7.4`.
+
 **Release 1.2.2 Published**: Fixed Scala.js null newline bug that was causing error
 message truncation in synapify. All 715 tests pass. Published to GitHub Packages.
+
+**Packaging Infrastructure**: Docker, npm, and TypeScript support added:
+- `Dockerfile` — Multi-stage build with custom JRE via jlink (~80-100MB image)
+- `docker-publish.yml` — CI workflow for Docker image publishing to ghcr.io
+- `npm-publish.yml` — CI workflow for npm package publishing
+- `riddlLib/js/types/index.d.ts` — TypeScript type definitions
+- `package.json.template` — Enhanced with TypeScript and ES module support
+- `pack-npm-modules.sh` — Updated with TypeScript definitions integration
 
 **Homebrew Tap Created**: `ossuminc/homebrew-tap` provides `brew install riddlc`.
 

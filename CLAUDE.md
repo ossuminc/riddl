@@ -24,7 +24,9 @@ RIDDL (Reactive Interface to Domain Definition Language) is a specification lang
 ## Critical Build Information
 
 ### Scala Version & Syntax
-- **Scala 3.3.7 LTS** (not Scala 2!)
+- **Scala 3.7.4** (not Scala 2!) — overrides sbt-ossuminc's 3.3.7 LTS
+  default due to a compiler infinite loop bug in 3.3.x with opaque
+  types and intersection types (see `build.sbt` header comment)
 - **ALWAYS use Scala 3 syntax**:
   - `while i < end do ... end while` (NOT `while (i < end) { ... }`)
   - No `null` checks - use `Option(x)` instead
@@ -41,8 +43,9 @@ RIDDL (Reactive Interface to Domain Definition Language) is a specification lang
 
 #### Common Configurations:
 ```scala
-// Scala 3.3.7 LTS (recommended for projects)
+// Scala 3.7.4 (overridden from sbt-ossuminc's 3.3.7 LTS default)
 .configure(With.scala3)  // Sets scalaVersion to 3.3.7 LTS
+// Then override: scalaVersion := "3.7.4"
 
 // Scala.js configuration
 .jsConfigure(With.ScalaJS(
@@ -231,7 +234,8 @@ sbt-ossuminc updates its default), the following files **MUST** be updated:
 **sbt-ossuminc Version Policy**:
 - sbt-ossuminc always defaults to the latest Scala LTS version
 - When sbt-ossuminc is updated, check if its default Scala version changed
-- Current LTS: **3.3.7** (3.3.x series)
+- Current LTS: **3.3.7** (3.3.x series), but riddl uses **3.7.4**
+  due to compiler bug (see build.sbt)
 - Next LTS expected: **3.9.x** (Q2 2026)
 
 **Quick Search to Find All References**:
@@ -239,10 +243,10 @@ sbt-ossuminc updates its default), the following files **MUST** be updated:
 grep -r "scala-3\." .github/workflows/
 ```
 
-**Example Fix** (3.3.7 → 3.9.0):
+**Example Fix** (3.7.4 → 3.9.0):
 ```bash
 # In each workflow file, replace all occurrences:
-sed -i 's/scala-3.3.7/scala-3.9.0/g' .github/workflows/*.yml
+sed -i 's/scala-3.7.4/scala-3.9.0/g' .github/workflows/*.yml
 ```
 
 ## Testing Patterns
@@ -614,7 +618,7 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 10. **Share code via utils/shared/** - For code used by both JVM and JS variants
 11. **BAST code lives in language module** - `language/shared/.../bast/`, NOT standalone directory
 12. **BAST readNode() vs readTypeExpression()** - Disjoint tag sets; mixing causes byte misalignment
-13. **Use `With.scala3` for Scala version** - Sets Scala 3.3.7 LTS; don't hardcode `scalaVersion`
+13. **Scala version is 3.7.4** - Each module overrides `scalaVersion := "3.7.4"` (3.3.x has compiler bug with opaque types)
 14. **BAST location comparisons use offsets** - Compare offset/endOffset, not line/col
 15. **Scala version changes require workflow updates** - Update `scala-X.Y.Z` paths in workflows
 16. **All RIDDL documentation goes to ossum.tech** - Don't add docs to this repo's `doc/` directory
