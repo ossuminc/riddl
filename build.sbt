@@ -361,7 +361,15 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
       maintainerEmail = "reid@ossuminc.com",
       pkgName = "riddlc",
       pkgSummary = "Compiler for RIDDL language, Universal packaging",
-      pkgDescription = ""
+      pkgDescription = "Compiler for the Reactive Interface to Domain Definition Language"
+    )
+  )
+  .jvmConfigure(
+    With.Packaging.docker(
+      maintainerEmail = "reid@ossuminc.com",
+      pkgName = "riddlc",
+      pkgSummary = "RIDDL Language Compiler",
+      pkgDescription = "Compiler for the Reactive Interface to Domain Definition Language"
     )
   )
   .jvmSettings(
