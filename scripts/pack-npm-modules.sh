@@ -82,9 +82,39 @@ build_and_pack() {
     return 1
   fi
 
-  # Create package.json from template
+  # Create package.json from template with TypeScript support
   echo -e "${YELLOW}Creating package.json...${NC}"
-  sed "s/VERSION_PLACEHOLDER/${version}/g" "$template_file" > "$output_dir/package.json"
+  sed "s/VERSION_PLACEHOLDER/${version}/g" "$template_file" > "$output_dir/package.json.tmp"
+
+  # Check if TypeScript definitions exist
+  local types_file="$PROJECT_ROOT/${module}/js/types/index.d.ts"
+  if [ -f "$types_file" ]; then
+    echo -e "${YELLOW}Adding TypeScript definitions...${NC}"
+    # Copy TypeScript definitions
+    cp "$types_file" "$output_dir/"
+
+    # Update package.json to include types field
+    # Using jq if available, otherwise use sed
+    if command -v jq &> /dev/null; then
+      jq '. + {
+        "types": "index.d.ts",
+        "type": "module",
+        "exports": {
+          ".": {
+            "types": "./index.d.ts",
+            "import": "./main.js"
+          }
+        }
+      }' "$output_dir/package.json.tmp" > "$output_dir/package.json"
+    else
+      # Fallback: just copy the template and note that types may be missing
+      cp "$output_dir/package.json.tmp" "$output_dir/package.json"
+      echo -e "${YELLOW}Note: jq not found, TypeScript support may be incomplete${NC}"
+    fi
+    rm -f "$output_dir/package.json.tmp"
+  else
+    mv "$output_dir/package.json.tmp" "$output_dir/package.json"
+  fi
 
   # Create README
   echo -e "${YELLOW}Creating README.md...${NC}"

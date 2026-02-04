@@ -1,17 +1,29 @@
 {
   "name": "@ossuminc/riddl-lib",
   "version": "VERSION_PLACEHOLDER",
-  "description": "RIDDL Language Library - JavaScript/TypeScript bindings",
+  "description": "RIDDL Language Library - JavaScript/TypeScript bindings for the RIDDL parser",
   "main": "main.js",
+  "types": "index.d.ts",
+  "type": "module",
   "exports": {
-    ".": "./main.js"
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./main.js"
+    }
   },
+  "files": [
+    "main.js",
+    "main.js.map",
+    "index.d.ts"
+  ],
   "keywords": [
     "riddl",
     "ddd",
     "domain-driven-design",
     "parser",
-    "ast"
+    "ast",
+    "typescript",
+    "reactive-systems"
   ],
   "author": "Ossum Inc.",
   "license": "Apache-2.0",
@@ -22,5 +34,8 @@
   "bugs": {
     "url": "https://github.com/ossuminc/riddl/issues"
   },
-  "homepage": "https://github.com/ossuminc/riddl#readme"
+  "homepage": "https://github.com/ossuminc/riddl#readme",
+  "publishConfig": {
+    "access": "public"
+  }
 }
