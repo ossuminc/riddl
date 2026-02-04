@@ -69,8 +69,41 @@ Implement the `import` statement to load BAST files into RIDDL models.
 - **Syntax**: `import "file.bast"` (no namespace - use domain paths)
 - **Locations**: Root level and inside domains only
 
-### 2. AIHelperPass - After Import
-AI-friendly validation pass for MCP server integration. See design section below.
+### 2. Comprehensive TypeScript Declarations for AST & Passes
+Expand `riddlLib/js/types/index.d.ts` to cover the full AST and Pass
+hierarchies so TypeScript consumers can access the rich capabilities
+of the RIDDL compiler — not just the RiddlAPI facade.
+
+**Current state**: The existing `index.d.ts` (~390 lines) only
+declares types for the `RiddlAPI` object's 12 exported methods and
+their return types. The underlying AST node types (Domain, Context,
+Entity, Handler, State, Type, etc.), pass outputs, and message types
+are represented as opaque `object` or simplified interfaces.
+
+**Goal**: Provide complete TypeScript type declarations for:
+- **AST hierarchy** — All `RiddlValue` subtypes: `Domain`, `Context`,
+  `Entity`, `Handler`, `State`, `Adaptor`, `Saga`, `Projector`,
+  `Repository`, `Streamlet`, `Epic`, `Function`, `Type`, statements,
+  expressions, etc.
+- **Type expressions** — `PredefinedType`, `AggregateTypeExpression`,
+  `EntityReferenceTypeExpression`, `AliasedTypeExpression`, etc.
+- **Pass outputs** — `PassesResult`, `SymbolsOutput`,
+  `ResolutionOutput`, `ValidationOutput`, message collections
+- **Messages** — `KindOfMessage` subtypes (`Error`, `Warning`,
+  `Info`, `MissingWarning`, `StyleWarning`, `UsageWarning`)
+- **Location** — `At` with `line`, `col`, `offset`, `endOffset`
+- **Contents** — Typed container contents for each definition kind
+
+**Approach**: Generate declarations from the Scala AST source files
+in `language/shared/src/main/scala/com/ossuminc/riddl/language/AST.scala`
+and related files. Consider whether declarations should be
+hand-maintained or auto-generated via a build step.
+
+**File**: `riddlLib/js/types/index.d.ts`
+
+### 3. AIHelperPass - After Import
+AI-friendly validation pass for MCP server integration. See design
+section below.
 
 ---
 
