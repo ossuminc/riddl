@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 3, 2026 (evening)
+**Last Updated**: February 4, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS default due to
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
@@ -18,9 +18,11 @@ Scala.js. Added `(using PlatformContext)` to `FileBuilder` trait and
 propagated through entire hierarchy. All tests pass. Published to
 GitHub Packages. Merged to main.
 
-**npm Package Published**: `@ossuminc/riddl-lib@1.2.3-1-aef48695-20260203-2217`
-published to GitHub Packages npm registry. ESModule format with TypeScript
-declarations. Consumable via `npm install @ossuminc/riddl-lib@dev` with
+**npm Package Published**: `@ossuminc/riddl-lib` published to GitHub
+Packages npm registry via CI and locally. ESModule format with TypeScript
+declarations. CI workflow (`npm-publish.yml`) uses sbt-ossuminc 1.3.0
+tasks (`npmPublishGithub`/`npmPublishNpmjs`). Consumable via
+`npm install @ossuminc/riddl-lib` with
 `@ossuminc:registry=https://npm.pkg.github.com` in `.npmrc`.
 
 **Packaging Infrastructure**: Docker, npm, and TypeScript support added:
@@ -161,53 +163,61 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ## Session Log
 
-### February 3, 2026 (npm Package Publishing to GitHub Packages)
+### February 3-4, 2026 (npm Package Publishing to GitHub Packages)
 
 **Focus**: Publish `@ossuminc/riddl-lib` as npm package to GH Packages
 for consumption by Synapify and ossum.ai
 
 **Key Finding**: Most infrastructure already existed (TypeScript
 declarations, package.json template, npm-publish.yml workflow). The
-sbt-ossuminc plugin (1.2.5-4) already had `With.Packaging.npm()` and
+sbt-ossuminc plugin already had `With.Packaging.npm()` and
 `With.Publishing.npm()` helpers ready to use.
 
 **Work Completed**:
-1. Updated sbt-ossuminc to 1.2.5-4-4a8a48fb-20260203-2208
-   (locally published version with npm packaging helpers)
-2. Fixed Scala.js module kind: changed from CommonJS to ESModule
+1. Fixed Scala.js module kind: changed from CommonJS to ESModule
    (`withCommonJSModule = true` removed). Package.json already
    declared `"type": "module"` so this resolved the mismatch.
-3. Wired up `With.Packaging.npm()` for riddlLibJS with scope
+2. Wired up `With.Packaging.npm()` for riddlLibJS with scope
    `@ossuminc`, keywords, and ESModule flag
-4. Wired up `With.Publishing.npm(registries = Seq("github"))`
-5. Fixed `npmTypesDir` convention mismatch: JS variant's
-   `baseDirectory` is `riddlLib/js/`, so convention looked at
-   `riddlLib/js/js/types/` (wrong). Overrode to
-   `baseDirectory / "types"`.
-6. Removed `export default RiddlAPI` from index.d.ts (ESModule
+3. Wired up `With.Publishing.npm(registries = Seq("github"))`
+4. Removed `export default RiddlAPI` from index.d.ts (ESModule
    uses named exports only)
-7. Published `@ossuminc/riddl-lib@1.2.3-1-aef48695-20260203-2217`
-   to GitHub Packages npm registry with `--tag dev`
+5. Published `@ossuminc/riddl-lib` locally to GitHub Packages
+   npm registry with `--tag dev`
+6. Simplified `.github/workflows/npm-publish.yml` — replaced
+   ~150 lines of custom shell scripting with sbt task calls
+   (`riddlLibJS/npmPublishGithub`, `riddlLibJS/npmPublishNpmjs`)
+7. Upgraded sbt-ossuminc to 1.3.0 (published to GH Packages,
+   fixes npmTypesDir convention, CI-compatible)
+8. CI workflow verified green — "Publish to GitHub Packages"
+   step passes end-to-end from development branch
 
-**Issues Encountered**:
+**Issues Encountered & Resolved**:
 - npm requires `--tag` for prerelease versions (sbt-dynver format
-  `1.2.3-1-hash-date` is a prerelease). The `NpmPublishing` helper
-  in sbt-ossuminc needs updating to handle this automatically.
-- `gh auth` needed `write:packages` scope refresh for npm publishing
-  (`gh auth refresh -s write:packages`)
+  `1.2.3-1-hash-date` is a prerelease)
+- `gh auth` needed `write:packages` scope refresh for npm
+  publishing (`gh auth refresh -s write:packages`)
+- CI couldn't resolve locally-published sbt-ossuminc 1.2.5-4;
+  upgraded to published 1.3.0
+- sbt-ossuminc 1.3.0 also fixed the npmTypesDir convention
+  mismatch, removing need for manual override
+
+**Commits** (on development):
+- `c5361e87` — Add npm packaging via sbt-ossuminc and publish
+  to GitHub Packages
+- `e36b7a3e` — Upgrade sbt-ossuminc to 1.3.0 for CI-compatible
+  npm packaging
 
 **Files Modified**:
-- `project/plugins.sbt` — sbt-ossuminc version bump
-- `build.sbt` — ESModule, npm packaging/publishing config, import
+- `project/plugins.sbt` — sbt-ossuminc 1.3.0
+- `build.sbt` — ESModule, npm packaging/publishing config
 - `riddlLib/js/types/index.d.ts` — removed default export
+- `.github/workflows/npm-publish.yml` — simplified to sbt tasks
 
-**Next Steps**:
-- Simplify `.github/workflows/npm-publish.yml` to use sbt tasks
-- Fix sbt-ossuminc `NpmPublishing` to pass `--tag dev` for
-  prerelease versions
+**Remaining**:
 - Test consumption from Synapify and ossum.ai
-- When ready for release, tag a clean version (e.g., `1.2.4`) to
-  get a proper semver npm version
+- When ready for release, tag a clean version (e.g., `1.2.4`)
+  to get a proper semver npm version
 
 ---
 
