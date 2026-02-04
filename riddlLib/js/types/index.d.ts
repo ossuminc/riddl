@@ -387,5 +387,3 @@ export declare const RiddlAPI: {
   formatInfo: string;
 };
 
-// Default export for CommonJS compatibility
-export default RiddlAPI;

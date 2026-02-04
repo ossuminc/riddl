@@ -8,12 +8,11 @@ on:
       registry:
         description: 'Registry to publish to'
         required: true
-        default: 'both'
+        default: 'github'
         type: choice
         options:
-          - npmjs
           - github
-          - both
+          - npmjs
 
 jobs:
   build-and-publish:
@@ -59,146 +58,21 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build Scala.js
-        run: sbt --batch riddlLibJS/fullLinkJS
+      - name: Publish to GitHub Packages
+        if: github.event_name == 'release' || github.event.inputs.registry == 'github'
+        run: sbt --batch riddlLibJS/npmPublishGithub
 
-      - name: Get version from sbt
+      - name: Publish to npmjs.com
+        if: github.event.inputs.registry == 'npmjs'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: sbt --batch riddlLibJS/npmPublishNpmjs
+
+      - name: Get version for summary
         id: version
         run: |
           VERSION=$(sbt --batch "print riddlLibJS/version" 2>/dev/null | grep -v "\[info\]" | grep -v "loading" | tail -1 | tr -d ' ')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
-
-      - name: Prepare npm package
-        run: |
-          # Find the output directory
-          OUTPUT_DIR=$(find riddlLib/js/target -type d -name "*-opt" | head -1)
-          echo "Output directory: $OUTPUT_DIR"
-
-          # Copy TypeScript definitions
-          cp riddlLib/js/types/index.d.ts "$OUTPUT_DIR/"
-
-          # Create package.json from template with version and TypeScript support
-          cat > "$OUTPUT_DIR/package.json" << EOF
-          {
-            "name": "@ossuminc/riddl-lib",
-            "version": "${{ steps.version.outputs.version }}",
-            "description": "RIDDL Language Library - JavaScript/TypeScript bindings",
-            "main": "main.js",
-            "types": "index.d.ts",
-            "type": "module",
-            "exports": {
-              ".": {
-                "types": "./index.d.ts",
-                "import": "./main.js"
-              }
-            },
-            "files": [
-              "main.js",
-              "main.js.map",
-              "index.d.ts"
-            ],
-            "keywords": [
-              "riddl",
-              "ddd",
-              "domain-driven-design",
-              "parser",
-              "ast",
-              "typescript"
-            ],
-            "author": "Ossum Inc.",
-            "license": "Apache-2.0",
-            "repository": {
-              "type": "git",
-              "url": "https://github.com/ossuminc/riddl.git"
-            },
-            "bugs": {
-              "url": "https://github.com/ossuminc/riddl/issues"
-            },
-            "homepage": "https://github.com/ossuminc/riddl#readme",
-            "publishConfig": {
-              "access": "public"
-            }
-          }
-          EOF
-
-          # Create README
-          cat > "$OUTPUT_DIR/README.md" << 'EOF'
-          # @ossuminc/riddl-lib
-
-          RIDDL Language Library - JavaScript/TypeScript bindings for the RIDDL parser.
-
-          ## Installation
-
-          ```bash
-          npm install @ossuminc/riddl-lib
-          ```
-
-          ## Usage
-
-          ```typescript
-          import { RiddlAPI } from '@ossuminc/riddl-lib';
-
-          // Parse a RIDDL source string
-          const result = RiddlAPI.parseString(`
-            domain Banking is {
-              context Accounts is {
-                entity Account is { ??? }
-              }
-            }
-          `);
-
-          if (result.succeeded) {
-            console.log("Domains:", result.value.domains);
-          } else {
-            console.error("Errors:", RiddlAPI.formatErrorArray(result.errors));
-          }
-          ```
-
-          ## API
-
-          - `RiddlAPI.parseString(source, origin?, verbose?)` - Parse RIDDL source to AST
-          - `RiddlAPI.parseNebula(source, origin?, verbose?)` - Parse arbitrary definitions
-          - `RiddlAPI.parseToTokens(source, origin?, verbose?)` - Tokenize for syntax highlighting
-          - `RiddlAPI.validateString(source, origin?, verbose?, noANSI?)` - Full validation
-          - `RiddlAPI.version` - Library version string
-          - `RiddlAPI.buildInfo` - Detailed build information
-          - `RiddlAPI.formatErrorArray(errors)` - Format errors as string
-          - `RiddlAPI.errorsToStrings(errors)` - Convert errors to string array
-
-          ## Documentation
-
-          See [RIDDL Documentation](https://ossum.tech/riddl/) for more information.
-
-          ## License
-
-          Apache-2.0
-          EOF
-
-          echo "PACKAGE_DIR=$OUTPUT_DIR" >> $GITHUB_ENV
-
-      - name: Publish to npmjs.com
-        if: github.event_name == 'release' || github.event.inputs.registry == 'npmjs' || github.event.inputs.registry == 'both'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          cd "$PACKAGE_DIR"
-          npm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN"
-          npm publish --access public
-        continue-on-error: true
-
-      - name: Publish to GitHub Packages
-        if: github.event_name == 'release' || github.event.inputs.registry == 'github' || github.event.inputs.registry == 'both'
-        run: |
-          cd "$PACKAGE_DIR"
-          npm config set //npm.pkg.github.com/:_authToken "$GITHUB_TOKEN"
-          npm config set @ossuminc:registry https://npm.pkg.github.com
-
-          # Update package.json for GitHub Packages
-          jq '.publishConfig.registry = "https://npm.pkg.github.com"' package.json > package.json.tmp
-          mv package.json.tmp package.json
-
-          npm publish --access public
 
       - name: Generate summary
         run: |

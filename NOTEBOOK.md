@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 3, 2026
+**Last Updated**: February 3, 2026 (evening)
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS default due to
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
@@ -17,6 +17,11 @@ All workflow paths updated to `scala-3.7.4`.
 Scala.js. Added `(using PlatformContext)` to `FileBuilder` trait and
 propagated through entire hierarchy. All tests pass. Published to
 GitHub Packages. Merged to main.
+
+**npm Package Published**: `@ossuminc/riddl-lib@1.2.3-1-aef48695-20260203-2217`
+published to GitHub Packages npm registry. ESModule format with TypeScript
+declarations. Consumable via `npm install @ossuminc/riddl-lib@dev` with
+`@ossuminc:registry=https://npm.pkg.github.com` in `.npmrc`.
 
 **Packaging Infrastructure**: Docker, npm, and TypeScript support added:
 - `Dockerfile` — Multi-stage build with custom JRE via jlink (~80-100MB image)
@@ -155,6 +160,56 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 3, 2026 (npm Package Publishing to GitHub Packages)
+
+**Focus**: Publish `@ossuminc/riddl-lib` as npm package to GH Packages
+for consumption by Synapify and ossum.ai
+
+**Key Finding**: Most infrastructure already existed (TypeScript
+declarations, package.json template, npm-publish.yml workflow). The
+sbt-ossuminc plugin (1.2.5-4) already had `With.Packaging.npm()` and
+`With.Publishing.npm()` helpers ready to use.
+
+**Work Completed**:
+1. Updated sbt-ossuminc to 1.2.5-4-4a8a48fb-20260203-2208
+   (locally published version with npm packaging helpers)
+2. Fixed Scala.js module kind: changed from CommonJS to ESModule
+   (`withCommonJSModule = true` removed). Package.json already
+   declared `"type": "module"` so this resolved the mismatch.
+3. Wired up `With.Packaging.npm()` for riddlLibJS with scope
+   `@ossuminc`, keywords, and ESModule flag
+4. Wired up `With.Publishing.npm(registries = Seq("github"))`
+5. Fixed `npmTypesDir` convention mismatch: JS variant's
+   `baseDirectory` is `riddlLib/js/`, so convention looked at
+   `riddlLib/js/js/types/` (wrong). Overrode to
+   `baseDirectory / "types"`.
+6. Removed `export default RiddlAPI` from index.d.ts (ESModule
+   uses named exports only)
+7. Published `@ossuminc/riddl-lib@1.2.3-1-aef48695-20260203-2217`
+   to GitHub Packages npm registry with `--tag dev`
+
+**Issues Encountered**:
+- npm requires `--tag` for prerelease versions (sbt-dynver format
+  `1.2.3-1-hash-date` is a prerelease). The `NpmPublishing` helper
+  in sbt-ossuminc needs updating to handle this automatically.
+- `gh auth` needed `write:packages` scope refresh for npm publishing
+  (`gh auth refresh -s write:packages`)
+
+**Files Modified**:
+- `project/plugins.sbt` — sbt-ossuminc version bump
+- `build.sbt` — ESModule, npm packaging/publishing config, import
+- `riddlLib/js/types/index.d.ts` — removed default export
+
+**Next Steps**:
+- Simplify `.github/workflows/npm-publish.yml` to use sbt tasks
+- Fix sbt-ossuminc `NpmPublishing` to pass `--tag dev` for
+  prerelease versions
+- Test consumption from Synapify and ossum.ai
+- When ready for release, tag a clean version (e.g., `1.2.4`) to
+  get a proper semver npm version
+
+---
 
 ### February 3, 2026 (Release 1.2.3 - System.lineSeparator Fix)
 

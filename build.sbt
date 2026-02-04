@@ -1,5 +1,6 @@
 import org.scoverage.coveralls.Imports.CoverallsKeys.coverallsTokenFile
 import com.ossuminc.sbt.OssumIncPlugin
+import com.ossuminc.sbt.helpers.NpmPackaging
 import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProblem}
 import sbt.Append.{appendSeqImplicit, appendSet}
 import sbt.Keys.{description, libraryDependencies, scalacOptions}
@@ -306,8 +307,21 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   .jvmSettings(
     coverageExcludedFiles := """<empty>;$anon"""
   )
-  .jsConfigure(With.ScalaJS("RIDDL: riddl-lib", withCommonJSModule = true))
+  .jsConfigure(With.ScalaJS("RIDDL: riddl-lib"))
   .jsConfigure(With.noMiMa)
+  .jsConfigure(With.Packaging.npm(
+    scope = "@ossuminc",
+    pkgName = "riddl-lib",
+    pkgDescription = "RIDDL Language Library - JavaScript/TypeScript bindings",
+    keywords = Seq("riddl", "ddd", "domain-driven-design", "parser", "ast", "typescript"),
+    esModule = true
+  ))
+  .jsSettings(
+    NpmPackaging.Keys.npmTypesDir := Some(baseDirectory.value / "types")
+  )
+  .jsConfigure(With.Publishing.npm(
+    registries = Seq("github")
+  ))
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
 val riddlLib = riddlLib_cp.jvm

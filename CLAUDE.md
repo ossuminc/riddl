@@ -112,10 +112,16 @@ The `riddlLib` module exports a TypeScript-friendly API via `RiddlAPI` object.
   - Case classes → Plain objects
   - `Either` → `{ succeeded, value, errors }`
 
-**Building npm packages**:
+**Building npm packages** (via sbt-ossuminc helpers):
+```bash
+sbt riddlLibJS/npmPrepare   # Assemble package (pure sbt)
+sbt riddlLibJS/npmPack      # Create .tgz tarball
+sbt riddlLibJS/npmPublishGithub  # Publish to GH Packages
+```
+
+**Legacy script** (still works):
 ```bash
 ./scripts/pack-npm-modules.sh riddlLib
-# Creates: npm-packages/ossuminc-riddl-lib-<version>.tgz
 ```
 
 **Documentation**:
@@ -652,3 +658,8 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 18. **FileBuilder requires PlatformContext** - `trait FileBuilder(using PlatformContext)` — all subclasses must propagate the using clause
 19. **Scala 3.7.4 default param limitation** - Case class defaults can't resolve givens from a subsequent using clause in generated apply; remove defaults or provide explicit givens
 20. **@JSExportTopLevel incompatible with using clauses** - Don't use on case classes that have `(using PlatformContext)` in a second parameter list
+21. **npm packaging uses sbt-ossuminc helpers** - `With.Packaging.npm()` assembles package, `With.Publishing.npm()` publishes. Tasks: `npmPrepare`, `npmPack`, `npmPublishGithub`
+22. **JS variant baseDirectory is `module/js/`** - The `npmTypesDir` convention looks for `baseDir/js/types/` which doubles to `module/js/js/types/`. Override with `.jsSettings(NpmPackaging.Keys.npmTypesDir := baseDirectory.value / "types")`
+23. **npm requires --tag for prerelease versions** - sbt-dynver versions like `1.2.3-1-hash` are prerelease per npm semver. Must pass `--tag dev` when publishing
+24. **riddlLib JS is ESModule** - Changed from CommonJS (`withCommonJSModule = true` removed). Package.json has `"type": "module"`. Consumers use `import { RiddlAPI } from '@ossuminc/riddl-lib'`
+25. **gh auth needs write:packages for npm** - Run `gh auth refresh -s write:packages` if publishing to GH Packages npm registry
