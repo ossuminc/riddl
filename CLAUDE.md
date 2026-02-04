@@ -301,6 +301,32 @@ When implementing new code:
 **Cause**: sbt-ossuminc 1.0.0 API change
 **Fix**: Use `With.ScalaJS` instead
 
+### Error: "No given instance of PlatformContext for default parameter"
+**Cause**: Scala 3.7.4 limitation — default parameter values in a case
+class's first parameter list cannot resolve `given` instances from a
+subsequent `using` clause in the generated companion `apply` method.
+**Fix**: Remove the default value. May be fixed in 3.9.x LTS.
+**Example**:
+```scala
+// This fails in 3.7.4:
+case class Foo(x: Bar = Bar())(using PlatformContext)
+// Fix: remove default (or provide explicit given)
+case class Foo(x: Bar)(using PlatformContext)
+```
+
+### Error: "parameters with defaults must be at the end" (Scala.js)
+**Cause**: `@JSExportTopLevel` on a case class with `(using
+PlatformContext)` in a second parameter list. The JS export sees the
+context parameter as a non-default parameter after defaulted params.
+**Fix**: Remove `@JSExportTopLevel` from internal data structures that
+don't need to be constructed from JS code.
+
+### System.lineSeparator() returns null in Scala.js
+**Cause**: `System.lineSeparator()` returns `\0` in Scala.js
+**Fix**: Use `PlatformContext.newline` instead. Never use
+`System.lineSeparator()` in shared code. The `FileBuilder` trait
+and its entire hierarchy use `(using PlatformContext)` for this.
+
 ## File Organization
 
 ### Creating New Modules
@@ -622,3 +648,7 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 14. **BAST location comparisons use offsets** - Compare offset/endOffset, not line/col
 15. **Scala version changes require workflow updates** - Update `scala-X.Y.Z` paths in workflows
 16. **All RIDDL documentation goes to ossum.tech** - Don't add docs to this repo's `doc/` directory
+17. **Never use System.lineSeparator() in shared code** - Use `PlatformContext.newline` instead; returns `\0` in Scala.js
+18. **FileBuilder requires PlatformContext** - `trait FileBuilder(using PlatformContext)` — all subclasses must propagate the using clause
+19. **Scala 3.7.4 default param limitation** - Case class defaults can't resolve givens from a subsequent using clause in generated apply; remove defaults or provide explicit givens
+20. **@JSExportTopLevel incompatible with using clauses** - Don't use on case classes that have `(using PlatformContext)` in a second parameter list

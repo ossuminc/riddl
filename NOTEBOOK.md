@@ -12,8 +12,11 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
 All workflow paths updated to `scala-3.7.4`.
 
-**Release 1.2.2 Published**: Fixed Scala.js null newline bug that was causing error
-message truncation in synapify. All 715 tests pass. Published to GitHub Packages.
+**Release 1.2.3 Published**: Comprehensive fix for all
+`System.lineSeparator()` calls in shared code that returned `\0` in
+Scala.js. Added `(using PlatformContext)` to `FileBuilder` trait and
+propagated through entire hierarchy. All tests pass. Published to
+GitHub Packages. Merged to main.
 
 **Packaging Infrastructure**: Docker, npm, and TypeScript support added:
 - `Dockerfile` — Multi-stage build with custom JRE via jlink (~80-100MB image)
@@ -152,6 +155,76 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 3, 2026 (Release 1.2.3 - System.lineSeparator Fix)
+
+**Focus**: Comprehensive fix for `System.lineSeparator()` returning
+`\0` null bytes in Scala.js shared code
+
+**Root Cause**: `System.lineSeparator()` returns `\0` in Scala.js,
+not just in `Messages.scala` (fixed in 1.2.2) but throughout all
+shared code including `FileBuilder`, `StringHelpers`, and command
+files.
+
+**Approach**: The architecturally correct fix — added
+`(using PlatformContext)` trait parameter to `FileBuilder` and
+propagated through the entire class hierarchy. This ensures all
+code uses `pc.newline` which returns the correct value per platform.
+
+**Work Completed**:
+1. ✅ **Fixed JVM/Native PlatformContext** — Changed hardcoded
+   `"\n"` to `System.lineSeparator()` (correct on these platforms)
+2. ✅ **Fixed Messages.scala** — Changed `System.lineSeparator()`
+   to existing `nl` constant
+3. ✅ **Fixed StringHelpers.toPrettyString** — Added
+   `(using PlatformContext)`, uses `pc.newline`
+4. ✅ **Fixed FileBuilder hierarchy** — Added
+   `(using PlatformContext)` trait parameter, propagated through:
+   `OutputFile`, `TextFileWriter`, `RiddlFileEmitter`,
+   `PrettifyState`, `PrettifyVisitor`, `PrettifyOutput`
+5. ✅ **Fixed Command files** — Replaced `System.lineSeparator()`
+   with `io.newline`/`pc.newline` in `Command.scala`,
+   `HelpCommand.scala`, `AboutCommand.scala`
+6. ✅ **Fixed JS export issues** — Removed `@JSExportTopLevel`
+   from `PrettifyState` and `PrettifyOutput` (incompatible with
+   `using` parameter lists in Scala.js exports)
+7. ✅ **All tests pass** — 715+ JVM tests, JS and Native compile
+8. ✅ **Released 1.2.3** — Tagged, published to GitHub Packages,
+   merged to main, GitHub release created
+
+**Scala 3.7.4 Compiler Limitation Discovered**:
+Default parameter values in a case class's first parameter list
+cannot resolve `given` instances from a subsequent `using` clause
+in the generated companion `apply` method. Worked around by
+removing the default value for `PrettifyOutput.state` (only call
+site provides it explicitly anyway). Documented with comment noting
+potential fix in 3.9.x LTS.
+
+**Commits** (on development, merged to main):
+- `5bcfbc68` - Fix System.lineSeparator() returning null bytes in
+  Scala.js
+
+**Files Modified** (18 files):
+- `utils/shared/.../FileBuilder.scala` — trait parameter
+- `utils/shared/.../StringHelpers.scala` — using clause
+- `utils/shared/test/.../StringHelpersTest.scala`
+- `utils/jvm/.../JVMPlatformContext.scala`
+- `utils/native/.../NativePlatformContext.scala`
+- `utils/jvm-native/.../OutputFile.scala`
+- `utils/jvm-native/.../TextFileWriter.scala`
+- `utils/jvm/test/.../FileBuilderTest.scala`
+- `utils/jvm/test/.../TextFileWriterTest.scala`
+- `language/shared/.../Messages.scala`
+- `passes/shared/.../PrettifyPass.scala`
+- `passes/shared/.../PrettifyState.scala`
+- `passes/shared/.../PrettifyVisitor.scala`
+- `passes/shared/.../RiddlFileEmitter.scala`
+- `passes/jvm-native/test/.../RiddlFileEmitterTest.scala`
+- `commands/shared/.../Command.scala`
+- `commands/shared/.../AboutCommand.scala`
+- `commands/shared/.../HelpCommand.scala`
+
+---
 
 ### February 3, 2026 (Packaging Infrastructure)
 
@@ -995,4 +1068,4 @@ Tool(
 ## Git Information
 
 **Branch**: `main`
-**Latest release**: 1.2.2 (February 3, 2026)
+**Latest release**: 1.2.3 (February 3, 2026)
