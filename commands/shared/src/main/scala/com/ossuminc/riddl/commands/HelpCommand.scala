@@ -47,16 +47,16 @@ class HelpCommand(using val pc: PlatformContext) extends Command[HelpCommand.Opt
         val common = OParser.usage(CommonOptionsHelper.commonOptionsParser, OneColumn)
         val commands = OParser.usage(CommandLoader.commandOptionsParser, OneColumn)
         val improved_commands = commands
-          .split(System.lineSeparator())
+          .split(pc.newline)
           .flatMap { line =>
             if line.isEmpty || line.forall(_.isWhitespace) then {
               Seq.empty[String]
             } else if line.startsWith("Command:") then {
-              Seq(System.lineSeparator() + line)
+              Seq(pc.newline + line)
             } else if line.startsWith("Usage:") then { Seq(line) }
             else { Seq("  " + line) }
           }
-          .mkString(System.lineSeparator())
+          .mkString(pc.newline)
         common ++ "\n\n" ++ improved_commands
       }
       pc.log.info(usage)

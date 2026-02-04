@@ -10,11 +10,11 @@ import com.ossuminc.riddl.utils.URL
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.parsing.Keyword
-import com.ossuminc.riddl.utils.FileBuilder
+import com.ossuminc.riddl.utils.{FileBuilder, PlatformContext}
 import fastparse.ParserInputSource.fromReadable
 
 /** Generates RIDDL in textual format based on the AST */
-case class RiddlFileEmitter(url: URL) extends FileBuilder {
+case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder {
 
   def add(strings: Seq[LiteralString]): this.type = {
     if strings.sizeIs > 1 then {

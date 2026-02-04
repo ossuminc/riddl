@@ -42,7 +42,7 @@ class AboutCommand(using io: PlatformContext) extends Command[AboutCommand.Optio
   ): Either[Messages, PassesResult] = {
     if io.options.verbose || !io.options.quiet then {
       val about: String = {
-        CommonOptionsHelper.blurb ++ System.lineSeparator() ++
+        CommonOptionsHelper.blurb ++ io.newline ++
           "Extensive Documentation here: https://riddl.tech"
       }
 

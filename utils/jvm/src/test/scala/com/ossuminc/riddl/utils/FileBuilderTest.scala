@@ -13,7 +13,7 @@ import org.scalatest.matchers.must.Matchers
 /** Unit Tests For FileBuilder */
 class FileBuilderTest extends AnyWordSpec with Matchers {
 
-  class TestFileBuilder extends FileBuilder {
+  class TestFileBuilder(using PlatformContext) extends FileBuilder {
     def indentLine(str: String, indent: Int =0): Unit = {
       for i <- 1 to indent do incr
       addIndent(str)

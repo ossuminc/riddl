@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.passes.prettify.RiddlFileEmitter
-import com.ossuminc.riddl.utils.{AbstractTestingBasis, URL}
+import com.ossuminc.riddl.utils.{AbstractTestingBasis, URL, pc}
 
 import java.nio.file.{Files, Path}
 

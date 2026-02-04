@@ -147,7 +147,7 @@ trait Command[OPT <: CommandOptions: ClassTag](val commandName: String)(using io
           val pretty = StringHelpers.toPrettyString(
             result,
             1,
-            Some(s"Loaded these options:${System.lineSeparator()}")
+            Some(s"Loaded these options:${io.newline}")
           )
           println(pretty)
         end if

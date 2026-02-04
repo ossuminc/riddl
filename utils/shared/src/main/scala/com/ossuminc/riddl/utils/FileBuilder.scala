@@ -12,11 +12,11 @@ import scala.collection.mutable
   * function to insert a newline, and other functions for putting changes into the file content. The file is assumed to
   * have a UTF-8 content type.
   */
-trait FileBuilder {
+trait FileBuilder(using pc: PlatformContext) {
 
   protected[utils] val sb: mutable.StringBuilder = new mutable.StringBuilder()
 
-  protected val new_line: String = System.lineSeparator()
+  protected val new_line: String = pc.newline
 
   protected val spaces_per_level = 2
 

@@ -27,12 +27,13 @@ object PrettifyPass extends PassInfo[PrettifyPass.Options]:
   case class Options(flatten: Boolean = false) extends PassOptions
 end PrettifyPass
 
-@JSExportTopLevel("PrettifyOutput")
 case class PrettifyOutput(
   root: PassRoot = Root.empty,
   messages: Messages = empty,
-  state: PrettifyState = PrettifyState()
-) extends PassOutput
+  state: PrettifyState // Ideally: = PrettifyState(), but Scala 3.7.4 can't resolve the
+  // given PlatformContext from the second parameter list when evaluating default expressions
+  // in the generated companion apply method. May be fixed in 3.9.x LTS.
+)(using PlatformContext) extends PassOutput
 
 /** This is the RIDDL Prettifier to convert an AST back to RIDDL plain text */
 @JSExportTopLevel("PrettifyPass")

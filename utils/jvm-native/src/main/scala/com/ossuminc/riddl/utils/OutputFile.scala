@@ -8,7 +8,7 @@ package com.ossuminc.riddl.utils
 import java.io.PrintWriter
 import java.nio.file.Path
 
-trait OutputFile extends FileBuilder {
+trait OutputFile(using PlatformContext) extends FileBuilder {
 
   def filePath: Path
 

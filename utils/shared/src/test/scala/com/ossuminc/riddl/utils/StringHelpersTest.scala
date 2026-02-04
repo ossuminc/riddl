@@ -221,9 +221,9 @@ class StringHelpersTest extends AnyWordSpec with Matchers {
       result must include("value: 42")
     }
 
-    "use system line separator" in {
+    "use platform newline" in {
       val result = toPrettyString("test")
-      result must include(System.lineSeparator())
+      result must include(pc.newline)
     }
 
     "handle tuple" in {

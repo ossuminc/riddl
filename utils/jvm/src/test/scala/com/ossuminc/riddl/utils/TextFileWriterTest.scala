@@ -21,7 +21,7 @@ class TextFileWriterTest extends AnyWordSpec with Matchers {
       result mustBe ("blah dee blah dee blah")
     }
 
-    case class TestTextFileWriter(filePath: Path) extends TextFileWriter
+    case class TestTextFileWriter(filePath: Path)(using PlatformContext) extends TextFileWriter
     "fill a template from a resource" in {
       val path = Files.createTempFile("test", "txt")
       val ttfw = TestTextFileWriter(path)

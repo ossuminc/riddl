@@ -11,7 +11,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 /** Unit Tests For TextFileWriter */
-abstract class TextFileWriter extends OutputFile {
+abstract class TextFileWriter(using PlatformContext) extends OutputFile {
 
   def fillTemplateFromResource(
     resourceName: String,

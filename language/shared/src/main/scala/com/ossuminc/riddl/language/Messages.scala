@@ -229,7 +229,7 @@ object Messages {
 
     /** Format all the messages with a newline in between them. */
     @JSExport def format: String = {
-      msgs.map(_.format).mkString(System.lineSeparator())
+      msgs.map(_.format).mkString(nl)
     }
 
     /** Return true iff all the messages are only warnings */

@@ -26,9 +26,9 @@ object StringHelpers {
     obj: Any,
     depth: Int = 0,
     paramName: Option[String] = None
-  ): String = {
+  )(using pc: PlatformContext): String = {
     val buf = new StringBuffer(1024)
-    val nl = System.lineSeparator()
+    val nl = pc.newline
 
     def doIt(
       obj: Any,

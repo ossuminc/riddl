@@ -10,10 +10,11 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.parsing.Keyword
 import com.ossuminc.riddl.passes.PassVisitor
+import com.ossuminc.riddl.utils.PlatformContext
 
 import scala.annotation.unused
 
-class PrettifyVisitor(options: PrettifyPass.Options) extends PassVisitor:
+class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) extends PassVisitor:
   val state: PrettifyState = PrettifyState(options.flatten)
 
   def result: PrettifyState = state
