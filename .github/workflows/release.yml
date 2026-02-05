@@ -1,0 +1,284 @@
+name: Release Artifacts
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build for (e.g., 1.4.0)'
+        required: true
+
+jobs:
+  # Build native riddlc binaries on each target platform
+  native-build:
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: riddlc-macos-arm64
+            arch: arm64
+          - os: macos-13
+            artifact: riddlc-macos-x86_64
+            arch: x86_64
+          - os: ubuntu-latest
+            artifact: riddlc-linux-x86_64
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+
+    - name: Set Up JDK 25
+      uses: actions/setup-java@v4
+      with:
+        java-version: '25'
+        distribution: temurin
+        cache: sbt
+
+    - name: Set Up SBT
+      uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
+
+    - name: Coursier Caching
+      uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
+
+    - name: Configure sbt GitHub Packages credentials
+      run: |
+        mkdir -p ~/.sbt/1.0
+        cat > ~/.sbt/1.0/github.sbt << 'CREDSEOF'
+        credentials += Credentials(
+          "GitHub Package Registry",
+          "maven.pkg.github.com",
+          "x-access-token",
+          sys.env.getOrElse("GITHUB_TOKEN", "")
+        )
+        CREDSEOF
+
+    - name: Install LLVM and Clang (Linux only)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update && sudo apt-get install -y clang llvm
+
+    - name: Install curl dev dependencies (Linux only)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcurl4-openssl-dev libidn2-dev
+
+    - name: Build Native Binary
+      run: sbt riddlcNative/nativeLink
+
+    - name: Package Native Binary
+      run: |
+        mkdir -p staging/bin
+        cp riddlc/native/target/scala-3.7.4/riddlc staging/bin/riddlc
+        cd staging && zip -r ../${{ matrix.artifact }}.zip bin/
+
+    - name: Upload to Release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+        gh release upload "$TAG" "${{ matrix.artifact }}.zip" --clobber
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact }}
+        retention-days: 30
+        path: ${{ matrix.artifact }}.zip
+
+  # Build JVM version (universal, runs on any platform with JDK)
+  jvm-build:
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: read
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+
+    - name: Set Up JDK 25
+      uses: actions/setup-java@v4
+      with:
+        java-version: '25'
+        distribution: temurin
+        cache: sbt
+
+    - name: Set Up SBT
+      uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
+
+    - name: Coursier Caching
+      uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
+
+    - name: Configure sbt GitHub Packages credentials
+      run: |
+        mkdir -p ~/.sbt/1.0
+        cat > ~/.sbt/1.0/github.sbt << 'CREDSEOF'
+        credentials += Credentials(
+          "GitHub Package Registry",
+          "maven.pkg.github.com",
+          "x-access-token",
+          sys.env.getOrElse("GITHUB_TOKEN", "")
+        )
+        CREDSEOF
+
+    - name: Build and Stage JVM Version
+      run: |
+        sbt riddlc/stage
+        cd riddlc/jvm/target/universal/stage && zip -r ../../../../../riddlc.zip bin/ lib/
+
+    - name: Upload to Release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+        gh release upload "$TAG" riddlc.zip --clobber
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: riddlc-jvm
+        retention-days: 30
+        path: riddlc.zip
+
+  # Update homebrew formula with new SHA256 hashes
+  update-homebrew:
+    needs: [native-build, jvm-build]
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Compute SHA256 hashes
+      id: hashes
+      run: |
+        echo "macos_arm64=$(shasum -a 256 artifacts/riddlc-macos-arm64/riddlc-macos-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+        echo "macos_x86=$(shasum -a 256 artifacts/riddlc-macos-x86_64/riddlc-macos-x86_64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+        echo "linux_x86=$(shasum -a 256 artifacts/riddlc-linux-x86_64/riddlc-linux-x86_64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+        echo "jvm=$(shasum -a 256 artifacts/riddlc-jvm/riddlc.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+    - name: Checkout homebrew-tap
+      uses: actions/checkout@v4
+      with:
+        repository: ossuminc/homebrew-tap
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: homebrew-tap
+
+    - name: Update formula
+      env:
+        TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+        SHA_MACOS_ARM64: ${{ steps.hashes.outputs.macos_arm64 }}
+        SHA_MACOS_X86: ${{ steps.hashes.outputs.macos_x86 }}
+        SHA_LINUX_X86: ${{ steps.hashes.outputs.linux_x86 }}
+        SHA_JVM: ${{ steps.hashes.outputs.jvm }}
+      run: |
+        cat > homebrew-tap/Formula/riddlc.rb << FORMULA
+        # Homebrew formula for riddlc - the RIDDL compiler
+        # To install: brew install ossuminc/tap/riddlc
+        # Or add the tap first: brew tap ossuminc/tap && brew install riddlc
+        # Auto-generated by release.yml - do not edit manually
+
+        class Riddlc < Formula
+          desc "Compiler for RIDDL (Reactive Interface to Domain Definition Language)"
+          homepage "https://github.com/ossuminc/riddl"
+          version "${TAG}"
+          license "Apache-2.0"
+
+          if OS.mac? && Hardware::CPU.arm?
+            url "https://github.com/ossuminc/riddl/releases/download/#{version}/riddlc-macos-arm64.zip"
+            sha256 "${SHA_MACOS_ARM64}"
+          elsif OS.mac? && Hardware::CPU.intel?
+            url "https://github.com/ossuminc/riddl/releases/download/#{version}/riddlc-macos-x86_64.zip"
+            sha256 "${SHA_MACOS_X86}"
+          elsif OS.linux?
+            url "https://github.com/ossuminc/riddl/releases/download/#{version}/riddlc-linux-x86_64.zip"
+            sha256 "${SHA_LINUX_X86}"
+          else
+            url "https://github.com/ossuminc/riddl/releases/download/#{version}/riddlc.zip"
+            sha256 "${SHA_JVM}"
+            depends_on "openjdk@21"
+          end
+
+          def install
+            if OS.mac? || OS.linux?
+              if !Hardware::CPU.type.to_s.start_with?("arm") || !OS.mac?
+                # x86_64 native or Linux native
+                bin.install "bin/riddlc"
+              else
+                # macOS ARM64 native
+                bin.install "bin/riddlc"
+              end
+            else
+              # JVM fallback
+              rm "bin/riddlc.bat"
+              libexec.install "lib"
+              libexec.install "bin"
+              (bin/"riddlc").write <<~EOS
+                #!/bin/bash
+                export JAVA_HOME="#{Formula["openjdk@21"].opt_prefix}"
+                exec "#{libexec}/bin/riddlc" "$@"
+              EOS
+            end
+          end
+
+          def caveats
+            if OS.mac? || OS.linux?
+              <<~EOS
+                riddlc is installed as a native binary. No JDK required.
+
+                To verify the installation:
+                  riddlc version
+
+                For help:
+                  riddlc help
+              EOS
+            else
+              <<~EOS
+                riddlc requires Java 21. This formula uses openjdk@21.
+
+                To verify the installation:
+                  riddlc version
+
+                For help:
+                  riddlc help
+              EOS
+            end
+          end
+
+          test do
+            assert_match "riddlc version", shell_output("#{bin}/riddlc version")
+          end
+        end
+        FORMULA
+
+    - name: Commit and push formula
+      run: |
+        cd homebrew-tap
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        TAG="${{ github.event.release.tag_name || github.event.inputs.tag }}"
+        git add Formula/riddlc.rb
+        git diff --cached --quiet || git commit -m "Update riddlc to ${TAG} with multi-platform native binaries"
+        git push
