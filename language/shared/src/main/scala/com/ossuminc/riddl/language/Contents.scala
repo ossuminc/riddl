@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.AST.{Branch, Definition, Definitions, Include, Processor, RiddlValue, VitalDefinition, WithIdentifier}
+import com.ossuminc.riddl.language.AST.{BASTImport, Branch, Container, Definition, Definitions, Include, Processor, RiddlValue, VitalDefinition, WithIdentifier}
 
 import scala.collection.{SeqFactory, immutable, mutable}
 import scala.reflect.{ClassTag, classTag}
@@ -62,6 +62,8 @@ extension [CV <: RiddlValue](container: Contents[CV])
   def toIterator: Iterator[CV] = container.toIterator
   inline def dropRight(howMany: Int): Contents[CV] = container.dropRight(howMany)
   inline def drop(howMany: Int): Contents[CV] = container.drop(howMany)
+  inline def clear(): Unit = container.clear()
+  inline def remove(index: Int): CV = container.remove(index)
   inline def append(elem: CV): Unit = container.append(elem)
   inline def prepend(elem: CV): Unit = container.prepend(elem)
   inline def +=(elem: CV): Contents[CV] = { container.addOne(elem); container }
@@ -96,4 +98,29 @@ extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
     result ++= other
     result
   end merge
+end extension
+
+extension [CV <: RiddlValue](container: Container[CV])
+  /** Recursively flatten Include and BASTImport nodes, promoting
+    * their children to the parent container. This is a one-way,
+    * irreversible, in-place operation.
+    */
+  def flatten(): Unit =
+    val items = container.contents
+    val flattened = mutable.ArrayBuffer.empty[RiddlValue]
+    items.foreach:
+      case include: Include[?] =>
+        include.contents.foreach(child => flattened += child)
+      case bi: BASTImport =>
+        bi.contents.foreach(child => flattened += child)
+      case other =>
+        flattened += other
+    items.clear()
+    flattened.foreach: item =>
+      items.asInstanceOf[mutable.ArrayBuffer[RiddlValue]] += item
+    // Recurse into child containers
+    items.foreach:
+      case child: Container[?] => child.flatten()
+      case _                   => ()
+  end flatten
 end extension
