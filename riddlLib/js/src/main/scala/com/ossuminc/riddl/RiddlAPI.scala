@@ -10,7 +10,8 @@ import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, OutlinePass, OutlineOutput, OutlineEntry, TreePass, TreeOutput, TreeNode}
+import com.ossuminc.riddl.passes.{Pass, PassInput, PassOptions, PassesOutput, OutlinePass, OutlineOutput, OutlineEntry, TreePass, TreeOutput, TreeNode}
+import com.ossuminc.riddl.passes.transforms.FlattenPass
 import com.ossuminc.riddl.utils.{CommonOptions, DOMPlatformContext, PlatformContext, URL}
 
 import scala.scalajs.js
@@ -200,6 +201,31 @@ object RiddlAPI {
     val input = RiddlParserInput(source, originToURL(origin))
     val result = TopLevelParser.parseInput(input, verbose)(using context)
     toJsResult(result, rootToJsObject)
+  }
+
+  /** Flatten Include and BASTImport wrapper nodes from the AST.
+    *
+    * Recursively removes Include and BASTImport nodes, promoting their
+    * children to the parent container. This makes accessor methods like
+    * `domain.contexts` and `context.entities` return all definitions,
+    * including those originally loaded from included/imported files.
+    *
+    * This modifies the Root in-place and returns the same object.
+    * The transformation is one-way and irreversible. Consumers that
+    * need the original Include/BASTImport structure (e.g., for source
+    * regeneration) should retain the un-flattened AST or raw BAST bytes.
+    *
+    * @param root The AST Root to flatten
+    * @return The same Root, with Include/BASTImport nodes removed
+    */
+  @JSExport("flattenAST")
+  def flattenAST(root: Root): Root = {
+    val passInput = PassInput(root)
+    Pass.runThesePasses(
+      passInput,
+      Seq(FlattenPass.creator(PassOptions.empty)(using defaultContext))
+    )(using defaultContext)
+    root
   }
 
   /** Parse arbitrary RIDDL definitions (nebula).
