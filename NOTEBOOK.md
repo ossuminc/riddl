@@ -6,17 +6,16 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 4, 2026
+**Last Updated**: February 5, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS default due to
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
 All workflow paths updated to `scala-3.7.4`.
 
-**Release 1.2.3 Published**: Comprehensive fix for all
-`System.lineSeparator()` calls in shared code that returned `\0` in
-Scala.js. Added `(using PlatformContext)` to `FileBuilder` trait and
-propagated through entire hierarchy. All tests pass. Published to
-GitHub Packages. Merged to main.
+**Release 1.3.0 Published**: New features: OutlinePass, TreePass,
+and RiddlAPI `getOutline()`/`getTree()` methods for RIDDL definition
+hierarchy navigation. npm packaging via sbt-ossuminc 1.3.0. Published
+to GitHub Packages. Homebrew tap updated.
 
 **npm Package Published**: `@ossuminc/riddl-lib` published to GitHub
 Packages npm registry via CI and locally. ESModule format with TypeScript
@@ -33,8 +32,8 @@ tasks (`npmPublishGithub`/`npmPublishNpmjs`). Consumable via
 - `package.json.template` — Enhanced with TypeScript and ES module support
 - `pack-npm-modules.sh` — Updated with TypeScript definitions integration
 
-**Homebrew Tap Updated**: `ossuminc/homebrew-tap` updated to 1.2.3 with
-correct riddlc.zip asset. `brew install ossuminc/tap/riddlc` works.
+**Homebrew Tap Updated**: `ossuminc/homebrew-tap` updated to 1.3.0.
+`brew install ossuminc/tap/riddlc` works.
 
 **Branch Cleanup Complete**: All stale feature/bugfix branches deleted. Only `main`
 and `development` branches remain.
@@ -75,7 +74,10 @@ After all files pass, add riddl-models EBNF validation to CI
 (`.github/workflows/scala.yml`, mirroring existing riddl-examples
 pattern).
 
-### 1. Comprehensive TypeScript Declarations for AST & Passes
+### 1. Merge development to main for 1.3.0 release
+Create PR from development to main, merge after CI passes.
+
+### 2. Comprehensive TypeScript Declarations for AST & Passes
 Expand `riddlLib/js/types/index.d.ts` to cover the full AST and Pass
 hierarchies so TypeScript consumers can access the rich capabilities
 of the RIDDL compiler — not just the RiddlAPI facade.
@@ -107,7 +109,7 @@ hand-maintained or auto-generated via a build step.
 
 **File**: `riddlLib/js/types/index.d.ts`
 
-### 2. AIHelperPass
+### 3. AIHelperPass
 AI-friendly validation pass for MCP server integration. See design
 section below.
 
@@ -221,6 +223,45 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 5, 2026 (OutlinePass, TreePass, Release 1.3.0)
+
+**Focus**: Implement getOutline/getTree RiddlAPI methods and release
+1.3.0.
+
+**Work Completed**:
+1. Created `OutlinePass.scala` — HierarchyPass that produces a flat
+   `Seq[OutlineEntry]` with kind, id, depth, line, col, offset for
+   every named definition
+2. Created `TreePass.scala` — HierarchyPass that produces a recursive
+   `Seq[TreeNode]` with children reflecting the definition hierarchy
+3. Added `getOutline()` and `getTree()` `@JSExport` methods to
+   `RiddlAPI.scala` following existing parse-then-run-pass pattern
+4. Added `OutlineEntry` and `TreeNode` TypeScript interfaces plus
+   method declarations to `index.d.ts`
+5. Tagged 1.3.0, clean build & test (all tests pass), published all
+   modules to GitHub Packages
+6. Created GitHub release with riddlc.zip asset
+7. Updated homebrew-tap formula to 1.3.0
+
+**Version Bump Rationale**: 1.2.3 → 1.3.0 (MINOR) — new features
+(OutlinePass, TreePass, npm packaging) with no breaking changes.
+
+**Commits**:
+- `0b1e704c` — Add getOutline and getTree methods to RiddlAPI
+- `9767b0c9` — Update CLAUDE.md and NOTEBOOK.md
+
+**Files Created**:
+- `passes/shared/.../passes/OutlinePass.scala`
+- `passes/shared/.../passes/TreePass.scala`
+
+**Files Modified**:
+- `riddlLib/js/.../RiddlAPI.scala` — 2 new @JSExport methods
+- `riddlLib/js/types/index.d.ts` — OutlineEntry, TreeNode interfaces
+
+**Cross-project**: `../homebrew-tap/Formula/riddlc.rb` → 1.3.0
+
+---
 
 ### February 4, 2026 (Knowledge Base Update & riddl-models Validation)
 
@@ -1220,5 +1261,5 @@ Tool(
 
 ## Git Information
 
-**Branch**: `main`
-**Latest release**: 1.2.3 (February 3, 2026)
+**Branch**: `development`
+**Latest release**: 1.3.0 (February 5, 2026)

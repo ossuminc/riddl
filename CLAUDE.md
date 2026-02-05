@@ -656,3 +656,5 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 23. **npm requires --tag for prerelease versions** - sbt-dynver versions like `1.2.3-1-hash` are prerelease per npm semver. Must pass `--tag dev` when publishing
 24. **riddlLib JS is ESModule** - Changed from CommonJS (`withCommonJSModule = true` removed). Package.json has `"type": "module"`. Consumers use `import { RiddlAPI } from '@ossuminc/riddl-lib'`
 25. **gh auth needs write:packages for npm** - Run `gh auth refresh -s write:packages` if publishing to GH Packages npm registry
+26. **OutlinePass and TreePass** - Lightweight HierarchyPass subclasses in `passes/shared/.../passes/`. OutlinePass produces flat `Seq[OutlineEntry]`; TreePass produces recursive `Seq[TreeNode]`. Exposed via `RiddlAPI.getOutline()` and `RiddlAPI.getTree()` with TypeScript declarations
+27. **riddlLibJS test runner crashes are benign** - `RPCCore$ClosedException` in `riddlLibJS/Test` is a Scala.js test adapter teardown issue, not a code failure. The module has no test classes; all actual tests pass
