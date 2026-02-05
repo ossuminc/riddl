@@ -985,14 +985,24 @@ object AST:
     /** Check if this is a selective import (imports a specific definition) */
     def isSelective: Boolean = kindOpt.isDefined && selector.isDefined
 
+    // NOTE: The RIDDL keyword "import" must NOT appear adjacent to a
+    // quote character (' or ") in any string literal that reaches the
+    // JS bundle.  ESM shim plugins (e.g. esmShimPlugin / Vite) scan
+    // the compiled JS for patterns like  import '…  or  import "…
+    // and rewrite them, corrupting the output.  We split the keyword
+    // with string concatenation so the pattern never appears in the
+    // bundle as a single token.  Do NOT "simplify" these into a
+    // single interpolated string.
+    private val imp = "im" + "port"
+
     def format: String =
       if isSelective then
         val kindStr = kindOpt.getOrElse("")
         val selectorStr = selector.map(_.value).getOrElse("")
         val aliasStr = alias.map(a => s" as ${a.value}").getOrElse("")
-        s"""import $kindStr $selectorStr from "${path.s}"$aliasStr"""
+        s"""$imp $kindStr $selectorStr from "${path.s}"$aliasStr"""
       else
-        s"""import "${path.s}""""
+        imp + " \"" + path.s + "\""
     override def toString: String = format
   end BASTImport
 

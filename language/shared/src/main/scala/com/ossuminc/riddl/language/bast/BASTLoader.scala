@@ -58,9 +58,11 @@ object BASTLoader {
           }
           loaded += 1
         case Left(error) =>
+          // NOTE: avoid "import '" in string literals — ESM shim
+          // plugins misinterpret it as an ES module import statement.
           msgs += Messages.Message(
             bi.loc,
-            s"Failed to load BAST import '${bi.path.s}': $error",
+            s"Failed to load BAST file '${bi.path.s}': $error",
             Messages.Error
           )
           failed += 1

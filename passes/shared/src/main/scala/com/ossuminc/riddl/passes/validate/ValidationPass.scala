@@ -496,9 +496,11 @@ case class ValidationPass(
     check(i.origin.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
   }
 
+  // NOTE: avoid "import '" in string literals — ESM shim plugins
+  // misinterpret it as an ES module import statement.
   private def validateBASTImport(bi: BASTImport, parents: Parents): Unit = {
-    check(bi.path.s.nonEmpty, "BAST import has no path specified", Messages.Error, bi.loc)
-    check(bi.path.s.endsWith(".bast"), s"BAST import path '${bi.path.s}' should end with .bast", Messages.Warning, bi.loc)
+    check(bi.path.s.nonEmpty, "BAST load has no path specified", Messages.Error, bi.loc)
+    check(bi.path.s.endsWith(".bast"), s"BAST load path '${bi.path.s}' should end with .bast", Messages.Warning, bi.loc)
   }
 
   private def validateEntity(

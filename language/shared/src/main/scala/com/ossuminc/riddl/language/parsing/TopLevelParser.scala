@@ -82,11 +82,13 @@ object TopLevelParser:
   private def loadBASTImports(root: Root, baseURL: URL)(using pc: PlatformContext): (Root, Messages) = {
     if BASTLoader.hasUnloadedImports(root) then
       val result = BASTLoader.loadImports(root, baseURL)
+      // NOTE: avoid "import(" in string literals — ESM shim plugins
+      // misinterpret it as a dynamic ES module import() call.
       if result.failedCount > 0 then
-        pc.log.warn(s"Failed to load ${result.failedCount} BAST import(s)")
+        pc.log.warn(s"Failed to load ${result.failedCount} BAST file(s)")
       end if
       if result.loadedCount > 0 then
-        pc.log.info(s"Loaded ${result.loadedCount} BAST import(s)")
+        pc.log.info(s"Loaded ${result.loadedCount} BAST file(s)")
       end if
       (root, result.messages)
     else
