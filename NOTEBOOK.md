@@ -33,7 +33,8 @@ tasks (`npmPublishGithub`/`npmPublishNpmjs`). Consumable via
 - `package.json.template` — Enhanced with TypeScript and ES module support
 - `pack-npm-modules.sh` — Updated with TypeScript definitions integration
 
-**Homebrew Tap Created**: `ossuminc/homebrew-tap` provides `brew install riddlc`.
+**Homebrew Tap Updated**: `ossuminc/homebrew-tap` updated to 1.2.3 with
+correct riddlc.zip asset. `brew install ossuminc/tap/riddlc` works.
 
 **Branch Cleanup Complete**: All stale feature/bugfix branches deleted. Only `main`
 and `development` branches remain.
@@ -61,15 +62,20 @@ go there, not this repo.
 
 ## Active Work Queue
 
-### 1. Import Functionality (Issue #72) - NEXT
-Implement the `import` statement to load BAST files into RIDDL models.
+### 0. Fix riddl-models Validation Errors (HANDED OFF)
+**Status**: Handed off — task document written at
+`../riddl-models/TASK-fix-validation-errors.md`
 
-- **Stub**: `ParsingContext.scala:81-89` (`doImport()` method)
-- **Test file**: `language/input/import/import.riddl`
-- **Syntax**: `import "file.bast"` (no namespace - use domain paths)
-- **Locations**: Root level and inside domains only
+45 of 186 riddl-models files fail `riddlc validate`. Error categories:
+ambiguous path references (23), `briefly` outside `with {}` (4),
+unresolved `EmailAddress` type (7), unresolved `Year` type (5),
+decimal fractional part (2), complex multi-error (4).
 
-### 2. Comprehensive TypeScript Declarations for AST & Passes
+After all files pass, add riddl-models EBNF validation to CI
+(`.github/workflows/scala.yml`, mirroring existing riddl-examples
+pattern).
+
+### 1. Comprehensive TypeScript Declarations for AST & Passes
 Expand `riddlLib/js/types/index.d.ts` to cover the full AST and Pass
 hierarchies so TypeScript consumers can access the rich capabilities
 of the RIDDL compiler — not just the RiddlAPI facade.
@@ -101,7 +107,7 @@ hand-maintained or auto-generated via a build step.
 
 **File**: `riddlLib/js/types/index.d.ts`
 
-### 3. AIHelperPass - After Import
+### 2. AIHelperPass
 AI-friendly validation pass for MCP server integration. See design
 section below.
 
@@ -109,9 +115,7 @@ section below.
 
 ## Blocked Tasks
 
-| Task | Blocked By | Notes |
-|------|------------|-------|
-| Add EBNF validation for riddl-models repository | riddl-models needs to be populated with RIDDL models | Similar to riddl-examples validation in CI; will validate against external repository once content exists |
+(none)
 
 ---
 
@@ -121,6 +125,28 @@ section below.
 |------|------|-------|
 | March 1, 2026 | Review and remove `doc/src/main/hugo/content/` | Hugo content migrated to ossum.tech/riddl. Redirect site is in `doc/redirect-site/`. After confirming redirects have been working for ~1 month, the Hugo content directory can be deleted. Keep `doc/redirect-site/` for ongoing redirects. |
 | November 2026 | Upgrade CodeQL Action v3 → v4 | GitHub deprecating CodeQL Action v3 in December 2026. Update `.github/workflows/scala.yml` line 182: `github/codeql-action/upload-sarif@v3` → `@v4`. See [changelog](https://github.blog/changelog/2025-10-28-upcoming-deprecation-of-codeql-action-v3/). |
+
+---
+
+## Import Functionality (Issue #72) - COMPLETE ✅
+
+**Status**: Fully implemented (January 30, 2026)
+
+BAST import is fully functional with three syntax variants:
+- **Full import**: `import "file.bast"`
+- **Selective import**: `import domain X from "file.bast"`
+- **Aliased import**: `import type T from "file.bast" as MyT`
+
+Allowed at root level, inside domains, and inside contexts. 14
+definition kinds supported. 4 tests passing in `BASTLoaderTest.scala`.
+Integrated into `ValidationPass`.
+
+**Key files**: `CommonParser.scala` (parsing), `TopLevelParser.scala`
+(post-parse loading), `BASTLoader.scala` (BAST reading), `AST.scala`
+(`BASTImport` case class).
+
+**Note**: The old `doImport()` stub in `ParsingContext.scala:82-90`
+is superseded but still present. Could be cleaned up.
 
 ---
 
@@ -195,6 +221,35 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 4, 2026 (Knowledge Base Update & riddl-models Validation)
+
+**Focus**: Verify import (#72) completion, update knowledge base, prepare
+riddl-models validation work for handoff.
+
+**Work Completed**:
+1. Verified Import (#72) is FULLY IMPLEMENTED — updated NOTEBOOK.md
+   and CLAUDE.md to reflect this (removed from Active Work Queue,
+   added "COMPLETE" section)
+2. Updated Homebrew tap to riddlc 1.2.3:
+   - Built riddlc via `sbt riddlc/stage`, created zip, uploaded to
+     GitHub release 1.2.3 (which was missing the riddlc.zip asset)
+   - Updated formula version and SHA256 in homebrew-tap
+   - Committed, pushed, and verified `brew upgrade` works
+3. Ran `riddlc validate` on all 186 riddl-models entry points:
+   - 141 pass, 45 fail
+   - Categorized all errors into 6 types
+4. Wrote comprehensive handoff document:
+   `../riddl-models/TASK-fix-validation-errors.md`
+   - Lists all 45 failing files with error categories
+   - Includes fix instructions and validation commands
+   - Describes the CI integration step after fixes
+
+**Cross-project changes**:
+- `../homebrew-tap/Formula/riddlc.rb` — version 1.2.3, new SHA256
+- `../riddl-models/TASK-fix-validation-errors.md` — handoff document
+
+---
 
 ### February 3-4, 2026 (npm Package Publishing to GitHub Packages)
 

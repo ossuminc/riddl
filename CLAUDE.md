@@ -142,21 +142,20 @@ Consumers use `import { RiddlAPI } from '@ossuminc/riddl-lib'`.
 - `include "entities.riddl"` in a Context → must contain Context-valid content
 - **Already implemented**
 
-### Import (Top-Level, Namespaced)
-- **Only at top of file**, before any definitions
-- Brings in arbitrary Nebula content from BAST files
-- Uses **namespaced** approach (Option C from design):
-  ```riddl
-  import "utils.bast" as utils
-  import "types.bast" as common
-
-  domain MyApp is {
-    type UserId is utils.UUID
-  }
-  ```
-- **Status**: Stub exists at `language/shared/src/main/scala/com/ossuminc/riddl/language/parsing/ParsingContext.scala:81-89`
-- **Test file**: `language/input/import/import.riddl`
-- **TODO**: Issue #72
+### Import (BAST Files) - COMPLETE ✅
+- Loads BAST-serialized content into RIDDL models
+- **Full import**: `import "file.bast"` — loads all Nebula contents
+- **Selective import**: `import domain X from "file.bast"`
+- **Aliased import**: `import type T from "file.bast" as MyT`
+- **Allowed locations**: Root level, inside domains, inside contexts
+- 14 definition kinds supported (domain, context, entity, type, etc.)
+- **Key files**:
+  - `CommonParser.scala` — `bastImport()`, `selectiveBastImport()`
+  - `TopLevelParser.scala` — `loadBASTImports()` post-parse loading
+  - `BASTLoader.scala` — BAST file reading and content population
+  - `AST.scala` — `BASTImport` case class
+- **Tests**: 4 passing in `BASTLoaderTest.scala`
+- **Validation**: Integrated into `ValidationPass`
 
 ## AST Architecture Details
 
@@ -413,17 +412,9 @@ sbt riddlc/stage
 # Result: riddlc/jvm/target/universal/stage/bin/riddlc
 ```
 
-o## Current Work Priorities
+## Current Work Priorities
 
-### 1. Import Functionality (NEXT)
-**Issue #72** - Implement the `import` statement to load BAST files
-
-- **Stub location**: `ParsingContext.scala:81-89` (`doImport()` method)
-- **Test file**: `language/input/import/import.riddl`
-- **Syntax**: `import "file.bast"` (no namespace clause - RIDDL uses nested domains)
-- **Allowed locations**: Root level and inside domains only
-
-### 2. AIHelperPass (After Import)
+### 1. AIHelperPass
 AI-friendly validation pass for MCP server integration. Design complete in NOTEBOOK.md.
 
 - Provides proactive guidance (Tips) rather than just errors/warnings
@@ -642,7 +633,7 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 
 1. **Always check sbt-ossuminc version** - API may have changed
 2. **BAST version is single integer** - `VERSION: Int = 1`, stays at 1 until schema finalized for users
-3. **Import stub exists but not implemented** - See ParsingContext.scala:81-89, Issue #72
+3. **BAST Import is fully implemented** - Full, selective, and aliased imports all work (Issue #72 resolved)
 4. **npm packages are versioned by git** - Rebuild after commits to get new version
 5. **Workflow improvements made** - Check .github/workflows/ for latest patterns
 6. **ONLY commit files related to your current task** - Multiple work streams may be active
