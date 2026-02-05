@@ -121,6 +121,44 @@ export interface DefinitionInfo {
 }
 
 /**
+ * Entry in a flat outline of RIDDL definitions.
+ * Each entry represents a named definition with its depth in the hierarchy.
+ */
+export interface OutlineEntry {
+  /** Definition type (e.g., "Domain", "Context", "Entity") */
+  kind: string;
+  /** Definition identifier name */
+  id: string;
+  /** Nesting depth (0 = top-level domain, 1 = context within domain, etc.) */
+  depth: number;
+  /** Line number in source (1-based) */
+  line: number;
+  /** Column number in source (1-based) */
+  col: number;
+  /** Character offset from start of source (0-based) */
+  offset: number;
+}
+
+/**
+ * Node in a recursive tree of RIDDL definitions.
+ * Mirrors the hierarchical structure of the RIDDL model.
+ */
+export interface TreeNode {
+  /** Definition type (e.g., "Domain", "Context", "Entity") */
+  kind: string;
+  /** Definition identifier name */
+  id: string;
+  /** Line number in source (1-based) */
+  line: number;
+  /** Column number in source (1-based) */
+  col: number;
+  /** Character offset from start of source (0-based) */
+  offset: number;
+  /** Child definitions nested within this definition */
+  children: TreeNode[];
+}
+
+/**
  * Categorized validation messages from full validation.
  */
 export interface ValidationMessages {
@@ -385,5 +423,53 @@ export declare const RiddlAPI: {
    * @returns Formatted build information string
    */
   formatInfo: string;
+
+  /**
+   * Get a flat outline of all named definitions in RIDDL source.
+   *
+   * Returns a flat array of entries, each with kind, id, depth, and location.
+   * Useful for building outline/table-of-contents views.
+   *
+   * @param source - The RIDDL source code to outline
+   * @param origin - Optional origin identifier for error messages
+   * @returns Result with array of OutlineEntry objects or errors
+   *
+   * @example
+   * ```typescript
+   * const result = RiddlAPI.getOutline("domain D is { context C is { ??? } }");
+   * if (result.succeeded) {
+   *   result.value.forEach(entry => {
+   *     console.log(`${"  ".repeat(entry.depth)}${entry.kind} ${entry.id}`);
+   *   });
+   * }
+   * ```
+   */
+  getOutline(source: string, origin?: string): ParseResult<OutlineEntry[]>;
+
+  /**
+   * Get a recursive tree of all named definitions in RIDDL source.
+   *
+   * Returns a nested tree structure mirroring the RIDDL definition hierarchy.
+   * Useful for building tree views or navigation panels.
+   *
+   * @param source - The RIDDL source code to process
+   * @param origin - Optional origin identifier for error messages
+   * @returns Result with array of top-level TreeNode objects or errors
+   *
+   * @example
+   * ```typescript
+   * const result = RiddlAPI.getTree("domain D is { context C is { ??? } }");
+   * if (result.succeeded) {
+   *   function printTree(nodes: TreeNode[], indent = 0) {
+   *     nodes.forEach(n => {
+   *       console.log(`${"  ".repeat(indent)}${n.kind} ${n.id}`);
+   *       printTree(n.children, indent + 1);
+   *     });
+   *   }
+   *   printTree(result.value);
+   * }
+   * ```
+   */
+  getTree(source: string, origin?: string): ParseResult<TreeNode[]>;
 };
 

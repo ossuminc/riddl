@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
-import com.ossuminc.riddl.passes.Pass
+import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput, OutlinePass, OutlineOutput, OutlineEntry, TreePass, TreeOutput, TreeNode}
 import com.ossuminc.riddl.utils.{CommonOptions, DOMPlatformContext, PlatformContext, URL}
 
 import scala.scalajs.js
@@ -460,5 +460,124 @@ object RiddlAPI {
   def formatInfo: String = {
     import com.ossuminc.riddl.utils.InfoFormatter
     InfoFormatter.formatInfo
+  }
+
+  /** Get a flat outline of all named definitions in RIDDL source.
+    *
+    * Returns a flat array of entries, each with kind, id, depth, and location.
+    * Useful for building outline/table-of-contents views.
+    *
+    * @param source The RIDDL source code to outline
+    * @param origin Optional origin identifier for error messages
+    * @return Result object with { succeeded: boolean, value?: OutlineEntry[], errors?: Array }
+    */
+  @JSExport("getOutline")
+  def getOutline(
+    source: String,
+    origin: String = "string"
+  ): js.Dynamic = {
+    val rpi = RiddlParserInput(source, originToURL(origin))
+    val parseResult = TopLevelParser.parseInput(rpi)(using defaultContext)
+    parseResult match {
+      case Right(root) =>
+        val passInput = PassInput(root)
+        val passesResult = Pass.runThesePasses(
+          passInput,
+          Seq(OutlinePass.creator()(using defaultContext))
+        )(using defaultContext)
+        passesResult.outputs.outputOf[OutlineOutput](OutlinePass.name) match {
+          case Some(outlineOutput) =>
+            val entries = outlineOutput.entries.map { e =>
+              js.Dynamic.literal(
+                kind = e.kind,
+                id = e.id,
+                depth = e.depth,
+                line = e.line,
+                col = e.col,
+                offset = e.offset
+              )
+            }.toJSArray
+            js.Dynamic.literal(succeeded = true, value = entries)
+          case None =>
+            js.Dynamic.literal(
+              succeeded = false,
+              errors = js.Array(
+                js.Dynamic.literal(
+                  kind = "Error",
+                  message = "OutlinePass produced no output",
+                  location = js.Dynamic.literal(
+                    line = 1, col = 1, offset = 0, source = origin
+                  )
+                )
+              )
+            )
+        }
+      case Left(messages) =>
+        js.Dynamic.literal(
+          succeeded = false,
+          errors = formatMessagesAsArray(messages)
+        )
+    }
+  }
+
+  /** Get a recursive tree of all named definitions in RIDDL source.
+    *
+    * Returns a nested tree structure mirroring the RIDDL definition hierarchy.
+    * Useful for building tree views or navigation panels.
+    *
+    * @param source The RIDDL source code to process
+    * @param origin Optional origin identifier for error messages
+    * @return Result object with { succeeded: boolean, value?: TreeNode[], errors?: Array }
+    */
+  @JSExport("getTree")
+  def getTree(
+    source: String,
+    origin: String = "string"
+  ): js.Dynamic = {
+    val rpi = RiddlParserInput(source, originToURL(origin))
+    val parseResult = TopLevelParser.parseInput(rpi)(using defaultContext)
+    parseResult match {
+      case Right(root) =>
+        val passInput = PassInput(root)
+        val passesResult = Pass.runThesePasses(
+          passInput,
+          Seq(TreePass.creator()(using defaultContext))
+        )(using defaultContext)
+        passesResult.outputs.outputOf[TreeOutput](TreePass.name) match {
+          case Some(treeOutput) =>
+            val nodes = treeOutput.tree.map(treeNodeToJs).toJSArray
+            js.Dynamic.literal(succeeded = true, value = nodes)
+          case None =>
+            js.Dynamic.literal(
+              succeeded = false,
+              errors = js.Array(
+                js.Dynamic.literal(
+                  kind = "Error",
+                  message = "TreePass produced no output",
+                  location = js.Dynamic.literal(
+                    line = 1, col = 1, offset = 0, source = origin
+                  )
+                )
+              )
+            )
+        }
+      case Left(messages) =>
+        js.Dynamic.literal(
+          succeeded = false,
+          errors = formatMessagesAsArray(messages)
+        )
+    }
+  }
+
+  /** Convert a TreeNode to a JavaScript object recursively */
+  private def treeNodeToJs(node: TreeNode): js.Dynamic = {
+    js.Dynamic.literal(
+      kind = node.kind,
+      id = node.id,
+      line = node.line,
+      col = node.col,
+      offset = node.offset,
+      children = node.children.map(treeNodeToJs).toJSArray
+    )
   }
 }
