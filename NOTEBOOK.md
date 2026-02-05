@@ -12,10 +12,10 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
 All workflow paths updated to `scala-3.7.4`.
 
-**Release 1.3.0 Published**: New features: OutlinePass, TreePass,
-and RiddlAPI `getOutline()`/`getTree()` methods for RIDDL definition
-hierarchy navigation. npm packaging via sbt-ossuminc 1.3.0. Published
-to GitHub Packages. Homebrew tap updated.
+**Release 1.4.0 Published**: New `Container.flatten()` extension
+method in the `language` module, rewritten `FlattenPass` using base
+`Pass` class, multi-platform release workflow. Native macOS ARM64
+binary now distributed via Homebrew (no JDK required).
 
 **npm Package Published**: `@ossuminc/riddl-lib` published to GitHub
 Packages npm registry via CI and locally. ESModule format with TypeScript
@@ -32,8 +32,9 @@ tasks (`npmPublishGithub`/`npmPublishNpmjs`). Consumable via
 - `package.json.template` — Enhanced with TypeScript and ES module support
 - `pack-npm-modules.sh` — Updated with TypeScript definitions integration
 
-**Homebrew Tap Updated**: `ossuminc/homebrew-tap` updated to 1.3.0.
-`brew install ossuminc/tap/riddlc` works.
+**Homebrew Tap Updated**: `ossuminc/homebrew-tap` updated to 1.4.0.
+macOS ARM64 gets native binary (no JDK dependency). Other platforms
+fall back to JVM version with openjdk@21.
 
 **Branch Cleanup Complete**: All stale feature/bugfix branches deleted. Only `main`
 and `development` branches remain.
@@ -109,7 +110,41 @@ hand-maintained or auto-generated via a build step.
 
 **File**: `riddlLib/js/types/index.d.ts`
 
-### 3. AIHelperPass
+### 3. Add `RiddlLib.ast2bast` Function
+**Status**: Requested by Synapify team (February 5, 2026)
+
+Add a convenience function to `RiddlLib` (the JS-exported API object)
+that converts a parsed AST to BAST bytes in a single call.
+
+**Motivation**: Synapify needs to parse RIDDL in Electron's main
+process (Node.js, for filesystem access/include resolution) and
+transport the parsed AST to the renderer process via IPC. BAST binary
+format is the natural transport format since BASTWriter/BASTReader are
+already in the `language/shared` module (Scala.js compatible).
+
+**Proposed API**:
+```scala
+// In RiddlLib or RiddlAPI:
+@JSExport
+def ast2bast(root: Root): js.typedarray.Int8Array = {
+  val input = PassInput(root)
+  val outputs = PassesOutput()
+  val pass = BASTWriterPass(input, outputs)
+  val result = Pass.runPass[BASTOutput](input, outputs, pass)
+  js.typedarray.Int8Array.from(result.bytes)
+}
+```
+
+**Details**:
+- Uses BASTWriterPass via the Pass framework for correct traversal
+- Returns `Int8Array` for efficient IPC transport (structured clone)
+- Synapify is prototyping this locally first, then will swap to the
+  RiddlLib version when available
+- BASTReader.read(bytes) already provides the inverse operation
+- Consider also adding `bast2ast(bytes: Int8Array): js.Dynamic` for
+  symmetry
+
+### 4. AIHelperPass
 AI-friendly validation pass for MCP server integration. See design
 section below.
 
@@ -223,6 +258,118 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 5, 2026 (FlattenPass, Release 1.4.0)
+
+**Focus**: Implement FlattenPass per FLATTEN_PASS_SPEC.md for
+Synapify, add multi-platform release CI.
+
+**Work Completed**:
+1. Added `clear()` and `remove()` extension methods to
+   `Contents[CV]` opaque type
+2. Added `flatten()` extension method on `Container[CV]` in the
+   `language` module — recursively removes Include/BASTImport
+   wrappers, promoting children to parent container. Available
+   without `passes` dependency.
+3. Rewrote `FlattenPass` to use base `Pass` (not `DepthFirstPass`)
+   with no-op `process()`, delegating to `root.flatten()` in
+   `result()`. Old implementation was buggy (computed new contents
+   via splitAt/merge but never assigned back; also unsafe mutation
+   during DepthFirstPass traversal).
+4. Created `FlattenPassTest` with 10 tests covering all spec
+   scenarios: single Include, single BASTImport, nested includes,
+   mixed nodes, ordering preservation, deep nesting, empty nodes,
+   accessor visibility after flatten, Nebula support.
+5. Added Backward Compatibility Policy to CLAUDE.md — no breaking
+   changes without deprecation through current major version.
+6. Released 1.4.0: tagged, clean test, published to GitHub Packages,
+   created GitHub release with JVM + native ARM64 artifacts.
+7. Updated homebrew-tap formula: native macOS ARM64 primary (no JDK
+   needed), JVM fallback for other platforms.
+8. Created `release.yml` workflow for automated multi-platform
+   builds: macOS ARM64, macOS x86_64, Linux x86_64, plus JVM.
+   Auto-updates homebrew formula with SHA256 hashes on release.
+
+**Design Decisions**:
+- `flatten()` lives in `language` module as Container extension
+  (not in `passes`) so any consumer can use it without the passes
+  dependency
+- Base `Pass` instead of `DepthFirstPass` to avoid mutating
+  contents during active ArrayBuffer iteration
+- Type parameter `Container[CV <: RiddlValue]` provides compile-
+  time constraint while still requiring runtime cast for mixed-
+  type Include/BASTImport contents
+
+**Version Bump Rationale**: 1.3.1 → 1.4.0 (MINOR) — new public
+API (`Container.flatten()` extension, `Contents.clear()`,
+`Contents.remove()`), no breaking changes.
+
+**Commits**:
+- `95608fcf` — Add Container.flatten() extension and rewrite
+  FlattenPass
+- `a79f7a5a` — Add multi-platform release workflow
+
+**Files Created**:
+- `passes/shared/.../transforms/FlattenPassTest.scala`
+- `.github/workflows/release.yml`
+
+**Files Modified**:
+- `language/shared/.../Contents.scala` — clear, remove, flatten
+- `passes/shared/.../transforms/FlattenPass.scala` — rewritten
+- `CLAUDE.md` — backward compatibility policy
+
+**Cross-project**: `../homebrew-tap/Formula/riddlc.rb` → 1.4.0
+with native ARM64 support
+
+---
+
+### February 5, 2026 (ESM Shim Fix, Release 1.3.1)
+
+**Focus**: Fix string literals that trigger ESM shim plugin
+rewriting in downstream JS projects, add regression test.
+
+**Problem**: ESM shim plugins (Vite esmShimPlugin) scan JS bundles
+for `import '…`, `import "…`, and `import(…` patterns and rewrite
+them. String literals in shared Scala source containing these
+patterns ended up in the riddl-lib JS bundle, corrupting downstream
+builds.
+
+**Work Completed**:
+1. Found 7 occurrences across 4 shared-source files:
+   - `AST.scala` (2, HIGH risk — exact ES import syntax)
+   - `BASTLoader.scala` (1, MED)
+   - `ValidationPass.scala` (2, LOW-MED)
+   - `TopLevelParser.scala` (2, LOW)
+2. Fixed all: split keyword via `val imp = "im" + "port"` for
+   format output; rephrased error messages to use "BAST file"
+   or "BAST load" instead of "BAST import"
+3. Added explanatory comments at each location warning future
+   developers not to reintroduce the pattern
+4. Created `ESMSafetyTest` (`riddlLib/jvm/src/test/`) that:
+   - Locates fullLinkJS output via glob (Scala-version agnostic)
+   - Scans the 5MB JS bundle for dangerous patterns
+   - Reports file path + size when scanning (distinguishes from
+     skip)
+   - Skips gracefully via `assume` if bundle not built
+5. Released 1.3.1 — tagged, clean build, all tests pass, published
+   to GitHub Packages, GitHub release created, homebrew-tap updated
+
+**Commits**:
+- `1272df2d` — Fix string literals that trigger ESM shim rewriting
+- `330b6593` — Add ESM safety regression test for JS bundle
+
+**Files Created**:
+- `riddlLib/jvm/src/test/scala/.../ESMSafetyTest.scala`
+
+**Files Modified**:
+- `language/shared/.../AST.scala` — split `import` keyword
+- `language/shared/.../bast/BASTLoader.scala` — rephrase message
+- `language/shared/.../parsing/TopLevelParser.scala` — rephrase
+- `passes/shared/.../validate/ValidationPass.scala` — rephrase
+
+**Cross-project**: `../homebrew-tap/Formula/riddlc.rb` → 1.3.1
+
+---
 
 ### February 5, 2026 (OutlinePass, TreePass, Release 1.3.0)
 
@@ -1262,4 +1409,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.3.0 (February 5, 2026)
+**Latest release**: 1.4.0 (February 5, 2026)

@@ -21,6 +21,29 @@ redirects to ossum.tech. Do not add new documentation here.
 
 RIDDL (Reactive Interface to Domain Definition Language) is a specification language for designing distributed, reactive, cloud-native systems using DDD principles. It's a **monorepo** containing multiple cross-platform Scala modules.
 
+## Backward Compatibility Policy
+
+RIDDL is a heavily used library both by Ossum Inc. and external
+consumers. **Never make incompatible changes** to public APIs without
+following this process:
+
+1. **No removal of public API** — Do not remove public methods, classes,
+   traits, or extension methods. If functionality must be retired, add
+   `@deprecated` annotations with a migration message and the target
+   major version for removal (e.g., `@deprecated("Use flatten() instead",
+   "2.0.0")`).
+2. **No breaking signature changes** — Do not change parameter types,
+   return types, or add required parameters to existing public methods.
+   New parameters must have defaults.
+3. **Deprecation warnings until next major release** — Deprecated APIs
+   must remain functional through the current major version (1.x). They
+   may only be removed in the next major release (2.0.0).
+4. **Additive changes only** — New methods, extension methods, classes,
+   and traits are always safe. Prefer adding new APIs alongside old ones
+   rather than modifying existing ones.
+
+When in doubt, **add, don't change**.
+
 ## Critical Build Information
 
 ### Scala Version & Syntax
@@ -658,3 +681,7 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 25. **gh auth needs write:packages for npm** - Run `gh auth refresh -s write:packages` if publishing to GH Packages npm registry
 26. **OutlinePass and TreePass** - Lightweight HierarchyPass subclasses in `passes/shared/.../passes/`. OutlinePass produces flat `Seq[OutlineEntry]`; TreePass produces recursive `Seq[TreeNode]`. Exposed via `RiddlAPI.getOutline()` and `RiddlAPI.getTree()` with TypeScript declarations
 27. **riddlLibJS test runner crashes are benign** - `RPCCore$ClosedException` in `riddlLibJS/Test` is a Scala.js test adapter teardown issue, not a code failure. The module has no test classes; all actual tests pass
+28. **NEVER put `import '`, `import "`, or `import(` in shared string literals** - ESM shim plugins scan the JS bundle and rewrite these patterns. Use string concatenation (`"im" + "port"`) or rephrase the message. `ESMSafetyTest` in `riddlLib/jvm/src/test/` enforces this by scanning the fullLinkJS bundle
+29. **Container.flatten() extension** - Recursively removes Include/BASTImport wrappers in-place. Lives in `language/shared/.../Contents.scala`. FlattenPass delegates to `root.flatten()`. Use base `Pass` not `DepthFirstPass` — mutating contents during traversal corrupts ArrayBuffer iteration
+30. **release.yml automates multi-platform builds** - Triggered by `gh release create`. Builds native riddlc on macOS ARM64, macOS x86_64, Linux x86_64, plus JVM. Auto-updates homebrew-tap formula with SHA256 hashes
+31. **Homebrew formula supports native + JVM fallback** - macOS ARM64 gets native binary (no JDK). Other platforms get JVM version with openjdk@21 dependency. Formula at `../homebrew-tap/Formula/riddlc.rb`
