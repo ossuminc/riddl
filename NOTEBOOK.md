@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 5, 2026
+**Last Updated**: February 6, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS default due to
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
@@ -16,11 +16,13 @@ All workflow paths updated to `scala-3.7.4`.
 `FlattenPass`, multi-platform release workflow. Native macOS ARM64
 binary distributed via Homebrew.
 
-**RiddlLib Shared Trait (pending 1.5.0 release)**: Extracted cross-
-platform `RiddlLib` trait from JS-only `RiddlAPI`. `RiddlAPI` is now
-a thin JS facade delegating to `RiddlLib`. `parseString` returns
-opaque Root handle; use `getDomains()`/`inspectRoot()` accessors.
-Fixed `riddlLibJS/test` ESModule crash. 1,527 tests pass (0 failures).
+**Release 1.5.0 Published**: Extracted cross-platform `RiddlLib`
+trait from JS-only `RiddlAPI`. `RiddlAPI` is now a thin JS facade
+delegating to `RiddlLib`. `parseString` returns opaque Root handle;
+use `getDomains()`/`inspectRoot()` accessors. Fixed `riddlLibJS/test`
+ESModule crash. 1,527 tests pass (0 failures). Published to GitHub
+Packages (Maven + npm). BREAKING: TS consumers must update
+`parseString` usage.
 
 **npm Package Published**: `@ossuminc/riddl-lib` published to GitHub
 Packages npm registry via CI and locally. ESModule format with TypeScript
@@ -80,8 +82,15 @@ After all files pass, add riddl-models EBNF validation to CI
 (`.github/workflows/scala.yml`, mirroring existing riddl-examples
 pattern).
 
-### 1. Merge development to main for 1.3.0 release
-Create PR from development to main, merge after CI passes.
+### 1. Update Consumers for 1.5.0 Breaking Change
+**Status**: Pending
+
+`parseString` now returns opaque Root. Downstream projects that
+access `result.value.domains` directly must switch to
+`RiddlAPI.getDomains(result.value)` or
+`RiddlAPI.inspectRoot(result.value).domains`.
+
+Projects to update: synapify, riddl-mcp-server, ossum.ai.
 
 ### 2. Comprehensive TypeScript Declarations for AST & Passes
 Expand `riddlLib/js/types/index.d.ts` to cover the full AST and Pass
@@ -295,11 +304,22 @@ fix riddlLibJS test runner crash.
 `riddlLibJS/test` now runs 8 tests successfully (was crashing).
 
 **Breaking Change**: `parseString` returns opaque Root. TypeScript
-consumers must use `getDomains()`/`inspectRoot()`. Ships as 1.5.0.
+consumers must use `getDomains()`/`inspectRoot()`.
+
+**Release 1.5.0** (February 6, 2026):
+- Merged development → main, tagged 1.5.0
+- `sbt clean test` — 1,527 tests, 0 failures
+- JS bundle built, ESMSafetyTest clean pass (5.3MB scanned)
+- `sbt publish` — all modules to GitHub Packages (Maven)
+- `gh release create 1.5.0` — triggers release.yml for native
+  builds and homebrew-tap update
+- `@ossuminc/riddl-lib@1.5.0` published to npm (GitHub Packages)
 
 **Commits**:
 - `407aebdb` — Extract shared RiddlLib trait and fix riddlLibJS
   test crash
+- `28c299b5` — Update CLAUDE.md and NOTEBOOK.md for RiddlLib
+  shared trait
 
 **Files Created**:
 - `riddlLib/shared/src/main/scala/.../RiddlLib.scala`
@@ -311,6 +331,9 @@ consumers must use `getDomains()`/`inspectRoot()`. Ships as 1.5.0.
 - `riddlLib/js/types/index.d.ts` — opaque RootAST, new methods
 - `riddlLib/jvm/src/test/scala/.../FlattenPassTest.scala` —
   un-pended
+
+**Consumers to update** (parseString breaking change):
+- synapify, riddl-mcp-server, ossum.ai
 
 ---
 
@@ -1464,5 +1487,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.4.0 (February 5, 2026)
-**Next release**: 1.5.0 (breaking: opaque Root in parseString)
+**Latest release**: 1.5.0 (February 6, 2026)
