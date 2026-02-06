@@ -308,6 +308,11 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   )
   .jsConfigure(With.ScalaJS("RIDDL: riddl-lib"))
   .jsConfigure(With.noMiMa)
+  .jsSettings(
+    Test / scalaJSLinkerConfig ~= {
+      _.withModuleKind(ModuleKind.CommonJSModule)
+    }
+  )
   .jsConfigure(With.Packaging.npm(
     scope = "@ossuminc",
     pkgName = "riddl-lib",

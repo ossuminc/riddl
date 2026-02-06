@@ -40,7 +40,7 @@ export interface ErrorInfo {
 /**
  * Result from a parse operation.
  *
- * @typeParam T - The type of the parsed value (Root, Nebula, Token[], etc.)
+ * @typeParam T - The type of the parsed value (RootAST, Nebula, Token[], etc.)
  */
 export interface ParseResult<T> {
   /** Whether parsing succeeded without errors */
@@ -76,9 +76,24 @@ export interface Domain {
 }
 
 /**
- * Root AST node - the top-level result of parsing a complete RIDDL file.
+ * Opaque handle to a parsed RIDDL AST Root.
+ *
+ * Obtain via `parseString()`. Pass to `flattenAST()`,
+ * `getDomains()`, or `inspectRoot()` to work with the AST.
+ *
+ * This is an opaque Scala object that cannot be inspected
+ * directly from JavaScript. Use the accessor methods on
+ * RiddlAPI to extract data.
  */
 export interface RootAST {
+  readonly __brand: 'RiddlRoot';
+}
+
+/**
+ * Plain JavaScript summary of a Root AST node.
+ * Returned by `inspectRoot()`.
+ */
+export interface RootInfo {
   /** Always "Root" for root nodes */
   kind: 'Root';
   /** Whether the root has no content */
@@ -239,9 +254,9 @@ export interface PlatformContext {
  *
  * const result = RiddlAPI.parseString("domain MyDomain is { ??? }");
  * if (result.succeeded) {
- *   console.log("Domains:", result.value.domains);
- * } else {
- *   console.error("Errors:", RiddlAPI.formatErrorArray(result.errors));
+ *   // result.value is an opaque Root handle
+ *   const info = RiddlAPI.inspectRoot(result.value);
+ *   console.log("Domains:", info.domains);
  * }
  * ```
  */
@@ -252,12 +267,16 @@ export declare const RiddlAPI: {
   readonly version: string;
 
   /**
-   * Parse a RIDDL source string and return the AST Root.
+   * Parse a RIDDL source string and return an opaque Root handle.
+   *
+   * The returned `value` is an opaque Scala Root object. Use
+   * `inspectRoot()` to get a plain JS summary, `getDomains()` to
+   * extract domains, or pass it to `flattenAST()`.
    *
    * @param source - The RIDDL source code to parse
    * @param origin - Optional origin identifier (e.g., filename) for error messages
    * @param verbose - Enable verbose failure messages (useful for debugging)
-   * @returns Result object with parsed Root AST or errors
+   * @returns Result object with opaque Root handle or errors
    *
    * @example
    * ```typescript
@@ -268,6 +287,10 @@ export declare const RiddlAPI: {
    *     }
    *   }
    * `);
+   * if (result.succeeded) {
+   *   const info = RiddlAPI.inspectRoot(result.value);
+   *   console.log("Domains:", info.domains.length);
+   * }
    * ```
    */
   parseString(source: string, origin?: string, verbose?: boolean): ParseResult<RootAST>;
@@ -279,7 +302,7 @@ export declare const RiddlAPI: {
    * @param origin - Origin identifier for error messages
    * @param verbose - Enable verbose failure messages
    * @param context - Custom platform context for I/O operations
-   * @returns Result object with parsed Root AST or errors
+   * @returns Result object with opaque Root handle or errors
    */
   parseStringWithContext(
     source: string,
@@ -287,6 +310,67 @@ export declare const RiddlAPI: {
     verbose: boolean,
     context: PlatformContext
   ): ParseResult<RootAST>;
+
+  /**
+   * Flatten Include and BASTImport wrapper nodes from the AST.
+   *
+   * Recursively removes Include and BASTImport nodes, promoting their
+   * children to the parent container. This makes accessor methods like
+   * `getDomains()` return all definitions, including those originally
+   * loaded from included/imported files.
+   *
+   * The Root is modified in-place and returned. The transformation is
+   * one-way and irreversible.
+   *
+   * @param root - The opaque Root handle from parseString
+   * @returns The same Root handle, with wrappers removed
+   *
+   * @example
+   * ```typescript
+   * const parseResult = RiddlAPI.parseString(source);
+   * if (parseResult.succeeded) {
+   *   const flattened = RiddlAPI.flattenAST(parseResult.value);
+   *   const info = RiddlAPI.inspectRoot(flattened);
+   *   console.log("All domains:", info.domains);
+   * }
+   * ```
+   */
+  flattenAST(root: RootAST): RootAST;
+
+  /**
+   * Get domain definitions from an opaque Root handle.
+   *
+   * @param root - The opaque Root handle from parseString
+   * @returns Array of domain objects with id, kind, isEmpty
+   *
+   * @example
+   * ```typescript
+   * const result = RiddlAPI.parseString("domain Foo is { ??? }");
+   * if (result.succeeded) {
+   *   const domains = RiddlAPI.getDomains(result.value);
+   *   domains.forEach(d => console.log(d.id, d.kind));
+   * }
+   * ```
+   */
+  getDomains(root: RootAST): Domain[];
+
+  /**
+   * Inspect an opaque Root handle, returning a plain JS summary.
+   *
+   * @param root - The opaque Root handle from parseString
+   * @returns Plain JS object with kind, isEmpty, domains, location
+   *
+   * @example
+   * ```typescript
+   * const result = RiddlAPI.parseString("domain Foo is { ??? }");
+   * if (result.succeeded) {
+   *   const info = RiddlAPI.inspectRoot(result.value);
+   *   console.log(info.kind);      // "Root"
+   *   console.log(info.domains);   // [{id: "Foo", kind: "Domain", ...}]
+   * }
+   * ```
+   */
+  inspectRoot(root: RootAST): RootInfo;
 
   /**
    * Parse arbitrary RIDDL definitions (nebula).
@@ -472,4 +556,3 @@ export declare const RiddlAPI: {
    */
   getTree(source: string, origin?: string): ParseResult<TreeNode[]>;
 };
-

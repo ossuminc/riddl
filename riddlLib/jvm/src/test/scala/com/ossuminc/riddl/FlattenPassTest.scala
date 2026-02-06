@@ -63,7 +63,7 @@ class FlattenPassTest extends AnyWordSpec with Matchers {
 
   "FlattenPass" should {
 
-    "remove all Include nodes from everything.riddl" in pending /* {
+    "remove all Include nodes from everything.riddl" in {
       val url = URL.fromCwdPath("language/input/everything.riddl")
       val inputFuture =
         RiddlParserInput.fromURL(url, "flatten-pass-test")
@@ -110,6 +110,6 @@ class FlattenPassTest extends AnyWordSpec with Matchers {
         case Left(messages) =>
           fail(s"Parse failed: ${messages.format}")
       }
-    } */
+    }
   }
 }
