@@ -537,26 +537,34 @@ Always add backup files and temporary files to `.gitignore`:
 - `target/` - Build artifacts (already present)
 - `.metals/` - Metals IDE files (already present)
 
-## RiddlAPI Common Patterns
+## RiddlLib & RiddlAPI Patterns
+
+### Architecture
+
+Core parsing/validation logic lives in `RiddlLib` (shared trait +
+companion object) at `riddlLib/shared/.../RiddlLib.scala`. This is
+usable on JVM, JS, and Native. The JS-only `RiddlAPI.scala` is a
+thin facade that delegates to `RiddlLib` and converts results to
+plain JavaScript objects.
+
+- **Cross-platform code**: Use `RiddlLib.parseString(...)` etc.
+  with a `given PlatformContext` in scope (provided by each
+  platform's `com.ossuminc.riddl.utils.pc`)
+- **JS facade**: `RiddlAPI` adds `@JSExport` methods, `getDomains`,
+  `inspectRoot`, and JS-only helpers like `formatErrorArray`
 
 ### Origin Parameter Pattern
 
-**CRITICAL**: All RiddlAPI methods that accept an `origin` parameter expect a `URL` object, not a `String`.
-
-**Problem**: Passing a String directly results in `URL.empty` being used, causing messages to show "empty" instead of the actual filename.
-
-**Solution**: Use the `originToURL()` helper (as of Jan 2026):
+**CRITICAL**: All methods that accept an `origin` parameter use
+`RiddlLib.originToURL()` to convert strings to URLs.
 
 ```scala
-private def originToURL(origin: String): URL = {
+def originToURL(origin: String): URL =
   if origin.startsWith("/") then
-    // Full file path - use fromFullPath
     URL.fromFullPath(origin)
   else
-    // Simple identifier or relative path - create URL with path component
     URL(URL.fileScheme, "", "", origin)
   end if
-}
 ```
 
 ### Scala 3 Lambda Syntax
@@ -680,8 +688,10 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 24. **riddlLib JS is ESModule** - Changed from CommonJS (`withCommonJSModule = true` removed). Package.json has `"type": "module"`. Consumers use `import { RiddlAPI } from '@ossuminc/riddl-lib'`
 25. **gh auth needs write:packages for npm** - Run `gh auth refresh -s write:packages` if publishing to GH Packages npm registry
 26. **OutlinePass and TreePass** - Lightweight HierarchyPass subclasses in `passes/shared/.../passes/`. OutlinePass produces flat `Seq[OutlineEntry]`; TreePass produces recursive `Seq[TreeNode]`. Exposed via `RiddlAPI.getOutline()` and `RiddlAPI.getTree()` with TypeScript declarations
-27. **riddlLibJS test runner crashes are benign** - `RPCCore$ClosedException` in `riddlLibJS/Test` is a Scala.js test adapter teardown issue, not a code failure. The module has no test classes; all actual tests pass
+27. **riddlLibJS tests now work** - Fixed by overriding `Test / scalaJSLinkerConfig` to `CommonJSModule` in `build.sbt`. Production bundle stays ESModule. 8 shared `RiddlLibTest` tests run on both JVM and JS
 28. **NEVER put `import '`, `import "`, or `import(` in shared string literals** - ESM shim plugins scan the JS bundle and rewrite these patterns. Use string concatenation (`"im" + "port"`) or rephrase the message. `ESMSafetyTest` in `riddlLib/jvm/src/test/` enforces this by scanning the fullLinkJS bundle
 29. **Container.flatten() extension** - Recursively removes Include/BASTImport wrappers in-place. Lives in `language/shared/.../Contents.scala`. FlattenPass delegates to `root.flatten()`. Use base `Pass` not `DepthFirstPass` — mutating contents during traversal corrupts ArrayBuffer iteration
 30. **release.yml automates multi-platform builds** - Triggered by `gh release create`. Builds native riddlc on macOS ARM64, macOS x86_64, Linux x86_64, plus JVM. Auto-updates homebrew-tap formula with SHA256 hashes
 31. **Homebrew formula supports native + JVM fallback** - macOS ARM64 gets native binary (no JDK). Other platforms get JVM version with openjdk@21 dependency. Formula at `../homebrew-tap/Formula/riddlc.rb`
+32. **RiddlLib shared trait** - `riddlLib/shared/.../RiddlLib.scala` provides cross-platform API (parseString, flattenAST, validateString, getOutline, getTree). `object RiddlLib extends RiddlLib` has default implementations. RiddlAPI.scala is now a thin JS facade delegating to RiddlLib
+33. **parseString returns opaque Root in JS** - As of 1.5.0, `RiddlAPI.parseString()` returns the actual Scala `Root` object (opaque to JS). Use `getDomains(root)` or `inspectRoot(root)` to access data. TypeScript type is branded `RootAST`

@@ -12,10 +12,15 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
 All workflow paths updated to `scala-3.7.4`.
 
-**Release 1.4.0 Published**: New `Container.flatten()` extension
-method in the `language` module, rewritten `FlattenPass` using base
-`Pass` class, multi-platform release workflow. Native macOS ARM64
-binary now distributed via Homebrew (no JDK required).
+**Release 1.4.0 Published**: `Container.flatten()` extension, rewritten
+`FlattenPass`, multi-platform release workflow. Native macOS ARM64
+binary distributed via Homebrew.
+
+**RiddlLib Shared Trait (pending 1.5.0 release)**: Extracted cross-
+platform `RiddlLib` trait from JS-only `RiddlAPI`. `RiddlAPI` is now
+a thin JS facade delegating to `RiddlLib`. `parseString` returns
+opaque Root handle; use `getDomains()`/`inspectRoot()` accessors.
+Fixed `riddlLibJS/test` ESModule crash. 1,527 tests pass (0 failures).
 
 **npm Package Published**: `@ossuminc/riddl-lib` published to GitHub
 Packages npm registry via CI and locally. ESModule format with TypeScript
@@ -258,6 +263,56 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 ---
 
 ## Session Log
+
+### February 5, 2026 (RiddlLib Shared Trait, JS Test Fix)
+
+**Focus**: Extract shared RiddlLib trait from JS-only RiddlAPI,
+fix riddlLibJS test runner crash.
+
+**Work Completed**:
+1. Created `RiddlLib.scala` in `riddlLib/shared/` — trait +
+   companion object with cross-platform implementations of
+   `parseString`, `parseNebula`, `parseToTokens`, `flattenAST`,
+   `validateString`, `getOutline`, `getTree`, `version`,
+   `formatInfo`. All methods use `(using PlatformContext)`.
+2. Refactored `RiddlAPI.scala` (610 → ~340 lines) — now a thin
+   JS facade delegating to `RiddlLib`. Added `getDomains(root)`
+   and `inspectRoot(root)` accessors for opaque Root handle.
+   `parseString` returns actual Scala Root (not plain JS object).
+3. Updated `index.d.ts` — `RootAST` is now opaque branded type,
+   added `RootInfo` interface, `flattenAST`, `getDomains`,
+   `inspectRoot` declarations.
+4. Created `RiddlLibTest.scala` in shared test (8 tests, runs on
+   JVM and JS).
+5. Un-pended `FlattenPassTest.scala` — passes (3 wrappers before
+   flatten, 0 after).
+6. Fixed `riddlLibJS/test` crash — overrode `Test /
+   scalaJSLinkerConfig` to `CommonJSModule` in `build.sbt`.
+   Production bundle stays ESModule. Pre-existing issue since
+   ESModule conversion.
+
+**Test Results**: 1,527 tests across all modules, 0 failures.
+`riddlLibJS/test` now runs 8 tests successfully (was crashing).
+
+**Breaking Change**: `parseString` returns opaque Root. TypeScript
+consumers must use `getDomains()`/`inspectRoot()`. Ships as 1.5.0.
+
+**Commits**:
+- `407aebdb` — Extract shared RiddlLib trait and fix riddlLibJS
+  test crash
+
+**Files Created**:
+- `riddlLib/shared/src/main/scala/.../RiddlLib.scala`
+- `riddlLib/shared/src/test/scala/.../RiddlLibTest.scala`
+
+**Files Modified**:
+- `build.sbt` — Test linker config override for riddlLibJS
+- `riddlLib/js/src/main/scala/.../RiddlAPI.scala` — thin facade
+- `riddlLib/js/types/index.d.ts` — opaque RootAST, new methods
+- `riddlLib/jvm/src/test/scala/.../FlattenPassTest.scala` —
+  un-pended
+
+---
 
 ### February 5, 2026 (FlattenPass, Release 1.4.0)
 
@@ -1410,3 +1465,4 @@ Tool(
 
 **Branch**: `development`
 **Latest release**: 1.4.0 (February 5, 2026)
+**Next release**: 1.5.0 (breaking: opaque Root in parseString)
