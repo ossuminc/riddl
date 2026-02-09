@@ -130,6 +130,10 @@ passes/input/check/everything/everything.riddl(52:19->20):
 passes/input/check/everything/everything.riddl(52:19->20):
  Field 'b' should have a description:
          returns { b: Boolean }
+passes/input/check/everything/everything.riddl(63:24->64:5):
+ Option 'transient' in Entity 'Something' is not a recognized RIDDL option:
+       option aggregate option transient
+     }
 passes/input/check/everything/everything.riddl(66:5->26):
  Metadata in Entity 'SomeOtherThing' should not be empty:
      entity SomeOtherThing is {
@@ -148,6 +152,9 @@ passes/input/check/everything/everything.riddl(67:7->20):
 passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' should have a handler:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(67:7->20):
+ Sink 'trashBin' has no connections to any connector:
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(67:26->38):
  Inlet 'SOT_In' is not connected:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
@@ -157,6 +164,9 @@ passes/input/check/everything/everything.riddl(69:7->28):
 passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' should have a description:
        state otherThingState of type Everything.StateType
+passes/input/check/everything/everything.riddl(70:7->18):
+ Handler 'fee' in Entity 'SomeOtherThing' handles no commands or queries; entity handlers typically handle commands and queries:
+       handler fee is {
 passes/input/check/everything/everything.riddl(7:5->18):
  Source 'Source' should have a handler:
      source Source is { outlet Commands is DoAThing } with { described by "Data Source" }

@@ -20,6 +20,9 @@ passes/input/check/saga/saga.riddl(13:7->20):
  Metadata in Sink 'trashCan' should not be empty:
        sink trashCan is { inlet in is command Something }
 passes/input/check/saga/saga.riddl(13:7->20):
+ Sink 'trashCan' has no connections to any connector:
+       sink trashCan is { inlet in is command Something }
+passes/input/check/saga/saga.riddl(13:7->20):
  Sink 'trashCan' should have a description:
        sink trashCan is { inlet in is command Something }
 passes/input/check/saga/saga.riddl(13:7->20):
@@ -52,3 +55,7 @@ passes/input/check/saga/saga.riddl(9:18->19):
 passes/input/check/saga/saga.riddl(9:67->68):
  Field identifier 'd' is too short. The minimum length is 3:
        requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
+passes/input/check/saga/saga.riddl(35:7->36:7):
+ Option 'parallel' in Saga 'name' is not a recognized RIDDL option:
+       option parallel
+       described as "ignore"
