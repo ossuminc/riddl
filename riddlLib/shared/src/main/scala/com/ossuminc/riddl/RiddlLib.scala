@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
+import com.ossuminc.riddl.language.AST.{Entity, Nebula, Root, Token}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.parsing.{
   RiddlParserInput, TopLevelParser
@@ -16,7 +16,14 @@ import com.ossuminc.riddl.passes.{
   OutlinePass, OutlineOutput, OutlineEntry,
   TreePass, TreeOutput, TreeNode
 }
+import com.ossuminc.riddl.passes.analysis.{
+  EntityLifecycle, EntityLifecycleOutput, EntityLifecyclePass,
+  MessageFlowOutput, MessageFlowPass
+}
 import com.ossuminc.riddl.passes.transforms.FlattenPass
+import com.ossuminc.riddl.passes.validate.{
+  HandlerCompleteness, ValidationOutput, ValidationPass
+}
 import com.ossuminc.riddl.utils.{
   CommonOptions, PlatformContext, RiddlBuildInfo, URL
 }
@@ -93,6 +100,36 @@ trait RiddlLib:
     source: String,
     origin: String = "string"
   )(using PlatformContext): Either[Messages, Seq[TreeNode]]
+
+  /** Get handler completeness classifications from validation.
+    *
+    * Runs the standard pass pipeline and returns the handler
+    * completeness data from ValidationOutput.
+    */
+  def getHandlerCompleteness(
+    source: String,
+    origin: String = "string"
+  )(using PlatformContext): Either[Messages, Seq[HandlerCompleteness]]
+
+  /** Get the message flow graph for a RIDDL model.
+    *
+    * Runs standard passes plus the MessageFlowPass to build
+    * a directed graph of message producers and consumers.
+    */
+  def getMessageFlow(
+    source: String,
+    origin: String = "string"
+  )(using PlatformContext): Either[Messages, MessageFlowOutput]
+
+  /** Get entity lifecycle (state machine) data.
+    *
+    * Runs standard passes plus the EntityLifecyclePass to
+    * extract state machines from entities with multiple states.
+    */
+  def getEntityLifecycles(
+    source: String,
+    origin: String = "string"
+  )(using PlatformContext): Either[Messages, Map[Entity, EntityLifecycle]]
 
   /** Get the RIDDL library version string. */
   def version: String
@@ -272,6 +309,65 @@ object RiddlLib extends RiddlLib:
       end match
     }
   end getTree
+
+  override def getHandlerCompleteness(
+    source: String,
+    origin: String
+  )(using PlatformContext): Either[Messages, Seq[HandlerCompleteness]] =
+    val rpi = RiddlParserInput(source, originToURL(origin))
+    val parseResult = TopLevelParser.parseInput(rpi)
+    parseResult.flatMap { root =>
+      val passInput = PassInput(root)
+      val passesResult = Pass.runStandardPasses(passInput)
+      passesResult.outputs
+        .outputOf[ValidationOutput](ValidationPass.name) match
+        case Some(vo) =>
+          Right(vo.handlerCompleteness)
+        case None =>
+          Left(List.empty)
+      end match
+    }
+  end getHandlerCompleteness
+
+  override def getMessageFlow(
+    source: String,
+    origin: String
+  )(using PlatformContext): Either[Messages, MessageFlowOutput] =
+    val rpi = RiddlParserInput(source, originToURL(origin))
+    val parseResult = TopLevelParser.parseInput(rpi)
+    parseResult.flatMap { root =>
+      val passInput = PassInput(root)
+      val passes = Pass.standardPasses :+ MessageFlowPass.creator()
+      val passesResult = Pass.runThesePasses(passInput, passes)
+      passesResult.outputs
+        .outputOf[MessageFlowOutput](MessageFlowPass.name) match
+        case Some(mfo) =>
+          Right(mfo)
+        case None =>
+          Left(List.empty)
+      end match
+    }
+  end getMessageFlow
+
+  override def getEntityLifecycles(
+    source: String,
+    origin: String
+  )(using PlatformContext): Either[Messages, Map[Entity, EntityLifecycle]] =
+    val rpi = RiddlParserInput(source, originToURL(origin))
+    val parseResult = TopLevelParser.parseInput(rpi)
+    parseResult.flatMap { root =>
+      val passInput = PassInput(root)
+      val passes = Pass.standardPasses :+ EntityLifecyclePass.creator()
+      val passesResult = Pass.runThesePasses(passInput, passes)
+      passesResult.outputs
+        .outputOf[EntityLifecycleOutput](EntityLifecyclePass.name) match
+        case Some(elo) =>
+          Right(elo.lifecycles)
+        case None =>
+          Left(List.empty)
+      end match
+    }
+  end getEntityLifecycles
 
   override def version: String =
     RiddlBuildInfo.version
