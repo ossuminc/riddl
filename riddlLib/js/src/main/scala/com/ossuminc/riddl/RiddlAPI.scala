@@ -472,6 +472,24 @@ object RiddlAPI {
     )
   end getMessageFlow
 
+  /** Convert a parsed AST Root to BAST binary bytes.
+    *
+    * Returns an Int8Array suitable for structured-clone
+    * transfer (e.g., Electron IPC).
+    */
+  @JSExport("ast2bast")
+  def ast2bast(root: Root): js.typedarray.Int8Array =
+    val bytes = RiddlLib.ast2bast(root)
+    val buffer = new js.typedarray.ArrayBuffer(bytes.length)
+    val view = new js.typedarray.Int8Array(buffer)
+    var i = 0
+    while i < bytes.length do
+      view(i) = bytes(i)
+      i += 1
+    end while
+    view
+  end ast2bast
+
   /** Get entity lifecycle (state machine) data. */
   @JSExport("getEntityLifecycles")
   def getEntityLifecycles(

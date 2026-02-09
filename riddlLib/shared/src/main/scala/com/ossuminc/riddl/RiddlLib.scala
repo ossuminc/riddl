@@ -12,6 +12,7 @@ import com.ossuminc.riddl.language.parsing.{
   RiddlParserInput, TopLevelParser
 }
 import com.ossuminc.riddl.passes.{
+  BASTOutput, BASTWriterPass,
   Pass, PassInput, PassOptions, PassesOutput,
   OutlinePass, OutlineOutput, OutlineEntry,
   TreePass, TreeOutput, TreeNode
@@ -130,6 +131,18 @@ trait RiddlLib:
     source: String,
     origin: String = "string"
   )(using PlatformContext): Either[Messages, Map[Entity, EntityLifecycle]]
+
+  /** Convert a parsed AST Root to BAST binary bytes.
+    *
+    * Runs BASTWriterPass to serialize the AST into the compact
+    * binary format for efficient storage or IPC transport.
+    *
+    * @param root The parsed AST Root
+    * @return The BAST bytes
+    */
+  def ast2bast(
+    root: Root
+  )(using PlatformContext): Array[Byte]
 
   /** Get the RIDDL library version string. */
   def version: String
@@ -368,6 +381,21 @@ object RiddlLib extends RiddlLib:
       end match
     }
   end getEntityLifecycles
+
+  override def ast2bast(
+    root: Root
+  )(using PlatformContext): Array[Byte] =
+    val passInput = PassInput(root)
+    val passesResult = Pass.runThesePasses(
+      passInput,
+      Seq(BASTWriterPass.creator())
+    )
+    passesResult.outputs
+      .outputOf[BASTOutput](BASTWriterPass.name) match
+      case Some(bastOutput) => bastOutput.bytes
+      case None => Array.empty
+    end match
+  end ast2bast
 
   override def version: String =
     RiddlBuildInfo.version
