@@ -1,0 +1,9 @@
+passes/input/check/streaming/streaming.riddl(4:3->28):
+ Source 'GetWeatherForecast' should have a handler:
+   source GetWeatherForecast is {
+passes/input/check/streaming/streaming.riddl(10:3->29):
+ Flow 'GetCurrentTemperature' should have a handler:
+   flow GetCurrentTemperature is {
+passes/input/check/streaming/streaming.riddl(17:3->23):
+ Sink 'AttenuateSensor' should have a handler:
+   sink AttenuateSensor is {

@@ -17,11 +17,45 @@ import com.ossuminc.riddl.utils.PlatformContext
 import scala.collection.{immutable, mutable}
 import scala.scalajs.js.annotation.*
 
+/** A connection in a data flow diagram representing data flowing through a
+  * connector from one streamlet/outlet to another streamlet/inlet
+  *
+  * @param from
+  *   The source definition (outlet's parent streamlet or processor)
+  * @param to
+  *   The target definition (inlet's parent streamlet or processor)
+  * @param connector
+  *   The connector element linking them
+  * @param messageType
+  *   The type name being transmitted
+  */
+@JSExportTopLevel("DataFlowConnection")
+case class DataFlowConnection(
+  from: Definition,
+  to: Definition,
+  connector: Connector,
+  messageType: String
+)
+
 /** The information needed to generate a Data Flow Diagram. DFDs are generated for each
-  * [[com.ossuminc.riddl.language.AST.Context]] and consist of the streaming components that that are connected.
+  * [[com.ossuminc.riddl.language.AST.Context]] and consist of the streaming components that are connected.
+  *
+  * @param context
+  *   The context this diagram represents
+  * @param connectors
+  *   All connectors within the context
+  * @param streamlets
+  *   All streamlets within the context
+  * @param connections
+  *   Resolved connection data with source, target, and message type
   */
 @JSExportTopLevel("DataFlowDiagramData")
-case class DataFlowDiagramData()
+case class DataFlowDiagramData(
+  context: Context,
+  connectors: Seq[Connector] = Seq.empty,
+  streamlets: Seq[Streamlet] = Seq.empty,
+  connections: Seq[DataFlowConnection] = Seq.empty
+)
 
 /** The information needed to generate a Use Case Diagram. The diagram for a use case is very similar to a Sequence
   * Diagram showing the interactions between involved components of the model.
@@ -51,10 +85,28 @@ case class ContextDiagramData(
   relationships: Seq[ContextRelationship] = Seq.empty
 )
 
-/** The information needed to generate a Context Diagram at the Domain level to show the relationships between its
-  * constituent bounded contexts
+/** The information needed to generate a Domain-level diagram showing the
+  * domain's structure: processors, subdomains, contexts, and epics
+  *
+  * @param domain
+  *   The domain this diagram represents
+  * @param processors
+  *   All processors contained in the domain
+  * @param subdomains
+  *   Nested subdomains
+  * @param contexts
+  *   Bounded contexts within the domain
+  * @param epics
+  *   Epics defined in the domain
   */
-type DomainDiagramData = Seq[(Context, ContextDiagramData)]
+@JSExportTopLevel("DomainDiagramData")
+case class DomainDiagramData(
+  domain: Domain,
+  processors: Seq[Processor[?]] = Seq.empty,
+  subdomains: Seq[Domain] = Seq.empty,
+  contexts: Seq[Context] = Seq.empty,
+  epics: Seq[Epic] = Seq.empty
+)
 
 /** The output of the DiagramsPass encompassing all the generated data for the various diagrams
   *
@@ -73,7 +125,8 @@ case class DiagramsPassOutput(
   messages: Messages.Messages = Messages.empty,
   dataFlowDiagrams: Map[Context, DataFlowDiagramData] = Map.empty,
   useCaseDiagrams: Map[UseCase, UseCaseDiagramData] = Map.empty,
-  contextDiagrams: Map[Context, ContextDiagramData] = Map.empty
+  contextDiagrams: Map[Context, ContextDiagramData] = Map.empty,
+  domainDiagrams: Map[Domain, DomainDiagramData] = Map.empty
 ) extends PassOutput
 
 @JSExportTopLevel("DiagramsPass")
@@ -91,6 +144,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private val dataFlowDiagrams: mutable.HashMap[Context, DataFlowDiagramData] = mutable.HashMap.empty
   private val useCaseDiagrams: mutable.HashMap[UseCase, UseCaseDiagramData] = mutable.HashMap.empty
   private val contextDiagrams: mutable.HashMap[Context, ContextDiagramData] = mutable.HashMap.empty
+  private val domainDiagramsMap: mutable.HashMap[Domain, DomainDiagramData] = mutable.HashMap.empty
 
   protected def process(definition: RiddlValue, parents: ParentStack): Unit = {
     definition match
@@ -100,6 +154,9 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
         val root = parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
         val relationships = makeRelationships(c, root)
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates.toSeq, relationships))
+        captureDataFlow(c)
+      case d: Domain =>
+        captureDomain(d)
       case epic: Epic =>
         epic.cases.foreach { uc =>
           val data = captureUseCase(uc)
@@ -334,13 +391,56 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     UseCaseDiagramData(title, actors, uc.contents.filter[Interaction])
   }
 
+  private def captureDataFlow(context: Context): Unit = {
+    val ctxConnectors = context.connectors.toSeq
+    val ctxStreamlets = context.streamlets.toSeq
+    val connections = ctxConnectors.flatMap { connector =>
+      if connector.nonEmpty then
+        val maybeOutlet = refMap.definitionOf[Outlet](connector.from, context)
+        val maybeInlet = refMap.definitionOf[Inlet](connector.to, context)
+        (maybeOutlet, maybeInlet) match
+          case (Some(outlet), Some(inlet)) =>
+            val fromDef: Definition = symTab.parentOf(outlet).collect {
+              case s: Streamlet => s: Definition
+            }.getOrElse(outlet)
+            val toDef: Definition = symTab.parentOf(inlet).collect {
+              case s: Streamlet => s: Definition
+            }.getOrElse(inlet)
+            val outletParent = symTab.parentOf(outlet).collect {
+              case b: Branch[?] => b
+            }.getOrElse(context)
+            val msgTypeName = refMap.definitionOf[Type](outlet.type_, outletParent)
+              .map(_.identify).getOrElse(outlet.type_.pathId.format)
+            Some(DataFlowConnection(fromDef, toDef, connector, msgTypeName))
+          case _ => None
+      else None
+    }
+    if ctxConnectors.nonEmpty || ctxStreamlets.nonEmpty then
+      dataFlowDiagrams.put(
+        context,
+        DataFlowDiagramData(context, ctxConnectors, ctxStreamlets, connections)
+      )
+  }
+
+  private def captureDomain(domain: Domain): Unit = {
+    val processors = domain.contents.processors.toSeq
+    val subdomains = domain.domains.toSeq
+    val contexts = domain.contexts.toSeq
+    val epics = domain.epics.toSeq
+    domainDiagramsMap.put(
+      domain,
+      DomainDiagramData(domain, processors, subdomains, contexts, epics)
+    )
+  }
+
   def result(root: PassRoot): DiagramsPassOutput = {
     DiagramsPassOutput(
       root,
       messages.toMessages,
       dataFlowDiagrams.toMap,
       useCaseDiagrams.toMap,
-      contextDiagrams.toMap
+      contextDiagrams.toMap,
+      domainDiagramsMap.toMap
     )
   }
 }

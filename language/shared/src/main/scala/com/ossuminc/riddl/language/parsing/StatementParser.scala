@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{*}
+import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.At
 import fastparse.*
@@ -75,7 +75,7 @@ private[parsing] trait StatementParser {
   private def whenCondition[u: P]: P[(LiteralString | Identifier, Boolean)] = {
     P(
       literalString.map(ls => (ls, false)) |
-      (Punctuation.exclamation ~ identifier).map { case id => (id, true) } |
+      (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
       identifier.map(id => (id, false))
     )
   }
@@ -159,7 +159,7 @@ private[parsing] trait StatementParser {
     }
   }
 
-  def setOfStatements[u: P](set: StatementsSet): P[Seq[Statements]] = {
+  private def setOfStatements[u: P](set: StatementsSet): P[Seq[Statements]] = {
     P(statement(set).rep(0))./
   }
 

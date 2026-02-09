@@ -112,6 +112,28 @@ passes/input/check/everything/everything.riddl(50:7->37):
 passes/input/check/everything/everything.riddl(50:7->37):
  Function 'whenUnderTheInfluence' is unused:
        function whenUnderTheInfluence is {
+passes/input/check/everything/everything.riddl(51:20->21):
+ Field identifier 'n' is too short. The minimum length is 3:
+         requires { n: Nothing }
+passes/input/check/everything/everything.riddl(51:20->21):
+ Metadata in Field 'n' should not be empty:
+         requires { n: Nothing }
+passes/input/check/everything/everything.riddl(51:20->21):
+ Field 'n' should have a description:
+         requires { n: Nothing }
+passes/input/check/everything/everything.riddl(52:19->20):
+ Field identifier 'b' is too short. The minimum length is 3:
+         returns { b: Boolean }
+passes/input/check/everything/everything.riddl(52:19->20):
+ Metadata in Field 'b' should not be empty:
+         returns { b: Boolean }
+passes/input/check/everything/everything.riddl(52:19->20):
+ Field 'b' should have a description:
+         returns { b: Boolean }
+passes/input/check/everything/everything.riddl(63:24->64:5):
+ Option 'transient' in Entity 'Something' is not a recognized RIDDL option:
+       option aggregate option transient
+     }
 passes/input/check/everything/everything.riddl(66:5->26):
  Metadata in Entity 'SomeOtherThing' should not be empty:
      entity SomeOtherThing is {
@@ -127,6 +149,12 @@ passes/input/check/everything/everything.riddl(67:7->20):
 passes/input/check/everything/everything.riddl(67:7->20):
  Sink 'trashBin' should have a description:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(67:7->20):
+ Sink 'trashBin' should have a handler:
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
+passes/input/check/everything/everything.riddl(67:7->20):
+ Sink 'trashBin' has no connections to any connector:
+       sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
 passes/input/check/everything/everything.riddl(67:26->38):
  Inlet 'SOT_In' is not connected:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }
@@ -136,8 +164,17 @@ passes/input/check/everything/everything.riddl(69:7->28):
 passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' should have a description:
        state otherThingState of type Everything.StateType
+passes/input/check/everything/everything.riddl(70:7->18):
+ Handler 'fee' in Entity 'SomeOtherThing' handles no commands or queries; entity handlers typically handle commands and queries:
+       handler fee is {
+passes/input/check/everything/everything.riddl(7:5->18):
+ Source 'Source' should have a handler:
+     source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
 passes/input/check/everything/everything.riddl(7:24->39):
  Outlet 'Commands' is overloaded with 2 kinds:
    Outlet 'Commands' at passes/input/check/everything/everything.riddl(7:24->52),
    Inlet 'Commands' at passes/input/check/everything/everything.riddl(8:20->47):
      source Source is { outlet Commands is DoAThing } with { described by "Data Source" }
+passes/input/check/everything/everything.riddl(8:5->14):
+ Sink 'Sink' should have a handler:
+     sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }

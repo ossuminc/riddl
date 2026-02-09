@@ -6,21 +6,41 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 5, 2026
+**Last Updated**: February 8, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS default due to
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
 All workflow paths updated to `scala-3.7.4`.
 
+**1.6.0 Enhancements (uncommitted)**: Comprehensive library
+enhancements for simulator and generator support. 5 phases
+completed across 2 sessions:
+- Phase 1: Handler completeness classification (A1), behavioral
+  statistics (A2)
+- Phase 2: MessageFlowPass (B1), EntityLifecyclePass (B2)
+- Phase 3: DiagramsPass extensions (A3), DependencyAnalysisPass (B3)
+- Phase 4: Recognized options vocabulary and validation (C1-C5)
+- Phase 5: RiddlLib/RiddlAPI extensions (D1)
+Full clean build: 734 tests, 0 failures.
+
+**Release 1.6.0 Published**: ValidationPass bug fixes and new
+validations. Fixed SagaStep undo check, SagaStep shape check,
+duplicate checkMetadata. Added validation for Schema, Relationship,
+Streamlet shape/handler, Adaptor/Repository handler requirements,
+Projector repo ref, Epic/UseCase user ref, Function input/output
+types. 1,526 tests pass (0 failures). Published to GitHub Packages.
+
+**Release 1.5.0 Published**: Extracted cross-platform `RiddlLib`
+trait from JS-only `RiddlAPI`. `RiddlAPI` is now a thin JS facade
+delegating to `RiddlLib`. `parseString` returns opaque Root handle;
+use `getDomains()`/`inspectRoot()` accessors. Fixed `riddlLibJS/test`
+ESModule crash. 1,527 tests pass (0 failures). Published to GitHub
+Packages (Maven + npm). BREAKING: TS consumers must update
+`parseString` usage.
+
 **Release 1.4.0 Published**: `Container.flatten()` extension, rewritten
 `FlattenPass`, multi-platform release workflow. Native macOS ARM64
 binary distributed via Homebrew.
-
-**RiddlLib Shared Trait (pending 1.5.0 release)**: Extracted cross-
-platform `RiddlLib` trait from JS-only `RiddlAPI`. `RiddlAPI` is now
-a thin JS facade delegating to `RiddlLib`. `parseString` returns
-opaque Root handle; use `getDomains()`/`inspectRoot()` accessors.
-Fixed `riddlLibJS/test` ESModule crash. 1,527 tests pass (0 failures).
 
 **npm Package Published**: `@ossuminc/riddl-lib` published to GitHub
 Packages npm registry via CI and locally. ESModule format with TypeScript
@@ -80,8 +100,15 @@ After all files pass, add riddl-models EBNF validation to CI
 (`.github/workflows/scala.yml`, mirroring existing riddl-examples
 pattern).
 
-### 1. Merge development to main for 1.3.0 release
-Create PR from development to main, merge after CI passes.
+### 1. Update Consumers for 1.5.0 Breaking Change
+**Status**: Pending
+
+`parseString` now returns opaque Root. Downstream projects that
+access `result.value.domains` directly must switch to
+`RiddlAPI.getDomains(result.value)` or
+`RiddlAPI.inspectRoot(result.value).domains`.
+
+Projects to update: synapify, riddl-mcp-server, ossum.ai.
 
 ### 2. Comprehensive TypeScript Declarations for AST & Passes
 Expand `riddlLib/js/types/index.d.ts` to cover the full AST and Pass
@@ -262,7 +289,161 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ---
 
+## Changes Since v1.6.0
+
+- **Handler completeness (A1)**: `HandlerCompleteness` + `BehaviorCategory`
+  enum in `ValidationOutput`. Handlers classified as Executable, PromptOnly,
+  or Empty during `postProcess()`.
+- **Behavioral statistics (A2)**: `numPromptStatements` and
+  `numExecutableStatements` added to `DefinitionStats` in StatsPass.
+- **MessageFlowPass (B1)**: New analysis pass builds directed message flow
+  graph. Output: edges, producerIndex, consumerIndex, messageIndex.
+- **EntityLifecyclePass (B2)**: New analysis pass extracts entity state
+  machines. Output: states, transitions, initial/terminal states.
+- **DiagramsPass extensions (A3)**: Populated `DataFlowDiagramData` (R1)
+  with connections/connectors/streamlets. Added `DomainDiagramData` (R3)
+  with processors/subdomains/contexts/epics.
+- **DependencyAnalysisPass (B3)**: New analysis pass builds cross-context
+  and cross-entity dependency graphs. Output: contextDeps, entityDeps,
+  typeDeps, adaptorBridges.
+- **Recognized options (C1-C5)**: `RecognizedOptions` registry with ~25
+  options. `validateRecognizedOption` validates name, arity, parent type.
+  Unrecognized options produce StyleWarning.
+- **RiddlLib API (D1)**: `getHandlerCompleteness()`, `getMessageFlow()`,
+  `getEntityLifecycles()` on shared RiddlLib trait + JS facade.
+- **Downstream integration plans (E1-E4)**: Delivered
+  `RIDDL-INTEGRATION-PLAN.md` to riddlsim, riddl-gen, riddl-mcp-server,
+  synapify.
+
 ## Session Log
+
+### February 8, 2026 (Library Enhancements for Simulator & Generator)
+
+**Focus**: Complete 5-phase implementation plan for RIDDL library
+enhancements. Phases 1-3 completed in previous session (context
+ran out). This session completed Phases 4-5 and deliverables.
+
+**Work Completed (this session)**:
+1. **C1-C5: Options vocabulary and validation** — Implemented
+   `validateRecognizedOption` method in `DefinitionValidation.scala`.
+   Validates option name recognition, argument count (min/max arity),
+   and parent definition type compatibility. Updated `everything.check`
+   and `saga.check` with expected StyleWarning messages for
+   unrecognized `transient` and `parallel` options.
+2. **D1: RiddlLib API extensions** — Added `getHandlerCompleteness`,
+   `getMessageFlow`, `getEntityLifecycles` methods to `RiddlLib`
+   trait (shared) and `RiddlAPI` (JS facade). Each parses source,
+   runs appropriate pass pipeline, converts to typed/JS results.
+3. **E1-E4: Downstream integration plans** — Wrote
+   `RIDDL-INTEGRATION-PLAN.md` to all 4 downstream project repos.
+4. **Full clean build verification** — `sbt clean cJVM` + `sbt tJVM`:
+   734 tests, 0 failures across all modules.
+
+**Work Completed (previous session, before context ran out)**:
+- A1: Handler completeness in ValidationPass
+- A2: Behavioral statistics in StatsPass
+- B1: MessageFlowPass (new file)
+- B2: EntityLifecyclePass (new file)
+- A3: DiagramsPass extensions (DataFlowDiagramData, DomainDiagramData)
+- B3: DependencyAnalysisPass (new file)
+- C1-C5 partial: OptionSpec/RecognizedOptions added, method stub placed
+
+**Files Created**:
+- `passes/shared/.../analysis/MessageFlowPass.scala`
+- `passes/shared/.../analysis/EntityLifecyclePass.scala`
+- `passes/shared/.../analysis/DependencyAnalysisPass.scala`
+- `../riddlsim/RIDDL-INTEGRATION-PLAN.md`
+- `../riddl-gen/RIDDL-INTEGRATION-PLAN.md`
+- `../riddl-mcp-server/RIDDL-INTEGRATION-PLAN.md`
+- `../synapify/RIDDL-INTEGRATION-PLAN.md`
+
+**Files Modified**:
+- `language/shared/.../parsing/StatementParser.scala`
+- `passes/shared/.../validate/ValidationOutput.scala`
+- `passes/shared/.../validate/ValidationPass.scala`
+- `passes/shared/.../validate/StreamingValidation.scala`
+- `passes/shared/.../validate/DefinitionValidation.scala`
+- `passes/shared/.../stats/StatsPass.scala`
+- `passes/shared/.../diagrams/DiagramsPass.scala`
+- `passes/jvm-native/.../DiagramsPassTest.scala`
+- `passes/input/check/everything/everything.check`
+- `passes/input/check/saga/saga.check`
+- `riddlLib/shared/.../RiddlLib.scala`
+- `riddlLib/js/.../RiddlAPI.scala`
+
+**Test Results**: 734 tests, 0 failures (clean build)
+
+**Status**: All changes uncommitted on `development` branch.
+
+**Test verification**: `sbt clean test` (all platforms) exited 0.
+`sbt test` (incremental, all platforms) also exited 0. Reported
+1,526 tests passed, 0 failures. However, the 2-minute wall time
+for an all-platform run including Native linking seems
+suspiciously fast — verify independently before releasing.
+
+---
+
+### February 7, 2026 (ValidationPass Gap Analysis & Enhancement)
+
+**Focus**: Comprehensive audit and enhancement of ValidationPass
+to catch missing validations and fix bugs.
+
+**Work Completed**:
+1. **Fixed 3 bugs**:
+   - SagaStep checked `doStatements` twice instead of
+     `undoStatements` for revert validation
+   - SagaStep shape check compared `getClass` of two
+     `Contents[Statements]` (always true) — replaced with
+     meaningful `nonEmpty` symmetry check
+   - `validateState` called `checkMetadata` twice — removed
+     duplicate
+2. **Added validation for 2 previously unvalidated definitions**:
+   - `Schema` — kind vs structure compatibility (flat/document/
+     columnar/vector shouldn't have links; graphical should;
+     vector expects single data node), data TypeRef resolution,
+     link FieldRef resolution, index FieldRef resolution
+   - `Relationship` — processor ref resolution, identifier
+     length, metadata checks
+3. **Added 6 semantic validations**:
+   - Streamlet shape vs inlet/outlet count (guarded by
+     `nonEmpty` to skip placeholders)
+   - Streamlet handler requirement
+   - Adaptor handler requirement + empty handler warning
+   - Repository handler requirement
+   - Projector repository ref resolution
+   - Epic/UseCase user story user ref resolution
+4. **Added Function input/output type validation** via
+   `checkTypeExpression` on `input`/`output` Aggregations
+5. **Updated 3 `.check` test expectation files** to reflect
+   new validation messages (everything, saga, streaming)
+
+**Test Results**: `sbt clean test` — 1,526 tests, 0 failures
+across all modules (JVM, JS, Native).
+
+**Commit**: `6d6185e5` — pushed to `origin/development`
+
+**Files Modified**:
+- `passes/shared/.../validate/ValidationPass.scala` — all
+  validation enhancements
+- `passes/input/check/everything/everything.check` — 12 new
+  expected messages
+- `passes/input/check/saga/saga.check` — 5 new expected
+  messages
+- `passes/input/check/streaming/streaming.check` — 3 new
+  expected messages
+
+**Remaining from gap analysis** (lower priority, not
+implemented this session):
+- Schema kind-specific deep checks (relational link type
+  compatibility, etc.)
+- Adaptor message compatibility with referenced context
+- Saga compensation symmetry hints
+- Entity FSM morph/become statement presence check
+- `checkStreamingUsage()` implementation (still a no-op)
+- Handler message type vs container type appropriateness
+- Context isolation warnings
+
+---
 
 ### February 5, 2026 (RiddlLib Shared Trait, JS Test Fix)
 
@@ -295,11 +476,22 @@ fix riddlLibJS test runner crash.
 `riddlLibJS/test` now runs 8 tests successfully (was crashing).
 
 **Breaking Change**: `parseString` returns opaque Root. TypeScript
-consumers must use `getDomains()`/`inspectRoot()`. Ships as 1.5.0.
+consumers must use `getDomains()`/`inspectRoot()`.
+
+**Release 1.5.0** (February 6, 2026):
+- Merged development → main, tagged 1.5.0
+- `sbt clean test` — 1,527 tests, 0 failures
+- JS bundle built, ESMSafetyTest clean pass (5.3MB scanned)
+- `sbt publish` — all modules to GitHub Packages (Maven)
+- `gh release create 1.5.0` — triggers release.yml for native
+  builds and homebrew-tap update
+- `@ossuminc/riddl-lib@1.5.0` published to npm (GitHub Packages)
 
 **Commits**:
 - `407aebdb` — Extract shared RiddlLib trait and fix riddlLibJS
   test crash
+- `28c299b5` — Update CLAUDE.md and NOTEBOOK.md for RiddlLib
+  shared trait
 
 **Files Created**:
 - `riddlLib/shared/src/main/scala/.../RiddlLib.scala`
@@ -311,6 +503,9 @@ consumers must use `getDomains()`/`inspectRoot()`. Ships as 1.5.0.
 - `riddlLib/js/types/index.d.ts` — opaque RootAST, new methods
 - `riddlLib/jvm/src/test/scala/.../FlattenPassTest.scala` —
   un-pended
+
+**Consumers to update** (parseString breaking change):
+- synapify, riddl-mcp-server, ossum.ai
 
 ---
 
@@ -1464,5 +1659,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.4.0 (February 5, 2026)
-**Next release**: 1.5.0 (breaking: opaque Root in parseString)
+**Latest release**: 1.6.0 (February 7, 2026)

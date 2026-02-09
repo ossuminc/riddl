@@ -20,7 +20,13 @@ passes/input/check/saga/saga.riddl(13:7->20):
  Metadata in Sink 'trashCan' should not be empty:
        sink trashCan is { inlet in is command Something }
 passes/input/check/saga/saga.riddl(13:7->20):
+ Sink 'trashCan' has no connections to any connector:
+       sink trashCan is { inlet in is command Something }
+passes/input/check/saga/saga.riddl(13:7->20):
  Sink 'trashCan' should have a description:
+       sink trashCan is { inlet in is command Something }
+passes/input/check/saga/saga.riddl(13:7->20):
+ Sink 'trashCan' should have a handler:
        sink trashCan is { inlet in is command Something }
 passes/input/check/saga/saga.riddl(4:5->23):
  Command 'UndoSomething' is unused:
@@ -34,6 +40,22 @@ passes/input/check/saga/saga.riddl(8:5->30):
 passes/input/check/saga/saga.riddl(5:5->26):
  Function 'AnotherThing' in Context 'ignore2' should have statements:
      function AnotherThing {
+passes/input/check/saga/saga.riddl(6:18->19):
+ Field identifier 'a' is too short. The minimum length is 3:
+       requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
+passes/input/check/saga/saga.riddl(6:67->68):
+ Field identifier 'b' is too short. The minimum length is 3:
+       requires { a: Integer with { described by "a" } } returns { b: Integer with { described by "b"} }
 passes/input/check/saga/saga.riddl(8:5->30):
  Function 'UndoAnotherThing' in Context 'ignore2' should have statements:
      function UndoAnotherThing {
+passes/input/check/saga/saga.riddl(9:18->19):
+ Field identifier 'c' is too short. The minimum length is 3:
+       requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
+passes/input/check/saga/saga.riddl(9:67->68):
+ Field identifier 'd' is too short. The minimum length is 3:
+       requires { c: Integer with { described by "c" } } returns { d: Integer with { described by "d"} }
+passes/input/check/saga/saga.riddl(35:7->36:7):
+ Option 'parallel' in Saga 'name' is not a recognized RIDDL option:
+       option parallel
+       described as "ignore"

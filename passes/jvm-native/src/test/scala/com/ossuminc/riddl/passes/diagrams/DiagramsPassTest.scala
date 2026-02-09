@@ -27,7 +27,7 @@ class DiagramsPassTest extends SharedDiagramsPassTest {
           output.messages.justErrors must be(empty)
           output.contextDiagrams must not be (empty)
           output.useCaseDiagrams must not be (empty)
-          output.dataFlowDiagrams must be(empty) // TODO: change to 'not be(empty)' when implemented
+          output.dataFlowDiagrams must not be(empty)
       }
     }
     Await.result(future, 10.seconds)

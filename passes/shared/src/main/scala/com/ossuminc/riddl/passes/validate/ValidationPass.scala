@@ -49,6 +49,10 @@ case class ValidationPass(
     outputs.outputOf[ResolutionOutput](ResolutionPass.name).get
   lazy val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
+  /** Accumulated handler-to-parent mappings collected during processing */
+  private val handlerParents: mutable.ListBuffer[(Handler, Definition)] =
+    mutable.ListBuffer.empty
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -62,13 +66,18 @@ case class ValidationPass(
       inlets.toSeq,
       outlets.toSeq,
       connectors.toSeq,
-      streamlets.toSeq
+      streamlets.toSeq,
+      computedHandlerCompleteness
     )
   }
+
+  private var computedHandlerCompleteness: Seq[HandlerCompleteness] =
+    Seq.empty
 
   override def postProcess(root: PassRoot): Unit = {
     checkOverloads()
     checkStreaming(root)
+    computedHandlerCompleteness = classifyHandlers()
   }
 
   def process(value: RiddlValue, parents: ParentStack): Unit = {
@@ -101,6 +110,9 @@ case class ValidationPass(
         validateStatement(statement, parentsAsSeq)
       case h: Handler =>
         validateHandler(h, parentsAsSeq)
+        parentsAsSeq.headOption.foreach { parent =>
+          handlerParents.addOne((h, parent))
+        }
       case c: Constant =>
         validateConstant(c, parentsAsSeq)
       case s: State =>
@@ -151,6 +163,10 @@ case class ValidationPass(
         validateInclude(include)
       case bi: BASTImport =>
         validateBASTImport(bi, parentsAsSeq)
+      case s: Schema =>
+        validateSchema(s, parentsAsSeq)
+      case r: Relationship =>
+        validateRelationship(r, parentsAsSeq)
       case _: MatchCase           => () // Validated through MatchStatement
       case _: Definition          => () // abstract type
       case _: NonDefinitionValues => () // We only validate definitions
@@ -465,7 +481,6 @@ case class ValidationPass(
         s.loc
       )
     }
-    checkMetadata(s)
   }
 
   private def validateFunction(
@@ -480,6 +495,12 @@ case class ValidationPass(
       MissingWarning,
       f.errorLoc
     )
+    f.input.foreach { agg =>
+      checkTypeExpression(agg, f, parents)
+    }
+    f.output.foreach { agg =>
+      checkTypeExpression(agg, f, parents)
+    }
     checkMetadata(f)
   }
 
@@ -488,6 +509,22 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, h)
+    parents.headOption match {
+      case Some(entity: Entity) =>
+        val messageClauses = h.clauses.collect { case omc: OnMessageClause => omc }
+        if messageClauses.nonEmpty then {
+          val handlesCommandOrQuery = messageClauses.exists { omc =>
+            omc.msg.messageKind == AggregateUseCase.CommandCase ||
+              omc.msg.messageKind == AggregateUseCase.QueryCase
+          }
+          if !handlesCommandOrQuery then
+            messages.addWarning(
+              h.errorLoc,
+              s"${h.identify} in ${entity.identify} handles no commands or queries; entity handlers typically handle commands and queries"
+            )
+        }
+      case _ => ()
+    }
   }
 
   // FIXME: This should be used:
@@ -501,6 +538,81 @@ case class ValidationPass(
   private def validateBASTImport(bi: BASTImport, parents: Parents): Unit = {
     check(bi.path.s.nonEmpty, "BAST load has no path specified", Messages.Error, bi.loc)
     check(bi.path.s.endsWith(".bast"), s"BAST load path '${bi.path.s}' should end with .bast", Messages.Warning, bi.loc)
+  }
+
+  private def validateSchema(
+    schema: Schema,
+    parents: Parents
+  ): Unit = {
+    checkIdentifierLength(schema)
+    checkMetadata(schema)
+    checkNonEmpty(
+      schema.data.toSeq,
+      "data definitions",
+      schema,
+      schema.errorLoc,
+      MissingWarning,
+      required = true
+    )
+    schema.schemaKind match {
+      case RepositorySchemaKind.Flat | RepositorySchemaKind.Document |
+           RepositorySchemaKind.Columnar | RepositorySchemaKind.Vector =>
+        if schema.links.nonEmpty then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is ${schema.schemaKind} and should not define links"
+          )
+      case RepositorySchemaKind.Graphical =>
+        if schema.links.isEmpty && schema.data.nonEmpty then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is graphical but has no links (edges)"
+          )
+      case RepositorySchemaKind.Relational =>
+        if schema.links.isEmpty && schema.data.size > 1 then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is relational with ${schema.data.size} data nodes but has no links; consider adding links to define relationships"
+          )
+        schema.links.values.foreach { case (fromRef, toRef) =>
+          val fromType = resolvePath[Field](fromRef.pathId, parents).map(_.typeEx)
+          val toType = resolvePath[Field](toRef.pathId, parents).map(_.typeEx)
+          (fromType, toType) match {
+            case (Some(ft), Some(tt)) =>
+              if ft != tt then
+                messages.addWarning(
+                  fromRef.loc,
+                  s"Link in ${schema.identify} connects fields with incompatible types: ${fromRef.pathId.format} is ${ft.format} but ${toRef.pathId.format} is ${tt.format}"
+                )
+            case _ => () // unresolved fields already reported elsewhere
+          }
+        }
+      case _ => ()
+    }
+    if schema.schemaKind == RepositorySchemaKind.Vector && schema.data.size > 1 then
+      messages.addWarning(
+        schema.errorLoc,
+        s"${schema.identify} is a vector schema but defines ${schema.data.size} data nodes; typically only one is expected"
+      )
+    schema.data.values.foreach { typeRef =>
+      checkRef[Type](typeRef, parents)
+    }
+    schema.links.values.foreach { case (from, to) =>
+      checkRef[Field](from, parents)
+      checkRef[Field](to, parents)
+    }
+    schema.indices.foreach { fieldRef =>
+      checkRef[Field](fieldRef, parents)
+    }
+  }
+
+  private def validateRelationship(
+    relationship: Relationship,
+    parents: Parents
+  ): Unit = {
+    checkIdentifierLength(relationship)
+    checkRef[Processor[?]](relationship.withProcessor, parents)
+    checkMetadata(relationship)
   }
 
   private def validateEntity(
@@ -534,6 +646,20 @@ case class ValidationPass(
           Messages.Error
         )
       )
+    }
+    if entity.hasOption("finite-state-machine") && entity.states.sizeIs >= 2 then {
+      val hasMorphOrBecome = entity.handlers.exists { handler =>
+        handler.clauses.exists { clause =>
+          val finder = Finder(clause.contents)
+          finder.recursiveFindByType[MorphStatement].nonEmpty ||
+            finder.recursiveFindByType[BecomeStatement].nonEmpty
+        }
+      }
+      if !hasMorphOrBecome then
+        messages.addWarning(
+          entity.errorLoc,
+          s"${entity.identify} is declared as a finite-state-machine but its handlers contain no morph or become statements"
+        )
     }
     if entity.states.nonEmpty && entity.handlers.isEmpty then {
       messages.add(
@@ -573,6 +699,24 @@ case class ValidationPass(
       Messages.Error,
       projector.errorLoc
     )
+    projector.repositories.foreach { repoRef =>
+      checkRef[Repository](repoRef, parents)
+    }
+    if projector.handlers.nonEmpty then {
+      val allClauses = projector.handlers.flatMap(_.clauses).collect {
+        case omc: OnMessageClause => omc
+      }
+      if allClauses.nonEmpty then {
+        val handlesEvents = allClauses.exists { omc =>
+          omc.msg.messageKind == AggregateUseCase.EventCase
+        }
+        if !handlesEvents then
+          messages.addWarning(
+            projector.errorLoc,
+            s"${projector.identify} handler does not handle any events; projectors typically handle events to build read models"
+          )
+      }
+    }
     checkMetadata(projector)
   }
 
@@ -590,6 +734,27 @@ case class ValidationPass(
       MissingWarning,
       required = false
     )
+    if repository.handlers.isEmpty && repository.nonEmpty then
+      messages.addMissing(
+        repository.errorLoc,
+        s"${repository.identify} should have at least one handler"
+      )
+    if repository.handlers.nonEmpty then {
+      val allClauses = repository.handlers.flatMap(_.clauses).collect {
+        case omc: OnMessageClause => omc
+      }
+      if allClauses.nonEmpty then {
+        val handlesCommandOrQuery = allClauses.exists { omc =>
+          omc.msg.messageKind == AggregateUseCase.CommandCase ||
+            omc.msg.messageKind == AggregateUseCase.QueryCase
+        }
+        if !handlesCommandOrQuery then
+          messages.addWarning(
+            repository.errorLoc,
+            s"${repository.identify} handlers do not handle any commands or queries; repositories typically handle commands (for mutations) and queries (for reads)"
+          )
+      }
+    }
   }
 
   private def validateAdaptor(
@@ -607,6 +772,51 @@ case class ValidationPass(
             messages.addError(adaptor.errorLoc, message)
           }
         }
+        if adaptor.handlers.isEmpty && adaptor.nonEmpty then
+          messages.addMissing(
+            adaptor.errorLoc,
+            s"${adaptor.identify} should have at least one handler"
+          )
+        else if adaptor.handlers.nonEmpty && adaptor.handlers.forall(_.clauses.isEmpty) then
+          messages.addMissing(
+            adaptor.errorLoc,
+            s"${adaptor.identify} has only empty handlers"
+          )
+        // Check if adaptor handlers reference message types from the adapted context
+        resolvePath[Context](adaptor.referent.pathId, parents).foreach { targetContext =>
+          val targetMessageTypes = targetContext.types.filter { t =>
+            t.typEx match {
+              case auc: AggregateUseCaseTypeExpression =>
+                auc.usecase == AggregateUseCase.CommandCase ||
+                  auc.usecase == AggregateUseCase.EventCase ||
+                  auc.usecase == AggregateUseCase.QueryCase ||
+                  auc.usecase == AggregateUseCase.ResultCase
+              case _ => false
+            }
+          }
+          if targetMessageTypes.nonEmpty && adaptor.handlers.nonEmpty then {
+            val allClauses = adaptor.handlers.flatMap(_.clauses).collect {
+              case omc: OnMessageClause => omc
+            }
+            if allClauses.nonEmpty then {
+              val referencesTargetType = allClauses.exists { omc =>
+                resolvePath[Type](omc.msg.pathId, parents).exists { resolvedType =>
+                  symbols.parentsOf(resolvedType).exists(_ == targetContext)
+                }
+              }
+              if !referencesTargetType then {
+                val directionWord = adaptor.direction match {
+                  case _: InboundAdaptor  => "from"
+                  case _: OutboundAdaptor => "to"
+                }
+                messages.addWarning(
+                  adaptor.errorLoc,
+                  s"${adaptor.identify} is ${adaptor.direction.format} ${directionWord} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}"
+                )
+              }
+            }
+          }
+        }
         checkMetadata(adaptor)
       case None | Some(_) =>
         messages.addError(adaptor.errorLoc, "Adaptor not contained within Context")
@@ -619,6 +829,33 @@ case class ValidationPass(
   ): Unit = {
     addStreamlet(streamlet)
     checkContainer(parents, streamlet)
+    if streamlet.nonEmpty then
+      val numInlets = streamlet.inlets.size
+      val numOutlets = streamlet.outlets.size
+      streamlet.shape match {
+        case _: Source =>
+          check(numInlets == 0, s"${streamlet.identify} is a source but has $numInlets inlets; sources must have none", Messages.Error, streamlet.errorLoc)
+          check(numOutlets >= 1, s"${streamlet.identify} is a source but has no outlets; sources must have at least one", Messages.Error, streamlet.errorLoc)
+        case _: Sink =>
+          check(numInlets >= 1, s"${streamlet.identify} is a sink but has no inlets; sinks must have at least one", Messages.Error, streamlet.errorLoc)
+          check(numOutlets == 0, s"${streamlet.identify} is a sink but has $numOutlets outlets; sinks must have none", Messages.Error, streamlet.errorLoc)
+        case _: Flow =>
+          check(numInlets >= 1, s"${streamlet.identify} is a flow but has no inlets; flows must have at least one", Messages.Error, streamlet.errorLoc)
+          check(numOutlets >= 1, s"${streamlet.identify} is a flow but has no outlets; flows must have at least one", Messages.Error, streamlet.errorLoc)
+        case _: Merge =>
+          check(numInlets >= 2, s"${streamlet.identify} is a merge but has $numInlets inlets; merges must have at least two", Messages.Error, streamlet.errorLoc)
+          check(numOutlets >= 1, s"${streamlet.identify} is a merge but has no outlets; merges must have at least one", Messages.Error, streamlet.errorLoc)
+        case _: Split =>
+          check(numInlets >= 1, s"${streamlet.identify} is a split but has no inlets; splits must have at least one", Messages.Error, streamlet.errorLoc)
+          check(numOutlets >= 2, s"${streamlet.identify} is a split but has $numOutlets outlets; splits must have at least two", Messages.Error, streamlet.errorLoc)
+        case _: Router =>
+          check(numInlets >= 2, s"${streamlet.identify} is a router but has $numInlets inlets; routers must have at least two", Messages.Error, streamlet.errorLoc)
+          check(numOutlets >= 2, s"${streamlet.identify} is a router but has $numOutlets outlets; routers must have at least two", Messages.Error, streamlet.errorLoc)
+        case _: Void => ()
+      }
+    end if
+    if streamlet.handlers.isEmpty && streamlet.nonEmpty then
+      messages.addMissing(streamlet.errorLoc, s"${streamlet.identify} should have a handler")
     checkMetadata(streamlet)
   }
 
@@ -662,13 +899,33 @@ case class ValidationPass(
   ): Unit = {
     checkDefinition(parents, s)
     checkNonEmpty(s.doStatements.toSeq, "Do Statements", s, MissingWarning)
-    checkNonEmpty(s.doStatements.toSeq, "Revert Statements", s, MissingWarning)
+    checkNonEmpty(s.undoStatements.toSeq, "Revert Statements", s, MissingWarning)
     check(
-      s.doStatements.getClass == s.undoStatements.getClass,
-      "The primary action and revert action must be the same shape",
+      s.doStatements.nonEmpty == s.undoStatements.nonEmpty,
+      "A saga step with do statements must also have revert statements, and vice versa",
       Messages.Error,
       s.errorLoc
     )
+    if s.doStatements.nonEmpty && s.undoStatements.nonEmpty then {
+      val doFinder = Finder(s.doStatements)
+      val undoFinder = Finder(s.undoStatements)
+      val doTellTargets = doFinder.recursiveFindByType[TellStatement].map(_.processorRef.pathId.format).toSet
+      val doSendTargets = doFinder.recursiveFindByType[SendStatement].map(_.portlet.pathId.format).toSet
+      val doTargets = doTellTargets ++ doSendTargets
+      if doTargets.nonEmpty then {
+        val undoTellTargets = undoFinder.recursiveFindByType[TellStatement].map(_.processorRef.pathId.format).toSet
+        val undoSendTargets = undoFinder.recursiveFindByType[SendStatement].map(_.portlet.pathId.format).toSet
+        val undoTargets = undoTellTargets ++ undoSendTargets
+        val uncompensated = doTargets -- undoTargets
+        if uncompensated.nonEmpty then
+          messages.add(
+            Messages.style(
+              s"${s.identify} do-step targets ${uncompensated.mkString(", ")} but the undo-step does not target the same; consider adding compensation",
+              s.errorLoc
+            )
+          )
+      }
+    }
     checkMetadata(s)
   }
 
@@ -685,9 +942,10 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, epic)
-    if epic.userStory.isEmpty then {
+    if epic.userStory.isEmpty then
       messages.addMissing(epic.errorLoc, s"${epic.identify} is missing a user story")
-    }
+    else
+      checkRef[User](epic.userStory.user, parents)
     checkMetadata(epic)
   }
 
@@ -750,6 +1008,8 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, uc)
+    if uc.userStory.nonEmpty then
+      checkRef[User](uc.userStory.user, parents)
     if uc.contents.nonEmpty then {
       uc.contents.foreach {
         case seq: SequentialInteractions =>
@@ -907,6 +1167,54 @@ case class ValidationPass(
       // Nothing else to validate
       case _: OptionalInteractions | _: ParallelInteractions | _: SequentialInteractions =>
       // These are all just containers of other interactions, not needing further validation
+    }
+  }
+
+  /** Classify all collected handlers by behavioral completeness.
+    * A handler is:
+    *   - Executable: has at least one executable statement
+    *     (tell, send, morph, set, become, error, code)
+    *   - PromptOnly: has only prompt statements
+    *   - Empty: has no statements or only uses ???
+    */
+  private def classifyHandlers(): Seq[HandlerCompleteness] = {
+    handlerParents.toSeq.map { case (handler, parent) =>
+      val finder = Finder(handler.contents)
+      val allStatements = handler.clauses.flatMap { clause =>
+        Finder(clause.contents).recursiveFindByType[Statement]
+      }
+
+      val executableCount = allStatements.count {
+        case _: TellStatement   => true
+        case _: SendStatement   => true
+        case _: MorphStatement  => true
+        case _: SetStatement    => true
+        case _: BecomeStatement => true
+        case _: ErrorStatement  => true
+        case _: CodeStatement   => true
+        case _                  => false
+      }
+
+      val promptCount = allStatements.count {
+        case _: PromptStatement => true
+        case _                 => false
+      }
+
+      val totalClauses = handler.clauses.size
+
+      val category =
+        if executableCount > 0 then BehaviorCategory.Executable
+        else if promptCount > 0 then BehaviorCategory.PromptOnly
+        else BehaviorCategory.Empty
+
+      HandlerCompleteness(
+        handler = handler,
+        parent = parent,
+        category = category,
+        executableCount = executableCount,
+        promptCount = promptCount,
+        totalClauses = totalClauses
+      )
     }
   }
 

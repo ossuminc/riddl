@@ -10,6 +10,8 @@ import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.{OutlineEntry, TreeNode}
+import com.ossuminc.riddl.passes.validate.{BehaviorCategory, HandlerCompleteness}
+import com.ossuminc.riddl.passes.analysis.{MessageFlowOutput, MessageFlowEdge, FlowMechanism, EntityLifecycle, StateTransition}
 import com.ossuminc.riddl.utils.{CommonOptions, DOMPlatformContext, PlatformContext, URL}
 
 import scala.scalajs.js
@@ -423,4 +425,81 @@ object RiddlAPI {
       nodes => nodes.map(treeNodeToJs).toJSArray
     )
   end getTree
+
+  /** Get handler completeness classifications. */
+  @JSExport("getHandlerCompleteness")
+  def getHandlerCompleteness(
+    source: String,
+    origin: String = "string"
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.getHandlerCompleteness(source, origin),
+      entries => entries.map { hc =>
+        js.Dynamic.literal(
+          handlerId = hc.handler.id.value,
+          parentId = hc.parent.id.value,
+          parentKind = hc.parent.kind,
+          category = hc.category.toString,
+          executableCount = hc.executableCount,
+          promptCount = hc.promptCount,
+          totalClauses = hc.totalClauses
+        )
+      }.toJSArray
+    )
+  end getHandlerCompleteness
+
+  /** Get the message flow graph. */
+  @JSExport("getMessageFlow")
+  def getMessageFlow(
+    source: String,
+    origin: String = "string"
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.getMessageFlow(source, origin),
+      mfo => js.Dynamic.literal(
+        edges = mfo.edges.map { edge =>
+          js.Dynamic.literal(
+            producerId = edge.producer.id.value,
+            producerKind = edge.producer.kind,
+            consumerId = edge.consumer.id.value,
+            consumerKind = edge.consumer.kind,
+            messageTypeId = edge.messageType.id.value,
+            mechanism = edge.mechanism.toString
+          )
+        }.toJSArray,
+        edgeCount = mfo.edges.size
+      )
+    )
+  end getMessageFlow
+
+  /** Get entity lifecycle (state machine) data. */
+  @JSExport("getEntityLifecycles")
+  def getEntityLifecycles(
+    source: String,
+    origin: String = "string"
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.getEntityLifecycles(source, origin),
+      lifecycles => lifecycles.map { case (entity, lc) =>
+        js.Dynamic.literal(
+          entityId = entity.id.value,
+          states = lc.states.map(s =>
+            s.id.value
+          ).toJSArray,
+          transitions = lc.transitions.map { t =>
+            js.Dynamic.literal(
+              fromState = t.fromState.map(_.id.value)
+                .getOrElse("*"),
+              toState = t.toState.id.value,
+              trigger = t.trigger.id.value
+            )
+          }.toJSArray,
+          initialState = lc.initialState
+            .map(_.id.value).getOrElse(""),
+          terminalStates = lc.terminalStates
+            .map(_.id.value).toJSArray
+        )
+      }.toJSArray
+    )
+  end getEntityLifecycles
 }

@@ -32,7 +32,86 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
   protected val streamlets: mutable.ListBuffer[Streamlet] = mutable.ListBuffer.empty
   protected val connectors: mutable.ListBuffer[Connector] = mutable.ListBuffer.empty
 
-  private def checkStreamingUsage(root: PassRoot): Unit = ()
+  private def checkStreamingUsage(root: PassRoot): Unit = {
+    if streamlets.nonEmpty then {
+      // Build a map from each streamlet to its connected streamlets via connectors
+      // First, resolve all connector endpoints to their parent streamlets
+      val connectedStreamlets = mutable.Set.empty[Streamlet]
+      // Adjacency list: streamlet → set of downstream streamlets (outlet→inlet direction)
+      val adjacency = mutable.Map.empty[Streamlet, mutable.Set[Streamlet]]
+
+      connectors.filterNot(_.isEmpty).foreach { connector =>
+        val connParents = symbols.parentsOf(connector)
+        val maybeOutlet = resolvePath[Outlet](connector.from.pathId, connParents)
+        val maybeInlet = resolvePath[Inlet](connector.to.pathId, connParents)
+
+        val maybeFromStreamlet = maybeOutlet.flatMap { outlet =>
+          symbols.parentOf(outlet).collect { case s: Streamlet => s }
+        }
+        val maybeToStreamlet = maybeInlet.flatMap { inlet =>
+          symbols.parentOf(inlet).collect { case s: Streamlet => s }
+        }
+
+        (maybeFromStreamlet, maybeToStreamlet) match {
+          case (Some(fromSl), Some(toSl)) =>
+            connectedStreamlets += fromSl
+            connectedStreamlets += toSl
+            adjacency.getOrElseUpdate(fromSl, mutable.Set.empty) += toSl
+          case (Some(fromSl), None) =>
+            connectedStreamlets += fromSl
+          case (None, Some(toSl)) =>
+            connectedStreamlets += toSl
+          case _ => ()
+        }
+      }
+
+      // Check 1: Isolated streamlets (non-Void, not connected to any connector)
+      streamlets.foreach { streamlet =>
+        streamlet.shape match {
+          case _: Void => () // Void streamlets are excluded
+          case _ =>
+            if !connectedStreamlets.contains(streamlet) then
+              messages.addWarning(
+                streamlet.errorLoc,
+                s"${streamlet.identify} has no connections to any connector"
+              )
+        }
+      }
+
+      // Check 2: Source→Sink reachability via BFS
+      val sources = streamlets.filter(_.shape.isInstanceOf[Source])
+      val sinks = streamlets.filter(_.shape.isInstanceOf[Sink]).toSet
+
+      sources.foreach { source =>
+        if adjacency.contains(source) then {
+          // BFS from this source
+          val visited = mutable.Set.empty[Streamlet]
+          val queue = mutable.Queue.empty[Streamlet]
+          queue.enqueue(source)
+          visited += source
+          var reachesSink = false
+
+          while queue.nonEmpty && !reachesSink do
+            val current = queue.dequeue()
+            if sinks.contains(current) && current != source then
+              reachesSink = true
+            else
+              adjacency.getOrElse(current, mutable.Set.empty).foreach { neighbor =>
+                if !visited.contains(neighbor) then
+                  visited += neighbor
+                  queue.enqueue(neighbor)
+              }
+          end while
+
+          if !reachesSink then
+            messages.addWarning(
+              source.errorLoc,
+              s"${source.identify} is a source but has no downstream path to any sink"
+            )
+        }
+      }
+    }
+  }
 
   private def checkConnectorPersistence(): Unit = {
     connectors.filterNot(_.isEmpty).foreach { connector =>
