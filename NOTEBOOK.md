@@ -6,15 +6,22 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 7, 2026
+**Last Updated**: February 8, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS default due to
 compiler infinite loop bug with opaque types/intersection types in 3.3.x).
 All workflow paths updated to `scala-3.7.4`.
 
-**Release 1.4.0 Published**: `Container.flatten()` extension, rewritten
-`FlattenPass`, multi-platform release workflow. Native macOS ARM64
-binary distributed via Homebrew.
+**1.6.0 Enhancements (uncommitted)**: Comprehensive library
+enhancements for simulator and generator support. 5 phases
+completed across 2 sessions:
+- Phase 1: Handler completeness classification (A1), behavioral
+  statistics (A2)
+- Phase 2: MessageFlowPass (B1), EntityLifecyclePass (B2)
+- Phase 3: DiagramsPass extensions (A3), DependencyAnalysisPass (B3)
+- Phase 4: Recognized options vocabulary and validation (C1-C5)
+- Phase 5: RiddlLib/RiddlAPI extensions (D1)
+Full clean build: 734 tests, 0 failures.
 
 **Release 1.6.0 Published**: ValidationPass bug fixes and new
 validations. Fixed SagaStep undo check, SagaStep shape check,
@@ -30,6 +37,10 @@ use `getDomains()`/`inspectRoot()` accessors. Fixed `riddlLibJS/test`
 ESModule crash. 1,527 tests pass (0 failures). Published to GitHub
 Packages (Maven + npm). BREAKING: TS consumers must update
 `parseString` usage.
+
+**Release 1.4.0 Published**: `Container.flatten()` extension, rewritten
+`FlattenPass`, multi-platform release workflow. Native macOS ARM64
+binary distributed via Homebrew.
 
 **npm Package Published**: `@ossuminc/riddl-lib` published to GitHub
 Packages npm registry via CI and locally. ESModule format with TypeScript
@@ -278,18 +289,99 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ---
 
-## Changes Since v1.5.0
+## Changes Since v1.6.0
 
-- **ValidationPass bug fixes**: SagaStep undo check used
-  doStatements twice, SagaStep shape check was always-true,
-  validateState called checkMetadata twice
-- **New validations**: Schema (kind vs structure, ref resolution),
-  Relationship (processor ref), Streamlet shape vs inlet/outlet
-  count, handler requirements for Streamlet/Adaptor/Repository,
-  Projector repository ref, Epic/UseCase user story user ref,
-  Function input/output type expressions
+- **Handler completeness (A1)**: `HandlerCompleteness` + `BehaviorCategory`
+  enum in `ValidationOutput`. Handlers classified as Executable, PromptOnly,
+  or Empty during `postProcess()`.
+- **Behavioral statistics (A2)**: `numPromptStatements` and
+  `numExecutableStatements` added to `DefinitionStats` in StatsPass.
+- **MessageFlowPass (B1)**: New analysis pass builds directed message flow
+  graph. Output: edges, producerIndex, consumerIndex, messageIndex.
+- **EntityLifecyclePass (B2)**: New analysis pass extracts entity state
+  machines. Output: states, transitions, initial/terminal states.
+- **DiagramsPass extensions (A3)**: Populated `DataFlowDiagramData` (R1)
+  with connections/connectors/streamlets. Added `DomainDiagramData` (R3)
+  with processors/subdomains/contexts/epics.
+- **DependencyAnalysisPass (B3)**: New analysis pass builds cross-context
+  and cross-entity dependency graphs. Output: contextDeps, entityDeps,
+  typeDeps, adaptorBridges.
+- **Recognized options (C1-C5)**: `RecognizedOptions` registry with ~25
+  options. `validateRecognizedOption` validates name, arity, parent type.
+  Unrecognized options produce StyleWarning.
+- **RiddlLib API (D1)**: `getHandlerCompleteness()`, `getMessageFlow()`,
+  `getEntityLifecycles()` on shared RiddlLib trait + JS facade.
+- **Downstream integration plans (E1-E4)**: Delivered
+  `RIDDL-INTEGRATION-PLAN.md` to riddlsim, riddl-gen, riddl-mcp-server,
+  synapify.
 
 ## Session Log
+
+### February 8, 2026 (Library Enhancements for Simulator & Generator)
+
+**Focus**: Complete 5-phase implementation plan for RIDDL library
+enhancements. Phases 1-3 completed in previous session (context
+ran out). This session completed Phases 4-5 and deliverables.
+
+**Work Completed (this session)**:
+1. **C1-C5: Options vocabulary and validation** — Implemented
+   `validateRecognizedOption` method in `DefinitionValidation.scala`.
+   Validates option name recognition, argument count (min/max arity),
+   and parent definition type compatibility. Updated `everything.check`
+   and `saga.check` with expected StyleWarning messages for
+   unrecognized `transient` and `parallel` options.
+2. **D1: RiddlLib API extensions** — Added `getHandlerCompleteness`,
+   `getMessageFlow`, `getEntityLifecycles` methods to `RiddlLib`
+   trait (shared) and `RiddlAPI` (JS facade). Each parses source,
+   runs appropriate pass pipeline, converts to typed/JS results.
+3. **E1-E4: Downstream integration plans** — Wrote
+   `RIDDL-INTEGRATION-PLAN.md` to all 4 downstream project repos.
+4. **Full clean build verification** — `sbt clean cJVM` + `sbt tJVM`:
+   734 tests, 0 failures across all modules.
+
+**Work Completed (previous session, before context ran out)**:
+- A1: Handler completeness in ValidationPass
+- A2: Behavioral statistics in StatsPass
+- B1: MessageFlowPass (new file)
+- B2: EntityLifecyclePass (new file)
+- A3: DiagramsPass extensions (DataFlowDiagramData, DomainDiagramData)
+- B3: DependencyAnalysisPass (new file)
+- C1-C5 partial: OptionSpec/RecognizedOptions added, method stub placed
+
+**Files Created**:
+- `passes/shared/.../analysis/MessageFlowPass.scala`
+- `passes/shared/.../analysis/EntityLifecyclePass.scala`
+- `passes/shared/.../analysis/DependencyAnalysisPass.scala`
+- `../riddlsim/RIDDL-INTEGRATION-PLAN.md`
+- `../riddl-gen/RIDDL-INTEGRATION-PLAN.md`
+- `../riddl-mcp-server/RIDDL-INTEGRATION-PLAN.md`
+- `../synapify/RIDDL-INTEGRATION-PLAN.md`
+
+**Files Modified**:
+- `language/shared/.../parsing/StatementParser.scala`
+- `passes/shared/.../validate/ValidationOutput.scala`
+- `passes/shared/.../validate/ValidationPass.scala`
+- `passes/shared/.../validate/StreamingValidation.scala`
+- `passes/shared/.../validate/DefinitionValidation.scala`
+- `passes/shared/.../stats/StatsPass.scala`
+- `passes/shared/.../diagrams/DiagramsPass.scala`
+- `passes/jvm-native/.../DiagramsPassTest.scala`
+- `passes/input/check/everything/everything.check`
+- `passes/input/check/saga/saga.check`
+- `riddlLib/shared/.../RiddlLib.scala`
+- `riddlLib/js/.../RiddlAPI.scala`
+
+**Test Results**: 734 tests, 0 failures (clean build)
+
+**Status**: All changes uncommitted on `development` branch.
+
+**Test verification**: `sbt clean test` (all platforms) exited 0.
+`sbt test` (incremental, all platforms) also exited 0. Reported
+1,526 tests passed, 0 failures. However, the 2-minute wall time
+for an all-platform run including Native linking seems
+suspiciously fast — verify independently before releasing.
+
+---
 
 ### February 7, 2026 (ValidationPass Gap Analysis & Enhancement)
 
@@ -1567,4 +1659,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.5.0 (February 6, 2026)
+**Latest release**: 1.6.0 (February 7, 2026)
