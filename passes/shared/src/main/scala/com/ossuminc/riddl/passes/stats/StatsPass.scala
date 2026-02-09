@@ -60,7 +60,9 @@ case class DefinitionStats(
   numTerms: Long = 0, // the number of term definitions
   numOptions: Long = 0, // number of options declared
   numIncludes: Long = 0,
-  numStatements: Long = 0
+  numStatements: Long = 0,
+  numPromptStatements: Long = 0, // prompt "..." count
+  numExecutableStatements: Long = 0 // tell/send/morph/set/become/error/code
 )
 
 @JSExportTopLevel("KindStats")
@@ -75,7 +77,9 @@ class KindStats(
   var numTerms: Long = 0, // the number of term definitions
   var numOptions: Long = 0,
   var numIncludes: Long = 0,
-  var numStatements: Long = 0
+  var numStatements: Long = 0,
+  var numPromptStatements: Long = 0,
+  var numExecutableStatements: Long = 0
 ) {
   def completeness: Double = (numCompleted.toDouble / numSpecifications) * 100.0d
   def complexity: Double =
@@ -114,37 +118,71 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
   private val kind_stats: mutable.HashMap[String, KindStats] = mutable.HashMap.empty
   private var total_stats: Option[KindStats] = None
 
-  private def computeNumStatements(definition: Branch[?]): Long = {
-    def handlerStatements(handlers: Seq[Handler]): Long = {
-      val sizes: Seq[Long] = for {
-        handler <- handlers
-        clause <- handler.clauses
-      } yield {
-        clause.contents.size.toLong
+  /** Counts of statement types: (total, prompts, executables) */
+  private case class StatementCounts(
+    total: Long = 0L,
+    prompts: Long = 0L,
+    executables: Long = 0L
+  ):
+    def +(other: StatementCounts): StatementCounts =
+      StatementCounts(
+        total + other.total,
+        prompts + other.prompts,
+        executables + other.executables
+      )
+  end StatementCounts
+
+  private def classifyStatements(stmts: Seq[RiddlValue]): StatementCounts = {
+    var total = 0L
+    var prompts = 0L
+    var executables = 0L
+    stmts.foreach {
+      case _: PromptStatement =>
+        total += 1; prompts += 1
+      case _: TellStatement | _: SendStatement | _: MorphStatement |
+           _: SetStatement | _: BecomeStatement | _: ErrorStatement |
+           _: CodeStatement =>
+        total += 1; executables += 1
+      case _: Statement =>
+        total += 1 // control flow: when, match, let
+      case _ => () // non-statements
+    }
+    StatementCounts(total, prompts, executables)
+  }
+
+  private def computeStatementCounts(
+    definition: Branch[?]
+  ): StatementCounts = {
+    def handlerCounts(handlers: Seq[Handler]): StatementCounts = {
+      handlers.foldLeft(StatementCounts()) { (acc, handler) =>
+        handler.clauses.foldLeft(acc) { (acc2, clause) =>
+          acc2 + classifyStatements(clause.contents.toSeq)
+        }
       }
-      sizes.foldLeft(0L)((a, b) => a + b)
     }
 
     definition.contents.vitals
       .map { (vd: Definition) =>
         vd match {
-          case a: Adaptor    => handlerStatements(a.handlers)
-          case c: Context    => handlerStatements(c.handlers)
-          case e: Entity     => handlerStatements(e.handlers)
-          case p: Projector  => handlerStatements(p.handlers)
-          case r: Repository => handlerStatements(r.handlers)
-          case s: Streamlet  => handlerStatements(s.handlers)
+          case a: Adaptor    => handlerCounts(a.handlers)
+          case c: Context    => handlerCounts(c.handlers)
+          case e: Entity     => handlerCounts(e.handlers)
+          case p: Projector  => handlerCounts(p.handlers)
+          case r: Repository => handlerCounts(r.handlers)
+          case s: Streamlet  => handlerCounts(s.handlers)
           case s: Saga =>
-            s.sagaSteps
-              .map(step => step.doStatements.size.toLong + step.undoStatements.size)
-              .sum[Long]
-          case f: Function   => f.statements.size.toLong
-          case _: Epic       => 0L
-          case _: Domain     => 0L
-          case _: Definition => 0L // Non Vital, ignore
+            val sagaStmts = s.sagaSteps.flatMap { step =>
+              step.doStatements.toSeq ++ step.undoStatements.toSeq
+            }
+            classifyStatements(sagaStmts)
+          case f: Function =>
+            classifyStatements(f.statements.toSeq)
+          case _: Epic       => StatementCounts()
+          case _: Domain     => StatementCounts()
+          case _: Definition => StatementCounts()
         }
       }
-      .sum[Long]
+      .foldLeft(StatementCounts())(_ + _)
   }
 
   protected def collect(definition: RiddlValue, parents: ParentStack): Seq[DefinitionStats] = {
@@ -159,6 +197,7 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
     val completes: Int = completedCount(definition)
     definition match {
       case definition: Branch[?] =>
+        val counts = computeStatementCounts(definition)
         Seq(
           DefinitionStats(
             kind = definition.kind,
@@ -184,7 +223,9 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             numAuthors = authors,
             numTerms = terms,
             numIncludes = includes,
-            numStatements = computeNumStatements(definition)
+            numStatements = counts.total,
+            numPromptStatements = counts.prompts,
+            numExecutableStatements = counts.executables
           )
         )
       case _: RiddlValue => Seq.empty[DefinitionStats]
@@ -207,7 +248,9 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
               numTerms = defStats.numTerms,
               numOptions = defStats.numOptions,
               numIncludes = defStats.numIncludes,
-              numStatements = defStats.numStatements
+              numStatements = defStats.numStatements,
+              numPromptStatements = defStats.numPromptStatements,
+              numExecutableStatements = defStats.numExecutableStatements
             )
           ) { (ks: KindStats) =>
             ks.count += 1
@@ -220,6 +263,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
             ks.numOptions += defStats.numOptions
             ks.numIncludes += defStats.numIncludes
             ks.numStatements += defStats.numStatements
+            ks.numPromptStatements += defStats.numPromptStatements
+            ks.numExecutableStatements += defStats.numExecutableStatements
             ks
           }
         )
@@ -237,6 +282,8 @@ case class StatsPass(input: PassInput, outputs: PassesOutput)(using PlatformCont
       total.numEmpty += next.numEmpty
       total.numAuthors += next.numAuthors
       total.numStatements += next.numStatements
+      total.numPromptStatements += next.numPromptStatements
+      total.numExecutableStatements += next.numExecutableStatements
       total
     }
     total_stats = Some(totals)
