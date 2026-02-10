@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 8, 2026
+**Last Updated**: February 9, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS
 default due to compiler infinite loop bug with opaque
