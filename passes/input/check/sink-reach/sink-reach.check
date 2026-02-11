@@ -1,0 +1,12 @@
+passes/input/check/sink-reach/sink-reach.riddl(12:5->18):
+ Sink 'Consumer' is a sink but has no upstream path from any source:
+     sink Consumer is {
+passes/input/check/sink-reach/sink-reach.riddl(12:5->18):
+ Sink 'Consumer' should have a handler:
+     sink Consumer is {
+passes/input/check/sink-reach/sink-reach.riddl(5:5->19):
+ Flow 'Processor' should have a handler:
+     flow Processor is {
+passes/input/check/sink-reach/sink-reach.riddl(6:7->19):
+ Inlet 'DataIn' is not connected:
+       inlet DataIn is type Data

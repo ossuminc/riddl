@@ -88,5 +88,20 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
     "formatInfo returns a non-empty string" in {
       RiddlLib.formatInfo must not be empty
     }
+
+    "ast2bast converts parsed AST to bytes" in {
+      val result = RiddlLib.parseString(
+        "domain D is { context C is { ??? } }"
+      )
+      result.isRight mustBe true
+      val root = result.toOption.get
+      val bytes = RiddlLib.ast2bast(root)
+      bytes must not be empty
+      // BAST magic number check (first 4 bytes = "BAST")
+      bytes(0) mustBe 'B'.toByte
+      bytes(1) mustBe 'A'.toByte
+      bytes(2) mustBe 'S'.toByte
+      bytes(3) mustBe 'T'.toByte
+    }
   }
 }

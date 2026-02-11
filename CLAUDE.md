@@ -704,3 +704,33 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 40. **RiddlLib analysis API methods** - `getHandlerCompleteness()`, `getMessageFlow()`, `getEntityLifecycles()` on shared RiddlLib trait + JS `RiddlAPI` facade. Each runs standard passes plus the relevant analysis pass
 41. **HandlerCompleteness in ValidationOutput** - `ValidationOutput.handlerCompleteness: Seq[HandlerCompleteness]` populated in `ValidationPass.postProcess()`. Categories: `BehaviorCategory.Executable`, `PromptOnly`, `Empty`
 42. **Downstream integration plans** - Each downstream project (riddlsim, riddl-gen, riddl-mcp-server, synapify) has a `RIDDL-INTEGRATION-PLAN.md` describing how to consume new library features. Designed for separate Claude instances working in those projects
+43. **gh CLI requires unset GITHUB_TOKEN** - When using `gh`
+    commands locally, `unset GITHUB_TOKEN` first so `gh` uses the
+    user's keychain credentials instead of the (possibly expired
+    or wrong-scope) env var
+44. **PR merge with branch protection** - Use
+    `gh pr merge --admin --merge --delete-branch=false` to bypass
+    branch protection when merging development→main for releases
+45. **RiddlLib.ast2bast(root)** - Converts parsed AST to BAST
+    binary bytes. Shared trait returns `Array[Byte]`, JS facade
+    returns `Int8Array`. Uses BASTWriterPass internally. Test
+    verifies BAST magic header bytes
+46. **Consumer update notes** - `RIDDL-UPDATE-NOTES.md` in
+    synapify, riddl-mcp-server, ossum.ai covers 1.5.0 breaking
+    change (opaque Root) and 1.7.0 new functions. Separate from
+    the detailed `RIDDL-INTEGRATION-PLAN.md` files
+47. **Schema parser uses `time-series` (hyphenated)** - The
+    `schemaKind` parser in RepositoryParser.scala expects
+    `"time-series"`, not `"timeseries"`. Check `StringIn(...)`
+    in `schemaKind` for all valid schema kind keywords
+48. **Consecutive schemas need `with` terminators** - Schema
+    definitions inside a repository need `with { ... }` blocks
+    to terminate because `data.rep(1)` is greedy and consumes
+    subsequent `of` clauses. Without `with`, the parser can't
+    find the boundary between consecutive schemas
+49. **Adaptor cross-context type resolution** - Use parent-
+    independent `resolution.refMap.definitionOf[Type](pathId)`
+    (no parent arg) for resolving types referenced in adaptor
+    handlers. The parent-keyed overload fails because the
+    resolution pass stores refs keyed under the OnMessageClause
+    parent, not the adaptor's parent

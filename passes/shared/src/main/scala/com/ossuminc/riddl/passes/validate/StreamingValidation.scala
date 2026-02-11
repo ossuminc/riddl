@@ -110,6 +110,43 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
             )
         }
       }
+
+      // Check 3: Sink←Source reverse reachability via BFS
+      val reverseAdjacency = mutable.Map.empty[Streamlet, mutable.Set[Streamlet]]
+      adjacency.foreach { case (from, toSet) =>
+        toSet.foreach { to =>
+          reverseAdjacency.getOrElseUpdate(to, mutable.Set.empty) += from
+        }
+      }
+
+      val sourceSet = sources.toSet
+      sinks.foreach { sink =>
+        if connectedStreamlets.contains(sink) then {
+          val visited = mutable.Set.empty[Streamlet]
+          val queue = mutable.Queue.empty[Streamlet]
+          queue.enqueue(sink)
+          visited += sink
+          var reachedBySource = false
+
+          while queue.nonEmpty && !reachedBySource do
+            val current = queue.dequeue()
+            if sourceSet.contains(current) then
+              reachedBySource = true
+            else
+              reverseAdjacency.getOrElse(current, mutable.Set.empty).foreach { neighbor =>
+                if !visited.contains(neighbor) then
+                  visited += neighbor
+                  queue.enqueue(neighbor)
+              }
+          end while
+
+          if !reachedBySource then
+            messages.addWarning(
+              sink.errorLoc,
+              s"${sink.identify} is a sink but has no upstream path from any source"
+            )
+        }
+      }
     }
   }
 

@@ -555,4 +555,140 @@ export declare const RiddlAPI: {
    * ```
    */
   getTree(source: string, origin?: string): ParseResult<TreeNode[]>;
+
+  /**
+   * Classify all handlers by behavioral completeness.
+   *
+   * Runs the full validation pipeline and returns handler
+   * classifications: Executable (real logic), PromptOnly
+   * (only prompt statements), or Empty (no on-clauses).
+   *
+   * @param source - The RIDDL source code to analyze
+   * @param origin - Optional origin identifier
+   * @returns Result with array of HandlerCompleteness objects
+   */
+  getHandlerCompleteness(
+    source: string,
+    origin?: string
+  ): ParseResult<HandlerCompletenessEntry[]>;
+
+  /**
+   * Build a directed message flow graph for the model.
+   *
+   * Runs standard passes plus MessageFlowPass. Returns edges
+   * connecting message producers to consumers with the
+   * mechanism (Tell, Send, AdaptorBridge, ConnectorPipe).
+   *
+   * @param source - The RIDDL source code to analyze
+   * @param origin - Optional origin identifier
+   * @returns Result with message flow graph
+   */
+  getMessageFlow(
+    source: string,
+    origin?: string
+  ): ParseResult<MessageFlowResult>;
+
+  /**
+   * Extract entity lifecycle (state machine) data.
+   *
+   * Runs standard passes plus EntityLifecyclePass. Returns
+   * state machines for entities that have multiple states,
+   * including transitions and initial/terminal states.
+   *
+   * @param source - The RIDDL source code to analyze
+   * @param origin - Optional origin identifier
+   * @returns Result with array of entity lifecycle objects
+   */
+  getEntityLifecycles(
+    source: string,
+    origin?: string
+  ): ParseResult<EntityLifecycleEntry[]>;
+
+  /**
+   * Convert a parsed AST Root to BAST binary bytes.
+   *
+   * Serializes the AST using BASTWriterPass for efficient
+   * storage or IPC transport. The returned Int8Array is
+   * structured-clone compatible.
+   *
+   * @param root - The opaque Root handle from parseString
+   * @returns BAST binary bytes as Int8Array
+   */
+  ast2bast(root: RootAST): Int8Array;
 };
+
+/**
+ * Handler behavioral completeness classification.
+ */
+export interface HandlerCompletenessEntry {
+  /** Handler identifier name */
+  handlerId: string;
+  /** Parent definition identifier (e.g., entity name) */
+  parentId: string;
+  /** Parent definition kind (e.g., "Entity") */
+  parentKind: string;
+  /** Behavioral category */
+  category: 'Executable' | 'PromptOnly' | 'Empty';
+  /** Number of on-clauses with executable statements */
+  executableCount: number;
+  /** Number of on-clauses with only prompt statements */
+  promptCount: number;
+  /** Total number of on-clauses */
+  totalClauses: number;
+}
+
+/**
+ * Message flow graph result.
+ */
+export interface MessageFlowResult {
+  /** Directed edges from producers to consumers */
+  edges: MessageFlowEdge[];
+  /** Total number of edges */
+  edgeCount: number;
+}
+
+/**
+ * A directed edge in the message flow graph.
+ */
+export interface MessageFlowEdge {
+  /** Producer definition identifier */
+  producerId: string;
+  /** Producer definition kind (e.g., "Entity") */
+  producerKind: string;
+  /** Consumer definition identifier */
+  consumerId: string;
+  /** Consumer definition kind (e.g., "Entity") */
+  consumerKind: string;
+  /** Message type identifier */
+  messageTypeId: string;
+  /** Flow mechanism */
+  mechanism: 'Tell' | 'Send' | 'AdaptorBridge' | 'ConnectorPipe';
+}
+
+/**
+ * Entity lifecycle (state machine) data.
+ */
+export interface EntityLifecycleEntry {
+  /** Entity identifier name */
+  entityId: string;
+  /** State names */
+  states: string[];
+  /** State transitions */
+  transitions: StateTransitionEntry[];
+  /** Initial state name (empty string if none) */
+  initialState: string;
+  /** Terminal state names */
+  terminalStates: string[];
+}
+
+/**
+ * A state transition in an entity lifecycle.
+ */
+export interface StateTransitionEntry {
+  /** Source state ("*" if from any state) */
+  fromState: string;
+  /** Target state name */
+  toState: string;
+  /** Triggering command/event name */
+  trigger: string;
+}

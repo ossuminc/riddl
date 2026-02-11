@@ -509,9 +509,9 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, h)
+    val messageClauses = h.clauses.collect { case omc: OnMessageClause => omc }
     parents.headOption match {
       case Some(entity: Entity) =>
-        val messageClauses = h.clauses.collect { case omc: OnMessageClause => omc }
         if messageClauses.nonEmpty then {
           val handlesCommandOrQuery = messageClauses.exists { omc =>
             omc.msg.messageKind == AggregateUseCase.CommandCase ||
@@ -521,6 +521,29 @@ case class ValidationPass(
             messages.addWarning(
               h.errorLoc,
               s"${h.identify} in ${entity.identify} handles no commands or queries; entity handlers typically handle commands and queries"
+            )
+        }
+      case Some(repo: Repository) =>
+        if messageClauses.nonEmpty then {
+          val handlesEvents = messageClauses.exists { omc =>
+            omc.msg.messageKind == AggregateUseCase.EventCase
+          }
+          if handlesEvents then
+            messages.addWarning(
+              h.errorLoc,
+              s"${h.identify} in ${repo.identify} handles events; repositories typically handle commands and queries, not events"
+            )
+        }
+      case Some(proj: Projector) =>
+        if messageClauses.nonEmpty then {
+          val handlesCommandsOrQueries = messageClauses.exists { omc =>
+            omc.msg.messageKind == AggregateUseCase.CommandCase ||
+              omc.msg.messageKind == AggregateUseCase.QueryCase
+          }
+          if handlesCommandsOrQueries then
+            messages.addWarning(
+              h.errorLoc,
+              s"${h.identify} in ${proj.identify} handles commands or queries; projectors typically handle events to build read models"
             )
         }
       case _ => ()
@@ -555,12 +578,41 @@ case class ValidationPass(
       required = true
     )
     schema.schemaKind match {
-      case RepositorySchemaKind.Flat | RepositorySchemaKind.Document |
-           RepositorySchemaKind.Columnar | RepositorySchemaKind.Vector =>
+      case RepositorySchemaKind.Flat =>
         if schema.links.nonEmpty then
           messages.addWarning(
             schema.errorLoc,
             s"${schema.identify} is ${schema.schemaKind} and should not define links"
+          )
+        if schema.data.size > 1 then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is flat but defines ${schema.data.size} data nodes; flat schemas typically represent a single table or collection"
+          )
+      case RepositorySchemaKind.Document | RepositorySchemaKind.Columnar |
+           RepositorySchemaKind.Vector =>
+        if schema.links.nonEmpty then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is ${schema.schemaKind} and should not define links"
+          )
+      case RepositorySchemaKind.TimeSeries =>
+        if schema.indices.isEmpty then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is a time-series schema but has no indices; time-series schemas should index the time dimension"
+          )
+      case RepositorySchemaKind.Hierarchical =>
+        if schema.links.isEmpty && schema.data.size > 1 then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is hierarchical with ${schema.data.size} data nodes but has no links; consider adding links to define the tree structure"
+          )
+      case RepositorySchemaKind.Star =>
+        if schema.links.isEmpty && schema.data.size > 1 then
+          messages.addWarning(
+            schema.errorLoc,
+            s"${schema.identify} is a star schema with ${schema.data.size} data nodes but has no links; consider adding links from fact table to dimension tables"
           )
       case RepositorySchemaKind.Graphical =>
         if schema.links.isEmpty && schema.data.nonEmpty then
@@ -580,7 +632,7 @@ case class ValidationPass(
           (fromType, toType) match {
             case (Some(ft), Some(tt)) =>
               if ft != tt then
-                messages.addWarning(
+                messages.addError(
                   fromRef.loc,
                   s"Link in ${schema.identify} connects fields with incompatible types: ${fromRef.pathId.format} is ${ft.format} but ${toRef.pathId.format} is ${tt.format}"
                 )
@@ -799,8 +851,14 @@ case class ValidationPass(
               case omc: OnMessageClause => omc
             }
             if allClauses.nonEmpty then {
+              // Use parent-independent lookup since the resolution
+              // pass keyed refs under the OnMessageClause's parent,
+              // not the Adaptor's parent
+              def resolveClauseType(omc: OnMessageClause): Option[Type] =
+                resolution.refMap.definitionOf[Type](omc.msg.pathId)
+
               val referencesTargetType = allClauses.exists { omc =>
-                resolvePath[Type](omc.msg.pathId, parents).exists { resolvedType =>
+                resolveClauseType(omc).exists { resolvedType =>
                   symbols.parentsOf(resolvedType).exists(_ == targetContext)
                 }
               }
@@ -813,6 +871,32 @@ case class ValidationPass(
                   adaptor.errorLoc,
                   s"${adaptor.identify} is ${adaptor.direction.format} ${directionWord} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}"
                 )
+              }
+              // Check direction-specific message kind compatibility
+              allClauses.foreach { omc =>
+                resolveClauseType(omc).foreach { resolvedType =>
+                  if symbols.parentsOf(resolvedType).exists(_ == targetContext) then
+                    adaptor.direction match {
+                      case _: InboundAdaptor =>
+                        omc.msg.messageKind match {
+                          case AggregateUseCase.CommandCase | AggregateUseCase.QueryCase =>
+                            messages.addError(
+                              omc.errorLoc,
+                              s"Inbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but inbound adaptors should handle events and results (the target's output)"
+                            )
+                          case _ => ()
+                        }
+                      case _: OutboundAdaptor =>
+                        omc.msg.messageKind match {
+                          case AggregateUseCase.EventCase | AggregateUseCase.ResultCase =>
+                            messages.addError(
+                              omc.errorLoc,
+                              s"Outbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but outbound adaptors should handle commands and queries (the target's input)"
+                            )
+                          case _ => ()
+                        }
+                    }
+                }
               }
             }
           }

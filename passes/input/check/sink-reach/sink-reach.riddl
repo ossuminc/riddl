@@ -1,0 +1,29 @@
+domain SinkReach is {
+  context StreamCtx is {
+    type Data is String
+
+    flow Processor is {
+      inlet DataIn is type Data
+      outlet DataOut is type Data
+    } with {
+      explained as "A flow processor"
+    }
+
+    sink Consumer is {
+      inlet ConsumeIn is type Data
+    } with {
+      explained as "A data consumer sink"
+    }
+
+    connector FlowToSink is {
+      from outlet StreamCtx.Processor.DataOut
+      to inlet StreamCtx.Consumer.ConsumeIn
+    } with {
+      explained as "Connect flow output to sink input"
+    }
+  } with {
+    explained as "Context for sink reachability test"
+  }
+} with {
+  explained as "Domain for sink reachability test"
+}
