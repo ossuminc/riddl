@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 9, 2026
+**Last Updated**: February 11, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS
 default due to compiler infinite loop bug with opaque
@@ -256,8 +256,96 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
   `getMessageFlow`, `getEntityLifecycles`, `ast2bast` with
   return type interfaces
 - Added `ast2bast` test in `RiddlLibTest`
+- ValidationPass: Schema kind-specific deep checks (Flat,
+  TimeSeries, Hierarchical, Star data/link structure warnings)
+- ValidationPass: Relational FK type mismatch upgraded from
+  Warning to Error
+- ValidationPass: Handler message type vs container type
+  checks (Repository handles events → warning, Projector
+  handles commands/queries → warning)
+- ValidationPass: Adaptor message direction compatibility
+  (inbound handling commands → error, outbound handling
+  events → error)
+- StreamingValidation: Sink reverse reachability check (warns
+  if connected sink has no upstream path from any source)
 
 ## Session Log
+
+### February 11, 2026 (ValidationPass Gap Analysis Completion)
+
+**Focus**: Implement remaining 4 items from the Feb 7 gap
+analysis. Three items were already complete (saga compensation
+symmetry, entity FSM morph/become, context isolation). This
+session implements the remaining four.
+
+**Work Completed**:
+1. **Schema kind-specific deep checks** — Extended
+   `validateSchema()` with structural validation: Flat warns
+   if >1 data node; TimeSeries warns if no indices;
+   Hierarchical and Star warn if multiple data nodes but no
+   links. Relational FK type mismatch upgraded from Warning
+   to Error (a genuine type error, not a style issue).
+2. **Handler message type vs container type** — Extended
+   `validateHandler()` with Repository and Projector cases.
+   Repository handler that handles Events gets a warning
+   (repos should handle commands/queries). Projector handler
+   that handles Commands/Queries gets a warning (projectors
+   should handle events).
+3. **Adaptor message direction compatibility** — Added
+   direction-specific checks after the existing
+   `referencesTargetType` check. Inbound adaptors handling
+   Commands/Queries from target context → Error. Outbound
+   adaptors handling Events/Results from target context →
+   Error.
+4. **Streaming sink reachability** — Added reverse BFS in
+   `checkStreamingUsage()`. For each connected sink, traces
+   upstream via reverse adjacency map. Warns if no path from
+   any source reaches the sink.
+
+**Test Cases Created**: 4 new test directories in
+`passes/input/check/` with .riddl and .check files covering
+26 individual validation messages:
+- `schema-kinds/` — 11 messages: flat multi-node, time-series
+  no indices, hierarchical/star no links, plus descriptions
+  and unused types
+- `handler-types/` — 8 messages: repo handles events, proj
+  handles commands, unused types, schema description
+- `adaptor-direction/` — 3 messages: inbound handles command,
+  outbound handles event, command should send event
+- `sink-reach/` — 4 messages: sink no upstream source, sink
+  no handler, flow no handler, inlet not connected
+
+**Key fixes during test creation**:
+- Schema parser expects `time-series` (hyphenated) not
+  `timeseries`; consecutive schemas need `with { ... }` blocks
+  as terminators for the greedy `data.rep(1)` parser
+- Adaptor cross-context resolution fixed: use parent-
+  independent `definitionOf[Type](pathId)` instead of parent-
+  keyed variant (pre-existing bug)
+
+**Test Results**: 268 passes tests (4 new), 280 language
+tests, 49 commands tests, 10 riddlLib tests — all passing.
+
+**Release 1.8.0**: Tagged, published, GitHub release created.
+
+**Files Modified**:
+- `passes/shared/.../validate/ValidationPass.scala` — schema,
+  handler, adaptor changes
+- `passes/shared/.../validate/StreamingValidation.scala` —
+  sink reachability BFS
+- `passes/jvm-native/.../CheckMessagesTest.scala` — 4 new
+  test registrations
+
+**Files Created**:
+- `passes/input/check/schema-kinds/` — .riddl + .check
+- `passes/input/check/handler-types/` — .riddl + .check
+- `passes/input/check/adaptor-direction/` — .riddl + .check
+- `passes/input/check/sink-reach/` — .riddl + .check
+
+**Gap Analysis Status**: All 7 items from the Feb 7 analysis
+are now complete.
+
+---
 
 ### February 9, 2026 (Housekeeping & ast2bast)
 
@@ -423,16 +511,15 @@ across all modules (JVM, JS, Native).
 - `passes/input/check/streaming/streaming.check` — 3 new
   expected messages
 
-**Remaining from gap analysis** (lower priority, not
-implemented this session):
-- Schema kind-specific deep checks (relational link type
-  compatibility, etc.)
-- Adaptor message compatibility with referenced context
-- Saga compensation symmetry hints
-- Entity FSM morph/become statement presence check
-- `checkStreamingUsage()` implementation (still a no-op)
-- Handler message type vs container type appropriateness
-- Context isolation warnings
+**Remaining from gap analysis** — ALL COMPLETE as of
+February 11, 2026:
+- ✅ Schema kind-specific deep checks (Feb 11)
+- ✅ Adaptor message direction compatibility (Feb 11)
+- ✅ Saga compensation symmetry hints (Feb 8, v1.7.0)
+- ✅ Entity FSM morph/become statement presence (Feb 8)
+- ✅ Streaming sink reachability (Feb 11)
+- ✅ Handler message type vs container type (Feb 11)
+- ✅ Context isolation warnings (Feb 8, v1.7.0)
 
 ---
 
@@ -1650,4 +1737,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.7.0 (February 8, 2026)
+**Latest release**: 1.8.0 (February 11, 2026)

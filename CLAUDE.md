@@ -719,3 +719,18 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
     synapify, riddl-mcp-server, ossum.ai covers 1.5.0 breaking
     change (opaque Root) and 1.7.0 new functions. Separate from
     the detailed `RIDDL-INTEGRATION-PLAN.md` files
+47. **Schema parser uses `time-series` (hyphenated)** - The
+    `schemaKind` parser in RepositoryParser.scala expects
+    `"time-series"`, not `"timeseries"`. Check `StringIn(...)`
+    in `schemaKind` for all valid schema kind keywords
+48. **Consecutive schemas need `with` terminators** - Schema
+    definitions inside a repository need `with { ... }` blocks
+    to terminate because `data.rep(1)` is greedy and consumes
+    subsequent `of` clauses. Without `with`, the parser can't
+    find the boundary between consecutive schemas
+49. **Adaptor cross-context type resolution** - Use parent-
+    independent `resolution.refMap.definitionOf[Type](pathId)`
+    (no parent arg) for resolving types referenced in adaptor
+    handlers. The parent-keyed overload fails because the
+    resolution pass stores refs keyed under the OnMessageClause
+    parent, not the adaptor's parent
