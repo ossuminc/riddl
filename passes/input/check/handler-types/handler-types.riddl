@@ -1,0 +1,36 @@
+domain HandlerTypes is {
+  context TypeCtx is {
+    type SomeEvent is event { what: String }
+    type SomeCommand is command { data: String }
+    type RecordType is record { field1: String }
+
+    repository EventRepo is {
+      schema RepoSchema is flat
+        of records as type RecordType
+      with { briefly as "Repo schema" }
+
+      handler EventHandler is {
+        on event SomeEvent {
+          prompt "handling event in repo"
+        }
+      }
+    } with {
+      explained as "Repository that handles events"
+    }
+
+    projector CmdProjector is {
+      type ProjRecord is record { field1: String }
+      handler CmdHandler is {
+        on command SomeCommand {
+          prompt "handling command in projector"
+        }
+      }
+    } with {
+      explained as "Projector that handles commands"
+    }
+  } with {
+    explained as "Context for handler type tests"
+  }
+} with {
+  explained as "Domain for handler type tests"
+}

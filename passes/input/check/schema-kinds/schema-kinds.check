@@ -1,0 +1,33 @@
+passes/input/check/schema-kinds/schema-kinds.riddl(7:7->23):
+ Schema 'FlatMulti' is flat but defines 2 data nodes; flat schemas typically represent a single table or collection:
+       schema FlatMulti is flat
+passes/input/check/schema-kinds/schema-kinds.riddl(7:7->23):
+ Schema 'FlatMulti' should have a description:
+       schema FlatMulti is flat
+passes/input/check/schema-kinds/schema-kinds.riddl(12:7->23):
+ Schema 'TSNoIndex' is a time-series schema but has no indices; time-series schemas should index the time dimension:
+       schema TSNoIndex is time-series
+passes/input/check/schema-kinds/schema-kinds.riddl(12:7->23):
+ Schema 'TSNoIndex' should have a description:
+       schema TSNoIndex is time-series
+passes/input/check/schema-kinds/schema-kinds.riddl(16:7->25):
+ Schema 'HierNoLinks' is hierarchical with 2 data nodes but has no links; consider adding links to define the tree structure:
+       schema HierNoLinks is hierarchical
+passes/input/check/schema-kinds/schema-kinds.riddl(16:7->25):
+ Schema 'HierNoLinks' should have a description:
+       schema HierNoLinks is hierarchical
+passes/input/check/schema-kinds/schema-kinds.riddl(21:7->25):
+ Schema 'StarNoLinks' is a star schema with 2 data nodes but has no links; consider adding links from fact table to dimension tables:
+       schema StarNoLinks is star
+passes/input/check/schema-kinds/schema-kinds.riddl(21:7->25):
+ Schema 'StarNoLinks' should have a description:
+       schema StarNoLinks is star
+passes/input/check/schema-kinds/schema-kinds.riddl(26:7->26):
+ Handler 'RepoHandler' in Repository 'SchemaRepo' should have content:
+       handler RepoHandler is { ??? }
+passes/input/check/schema-kinds/schema-kinds.riddl(3:5->18):
+ Type 'Customer' is unused:
+     type Customer is { name: String, email: String, age: Number }
+passes/input/check/schema-kinds/schema-kinds.riddl(4:5->19):
+ Type 'OrderInfo' is unused:
+     type OrderInfo is { orderId: UUID, amount: Number, date: Date }

@@ -128,5 +128,9 @@ class CheckMessagesTest extends AbstractValidatingTest {
     "check saga" in { (td: TestData) => checkADirectory("saga", td) }
     "check streaming" in { (td: TestData) => checkADirectory("streaming", td) }
     "check t0001" in { (td: TestData) => checkADirectory("t0001", td) }
+    "check schema-kinds" in { (td: TestData) => checkADirectory("schema-kinds", td) }
+    "check handler-types" in { (td: TestData) => checkADirectory("handler-types", td) }
+    "check adaptor-direction" in { (td: TestData) => checkADirectory("adaptor-direction", td) }
+    "check sink-reach" in { (td: TestData) => checkADirectory("sink-reach", td) }
   }
 }

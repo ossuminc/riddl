@@ -1,0 +1,34 @@
+domain AdaptorDir is {
+  context SourceCtx is {
+    type DoIt is command { data: String }
+    type ItDone is event { what: String }
+  } with {
+    explained as "Source context with message types"
+  }
+
+  context TargetCtx is {
+    adaptor BadInbound from context SourceCtx is {
+      handler InHandler is {
+        on command SourceCtx.DoIt {
+          prompt "handling command in inbound adaptor"
+        }
+      }
+    } with {
+      explained as "Inbound adaptor that incorrectly handles commands"
+    }
+
+    adaptor BadOutbound to context SourceCtx is {
+      handler OutHandler is {
+        on event SourceCtx.ItDone {
+          prompt "handling event in outbound adaptor"
+        }
+      }
+    } with {
+      explained as "Outbound adaptor that incorrectly handles events"
+    }
+  } with {
+    explained as "Target context with adaptors"
+  }
+} with {
+  explained as "Domain for adaptor direction tests"
+}

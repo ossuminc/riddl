@@ -1,0 +1,9 @@
+passes/input/check/adaptor-direction/adaptor-direction.riddl(12:9->34):
+ Inbound Adaptor 'BadInbound' handles Command 'SourceCtx.DoIt' from Context 'SourceCtx', but inbound adaptors should handle events and results (the target's output):
+         on command SourceCtx.DoIt {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(12:9->34):
+ Processing for commands should result in sending an event:
+         on command SourceCtx.DoIt {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(22:9->34):
+ Outbound Adaptor 'BadOutbound' handles Event 'SourceCtx.ItDone' from Context 'SourceCtx', but outbound adaptors should handle commands and queries (the target's input):
+         on event SourceCtx.ItDone {

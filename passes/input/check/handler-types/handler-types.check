@@ -1,0 +1,24 @@
+passes/input/check/handler-types/handler-types.riddl(12:7->27):
+ Handler 'EventHandler' in Repository 'EventRepo' handles events; repositories typically handle commands and queries, not events:
+       handler EventHandler is {
+passes/input/check/handler-types/handler-types.riddl(21:5->27):
+ Projector 'CmdProjector' handler does not handle any events; projectors typically handle events to build read models:
+     projector CmdProjector is {
+passes/input/check/handler-types/handler-types.riddl(22:7->22):
+ Record 'ProjRecord' is unused:
+       type ProjRecord is record { field1: String }
+passes/input/check/handler-types/handler-types.riddl(23:7->25):
+ Handler 'CmdHandler' in Projector 'CmdProjector' handles commands or queries; projectors typically handle events to build read models:
+       handler CmdHandler is {
+passes/input/check/handler-types/handler-types.riddl(24:9->31):
+ Processing for commands should result in sending an event:
+         on command SomeCommand {
+passes/input/check/handler-types/handler-types.riddl(5:5->20):
+ Record 'RecordType' is unused:
+     type RecordType is record { field1: String }
+passes/input/check/handler-types/handler-types.riddl(7:5->25):
+ Repository 'EventRepo' handlers do not handle any commands or queries; repositories typically handle commands (for mutations) and queries (for reads):
+     repository EventRepo is {
+passes/input/check/handler-types/handler-types.riddl(8:7->24):
+ Schema 'RepoSchema' should have a description:
+       schema RepoSchema is flat

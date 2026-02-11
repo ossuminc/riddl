@@ -1,0 +1,35 @@
+domain SchemaKinds is {
+  context DataCtx is {
+    type Customer is { name: String, email: String, age: Number }
+    type OrderInfo is { orderId: UUID, amount: Number, date: Date }
+
+    repository SchemaRepo is {
+      schema FlatMulti is flat
+        of customers as type Customer
+        of orders as type OrderInfo
+      with { briefly as "Flat schema with multiple data nodes" }
+
+      schema TSNoIndex is time-series
+        of metrics as type Customer
+      with { briefly as "Time-series schema without indices" }
+
+      schema HierNoLinks is hierarchical
+        of parent as type Customer
+        of child as type OrderInfo
+      with { briefly as "Hierarchical schema without links" }
+
+      schema StarNoLinks is star
+        of fact as type Customer
+        of dim as type OrderInfo
+      with { briefly as "Star schema without links" }
+
+      handler RepoHandler is { ??? }
+    } with {
+      explained as "Repository for schema kind validation tests"
+    }
+  } with {
+    explained as "Context for schema kind tests"
+  }
+} with {
+  explained as "Domain for schema kind tests"
+}
