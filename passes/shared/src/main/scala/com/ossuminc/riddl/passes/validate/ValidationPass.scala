@@ -863,13 +863,9 @@ case class ValidationPass(
                 }
               }
               if !referencesTargetType then {
-                val directionWord = adaptor.direction match {
-                  case _: InboundAdaptor  => "from"
-                  case _: OutboundAdaptor => "to"
-                }
                 messages.addWarning(
                   adaptor.errorLoc,
-                  s"${adaptor.identify} is ${adaptor.direction.format} ${directionWord} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}"
+                  s"${adaptor.identify} is ${adaptor.direction.format} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}"
                 )
               }
               // Check direction-specific message kind compatibility
