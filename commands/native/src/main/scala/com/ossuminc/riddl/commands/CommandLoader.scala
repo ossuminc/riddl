@@ -23,26 +23,29 @@ object CommandLoader:
   def loadCommandNamed(name: String)(using io: PlatformContext): Either[Messages, Command[?]] =
     if io.options.verbose then io.log.info(s"Loading command: $name") else ()
     name match
-      case "about"    => Right(AboutCommand())
-      case "dump"     => Right(DumpCommand())
-      case "flatten"  => Right(FlattenCommand())
-      case "from"     => Right(FromCommand())
-      case "help"     => Right(HelpCommand())
-      case "info"     => Right(InfoCommand())
-      case "onchange" => Right(OnChangeCommand())
-      case "parse"    => Right(ParseCommand())
-      case "prettify" => Right(PrettifyCommand())
-      case "repeat"   => Right(RepeatCommand())
-      case "stats"    => Right(StatsCommand())
-      case "validate" => Right(ValidateCommand())
-      case "version"  => Right(VersionCommand())
-      case _          => Left(errors(s"No command found for '$name'"))
+      case "about"     => Right(AboutCommand())
+      case "bastify"   => Right(BastifyCommand())
+      case "dump"      => Right(DumpCommand())
+      case "flatten"   => Right(FlattenCommand())
+      case "from"      => Right(FromCommand())
+      case "help"      => Right(HelpCommand())
+      case "info"      => Right(InfoCommand())
+      case "onchange"  => Right(OnChangeCommand())
+      case "parse"     => Right(ParseCommand())
+      case "prettify"  => Right(PrettifyCommand())
+      case "repeat"    => Right(RepeatCommand())
+      case "stats"     => Right(StatsCommand())
+      case "unbastify" => Right(UnbastifyCommand())
+      case "validate"  => Right(ValidateCommand())
+      case "version"   => Right(VersionCommand())
+      case _           => Left(errors(s"No command found for '$name'"))
     end match
   end loadCommandNamed
 
   def commandOptionsParser(using io: PlatformContext): OParser[Unit, ?] =
     val optionParsers = Seq(
       AboutCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
+      BastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FlattenCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       FromCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
@@ -53,6 +56,7 @@ object CommandLoader:
       PrettifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       RepeatCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       StatsCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
+      UnbastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       ValidateCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       VersionCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]]
     )
