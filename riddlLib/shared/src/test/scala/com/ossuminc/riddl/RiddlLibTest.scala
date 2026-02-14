@@ -89,6 +89,23 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
       RiddlLib.formatInfo must not be empty
     }
 
+    "bast2FlatAST round-trips parse to bast to flatAST" in {
+      val source = """domain TestDomain is {
+        context TestCtx is { ??? }
+      }"""
+      val parseResult = RiddlLib.parseString(source)
+      parseResult.isRight mustBe true
+      val root = parseResult.toOption.get
+      val bastBytes = RiddlLib.ast2bast(root)
+      bastBytes.length must be > 0
+
+      val flatResult = RiddlLib.bast2FlatAST(bastBytes)
+      flatResult.isRight mustBe true
+      val flatRoot = flatResult.toOption.get
+      flatRoot.domains must not be empty
+      flatRoot.domains.head.id.value mustBe "TestDomain"
+    }
+
     "ast2bast converts parsed AST to bytes" in {
       val result = RiddlLib.parseString(
         "domain D is { context C is { ??? } }"

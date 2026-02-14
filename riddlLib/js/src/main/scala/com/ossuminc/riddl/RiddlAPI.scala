@@ -490,6 +490,27 @@ object RiddlAPI {
     view
   end ast2bast
 
+  /** Deserialize BAST binary bytes to a flattened AST Root.
+    *
+    * Reads BAST binary data, converts to AST, flattens
+    * Include/BASTImport wrappers, and returns an opaque Root.
+    *
+    * @param bytes BAST binary data as Int8Array
+    * @return Result with opaque Root handle or errors
+    */
+  @JSExport("bast2FlatAST")
+  def bast2FlatAST(
+    bytes: js.typedarray.Int8Array
+  ): js.Dynamic =
+    val scalaBytes = Array.tabulate(bytes.length)(i =>
+      bytes(i)
+    )
+    toJsResult(
+      RiddlLib.bast2FlatAST(scalaBytes),
+      root => root.asInstanceOf[js.Any]
+    )
+  end bast2FlatAST
+
   /** Get entity lifecycle (state machine) data. */
   @JSExport("getEntityLifecycles")
   def getEntityLifecycles(

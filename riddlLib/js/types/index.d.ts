@@ -615,6 +615,30 @@ export declare const RiddlAPI: {
    * @returns BAST binary bytes as Int8Array
    */
   ast2bast(root: RootAST): Int8Array;
+
+  /**
+   * Deserialize BAST binary bytes to a flattened AST Root.
+   *
+   * Reads BAST binary data, deserializes to AST, removes
+   * Include/BASTImport wrapper nodes (flattening), and
+   * returns an opaque Root handle.
+   *
+   * Usage with HTTP URL:
+   * ```typescript
+   * const response = await fetch(bastUrl);
+   * const buffer = await response.arrayBuffer();
+   * const result = RiddlAPI.bast2FlatAST(
+   *   new Int8Array(buffer)
+   * );
+   * if (result.succeeded) {
+   *   const info = RiddlAPI.inspectRoot(result.value);
+   * }
+   * ```
+   *
+   * @param bytes - BAST binary data as Int8Array
+   * @returns Result with opaque Root handle or errors
+   */
+  bast2FlatAST(bytes: Int8Array): ParseResult<RootAST>;
 };
 
 /**

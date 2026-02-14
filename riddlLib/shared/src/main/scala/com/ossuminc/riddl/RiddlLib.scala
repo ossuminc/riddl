@@ -6,8 +6,13 @@
 
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.language.AST.{Entity, Nebula, Root, Token}
+import com.ossuminc.riddl.language.AST.{
+  Author, Domain, Entity, Module, Nebula, Root,
+  RootContents, Token
+}
+import com.ossuminc.riddl.language.{Contents, Messages, toSeq}
 import com.ossuminc.riddl.language.Messages.Messages
+import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{
   RiddlParserInput, TopLevelParser
 }
@@ -143,6 +148,19 @@ trait RiddlLib:
   def ast2bast(
     root: Root
   )(using PlatformContext): Array[Byte]
+
+  /** Deserialize BAST binary bytes to a flattened AST Root.
+    *
+    * Reads BAST binary data, converts the resulting Nebula to
+    * a Root (filtering to valid RootContents), then flattens
+    * Include/BASTImport wrapper nodes.
+    *
+    * @param bytes The BAST binary data
+    * @return Right(Root) on success, Left(Messages) on failure
+    */
+  def bast2FlatAST(
+    bytes: Array[Byte]
+  )(using PlatformContext): Either[Messages, Root]
 
   /** Get the RIDDL library version string. */
   def version: String
@@ -396,6 +414,24 @@ object RiddlLib extends RiddlLib:
       case None => Array.empty
     end match
   end ast2bast
+
+  override def bast2FlatAST(
+    bytes: Array[Byte]
+  )(using PlatformContext): Either[Messages, Root] =
+    BASTReader.read(bytes).map { nebula =>
+      val rootItems: Seq[RootContents] =
+        nebula.contents.toSeq.collect {
+          case d: Domain => d
+          case m: Module => m
+          case a: Author => a
+        }
+      val root = Root(
+        nebula.loc,
+        Contents[RootContents](rootItems*)
+      )
+      flattenAST(root)
+    }
+  end bast2FlatAST
 
   override def version: String =
     RiddlBuildInfo.version
