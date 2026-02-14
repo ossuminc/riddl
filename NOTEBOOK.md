@@ -248,15 +248,72 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ---
 
-## Changes Since v1.9.0
+## Changes Since v1.10.0
 
-- BAST reader metadata flag fix, deserialization edge cases
-- BASTWriter node tracking improvements
-- BinaryFormat header enhancements, new BAST node type tags
-- Pass.scala updates for BAST integration
-- SharedBASTTest coverage for deserialization edge cases
+- Fixed Dockerfile `Dep.scala` → `Dependencies.scala` reference
+- Dropped deprecated `macos-13` x86_64 from release.yml (GitHub
+  retired the runner; Intel Macs fall back to JVM version)
+- Updated generated Homebrew formula in release.yml to match
+  actual homebrew-tap structure
+- Added `/release` skill (`.claude/skills/release/SKILL.md`)
+- Updated CLAUDE.md notes #30, #31 for dropped x86_64 target
+- Updated `../CLAUDE.md` with workflow discipline rules from
+  insights analysis (scope discipline, single-purpose commits,
+  post-commit verification, publish-from-main, GITHUB_TOKEN
+  caveat, dependency locality)
 
 ## Session Log
+
+### February 14, 2026 (CI Fixes & Insights)
+
+**Focus**: Fix pre-existing CI failures, apply insights
+suggestions to CLAUDE.md files, create `/release` skill.
+
+**Work Completed**:
+1. **Fixed Dockerfile** — `Dep.scala` → `Dependencies.scala`
+   (file was renamed but Dockerfile never updated)
+2. **Dropped `macos-13` x86_64 from release.yml** — GitHub
+   deprecated `macos-13` runners. Removed matrix entry, SHA
+   computation, and updated generated Homebrew formula to
+   match actual `homebrew-tap` structure (macOS ARM64 native,
+   Linux x86_64 native, JVM fallback for everything else)
+3. **Applied insights suggestions to `../CLAUDE.md`** (general,
+   all ossuminc projects):
+   - Scope discipline (don't expand without asking)
+   - `unset GITHUB_TOKEN` before `gh` commands
+   - Publish from `main` only
+   - Dependency locality (prefer local packages)
+   - Single-purpose commits
+   - Post-commit verification (`git status` after commit)
+4. **Updated `./CLAUDE.md`** — notes #30 and #31 for dropped
+   macOS x86_64 target
+5. **Created `/release` skill** at
+   `.claude/skills/release/SKILL.md` — encodes full release
+   workflow with pre-flight checks, publish steps, and
+   post-release verification
+6. **Un-ignored `.claude/skills/`** in `.gitignore` so skills
+   are tracked in git (other `.claude/` contents stay ignored)
+
+**CI Failure Analysis**:
+- Docker: Fixed (Dockerfile)
+- Release Artifacts: Fixed (dropped `macos-13`)
+- RiddlModelsRoundTripTest: Known chicken-egg problem — needs
+  .bast files regenerated with 1.10.0 in riddl-models. Not
+  actionable from this repo.
+
+**Files Created**:
+- `.claude/skills/release/SKILL.md`
+
+**Files Modified**:
+- `Dockerfile`
+- `.github/workflows/release.yml`
+- `.gitignore`
+- `CLAUDE.md`
+
+**Cross-project**:
+- `../CLAUDE.md` — workflow discipline rules
+
+---
 
 ### February 14, 2026 (RiddlResult ADT)
 

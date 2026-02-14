@@ -23,9 +23,6 @@ jobs:
           - os: macos-latest
             artifact: riddlc-macos-arm64
             arch: arm64
-          - os: macos-13
-            artifact: riddlc-macos-x86_64
-            arch: x86_64
           - os: ubuntu-latest
             artifact: riddlc-linux-x86_64
             arch: x86_64
@@ -175,7 +172,6 @@ jobs:
       id: hashes
       run: |
         echo "macos_arm64=$(shasum -a 256 artifacts/riddlc-macos-arm64/riddlc-macos-arm64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-        echo "macos_x86=$(shasum -a 256 artifacts/riddlc-macos-x86_64/riddlc-macos-x86_64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
         echo "linux_x86=$(shasum -a 256 artifacts/riddlc-linux-x86_64/riddlc-linux-x86_64.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
         echo "jvm=$(shasum -a 256 artifacts/riddlc-jvm/riddlc.zip | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
@@ -190,7 +186,6 @@ jobs:
       env:
         TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
         SHA_MACOS_ARM64: ${{ steps.hashes.outputs.macos_arm64 }}
-        SHA_MACOS_X86: ${{ steps.hashes.outputs.macos_x86 }}
         SHA_LINUX_X86: ${{ steps.hashes.outputs.linux_x86 }}
         SHA_JVM: ${{ steps.hashes.outputs.jvm }}
       run: |
@@ -209,10 +204,7 @@ jobs:
           if OS.mac? && Hardware::CPU.arm?
             url "https://github.com/ossuminc/riddl/releases/download/#{version}/riddlc-macos-arm64.zip"
             sha256 "${SHA_MACOS_ARM64}"
-          elsif OS.mac? && Hardware::CPU.intel?
-            url "https://github.com/ossuminc/riddl/releases/download/#{version}/riddlc-macos-x86_64.zip"
-            sha256 "${SHA_MACOS_X86}"
-          elsif OS.linux?
+          elsif OS.linux? && Hardware::CPU.intel?
             url "https://github.com/ossuminc/riddl/releases/download/#{version}/riddlc-linux-x86_64.zip"
             sha256 "${SHA_LINUX_X86}"
           else
@@ -222,19 +214,15 @@ jobs:
           end
 
           def install
-            if OS.mac? || OS.linux?
-              if !Hardware::CPU.type.to_s.start_with?("arm") || !OS.mac?
-                # x86_64 native or Linux native
-                bin.install "bin/riddlc"
-              else
-                # macOS ARM64 native
-                bin.install "bin/riddlc"
-              end
+            if (OS.mac? && Hardware::CPU.arm?) || (OS.linux? && Hardware::CPU.intel?)
+              # Native binary - Homebrew strips the single top-level "bin/" dir
+              bin.install "riddlc"
             else
-              # JVM fallback
+              # JVM version - needs wrapper script
               rm "bin/riddlc.bat"
               libexec.install "lib"
               libexec.install "bin"
+
               (bin/"riddlc").write <<~EOS
                 #!/bin/bash
                 export JAVA_HOME="#{Formula["openjdk@21"].opt_prefix}"
@@ -244,7 +232,7 @@ jobs:
           end
 
           def caveats
-            if OS.mac? || OS.linux?
+            if (OS.mac? && Hardware::CPU.arm?) || (OS.linux? && Hardware::CPU.intel?)
               <<~EOS
                 riddlc is installed as a native binary. No JDK required.
 

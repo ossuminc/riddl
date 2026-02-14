@@ -27,6 +27,7 @@ target
 /node_modules
 *.bak
 language/input/everything.bast
-.claude/
+.claude/*
+!.claude/skills/
 language/jvm/src/test/python/.venv/
 __pycache__/
