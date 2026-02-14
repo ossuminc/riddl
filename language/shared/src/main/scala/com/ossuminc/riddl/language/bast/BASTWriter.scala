@@ -133,6 +133,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       magic = MAGIC_BYTES,
       version = VERSION,
       flags = 0,
+      formatRevision = FORMAT_REVISION,
       stringTableOffset = stringTableOffset,
       rootOffset = HEADER_SIZE,
       fileSize = writer.size,

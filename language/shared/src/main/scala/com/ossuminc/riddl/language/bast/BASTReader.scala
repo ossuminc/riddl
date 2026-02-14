@@ -111,7 +111,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       // Read and validate header
       val header = readHeader()
       if !header.isValid then
-        return Left(List(Messages.error("Invalid BAST file header", At.empty)))
+        return Left(List(Messages.error(
+          s"Invalid BAST file: ${header.invalidReason}", At.empty)))
       end if
 
       // Validate checksum
@@ -154,7 +155,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val magic = reader.readRawBytes(4)
     val version = reader.readInt()
     val flags = reader.readShort()
-    reader.readShort() // reserved1
+    val formatRevision = reader.readShort()
     val stringTableOffset = reader.readInt()
     val rootOffset = reader.readInt()
     val fileSize = reader.readInt()
@@ -165,6 +166,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       magic = magic,
       version = version,
       flags = flags,
+      formatRevision = formatRevision,
       stringTableOffset = stringTableOffset,
       rootOffset = rootOffset,
       fileSize = fileSize,

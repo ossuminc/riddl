@@ -15,7 +15,7 @@ package com.ossuminc.riddl.language.bast
   * │  - Magic: "BAST" (4 bytes)          │
   * │  - Version: u32                     │
   * │  - Flags: u16                       │
-  * │  - Reserved1: u16                   │
+  * │  - Format Revision: u16             │
   * │  - String Table Offset: u32         │
   * │  - Root Offset: u32                 │
   * │  - File Size: u32                   │
@@ -51,6 +51,7 @@ object BinaryFormat {
     magic: Array[Byte],           // Must equal MAGIC_BYTES
     version: Int,                 // Single monotonically incrementing version
     flags: Short,
+    formatRevision: Short,        // Internal serialization revision
     stringTableOffset: Int,
     rootOffset: Int,
     fileSize: Int,
@@ -60,8 +61,25 @@ object BinaryFormat {
     def isValid: Boolean = {
       magic.sameElements(MAGIC_BYTES) &&
       version == VERSION &&
+      formatRevision == FORMAT_REVISION &&
       fileSize > 0 &&
       fileSize <= MAX_BAST_SIZE
+    }
+
+    /** Return a human-readable reason why the header is invalid */
+    def invalidReason: String = {
+      if !magic.sameElements(MAGIC_BYTES) then
+        "Not a BAST file (invalid magic bytes)"
+      else if version != VERSION then
+        s"BAST format version $version does not match " +
+        s"expected version $VERSION"
+      else if formatRevision != FORMAT_REVISION then
+        s"BAST format revision $formatRevision does not " +
+        s"match expected revision $FORMAT_REVISION; " +
+        s"regenerate .bast files with the current riddlc"
+      else if fileSize <= 0 || fileSize > MAX_BAST_SIZE then
+        s"Invalid file size: $fileSize"
+      else "Unknown"
     }
 
     def hasLocations: Boolean = (flags & Flags.WITH_LOCATIONS) != 0
@@ -75,12 +93,14 @@ object BinaryFormat {
       rootOffset: Int,
       fileSize: Int,
       checksum: Int,
-      flags: Short = (Flags.WITH_LOCATIONS | Flags.WITH_DESCRIPTIONS).toShort
+      flags: Short = (Flags.WITH_LOCATIONS | Flags.WITH_DESCRIPTIONS).toShort,
+      formatRevision: Short = FORMAT_REVISION
     ): Header = {
       Header(
         magic = MAGIC_BYTES,
         version = VERSION,
         flags = flags,
+        formatRevision = formatRevision,
         stringTableOffset = stringTableOffset,
         rootOffset = rootOffset,
         fileSize = fileSize,
@@ -112,7 +132,7 @@ object BinaryFormat {
     writer.writeRawBytes(header.magic)       // 4 bytes
     writer.writeInt(header.version)           // 4 bytes
     writer.writeShort(header.flags)           // 2 bytes
-    writer.writeShort(0)                      // 2 bytes reserved
+    writer.writeShort(header.formatRevision)  // 2 bytes format revision
     writer.writeInt(header.stringTableOffset) // 4 bytes
     writer.writeInt(header.rootOffset)        // 4 bytes
     writer.writeInt(header.fileSize)          // 4 bytes
