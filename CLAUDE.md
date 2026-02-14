@@ -691,8 +691,17 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 27. **riddlLibJS tests now work** - Fixed by overriding `Test / scalaJSLinkerConfig` to `CommonJSModule` in `build.sbt`. Production bundle stays ESModule. 8 shared `RiddlLibTest` tests run on both JVM and JS
 28. **NEVER put `import '`, `import "`, or `import(` in shared string literals** - ESM shim plugins scan the JS bundle and rewrite these patterns. Use string concatenation (`"im" + "port"`) or rephrase the message. `ESMSafetyTest` in `riddlLib/jvm/src/test/` enforces this by scanning the fullLinkJS bundle
 29. **Container.flatten() extension** - Recursively removes Include/BASTImport wrappers in-place. Lives in `language/shared/.../Contents.scala`. FlattenPass delegates to `root.flatten()`. Use base `Pass` not `DepthFirstPass` — mutating contents during traversal corrupts ArrayBuffer iteration
-30. **release.yml automates multi-platform builds** - Triggered by `gh release create`. Builds native riddlc on macOS ARM64, macOS x86_64, Linux x86_64, plus JVM. Auto-updates homebrew-tap formula with SHA256 hashes
-31. **Homebrew formula supports native + JVM fallback** - macOS ARM64 gets native binary (no JDK). Other platforms get JVM version with openjdk@21 dependency. Formula at `../homebrew-tap/Formula/riddlc.rb`
+30. **release.yml automates multi-platform builds** - Triggered
+    by `gh release create`. Builds native riddlc on macOS ARM64
+    and Linux x86_64, plus JVM universal. Auto-updates
+    homebrew-tap formula with SHA256 hashes. macOS x86_64
+    dropped (GitHub deprecated `macos-13` runners; Intel Macs
+    fall back to JVM version)
+31. **Homebrew formula supports native + JVM fallback** - macOS
+    ARM64 and Linux x86_64 get native binaries (no JDK). All
+    other platforms (including Intel Macs) get JVM version with
+    openjdk@21 dependency. Formula at
+    `../homebrew-tap/Formula/riddlc.rb`
 32. **RiddlLib shared trait** - `riddlLib/shared/.../RiddlLib.scala` provides cross-platform API (parseString, flattenAST, validateString, getOutline, getTree). `object RiddlLib extends RiddlLib` has default implementations. RiddlAPI.scala is now a thin JS facade delegating to RiddlLib
 33. **parseString returns opaque Root in JS** - As of 1.5.0, `RiddlAPI.parseString()` returns the actual Scala `Root` object (opaque to JS). Use `getDomains(root)` or `inspectRoot(root)` to access data. TypeScript type is branded `RootAST`
 34. **Schema is in NonDefinitionValues** - Schema extends Leaf (Definition) but is also in the `NonDefinitionValues` union type. Its match case in `ValidationPass.process()` must appear BEFORE `case _: NonDefinitionValues`. Similarly, Relationship extends Leaf and must be matched before `case _: Definition`
