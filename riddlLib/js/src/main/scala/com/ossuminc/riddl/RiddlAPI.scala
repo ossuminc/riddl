@@ -53,18 +53,20 @@ object RiddlAPI {
 
   // ── JS conversion helpers ──────────────────────────────
 
-  /** Convert Either to JavaScript-friendly result object */
+  /** Convert RiddlResult to JavaScript-friendly result
+    * object.
+    */
   private def toJsResult[T](
-    either: Either[Messages, T],
+    result: RiddlResult[T],
     converter: T => js.Any = (v: T) => v.asInstanceOf[js.Any]
   ): js.Dynamic =
-    either match
-      case Right(value) =>
+    result match
+      case RiddlResult.Success(value) =>
         js.Dynamic.literal(
           succeeded = true,
           value = converter(value)
         )
-      case Left(messages) =>
+      case RiddlResult.Failure(messages) =>
         js.Dynamic.literal(
           succeeded = false,
           errors = formatMessagesAsArray(messages)
@@ -474,21 +476,61 @@ object RiddlAPI {
 
   /** Convert a parsed AST Root to BAST binary bytes.
     *
-    * Returns an Int8Array suitable for structured-clone
-    * transfer (e.g., Electron IPC).
+    * Returns a RiddlResult containing an Int8Array suitable
+    * for structured-clone transfer (e.g., Electron IPC).
     */
   @JSExport("ast2bast")
-  def ast2bast(root: Root): js.typedarray.Int8Array =
-    val bytes = RiddlLib.ast2bast(root)
-    val buffer = new js.typedarray.ArrayBuffer(bytes.length)
-    val view = new js.typedarray.Int8Array(buffer)
-    var i = 0
-    while i < bytes.length do
-      view(i) = bytes(i)
-      i += 1
-    end while
-    view
+  def ast2bast(root: Root): js.Dynamic =
+    toJsResult(
+      RiddlLib.ast2bast(root),
+      bytes =>
+        val buffer =
+          new js.typedarray.ArrayBuffer(bytes.length)
+        val view = new js.typedarray.Int8Array(buffer)
+        var i = 0
+        while i < bytes.length do
+          view(i) = bytes(i)
+          i += 1
+        end while
+        view.asInstanceOf[js.Any]
+    )
   end ast2bast
+
+  /** Deserialize BAST binary bytes to a flattened AST Root.
+    *
+    * Reads BAST binary data, converts to AST, flattens
+    * Include/BASTImport wrappers, and returns an opaque Root.
+    *
+    * @param bytes BAST binary data as Int8Array
+    * @return Result with opaque Root handle or errors
+    */
+  @JSExport("bast2FlatAST")
+  def bast2FlatAST(
+    bytes: js.typedarray.Int8Array
+  ): js.Dynamic =
+    val scalaBytes = Array.tabulate(bytes.length)(i =>
+      bytes(i)
+    )
+    toJsResult(
+      RiddlLib.bast2FlatAST(scalaBytes),
+      root => root.asInstanceOf[js.Any]
+    )
+  end bast2FlatAST
+
+  /** Convert an AST Root to RIDDL source text.
+    *
+    * Runs PrettifyPass to regenerate RIDDL source code from
+    * the AST. Produces a single flattened string with all
+    * definitions inline (no include directives).
+    *
+    * @param root The opaque Root handle from parseString
+    *             or bast2FlatAST
+    * @return RIDDL source code as a string
+    */
+  @JSExport("root2RiddlSource")
+  def root2RiddlSource(root: Root): String =
+    RiddlLib.root2RiddlSource(root)
+  end root2RiddlSource
 
   /** Get entity lifecycle (state machine) data. */
   @JSExport("getEntityLifecycles")

@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 11, 2026
+**Last Updated**: February 14, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS
 default due to compiler infinite loop bug with opaque
@@ -248,28 +248,58 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ---
 
-## Changes Since v1.7.0
+## Changes Since v1.8.2
 
-- Added `RiddlLib.ast2bast(root)` — converts parsed AST to
-  BAST binary bytes (shared trait + JS facade)
-- Added TypeScript declarations for `getHandlerCompleteness`,
-  `getMessageFlow`, `getEntityLifecycles`, `ast2bast` with
-  return type interfaces
-- Added `ast2bast` test in `RiddlLibTest`
-- ValidationPass: Schema kind-specific deep checks (Flat,
-  TimeSeries, Hierarchical, Star data/link structure warnings)
-- ValidationPass: Relational FK type mismatch upgraded from
-  Warning to Error
-- ValidationPass: Handler message type vs container type
-  checks (Repository handles events → warning, Projector
-  handles commands/queries → warning)
-- ValidationPass: Adaptor message direction compatibility
-  (inbound handling commands → error, outbound handling
-  events → error)
-- StreamingValidation: Sink reverse reachability check (warns
-  if connected sink has no upstream path from any source)
+- **RiddlResult[T] ADT** — New sealed trait replacing
+  `Either[Messages, T]` as return type for all RiddlLib
+  methods. `Success[T]` and `Failure` cases with `map`,
+  `flatMap`, `toEither`. TypeScript: `RiddlResult<T>`
+  (deprecated `ParseResult<T>` alias kept for migration)
+- **ast2bast returns RiddlResult** — Previously returned
+  `Array[Byte]` (silently empty on failure); now returns
+  `RiddlResult[Array[Byte]]` with proper error reporting
+- **RiddlResult.scala** — New file in riddlLib/shared
+- **TypeScript index.d.ts** — `ParseResult<T>` renamed to
+  `RiddlResult<T>` across all method signatures
 
 ## Session Log
+
+### February 14, 2026 (RiddlResult ADT)
+
+**Focus**: Add cross-platform `RiddlResult[T]` result type to
+replace ad-hoc `Either[Messages, T]` returns in RiddlLib.
+
+**Work Completed**:
+1. **Created `RiddlResult.scala`** — Sealed trait with
+   `Success[T]` and `Failure` cases. Includes `map`,
+   `flatMap`, `toEither`, `fromEither` for interop.
+2. **Updated `RiddlLib.scala`** — Changed all 10 methods
+   returning `Either[Messages, T]` to `RiddlResult[T]`.
+   Changed `ast2bast` from `Array[Byte]` to
+   `RiddlResult[Array[Byte]]` (surfaces errors properly).
+3. **Updated `RiddlAPI.scala`** — `toJsResult` now accepts
+   `RiddlResult[T]`. `ast2bast` wrapped in `toJsResult`.
+4. **Updated `index.d.ts`** — `ParseResult<T>` renamed to
+   `RiddlResult<T>`. Deprecated alias kept. `ast2bast`
+   return type changed to `RiddlResult<Int8Array>`.
+5. **Updated `RiddlLibTest.scala`** — All tests use
+   `RiddlResult.Success`/`RiddlResult.Failure` matching.
+
+**Test Results**: 13/13 JVM, 11/11 JS — all pass.
+
+**Version**: 1.9.0 (MINOR — new `RiddlResult` type, API
+return type changes with `toEither` migration path)
+
+**Files Created**:
+- `riddlLib/shared/.../RiddlResult.scala`
+
+**Files Modified**:
+- `riddlLib/shared/.../RiddlLib.scala`
+- `riddlLib/js/.../RiddlAPI.scala`
+- `riddlLib/js/types/index.d.ts`
+- `riddlLib/shared/test/.../RiddlLibTest.scala`
+
+---
 
 ### February 11, 2026 (ValidationPass Gap Analysis Completion)
 
@@ -1737,4 +1767,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.8.0 (February 11, 2026)
+**Latest release**: 1.9.0 (February 14, 2026)

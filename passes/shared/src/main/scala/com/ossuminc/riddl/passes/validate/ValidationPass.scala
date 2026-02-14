@@ -195,7 +195,7 @@ case class ValidationPass(
             tells.exists(_.msg.messageKind == AggregateUseCase.EventCase)
           if !(foundSend || foundTell) then
             messages.add(
-              missing("Processing for commands should result in sending an event", omc.errorLoc)
+              warning("Processing for commands should result in sending an event", omc.errorLoc)
             )
         case AggregateUseCase.QueryCase =>
           val finder = Finder(omc.contents)
@@ -207,7 +207,7 @@ case class ValidationPass(
             tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
           if !(foundSend || foundTell) then
             messages.add(
-              missing("Processing for queries should result in sending a result", omc.errorLoc)
+              warning("Processing for queries should result in sending a result", omc.errorLoc)
             )
         case _ =>
       }
