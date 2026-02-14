@@ -16,7 +16,7 @@ RUN curl -fsSL https://github.com/sbt/sbt/releases/download/v1.10.7/sbt-1.10.7.t
 WORKDIR /app
 
 # Copy project files for sbt dependency resolution (cached layer)
-COPY project/build.properties project/plugins.sbt project/Dep.scala project/
+COPY project/build.properties project/plugins.sbt project/Dependencies.scala project/
 COPY build.sbt ./
 
 # Pre-fetch dependencies (this layer is cached if build files don't change)
