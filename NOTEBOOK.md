@@ -248,19 +248,13 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ---
 
-## Changes Since v1.8.2
+## Changes Since v1.9.0
 
-- **RiddlResult[T] ADT** — New sealed trait replacing
-  `Either[Messages, T]` as return type for all RiddlLib
-  methods. `Success[T]` and `Failure` cases with `map`,
-  `flatMap`, `toEither`. TypeScript: `RiddlResult<T>`
-  (deprecated `ParseResult<T>` alias kept for migration)
-- **ast2bast returns RiddlResult** — Previously returned
-  `Array[Byte]` (silently empty on failure); now returns
-  `RiddlResult[Array[Byte]]` with proper error reporting
-- **RiddlResult.scala** — New file in riddlLib/shared
-- **TypeScript index.d.ts** — `ParseResult<T>` renamed to
-  `RiddlResult<T>` across all method signatures
+- BAST reader metadata flag fix, deserialization edge cases
+- BASTWriter node tracking improvements
+- BinaryFormat header enhancements, new BAST node type tags
+- Pass.scala updates for BAST integration
+- SharedBASTTest coverage for deserialization edge cases
 
 ## Session Log
 
@@ -287,8 +281,9 @@ replace ad-hoc `Either[Messages, T]` returns in RiddlLib.
 
 **Test Results**: 13/13 JVM, 11/11 JS — all pass.
 
-**Version**: 1.9.0 (MINOR — new `RiddlResult` type, API
-return type changes with `toEither` migration path)
+**Version**: 1.9.0 released with only RiddlResult changes.
+Corrected to 1.10.0 to include BAST fixes that were
+mistakenly excluded from 1.9.0.
 
 **Files Created**:
 - `riddlLib/shared/.../RiddlResult.scala`
@@ -1767,4 +1762,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.9.0 (February 14, 2026)
+**Latest release**: 1.10.0 (February 14, 2026)
