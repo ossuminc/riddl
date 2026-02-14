@@ -322,6 +322,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readNode(): RiddlValue = {
     val posBeforeNode = reader.position
     checkBoundary(s"readNode at position $posBeforeNode")
+    val savedMetadataFlag = currentNodeHasMetadata
     var tagByte = reader.readU8()
     debugLog(f"[DEBUG] readNode at pos $posBeforeNode: tagByte=${tagByte & 0xFF}%d (0x${tagByte & 0xFF}%02X)")
 
@@ -470,6 +471,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           LiteralString(lastLocation, s"<unknown node type $nodeType>")
       }
       popContext()
+      currentNodeHasMetadata = savedMetadataFlag
       val posAfterNode = reader.position
       recordNodeRead(nodeName, posBeforeNode)
       debugLog(f"[DEBUG] finished $nodeName at pos $posAfterNode (read ${posAfterNode - posBeforeNode} bytes)")
@@ -477,6 +479,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     } catch {
       case e: Exception =>
         popContext()
+        currentNodeHasMetadata = savedMetadataFlag
         throw e // Re-throw with context already in error message
     }
   }
@@ -492,45 +495,37 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readDomainNode(): Domain = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents (children overwrite flag)
-    debugLog(f"[DEBUG] readDomainNode: hasMetadata=$hasMetadata at pos ${reader.position}")
+    debugLog(f"[DEBUG] readDomainNode: hasMetadata=$currentNodeHasMetadata at pos ${reader.position}")
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     debugLog(f"[DEBUG] readDomainNode: domain '${id.value}' at pos ${reader.position}")
     val contents = readContentsDeferred[OccursInDomain]().asInstanceOf[Contents[DomainContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
-    debugLog(f"[DEBUG] readDomainNode: reading metadata (hasMetadata=$hasMetadata) at pos ${reader.position}")
+    debugLog(f"[DEBUG] readDomainNode: reading metadata (hasMetadata=$currentNodeHasMetadata) at pos ${reader.position}")
     val metadata = readMetadataDeferred()
     debugLog(f"[DEBUG] readDomainNode: finished, metadata count=${metadata.length}")
     Domain(loc, id, contents, metadata)
   }
 
   private def readContextNode(): Context = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Context(loc, id, contents, metadata)
   }
 
   private def readEntityNode(): Entity = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Entity(loc, id, contents, metadata)
   }
 
   private def readModuleNode(): Module = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[Domain | Author | Comment]().asInstanceOf[Contents[ModuleContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Module(loc, id, contents, metadata)
   }
@@ -557,17 +552,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== Type Definitions ==========
 
   private def readTypeNode(): Type = {
-    val hasMetadata = currentNodeHasMetadata  // Save before reading nested content
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val typEx = readTypeExpression()
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Type(loc, id, typEx, metadata)
   }
 
   private def readFieldOrConstantOrMethod(): RiddlValue = {
-    val hasMetadata = currentNodeHasMetadata  // Save before reading nested content
     val loc = readLocation()
     val idOrName = reader.peekU8()
 
@@ -579,7 +571,6 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       // Check if this is a Constant (has value) or Method (has args) or Field
       // This is ambiguous - we need to peek ahead
       // For now, assume Field. Writer should disambiguate better.
-      currentNodeHasMetadata = hasMetadata  // Restore for metadata read
       val metadata = readMetadataDeferred()
       Field(loc, id, typEx, metadata)
     else
@@ -601,7 +592,6 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== Processor Definitions ==========
 
   private def readAdaptorNode(): Adaptor = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val directionTag = reader.readU8()
@@ -612,13 +602,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     }
     val referent = readContextRef()
     val contents = readContentsDeferred[OccursInProcessor]().asInstanceOf[Contents[AdaptorContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Adaptor(loc, id, direction, referent, contents, metadata)
   }
 
   private def readFunctionNode(): Function = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     // Debug: Read input with type checking
@@ -640,13 +628,11 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       }
     }
     val contents = readContentsDeferred[OccursInVitalDefinition | Statement | Function]().asInstanceOf[Contents[FunctionContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Function(loc, id, input, output, contents, metadata)
   }
 
   private def readSagaNode(): Saga = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     // Debug: Read input with type checking
@@ -668,27 +654,22 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       }
     }
     val contents = readContentsDeferred[OccursInVitalDefinition | SagaStep]().asInstanceOf[Contents[SagaContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Saga(loc, id, input, output, contents, metadata)
   }
 
   private def readProjectorNode(): Projector = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]().asInstanceOf[Contents[ProjectorContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Projector(loc, id, contents, metadata)
   }
 
   private def readRepositoryNode(): Repository = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Repository(loc, id, contents, metadata)
   }
@@ -699,12 +680,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
 
-    val schemaKind = subtype match {
-      case 0 => RepositorySchemaKind.Relational
-      case 1 => RepositorySchemaKind.Document
-      case 2 => RepositorySchemaKind.Graphical
-      case _ => RepositorySchemaKind.Relational
-    }
+    val schemaKind = RepositorySchemaKind.fromOrdinal(subtype)
 
     // Read data map - keys use writeIdentifier (with tag)
     val dataCount = reader.readVarInt()
@@ -731,7 +707,6 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readStreamletNode(): Streamlet = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val shapeTag = reader.readU8()
@@ -745,7 +720,6 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       case _ => Void(loc)
     }
     val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]().asInstanceOf[Contents[StreamletContents]]
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Streamlet(loc, id, shape, contents, metadata)
   }
@@ -753,26 +727,19 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   // ========== Epic Definitions ==========
 
   private def readEpicOrUseCaseNode(): RiddlValue = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
+    val subtype = reader.readU8() // 0 = Epic, 1 = UseCase
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
 
-    // Check if next is UserStory (NODE_USER tag) or Contents
-    val saved = reader.position
-    val nextTag = reader.readU8()
-    reader.seek(saved)
-
-    if nextTag == NODE_USER then
+    if subtype == 0 then
       val userStory = readUserStoryNode()
       val contents = readContentsDeferred[OccursInVitalDefinition | ShownBy | UseCase]().asInstanceOf[Contents[EpicContents]]
-      currentNodeHasMetadata = hasMetadata  // Restore for metadata read
       val metadata = readMetadataDeferred()
       Epic(loc, id, userStory, contents, metadata)
     else
-      // UseCase
+      // UseCase (subtype == 1)
       val userStory = readUserStoryNode()
       val contents = readContentsDeferred[UseCaseContents]()
-      currentNodeHasMetadata = hasMetadata  // Restore for metadata read
       val metadata = readMetadataDeferred()
       UseCase(loc, id, userStory, contents, metadata)
     end if
@@ -782,11 +749,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   /** Read a Handler node (Phase 7: handlers have dedicated NODE_HANDLER tag) */
   private def readHandlerNode(): Handler = {
-    val hasMetadata = currentNodeHasMetadata  // Save before contents
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val contents = readContentsDeferred[HandlerContents]()
-    currentNodeHasMetadata = hasMetadata  // Restore for metadata read
     val metadata = readMetadataDeferred()
     Handler(loc, id, contents, metadata)
   }

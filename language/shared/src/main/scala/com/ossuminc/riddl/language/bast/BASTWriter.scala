@@ -471,6 +471,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   def writeEpic(e: Epic): Unit = {
     writeNodeTag(NODE_EPIC, e.metadata.nonEmpty)
+    writer.writeU8(0) // Subtype: 0 = Epic, 1 = UseCase
     writeLocation(e.loc)
     writeIdentifierInline(e.id)  // Inline - no tag needed
     writeUserStory(e.userStory)
@@ -663,7 +664,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Epic/UseCase Component Serialization ==========
 
   def writeUseCase(uc: UseCase): Unit = {
-    writeNodeTag(NODE_EPIC, uc.metadata.nonEmpty) // UseCase similar to Epic
+    writeNodeTag(NODE_EPIC, uc.metadata.nonEmpty)
+    writer.writeU8(1) // Subtype: 0 = Epic, 1 = UseCase
     writeLocation(uc.loc)
     writeIdentifierInline(uc.id)  // Inline - no tag needed
     writeUserStory(uc.userStory)
