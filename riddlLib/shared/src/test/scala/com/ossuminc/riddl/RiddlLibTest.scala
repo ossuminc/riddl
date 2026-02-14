@@ -18,66 +18,75 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
   "RiddlLib" should {
 
     "parse a simple domain" in {
-      val result = RiddlLib.parseString(
+      RiddlLib.parseString(
         "domain MyDomain is { ??? }"
-      )
-      result.isRight mustBe true
-      val root = result.toOption.get
-      root.domains must not be empty
-      root.domains.head.id.value mustBe "MyDomain"
+      ) match
+        case RiddlResult.Success(root) =>
+          root.domains must not be empty
+          root.domains.head.id.value mustBe "MyDomain"
+        case RiddlResult.Failure(errors) =>
+          fail(s"Parse failed: $errors")
+      end match
     }
 
     "return errors for invalid input" in {
-      val result = RiddlLib.parseString(
+      RiddlLib.parseString(
         "this is not valid riddl"
-      )
-      result.isLeft mustBe true
-      val messages = result.swap.toOption.get
-      messages must not be empty
+      ) match
+        case RiddlResult.Failure(errors) =>
+          errors must not be empty
+        case RiddlResult.Success(_) =>
+          fail("Expected parse failure")
+      end match
     }
 
     "flattenAST on a parsed result" in {
-      val result = RiddlLib.parseString(
+      RiddlLib.parseString(
         "domain D is { context C is { ??? } }"
-      )
-      result.isRight mustBe true
-      val root = result.toOption.get
-      val flattened = RiddlLib.flattenAST(root)
-      flattened.domains must not be empty
-      flattened.domains.head.id.value mustBe "D"
+      ) match
+        case RiddlResult.Success(root) =>
+          val flattened = RiddlLib.flattenAST(root)
+          flattened.domains must not be empty
+          flattened.domains.head.id.value mustBe "D"
+        case RiddlResult.Failure(errors) =>
+          fail(s"Parse failed: $errors")
+      end match
     }
 
     "getOutline returns entries" in {
-      val result = RiddlLib.getOutline(
+      RiddlLib.getOutline(
         "domain D is { context C is { ??? } }"
-      )
-      result.isRight mustBe true
-      val entries = result.toOption.get
-      entries must not be empty
-      entries.exists(_.kind == "Domain") mustBe true
+      ) match
+        case RiddlResult.Success(entries) =>
+          entries must not be empty
+          entries.exists(
+            _.kind == "Domain"
+          ) mustBe true
+        case RiddlResult.Failure(errors) =>
+          fail(s"getOutline failed: $errors")
+      end match
     }
 
     "getTree returns nodes" in {
-      val result = RiddlLib.getTree(
+      RiddlLib.getTree(
         "domain D is { context C is { ??? } }"
-      )
-      result.isRight mustBe true
-      val nodes = result.toOption.get
-      nodes must not be empty
-      // Top level is the Root node with Domain children
-      val rootNode = nodes.head
-      rootNode.kind mustBe "Root"
-      rootNode.children.exists(
-        _.kind == "Domain"
-      ) mustBe true
+      ) match
+        case RiddlResult.Success(nodes) =>
+          nodes must not be empty
+          val rootNode = nodes.head
+          rootNode.kind mustBe "Root"
+          rootNode.children.exists(
+            _.kind == "Domain"
+          ) mustBe true
+        case RiddlResult.Failure(errors) =>
+          fail(s"getTree failed: $errors")
+      end match
     }
 
     "validateString returns a ValidateResult" in {
       val vr = RiddlLib.validateString(
         "domain D is { context C is { ??? } }"
       )
-      // Should not throw; may or may not succeed
-      // depending on validation rules
       vr.parseErrors mustBe empty
     }
 
@@ -93,32 +102,59 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
       val source = """domain TestDomain is {
         context TestCtx is { ??? }
       }"""
-      val parseResult = RiddlLib.parseString(source)
-      parseResult.isRight mustBe true
-      val root = parseResult.toOption.get
-      val bastBytes = RiddlLib.ast2bast(root)
-      bastBytes.length must be > 0
+      RiddlLib.parseString(source) match
+        case RiddlResult.Success(root) =>
+          RiddlLib.ast2bast(root) match
+            case RiddlResult.Success(bastBytes) =>
+              bastBytes.length must be > 0
+              RiddlLib.bast2FlatAST(bastBytes) match
+                case RiddlResult.Success(flatRoot) =>
+                  flatRoot.domains must not be empty
+                  flatRoot.domains.head.id
+                    .value mustBe "TestDomain"
+                case RiddlResult.Failure(errors) =>
+                  fail(s"bast2FlatAST failed: $errors")
+              end match
+            case RiddlResult.Failure(errors) =>
+              fail(s"ast2bast failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"Parse failed: $errors")
+      end match
+    }
 
-      val flatResult = RiddlLib.bast2FlatAST(bastBytes)
-      flatResult.isRight mustBe true
-      val flatRoot = flatResult.toOption.get
-      flatRoot.domains must not be empty
-      flatRoot.domains.head.id.value mustBe "TestDomain"
+    "root2RiddlSource round-trips parse to source" in {
+      val source = """domain TestDomain is {
+        context TestCtx is { ??? }
+      }"""
+      RiddlLib.parseString(source) match
+        case RiddlResult.Success(root) =>
+          val riddlText = RiddlLib.root2RiddlSource(root)
+          riddlText must include("domain TestDomain")
+          riddlText must include("context TestCtx")
+        case RiddlResult.Failure(errors) =>
+          fail(s"Parse failed: $errors")
+      end match
     }
 
     "ast2bast converts parsed AST to bytes" in {
-      val result = RiddlLib.parseString(
+      RiddlLib.parseString(
         "domain D is { context C is { ??? } }"
-      )
-      result.isRight mustBe true
-      val root = result.toOption.get
-      val bytes = RiddlLib.ast2bast(root)
-      bytes must not be empty
-      // BAST magic number check (first 4 bytes = "BAST")
-      bytes(0) mustBe 'B'.toByte
-      bytes(1) mustBe 'A'.toByte
-      bytes(2) mustBe 'S'.toByte
-      bytes(3) mustBe 'T'.toByte
+      ) match
+        case RiddlResult.Success(root) =>
+          RiddlLib.ast2bast(root) match
+            case RiddlResult.Success(bytes) =>
+              bytes must not be empty
+              bytes(0) mustBe 'B'.toByte
+              bytes(1) mustBe 'A'.toByte
+              bytes(2) mustBe 'S'.toByte
+              bytes(3) mustBe 'T'.toByte
+            case RiddlResult.Failure(errors) =>
+              fail(s"ast2bast failed: $errors")
+          end match
+        case RiddlResult.Failure(errors) =>
+          fail(s"Parse failed: $errors")
+      end match
     }
   }
 }

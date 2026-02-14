@@ -10,7 +10,7 @@ import com.ossuminc.riddl.language.AST.{
   Author, Domain, Entity, Module, Nebula, Root,
   RootContents, Token
 }
-import com.ossuminc.riddl.language.{Contents, Messages, toSeq}
+import com.ossuminc.riddl.language.{At, Contents, Messages, toSeq}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.language.parsing.{
@@ -26,6 +26,7 @@ import com.ossuminc.riddl.passes.analysis.{
   EntityLifecycle, EntityLifecycleOutput, EntityLifecyclePass,
   MessageFlowOutput, MessageFlowPass
 }
+import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass}
 import com.ossuminc.riddl.passes.transforms.FlattenPass
 import com.ossuminc.riddl.passes.validate.{
   HandlerCompleteness, ValidationOutput, ValidationPass
@@ -49,13 +50,14 @@ trait RiddlLib:
     * @param origin Origin identifier (e.g., filename) for error
     *               messages
     * @param verbose Enable verbose failure messages
-    * @return Right(Root) on success, Left(Messages) on failure
+    * @return Success(Root) on success, Failure(Messages) on
+    *         failure
     */
   def parseString(
     source: String,
     origin: String = "string",
     verbose: Boolean = false
-  )(using PlatformContext): Either[Messages, Root]
+  )(using PlatformContext): RiddlResult[Root]
 
   /** Parse arbitrary RIDDL definitions (nebula).
     *
@@ -66,7 +68,7 @@ trait RiddlLib:
     source: String,
     origin: String = "string",
     verbose: Boolean = false
-  )(using PlatformContext): Either[Messages, Nebula]
+  )(using PlatformContext): RiddlResult[Nebula]
 
   /** Parse RIDDL source into a list of tokens for syntax
     * highlighting.
@@ -75,7 +77,7 @@ trait RiddlLib:
     source: String,
     origin: String = "string",
     verbose: Boolean = false
-  )(using PlatformContext): Either[Messages, List[Token]]
+  )(using PlatformContext): RiddlResult[List[Token]]
 
   /** Flatten Include and BASTImport wrapper nodes from the
     * AST. Modifies the Root in-place and returns the same
@@ -99,13 +101,13 @@ trait RiddlLib:
   def getOutline(
     source: String,
     origin: String = "string"
-  )(using PlatformContext): Either[Messages, Seq[OutlineEntry]]
+  )(using PlatformContext): RiddlResult[Seq[OutlineEntry]]
 
   /** Get a recursive tree of all named definitions. */
   def getTree(
     source: String,
     origin: String = "string"
-  )(using PlatformContext): Either[Messages, Seq[TreeNode]]
+  )(using PlatformContext): RiddlResult[Seq[TreeNode]]
 
   /** Get handler completeness classifications from validation.
     *
@@ -115,7 +117,7 @@ trait RiddlLib:
   def getHandlerCompleteness(
     source: String,
     origin: String = "string"
-  )(using PlatformContext): Either[Messages, Seq[HandlerCompleteness]]
+  )(using PlatformContext): RiddlResult[Seq[HandlerCompleteness]]
 
   /** Get the message flow graph for a RIDDL model.
     *
@@ -125,7 +127,7 @@ trait RiddlLib:
   def getMessageFlow(
     source: String,
     origin: String = "string"
-  )(using PlatformContext): Either[Messages, MessageFlowOutput]
+  )(using PlatformContext): RiddlResult[MessageFlowOutput]
 
   /** Get entity lifecycle (state machine) data.
     *
@@ -135,7 +137,8 @@ trait RiddlLib:
   def getEntityLifecycles(
     source: String,
     origin: String = "string"
-  )(using PlatformContext): Either[Messages, Map[Entity, EntityLifecycle]]
+  )(using PlatformContext
+  ): RiddlResult[Map[Entity, EntityLifecycle]]
 
   /** Convert a parsed AST Root to BAST binary bytes.
     *
@@ -143,11 +146,11 @@ trait RiddlLib:
     * binary format for efficient storage or IPC transport.
     *
     * @param root The parsed AST Root
-    * @return The BAST bytes
+    * @return Success(bytes) or Failure with diagnostics
     */
   def ast2bast(
     root: Root
-  )(using PlatformContext): Array[Byte]
+  )(using PlatformContext): RiddlResult[Array[Byte]]
 
   /** Deserialize BAST binary bytes to a flattened AST Root.
     *
@@ -156,11 +159,25 @@ trait RiddlLib:
     * Include/BASTImport wrapper nodes.
     *
     * @param bytes The BAST binary data
-    * @return Right(Root) on success, Left(Messages) on failure
+    * @return Success(Root) on success, Failure(Messages) on
+    *         failure
     */
   def bast2FlatAST(
     bytes: Array[Byte]
-  )(using PlatformContext): Either[Messages, Root]
+  )(using PlatformContext): RiddlResult[Root]
+
+  /** Convert a parsed AST Root to RIDDL source text.
+    *
+    * Runs PrettifyPass with flatten=true to regenerate RIDDL
+    * source code from the AST as a single self-contained string
+    * with all definitions inline (no include directives).
+    *
+    * @param root The parsed AST Root
+    * @return RIDDL source code as a string
+    */
+  def root2RiddlSource(
+    root: Root
+  )(using PlatformContext): String
 
   /** Get the RIDDL library version string. */
   def version: String
@@ -200,27 +217,33 @@ object RiddlLib extends RiddlLib:
     source: String,
     origin: String,
     verbose: Boolean
-  )(using PlatformContext): Either[Messages, Root] =
+  )(using PlatformContext): RiddlResult[Root] =
     val input = RiddlParserInput(source, originToURL(origin))
-    TopLevelParser.parseInput(input, verbose)
+    RiddlResult.fromEither(
+      TopLevelParser.parseInput(input, verbose)
+    )
   end parseString
 
   override def parseNebula(
     source: String,
     origin: String,
     verbose: Boolean
-  )(using PlatformContext): Either[Messages, Nebula] =
+  )(using PlatformContext): RiddlResult[Nebula] =
     val input = RiddlParserInput(source, originToURL(origin))
-    TopLevelParser.parseNebula(input, verbose)
+    RiddlResult.fromEither(
+      TopLevelParser.parseNebula(input, verbose)
+    )
   end parseNebula
 
   override def parseToTokens(
     source: String,
     origin: String,
     verbose: Boolean
-  )(using PlatformContext): Either[Messages, List[Token]] =
+  )(using PlatformContext): RiddlResult[List[Token]] =
     val input = RiddlParserInput(source, originToURL(origin))
-    TopLevelParser.parseToTokens(input, verbose)
+    RiddlResult.fromEither(
+      TopLevelParser.parseToTokens(input, verbose)
+    )
   end parseToTokens
 
   override def flattenAST(
@@ -300,10 +323,10 @@ object RiddlLib extends RiddlLib:
   override def getOutline(
     source: String,
     origin: String
-  )(using PlatformContext): Either[Messages, Seq[OutlineEntry]] =
+  )(using PlatformContext): RiddlResult[Seq[OutlineEntry]] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
-    parseResult.flatMap { root =>
+    RiddlResult.fromEither(parseResult).flatMap { root =>
       val passInput = PassInput(root)
       val passesResult = Pass.runThesePasses(
         passInput,
@@ -312,9 +335,9 @@ object RiddlLib extends RiddlLib:
       passesResult.outputs
         .outputOf[OutlineOutput](OutlinePass.name) match
         case Some(outlineOutput) =>
-          Right(outlineOutput.entries)
+          RiddlResult.Success(outlineOutput.entries)
         case None =>
-          Left(List.empty)
+          RiddlResult.Failure(List.empty)
       end match
     }
   end getOutline
@@ -322,10 +345,10 @@ object RiddlLib extends RiddlLib:
   override def getTree(
     source: String,
     origin: String
-  )(using PlatformContext): Either[Messages, Seq[TreeNode]] =
+  )(using PlatformContext): RiddlResult[Seq[TreeNode]] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
-    parseResult.flatMap { root =>
+    RiddlResult.fromEither(parseResult).flatMap { root =>
       val passInput = PassInput(root)
       val passesResult = Pass.runThesePasses(
         passInput,
@@ -334,9 +357,9 @@ object RiddlLib extends RiddlLib:
       passesResult.outputs
         .outputOf[TreeOutput](TreePass.name) match
         case Some(treeOutput) =>
-          Right(treeOutput.tree)
+          RiddlResult.Success(treeOutput.tree)
         case None =>
-          Left(List.empty)
+          RiddlResult.Failure(List.empty)
       end match
     }
   end getTree
@@ -344,18 +367,21 @@ object RiddlLib extends RiddlLib:
   override def getHandlerCompleteness(
     source: String,
     origin: String
-  )(using PlatformContext): Either[Messages, Seq[HandlerCompleteness]] =
+  )(using PlatformContext
+  ): RiddlResult[Seq[HandlerCompleteness]] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
-    parseResult.flatMap { root =>
+    RiddlResult.fromEither(parseResult).flatMap { root =>
       val passInput = PassInput(root)
       val passesResult = Pass.runStandardPasses(passInput)
       passesResult.outputs
-        .outputOf[ValidationOutput](ValidationPass.name) match
+        .outputOf[ValidationOutput](
+          ValidationPass.name
+        ) match
         case Some(vo) =>
-          Right(vo.handlerCompleteness)
+          RiddlResult.Success(vo.handlerCompleteness)
         case None =>
-          Left(List.empty)
+          RiddlResult.Failure(List.empty)
       end match
     }
   end getHandlerCompleteness
@@ -363,19 +389,24 @@ object RiddlLib extends RiddlLib:
   override def getMessageFlow(
     source: String,
     origin: String
-  )(using PlatformContext): Either[Messages, MessageFlowOutput] =
+  )(using PlatformContext
+  ): RiddlResult[MessageFlowOutput] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
-    parseResult.flatMap { root =>
+    RiddlResult.fromEither(parseResult).flatMap { root =>
       val passInput = PassInput(root)
-      val passes = Pass.standardPasses :+ MessageFlowPass.creator()
-      val passesResult = Pass.runThesePasses(passInput, passes)
+      val passes =
+        Pass.standardPasses :+ MessageFlowPass.creator()
+      val passesResult =
+        Pass.runThesePasses(passInput, passes)
       passesResult.outputs
-        .outputOf[MessageFlowOutput](MessageFlowPass.name) match
+        .outputOf[MessageFlowOutput](
+          MessageFlowPass.name
+        ) match
         case Some(mfo) =>
-          Right(mfo)
+          RiddlResult.Success(mfo)
         case None =>
-          Left(List.empty)
+          RiddlResult.Failure(List.empty)
       end match
     }
   end getMessageFlow
@@ -383,26 +414,31 @@ object RiddlLib extends RiddlLib:
   override def getEntityLifecycles(
     source: String,
     origin: String
-  )(using PlatformContext): Either[Messages, Map[Entity, EntityLifecycle]] =
+  )(using PlatformContext
+  ): RiddlResult[Map[Entity, EntityLifecycle]] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
-    parseResult.flatMap { root =>
+    RiddlResult.fromEither(parseResult).flatMap { root =>
       val passInput = PassInput(root)
-      val passes = Pass.standardPasses :+ EntityLifecyclePass.creator()
-      val passesResult = Pass.runThesePasses(passInput, passes)
+      val passes =
+        Pass.standardPasses :+ EntityLifecyclePass.creator()
+      val passesResult =
+        Pass.runThesePasses(passInput, passes)
       passesResult.outputs
-        .outputOf[EntityLifecycleOutput](EntityLifecyclePass.name) match
+        .outputOf[EntityLifecycleOutput](
+          EntityLifecyclePass.name
+        ) match
         case Some(elo) =>
-          Right(elo.lifecycles)
+          RiddlResult.Success(elo.lifecycles)
         case None =>
-          Left(List.empty)
+          RiddlResult.Failure(List.empty)
       end match
     }
   end getEntityLifecycles
 
   override def ast2bast(
     root: Root
-  )(using PlatformContext): Array[Byte] =
+  )(using PlatformContext): RiddlResult[Array[Byte]] =
     val passInput = PassInput(root)
     val passesResult = Pass.runThesePasses(
       passInput,
@@ -410,28 +446,50 @@ object RiddlLib extends RiddlLib:
     )
     passesResult.outputs
       .outputOf[BASTOutput](BASTWriterPass.name) match
-      case Some(bastOutput) => bastOutput.bytes
-      case None => Array.empty
+      case Some(bastOutput) =>
+        RiddlResult.Success(bastOutput.bytes)
+      case None =>
+        RiddlResult.Failure(List(
+          Messages.error("BASTWriterPass produced no output")
+        ))
     end match
   end ast2bast
 
   override def bast2FlatAST(
     bytes: Array[Byte]
-  )(using PlatformContext): Either[Messages, Root] =
-    BASTReader.read(bytes).map { nebula =>
-      val rootItems: Seq[RootContents] =
-        nebula.contents.toSeq.collect {
-          case d: Domain => d
-          case m: Module => m
-          case a: Author => a
-        }
-      val root = Root(
-        nebula.loc,
-        Contents[RootContents](rootItems*)
-      )
-      flattenAST(root)
+  )(using PlatformContext): RiddlResult[Root] =
+    RiddlResult.fromEither(BASTReader.read(bytes)).map {
+      nebula =>
+        val rootItems: Seq[RootContents] =
+          nebula.contents.toSeq.collect {
+            case d: Domain => d
+            case m: Module => m
+            case a: Author => a
+          }
+        val root = Root(
+          nebula.loc,
+          Contents[RootContents](rootItems*)
+        )
+        flattenAST(root)
     }
   end bast2FlatAST
+
+  override def root2RiddlSource(
+    root: Root
+  )(using PlatformContext): String =
+    val passInput = PassInput(root)
+    val passes = Seq(
+      PrettifyPass.creator(
+        PrettifyPass.Options(flatten = true)
+      )
+    )
+    val result = Pass.runThesePasses(passInput, passes)
+    result.outputs
+      .outputOf[PrettifyOutput](PrettifyPass.name) match
+      case Some(po) => po.state.filesAsString
+      case None     => ""
+    end match
+  end root2RiddlSource
 
   override def version: String =
     RiddlBuildInfo.version

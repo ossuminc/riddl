@@ -38,18 +38,24 @@ export interface ErrorInfo {
 }
 
 /**
- * Result from a parse operation.
+ * Result from a RiddlAPI operation.
  *
- * @typeParam T - The type of the parsed value (RootAST, Nebula, Token[], etc.)
+ * On success: succeeded=true, value contains the result.
+ * On failure: succeeded=false, errors contains diagnostics.
+ *
+ * @typeParam T - The type of the success value
  */
-export interface ParseResult<T> {
-  /** Whether parsing succeeded without errors */
+export interface RiddlResult<T> {
+  /** Whether the operation succeeded */
   succeeded: boolean;
-  /** The parsed value, present when succeeded is true */
+  /** The result value, present when succeeded is true */
   value?: T;
   /** Array of error objects, present when succeeded is false */
   errors?: ErrorInfo[];
 }
+
+/** @deprecated Use RiddlResult instead */
+export type ParseResult<T> = RiddlResult<T>;
 
 /**
  * Lexical token from tokenization.
@@ -293,7 +299,7 @@ export declare const RiddlAPI: {
    * }
    * ```
    */
-  parseString(source: string, origin?: string, verbose?: boolean): ParseResult<RootAST>;
+  parseString(source: string, origin?: string, verbose?: boolean): RiddlResult<RootAST>;
 
   /**
    * Parse a RIDDL source string with a custom platform context.
@@ -309,7 +315,7 @@ export declare const RiddlAPI: {
     origin: string,
     verbose: boolean,
     context: PlatformContext
-  ): ParseResult<RootAST>;
+  ): RiddlResult<RootAST>;
 
   /**
    * Flatten Include and BASTImport wrapper nodes from the AST.
@@ -391,7 +397,7 @@ export declare const RiddlAPI: {
    * `);
    * ```
    */
-  parseNebula(source: string, origin?: string, verbose?: boolean): ParseResult<NebulaAST>;
+  parseNebula(source: string, origin?: string, verbose?: boolean): RiddlResult<NebulaAST>;
 
   /**
    * Parse RIDDL source into a list of tokens for syntax highlighting.
@@ -414,7 +420,7 @@ export declare const RiddlAPI: {
    * }
    * ```
    */
-  parseToTokens(source: string, origin?: string, verbose?: boolean): ParseResult<Token[]>;
+  parseToTokens(source: string, origin?: string, verbose?: boolean): RiddlResult<Token[]>;
 
   /**
    * Parse and validate RIDDL source, returning both syntax and semantic errors.
@@ -528,7 +534,7 @@ export declare const RiddlAPI: {
    * }
    * ```
    */
-  getOutline(source: string, origin?: string): ParseResult<OutlineEntry[]>;
+  getOutline(source: string, origin?: string): RiddlResult<OutlineEntry[]>;
 
   /**
    * Get a recursive tree of all named definitions in RIDDL source.
@@ -554,7 +560,7 @@ export declare const RiddlAPI: {
    * }
    * ```
    */
-  getTree(source: string, origin?: string): ParseResult<TreeNode[]>;
+  getTree(source: string, origin?: string): RiddlResult<TreeNode[]>;
 
   /**
    * Classify all handlers by behavioral completeness.
@@ -570,7 +576,7 @@ export declare const RiddlAPI: {
   getHandlerCompleteness(
     source: string,
     origin?: string
-  ): ParseResult<HandlerCompletenessEntry[]>;
+  ): RiddlResult<HandlerCompletenessEntry[]>;
 
   /**
    * Build a directed message flow graph for the model.
@@ -586,7 +592,7 @@ export declare const RiddlAPI: {
   getMessageFlow(
     source: string,
     origin?: string
-  ): ParseResult<MessageFlowResult>;
+  ): RiddlResult<MessageFlowResult>;
 
   /**
    * Extract entity lifecycle (state machine) data.
@@ -602,19 +608,19 @@ export declare const RiddlAPI: {
   getEntityLifecycles(
     source: string,
     origin?: string
-  ): ParseResult<EntityLifecycleEntry[]>;
+  ): RiddlResult<EntityLifecycleEntry[]>;
 
   /**
    * Convert a parsed AST Root to BAST binary bytes.
    *
    * Serializes the AST using BASTWriterPass for efficient
-   * storage or IPC transport. The returned Int8Array is
-   * structured-clone compatible.
+   * storage or IPC transport. On success, the value is an
+   * Int8Array that is structured-clone compatible.
    *
    * @param root - The opaque Root handle from parseString
-   * @returns BAST binary bytes as Int8Array
+   * @returns Result with BAST binary bytes or errors
    */
-  ast2bast(root: RootAST): Int8Array;
+  ast2bast(root: RootAST): RiddlResult<Int8Array>;
 
   /**
    * Deserialize BAST binary bytes to a flattened AST Root.
@@ -638,7 +644,20 @@ export declare const RiddlAPI: {
    * @param bytes - BAST binary data as Int8Array
    * @returns Result with opaque Root handle or errors
    */
-  bast2FlatAST(bytes: Int8Array): ParseResult<RootAST>;
+  bast2FlatAST(bytes: Int8Array): RiddlResult<RootAST>;
+
+  /**
+   * Convert an AST Root to RIDDL source text.
+   *
+   * Runs PrettifyPass to regenerate RIDDL source code from
+   * the AST. Produces a single flattened string with all
+   * definitions inline (no include directives).
+   *
+   * @param root - The opaque Root handle from parseString
+   *               or bast2FlatAST
+   * @returns RIDDL source code as a string
+   */
+  root2RiddlSource(root: RootAST): string;
 };
 
 /**

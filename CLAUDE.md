@@ -712,9 +712,8 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
     `gh pr merge --admin --merge --delete-branch=false` to bypass
     branch protection when merging development→main for releases
 45. **RiddlLib.ast2bast(root)** - Converts parsed AST to BAST
-    binary bytes. Shared trait returns `Array[Byte]`, JS facade
-    returns `Int8Array`. Uses BASTWriterPass internally. Test
-    verifies BAST magic header bytes
+    binary bytes. Returns `RiddlResult[Array[Byte]]` (shared) /
+    `RiddlResult<Int8Array>` (TS). Uses BASTWriterPass internally
 46. **Consumer update notes** - `RIDDL-UPDATE-NOTES.md` in
     synapify, riddl-mcp-server, ossum.ai covers 1.5.0 breaking
     change (opaque Root) and 1.7.0 new functions. Separate from
@@ -734,3 +733,11 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
     handlers. The parent-keyed overload fails because the
     resolution pass stores refs keyed under the OnMessageClause
     parent, not the adaptor's parent
+50. **RiddlResult[T] replaces Either[Messages, T]** — Sealed
+    ADT with `Success[T]` and `Failure` cases. All RiddlLib
+    methods that previously returned `Either` now return
+    `RiddlResult`. Use `result.toEither` for backward compat.
+    TypeScript: `RiddlResult<T>` (deprecated `ParseResult<T>`
+    alias kept). Lives in `RiddlResult.scala` alongside
+    `RiddlLib.scala`. `ast2bast` now surfaces errors via
+    `RiddlResult` instead of silently returning empty array
