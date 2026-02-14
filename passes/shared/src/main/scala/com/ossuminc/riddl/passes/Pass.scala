@@ -8,8 +8,8 @@ package com.ossuminc.riddl.passes
 
 import com.ossuminc.riddl.utils.*
 import com.ossuminc.riddl.language.AST.*
-import com.ossuminc.riddl.language.Messages
-import com.ossuminc.riddl.language.{AST, At, Contents, *}
+import com.ossuminc.riddl.language.{AST, At, Messages}
+import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.passes.PassCreator
 import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, ResolutionPass, Usages}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -743,8 +743,6 @@ object Pass {
     * @param passes
     *   The list of Pass construction functions to use to instantiate the passes and run them. The
     *   type
-    * @param log
-    *   The log to which messages are logged
     * @return
     *   A PassesResult which provides the individual
     */

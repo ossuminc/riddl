@@ -174,5 +174,52 @@ class SharedBASTTest extends AbstractTestingBasis {
           fail(s"BAST read failed: ${errs.format}")
       }
     }
+
+    "reject BAST with stale format revision" in {
+      import com.ossuminc.riddl.language.bast.{BinaryFormat, FORMAT_REVISION, HEADER_SIZE}
+
+      // First, produce valid BAST bytes via a round-trip
+      val domain = Domain(At(), Identifier(At(), "RevTest"), Contents(
+        Type(At(), Identifier(At(), "X"), String_(At()))
+      ))
+      val root = Root(At(), Contents(domain))
+      val passInput = PassInput(root)
+      val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+      val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+      val bastBytes = output.bytes.clone()
+
+      // Patch the format revision to 0 (stale, pre-check era)
+      // Format revision is at header offset 10-11 (after magic[4] + version[4] + flags[2])
+      bastBytes(10) = 0.toByte
+      bastBytes(11) = 0.toByte
+
+      BASTReader.read(bastBytes) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString
+          msg must include("format revision")
+          msg must include("regenerate")
+        case Right(_) =>
+          fail("Expected rejection of stale format revision")
+      }
+    }
+
+    "accept BAST with current format revision" in {
+      // Simple round-trip proves current revision is accepted
+      val domain = Domain(At(), Identifier(At(), "RevOK"), Contents(
+        Type(At(), Identifier(At(), "Y"), Bool(At()))
+      ))
+      val root = Root(At(), Contents(domain))
+      val passInput = PassInput(root)
+      val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+      val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+
+      BASTReader.read(output.bytes) match {
+        case Right(nebula: Nebula) =>
+          nebula.contents.toSeq.size mustBe 1
+          succeed
+        case Left(errs) =>
+          fail(s"BAST read should accept current format revision: ${errs.format}")
+      }
+    }
   }
 }
