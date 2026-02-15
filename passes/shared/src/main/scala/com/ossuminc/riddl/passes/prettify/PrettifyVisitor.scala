@@ -81,7 +81,8 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def closeUseCase(useCase: UseCase, parents: Parents): Unit =
     state.withCurrent { (rfe: RiddlFileEmitter) =>
-      rfe.decr.addLine("}")
+      rfe.decr.addIndent("}")
+      rfe.emitMetaData(useCase.metadata)
     }
   end closeUseCase
 
@@ -98,7 +99,12 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     }
   end closeFunction
 
-  def openSaga(saga: Saga, parents: Parents): Unit = open(saga)
+  def openSaga(saga: Saga, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      rfe.openDef(saga)
+      saga.input.foreach(te => rfe.addIndent("requires ").emitAggregation(te))
+      saga.output.foreach(te => rfe.addIndent("returns  ").emitAggregation(te))
+    }
   def closeSaga(saga: Saga, parents: Parents): Unit = close(saga)
 
   def openStreamlet(streamlet: Streamlet, parents: Parents): Unit = open(streamlet)
@@ -187,7 +193,8 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         .addIndent(s"email = ${author.email.format}\n")
       author.organization.map(org => rfe.addIndent(s"organization =${org.format}\n"))
       author.title.map(title => rfe.addIndent(s"title = ${title.format}\n"))
-      rfe.decr.addIndent("}").nl
+      rfe.decr.addIndent("}")
+      rfe.emitMetaData(author.metadata)
     }
   end doAuthor
 
@@ -209,11 +216,11 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def doSagaStep(sagaStep: SagaStep): Unit =
     state.withCurrent { rfe =>
       rfe
-        .openDef(sagaStep)
+        .openDef(sagaStep, withBrace = false)
         .emitCodeBlock(sagaStep.doStatements.toSeq)
-        .add("reverted by")
+        .addIndent("reverted by")
         .emitCodeBlock(sagaStep.undoStatements.toSeq)
-        .closeDef(sagaStep)
+      rfe.emitMetaData(sagaStep.metadata)
     }
   end doSagaStep
 
@@ -339,15 +346,48 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def doInteraction(interaction: Interaction): Unit =
     state.withCurrent { rfe =>
       interaction match
-        case _: SequentialInteractions  => () // TODO: implement
-        case _: ParallelInteractions    => () // TODO: implement
-        case _: OptionalInteractions    => () // TODO: implement
-        case _: TwoReferenceInteraction => () // TODO: implement
-        case _: GenericInteraction      => () // TODO: implement
+        case si: SequentialInteractions =>
+          rfe.addIndent("sequence {").nl.incr
+          emitInteractionContents(si.contents)
+          rfe.decr.addIndent("}")
+        case pi: ParallelInteractions =>
+          rfe.addIndent("parallel {").nl.incr
+          emitInteractionContents(pi.contents)
+          rfe.decr.addIndent("}")
+        case oi: OptionalInteractions =>
+          rfe.addIndent("optional {").nl.incr
+          emitInteractionContents(oi.contents)
+          rfe.decr.addIndent("}")
+        case vi: VagueInteraction =>
+          rfe.addIndent(s"step is ${vi.from.format} ${vi.relationship.format} ${vi.to.format}")
+        case smi: SendMessageInteraction =>
+          rfe.addIndent(s"step send ${smi.message.format} from ${smi.from.format} to ${smi.to.format}")
+        case ai: ArbitraryInteraction =>
+          rfe.addIndent(s"step from ${ai.from.format} ${ai.relationship.format} to ${ai.to.format}")
+        case si: SelfInteraction =>
+          rfe.addIndent(s"step for ${si.from.format} is ${si.relationship.format}")
+        case fi: FocusOnGroupInteraction =>
+          rfe.addIndent(s"step focus ${fi.from.format} on ${fi.to.format}")
+        case du: DirectUserToURLInteraction =>
+          rfe.addIndent(s"step direct ${du.from.format} to ${du.url.toExternalForm}")
+        case so: ShowOutputInteraction =>
+          rfe.addIndent(s"step show ${so.from.format} to ${so.to.format}")
+        case si: SelectInputInteraction =>
+          rfe.addIndent(s"step ${si.from.format} selects ${si.to.format}")
+        case ti: TakeInputInteraction =>
+          rfe.addIndent(s"step take ${ti.to.format} from ${ti.from.format}")
       end match
       rfe.emitMetaData(interaction.metadata)
+      if interaction.metadata.isEmpty then rfe.nl
     }
   end doInteraction
+
+  private def emitInteractionContents(contents: Contents[InteractionContainerContents]): Unit =
+    contents.toSeq.foreach {
+      case i: Interaction => doInteraction(i)
+      case c: Comment     => doComment(c)
+    }
+  end emitInteractionContents
 
   def doOptionValue(option: OptionValue): Unit =
     state.withCurrent { rfe =>
