@@ -174,7 +174,7 @@ jobs:
     - name: Dispatch formula update to homebrew-tap
       uses: peter-evans/repository-dispatch@v3
       with:
-        token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        token: ${{ secrets.HOMEBREW_TAP_SECRET }}
         repository: ossuminc/homebrew-tap
         event-type: update-formula
         client-payload: >-
