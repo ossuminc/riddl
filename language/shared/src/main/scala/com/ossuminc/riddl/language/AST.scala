@@ -2634,7 +2634,7 @@ object AST:
     contents: Contents[Statements] = Contents.empty[Statements](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
   ) extends OnClause {
-    def id: Identifier = Identifier(loc, s"pther")
+    def id: Identifier = Identifier(loc, s"other")
 
     override def kind: String = "On Other"
 

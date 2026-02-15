@@ -89,7 +89,11 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
       case bd: BlockDescription =>
         addLine("described as {")
         incr
-        bd.lines.foreach { line => addIndent("|").add(line.s).nl }
+        bd.lines.foreach { line =>
+          line.s.split("\n").foreach { part =>
+            addIndent("|").add(part).nl
+          }
+        }
         decr
         addLine("}")
       case URLDescription(_, url) =>
