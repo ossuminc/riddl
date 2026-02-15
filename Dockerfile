@@ -12,21 +12,28 @@ RUN curl -fsSL https://github.com/sbt/sbt/releases/download/v1.10.7/sbt-1.10.7.t
     tar xz -C /opt && \
     ln -s /opt/sbt/bin/sbt /usr/local/bin/sbt
 
+# GitHub Packages credentials for sbt-ossuminc plugin
+ARG GITHUB_TOKEN
+
 # Set working directory
 WORKDIR /app
+
+# Configure sbt GitHub Packages credentials
+RUN mkdir -p /root/.sbt/1.0 && \
+    echo 'credentials += Credentials("GitHub Package Registry", "maven.pkg.github.com", "x-access-token", sys.env.getOrElse("GITHUB_TOKEN", ""))' > /root/.sbt/1.0/github.sbt
 
 # Copy project files for sbt dependency resolution (cached layer)
 COPY project/build.properties project/plugins.sbt project/Dependencies.scala project/
 COPY build.sbt ./
 
 # Pre-fetch dependencies (this layer is cached if build files don't change)
-RUN sbt --batch update
+RUN GITHUB_TOKEN=${GITHUB_TOKEN} sbt --batch update
 
 # Copy source code
 COPY . .
 
 # Build the universal package
-RUN sbt --batch riddlc/Universal/stage
+RUN GITHUB_TOKEN=${GITHUB_TOKEN} sbt --batch riddlc/Universal/stage
 
 # Stage 2: Create custom JRE with jlink
 FROM eclipse-temurin:25-jdk-alpine AS jre-builder
