@@ -750,3 +750,12 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
     alias kept). Lives in `RiddlResult.scala` alongside
     `RiddlLib.scala`. `ast2bast` now surfaces errors via
     `RiddlResult` instead of silently returning empty array
+51. **Homebrew formula updates via repository_dispatch** —
+    `release.yml` no longer checks out homebrew-tap directly.
+    Instead it sends a `repository_dispatch` event with version
+    and SHA256 hashes to `ossuminc/homebrew-tap`, which has its
+    own `update-formula.yml` workflow. Requires `HOMEBREW_TAP_TOKEN`
+    secret (fine-grained PAT with Contents read/write on
+    homebrew-tap). The formula heredoc uses quoted delimiter
+    (`<< 'FORMULA'`) + `envsubst` to avoid bash expanding Ruby
+    `$@` and `#{...}` interpolations

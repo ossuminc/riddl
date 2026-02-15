@@ -248,21 +248,91 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ---
 
-## Changes Since v1.10.0
+## Changes Since v1.10.1
 
-- Fixed Dockerfile `Dep.scala` → `Dependencies.scala` reference
-- Dropped deprecated `macos-13` x86_64 from release.yml (GitHub
-  retired the runner; Intel Macs fall back to JVM version)
-- Updated generated Homebrew formula in release.yml to match
-  actual homebrew-tap structure
-- Added `/release` skill (`.claude/skills/release/SKILL.md`)
-- Updated CLAUDE.md notes #30, #31 for dropped x86_64 target
-- Updated `../CLAUDE.md` with workflow discipline rules from
-  insights analysis (scope discipline, single-purpose commits,
-  post-commit verification, publish-from-main, GITHUB_TOKEN
-  caveat, dependency locality)
+- Replaced `update-homebrew` job in `release.yml` with
+  `repository_dispatch` to decouple riddl from homebrew-tap
+  (no more cross-repo checkout/push with GITHUB_TOKEN)
 
 ## Session Log
+
+### February 14, 2026 (Homebrew Dispatch Automation)
+
+**Focus**: Fix `update-homebrew` job in `release.yml` which
+failed with 404 because `GITHUB_TOKEN` can't access cross-repo
+`ossuminc/homebrew-tap`.
+
+**Work Completed**:
+1. **Replaced `update-homebrew` job** in `release.yml` — removed
+   direct checkout/push to homebrew-tap, replaced with
+   `peter-evans/repository-dispatch@v3` sending `update-formula`
+   event with version + SHA256 hashes. Uses `HOMEBREW_TAP_TOKEN`
+   (fine-grained PAT scoped to homebrew-tap, Contents read/write)
+2. **Created `update-formula.yml`** in `homebrew-tap` — triggered
+   by `repository_dispatch`, extracts payload, generates formula
+   via `envsubst` + quoted heredoc, commits and pushes
+3. **Fixed heredoc expansion bug** — unquoted `<< FORMULA` caused
+   bash to expand `$@` and Ruby `#{...}` interpolations. Fixed
+   with `<< 'FORMULA'` + `envsubst '$TAG $SHA_MACOS_ARM64 ...'`
+4. **End-to-end test** — manually dispatched with 1.10.1 hashes,
+   confirmed formula updated correctly in homebrew-tap
+
+**PAT Setup**: Fine-grained token `homebrew-tap-dispatch` scoped
+to `ossuminc/homebrew-tap` with Contents read/write. Added as
+`HOMEBREW_TAP_TOKEN` in riddl repo secrets.
+
+**Files Modified**:
+- `.github/workflows/release.yml` (riddl)
+
+**Cross-project files**:
+- `homebrew-tap/.github/workflows/update-formula.yml` (created)
+
+---
+
+### February 14, 2026 (PrettifyPass Bug Fixes & Release 1.10.1)
+
+**Focus**: Fix 6 PrettifyPass bugs preventing RIDDL round-trip
+via `riddlc unbastify`, then release.
+
+**Work Completed**:
+1. **Bug A: Interactions unimplemented** — Implemented all 12
+   interaction types in `doInteraction()` (was all TODO stubs).
+   Container types (sequential/parallel/optional) recurse via
+   `emitInteractionContents()`. Step types emit parser-correct
+   syntax (`step send`, `step focus`, `step for`, etc.)
+2. **Bug B: Saga requires/returns dropped** — `openSaga()` now
+   emits `requires`/`returns` clauses following `openFunction()`
+   pattern
+3. **Bug C: SagaStep double-braced** — Changed to
+   `openDef(sagaStep, withBrace = false)` so `emitCodeBlock`
+   handles the brace, not both
+4. **Bug D: Currency parameter lost** — Added specific
+   `Currency(country)` case before generic `PredefinedType` in
+   `emitTypeExpression`. Changed generic from `p.kind` to
+   `p.format`
+5. **Bug E: Author metadata dropped** — Added
+   `emitMetaData(author.metadata)` call in `doAuthor()`
+6. **Bug F: UseCase metadata dropped** — Added
+   `emitMetaData(useCase.metadata)` call in `closeUseCase()`
+7. **Released 1.10.1** — Tagged, published all modules (JVM, JS,
+   Native) to GitHub Packages, created GitHub release, merged
+   back to development
+
+**Release Process Learnings**:
+- `unset GITHUB_TOKEN` is only for `gh` commands, NOT for sbt
+  (sbt needs it for GitHub Packages resolution)
+- Always `git pull` before merging when switching branches
+- When recommending semver versions, check ALL tags first
+  (`git tag --sort=-v:refname`) and present a recommendation
+
+**Test Results**: 270 passes tests, all pass.
+
+**Files Modified**:
+- `passes/shared/.../prettify/PrettifyVisitor.scala` — bugs
+  A, B, C, E, F
+- `passes/shared/.../prettify/RiddlFileEmitter.scala` — bug D
+
+---
 
 ### February 14, 2026 (CI Fixes & Insights)
 
@@ -1819,4 +1889,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.10.0 (February 14, 2026)
+**Latest release**: 1.10.1 (February 14, 2026)

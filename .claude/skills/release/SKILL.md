@@ -7,9 +7,13 @@ report the problem.
 ## Arguments
 
 The user should provide a version number (e.g., `1.10.1`). If
-not provided, analyze changes since the last tag and recommend
-a version bump per semver (MAJOR/MINOR/PATCH), then wait for
-the user to confirm.
+not provided:
+1. Run `git tag --sort=-v:refname | head -5` to find the
+   actual latest tag (not just reachable from current branch)
+2. Run `git log --oneline <latest-tag>..HEAD` to see changes
+3. Analyze per semver and **recommend** a version (don't ask
+   the user to choose — present your recommendation and let
+   them confirm or override)
 
 ## Pre-Flight Checks
 
@@ -27,12 +31,17 @@ the user to confirm.
    If dirty, list the uncommitted files and ask the user how
    to proceed.
 
-3. Unset GITHUB_TOKEN to avoid auth conflicts:
+3. **GITHUB_TOKEN handling**: Do NOT `unset GITHUB_TOKEN`
+   globally — sbt needs it for GitHub Packages resolution.
+   Only unset it immediately before `gh` commands:
    ```
-   unset GITHUB_TOKEN
+   unset GITHUB_TOKEN && gh release create ...
    ```
 
-4. Verify the version tag does not already exist:
+4. When switching to `main`, always `git pull` first to
+   ensure local main is up to date with origin.
+
+5. Verify the version tag does not already exist:
    ```
    git tag -l <VERSION>
    ```
