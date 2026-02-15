@@ -754,8 +754,17 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
     `release.yml` no longer checks out homebrew-tap directly.
     Instead it sends a `repository_dispatch` event with version
     and SHA256 hashes to `ossuminc/homebrew-tap`, which has its
-    own `update-formula.yml` workflow. Requires `HOMEBREW_TAP_TOKEN`
-    secret (fine-grained PAT with Contents read/write on
-    homebrew-tap). The formula heredoc uses quoted delimiter
-    (`<< 'FORMULA'`) + `envsubst` to avoid bash expanding Ruby
-    `$@` and `#{...}` interpolations
+    own `update-formula.yml` workflow. Requires
+    `HOMEBREW_TAP_SECRET` repo secret (fine-grained PAT with
+    Contents read/write on homebrew-tap). The formula heredoc
+    uses quoted delimiter (`<< 'FORMULA'`) + `envsubst` to
+    avoid bash expanding Ruby `$@` and `#{...}` interpolations
+52. **sbt-dynver requires clean working tree for releases** —
+    Dirty files (even unstaged) cause sbt-dynver to produce
+    snapshot versions like `X.Y.Z-0-hash-date` instead of
+    clean `X.Y.Z`. Always `git stash` modified files before
+    `sbt publish` when on a release tag
+53. **Release skill secret name** — The homebrew-tap dispatch
+    secret is `HOMEBREW_TAP_SECRET` (not `HOMEBREW_TAP_TOKEN`).
+    If the dispatch fails with "Parameter token or opts.auth
+    is required", the secret name is wrong or missing

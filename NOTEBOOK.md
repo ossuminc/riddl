@@ -248,13 +248,50 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
 
 ---
 
-## Changes Since v1.10.1
+## Changes Since v1.10.2
 
-- Replaced `update-homebrew` job in `release.yml` with
-  `repository_dispatch` to decouple riddl from homebrew-tap
-  (no more cross-repo checkout/push with GITHUB_TOKEN)
+- Fixed `on pther` typo in `OnOtherClause.id` (AST.scala)
+- Fixed missing `|` prefix on continuation lines in
+  `emitDescription` (RiddlFileEmitter.scala)
+- Fixed `HOMEBREW_TAP_TOKEN` → `HOMEBREW_TAP_SECRET` in
+  `release.yml` dispatch step
 
 ## Session Log
+
+### February 14, 2026 (Release 1.10.2 — Unbastify Bug Fixes)
+
+**Focus**: Fix two PrettifyPass bugs from unbastify round-trip
+testing, then release 1.10.2.
+
+**Work Completed**:
+1. **Fixed `on pther` typo** — `OnOtherClause.id` in AST.scala
+   had `s"pther"` instead of `s"other"`, causing `on pther is`
+   output in unbastified RIDDL
+2. **Fixed missing `|` on description continuation lines** —
+   `emitDescription()` in RiddlFileEmitter.scala now splits
+   `LiteralString.s` on embedded newlines and emits each
+   fragment with its own `|` prefix
+3. **Released 1.10.2** — Tagged, published all modules (JVM, JS,
+   Native) to GitHub Packages, created GitHub release
+4. **Fixed homebrew dispatch secret mismatch** — `release.yml`
+   referenced `HOMEBREW_TAP_TOKEN` but the repo secret is named
+   `HOMEBREW_TAP_SECRET`. Manually dispatched to homebrew-tap
+   to update formula for 1.10.2
+
+**Release Process Learnings**:
+- Dirty working tree causes sbt-dynver to produce snapshot
+  versions even when on a tag — must `git stash` before publish
+- Secret names matter: always verify with `gh secret list`
+
+**Test Results**: All tests pass across all modules.
+
+**Files Modified**:
+- `language/shared/.../AST.scala` — `pther` → `other`
+- `passes/shared/.../prettify/RiddlFileEmitter.scala` — split
+  multiline descriptions
+- `.github/workflows/release.yml` — secret name fix
+
+---
 
 ### February 14, 2026 (Homebrew Dispatch Automation)
 
@@ -1889,4 +1926,4 @@ Tool(
 ## Git Information
 
 **Branch**: `development`
-**Latest release**: 1.10.1 (February 14, 2026)
+**Latest release**: 1.10.2 (February 14, 2026)
