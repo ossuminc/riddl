@@ -3978,7 +3978,7 @@ object AST:
     * @param root
     *   The model's [[AST.Root]] node.
     * @return
-    *   A Seq of [[AST.Domain]]s as a [[AST.Contents]] extension
+    *   A Seq of [[AST.Domain]]s including those in [[AST.Include]]s
     */
   @JSExport
   def getTopLevelDomains(root: Root): Seq[Domain] = {
@@ -3989,7 +3989,7 @@ object AST:
     * @param domain
     *   The parent [[AST.Domain]] whose subdomains will be returned
     * @return
-    *   The subdomains of the provided domain as a [[AST.Contents]] extension
+    *   The subdomains of the provided domain including those in [[AST.Include]]s
     */
   @JSExport
   def getDomains(domain: Domain): Seq[Domain] = {
@@ -4007,7 +4007,7 @@ object AST:
     * @param domain
     *   The domain whose contexts should be returned
     * @return
-    *   A Seq of Context expressed as a [[AST.Contents]] extension
+    *   A Seq of Context expressed including those in [[AST.Include]]s
     */
   @JSExport
   def getContexts(domain: Domain): Seq[Context] = {
@@ -4019,7 +4019,7 @@ object AST:
     * @param domain
     *   The domain to examine for epics
     * @return
-    *   A [[scala.Seq]] of [[AST.Epic]] expressed as a [[AST.Contents]] extension
+    *   A [[scala.Seq]] of [[AST.Epic]] expressed including those in [[AST.Include]]s
     */
   @JSExport
   def getEpics(domain: Domain): Seq[Epic] = {
@@ -4031,19 +4031,19 @@ object AST:
     * @param context
     *   The domain to examine for entities
     * @return
-    *   A Seq of [[AST.Entity]] expressed as a [[AST.Contents]] extension
+    *   A Seq of [[AST.Entity]] expressed including those in [[AST.Include]]s
     */
   @JSExport
   def getEntities(context: Context): Seq[Entity] = {
     context.entities ++ context.includes.flatMap(_.contents.filter[Entity])
   }
 
-  /** get all the authors defined in a domain even if they are in includes of that domain
+  /** Get all the authors defined in a domain even if they are in includes of that domain
     *
     * @param domain
     *   The domain to examine for authors
     * @return
-    *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
+    *   A Seq of [[AST.Author]] from the domain and nested domains
     */
   @JSExport
   def getAuthors(domain: Domain): Seq[Author] = {
@@ -4051,24 +4051,24 @@ object AST:
     domain.authors ++ domain.domains.flatMap(getAuthors) ++ nested
   }
 
-  /** get all the authors defined in the root node even if they are in includes
+  /** Get all the authors defined in the root node even if they are in includes
     *
     * @param root
-    *   The domain to examine for entities
+    *   The root to examine for authors
     * @return
-    *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
+    *   A Seq of [[AST.Author]] from all domains
     */
   @JSExport
   def getAuthors(root: Root): Seq[Author] = {
     root.domains.flatMap(getAuthors)
   }
 
-  /** get all the [[Author]]s defined in a [[Domain]] node even if they are in includes
+  /** Get all the [[User]]s defined in a [[Domain]] node even if they are in includes
     *
     * @param domain
-    *   The domain to examine for entities
+    *   The domain to examine for users
     * @return
-    *   A Seq of [[AST.Author]] expressed as a [[AST.Contents]] extension
+    *   A Seq of [[AST.User]] from the domain and nested domains
     */
   @JSExport
   def getUsers(domain: Domain): Seq[User] = {
@@ -4080,7 +4080,7 @@ object AST:
     * @param root
     *   The [[AST.Root]] node to examine
     * @return
-    *   A Seq of [[AST.User]] expressed as a [[AST.Contents]] extension
+    *   A Seq of [[AST.User]] from all domains and root-level includes
     */
   @JSExport
   def getUsers(root: Root): Seq[User] = {
