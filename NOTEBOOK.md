@@ -6,12 +6,20 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 16, 2026
+**Last Updated**: February 16, 2026 (afternoon)
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS
 default due to compiler infinite loop bug with opaque
 types/intersection types in 3.3.x). All workflow paths updated
 to `scala-3.7.4`.
+
+**Release 1.11.0 Published**: Scala.js validation performance
+improvements and new APIs. ParentStack caching (Phase 0),
+ValidationPass micro-optimizations (Phase 1),
+`validateStringQuick()` (Phase 2), `IncrementalValidator`
+(Phase 3). Also: ScalaDoc fixes, sbt 1.12.1, sbt-ossuminc
+1.3.3 (npm publishLocal support). All tests pass on all
+platforms. Published to GitHub Packages.
 
 **Release 1.7.0 Published**: Analysis passes, validation
 enhancements, diagram extensions. Committed in 7 cohesive
@@ -275,6 +283,65 @@ The `pseudoCodeBlock` parser now allows comments before and/or after `???`:
   `release.yml` dispatch step
 
 ## Session Log
+
+### February 16, 2026 (Release 1.11.0 — Performance & APIs)
+
+**Focus**: Implement 4-phase Scala.js validation performance
+plan, fix ScalaDoc warnings, upgrade build tooling, add npm
+publishLocal to sbt-ossuminc, tag and publish 1.11.0.
+
+**Work Completed**:
+1. **Phase 0: ParentStack caching** — Replaced `ParentStack`
+   type alias with wrapper class caching `toSeq` result,
+   invalidated on push/pop. Fixes O(N*D) allocations
+2. **Phase 1: ValidationPass micro-optimizations** — Added
+   `recursiveFindByType` cache to Finder, `walkStatements`
+   helper, single-pass handler classification, combined
+   SagaStep validation
+3. **Phase 2: `validateStringQuick()`** — Added
+   `ValidationMode` enum (Full/Quick) gating expensive
+   postProcess checks. New API in RiddlLib + JS facade
+4. **Phase 3: `IncrementalValidator`** — Context-level
+   fingerprinting (FNV-1a 64-bit) with message caching.
+   New files: `ContextFingerprint.scala`,
+   `IncrementalValidator.scala`
+5. **ScalaDoc fixes** — Fixed 9 broken `[[AST.Contents]]`
+   links in AST.scala
+6. **sbt-ossuminc 1.3.3** — Added `npmPublishLocal` task
+   that hooks into `publishLocal`, producing npm `.tgz`
+   automatically. Modified `NpmPackaging.scala` in
+   sbt-ossuminc repo
+7. **Build upgrades** — sbt 1.12.1, sbt-ossuminc 1.3.3
+8. **Released 1.11.0** — Tagged, all tests pass, published
+   all modules (JVM, JS, Native) to GitHub Packages
+
+**Key Technical Notes**:
+- `Contents[?]` opaque type extensions need concrete type
+  parameters, wildcards don't work
+- `AST.Set` shadows `scala.collection.immutable.Set` with
+  wildcard imports — use selective imports
+- FNV-1a 64-bit hash chosen for cross-platform compat (no
+  `java.security.MessageDigest` in Scala.js)
+
+**Files Created**:
+- `passes/shared/.../ContextFingerprint.scala`
+- `passes/shared/.../IncrementalValidator.scala`
+
+**Files Modified**:
+- `language/shared/.../AST.scala` — ParentStack class +
+  ScalaDoc fixes
+- `language/shared/.../Finder.scala` — recursive cache
+- `passes/shared/.../Pass.scala` — `quickValidationPasses`
+- `passes/shared/.../validate/ValidationPass.scala` —
+  ValidationMode, walkStatements, optimizations
+- `passes/jvm-native/.../PassTest.scala` — ParentStack API
+- `riddlLib/shared/.../RiddlLib.scala` — new API methods
+- `riddlLib/js/.../RiddlAPI.scala` — JS facades
+- `riddlLib/js/types/index.d.ts` — TS declarations
+- `project/plugins.sbt` — sbt-ossuminc 1.3.3
+- `project/build.properties` — sbt 1.12.1
+
+---
 
 ### February 14, 2026 (Release 1.10.2 — Unbastify Bug Fixes)
 

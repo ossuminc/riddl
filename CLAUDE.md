@@ -801,3 +801,13 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
     Statement => Unit)` recursively walks Contents descending
     into WhenStatement/MatchStatement nesting. Use instead of
     creating Finder instances for statement counting/searching
+60. **sbt-ossuminc 1.3.3 adds npmPublishLocal** — Projects
+    using `With.Packaging.npm()` now automatically produce an
+    npm `.tgz` and copy it to
+    `~/.ivy2/local/npm/<scope>/<name>/<version>/` when
+    `publishLocal` runs. No extra configuration needed
+61. **sbt version is 1.12.1** — Updated from 1.12.0 in
+    `project/build.properties`
+62. **Current release is 1.11.0** — Minor release adding
+    `validateStringQuick()`, `IncrementalValidator` APIs,
+    ParentStack caching, and ValidationPass optimizations
