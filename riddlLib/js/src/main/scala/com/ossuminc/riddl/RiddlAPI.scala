@@ -9,7 +9,7 @@ package com.ossuminc.riddl
 import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
-import com.ossuminc.riddl.passes.{OutlineEntry, TreeNode}
+import com.ossuminc.riddl.passes.{IncrementalValidator, OutlineEntry, TreeNode}
 import com.ossuminc.riddl.passes.validate.{BehaviorCategory, HandlerCompleteness}
 import com.ossuminc.riddl.passes.analysis.{MessageFlowOutput, MessageFlowEdge, FlowMechanism, EntityLifecycle, StateTransition}
 import com.ossuminc.riddl.utils.{CommonOptions, DOMPlatformContext, PlatformContext, URL}
@@ -324,6 +324,67 @@ object RiddlAPI {
       )
     )
   end validateString
+
+  /** Parse and validate RIDDL source using quick mode.
+    * Skips expensive streaming and handler classification
+    * checks for faster interactive feedback.
+    */
+  @JSExport("validateStringQuick")
+  def validateStringQuick(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false,
+    noANSIMessages: Boolean = true
+  ): js.Dynamic =
+    val vr = RiddlLib.validateStringQuick(
+      source, origin, verbose, noANSIMessages
+    )
+    js.Dynamic.literal(
+      succeeded = vr.succeeded,
+      parseErrors = formatMessagesAsArray(vr.parseErrors),
+      validationMessages = js.Dynamic.literal(
+        errors = formatMessagesAsArray(vr.errors),
+        warnings = formatMessagesAsArray(vr.warnings),
+        info = formatMessagesAsArray(vr.info),
+        all = formatMessagesAsArray(vr.all)
+      )
+    )
+  end validateStringQuick
+
+  /** Create an IncrementalValidator for efficient repeated
+    * validation. The validator caches results at the Context
+    * level, re-validating only changed Contexts on subsequent
+    * calls.
+    */
+  @JSExport("createIncrementalValidator")
+  def createIncrementalValidator(): IncrementalValidator =
+    RiddlLib.createIncrementalValidator()
+  end createIncrementalValidator
+
+  /** Validate using an IncrementalValidator. Parses the
+    * source, then uses cached results for unchanged Contexts.
+    */
+  @JSExport("validateIncremental")
+  def validateIncremental(
+    validator: IncrementalValidator,
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    val vr = RiddlLib.validateIncremental(
+      validator, source, origin, verbose
+    )
+    js.Dynamic.literal(
+      succeeded = vr.succeeded,
+      parseErrors = formatMessagesAsArray(vr.parseErrors),
+      validationMessages = js.Dynamic.literal(
+        errors = formatMessagesAsArray(vr.errors),
+        warnings = formatMessagesAsArray(vr.warnings),
+        info = formatMessagesAsArray(vr.info),
+        all = formatMessagesAsArray(vr.all)
+      )
+    )
+  end validateIncremental
 
   /** Create a custom platform context with specific
     * options.

@@ -462,6 +462,43 @@ export declare const RiddlAPI: {
   ): ValidationResult;
 
   /**
+   * Quick validation — skips expensive streaming analysis
+   * and handler classification. Messages are a strict subset
+   * of full validation. Use for interactive/LSP feedback.
+   */
+  validateStringQuick(
+    source: string,
+    origin?: string,
+    verbose?: boolean,
+    noANSIMessages?: boolean
+  ): ValidationResult;
+
+  /**
+   * Opaque handle to an IncrementalValidator.
+   * Created by `createIncrementalValidator()`.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+  interface IncrementalValidator { readonly __brand: unique symbol }
+
+  /**
+   * Create an IncrementalValidator for efficient repeated
+   * validation. Caches results at the Context level,
+   * re-validating only changed Contexts on subsequent calls.
+   */
+  createIncrementalValidator(): IncrementalValidator;
+
+  /**
+   * Validate using an IncrementalValidator. Parses the source,
+   * then uses cached results for unchanged Contexts.
+   */
+  validateIncremental(
+    validator: IncrementalValidator,
+    source: string,
+    origin?: string,
+    verbose?: boolean
+  ): ValidationResult;
+
+  /**
    * Create a custom platform context with specific options.
    *
    * @param showTimes - Enable timing information in output

@@ -19,10 +19,23 @@ import com.ossuminc.riddl.utils.*
 import scala.collection.mutable
 import scala.collection.immutable.Seq
 
+/** Controls which validation checks are performed.
+  * - Full: all checks including streaming analysis and handler
+  *   classification (suitable for CI/final validation)
+  * - Quick: skips expensive postProcess checks for faster
+  *   interactive feedback (suitable for JS/LSP)
+  */
+enum ValidationMode:
+  case Full, Quick
+end ValidationMode
+
 object ValidationPass extends PassInfo[PassOptions] {
   val name: String = "Validation"
   def creator(options: PassOptions = PassOptions.empty)(using PlatformContext): PassCreator = {
     (in: PassInput, out: PassesOutput) => ValidationPass(in, out)
+  }
+  def quickCreator(options: PassOptions = PassOptions.empty)(using PlatformContext): PassCreator = {
+    (in: PassInput, out: PassesOutput) => ValidationPass(in, out, ValidationMode.Quick)
   }
 }
 
@@ -35,7 +48,8 @@ object ValidationPass extends PassInfo[PassOptions] {
   */
 case class ValidationPass(
   input: PassInput,
-  outputs: PassesOutput
+  outputs: PassesOutput,
+  mode: ValidationMode = ValidationMode.Full
 )(using PlatformContext)
     extends Pass(input, outputs)
     with StreamingValidation {
@@ -76,8 +90,10 @@ case class ValidationPass(
 
   override def postProcess(root: PassRoot): Unit = {
     checkOverloads()
-    checkStreaming(root)
-    computedHandlerCompleteness = classifyHandlers()
+    if mode == ValidationMode.Full then
+      checkStreaming(root)
+      computedHandlerCompleteness = classifyHandlers()
+    end if
   }
 
   def process(value: RiddlValue, parents: ParentStack): Unit = {
@@ -987,16 +1003,20 @@ case class ValidationPass(
       s.errorLoc
     )
     if s.doStatements.nonEmpty && s.undoStatements.nonEmpty then {
-      val doFinder = Finder(s.doStatements)
-      val undoFinder = Finder(s.undoStatements)
-      val doTellTargets = doFinder.recursiveFindByType[TellStatement].map(_.processorRef.pathId.format).toSet
-      val doSendTargets = doFinder.recursiveFindByType[SendStatement].map(_.portlet.pathId.format).toSet
-      val doTargets = doTellTargets ++ doSendTargets
+      val doTargets = mutable.Set.empty[String]
+      walkStatements(s.doStatements) {
+        case t: TellStatement => doTargets += t.processorRef.pathId.format
+        case snd: SendStatement => doTargets += snd.portlet.pathId.format
+        case _ => ()
+      }
       if doTargets.nonEmpty then {
-        val undoTellTargets = undoFinder.recursiveFindByType[TellStatement].map(_.processorRef.pathId.format).toSet
-        val undoSendTargets = undoFinder.recursiveFindByType[SendStatement].map(_.portlet.pathId.format).toSet
-        val undoTargets = undoTellTargets ++ undoSendTargets
-        val uncompensated = doTargets -- undoTargets
+        val undoTargets = mutable.Set.empty[String]
+        walkStatements(s.undoStatements) {
+          case t: TellStatement => undoTargets += t.processorRef.pathId.format
+          case snd: SendStatement => undoTargets += snd.portlet.pathId.format
+          case _ => ()
+        }
+        val uncompensated = doTargets.toSet -- undoTargets
         if uncompensated.nonEmpty then
           messages.add(
             Messages.style(
@@ -1250,6 +1270,26 @@ case class ValidationPass(
     }
   }
 
+  /** Recursively walk all statements in a contents collection,
+    * descending into nested statement containers (WhenStatement,
+    * MatchStatement). Calls `f` on each Statement encountered.
+    */
+  private def walkStatements[CV <: RiddlValue](contents: Contents[CV])(f: Statement => Unit): Unit =
+    contents.foreach {
+      case s: Statement =>
+        f(s)
+        s match
+          case WhenStatement(_, _, thenStatements, elseStatements, _) =>
+            walkStatements(thenStatements)(f)
+            walkStatements(elseStatements)(f)
+          case MatchStatement(_, _, cases, default) =>
+            cases.foreach(mc => walkStatements(mc.statements)(f))
+            walkStatements(default)(f)
+          case _ => ()
+      case _ => () // skip Comments
+    }
+  end walkStatements
+
   /** Classify all collected handlers by behavioral completeness.
     * A handler is:
     *   - Executable: has at least one executable statement
@@ -1259,25 +1299,19 @@ case class ValidationPass(
     */
   private def classifyHandlers(): Seq[HandlerCompleteness] = {
     handlerParents.toSeq.map { case (handler, parent) =>
-      val finder = Finder(handler.contents)
-      val allStatements = handler.clauses.flatMap { clause =>
-        Finder(clause.contents).recursiveFindByType[Statement]
-      }
+      var executableCount = 0
+      var promptCount = 0
 
-      val executableCount = allStatements.count {
-        case _: TellStatement   => true
-        case _: SendStatement   => true
-        case _: MorphStatement  => true
-        case _: SetStatement    => true
-        case _: BecomeStatement => true
-        case _: ErrorStatement  => true
-        case _: CodeStatement   => true
-        case _                  => false
-      }
-
-      val promptCount = allStatements.count {
-        case _: PromptStatement => true
-        case _                 => false
+      handler.clauses.foreach { clause =>
+        walkStatements(clause.contents) {
+          case _: TellStatement | _: SendStatement | _: MorphStatement |
+               _: SetStatement | _: BecomeStatement | _: ErrorStatement |
+               _: CodeStatement =>
+            executableCount += 1
+          case _: PromptStatement =>
+            promptCount += 1
+          case _ => ()
+        }
       }
 
       val totalClauses = handler.clauses.size

@@ -768,3 +768,36 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
     secret is `HOMEBREW_TAP_SECRET` (not `HOMEBREW_TAP_TOKEN`).
     If the dispatch fails with "Parameter token or opts.auth
     is required", the secret name is wrong or missing
+54. **ParentStack is now a class, not a type alias** — As of
+    Feb 2026, `ParentStack` is a `final class` wrapping
+    `mutable.Stack[Branch[?]]` with cached `toParents`. Code
+    that used `mutable.Stack.empty` for ParentStack must use
+    `ParentStack.empty`. Same API: push, pop, toParents, head,
+    headOption, top, isEmpty, nonEmpty, size, find
+55. **ValidationMode enum** — `ValidationPass` accepts a `mode`
+    parameter (`Full` or `Quick`). Quick skips `checkStreaming`
+    and `classifyHandlers` in postProcess. Use
+    `Pass.quickValidationPasses` or
+    `ValidationPass.quickCreator()` for interactive validation
+56. **IncrementalValidator** — Stateful validator in
+    `passes/shared/.../IncrementalValidator.scala`. Caches
+    messages per-Context using FNV-1a fingerprints. API:
+    `createIncrementalValidator()` and
+    `validateIncremental(validator, source, origin)` in
+    RiddlLib/RiddlAPI. Call `validator.reset()` to force full
+    re-validation
+57. **AST.Set shadows scala Set** — Wildcard `import AST.*`
+    brings in `AST.Set` (RIDDL's Set type) which shadows
+    `scala.collection.immutable.Set`. Use selective imports
+    (`import AST.{Context, Domain, ...}`) in files that need
+    both, or qualify as `scala.collection.immutable.Set`
+58. **Contents[?] extension methods don't work** — The opaque
+    type `Contents` extensions require a concrete type
+    parameter (`Contents[CV]` where `CV <: RiddlValue`).
+    `Contents[?]` or `Contents[_ <: RiddlValue]` won't match.
+    Use a type parameter `[CV <: RiddlValue]` on the method
+59. **walkStatements helper in ValidationPass** — Private
+    method `walkStatements[CV](contents: Contents[CV])(f:
+    Statement => Unit)` recursively walks Contents descending
+    into WhenStatement/MatchStatement nesting. Use instead of
+    creating Finder instances for statement counting/searching

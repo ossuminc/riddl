@@ -157,11 +157,11 @@ class PassTest extends AbstractTestingBasisWithTestData {
             val outputs = PassesOutput()
             val hp = TestHierarchyPass(input, outputs)
             Pass.runPass[PassOutput](input, outputs, hp)
-            val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
-            opens must be(closes)
-            opens must be(55)
-            values must be(25)
-            leaves must be(19)
+            val (opens, closes, leaves, values) = hp.processForTest(result.root, ParentStack.empty)
+            opens.must(be(closes))
+            opens.must(be(55))
+            values.must(be(25))
+            leaves.must(be(19))
       }
       Await.result(future, 10.seconds)
     }
@@ -182,11 +182,11 @@ class PassTest extends AbstractTestingBasisWithTestData {
           val outputs = PassesOutput()
           val hp = TestHierarchyPass(input, outputs)
           Pass.runPass[PassOutput](input, outputs, hp)
-          val (opens, closes, leaves, values) = hp.processForTest(result.root, mutable.Stack.empty)
-          opens must be(closes)
-          opens must be(3)
-          values must be(1)
-          leaves must be(0)
+          val (opens, closes, leaves, values) = hp.processForTest(result.root, ParentStack.empty)
+          opens.must(be(closes))
+          opens.must(be(3))
+          values.must(be(1))
+          leaves.must(be(0))
 
     }
   }

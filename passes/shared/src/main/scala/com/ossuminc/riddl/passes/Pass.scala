@@ -728,6 +728,14 @@ object Pass {
   def standardPasses(using PlatformContext): PassCreators =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
+  /** Like standardPasses but uses Quick validation mode, skipping
+    * expensive streaming analysis and handler classification.
+    * Suitable for interactive/LSP use where speed matters more
+    * than exhaustive checks.
+    */
+  def quickValidationPasses(using PlatformContext): PassCreators =
+    Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.quickCreator())
+
   /** A PassesCreate of the passes that extract information but don't do much real work. These
     * generate the symbol table, resolve path references, and calculate statistics. This allows
     * basic information be refreshed without doing a full validation

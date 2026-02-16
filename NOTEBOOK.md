@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 14, 2026
+**Last Updated**: February 16, 2026
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS
 default due to compiler infinite loop bug with opaque
@@ -138,6 +138,24 @@ Added `ast2bast(root: Root)` to:
 ### 4. AIHelperPass
 AI-friendly validation pass for MCP server integration. See design
 section below.
+
+### 5. Scala.js Validation Performance (DONE)
+**Status**: Complete (February 16, 2026)
+
+Four-phase optimization to make validation practical for large
+models in Scala.js (browser playground, future LSP):
+
+- **Phase 0**: ParentStack caching — replaced type alias with
+  wrapper class that caches `toParents` (toSeq) result
+- **Phase 1**: ValidationPass micro-optimizations —
+  `recursiveFindByType` cache, single-pass handler
+  classification, combined SagaStep validation
+- **Phase 2**: `validateStringQuick()` — `ValidationMode` enum
+  gates expensive postProcess checks for interactive feedback
+- **Phase 3**: `IncrementalValidator` — context-level
+  fingerprinting and message caching for repeated validation
+
+See session log February 16, 2026 for details.
 
 ---
 
@@ -419,6 +437,75 @@ suggestions to CLAUDE.md files, create `/release` skill.
 
 **Cross-project**:
 - `../CLAUDE.md` — workflow discipline rules
+
+---
+
+### February 16, 2026 (Scala.js Validation Performance)
+
+**Focus**: Four-phase optimization to make validation practical
+for large RIDDL models in Scala.js. The ossum.ai Playground's
+`validateString()` took 168s for reactive-bbq (8,105 lines);
+even `getTree()` took 152s due to framework-level overhead.
+
+**Root Cause**: `ParentStack.toParents` (AST.scala) called
+`mutable.Stack.toSeq` on every AST node visit — O(N*D)
+allocations where N=nodes, D=average depth.
+
+**Work Completed**:
+1. **Phase 0: ParentStack caching** — Replaced
+   `type ParentStack = mutable.Stack[Branch[?]]` with a
+   `final class ParentStack` that caches the `toSeq` result,
+   invalidating only on push/pop. Same API surface. Expected
+   50-70% speedup on all pass traversals.
+2. **Phase 1: ValidationPass micro-optimizations** — Added
+   `recursiveFindByTypeCache` to Finder (mirrors existing
+   `findByTypeCache`). Added `walkStatements[CV]` helper for
+   recursive statement walking. Replaced `classifyHandlers`
+   with single-pass mutable counter walk. Replaced
+   `validateSagaStep` 4×recursiveFindByType with 2 walks
+   using mutable Sets.
+3. **Phase 2: `validateStringQuick()`** — Added
+   `ValidationMode` enum (Full/Quick). Quick mode skips
+   `checkStreaming()` and `classifyHandlers()` in postProcess.
+   Added `quickValidationPasses` to Pass companion.
+   Exposed via RiddlLib trait, RiddlAPI JS facade, and
+   TypeScript declarations.
+4. **Phase 3: Incremental validation** — Created
+   `ContextFingerprint` (FNV-1a 64-bit hashing of Context
+   source spans, cross-platform). Created
+   `IncrementalValidator` — stateful validator that caches
+   messages per-Context, re-validates only changed Contexts.
+   Conservative: falls back to full validation when >50%
+   changed. Exposed via `createIncrementalValidator()` and
+   `validateIncremental()` in RiddlLib/RiddlAPI/TypeScript.
+
+**Also fixed**: Pre-existing infix method warnings in
+PassTest.scala (`must be(x)` → `.must(be(x))`), updated
+`mutable.Stack.empty` → `ParentStack.empty` in test code.
+
+**Test Results**: 800 tests across language (280), passes
+(270), riddlLib (12), commands (238) — all passing on JVM.
+Full `sbt test` (JVM + JS + Native) passes.
+
+**Files Created**:
+- `passes/shared/.../ContextFingerprint.scala`
+- `passes/shared/.../IncrementalValidator.scala`
+
+**Files Modified**:
+- `language/shared/.../AST.scala` — ParentStack class
+- `language/shared/.../Finder.scala` — recursiveFindByType
+  cache
+- `passes/shared/.../Pass.scala` — quickValidationPasses
+- `passes/shared/.../validate/ValidationPass.scala` —
+  ValidationMode, walkStatements, optimized classifyHandlers
+  and validateSagaStep
+- `passes/jvm-native/.../PassTest.scala` — ParentStack.empty,
+  infix fixes
+- `riddlLib/shared/.../RiddlLib.scala` — validateStringQuick,
+  createIncrementalValidator, validateIncremental, doValidate
+  refactor
+- `riddlLib/js/.../RiddlAPI.scala` — JS facades
+- `riddlLib/js/types/index.d.ts` — TypeScript declarations
 
 ---
 
@@ -1920,6 +2007,140 @@ Tool(
 3. How to handle tips that become irrelevant after model changes?
 
 *Design Author: Claude (AI Assistant), January 17, 2026*
+
+---
+
+## Scala.js Validation Performance (from ossum.ai playground)
+
+**Filed:** 2026-02-16
+**Context:** The ossum.ai RIDDL Playground loads models from
+riddl-models via `.bast` files, converts them to source with
+`root2RiddlSource()`, and optionally validates with
+`validateString()`. For the `reactive-bbq` model (8,105 lines /
+213KB after flattening), `validateString()` takes **168 seconds**
+in the browser (Scala.js) vs seconds on JVM. This makes
+interactive validation impractical for large models.
+
+### Benchmark (reactive-bbq, Chrome/V8)
+
+| Operation | Time |
+|-----------|------|
+| `bast2FlatAST()` | 57ms |
+| `root2RiddlSource()` | 12ms |
+| `parseString()` | 24ms |
+| `getTree()` | 152,714ms |
+| `validateString()` | 168,673ms |
+
+**Note:** `getTree()` runs only `TreePass` (not the full
+validation pipeline), yet still takes 2.5 minutes. This is
+unexpectedly slow and warrants separate investigation — the
+tree pass should be lightweight.
+
+### Identified Bottlenecks in ValidationPass
+
+#### 1. Double iteration in `classifyHandlers()`
+
+**Location:** `ValidationPass.scala` ~lines 1260-1299
+
+For every handler, `recursiveFindByType[Statement]` collects
+all statements, then the list is iterated **twice** — once
+with `.count()` for executable statements, once with
+`.count()` for prompt statements. A single-pass accumulator
+would halve this work.
+
+**Fix:** Replace two `.count()` calls with one `.foreach`
+that increments both counters:
+
+```scala
+var executableCount = 0
+var promptCount = 0
+allStatements.foreach {
+  case _: TellStatement | _: SendStatement |
+       _: MorphStatement | _: SetStatement |
+       _: BecomeStatement | _: ErrorStatement |
+       _: CodeStatement =>
+    executableCount += 1
+  case _: PromptStatement =>
+    promptCount += 1
+  case _ => ()
+}
+```
+
+**Estimated impact:** ~15-20% of postProcess time
+
+#### 2. Redundant `symbols.parentsOf()` in streaming
+
+**Location:** `StreamingValidation.scala` ~line 44
+
+`symbols.parentsOf(connector)` is called for every connector
+without caching. Additionally, the reverse adjacency map is
+built in a separate pass instead of simultaneously with the
+forward adjacency, and two full BFS traversals run (sources→
+sinks, then sinks→sources) when one bidirectional pass would
+suffice.
+
+**Fix:** Cache `parentsOf()` results in a local map. Build
+forward and reverse adjacency simultaneously.
+
+**Estimated impact:** ~10-15%
+
+#### 3. Four tree walks per SagaStep
+
+**Location:** `ValidationPass.scala` ~lines 976-1010
+
+Each SagaStep creates two Finders (do/undo), walks each
+**twice** (once for `TellStatement`, once for
+`SendStatement`), creates intermediate `Seq`s, converts to
+`Set`s. Could be 2 walks instead of 4 by collecting both
+statement types in a single pass.
+
+**Estimated impact:** ~8-12%
+
+#### 4. Finder cache is per-instance
+
+**Location:** `Finder.scala` ~lines 27-64
+
+Each `Finder(container.contents)` creates a fresh
+`findByTypeCache`. Across hundreds of handlers creating new
+Finders, no cache reuse occurs. A shared cache keyed by
+container identity could help.
+
+### Micro-optimization Summary
+
+These fixes sum to roughly **20-30% improvement** (~30-50s
+off the 3-minute Scala.js runtime). Meaningful but doesn't
+solve the fundamental 10-50x Scala.js vs JVM gap for
+allocation-heavy compute.
+
+### Architectural Approaches (Higher Impact)
+
+1. **Pre-compute validation results into BAST** — Store
+   validation messages alongside `.bast` files at build time.
+   The playground would just display them with zero compute.
+   This is the highest-impact, lowest-risk change.
+
+2. **Incremental validation** — Only re-validate the changed
+   definition and its dependents, not the entire model. This
+   is how language servers (LSP) stay fast. High effort but
+   would make the playground truly interactive for any size
+   model.
+
+3. **`validateStringLite()` for JS** — A lighter validation
+   pass that skips expensive checks (streaming analysis, saga
+   compensation, handler completeness) that matter less in a
+   browser playground context. Medium effort, could bring
+   large-model validation under 30 seconds.
+
+### Current ossum.ai Workaround
+
+The playground uses a tiered strategy:
+- `parseString()` on main thread (~24ms) for every keystroke
+- Sources under 10KB: auto-validate in Web Worker on
+  keystroke (debounced)
+- Sources over 10KB: manual "Validate" button triggers Web
+  Worker; page stays responsive while validation runs in
+  background
+- BAST-loaded models: skip validation entirely (pre-validated)
 
 ---
 

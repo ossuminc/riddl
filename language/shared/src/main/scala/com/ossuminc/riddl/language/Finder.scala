@@ -28,6 +28,10 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
   // This avoids repeated full tree traversals for the same type
   private val findByTypeCache: mutable.Map[Class[?], Seq[RiddlValue]] = mutable.Map.empty
 
+  // Cache for recursiveFindByType results - same pattern as findByTypeCache
+  // but for the recursive variant that descends into nested statements
+  private val recursiveFindByTypeCache: mutable.Map[Class[?], Seq[RiddlValue]] = mutable.Map.empty
+
   /** Search the `root` for a [[AST.RiddlValue]] that matches the boolean expression
     *
     * @param select
@@ -66,29 +70,37 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
   def recursiveFindByType[T <: AST.RiddlValue: ClassTag]: Seq[T] =
     import scala.reflect.classTag
     val lookingFor = classTag[T].runtimeClass
-    def consider(list: Seq[T], child: RiddlValue): Seq[T] =
-      val nested = {
-        child match
-          case c: Container[?] =>
-            c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
-          case WhenStatement(_, _, thenStatements, elseStatements, _) =>
-            val r1 = thenStatements.foldLeft(list) { case (next, child) => consider(next, child) }
-            elseStatements.foldLeft(r1) { case (next, child) => consider(next, child) }
-          case MatchStatement(_, _, cases, default) =>
-            val r1 = cases.foldLeft(list) { case (next, mc) =>
-              mc.statements.foldLeft(next) { case (next2, child) => consider(next2, child) }
-            }
-            default.foldLeft(r1) { case (next, child) => consider(next, child) }
-          case SagaStep(_, _, dos, undos, _) =>
-            val r2 = dos.foldLeft(list) { case (next, child) => consider(next, child) }
-            undos.foldLeft(r2) { case (next, child) => consider(next, child) }
-          case _ => list
-        end match
-      }
-      if lookingFor.isAssignableFrom(child.getClass) then nested :+ child.asInstanceOf[T]
-      else nested
-    end consider
-    root.contents.foldLeft(Seq.empty) { case (list, child) => consider(list, child) }
+
+    // Check cache first
+    recursiveFindByTypeCache.get(lookingFor) match
+      case Some(cached) =>
+        cached.asInstanceOf[Seq[T]]
+      case None =>
+        def consider(list: Seq[T], child: RiddlValue): Seq[T] =
+          val nested =
+            child match
+              case c: Container[?] =>
+                c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
+              case WhenStatement(_, _, thenStatements, elseStatements, _) =>
+                val r1 = thenStatements.foldLeft(list) { case (next, child) => consider(next, child) }
+                elseStatements.foldLeft(r1) { case (next, child) => consider(next, child) }
+              case MatchStatement(_, _, cases, default) =>
+                val r1 = cases.foldLeft(list) { case (next, mc) =>
+                  mc.statements.foldLeft(next) { case (next2, child) => consider(next2, child) }
+                }
+                default.foldLeft(r1) { case (next, child) => consider(next, child) }
+              case SagaStep(_, _, dos, undos, _) =>
+                val r2 = dos.foldLeft(list) { case (next, child) => consider(next, child) }
+                undos.foldLeft(r2) { case (next, child) => consider(next, child) }
+              case _ => list
+            end match
+          if lookingFor.isAssignableFrom(child.getClass) then nested :+ child.asInstanceOf[T]
+          else nested
+        end consider
+        val result = root.contents.foldLeft(Seq.empty[T]) { case (list, child) => consider(list, child) }
+        recursiveFindByTypeCache(lookingFor) = result
+        result
+    end match
   end recursiveFindByType
 
   /** The return value for the [[Finder.findWithParents()]] function */

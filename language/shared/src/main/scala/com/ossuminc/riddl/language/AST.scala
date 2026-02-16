@@ -850,21 +850,55 @@ object AST:
   end Parents
 
   /** A mutable stack of Branch[?] for keeping track of the parent hierarchy.
-    * Contains only Branch (Definition) nodes - Include nodes are tracked separately via includeContext in Pass.
+    * Contains only Branch (Definition) nodes - Include nodes are tracked
+    * separately via includeContext in Pass.
+    *
+    * Caches the `toParents` (toSeq) result for performance. The cache is
+    * invalidated on push/pop. This avoids O(N*D) allocations during AST
+    * traversal where N is the number of nodes and D is average depth.
     */
-  type ParentStack = mutable.Stack[Branch[?]]
+  final class ParentStack private (
+    private val stack: mutable.Stack[Branch[?]]
+  ):
+    private var cachedSeq: Parents | Null = null
 
-  /** Extension methods for the ParentStack type */
-  extension (ps: ParentStack)
-    /** Convert the mutable ParentStack into an immutable Parents Seq */
-    def toParents: Parents = ps.toSeq
-  end extension
+    def push(item: Branch[?]): Unit =
+      stack.push(item)
+      cachedSeq = null
+    end push
 
-  /** A Companion to the ParentStack class */
+    def pop(): Branch[?] =
+      cachedSeq = null
+      stack.pop()
+    end pop
+
+    /** Convert the mutable ParentStack into an immutable Parents Seq.
+      * Result is cached until the next push or pop.
+      */
+    def toParents: Parents =
+      if cachedSeq == null then cachedSeq = stack.toSeq
+      cachedSeq.nn
+    end toParents
+
+    inline def head: Branch[?] = stack.head
+    inline def headOption: Option[Branch[?]] = stack.headOption
+    inline def top: Branch[?] = stack.top
+    inline def isEmpty: Boolean = stack.isEmpty
+    inline def nonEmpty: Boolean = stack.nonEmpty
+    inline def size: Int = stack.size
+
+    /** Find the first element matching the predicate (top to bottom). */
+    inline def find(p: Branch[?] => Boolean): Option[Branch[?]] =
+      stack.find(p)
+  end ParentStack
+
+  /** Companion to the ParentStack class */
   object ParentStack:
-    /** @return  an empty ParentStack */
-    def empty[CV <: RiddlValue]: ParentStack = mutable.Stack.empty[Branch[?]]
-    def apply(items: Branch[?]*): ParentStack = mutable.Stack(items: _*)
+    /** @return an empty ParentStack */
+    def empty[CV <: RiddlValue]: ParentStack =
+      new ParentStack(mutable.Stack.empty[Branch[?]])
+    def apply(items: Branch[?]*): ParentStack =
+      new ParentStack(mutable.Stack(items*))
   end ParentStack
 
   type DefinitionStack = mutable.Stack[Definition] // TODO: Make this opaque some day

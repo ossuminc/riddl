@@ -17,8 +17,8 @@ import com.ossuminc.riddl.language.parsing.{
   RiddlParserInput, TopLevelParser
 }
 import com.ossuminc.riddl.passes.{
-  BASTOutput, BASTWriterPass,
-  Pass, PassInput, PassOptions, PassesOutput,
+  BASTOutput, BASTWriterPass, IncrementalValidator,
+  Pass, PassCreators, PassInput, PassOptions, PassesOutput,
   OutlinePass, OutlineOutput, OutlineEntry,
   TreePass, TreeOutput, TreeNode
 }
@@ -91,6 +91,18 @@ trait RiddlLib:
     * messages.
     */
   def validateString(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false,
+    noANSIMessages: Boolean = true
+  )(using PlatformContext): RiddlLib.ValidateResult
+
+  /** Parse and validate RIDDL source using quick mode.
+    * Skips expensive streaming analysis and handler
+    * classification for faster interactive feedback.
+    * Messages are a strict subset of full validation.
+    */
+  def validateStringQuick(
     source: String,
     origin: String = "string",
     verbose: Boolean = false,
@@ -179,6 +191,25 @@ trait RiddlLib:
     root: Root
   )(using PlatformContext): String
 
+  /** Create an IncrementalValidator for efficient repeated
+    * validation of the same model with small edits.
+    * The validator caches results at the Context level.
+    */
+  def createIncrementalValidator()(
+    using PlatformContext
+  ): IncrementalValidator
+
+  /** Validate using an IncrementalValidator, parsing the
+    * source first. Reuses cached results for unchanged
+    * Contexts.
+    */
+  def validateIncremental(
+    validator: IncrementalValidator,
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlLib.ValidateResult
+
   /** Get the RIDDL library version string. */
   def version: String
 
@@ -257,11 +288,12 @@ object RiddlLib extends RiddlLib:
     root
   end flattenAST
 
-  override def validateString(
+  private def doValidate(
     source: String,
     origin: String,
     verbose: Boolean,
-    noANSIMessages: Boolean
+    noANSIMessages: Boolean,
+    passes: PassCreators
   )(using pc: PlatformContext): ValidateResult =
     val options = CommonOptions(
       verbose = verbose,
@@ -277,8 +309,9 @@ object RiddlLib extends RiddlLib:
       parseResult match
         case Right(root) =>
           try
+            val passInput = PassInput(root)
             val passesResult =
-              Pass.runStandardPasses(root)
+              Pass.runThesePasses(passInput, passes)
             val messages = passesResult.messages
             val errs =
               messages.filter(_.isError).distinct
@@ -296,8 +329,6 @@ object RiddlLib extends RiddlLib:
             )
           catch
             case e: Exception =>
-              val msg =
-                s"Validation failed: ${e.getMessage}"
               ValidateResult(
                 succeeded = false,
                 parseErrors = List.empty,
@@ -318,7 +349,27 @@ object RiddlLib extends RiddlLib:
           )
       end match
     }
+  end doValidate
+
+  override def validateString(
+    source: String,
+    origin: String,
+    verbose: Boolean,
+    noANSIMessages: Boolean
+  )(using PlatformContext): ValidateResult =
+    doValidate(source, origin, verbose, noANSIMessages,
+      Pass.standardPasses)
   end validateString
+
+  override def validateStringQuick(
+    source: String,
+    origin: String,
+    verbose: Boolean,
+    noANSIMessages: Boolean
+  )(using PlatformContext): ValidateResult =
+    doValidate(source, origin, verbose, noANSIMessages,
+      Pass.quickValidationPasses)
+  end validateStringQuick
 
   override def getOutline(
     source: String,
@@ -490,6 +541,69 @@ object RiddlLib extends RiddlLib:
       case None     => ""
     end match
   end root2RiddlSource
+
+  override def createIncrementalValidator()(
+    using PlatformContext
+  ): IncrementalValidator =
+    new IncrementalValidator()
+  end createIncrementalValidator
+
+  override def validateIncremental(
+    validator: IncrementalValidator,
+    source: String,
+    origin: String,
+    verbose: Boolean
+  )(using pc: PlatformContext): ValidateResult =
+    val options = CommonOptions(verbose = verbose)
+    pc.withOptions(options) { _ =>
+      val input = RiddlParserInput(
+        source, originToURL(origin)
+      )
+      val parseResult = TopLevelParser.parseInput(
+        input, verbose
+      )
+      parseResult match
+        case Right(root) =>
+          try
+            val passesResult = validator.validate(root)
+            val messages = passesResult.messages
+            val errs =
+              messages.filter(_.isError).distinct
+            val warns =
+              messages.filter(_.isWarning).distinct
+            val infos = messages
+              .filter(_.kind.severity == 0).distinct
+            ValidateResult(
+              succeeded = !messages.hasErrors,
+              parseErrors = List.empty,
+              errors = errs,
+              warnings = warns,
+              info = infos,
+              all = messages
+            )
+          catch
+            case e: Exception =>
+              ValidateResult(
+                succeeded = false,
+                parseErrors = List.empty,
+                errors = List.empty,
+                warnings = List.empty,
+                info = List.empty,
+                all = List.empty
+              )
+          end try
+        case Left(parseMessages) =>
+          ValidateResult(
+            succeeded = false,
+            parseErrors = parseMessages,
+            errors = List.empty,
+            warnings = List.empty,
+            info = List.empty,
+            all = List.empty
+          )
+      end match
+    }
+  end validateIncremental
 
   override def version: String =
     RiddlBuildInfo.version
