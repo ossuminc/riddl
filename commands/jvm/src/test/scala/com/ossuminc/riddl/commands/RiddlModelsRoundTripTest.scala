@@ -6,11 +6,14 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{pc, PlatformContext}
+import com.ossuminc.riddl.utils.{PathUtils, Zip, pc, PlatformContext}
+import org.apache.commons.io.FileUtils
 import org.ekrich.config.*
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import java.net.URL
 import java.nio.file.{Files, Path}
 import scala.jdk.StreamConverters.*
 
@@ -26,12 +29,48 @@ import scala.jdk.StreamConverters.*
   * Both outputs go through PrettifyPass, so any PrettifyPass
   * formatting quirks cancel out. What we're testing is that
   * the BAST serialization/deserialization is lossless.
+  *
+  * Uses local ../riddl-models if available (faster for local
+  * dev), otherwise downloads from GitHub (for CI).
   */
-class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
+class RiddlModelsRoundTripTest
+    extends AnyWordSpec
+    with Matchers
+    with BeforeAndAfterAll {
 
   given io: PlatformContext = pc
 
-  private val riddlModelsDir = Path.of("../riddl-models")
+  private val localDir = Path.of("../riddl-models")
+
+  private val modelsRepo: String =
+    "https://github.com/ossuminc/riddl-models/archive/refs/heads/main.zip"
+  private val modelsURL: URL =
+    java.net.URI.create(modelsRepo).toURL
+
+  // Resolve riddl-models directory eagerly at construction
+  // time so test cases can be registered in the should block.
+  // Use local checkout if available, otherwise download.
+  private val (riddlModelsDir, tmpDir) = resolveModelsDir()
+
+  private def resolveModelsDir(): (Path, Option[Path]) = {
+    if Files.isDirectory(localDir) then
+      (localDir, None)
+    else
+      val tmp = Files.createTempDirectory("riddl-models")
+      val fileName = PathUtils.copyURLToDir(modelsURL, tmp)
+      val zipPath = tmp.resolve(fileName)
+      Zip.unzip(zipPath, tmp)
+      Files.deleteIfExists(zipPath)
+      (tmp.resolve("riddl-models-main"), Some(tmp))
+    end if
+  }
+
+  override def afterAll(): Unit = {
+    tmpDir.foreach(dir =>
+      FileUtils.forceDeleteOnExit(dir.toFile)
+    )
+    super.afterAll()
+  }
 
   private val commonArgs = Array(
     "--quiet",
@@ -41,25 +80,29 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
   )
 
   "BAST round-trip" should {
-    assume(
-      Files.isDirectory(riddlModelsDir),
-      "riddl-models not found at ../riddl-models — skipping"
-    )
-
     val confFiles = discoverModels(riddlModelsDir)
-    assume(confFiles.nonEmpty, "No .conf files found in riddl-models")
-
-    confFiles.foreach { case (confFile, riddlFile) =>
-      val relPath = riddlModelsDir.relativize(confFile.getParent)
-
-      s"round-trip $relPath" in {
-        roundTripTest(confFile, riddlFile)
+    if confFiles.isEmpty then
+      "be skipped (no .conf files)" in {
+        cancel("No .conf files found in riddl-models")
       }
-    }
+    else
+      confFiles.foreach { case (confFile, riddlFile) =>
+        val relPath =
+          riddlModelsDir.relativize(confFile.getParent)
+        s"round-trip $relPath" in {
+          roundTripTest(confFile, riddlFile)
+        }
+      }
+    end if
   }
 
-  /** Discover models: find .conf files at depth 3, parse input-file */
-  private def discoverModels(base: Path): Seq[(Path, Path)] = {
+  /** Discover models: find .conf files at depth 3,
+    * parse input-file
+    */
+  private def discoverModels(
+    base: Path
+  ): Seq[(Path, Path)] = {
+    if !Files.isDirectory(base) then return Seq.empty
     val allConf = Files
       .walk(base, 5)
       .filter(p =>
@@ -82,7 +125,8 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
     try {
       val config = ConfigFactory.parseFile(confFile.toFile)
       if config.hasPath("validate.input-file") then
-        val inputFile = config.getString("validate.input-file")
+        val inputFile =
+          config.getString("validate.input-file")
         Some(confFile.getParent.resolve(inputFile))
       else None
     } catch {
@@ -107,7 +151,8 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
 
     try {
       val riddlPath = riddlFile.toAbsolutePath.toString
-      val bastPath = riddlPath.replaceAll("\\.riddl$", ".bast")
+      val bastPath =
+        riddlPath.replaceAll("\\.riddl$", ".bast")
 
       // Step 1: Validate original
       val validateArgs =
@@ -126,7 +171,10 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
         commonArgs ++ Array("bastify", riddlPath)
       Commands.runMainForTest(bastifyArgs) match {
         case Left(messages) =>
-          fail(s"Step 2 (bastify) failed:\n${messages.format}")
+          fail(
+            s"Step 2 (bastify) failed:\n" +
+              s"${messages.format}"
+          )
         case Right(_) =>
           assert(
             Files.exists(Path.of(bastPath)),
@@ -135,7 +183,7 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
       }
 
       try {
-        // Step 3: Unbastify (uses PrettifyPass with flatten=true)
+        // Step 3: Unbastify
         val unbastifyArgs = commonArgs ++ Array(
           "unbastify",
           bastPath,
@@ -145,7 +193,8 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
         Commands.runMainForTest(unbastifyArgs) match {
           case Left(messages) =>
             fail(
-              s"Step 3 (unbastify) failed:\n${messages.format}"
+              s"Step 3 (unbastify) failed:\n" +
+                s"${messages.format}"
             )
           case Right(_) =>
             assert(
@@ -208,7 +257,8 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
           firstDiff match {
             case Some(((line1, line2), idx)) =>
               fail(
-                s"Round-trip differs at line ${idx + 1}:\n" +
+                s"Round-trip differs at line " +
+                  s"${idx + 1}:\n" +
                   s"  original:   $line1\n" +
                   s"  round-trip: $line2"
               )
@@ -216,7 +266,8 @@ class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers {
               if lines1.length != lines2.length then
                 fail(
                   s"Round-trip differs in length: " +
-                    s"${lines1.length} vs ${lines2.length}"
+                    s"${lines1.length} vs " +
+                    s"${lines2.length}"
                 )
               end if
           }

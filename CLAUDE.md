@@ -811,3 +811,14 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 62. **Current release is 1.11.0** — Minor release adding
     `validateStringQuick()`, `IncrementalValidator` APIs,
     ParentStack caching, and ValidationPass optimizations
+63. **Tests needing external repos download from GitHub** —
+    `RunCommandOnExamplesTest` and `RiddlModelsRoundTripTest`
+    download zip archives from GitHub when local checkouts are
+    absent. Use `PathUtils.copyURLToDir` + `Zip.unzip`. For
+    ScalaTest `AnyWordSpec`, download must happen at
+    construction time (not `beforeAll`) because test cases are
+    registered during class construction in `should` blocks
+64. **TatSu 5.17.0 is broken** — Missing `rich` dependency
+    causes `ModuleNotFoundError` at import. Pin
+    `TatSu>=5.12.0,<5.17.0` in `requirements.txt`. CI uses
+    Python 3.12 (set in `scala.yml`)

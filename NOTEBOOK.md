@@ -6,7 +6,7 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 16, 2026 (afternoon)
+**Last Updated**: February 16, 2026 (evening)
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS
 default due to compiler infinite loop bug with opaque
@@ -95,6 +95,26 @@ to Domain Definition Language. BAST serialization is **complete** (60 tests,
 
 **Documentation**: [ossum.tech/riddl](https://ossum.tech/riddl/) - all new docs
 go there, not this repo.
+
+---
+
+## Session Log
+
+### February 16, 2026 (evening) — CI Fixes
+
+Fixed two unrelated CI failures on `development` branch:
+
+1. **RiddlModelsRoundTripTest** — `assume()` inside ScalaTest
+   `should` block caused suite abort on CI (where `riddl-models`
+   doesn't exist). Rewrote to download riddl-models zip from
+   GitHub when local checkout absent, using same
+   `PathUtils.copyURLToDir` + `Zip.unzip` pattern as
+   `RunCommandOnExamplesTest`. Local dev still uses fast local
+   checkout. 187 tests pass.
+
+2. **TatSu 5.17.0 import failure** — New release has missing
+   `rich` dependency (`ModuleNotFoundError`). Pinned to
+   `TatSu>=5.12.0,<5.17.0` (resolves to 5.16.0 on Python 3.12).
 
 ---
 
