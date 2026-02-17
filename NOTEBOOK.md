@@ -6,7 +6,33 @@ This is the central engineering notebook for the RIDDL project. It tracks curren
 
 ## Current Status
 
-**Last Updated**: February 16, 2026 (evening)
+**Last Updated**: February 17, 2026
+
+### PrettifyPass Formatting Fixes (Feb 17, 2026)
+
+Fixed four systemic formatting issues in PrettifyPass output:
+
+1. **Closing `}` at wrong indent** — `emitMetaData()` used
+   `add("}")` instead of `addIndent("}")`, placing with-block
+   closing braces at column 0. Fixed in `RiddlFileEmitter.scala`.
+
+2. **Missing newlines between siblings** — `closeDef()` emitted
+   no newline when metadata was empty, causing consecutive
+   definitions to run together. Fixed `closeDef`, `closeUseCase`,
+   `closeFunction`, and `doAuthor` to always end with newline.
+
+3. **Comma placement with field metadata** — `emitFields()` used
+   `foldLeft` + `deleteCharAt` which broke when fields had
+   `with` blocks. Replaced with `zipWithIndex` approach that
+   inserts commas correctly relative to metadata blocks.
+
+4. **Schema indentation** — `doSchema()` had no indentation for
+   `of`/`index`/`link` clauses. Added two indent levels: `of`
+   clauses one level deeper than `schema`, `index`/`link` two
+   levels deeper.
+
+All 273 passes tests + 238 commands tests pass. Three new
+regression tests added to `RiddlTest.scala`.
 
 **Scala Version**: 3.7.4 (overrides sbt-ossuminc's 3.3.7 LTS
 default due to compiler infinite loop bug with opaque

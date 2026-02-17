@@ -48,8 +48,12 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   def closeDef(
     definition: Definition
   ): this.type = {
-    if definition.nonEmpty then decr.addIndent("}")
-    emitMetaData(definition.metadata)
+    if definition.nonEmpty then
+      decr.addIndent("}")
+      emitMetaData(definition.metadata)
+      if definition.metadata.isEmpty then nl
+    end if
+    this
   }
 
   def emitMetaData(meta: Contents[MetaData]): this.type =
@@ -66,7 +70,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         case fa: FileAttachment   => emitFileAttachment(fa)
         case ua: ULIDAttachment   => emitULIDAttachment(ua)
       }
-      decr.add("}").nl
+      decr.addIndent("}").nl
     end if
     this
   end emitMetaData
@@ -185,20 +189,31 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     of.headOption match {
       case None => this.add("{ ??? }")
       case Some(field) if of.size == 1 =>
-        add(s"{ ")
-          .emitField(field)
-          .add(" }")
-          .nl
+        if field.metadata.nonEmpty then
+          add("{").nl.incr
+          add(spc).emitField(field)
+          decr.addIndent("}").nl
+        else
+          add(s"{ ")
+            .emitField(field)
+            .add(" }")
+            .nl
       case Some(_) =>
         this.add("{").nl.incr
-        of.foldLeft(this) { case (s, f) =>
-          s.add(spc)
-            .emitField(f)
-            .add(",")
-            .nl
+        val lastIdx = of.size - 1
+        of.zipWithIndex.foreach { case (f, idx) =>
+          add(spc).emitField(f)
+          if idx < lastIdx then
+            if f.metadata.nonEmpty then
+              // metadata ended with }\n; insert comma before trailing newline
+              sb.insert(sb.length - new_line.length, ",")
+            else
+              add(",").nl
+          else
+            // last field — no comma
+            if f.metadata.isEmpty then nl
         }
-        sb.deleteCharAt(sb.length - 2)
-        decr.add(s"$spc} ")
+        decr.addIndent("}").nl
     }
     this
   }

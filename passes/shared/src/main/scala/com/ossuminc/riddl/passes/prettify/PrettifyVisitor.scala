@@ -83,6 +83,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     state.withCurrent { (rfe: RiddlFileEmitter) =>
       rfe.decr.addIndent("}")
       rfe.emitMetaData(useCase.metadata)
+      if useCase.metadata.isEmpty then rfe.nl
     }
   end closeUseCase
 
@@ -96,6 +97,8 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def closeFunction(function: Function, parents: Parents): Unit =
     state.withCurrent { rfe =>
       rfe.decr.addIndent("}")
+      rfe.emitMetaData(function.metadata)
+      if function.metadata.isEmpty then rfe.nl
     }
   end closeFunction
 
@@ -195,6 +198,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
       author.title.map(title => rfe.addIndent(s"title = ${title.format}\n"))
       rfe.decr.addIndent("}")
       rfe.emitMetaData(author.metadata)
+      if author.metadata.isEmpty then rfe.nl
     }
   end doAuthor
 
@@ -268,9 +272,11 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
         .add(" is ")
         .emitSchemaKind(schema.schemaKind)
         .nl
+      rfe.incr
       schema.data.toSeq.sortBy(_._1.value).foreach { (id: Identifier, typeRef: TypeRef) =>
         rfe.addIndent("of ").add(id.format).add(" as ").add(typeRef.format).nl
       }
+      rfe.incr
       schema.links.toSeq.sortBy(_._1.value).foreach { (id: Identifier, tr: (FieldRef, FieldRef)) =>
         rfe
           .addIndent("link ")
@@ -284,6 +290,9 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
       schema.indices.foreach { fieldRef =>
         rfe.addIndent("index on ").add(fieldRef.format).nl
       }
+      rfe.decr.decr
+      rfe.emitMetaData(schema.metadata)
+      if schema.metadata.isEmpty then rfe.nl
     }
   end doSchema
 
