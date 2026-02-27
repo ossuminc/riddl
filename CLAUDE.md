@@ -750,7 +750,7 @@ Items below are NOT duplicated elsewhere in this file.
 34. **TatSu 5.17.0 is broken** — Pin `TatSu>=5.12.0,<5.17.0`
 35. **No `inline` on Contents extensions** — ScalaDoc 3.7.4
     crashes. Filed: scala/scala3#25306
-36. **Current release is 1.13.2** — Supersedes 1.13.1
+36. **Current release is 1.13.3** — Supersedes 1.13.2
 37. **PrettifyPass multi-file mode** — `flatten=false` (default)
     preserves include/import structure. `-s true` for single file
 38. **BASTImport in HierarchyPass** — `openBASTImport`/

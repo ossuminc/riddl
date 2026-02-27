@@ -15,7 +15,21 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: February 24, 2026
+**Last Updated**: February 27, 2026
+
+### Release 1.13.3 Published (Feb 27, 2026)
+
+Bugfix patch for parse error location reporting:
+- When trailing syntax is missing (e.g., `type Money is Currency`
+  instead of `Currency(USD)`), fastparse reported the error at the
+  next token's position (often the next line) instead of where the
+  expected token was missing
+- Added `adjustFailureIndex()` in `ParsingErrors.scala` that walks
+  backward from `failure.index` past whitespace; only adjusts when
+  crossing a newline boundary (same-line failures unchanged)
+- Added test in `CommonParserTest` verifying error points to the
+  offending line
+- All 281 language + 277 passes tests pass
 
 ### Release 1.13.2 Published (Feb 24, 2026)
 
