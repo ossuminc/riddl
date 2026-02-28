@@ -15,7 +15,13 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: February 27, 2026
+**Last Updated**: February 28, 2026
+
+### Post-1.13.3 Cleanup (Feb 28, 2026)
+
+- Removed `.github/workflows/docker-publish.yml` — multi-platform
+  Docker build consistently timed out at 45min in CI. Dockerfile
+  retained in repo for potential future use.
 
 ### Release 1.13.3 Published (Feb 27, 2026)
 
