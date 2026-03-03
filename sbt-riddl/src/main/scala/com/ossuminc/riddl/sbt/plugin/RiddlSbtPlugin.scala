@@ -94,13 +94,22 @@ object RiddlSbtPlugin extends AutoPlugin {
       confExclusions: Seq[String] = Seq("patterns"),
       options: Seq[String] = Seq("--show-times")
     )(project: Project): Project = {
-      project.settings(
+      val base = Seq(
         riddlcVersion := version,
         riddlcSourceDir := baseDirectory.value / sourceDir,
         riddlcValidateOnCompile := validateOnCompile,
         riddlcConfExclusions := confExclusions,
         riddlcOptions := options
       )
+      val hook = if (validateOnCompile) Seq(
+        Compile / compile := Def.taskDyn {
+          Def.task {
+            riddlcValidate.value
+            (Compile / compile).value
+          }
+        }.value
+      ) else Seq.empty
+      project.settings(base ++ hook)
     }
   }
 
@@ -461,7 +470,7 @@ object RiddlSbtPlugin extends AutoPlugin {
     riddlcSourceDir := baseDirectory.value / "src" /
       "main" / "riddl",
     riddlcConfExclusions := Seq("patterns"),
-    riddlcValidateOnCompile := true,
+    riddlcValidateOnCompile := false,
 
     // --- Task implementations ---
 
@@ -638,20 +647,6 @@ object RiddlSbtPlugin extends AutoPlugin {
         }
       }
     },
-
-    // Pre-compile validation hook
-    Compile / compile := Def.taskDyn {
-      if (riddlcValidateOnCompile.value) {
-        Def.task {
-          riddlcValidate.value
-          (Compile / compile).value
-        }
-      } else {
-        Def.task {
-          (Compile / compile).value
-        }
-      }
-    }.value,
 
     // Command wrappers for interactive sbt use
     commands ++= Seq(
