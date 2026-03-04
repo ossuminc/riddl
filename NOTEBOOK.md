@@ -15,7 +15,20 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: February 28, 2026
+**Last Updated**: March 3, 2026
+
+### Release 1.13.4 Published (Mar 3, 2026)
+
+Bugfix patch for sbt-riddl plugin:
+- Moved the `Compile / compile` validation hook from unconditional
+  `projectSettings` into the `riddlc()` curried helper. Root
+  aggregator projects (like riddl-models) that don't use
+  `.configure(riddlc())` no longer get `RuntimeUndefined` errors
+  on `sbt compile`
+- Changed `riddlcValidateOnCompile` default to `false` in
+  `projectSettings` — the hook is now opt-in via the helper
+  (which defaults `validateOnCompile = true`)
+- Homebrew formula auto-updated by CI release workflow
 
 ### Post-1.13.3 Cleanup (Feb 28, 2026)
 
