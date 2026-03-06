@@ -246,4 +246,235 @@ object TopLevelParser:
         Right(mapped)
     end match
   end mapTextAndToken
+
+  /** Parse content as if it were inside a Domain body.
+    *
+    * Wraps the input in a synthetic `domain SyntheticScope is { ... }`
+    * declaration, parses it, and returns the resulting Domain.
+    *
+    * @param input The RiddlParserInput containing domain-level content
+    * @param withVerboseFailures Enable verbose parse failure messages
+    * @return Either error messages or the parsed Domain
+    */
+  def parseAsDomain(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Domain] =
+    val wrapped = RiddlParserInput(
+      s"domain SyntheticScope is {\n${input.data}\n}",
+      input.root
+    )
+    val tlp = new TopLevelParser(wrapped, withVerboseFailures)
+    tlp.parseDomainContents
+  end parseAsDomain
+
+  /** Parse content as if it were inside a Context body.
+    *
+    * Wraps the input in a synthetic `context SyntheticScope is { ... }`
+    * declaration, parses it, and returns the resulting Context.
+    *
+    * @param input The RiddlParserInput containing context-level content
+    * @param withVerboseFailures Enable verbose parse failure messages
+    * @return Either error messages or the parsed Context
+    */
+  def parseAsContext(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Context] =
+    val wrapped = RiddlParserInput(
+      s"context SyntheticScope is {\n${input.data}\n}",
+      input.root
+    )
+    val tlp = new TopLevelParser(wrapped, withVerboseFailures)
+    tlp.parseContextContents
+  end parseAsContext
+
+  /** Parse content as if it were inside an Entity body.
+    *
+    * Wraps the input in a synthetic `entity SyntheticScope is { ... }`
+    * declaration, parses it, and returns the resulting Entity.
+    *
+    * @param input The RiddlParserInput containing entity-level content
+    * @param withVerboseFailures Enable verbose parse failure messages
+    * @return Either error messages or the parsed Entity
+    */
+  def parseAsEntity(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Entity] =
+    val wrapped = RiddlParserInput(
+      s"entity SyntheticScope is {\n${input.data}\n}",
+      input.root
+    )
+    val tlp = new TopLevelParser(wrapped, withVerboseFailures)
+    tlp.parseEntityContents
+  end parseAsEntity
+
+  /** Parse content as if it were inside a Module body.
+    *
+    * Wraps the input in a synthetic `module SyntheticScope is { ... }`
+    * declaration, parses it, and returns the resulting Module.
+    */
+  def parseAsModule(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Module] =
+    val wrapped = RiddlParserInput(
+      s"module SyntheticScope is {\n${input.data}\n}",
+      input.root
+    )
+    val tlp = new TopLevelParser(wrapped, withVerboseFailures)
+    tlp.parseModuleContents
+  end parseAsModule
+
+  /** Parse content as if it were inside an Adaptor body.
+    *
+    * Wraps the input in a synthetic adaptor declaration using
+    * the caller-provided direction and context reference, then
+    * parses it and returns the resulting Adaptor.
+    *
+    * @param input The RiddlParserInput containing adaptor body content
+    * @param direction The AdaptorDirection (InboundAdaptor or OutboundAdaptor)
+    * @param contextRef The ContextRef the adaptor adapts from/to
+    * @param withVerboseFailures Enable verbose parse failure messages
+    * @return Either error messages or the parsed Adaptor
+    */
+  def parseAsAdaptor(
+    input: RiddlParserInput,
+    direction: AdaptorDirection,
+    contextRef: ContextRef,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Adaptor] =
+    val dirStr = direction match
+      case _: InboundAdaptor  => "from"
+      case _: OutboundAdaptor => "to"
+    val ctxPath = contextRef.pathId.value.mkString(".")
+    val wrapped = RiddlParserInput(
+      s"adaptor SyntheticScope $dirStr context $ctxPath is {\n${input.data}\n}",
+      input.root
+    )
+    val tlp = new TopLevelParser(wrapped, withVerboseFailures)
+    tlp.parseAdaptorContents
+  end parseAsAdaptor
+
+  /** Parse content as if it were inside a Projector body.
+    *
+    * Wraps the input in a synthetic `projector SyntheticScope is { ... }`
+    * declaration, parses it, and returns the resulting Projector.
+    */
+  def parseAsProjector(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Projector] =
+    val wrapped = RiddlParserInput(
+      s"projector SyntheticScope is {\n${input.data}\n}",
+      input.root
+    )
+    val tlp = new TopLevelParser(wrapped, withVerboseFailures)
+    tlp.parseProjectorContents
+  end parseAsProjector
+
+  /** Parse content as if it were inside a Repository body.
+    *
+    * Wraps the input in a synthetic `repository SyntheticScope is { ... }`
+    * declaration, parses it, and returns the resulting Repository.
+    */
+  def parseAsRepository(
+    input: RiddlParserInput,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Repository] =
+    val wrapped = RiddlParserInput(
+      s"repository SyntheticScope is {\n${input.data}\n}",
+      input.root
+    )
+    val tlp = new TopLevelParser(wrapped, withVerboseFailures)
+    tlp.parseRepositoryContents
+  end parseAsRepository
+
+  /** Parse content as if it were inside a Saga body.
+    *
+    * Parses the input for saga body content (saga steps,
+    * functions, inlets, outlets) and assembles a Saga using
+    * the caller-provided input/output aggregations.
+    *
+    * @param input The RiddlParserInput containing saga body content
+    * @param sagaInput Optional input aggregation from the parent Saga
+    * @param sagaOutput Optional output aggregation from the parent Saga
+    * @param withVerboseFailures Enable verbose parse failure messages
+    * @return Either error messages or the parsed Saga
+    */
+  def parseAsSaga(
+    input: RiddlParserInput,
+    sagaInput: Option[Aggregation] = None,
+    sagaOutput: Option[Aggregation] = None,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Saga] =
+    val tlp = new TopLevelParser(input, withVerboseFailures)
+    tlp.parseSagaDefinitions.map { contents =>
+      val loc =
+        if contents.nonEmpty then contents.head.loc
+        else At.empty
+      Saga(loc, Identifier.empty, sagaInput, sagaOutput,
+        contents.toContents)
+    }
+  end parseAsSaga
+
+  /** Parse content as if it were inside an Epic body.
+    *
+    * Parses the input for epic body content (use cases, types,
+    * etc.) and assembles an Epic using the caller-provided
+    * UserStory.
+    *
+    * @param input The RiddlParserInput containing epic-level content
+    * @param userStory The UserStory from the parent Epic definition
+    * @param withVerboseFailures Enable verbose parse failure messages
+    * @return Either error messages or the parsed Epic
+    */
+  def parseAsEpic(
+    input: RiddlParserInput,
+    userStory: UserStory,
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Epic] =
+    val tlp = new TopLevelParser(input, withVerboseFailures)
+    tlp.parseEpicDefinitions.map { contents =>
+      val loc =
+        if contents.nonEmpty then contents.head.loc
+        else At.empty
+      Epic(loc, Identifier.empty, userStory, contents.toContents)
+    }
+  end parseAsEpic
+
+  /** Parse content as if it were inside a Streamlet body.
+    *
+    * Parses the input for processor content (handlers, types,
+    * functions, etc.) and assembles a Streamlet using the
+    * caller-provided shape, inlets, and outlets.
+    *
+    * @param input The RiddlParserInput containing streamlet body content
+    * @param shape The StreamletShape from the parent Streamlet definition
+    * @param inlets The Inlet definitions from the parent Streamlet
+    * @param outlets The Outlet definitions from the parent Streamlet
+    * @param withVerboseFailures Enable verbose parse failure messages
+    * @return Either error messages or the parsed Streamlet
+    */
+  def parseAsStreamlet(
+    input: RiddlParserInput,
+    shape: StreamletShape,
+    inlets: Seq[Inlet],
+    outlets: Seq[Outlet],
+    withVerboseFailures: Boolean = false
+  )(using PlatformContext): Either[Messages, Streamlet] =
+    val tlp = new TopLevelParser(input, withVerboseFailures)
+    tlp.parseStreamletDefinitions.map { contents =>
+      val allContents =
+        (inlets.asInstanceOf[Seq[StreamletContents]] ++
+          outlets.asInstanceOf[Seq[StreamletContents]] ++
+          contents)
+      val loc =
+        if allContents.nonEmpty then allContents.head.loc
+        else At.empty
+      Streamlet(loc, Identifier.empty, shape, allContents.toContents)
+    }
+  end parseAsStreamlet
+
 end TopLevelParser

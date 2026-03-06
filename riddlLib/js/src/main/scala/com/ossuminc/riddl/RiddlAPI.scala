@@ -6,7 +6,12 @@
 
 package com.ossuminc.riddl
 
-import com.ossuminc.riddl.language.AST.{Nebula, Root, Token}
+import com.ossuminc.riddl.language.AST.{
+  Adaptor, AdaptorDirection, Aggregation, Context,
+  ContextRef, Domain, Entity, Epic, Inlet, Module,
+  Nebula, Outlet, Projector, Repository, Root, Saga,
+  Streamlet, StreamletShape, Token, UserStory
+}
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.{IncrementalValidator, OutlineEntry, TreeNode}
@@ -592,6 +597,188 @@ object RiddlAPI {
   def root2RiddlSource(root: Root): String =
     RiddlLib.root2RiddlSource(root)
   end root2RiddlSource
+
+  // ── Scope-based parsing methods ───────────────────────
+
+  /** Parse content as if inside a Domain body.
+    *
+    * Returns the Domain as an opaque handle. Use
+    * `inspectRoot()` pattern or pass to other APIs.
+    */
+  @JSExport("parseAsDomain")
+  def parseAsDomain(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsDomain(source, origin, verbose),
+      d => d.asInstanceOf[js.Any]
+    )
+  end parseAsDomain
+
+  /** Parse content as if inside a Context body. */
+  @JSExport("parseAsContext")
+  def parseAsContext(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsContext(source, origin, verbose),
+      c => c.asInstanceOf[js.Any]
+    )
+  end parseAsContext
+
+  /** Parse content as if inside an Entity body. */
+  @JSExport("parseAsEntity")
+  def parseAsEntity(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsEntity(source, origin, verbose),
+      e => e.asInstanceOf[js.Any]
+    )
+  end parseAsEntity
+
+  /** Parse content as if inside an Epic body.
+    *
+    * @param source The RIDDL source containing epic body content
+    * @param userStory Opaque UserStory handle from a parent parse
+    * @param origin Origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    */
+  @JSExport("parseAsEpic")
+  def parseAsEpic(
+    source: String,
+    userStory: js.Any,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsEpic(
+        source,
+        userStory.asInstanceOf[UserStory],
+        origin, verbose
+      ),
+      e => e.asInstanceOf[js.Any]
+    )
+  end parseAsEpic
+
+  /** Parse content as if inside a Streamlet body.
+    *
+    * @param source The RIDDL source containing streamlet body
+    * @param shape Opaque StreamletShape from a parent parse
+    * @param inlets Opaque Inlet array from a parent parse
+    * @param outlets Opaque Outlet array from a parent parse
+    * @param origin Origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    */
+  @JSExport("parseAsStreamlet")
+  def parseAsStreamlet(
+    source: String,
+    shape: js.Any,
+    inlets: js.Array[js.Any],
+    outlets: js.Array[js.Any],
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsStreamlet(
+        source,
+        shape.asInstanceOf[StreamletShape],
+        inlets.toSeq.map(_.asInstanceOf[Inlet]),
+        outlets.toSeq.map(_.asInstanceOf[Outlet]),
+        origin, verbose
+      ),
+      s => s.asInstanceOf[js.Any]
+    )
+  end parseAsStreamlet
+
+  /** Parse content as if inside a Module body. */
+  @JSExport("parseAsModule")
+  def parseAsModule(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsModule(source, origin, verbose),
+      m => m.asInstanceOf[js.Any]
+    )
+  end parseAsModule
+
+  /** Parse content as if inside an Adaptor body. */
+  @JSExport("parseAsAdaptor")
+  def parseAsAdaptor(
+    source: String,
+    direction: js.Any,
+    contextRef: js.Any,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsAdaptor(
+        source,
+        direction.asInstanceOf[AdaptorDirection],
+        contextRef.asInstanceOf[ContextRef],
+        origin, verbose
+      ),
+      a => a.asInstanceOf[js.Any]
+    )
+  end parseAsAdaptor
+
+  /** Parse content as if inside a Projector body. */
+  @JSExport("parseAsProjector")
+  def parseAsProjector(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsProjector(source, origin, verbose),
+      p => p.asInstanceOf[js.Any]
+    )
+  end parseAsProjector
+
+  /** Parse content as if inside a Repository body. */
+  @JSExport("parseAsRepository")
+  def parseAsRepository(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsRepository(source, origin, verbose),
+      r => r.asInstanceOf[js.Any]
+    )
+  end parseAsRepository
+
+  /** Parse content as if inside a Saga body. */
+  @JSExport("parseAsSaga")
+  def parseAsSaga(
+    source: String,
+    sagaInput: js.UndefOr[js.Any] = js.undefined,
+    sagaOutput: js.UndefOr[js.Any] = js.undefined,
+    origin: String = "string",
+    verbose: Boolean = false
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseAsSaga(
+        source,
+        sagaInput.toOption.map(
+          _.asInstanceOf[Aggregation]
+        ),
+        sagaOutput.toOption.map(
+          _.asInstanceOf[Aggregation]
+        ),
+        origin, verbose
+      ),
+      s => s.asInstanceOf[js.Any]
+    )
+  end parseAsSaga
 
   /** Get entity lifecycle (state machine) data. */
   @JSExport("getEntityLifecycles")

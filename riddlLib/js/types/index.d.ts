@@ -252,6 +252,142 @@ export interface PlatformContext {
 }
 
 /**
+ * Opaque handle to a parsed Domain AST node.
+ * Obtain via `parseAsDomain()`.
+ */
+export interface DomainAST {
+  readonly __brand: 'RiddlDomain';
+}
+
+/**
+ * Opaque handle to a parsed Context AST node.
+ * Obtain via `parseAsContext()`.
+ */
+export interface ContextAST {
+  readonly __brand: 'RiddlContext';
+}
+
+/**
+ * Opaque handle to a parsed Entity AST node.
+ * Obtain via `parseAsEntity()`.
+ */
+export interface EntityAST {
+  readonly __brand: 'RiddlEntity';
+}
+
+/**
+ * Opaque handle to a parsed Epic AST node.
+ * Obtain via `parseAsEpic()`.
+ */
+export interface EpicAST {
+  readonly __brand: 'RiddlEpic';
+}
+
+/**
+ * Opaque handle to a parsed Streamlet AST node.
+ * Obtain via `parseAsStreamlet()`.
+ */
+export interface StreamletAST {
+  readonly __brand: 'RiddlStreamlet';
+}
+
+/**
+ * Opaque handle to a parsed Module AST node.
+ * Obtain via `parseAsModule()`.
+ */
+export interface ModuleAST {
+  readonly __brand: 'RiddlModule';
+}
+
+/**
+ * Opaque handle to a parsed Adaptor AST node.
+ * Obtain via `parseAsAdaptor()`.
+ */
+export interface AdaptorAST {
+  readonly __brand: 'RiddlAdaptor';
+}
+
+/**
+ * Opaque handle to a parsed Projector AST node.
+ * Obtain via `parseAsProjector()`.
+ */
+export interface ProjectorAST {
+  readonly __brand: 'RiddlProjector';
+}
+
+/**
+ * Opaque handle to a parsed Repository AST node.
+ * Obtain via `parseAsRepository()`.
+ */
+export interface RepositoryAST {
+  readonly __brand: 'RiddlRepository';
+}
+
+/**
+ * Opaque handle to a parsed Saga AST node.
+ * Obtain via `parseAsSaga()`.
+ */
+export interface SagaAST {
+  readonly __brand: 'RiddlSaga';
+}
+
+/**
+ * Opaque handle to a UserStory AST node.
+ * Obtained from a previously parsed Epic.
+ */
+export interface UserStoryAST {
+  readonly __brand: 'RiddlUserStory';
+}
+
+/**
+ * Opaque handle to a StreamletShape AST node.
+ * Obtained from a previously parsed Streamlet.
+ */
+export interface StreamletShapeAST {
+  readonly __brand: 'RiddlStreamletShape';
+}
+
+/**
+ * Opaque handle to an Inlet AST node.
+ * Obtained from a previously parsed Streamlet.
+ */
+export interface InletAST {
+  readonly __brand: 'RiddlInlet';
+}
+
+/**
+ * Opaque handle to an Outlet AST node.
+ * Obtained from a previously parsed Streamlet.
+ */
+export interface OutletAST {
+  readonly __brand: 'RiddlOutlet';
+}
+
+/**
+ * Opaque handle to an AdaptorDirection AST node.
+ * Obtained from a previously parsed Adaptor.
+ */
+export interface AdaptorDirectionAST {
+  readonly __brand: 'RiddlAdaptorDirection';
+}
+
+/**
+ * Opaque handle to a ContextRef AST node.
+ * Obtained from a previously parsed Adaptor.
+ */
+export interface ContextRefAST {
+  readonly __brand: 'RiddlContextRef';
+}
+
+/**
+ * Opaque handle to an Aggregation AST node.
+ * Obtained from a previously parsed Saga or Function.
+ */
+export interface AggregationAST {
+  readonly __brand: 'RiddlAggregation';
+}
+
+/**
  * Main API object for RIDDL parsing functionality.
  *
  * @example
@@ -598,6 +734,169 @@ export declare const RiddlAPI: {
    * ```
    */
   getTree(source: string, origin?: string): RiddlResult<TreeNode[]>;
+
+  /**
+   * Parse content as if inside a Domain body.
+   *
+   * Wraps the input in a synthetic domain declaration, parses it,
+   * and returns the resulting Domain as an opaque handle.
+   *
+   * @param source - RIDDL source containing domain-level definitions
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   * @returns Result with opaque Domain handle or errors
+   */
+  parseAsDomain(
+    source: string,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<DomainAST>;
+
+  /**
+   * Parse content as if inside a Context body.
+   *
+   * @param source - RIDDL source containing context-level definitions
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   * @returns Result with opaque Context handle or errors
+   */
+  parseAsContext(
+    source: string,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<ContextAST>;
+
+  /**
+   * Parse content as if inside an Entity body.
+   *
+   * @param source - RIDDL source containing entity-level definitions
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   * @returns Result with opaque Entity handle or errors
+   */
+  parseAsEntity(
+    source: string,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<EntityAST>;
+
+  /**
+   * Parse content as if inside an Epic body.
+   *
+   * The caller provides the UserStory from the parent Epic
+   * definition (obtained from a previous parse). The source
+   * should contain use cases, types, and other epic body content.
+   *
+   * @param source - RIDDL source containing epic body content
+   * @param userStory - Opaque UserStory handle from parent parse
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   * @returns Result with opaque Epic handle or errors
+   */
+  parseAsEpic(
+    source: string,
+    userStory: UserStoryAST,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<EpicAST>;
+
+  /**
+   * Parse content as if inside a Streamlet body.
+   *
+   * The caller provides the shape, inlets, and outlets from
+   * the parent Streamlet definition (obtained from a previous
+   * parse). The source should contain handlers, types,
+   * functions, and other processor content.
+   *
+   * @param source - RIDDL source containing streamlet body content
+   * @param shape - Opaque StreamletShape from parent parse
+   * @param inlets - Array of opaque Inlet handles from parent parse
+   * @param outlets - Array of opaque Outlet handles from parent parse
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   * @returns Result with opaque Streamlet handle or errors
+   */
+  parseAsStreamlet(
+    source: string,
+    shape: StreamletShapeAST,
+    inlets: InletAST[],
+    outlets: OutletAST[],
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<StreamletAST>;
+
+  /**
+   * Parse content as if inside a Module body.
+   *
+   * @param source - RIDDL source containing module-level definitions
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   */
+  parseAsModule(
+    source: string,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<ModuleAST>;
+
+  /**
+   * Parse content as if inside an Adaptor body.
+   *
+   * @param source - RIDDL source containing adaptor body content
+   * @param direction - Opaque AdaptorDirection from parent parse
+   * @param contextRef - Opaque ContextRef from parent parse
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   */
+  parseAsAdaptor(
+    source: string,
+    direction: AdaptorDirectionAST,
+    contextRef: ContextRefAST,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<AdaptorAST>;
+
+  /**
+   * Parse content as if inside a Projector body.
+   *
+   * @param source - RIDDL source containing projector body content
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   */
+  parseAsProjector(
+    source: string,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<ProjectorAST>;
+
+  /**
+   * Parse content as if inside a Repository body.
+   *
+   * @param source - RIDDL source containing repository body content
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   */
+  parseAsRepository(
+    source: string,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<RepositoryAST>;
+
+  /**
+   * Parse content as if inside a Saga body.
+   *
+   * @param source - RIDDL source containing saga body content
+   * @param sagaInput - Optional opaque Aggregation from parent parse
+   * @param sagaOutput - Optional opaque Aggregation from parent parse
+   * @param origin - Optional origin identifier for error messages
+   * @param verbose - Enable verbose failure messages
+   */
+  parseAsSaga(
+    source: string,
+    sagaInput?: AggregationAST,
+    sagaOutput?: AggregationAST,
+    origin?: string,
+    verbose?: boolean
+  ): RiddlResult<SagaAST>;
 
   /**
    * Classify all handlers by behavioral completeness.

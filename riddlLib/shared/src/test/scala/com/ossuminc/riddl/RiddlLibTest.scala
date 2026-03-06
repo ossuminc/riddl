@@ -6,6 +6,8 @@
 
 package com.ossuminc.riddl
 
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
@@ -134,6 +136,171 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
           riddlText must include("context TestCtx")
         case RiddlResult.Failure(errors) =>
           fail(s"Parse failed: $errors")
+      end match
+    }
+
+    "parseAsDomain parses domain body content" in {
+      RiddlLib.parseAsDomain(
+        "context C is { ??? }\ntype T is String"
+      ) match
+        case RiddlResult.Success(domain) =>
+          domain.contexts must not be empty
+          domain.contexts.head.id.value mustBe "C"
+          domain.types must not be empty
+          domain.types.head.id.value mustBe "T"
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsDomain failed: $errors")
+      end match
+    }
+
+    "parseAsContext parses context body content" in {
+      RiddlLib.parseAsContext(
+        "entity E is { ??? }\ntype T is Integer"
+      ) match
+        case RiddlResult.Success(context) =>
+          context.entities must not be empty
+          context.entities.head.id.value mustBe "E"
+          context.types must not be empty
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsContext failed: $errors")
+      end match
+    }
+
+    "parseAsEntity parses entity body content" in {
+      RiddlLib.parseAsEntity(
+        "handler input is { ??? }"
+      ) match
+        case RiddlResult.Success(entity) =>
+          entity.handlers must not be empty
+          entity.handlers.head.id.value mustBe "input"
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsEntity failed: $errors")
+      end match
+    }
+
+    "parseAsEpic parses epic body with user story" in {
+      val userStory = UserStory(
+        At.empty,
+        UserRef(At.empty, PathIdentifier(At.empty, Seq("u"))),
+        LiteralString(At.empty, "do something"),
+        LiteralString(At.empty, "it works")
+      )
+      RiddlLib.parseAsEpic(
+        """case HappyPath is {
+          |  user u wants "complete it"
+          |    so that "it is done"
+          |  ???
+          |}""".stripMargin,
+        userStory
+      ) match
+        case RiddlResult.Success(epic) =>
+          epic.cases must not be empty
+          epic.cases.head.id.value mustBe "HappyPath"
+          epic.userStory mustBe userStory
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsEpic failed: $errors")
+      end match
+    }
+
+    "parseAsStreamlet parses body with provided ports" in {
+      val shape = Flow(At.empty)
+      val inlets = Seq(Inlet(
+        At.empty,
+        Identifier(At.empty, "in"),
+        TypeRef(At.empty, "type",
+          PathIdentifier(At.empty, Seq("String")))
+      ))
+      val outlets = Seq(Outlet(
+        At.empty,
+        Identifier(At.empty, "out"),
+        TypeRef(At.empty, "type",
+          PathIdentifier(At.empty, Seq("String")))
+      ))
+      RiddlLib.parseAsStreamlet(
+        "handler input is { ??? }",
+        shape, inlets, outlets
+      ) match
+        case RiddlResult.Success(streamlet) =>
+          streamlet.shape mustBe a[Flow]
+          streamlet.inlets.size mustBe 1
+          streamlet.outlets.size mustBe 1
+          streamlet.handlers must not be empty
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsStreamlet failed: $errors")
+      end match
+    }
+
+    "parseAsModule parses module body content" in {
+      RiddlLib.parseAsModule(
+        "domain Inner is { ??? }"
+      ) match
+        case RiddlResult.Success(module) =>
+          module.domains must not be empty
+          module.domains.head.id.value mustBe "Inner"
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsModule failed: $errors")
+      end match
+    }
+
+    "parseAsAdaptor parses adaptor body content" in {
+      import com.ossuminc.riddl.language.AST.{
+        InboundAdaptor, ContextRef, PathIdentifier
+      }
+      val direction = InboundAdaptor(At.empty)
+      val ctxRef = ContextRef(
+        At.empty,
+        PathIdentifier(At.empty, Seq("OtherCtx"))
+      )
+      RiddlLib.parseAsAdaptor(
+        "handler input is { ??? }",
+        direction, ctxRef
+      ) match
+        case RiddlResult.Success(adaptor) =>
+          adaptor.handlers must not be empty
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsAdaptor failed: $errors")
+      end match
+    }
+
+    "parseAsProjector parses projector body content" in {
+      RiddlLib.parseAsProjector(
+        "handler input is { ??? }"
+      ) match
+        case RiddlResult.Success(projector) =>
+          projector.handlers must not be empty
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsProjector failed: $errors")
+      end match
+    }
+
+    "parseAsRepository parses repository body content" in {
+      RiddlLib.parseAsRepository(
+        "handler commands is { ??? }"
+      ) match
+        case RiddlResult.Success(repository) =>
+          repository.handlers must not be empty
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsRepository failed: $errors")
+      end match
+    }
+
+    "parseAsSaga parses saga body content" in {
+      RiddlLib.parseAsSaga(
+        """step One is {
+          |  ???
+          |} reverted by {
+          |  ???
+          |}
+          |step Two is {
+          |  ???
+          |} reverted by {
+          |  ???
+          |}""".stripMargin
+      ) match
+        case RiddlResult.Success(saga) =>
+          saga.sagaSteps.size mustBe 2
+        case RiddlResult.Failure(errors) =>
+          fail(s"parseAsSaga failed: $errors")
       end match
     }
 

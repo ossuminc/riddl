@@ -7,8 +7,11 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.language.AST.{
-  Author, Domain, Entity, Module, Nebula, Root,
-  RootContents, Token
+  Adaptor, AdaptorDirection, Aggregation, Author,
+  Context, ContextRef, Domain, Entity, Epic, Identifier,
+  Inlet, Module, Nebula, Outlet, Projector, Repository,
+  Root, RootContents, Saga, Streamlet, StreamletShape,
+  Token, UserStory
 }
 import com.ossuminc.riddl.language.{At, Contents, Messages, toSeq}
 import com.ossuminc.riddl.language.Messages.Messages
@@ -209,6 +212,137 @@ trait RiddlLib:
     origin: String = "string",
     verbose: Boolean = false
   )(using PlatformContext): RiddlLib.ValidateResult
+
+  /** Parse content as if inside a Domain body.
+    *
+    * @param source The RIDDL source containing domain-level
+    *               definitions (contexts, types, epics, etc.)
+    * @param origin Origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    * @return Success(Domain) or Failure(Messages)
+    */
+  def parseAsDomain(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Domain]
+
+  /** Parse content as if inside a Context body.
+    *
+    * @param source The RIDDL source containing context-level
+    *               definitions (entities, handlers, types, etc.)
+    * @param origin Origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    * @return Success(Context) or Failure(Messages)
+    */
+  def parseAsContext(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Context]
+
+  /** Parse content as if inside an Entity body.
+    *
+    * @param source The RIDDL source containing entity-level
+    *               definitions (states, handlers, types, etc.)
+    * @param origin Origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    * @return Success(Entity) or Failure(Messages)
+    */
+  def parseAsEntity(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Entity]
+
+  /** Parse content as if inside an Epic body.
+    *
+    * The caller provides the UserStory from the parent Epic
+    * definition. The source should contain use cases, types,
+    * and other epic body content.
+    *
+    * @param source The RIDDL source containing epic body content
+    * @param userStory The UserStory from the parent Epic
+    * @param origin Origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    * @return Success(Epic) or Failure(Messages)
+    */
+  def parseAsEpic(
+    source: String,
+    userStory: UserStory,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Epic]
+
+  /** Parse content as if inside a Streamlet body.
+    *
+    * The caller provides the shape, inlets, and outlets from
+    * the parent Streamlet definition. The source should contain
+    * handlers, types, functions, and other processor content.
+    *
+    * @param source The RIDDL source containing streamlet body
+    * @param shape The StreamletShape from the parent Streamlet
+    * @param inlets The Inlet definitions from the parent
+    * @param outlets The Outlet definitions from the parent
+    * @param origin Origin identifier for error messages
+    * @param verbose Enable verbose failure messages
+    * @return Success(Streamlet) or Failure(Messages)
+    */
+  def parseAsStreamlet(
+    source: String,
+    shape: StreamletShape,
+    inlets: Seq[Inlet],
+    outlets: Seq[Outlet],
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Streamlet]
+
+  /** Parse content as if inside a Module body. */
+  def parseAsModule(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Module]
+
+  /** Parse content as if inside an Adaptor body.
+    *
+    * The caller provides the direction and context reference
+    * from the parent Adaptor definition.
+    */
+  def parseAsAdaptor(
+    source: String,
+    direction: AdaptorDirection,
+    contextRef: ContextRef,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Adaptor]
+
+  /** Parse content as if inside a Projector body. */
+  def parseAsProjector(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Projector]
+
+  /** Parse content as if inside a Repository body. */
+  def parseAsRepository(
+    source: String,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Repository]
+
+  /** Parse content as if inside a Saga body.
+    *
+    * The caller provides the optional input/output
+    * aggregations from the parent Saga definition.
+    */
+  def parseAsSaga(
+    source: String,
+    sagaInput: Option[Aggregation] = None,
+    sagaOutput: Option[Aggregation] = None,
+    origin: String = "string",
+    verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Saga]
 
   /** Get the RIDDL library version string. */
   def version: String
@@ -604,6 +738,130 @@ object RiddlLib extends RiddlLib:
       end match
     }
   end validateIncremental
+
+  override def parseAsDomain(
+    source: String,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Domain] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsDomain(input, verbose)
+    )
+  end parseAsDomain
+
+  override def parseAsContext(
+    source: String,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Context] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsContext(input, verbose)
+    )
+  end parseAsContext
+
+  override def parseAsEntity(
+    source: String,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Entity] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsEntity(input, verbose)
+    )
+  end parseAsEntity
+
+  override def parseAsEpic(
+    source: String,
+    userStory: UserStory,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Epic] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsEpic(input, userStory, verbose)
+    )
+  end parseAsEpic
+
+  override def parseAsStreamlet(
+    source: String,
+    shape: StreamletShape,
+    inlets: Seq[Inlet],
+    outlets: Seq[Outlet],
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Streamlet] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsStreamlet(
+        input, shape, inlets, outlets, verbose
+      )
+    )
+  end parseAsStreamlet
+
+  override def parseAsModule(
+    source: String,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Module] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsModule(input, verbose)
+    )
+  end parseAsModule
+
+  override def parseAsAdaptor(
+    source: String,
+    direction: AdaptorDirection,
+    contextRef: ContextRef,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Adaptor] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsAdaptor(
+        input, direction, contextRef, verbose
+      )
+    )
+  end parseAsAdaptor
+
+  override def parseAsProjector(
+    source: String,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Projector] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsProjector(input, verbose)
+    )
+  end parseAsProjector
+
+  override def parseAsRepository(
+    source: String,
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Repository] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsRepository(input, verbose)
+    )
+  end parseAsRepository
+
+  override def parseAsSaga(
+    source: String,
+    sagaInput: Option[Aggregation],
+    sagaOutput: Option[Aggregation],
+    origin: String,
+    verbose: Boolean
+  )(using PlatformContext): RiddlResult[Saga] =
+    val input = RiddlParserInput(source, originToURL(origin))
+    RiddlResult.fromEither(
+      TopLevelParser.parseAsSaga(
+        input, sagaInput, sagaOutput, verbose
+      )
+    )
+  end parseAsSaga
 
   override def version: String =
     RiddlBuildInfo.version

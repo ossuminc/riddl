@@ -778,8 +778,10 @@ object AST:
   /** Type of definitions that occur in a [[Function]] */
   private type OccursInFunction = OccursInVitalDefinition | Statement | Function
 
-  /** Type of definitions that occur in a [[Function]], with Include */
-  type FunctionContents = OccursInFunction | Include[OccursInFunction]
+  /** Type of definitions that occur in a [[Function]].
+    * Functions are self-contained and do not support includes.
+    */
+  type FunctionContents = OccursInFunction
 
   /** Type of definitions that occur in a [[Type]] */
   type TypeContents = Field | Method | Enumerator

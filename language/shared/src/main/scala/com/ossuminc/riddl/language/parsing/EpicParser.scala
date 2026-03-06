@@ -151,7 +151,7 @@ private[parsing] trait EpicParser {
     include[u, EpicContents]((p: P[?]) => epicDefinitions(using p.asInstanceOf[P[u]]))
   }
 
-  private def epicDefinitions[u: P]: P[Seq[EpicContents]] = {
+  private[parsing] def epicDefinitions[u: P]: P[Seq[EpicContents]] = {
     P(vitalDefinitionContents | useCase | shownBy | epicInclude).asInstanceOf[P[EpicContents]].rep(1)
   }
 

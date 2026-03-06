@@ -15,10 +15,6 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait FunctionParser {
   this: VitalDefinitionParser & StatementParser =>
 
-  private def functionInclude[u: P]: P[Include[FunctionContents]] = {
-    include[u, FunctionContents]((p: P[?]) => functionDefinitions(using p.asInstanceOf[P[u]]))
-  }
-
   def funcInput[u: P]: P[Aggregation] = {
     P(Keywords.requires ~ aggregation)./
   }
@@ -30,7 +26,7 @@ private[parsing] trait FunctionParser {
   private def functionDefinitions[u: P]: P[Seq[FunctionContents]] = {
     P(
       undefined(Seq.empty[FunctionContents]) | (
-        vitalDefinitionContents | function | functionInclude | statement(
+        vitalDefinitionContents | function | statement(
           StatementsSet.FunctionStatements
         )
       ).asInstanceOf[P[FunctionContents]]./.rep(0)
@@ -56,7 +52,6 @@ private[parsing] trait FunctionParser {
     P(
       Index ~ Keywords.function ~/ identifier ~ is ~ open ~/ functionBody ~ close ~ withMetaData ~/ Index
     )./.map { case (start, id, (ins, outs, contents), descriptives, end) =>
-      checkForDuplicateIncludes(contents)
       Function(at(start, end), id, ins, outs, contents.toContents, descriptives.toContents)
     }
   }
