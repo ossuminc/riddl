@@ -15,7 +15,22 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: March 3, 2026
+**Last Updated**: March 6, 2026
+
+### Release 1.14.0 Published (Mar 6, 2026)
+
+New feature release: scope-based parsing API for Synapify.
+
+- Added 10 `parseAs*` methods: `parseAsDomain`, `parseAsContext`,
+  `parseAsEntity`, `parseAsEpic`, `parseAsStreamlet`,
+  `parseAsModule`, `parseAsAdaptor`, `parseAsProjector`,
+  `parseAsRepository`, `parseAsSaga`
+- Exposed across all layers: `TopLevelParser` (parser),
+  `RiddlLib` (cross-platform), `RiddlAPI` (JS facade),
+  TypeScript `index.d.ts` (branded opaque types)
+- Removed `include` support from Function definitions
+- 38 new test cases (17 parser-level + 21 RiddlLib-level)
+- All tests pass across JVM, JS, and Native
 
 ### Release 1.13.4 Published (Mar 3, 2026)
 
