@@ -34,7 +34,9 @@ private[parsing] trait ModuleParser {
 
   def module[u: P]: P[Module] = {
     P(
-      Index ~ Keywords.module ~/ identifier ~ is ~ open ~ moduleContents ~ close ~ withMetaData ~ Index
+      Index ~ Keywords.module ~/ identifier ~ is ~ open ~
+        (undefined(Seq.empty[ModuleContents]) | moduleContents) ~
+        close ~ withMetaData ~ Index
     )./.map { case (start, id, contents, descriptives, end) =>
       checkForDuplicateIncludes(contents)
       Module(at(start, end), id, contents.toContents, descriptives.toContents)
