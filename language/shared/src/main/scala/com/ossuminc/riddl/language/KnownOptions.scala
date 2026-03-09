@@ -37,6 +37,7 @@ object KnownOptions {
     KnownOption.gateway,
     KnownOption.service,
     KnownOption.package_,
+    KnownOption.namespace,
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
@@ -46,6 +47,7 @@ object KnownOptions {
   final val domain: Seq[String] = Seq(
     KnownOption.external,
     KnownOption.package_,
+    KnownOption.namespace,
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
@@ -120,6 +122,7 @@ object KnownOption {
   final val gateway = "gateway"
   final val kind = "kind"
   final val message_queue = "message-queue"
+  final val namespace = "namespace"
   final val package_ = "package"
   final val parallel = "parallel"
   final val persistent = "persistent"

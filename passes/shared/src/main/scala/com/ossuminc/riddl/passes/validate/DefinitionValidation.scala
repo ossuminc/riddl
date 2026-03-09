@@ -29,6 +29,21 @@ case class OptionSpec(
   maxArgs: Int = 0
 )
 
+/** Registry of deprecated option names and their replacements.
+  * Used to generate deprecation warnings while maintaining
+  * backward compatibility.
+  */
+object DeprecatedOptions:
+  case class Deprecation(
+    replacement: String,
+    sinceVersion: String = "1.15.0"
+  )
+
+  val registry: Map[String, Deprecation] = Map(
+    "package" -> Deprecation("namespace", "1.15.0")
+  )
+end DeprecatedOptions
+
 /** Registry of recognized RIDDL option names with their
   * specifications. Options not in this registry will produce
   * style warnings (not errors) to keep the system extensible.
@@ -78,7 +93,13 @@ object RecognizedOptions:
     ),
     "batch" -> OptionSpec(
       Seq("Projector", "Repository"), 1, 1
-    )
+    ),
+    // Icon and display options
+    "faicon" -> OptionSpec(Seq.empty, 1, 1),
+    // Domain/Context structural options
+    "external" -> OptionSpec(Seq("Domain"), 0, 0),
+    "namespace" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
+    "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1)
   )
 end RecognizedOptions
 
@@ -206,7 +227,7 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           hasDescription = true
         case t: Term =>
           check(
-            t.definition.length >= 10,
+            t.definition.map(_.s.length).sum >= 10,
             s"${t.identify}'s definition is too short. It must be at least 10 characters'",
             Warning,
             t.loc
@@ -238,6 +259,14 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
     identity: String,
     loc: At
   ): Unit =
+    DeprecatedOptions.registry.get(option.name).foreach { dep =>
+      messages.addStyle(
+        option.loc,
+        s"Option '${option.name}' in $identity is deprecated" +
+          s" since ${dep.sinceVersion}." +
+          s" Use '${dep.replacement}' instead"
+      )
+    }
     RecognizedOptions.registry.get(option.name) match
       case Some(spec) =>
         val argCount = option.args.size

@@ -517,7 +517,6 @@ case class ValidationPass(
     f.output.foreach { agg =>
       checkTypeExpression(agg, f, parents)
     }
-    checkMetadata(f)
   }
 
   private def validateHandler(
@@ -741,7 +740,6 @@ case class ValidationPass(
         )
       )
     }
-    checkMetadata(entity)
   }
 
   private def validateProjector(
@@ -785,7 +783,6 @@ case class ValidationPass(
           )
       }
     }
-    checkMetadata(projector)
   }
 
   private def validateRepository(
@@ -793,7 +790,6 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, repository)
-    checkMetadata(repository)
     checkNonEmpty(
       repository.contents.filter[Schema],
       "schema",
@@ -913,7 +909,6 @@ case class ValidationPass(
             }
           }
         }
-        checkMetadata(adaptor)
       case None | Some(_) =>
         messages.addError(adaptor.errorLoc, "Adaptor not contained within Context")
     }
@@ -952,7 +947,6 @@ case class ValidationPass(
     end if
     if streamlet.handlers.isEmpty && streamlet.nonEmpty then
       messages.addMissing(streamlet.errorLoc, s"${streamlet.identify} should have a handler")
-    checkMetadata(streamlet)
   }
 
   private def validateDomain(
@@ -966,7 +960,6 @@ case class ValidationPass(
       StyleWarning,
       domain.errorLoc
     )
-    checkMetadata(domain)
   }
 
   private def validateSaga(
@@ -986,7 +979,6 @@ case class ValidationPass(
       Messages.Error,
       saga.errorLoc
     )
-    checkMetadata(saga)
   }
 
   private def validateSagaStep(
@@ -1034,7 +1026,6 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, c)
-    checkMetadata(c)
   }
 
   private def validateEpic(
@@ -1046,7 +1037,6 @@ case class ValidationPass(
       messages.addMissing(epic.errorLoc, s"${epic.identify} is missing a user story")
     else
       checkRef[User](epic.userStory.user, parents)
-    checkMetadata(epic)
   }
 
   private def validateGroup(
