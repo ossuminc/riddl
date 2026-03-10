@@ -1,0 +1,46 @@
+// Test: State definitions with handlers (State as Branch)
+domain StateHandlerTest is {
+  type SomeType is String
+  command Activate()
+  command Deactivate()
+  event Activated()
+  event Deactivated()
+
+  context TestContext is {
+    entity StateMachine is {
+      record ActiveFields(status: Boolean)
+      record InactiveFields(reason: String)
+
+      // State with handlers - the new syntax
+      state ActiveState of StateMachine.ActiveFields is {
+        handler onActive is {
+          on command Deactivate {
+            send event Deactivated to outlet TestContext.Sink.Out
+          }
+        }
+      }
+
+      // State with handlers using multiple handlers
+      state InactiveState of StateMachine.InactiveFields is {
+        handler onInactive is {
+          on command Activate {
+            send event Activated to outlet TestContext.Sink.Out
+          }
+        }
+      }
+
+      // State without handlers - the traditional syntax
+      state PlainState of StateMachine.ActiveFields
+
+      handler default is {
+        on command Activate { ??? }
+      }
+    }
+
+    source Sink is {
+      outlet Out is type SomeType
+    } with { briefly "A source" }
+  }
+} with {
+  briefly "Test domain for state-with-handlers feature"
+}

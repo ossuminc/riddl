@@ -126,30 +126,6 @@ not provided:
 15. Report a summary: tag, commit SHA, release URL, and any
     CI workflows triggered.
 
-16. **Drop upgrade tasks in dependent projects.** For each
-    consumer of riddl, create a task file in its `task/`
-    directory describing the version bump needed. The file
-    should be named `upgrade-riddl-<VERSION>.md` and contain:
-    - What changed (link to the GitHub release)
-    - The new version to depend on
-    - Which files to update (e.g., `project/Dependencies.scala`,
-      `build.sbt`, or `package.json`)
-
-    Consumer projects:
-    ```
-    ../synapify/task/upgrade-riddl-<VERSION>.md
-    ../riddl-idea-plugin/task/upgrade-riddl-<VERSION>.md
-    ../riddlsim/task/upgrade-riddl-<VERSION>.md
-    ../ossum.tech/task/upgrade-riddl-<VERSION>.md
-    ../riddl-mcp-server/task/upgrade-riddl-<VERSION>.md
-    ../riddl-models/task/upgrade-riddl-<VERSION>.md
-    ../ossum.ai/task/upgrade-riddl-<VERSION>.md
-    ../riddl-gen/task/upgrade-riddl-<VERSION>.md
-    ```
-
-    Also update the `riddl dep` column in
-    `../CLAUDE.md` (ossuminc-level) to reflect `<VERSION>`.
-
 ## If Something Fails
 
 - If tests fail in step 9: delete the local tag

@@ -159,9 +159,9 @@ class PassTest extends AbstractTestingBasisWithTestData {
             Pass.runPass[PassOutput](input, outputs, hp)
             val (opens, closes, leaves, values) = hp.processForTest(result.root, ParentStack.empty)
             opens.must(be(closes))
-            opens.must(be(55))
+            opens.must(be(57))
             values.must(be(25))
-            leaves.must(be(19))
+            leaves.must(be(17))
       }
       Await.result(future, 10.seconds)
     }

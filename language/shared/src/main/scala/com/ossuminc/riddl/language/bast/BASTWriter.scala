@@ -569,6 +569,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLocation(s.loc)
     writeIdentifierInline(s.id)  // Inline - no tag needed
     writeTypeRefInline(s.typ)    // Inline - position known
+    writeContents(s.contents)
   }
 
   def writeInvariant(i: Invariant): Unit = {

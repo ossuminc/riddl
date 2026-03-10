@@ -62,10 +62,10 @@ class StatsPassTest extends AbstractValidatingTest {
               statsOutput.maximum_depth > 0 mustBe true
               statsOutput.categories mustNot be(empty)
               statsOutput.categories.toSeq.foreach { pair => println(pair._1 + s" => ${pair._2.count}") }
-              statsOutput.categories.size must be(22)
+              statsOutput.categories.size must be(23)
               val ksAll: KindStats = statsOutput.categories("All")
-              ksAll.count must be(21)
-              ksAll.numEmpty must be(21)
+              ksAll.count must be(22)
+              ksAll.numEmpty must be(23)
               ksAll.numStatements must be(7)
               succeed
         }

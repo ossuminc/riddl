@@ -15,11 +15,23 @@ import fastparse.MultiLineWhitespace.*
 private[parsing] trait EntityParser {
   this: ProcessorParser & StreamingParser =>
 
+  private def stateContent[u: P]: P[StateContents] =
+    P(handler(StatementsSet.EntityStatements) | comment).asInstanceOf[P[StateContents]]
+
+  private def stateContents[u: P]: P[Seq[StateContents]] =
+    stateContent.rep(1)
+
+  private def stateBody[u: P]: P[Seq[StateContents]] =
+    P(is ~ open ~ (undefined(Seq.empty[StateContents]) | stateContents) ~ close)
+
   def state[u: P]: P[State] = {
     P(
-      Index ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/ withMetaData ~ Index
-    )./.map { case (start, id, typRef, descriptives, end) =>
-      State(at(start,end), id, typRef, descriptives.toContents)
+      Index ~ Keywords.state ~ identifier ~/ (of | is) ~ typeRef ~/
+        stateBody.? ~ withMetaData ~ Index
+    )./.map { case (start, id, typRef, body, descriptives, end) =>
+      State(at(start, end), id, typRef,
+        body.getOrElse(Seq.empty).toContents,
+        descriptives.toContents)
     }
   }
 

@@ -853,8 +853,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val loc = readLocation()
     val id = readIdentifierInline()  // Inline - no tag
     val typ = readTypeRefInline()    // Inline - position known
+    val contents = readContentsDeferred[StateContents]()
     val metadata = readMetadataDeferred()
-    State(loc, id, typ, metadata)
+    State(loc, id, typ, contents, metadata)
   }
 
   private def readInvariantNode(): Invariant = {

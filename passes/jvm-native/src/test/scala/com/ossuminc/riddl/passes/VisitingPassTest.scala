@@ -41,7 +41,7 @@ class VisitingPassTest extends ParsingTest {
           //      |closes=${visitor.closes}
           //      |""".stripMargin)
           visitor.depth must be(0)
-          visitor.leaves must be(19)
+          visitor.leaves must be(17)
           visitor.values must be(24)
           visitor.opens must be(visitor.closes)
       end match
@@ -128,7 +128,8 @@ class TestVisitor extends PassVisitor:
   def doConnector(connector: Connector): Unit = leaf(connector)
   def doUser(user: User): Unit = leaf(user)
   def doSchema(schema: Schema): Unit = leaf(schema)
-  def doState(state: State): Unit = leaf(state)
+  def openState(state: State, parents: Parents): Unit = incr(state)
+  def closeState(state: State, parents: Parents): Unit = decr(state)
   def doRelationship(relationship: Relationship): Unit = leaf(relationship)
   def doContainedGroup(containedGroup: ContainedGroup): Unit = leaf(containedGroup)
 

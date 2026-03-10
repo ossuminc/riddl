@@ -505,6 +505,7 @@ trait PassVisitor:
   def openGroup(group: Group, parents: Parents): Unit
   def openOutput(output: Output, parents: Parents): Unit
   def openInput(input: Input, parents: Parents): Unit
+  def openState(state: State, parents: Parents): Unit
   def openInclude(include: Include[?], parents: Parents): Unit
   def openBASTImport(bi: BASTImport, parents: Parents): Unit
 
@@ -526,6 +527,7 @@ trait PassVisitor:
   def closeGroup(group: Group, parents: Parents): Unit
   def closeOutput(output: Output, parents: Parents): Unit
   def closeInput(input: Input, parents: Parents): Unit
+  def closeState(state: State, parents: Parents): Unit
   def closeInclude(include: Include[?], parents: Parents): Unit
   def closeBASTImport(bi: BASTImport, parents: Parents): Unit
 
@@ -541,7 +543,6 @@ trait PassVisitor:
   def doConnector(connector: Connector): Unit
   def doUser(user: User): Unit
   def doSchema(schema: Schema): Unit
-  def doState(state: State): Unit
   def doRelationship(relationship: Relationship): Unit
   def doEnumerator(enumerator: Enumerator): Unit
   def doContainedGroup(containedGroup: ContainedGroup): Unit
@@ -584,13 +585,14 @@ abstract class VisitingPass[VT <: PassVisitor](
       case projector: Projector   => visitor.openProjector(projector, parents)
       case handler: Handler       => visitor.openHandler(handler, parents)
       case onClause: OnClause     => visitor.openOnClause(onClause, parents)
+      case state: State           => visitor.openState(state, parents)
       case group: Group           => visitor.openGroup(group, parents)
       case output: Output         => visitor.openOutput(output, parents)
       case input: Input           => visitor.openInput(input, parents)
       case _: Root                => () // ignore
       case _: Enumerator          => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep |
-          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: State |
+          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema |
           _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
           _: Definition => // not containers
         () // not  containers
@@ -613,12 +615,13 @@ abstract class VisitingPass[VT <: PassVisitor](
       case projector: Projector   => visitor.closeProjector(projector, parents)
       case handler: Handler       => visitor.closeHandler(handler, parents)
       case onClause: OnClause     => visitor.closeOnClause(onClause, parents)
+      case state: State           => visitor.closeState(state, parents)
       case group: Group           => visitor.closeGroup(group, parents)
       case output: Output         => visitor.closeOutput(output, parents)
       case input: Input           => visitor.closeInput(input, parents)
       case _: Root                => () // ignore
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep |
-          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: State | _: Enumerator |
+          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: Enumerator |
           _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
           _: Definition =>
         () // not  containers
@@ -638,7 +641,6 @@ abstract class VisitingPass[VT <: PassVisitor](
       case connector: Connector           => visitor.doConnector(connector)
       case user: User                     => visitor.doUser(user)
       case schema: Schema                 => visitor.doSchema(schema)
-      case state: State                   => visitor.doState(state)
       case relationship: Relationship     => visitor.doRelationship(relationship)
       case containedGroup: ContainedGroup => visitor.doContainedGroup(containedGroup)
     end match

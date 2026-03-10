@@ -730,6 +730,9 @@ object AST:
   /** Type of definitions that occur in an [[Entity]] with [[Include]] */
   type EntityContents = OccursInEntity | Include[OccursInEntity]
 
+  /** Type of definitions that occur in a [[State]] */
+  type StateContents = Handler | Comment
+
   /** Type of definitions that occur in a [[Handler]] */
   type HandlerContents = OnClause | Comment
 
@@ -2806,8 +2809,10 @@ object AST:
     loc: At,
     id: Identifier,
     typ: TypeRef,
+    contents: Contents[StateContents] = Contents.empty[StateContents](),
     metadata: Contents[MetaData] = Contents.empty[MetaData]()
-  ) extends Leaf:
+  ) extends Branch[StateContents]
+      with WithHandlers[StateContents]:
     def format: String = Keyword.state + " " + id.format
   end State
 

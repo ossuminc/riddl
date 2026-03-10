@@ -305,11 +305,24 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     }
   end doSchema
 
-  def doState(riddl_state: State): Unit =
+  def openState(riddl_state: State, parents: Parents): Unit =
     state.withCurrent { rfe =>
-      rfe.addLine(s"${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}")
+      if riddl_state.contents.isEmpty then
+        rfe.addLine(s"${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}")
+      else
+        rfe.addLine(s"${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format}")
+        rfe.openDef(riddl_state)
+      end if
     }
-  end doState
+  end openState
+
+  def closeState(riddl_state: State, parents: Parents): Unit =
+    state.withCurrent { rfe =>
+      if riddl_state.contents.nonEmpty then
+        rfe.closeDef(riddl_state)
+      end if
+    }
+  end closeState
 
   def doRelationship(rel: com.ossuminc.riddl.language.AST.Relationship): Unit =
     state.withCurrent { rfe =>

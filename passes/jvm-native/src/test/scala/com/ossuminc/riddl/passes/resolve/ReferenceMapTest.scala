@@ -88,7 +88,10 @@ class ReferenceMapTest extends AbstractValidatingTest {
       val expected = entity.types(2)
       val pid = PathIdentifier(At.empty, Seq("Something", "someData"))
       val ref = TypeRef(At(), "record", pid)
-      refMap.definitionOf[Type](ref, entity) match {
+      // State is a Branch, so the refMap stores the State's type ref
+      // with the State as parent (not the Entity)
+      val state = entity.states.head
+      refMap.definitionOf[Type](ref, state) match {
         case Some(actual: Type) =>
           actual mustBe expected
           actual.id.value mustBe ("someData")
