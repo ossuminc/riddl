@@ -15,7 +15,34 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: March 6, 2026
+**Last Updated**: March 9, 2026
+
+### Release 1.14.2 Published (Mar 9, 2026)
+
+Bugfix patch for module parser:
+- Module parser now accepts `???` (undefined) body, matching
+  every other scope parser (domain, context, entity, etc.)
+- Previously `module X is { ??? }` caused a parse error because
+  `moduleContents` required `.rep(1)` with no `undefined`
+  alternative
+
+### Release 1.14.1 Published (Mar 9, 2026)
+
+Bugfix patch for validation issues reported by Synapify:
+- Added `faicon`, `external`, `namespace`, `package` to the
+  `RecognizedOptions` registry — `option faicon("...")` no
+  longer produces "not a recognized RIDDL option"
+- Fixed Term definition length check: now sums character counts
+  across `LiteralString` entries instead of checking sequence
+  size (`t.definition.map(_.s.length).sum` vs `t.definition.length`)
+- Removed 10 duplicate `checkMetadata` calls on VitalDefinitions
+  (Function, Entity, Projector, Repository, Adaptor, Streamlet,
+  Domain, Saga, Context, Epic) — these were already called via
+  `checkContainer` → `checkDefinition` → `checkMetadata`
+- Added deprecation framework for option renames: `option
+  package(...)` now emits a style warning directing users to
+  use `namespace` instead (backward compatible through 1.x)
+- Added `KnownOption.namespace` to language module KnownOptions
 
 ### Release 1.14.0 Published (Mar 6, 2026)
 
