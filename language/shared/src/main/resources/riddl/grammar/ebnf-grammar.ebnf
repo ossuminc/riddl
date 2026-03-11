@@ -207,7 +207,7 @@ the_set_statement = "set" field_ref "to" literal_string ;
 let_statement = "let" identifier "=" literal_string ;
 
 (* General statements *)
-prompt_statement = "prompt" literal_string ;
+prompt_statement = ("prompt" | "do") literal_string ;
 code_statement = "```" ("scala" | "java" | "python" | "mojo") code_contents "```" ;
 code_contents = {any_char_except_triple_backtick} ;
 error_statement = "error" literal_string ;

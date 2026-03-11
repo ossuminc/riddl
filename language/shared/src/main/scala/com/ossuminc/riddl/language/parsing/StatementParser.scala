@@ -21,7 +21,7 @@ private[parsing] trait StatementParser {
   this: ReferenceParser & CommonParser =>
 
   private def promptStatement[u: P]: P[PromptStatement] = {
-    P(Index ~ Keywords.prompt ~ literalString ~/ Index)./ map { case (start, str, end) => PromptStatement(at(start, end), str) }
+    P(Index ~ (Keywords.prompt | Keywords.do_) ~ literalString ~/ Index)./ map { case (start, str, end) => PromptStatement(at(start, end), str) }
   }
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
