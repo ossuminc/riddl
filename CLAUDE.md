@@ -750,7 +750,14 @@ Items below are NOT duplicated elsewhere in this file.
 34. **TatSu 5.17.0 is broken** — Pin `TatSu>=5.12.0,<5.17.0`
 35. **No `inline` on Contents extensions** — ScalaDoc 3.7.4
     crashes. Filed: scala/scala3#25306
-36. **Current release is 1.14.2** — Validation + parser fixes
+36. **Current release is 1.15.1** — State-as-Branch + `do` alias
+45. **State is a Branch** — State extends `Branch[StateContents]`
+    where `StateContents = Handler | Comment`. PassVisitor uses
+    `openState`/`closeState` (not `doState`). ResolutionPass
+    prepends State to parents (as with all Branches), so refMap
+    keys for State's type ref use State as parent, not Entity
+46. **`do` is alias for `prompt`** — Both `do "text"` and
+    `prompt "text"` produce `PromptStatement`
 37. **PrettifyPass multi-file mode** — `flatten=false` (default)
     preserves include/import structure. `-s true` for single file
 38. **BASTImport in HierarchyPass** — `openBASTImport`/

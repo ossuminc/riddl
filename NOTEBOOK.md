@@ -15,7 +15,31 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: March 9, 2026
+**Last Updated**: March 11, 2026
+
+### Release 1.15.1 Published (Mar 11, 2026)
+
+Patch: `do` keyword alias for `prompt` statement.
+- `do "something"` now parses identically to `prompt "something"`
+- EBNF grammar updated
+
+### Release 1.15.0 Published (Mar 10, 2026)
+
+New feature: State as Branch (container) instead of Leaf.
+- State definitions inside entities can now contain handlers,
+  enabling state-machine modeling where behavior changes per
+  active state
+- New syntax: `state X of Y is { handler H is { ... } }`
+- Traditional bare syntax still works: `state X of Y`
+- AST: `StateContents = Handler | Comment`, State extends
+  `Branch[StateContents]` with `WithHandlers[StateContents]`
+- Parser: `stateContent`, `stateContents`, `stateBody` rules
+- BAST: `writeContents`/`readContentsDeferred` for State
+- Pass.scala: `openState`/`closeState` in PassVisitor
+- PrettifyVisitor: handles both bare and body forms
+- EBNF: `state_body` and `state_content` rules added
+- All 762 tests pass (298 language + 277 passes + 187 other)
+- `/ship` skill updated: removed task-file generation step
 
 ### Release 1.14.2 Published (Mar 9, 2026)
 
