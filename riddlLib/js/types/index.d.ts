@@ -388,6 +388,13 @@ export interface AggregationAST {
 }
 
 /**
+ * Opaque handle to an IncrementalValidator.
+ * Created by `createIncrementalValidator()`.
+ */
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface IncrementalValidator { readonly __brand: unique symbol }
+
+/**
  * Main API object for RIDDL parsing functionality.
  *
  * @example
@@ -609,12 +616,6 @@ export declare const RiddlAPI: {
     noANSIMessages?: boolean
   ): ValidationResult;
 
-  /**
-   * Opaque handle to an IncrementalValidator.
-   * Created by `createIncrementalValidator()`.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface IncrementalValidator { readonly __brand: unique symbol }
 
   /**
    * Create an IncrementalValidator for efficient repeated
