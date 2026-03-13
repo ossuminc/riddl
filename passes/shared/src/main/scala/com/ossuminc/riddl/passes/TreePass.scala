@@ -44,8 +44,8 @@ case class TreePass(
 
   def name: String = TreePass.name
 
-  private val childrenMap: mutable.Map[Definition, mutable.ListBuffer[TreeNode]] =
-    mutable.Map.empty
+  private val stack: mutable.Stack[mutable.ListBuffer[TreeNode]] =
+    mutable.Stack.empty
 
   private val topLevel: mutable.ListBuffer[TreeNode] =
     mutable.ListBuffer.empty
@@ -54,7 +54,7 @@ case class TreePass(
     definition: Definition,
     parents: Parents
   ): Unit = {
-    childrenMap(definition) = mutable.ListBuffer.empty
+    stack.push(mutable.ListBuffer.empty)
   }
 
   protected def processLeaf(
@@ -70,11 +70,7 @@ case class TreePass(
         offset = definition.loc.offset,
         children = Seq.empty
       )
-      if parents.nonEmpty then
-        childrenMap.get(parents.head.asInstanceOf[Definition]) match {
-          case Some(buf) => buf.append(leaf)
-          case None      => topLevel.append(leaf)
-        }
+      if stack.nonEmpty then stack.head.append(leaf)
       else topLevel.append(leaf)
       end if
     end if
@@ -89,8 +85,7 @@ case class TreePass(
     definition: Definition,
     parents: Parents
   ): Unit = {
-    val children = childrenMap.remove(definition)
-      .map(_.toSeq).getOrElse(Seq.empty)
+    val children = if stack.nonEmpty then stack.pop().toSeq else Seq.empty
     if definition.id.nonEmpty then
       val node = TreeNode(
         kind = definition.kind,
@@ -100,11 +95,7 @@ case class TreePass(
         offset = definition.loc.offset,
         children = children
       )
-      if parents.nonEmpty then
-        childrenMap.get(parents.head.asInstanceOf[Definition]) match {
-          case Some(buf) => buf.append(node)
-          case None      => topLevel.append(node)
-        }
+      if stack.nonEmpty then stack.head.append(node)
       else topLevel.append(node)
       end if
     end if

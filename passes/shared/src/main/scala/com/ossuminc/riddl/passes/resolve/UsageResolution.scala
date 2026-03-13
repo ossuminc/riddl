@@ -15,11 +15,11 @@ import scala.reflect.ClassTag
 
 trait UsageBase {
 
-  type UseMap = mutable.HashMap[Definition, Seq[Definition]]
-  type UsedByMap = mutable.HashMap[Definition, Seq[Definition]]
+  type UseMap = mutable.HashMap[Definition, mutable.Set[Definition]]
+  type UsedByMap = mutable.HashMap[Definition, mutable.Set[Definition]]
 
-  protected val uses: UseMap = mutable.HashMap.empty[Definition, Seq[Definition]]
-  protected val usedBy: UsedByMap = mutable.HashMap.empty[Definition, Seq[Definition]]
+  protected val uses: UseMap = mutable.HashMap.empty[Definition, mutable.Set[Definition]]
+  protected val usedBy: UsedByMap = mutable.HashMap.empty[Definition, mutable.Set[Definition]]
 }
 
 /** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call associateUsage. After
@@ -60,11 +60,8 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
   end associateUsage
 
   def associateUsage(user: Definition, use: Definition): this.type =
-    val used = uses.getOrElse(user, Seq.empty[Definition])
-    if !used.contains(use) then uses.update(user, used :+ use)
-
-    val usages = usedBy.getOrElse(use, Seq.empty[Definition])
-    if !usages.contains(user) then usedBy.update(use, usages :+ user)
+    uses.getOrElseUpdate(user, mutable.Set.empty[Definition]).add(use)
+    usedBy.getOrElseUpdate(use, mutable.Set.empty[Definition]).add(user)
     this
   end associateUsage
 

@@ -812,6 +812,40 @@ object AST:
     override def isDefinition: Boolean = true
     override def isParent: Boolean = false
     override def hasDefinitions: Boolean = false
+
+    /** Cheap hash based on id + loc to avoid O(subtree) traversal of contents fields.
+      * Case class auto-generated hashCode traverses ALL constructor fields including
+      * Contents (mutable.ArrayBuffer), making every HashMap operation O(subtree).
+      * Note: overriding hashCode here suppresses case class auto-generated equals too
+      * (Scala 3 spec), so we must also override equals to preserve structural comparison.
+      */
+    override def hashCode: Int =
+      val h = id.hashCode * 31 + loc.hashCode
+      h * 31 + getClass.hashCode
+    override def equals(that: Any): Boolean = that match
+      case other: Definition =>
+        (this eq other) || (
+          getClass == other.getClass &&
+          id == other.id &&
+          loc == other.loc &&
+          metadata == other.metadata &&
+          productEquals(other)
+        )
+      case _ => false
+
+    /** Structural comparison of product elements, skipping Contents fields
+      * to avoid O(subtree) traversal. For two Definitions at the same loc
+      * with the same id, the non-contents fields determine equality.
+      */
+    private def productEquals(other: Definition): Boolean =
+      (this, other) match
+        case (a: Product, b: Product) =>
+          a.productArity == b.productArity &&
+          (0 until a.productArity).forall: i =>
+            (a.productElement(i), b.productElement(i)) match
+              case (_: Contents[?], _: Contents[?]) => true // skip contents
+              case (x, y) => x == y
+        case _ => false
   end Definition
 
   object Definition:

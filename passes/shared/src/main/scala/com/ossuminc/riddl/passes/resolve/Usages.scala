@@ -31,7 +31,7 @@ case class Usages(
 
   /** Determine if a definition is used or not */
   def isUsed(definition: Definition): Boolean = {
-    uses.keys.exists(_ == definition)
+    uses.contains(definition)
   }
 
   /** Determine if one definition is used by another
@@ -72,7 +72,7 @@ case class Usages(
     *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.Definition]] that are using `used`
     */
   def getUsers(used: Definition): Seq[Definition] = {
-    usedBy.getOrElse(used, Seq.empty)
+    usedBy.getOrElse(used, mutable.Set.empty).toSeq
   }
 
   /** Retrieve the uses of a given user
@@ -83,7 +83,7 @@ case class Usages(
     *   The [[scala.Seq]] of [[com.ossuminc.riddl.language.AST.Definition]] that are used by `user`
     */
   def getUses(user: Definition): Seq[Definition] = {
-    uses.getOrElse(user, Seq.empty)
+    uses.getOrElse(user, mutable.Set.empty).toSeq
   }
 
   def usesAsString: String = {
