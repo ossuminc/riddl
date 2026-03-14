@@ -531,7 +531,7 @@ object RiddlAPI {
             producerKind = edge.producer.kind,
             consumerId = edge.consumer.id.value,
             consumerKind = edge.consumer.kind,
-            messageTypeId = edge.messageType.id.value,
+            messageTypeId = edge.messageType.map(_.id.value).getOrElse(""),
             mechanism = edge.mechanism.toString
           )
         }.toJSArray,

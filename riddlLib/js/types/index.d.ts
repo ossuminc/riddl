@@ -1039,7 +1039,7 @@ export interface MessageFlowEdge {
   consumerId: string;
   /** Consumer definition kind (e.g., "Entity") */
   consumerKind: string;
-  /** Message type identifier */
+  /** Message type identifier (empty string if not available) */
   messageTypeId: string;
   /** Flow mechanism */
   mechanism: 'Tell' | 'Send' | 'AdaptorBridge' | 'ConnectorPipe';

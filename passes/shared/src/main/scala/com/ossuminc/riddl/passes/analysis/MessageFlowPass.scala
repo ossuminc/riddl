@@ -37,7 +37,7 @@ enum FlowMechanism:
 case class MessageFlowEdge(
   producer: Definition,
   consumer: Definition,
-  messageType: Type,
+  messageType: Option[Type],
   mechanism: FlowMechanism
 )
 
@@ -65,7 +65,23 @@ case class MessageFlowOutput(
   producerIndex: Map[Definition, Seq[MessageFlowEdge]] = Map.empty,
   consumerIndex: Map[Definition, Seq[MessageFlowEdge]] = Map.empty,
   messageIndex: Map[Type, Seq[MessageFlowEdge]] = Map.empty
-) extends PassOutput
+) extends PassOutput:
+
+  /** Edges where producer or consumer is within the given domain */
+  def edgesForDomain(domain: Domain, symbols: SymbolsOutput): Seq[MessageFlowEdge] =
+    edges.filter: edge =>
+      isWithin(edge.producer, domain, symbols) ||
+        isWithin(edge.consumer, domain, symbols)
+
+  /** Edges where producer or consumer is within the given context */
+  def edgesForContext(context: Context, symbols: SymbolsOutput): Seq[MessageFlowEdge] =
+    edges.filter: edge =>
+      isWithin(edge.producer, context, symbols) ||
+        isWithin(edge.consumer, context, symbols)
+
+  private def isWithin(defn: Definition, ancestor: Definition, symbols: SymbolsOutput): Boolean =
+    (defn == ancestor) || symbols.parentsOf(defn).contains(ancestor)
+end MessageFlowOutput
 
 @JSExportTopLevel("MessageFlowPass$")
 object MessageFlowPass extends PassInfo[PassOptions] {
@@ -143,11 +159,23 @@ case class MessageFlowPass(
             MessageFlowEdge(
               producer = processor,
               consumer = target,
-              messageType = msgType,
+              messageType = Some(msgType),
               mechanism = FlowMechanism.Tell
             )
           )
-        case _ => ()
+        case _ =>
+          if maybeTarget.isEmpty then
+            messages.addWarning(
+              tell.loc,
+              s"MessageFlowPass: could not resolve tell target" +
+                s" '${tell.processorRef.format}' in ${processor.identify}"
+            )
+          if maybeType.isEmpty then
+            messages.addWarning(
+              tell.loc,
+              s"MessageFlowPass: could not resolve message type" +
+                s" '${tell.msg.format}' in ${processor.identify}"
+            )
     }
 
     sends.foreach { send =>
@@ -164,12 +192,24 @@ case class MessageFlowPass(
               MessageFlowEdge(
                 producer = processor,
                 consumer = target,
-                messageType = msgType,
+                messageType = Some(msgType),
                 mechanism = FlowMechanism.Send
               )
             )
           }
-        case _ => ()
+        case _ =>
+          if maybePortlet.isEmpty then
+            messages.addWarning(
+              send.loc,
+              s"MessageFlowPass: could not resolve send portlet" +
+                s" '${send.portlet.format}' in ${processor.identify}"
+            )
+          if maybeType.isEmpty then
+            messages.addWarning(
+              send.loc,
+              s"MessageFlowPass: could not resolve message type" +
+                s" '${send.msg.format}' in ${processor.identify}"
+            )
     }
   }
 
@@ -177,13 +217,29 @@ case class MessageFlowPass(
     adaptor: Adaptor,
     parents: Parents
   ): Unit = {
-    val maybeTargetContext =
+    val maybeReferentContext =
       refMap.definitionOf[Context](adaptor.referent, adaptor)
-    val sourceContext = parents.headOption.collect {
+    val maybeSourceContext = parents.headOption.collect {
       case c: Context => c
     }
-    (sourceContext, maybeTargetContext) match
-      case (Some(source), Some(target)) =>
+    (maybeSourceContext, maybeReferentContext) match
+      case (Some(source), Some(referent)) =>
+        // Determine producer/consumer based on adaptor direction
+        val (producer, consumer) = adaptor.direction match
+          case _: InboundAdaptor  => (referent, source)
+          case _: OutboundAdaptor => (source, referent)
+
+        // Always create a declaration-level edge (no message type)
+        collectedEdges.addOne(
+          MessageFlowEdge(
+            producer = producer,
+            consumer = consumer,
+            messageType = None,
+            mechanism = FlowMechanism.AdaptorBridge
+          )
+        )
+
+        // Create additional typed edges from handler clauses
         adaptor.handlers.foreach { handler =>
           handler.clauses.foreach {
             case omc: OnMessageClause =>
@@ -192,9 +248,9 @@ case class MessageFlowPass(
               maybeType.foreach { msgType =>
                 collectedEdges.addOne(
                   MessageFlowEdge(
-                    producer = target,
-                    consumer = source,
-                    messageType = msgType,
+                    producer = producer,
+                    consumer = consumer,
+                    messageType = Some(msgType),
                     mechanism = FlowMechanism.AdaptorBridge
                   )
                 )
@@ -202,7 +258,12 @@ case class MessageFlowPass(
             case _ => ()
           }
         }
-      case _ => ()
+      case _ =>
+        messages.addWarning(
+          adaptor.loc,
+          s"MessageFlowPass: could not resolve adaptor context references" +
+            s" for ${adaptor.identify}"
+        )
   }
 
   private def processConnector(
@@ -257,7 +318,7 @@ case class MessageFlowPass(
                 MessageFlowEdge(
                   producer = from,
                   consumer = to,
-                  messageType = msgType,
+                  messageType = Some(msgType),
                   mechanism = FlowMechanism.ConnectorPipe
                 )
               )
@@ -273,7 +334,9 @@ case class MessageFlowPass(
       edges = edges,
       producerIndex = edges.groupBy(_.producer),
       consumerIndex = edges.groupBy(_.consumer),
-      messageIndex = edges.groupBy(_.messageType)
+      messageIndex = edges.collect {
+        case e if e.messageType.isDefined => e
+      }.groupBy(_.messageType.get)
     )
   }
 }
