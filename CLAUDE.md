@@ -750,7 +750,7 @@ Items below are NOT duplicated elsewhere in this file.
 34. **TatSu 5.17.0 is broken** — Pin `TatSu>=5.12.0,<5.17.0`
 35. **No `inline` on Contents extensions** — ScalaDoc 3.7.4
     crashes. Filed: scala/scala3#25306
-36. **Current release is 1.15.1** — State-as-Branch + `do` alias
+36. **Current release is 1.15.3** — MessageFlowPass fix + perf opts
 45. **State is a Branch** — State extends `Branch[StateContents]`
     where `StateContents = Handler | Comment`. PassVisitor uses
     `openState`/`closeState` (not `doState`). ResolutionPass
@@ -776,3 +776,28 @@ Items below are NOT duplicated elsewhere in this file.
     for version parsing. Pin `riddlcVersion` in scripted tests
 44. **sbt plugin visibility** — Use `private[plugin] def` to
     avoid "private method never used" in sbt plugins (Scala 2.12)
+47. **Definition hashCode/equals override** — `Definition` trait
+    overrides `hashCode` (cheap: id+loc+class) and `equals`
+    (structural but skips `Contents` fields via `productEquals`).
+    This prevents O(subtree) hashing in all `HashMap[Definition,X]`
+    operations. Opaque type `Contents[?]` erases to `ArrayBuffer`
+    at runtime, so `case (_: Contents[?], ...)` matches correctly
+48. **TreePass uses Stack not HashMap** — `mutable.Stack` of
+    `ListBuffer[TreeNode]` replaces `Map[Definition, ListBuffer]`
+    for pure O(n) tree building
+49. **UsageResolution uses mutable.Set** — `uses`/`usedBy` value
+    types are `mutable.Set[Definition]` not `Seq[Definition]`.
+    API boundary methods (`getUsers`, `getUses`) return `.toSeq`
+50. **MessageFlowEdge.messageType is Option[Type]** — Changed
+    in 1.15.3. Adaptor declarations produce edges with `None`.
+    JS facade returns `""` for missing type. Consumers must use
+    `.map()`/`.getOrElse()`
+51. **MessageFlowPass direction-aware** — `InboundAdaptor` →
+    producer=referent, consumer=source. `OutboundAdaptor` →
+    producer=source, consumer=referent. Fixed in 1.15.3
+52. **MessageFlowOutput scoping helpers** — `edgesForDomain()`
+    and `edgesForContext()` take `SymbolsOutput` parameter to
+    walk parent chains
+53. **EBNF TatSu syntax** — Use `{rule}+` not `rule+` for
+    positive closure. TatSu requires curly braces around
+    repeated elements

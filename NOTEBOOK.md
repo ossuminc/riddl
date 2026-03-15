@@ -15,7 +15,38 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: March 11, 2026
+**Last Updated**: March 14, 2026
+
+### Release 1.15.3 Published (Mar 14, 2026)
+
+Bugfix: MessageFlowPass empty results + EBNF grammar fix.
+- MessageFlowPass now creates `AdaptorBridge` edges from adaptor
+  declarations even when handlers contain only `prompt` or `???`
+- Fixed adaptor direction bug: was always treating adaptors as
+  inbound regardless of `from`/`to` declaration
+- `MessageFlowEdge.messageType` changed to `Option[Type]` — adaptor
+  declaration edges have `None`, typed handler edges have `Some`
+- Silent resolution failures now emit `Messages.warning`
+- Added `edgesForDomain()` and `edgesForContext()` scoping helpers
+  to `MessageFlowOutput` (takes `SymbolsOutput` parameter)
+- JS facade: `messageTypeId` returns `""` for untyped edges
+- Fixed EBNF grammar: `state_content+` → `{state_content}+`
+  (TatSu requires curly braces for positive closure)
+- 6 new MessageFlowPass tests (289 total passes tests)
+
+### Release 1.15.2 Published (Mar 13, 2026)
+
+Performance optimization for Scala.js and Native:
+- TreePass: replaced `HashMap[Definition, ListBuffer]` with
+  `mutable.Stack[ListBuffer]` — pure O(n) tree building
+- Definition trait: overrides `hashCode` (cheap: id+loc+class)
+  and `equals` (structural but skips Contents fields) to prevent
+  O(subtree) hashing in all HashMap operations
+- UsageResolution: changed `uses`/`usedBy` from `Seq[Definition]`
+  to `mutable.Set[Definition]` for O(1) association lookups
+- `Usages.isUsed()` uses `HashMap.contains` instead of
+  `keys.exists(_ == definition)`
+- All 1818 tests pass across JVM, JS, Native
 
 ### Release 1.15.1 Published (Mar 11, 2026)
 
