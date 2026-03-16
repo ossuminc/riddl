@@ -22,6 +22,7 @@ class FunctionValidatorTest extends AbstractValidatingTest with Inside {
          |    returns {r: Integer }
          |    ???
          |  }
+         |  handler x is { ??? }
          |}
          |""".stripMargin) { (e, rpi, msgs) =>
         inside(e.functions.head) { (f: Function) =>

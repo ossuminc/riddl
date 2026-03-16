@@ -46,6 +46,7 @@ class RunRiddlcOnLocalTest extends RunCommandSpecBase {
       runOnLocalProject(cwd, config, "validate")
     }
     "validate on ossuminc/institutional-commerce" in {
+      pending // entities in institutional-commerce need handlers or states with handlers
       val cwd = "/Users/reid/Code/ossuminc/institutional-commerce"
       val config = "src/main/riddl/ImprovingApp.conf"
       runOnLocalProject(cwd, config, "validate")

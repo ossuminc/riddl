@@ -69,6 +69,7 @@ trait SharedAdaptorTest(using PlatformContext) extends AbstractValidatingTest {
           |
           |  entity MyEntity is {
           |    sink phum is { inlet commands is command LetsDoIt }
+          |    handler x is { ??? }
           |  }
           |  connector only is {
           |    from outlet Foo.PaymentAdapter.foo.forMyEntity

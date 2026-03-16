@@ -92,7 +92,7 @@ class EntityValidatorTest extends AbstractValidatingTest {
             assertValidationMessage(
               msgs,
               Error,
-              "Entity 'Hamburger' has 1 state but no handlers."
+              "State 'foo' in Entity 'Hamburger' has no handlers."
             )
             assertValidationMessage(
               msgs,

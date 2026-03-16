@@ -19,6 +19,7 @@ class InvariantValidator extends AbstractValidatingTest {
         """
           |entity user is {
           | invariant small is ??? with { described as { "self explanatory!" } }
+          | handler x is { ??? }
           |}
           |""".stripMargin
       ) { (_, _, msgs) =>
@@ -44,6 +45,7 @@ class InvariantValidator extends AbstractValidatingTest {
         """
           |entity user is {
           | invariant large is "x must be greater or equal to 10"
+          | handler x is { ??? }
           |}
           |""".stripMargin
       ) { (_, _, msgs) =>
@@ -58,6 +60,7 @@ class InvariantValidator extends AbstractValidatingTest {
       parseAndValidateInContext[AST.Entity]("""
                                               |entity user is {
                                               | invariant large is "true"
+                                              | handler x is { ??? }
                                               |}
                                               |""".stripMargin) { (_, _, msgs) =>
         assertValidationMessage(

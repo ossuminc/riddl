@@ -58,6 +58,7 @@ class RunRiddlcOnRemoteTest extends RunCommandSpecBase {
 
   "riddlc" should {
     "validate on ossuminc/institutional-commerce" in {
+      pending // entities in institutional-commerce need handlers or states with handlers
       runOnGitHubProject(
         "ossuminc",
         "institutional-commerce",

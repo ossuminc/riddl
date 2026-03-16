@@ -64,11 +64,12 @@ class ReportedIssuesTest extends JVMAbstractValidatingTest {
           // info(messages.format)
           val errors = messages.justErrors
           info(errors.format)
-          errors.length must be(3)
+          errors.length must be(4)
           val f = errors.map(_.format)
           f contains "Path 'FooExamplexxx.garbage' was not resolved,"
           f contains "Path 'FooExamplexxxx.garbage' was not resolved"
           f contains "Path 'Examplexxxx.Foo' was not resolved,"
+          f contains "Entity 'OtherEntity' has no handlers and no states with handlers."
           val usage = messages.justUsage
           usage.length must be(0)
           val u = usage.map(_.format)

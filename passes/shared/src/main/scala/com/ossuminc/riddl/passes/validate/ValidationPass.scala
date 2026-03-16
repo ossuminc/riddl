@@ -728,14 +728,25 @@ case class ValidationPass(
           s"${entity.identify} is declared as a finite-state-machine but its handlers contain no morph or become statements"
         )
     }
-    if entity.states.nonEmpty && entity.handlers.isEmpty then {
+    if entity.states.nonEmpty then {
+      val statesWithoutHandlers = entity.states.filter { state =>
+        state.handlers.isEmpty && entity.handlers.isEmpty
+      }
+      for state <- statesWithoutHandlers do
+        messages.add(
+          Message(
+            state.errorLoc,
+            s"${state.identify} in ${entity.identify} has no handlers.",
+            Messages.Error
+          )
+        )
+      end for
+    } else if entity.handlers.isEmpty && !entity.isEmpty then {
       messages.add(
         Message(
           entity.errorLoc,
-          s"${entity.identify} has ${entity.states.size} state${
-              if entity.states.size != 1 then "s"
-              else ""
-            } but no handlers.",
+          s"${entity.identify} has no handlers and no states with handlers. " +
+            "Add a handler to the entity or add a state with a handler.",
           Messages.Error
         )
       )

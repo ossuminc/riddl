@@ -10,6 +10,9 @@ passes/input/check/saga/saga.riddl(12:5->16):
 passes/input/check/saga/saga.riddl(12:5->16):
  Metadata in Entity 'blah' should not be empty:
      entity blah is {
+passes/input/check/saga/saga.riddl(12:5->16):
+ Entity 'blah' has no handlers and no states with handlers. Add a handler to the entity or add a state with a handler.:
+     entity blah is {
 passes/input/check/saga/saga.riddl(13:26->34):
  Inlet 'in' is not connected:
        sink trashCan is { inlet in is command Something }
