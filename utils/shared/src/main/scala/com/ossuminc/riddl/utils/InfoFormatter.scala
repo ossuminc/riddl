@@ -19,8 +19,7 @@ object InfoFormatter {
     */
   def formatInfo: String = {
     val lines = Seq(
-      "About RIDDL:",
-      s"           name: ${RiddlBuildInfo.name}",
+      "Build information about RIDDL:",
       s"        version: ${RiddlBuildInfo.version}",
       s"  documentation: ${RiddlBuildInfo.projectHomepage}",
       s"      copyright: ${RiddlBuildInfo.copyright}",
