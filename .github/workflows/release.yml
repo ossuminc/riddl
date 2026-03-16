@@ -184,3 +184,22 @@ jobs:
             "sha_linux_x86": "${{ steps.hashes.outputs.linux_x86 }}",
             "sha_jvm": "${{ steps.hashes.outputs.jvm }}"
           }
+
+  # Notify ossum.ai to create a blog post from release notes
+  notify-blog:
+    needs: [native-build, jvm-build]
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch blog post creation
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_SECRET }}
+          repository: ossuminc/ossum.ai
+          event-type: riddl-release
+          client-payload: >-
+            {
+              "product": "riddl",
+              "version": "${{ github.event.release.tag_name || github.event.inputs.tag }}",
+              "release_url": "https://github.com/ossuminc/riddl/releases/tag/${{ github.event.release.tag_name || github.event.inputs.tag }}"
+            }
