@@ -161,8 +161,8 @@ case class ValidationPass(
         validateContext(c, parentsAsSeq)
       case d: Domain =>
         validateDomain(d, parentsAsSeq)
-      case s: Epic =>
-        validateEpic(s, parentsAsSeq)
+      case e: Epic =>
+        validateEpic(e, parentsAsSeq)
       case uc: UseCase =>
         validateUseCase(uc, parentsAsSeq)
       case grp: Group =>
@@ -1236,7 +1236,7 @@ case class ValidationPass(
   // FIXME: This should be used
   private def validateInteraction(interaction: Interaction, parents: Parents): Unit = {
     val useCase = parents.head
-    checkMetadata(useCase.identify, interaction, interaction.loc)
+    // checkMetadata(useCase.identify, interaction, interaction.loc)
     interaction match {
       case SelfInteraction(_, from, _, _) =>
         checkRef[Definition](from, parents)

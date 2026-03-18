@@ -97,7 +97,7 @@ object RecognizedOptions:
     // Icon and display options
     "faicon" -> OptionSpec(Seq.empty, 1, 1),
     // Domain/Context structural options
-    "external" -> OptionSpec(Seq("Domain"), 0, 0),
+    "external" -> OptionSpec(Seq("Domain", "Context"), 0, 0),
     "namespace" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
     "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1)
   )
