@@ -194,7 +194,7 @@ jobs:
       - name: Dispatch blog post creation
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.HOMEBREW_TAP_SECRET }}
+          token: ${{ secrets.BLOG_DISPATCH }}
           repository: ossuminc/ossum.ai
           event-type: riddl-release
           client-payload: >-
