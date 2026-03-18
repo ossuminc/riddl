@@ -197,7 +197,9 @@ case class ValidationPass(
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
     checkDefinition(parents, omc)
     validateOnClause(omc)
-
+    val isAdaptor: Boolean = parents.exists(_.isInstanceOf[Adaptor])
+    val isExternalContext: Boolean = parents.collectFirst { case c: Context => c }
+      .exists(_.hasOption("external"))
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
       omc.msg.messageKind match {
@@ -209,7 +211,7 @@ case class ValidationPass(
             sends.exists(_.msg.messageKind == AggregateUseCase.EventCase)
           val foundTell = tells.nonEmpty &&
             tells.exists(_.msg.messageKind == AggregateUseCase.EventCase)
-          if !(foundSend || foundTell) then
+          if !(foundSend || foundTell) && !isAdaptor && !isExternalContext then
             messages.add(
               warning("Processing for commands should result in sending an event", omc.errorLoc)
             )
@@ -221,7 +223,7 @@ case class ValidationPass(
             sends.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
           val foundTell = tells.nonEmpty &&
             tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
-          if !(foundSend || foundTell) then
+          if !(foundSend || foundTell) && !isAdaptor then
             messages.add(
               warning("Processing for queries should result in sending a result", omc.errorLoc)
             )
@@ -269,19 +271,19 @@ case class ValidationPass(
         checkRef[Type](value, parents)
       case BecomeStatement(_, entityRef, handlerRef) =>
         checkRef[Entity](entityRef, parents).foreach { entity =>
-          checkCrossContextReference(entityRef.pathId, entity, onClause)
+          checkCrossContextReference(entityRef.pathId, entity, onClause, parents)
         }
         checkRef[Handler](handlerRef, parents).foreach { handler =>
-          checkCrossContextReference(handlerRef.pathId, handler, onClause)
+          checkCrossContextReference(handlerRef.pathId, handler, onClause, parents)
         }
       case TellStatement(_, msg, processorRef) =>
         val maybeProc = checkRef[Processor[?]](processorRef, parents)
         maybeProc.foreach { entity =>
-          checkCrossContextReference(processorRef.pathId, entity, onClause)
+          checkCrossContextReference(processorRef.pathId, entity, onClause, parents)
         }
         val maybeType = checkRef[Type](msg, parents)
         maybeType.foreach { typ =>
-          checkCrossContextReference(msg.pathId, typ, onClause)
+          checkCrossContextReference(msg.pathId, typ, onClause, parents)
         }
       case WhenStatement(loc, condition, thenStatements, elseStatements, _) =>
         condition match {
@@ -298,7 +300,7 @@ case class ValidationPass(
         cases.foreach { mc =>
           checkNonEmptyValue(mc.pattern, "case pattern", onClause, mc.loc, MissingWarning, required = true)
         }
-      case LetStatement(loc, identifier, expression) =>
+      case LetStatement(loc, identifier, _, expression) =>
         check(
           identifier.value.length >= 3,
           s"Identifier '${identifier.value}' is too short",

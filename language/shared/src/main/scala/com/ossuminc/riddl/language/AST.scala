@@ -2530,10 +2530,13 @@ object AST:
   case class LetStatement(
     loc: At,
     identifier: Identifier,
+    typeRef: Option[TypeRef],
     expression: LiteralString
   ) extends Statement {
     override def kind: String = "Let Statement"
-    def format: String = s"let ${identifier.format} = ${expression.format}"
+    def format: String =
+      val typeClause = typeRef.map(t => s": ${t.format}").getOrElse("")
+      s"let ${identifier.format}$typeClause = ${expression.format}"
   }
 
   /** A code statement that contains arbitrary code in a specified language

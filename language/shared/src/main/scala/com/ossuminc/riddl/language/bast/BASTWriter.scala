@@ -945,6 +945,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(12) // Let statement
     writeLocation(s.loc)
     writeIdentifier(s.identifier)
+    s.typeRef match
+      case Some(tr) =>
+        writer.writeU8(1)
+        writePathIdentifier(tr.pathId)
+      case None =>
+        writer.writeU8(0)
     writeLiteralString(s.expression)
   }
 

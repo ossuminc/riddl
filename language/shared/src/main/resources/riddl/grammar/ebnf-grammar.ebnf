@@ -204,7 +204,7 @@ tell_statement = "tell" message_ref "to" processor_ref ;
 
 (* Variable operations *)
 the_set_statement = "set" field_ref "to" literal_string ;
-let_statement = "let" identifier "=" literal_string ;
+let_statement = "let" identifier [":" type_ref] "=" literal_string ;
 
 (* General statements *)
 prompt_statement = ("prompt" | "do") literal_string ;

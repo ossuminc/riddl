@@ -138,7 +138,7 @@ class ASTTest extends AbstractTestingBasis {
     BecomeStatement(At.empty, entityRef, HandlerRef(At(), PathIdentifier(At(), Seq("Entity")))),
     CodeStatement(At.empty, language = LiteralString(At.empty, "scala"), body = "def f[A](x: A): A"),
     ErrorStatement(At.empty, LiteralString(At.empty, "error message")),
-    LetStatement(At.empty, Identifier(At.empty, "varName"), LiteralString(At.empty, "value")),
+    LetStatement(At.empty, Identifier(At.empty, "varName"), None, LiteralString(At.empty, "value")),
     MatchStatement(At.empty, LiteralString(At.empty, "expr"), Seq(MatchCase(At.empty, LiteralString(At.empty, "pattern"), Contents.empty())), Contents.empty()),
     MorphStatement(At.empty, entityRef, StateRef(At.empty, PathIdentifier(At(), Seq("state"))), messageRef),
     SendStatement(At.empty, messageRef, InletRef(At.empty, PathIdentifier(At.empty, Seq("inlet")))),

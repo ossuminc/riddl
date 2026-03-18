@@ -836,8 +836,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
       case 12 => // Let
         val identifier = readIdentifier()
+        val hasTypeRef = reader.readU8() != 0
+        val optTypeRef = if hasTypeRef then
+          val pid = readPathIdentifierNode()
+          Some(TypeRef(loc, "type", pid))
+        else None
         val expression = readLiteralString()
-        LetStatement(loc, identifier, expression)
+        LetStatement(loc, identifier, optTypeRef, expression)
 
       case 13 => // Code
         val language = readLiteralString()

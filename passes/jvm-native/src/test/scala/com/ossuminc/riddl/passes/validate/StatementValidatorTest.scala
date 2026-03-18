@@ -7,7 +7,7 @@
 package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.Root
-import com.ossuminc.riddl.language.Messages.{Messages, StyleWarning}
+import com.ossuminc.riddl.language.Messages.{Messages, Warning}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
 import com.ossuminc.riddl.utils.{pc, ec}
@@ -47,8 +47,8 @@ class StatementValidatorTest extends AbstractValidatingTest {
           val warnings = messages.justWarnings
           warnings.isEmpty mustBe false
           messages.exists { (msg: Messages.Message) =>
-            msg.kind == StyleWarning &&
-            msg.message.contains("Cross-context references are ill-advised")
+            msg.kind == Warning &&
+            msg.message.contains("Cross-context references violate")
           } must be(true)
       }
 

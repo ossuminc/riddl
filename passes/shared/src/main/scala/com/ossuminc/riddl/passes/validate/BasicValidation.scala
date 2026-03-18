@@ -308,8 +308,12 @@ trait BasicValidation(using pc: PlatformContext) {
   def checkCrossContextReference(
     ref: PathIdentifier,
     definition: Definition,
-    container: Definition
+    container: Definition,
+    parents: Parents
   ): Unit = {
+    // Adaptors exist to handle cross-context communication, so
+    // cross-context references within them are expected and valid.
+    if parents.exists(_.isInstanceOf[Adaptor]) then return
     symbols.contextOf(definition) match {
       case Some(definitionContext) =>
         symbols.contextOf(container) match {
@@ -317,11 +321,12 @@ trait BasicValidation(using pc: PlatformContext) {
             if definitionContext != containerContext then
               val formatted = ref.format
               messages.add(
-                style(
+                warning(
                   s"Path Identifier $formatted at ${ref.loc.format} references ${definition.identify} in " +
                     s"${definitionContext.identify} but occurs in ${container.identify} in ${containerContext.identify}." +
-                    " Cross-context references are ill-advised as they lead to model confusion and violate " +
-                    "the 'bounded' aspect of bounded contexts",
+                    " Cross-context references violate the 'bounded' aspect of bounded contexts and lead to" +
+                    " model confusion. Instead, use an Adaptor to translate message types between contexts" +
+                    " or a Streamlet pipeline (Source/Sink/Flow) to decouple the communication",
                   ref.loc.extend(formatted.length)
                 )
               )

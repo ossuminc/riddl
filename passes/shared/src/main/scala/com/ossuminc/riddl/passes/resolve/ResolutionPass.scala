@@ -252,7 +252,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case _: ErrorStatement  => () // no references
       case _: WhenStatement   => () // no references (condition is a literal string)
       case _: MatchStatement  => () // no references (expression/patterns are literal strings)
-      case _: LetStatement    => () // no references (expression is a literal string)
+      case ls: LetStatement =>
+        ls.typeRef.foreach(tr => resolveARef[Type](tr, parents))
       case _: CodeStatement   => () // no references (code body is a string)
     }
   }

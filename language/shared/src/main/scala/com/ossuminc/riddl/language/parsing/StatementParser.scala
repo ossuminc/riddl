@@ -114,9 +114,10 @@ private[parsing] trait StatementParser {
 
   private def letStatement[u: P]: P[LetStatement] = {
     P(
-      Index ~ Keywords.let ~/ identifier ~ Punctuation.equalsSign ~/ literalString ~/ Index
-    )./.map { case (start, id, expr, end) =>
-      LetStatement(at(start, end), id, expr)
+      Index ~ Keywords.let ~/ identifier ~ (Punctuation.colon ~ typeRef).? ~
+        Punctuation.equalsSign ~/ literalString ~/ Index
+    )./.map { case (start, id, optTypeRef, expr, end) =>
+      LetStatement(at(start, end), id, optTypeRef, expr)
     }
   }
 

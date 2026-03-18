@@ -103,10 +103,65 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
     "check Let Statement" in { td =>
       val id = Identifier(At.empty, "foo")
       val expr = LiteralString(At.empty, "value")
-      val s = LetStatement(At.empty, id, expr)
+      val s = LetStatement(At.empty, id, None, expr)
       s.kind must be("Let Statement")
       s.format must be(s"let ${id.format} = ${expr.format}")
       checkStatement(s)
+    }
+    "check Let Statement with type annotation" in { td =>
+      val id = Identifier(At.empty, "foo")
+      val tr = TypeRef(At.empty, "type", PathIdentifier(At.empty, Seq("Number")))
+      val expr = LiteralString(At.empty, "42")
+      val s = LetStatement(At.empty, id, Some(tr), expr)
+      s.kind must be("Let Statement")
+      s.format must be("let foo: type Number = \"42\"")
+      checkStatement(s)
+    }
+    "parse Let Statement with type annotation" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain LetTest is {
+          |  context LetTest is {
+          |    type MyCommand is command { field: String }
+          |    handler h is {
+          |      on init {
+          |        let myVar: MyCommand = "MyCommand(field = hello)"
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin, td)
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(root) =>
+          val clause = AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+          val s: Statement = clause.contents.filter[Statement].head
+          s.isInstanceOf[LetStatement] must be(true)
+          val letStmt = s.asInstanceOf[LetStatement]
+          letStmt.identifier.value must be("myVar")
+          letStmt.typeRef must not be empty
+          letStmt.typeRef.get.pathId.value must be(Seq("MyCommand"))
+          letStmt.expression.s must be("MyCommand(field = hello)")
+    }
+    "parse Let Statement without type annotation" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain LetTest2 is {
+          |  context LetTest2 is {
+          |    handler h is {
+          |      on init {
+          |        let myVar = "some value"
+          |      }
+          |    }
+          |  }
+          |}""".stripMargin, td)
+      TopLevelParser.parseInput(input) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(root) =>
+          val clause = AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+          val s: Statement = clause.contents.filter[Statement].head
+          s.isInstanceOf[LetStatement] must be(true)
+          val letStmt = s.asInstanceOf[LetStatement]
+          letStmt.identifier.value must be("myVar")
+          letStmt.typeRef must be(None)
+          letStmt.expression.s must be("some value")
     }
     "check Code Statement" in { td =>
       val language = LiteralString(At.empty, "scala")

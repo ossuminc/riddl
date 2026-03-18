@@ -341,8 +341,9 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
           decr.addLine("}")
         end if
         decr.addLine("}")
-      case LetStatement(_, id, expr) =>
-        addLine(s"let ${id.format} = ${expr.format}")
+      case LetStatement(_, id, optTypeRef, expr) =>
+        val typeClause = optTypeRef.map(t => s": ${t.format}").getOrElse("")
+        addLine(s"let ${id.format}$typeClause = ${expr.format}")
       case PromptStatement(_, what) =>
         addLine(s"prompt ${what.format}")
       case SendStatement(_, msg, portlet) =>
