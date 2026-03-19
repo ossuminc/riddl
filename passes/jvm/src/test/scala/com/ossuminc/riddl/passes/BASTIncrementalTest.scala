@@ -474,6 +474,37 @@ class BASTIncrementalTest extends AnyWordSpec with Matchers {
       }""")
     }
 
+    // Level 19.5: Test epic with user story and interactions
+    "handle epic with user story and interactions" in {
+      testRoundTrip("epic-test", """domain TestDomain is {
+        user Customer is "a person who orders food" with { briefly "customer" }
+        epic DineIn is {
+          user Customer wants "to order food" so that "they can eat"
+          case OrderFood is {
+            user Customer wants "to select items from the menu" so that "they can build an order"
+            step from user Customer "selects items from menu" to user Customer
+          }
+        } with { briefly "dining in" }
+      }""")
+    }
+
+    // Level 19.6: Test typed let statement (was the original LetStatement bug)
+    "handle typed let statement" in {
+      testRoundTrip("typed-let", """domain TestDomain is {
+        context Reservations is {
+          type ReservationBoardEntry is { name: String }
+          entity ReservationBoard is {
+            state main of ReservationBoard.ReservationBoardEntry
+            handler Input is {
+              on event TestDomain.Reservations.ReservationBoard.SomeEvent {
+                let entry: ReservationBoardEntry = "new ReservationBoardEntry from event"
+              }
+            }
+          }
+        }
+      }""")
+    }
+
     // Level 20: Test with rbbq-like structure
     "handle rbbq-like kitchen context" in {
       testRoundTrip("rbbq-kitchen", """domain ReactiveBBQ is {

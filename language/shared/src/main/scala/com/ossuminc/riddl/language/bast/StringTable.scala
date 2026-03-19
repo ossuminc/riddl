@@ -11,49 +11,12 @@ import scala.collection.mutable
 /** String interning table for BAST serialization
   *
   * Provides efficient string storage by deduplicating common strings
-  * and allowing reference by index. Pre-populated with RIDDL keywords
-  * and predefined types to minimize file size.
+  * and allowing reference by index. Only strings actually used during
+  * serialization are stored — no pre-populated keywords.
   */
 class StringTable {
   private val strings = mutable.ArrayBuffer[String]()
   private val stringToIndex = mutable.HashMap[String, Int]()
-
-  // Pre-populate with RIDDL keywords for maximum compression
-  private val keywords = Seq(
-    // Structure keywords
-    "domain", "context", "entity", "adaptor", "saga", "streamlet",
-    "processor", "projector", "repository", "connector", "application",
-    "epic", "story", "useCase", "function", "type", "author", "user",
-    "term", "include", "import",
-
-    // Type keywords
-    "String", "Number", "Integer", "Decimal", "Boolean", "Date", "Time",
-    "DateTime", "TimeStamp", "URL", "UUID", "Current", "Id", "Abstract",
-    "Pattern", "Enumeration", "Alternation", "Aggregation", "Mapping",
-    "Graph", "Table", "Replica", "Reference", "Range", "Optional",
-    "ZeroOrMore", "OneOrMore", "required",
-
-    // Common structural keywords
-    "is", "as", "of", "from", "to", "by", "with", "for", "in", "on",
-    "at", "and", "or", "not", "if", "then", "else", "briefly", "described",
-    "explained", "contains", "yields", "returns", "requires", "ensures",
-    "invariant", "options", "pipe", "source", "sink", "flow", "merge",
-    "split", "void", "command", "event", "query", "result", "record",
-
-    // Handler keywords
-    "handler", "on", "other", "arbitrary",
-
-    // Relationship keywords
-    "sends", "acquires", "uses",
-
-    // Common names
-    "id", "name", "description", "value", "data", "message", "request",
-    "response", "error", "status", "code", "timestamp", "userId",
-    "created", "updated", "deleted"
-  )
-
-  // Initialize with keywords
-  keywords.foreach(intern)
 
   /** Intern a string and return its index
     *
@@ -119,25 +82,21 @@ class StringTable {
     }
   }
 
-  /** Clear the string table (except keywords) */
+  /** Clear the string table */
   def reset(): Unit = {
     strings.clear()
     stringToIndex.clear()
-    keywords.foreach(intern)
   }
 
   /** Statistics for debugging and optimization */
   def stats: StringTableStats = {
     val totalChars = strings.map(_.length).sum
     val avgChars = if strings.nonEmpty then totalChars.toDouble / strings.length else 0.0
-    val duplicatesAvoided = stringToIndex.size - keywords.size
-
     StringTableStats(
       totalStrings = strings.length,
       uniqueStrings = stringToIndex.size,
       totalCharacters = totalChars,
-      averageLength = avgChars,
-      duplicatesAvoided = duplicatesAvoided
+      averageLength = avgChars
     )
   }
 }
@@ -147,13 +106,12 @@ case class StringTableStats(
   totalStrings: Int,
   uniqueStrings: Int,
   totalCharacters: Int,
-  averageLength: Double,
-  duplicatesAvoided: Int
+  averageLength: Double
 )
 
 object StringTable {
 
-  /** Create a new empty string table with keywords pre-loaded */
+  /** Create a new empty string table */
   def apply(): StringTable = new StringTable()
 
   /** Deserialize a string table from a byte buffer
@@ -163,11 +121,6 @@ object StringTable {
     */
   def readFrom(reader: ByteBufferReader): StringTable = {
     val table = new StringTable()
-
-    // Clear the pre-populated keywords since we'll load from file
-    table.strings.clear()
-    table.stringToIndex.clear()
-
     val count = reader.readVarInt()
 
     var i = 0

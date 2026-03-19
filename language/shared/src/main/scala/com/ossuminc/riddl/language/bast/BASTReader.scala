@@ -824,20 +824,42 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
       case 11 => // Match
         val expression = readLiteralString()
+        // Writer writes all case headers (loc + pattern + count) first,
+        // then all case items sequentially, then default items.
         val numCases = reader.readVarInt()
-        val cases = (0 until numCases).map { _ =>
+        // Phase 1: Read all case headers (loc, pattern, count)
+        val caseHeaders = (0 until numCases).map { _ =>
           val caseLoc = readLocation()
           val pattern = readLiteralString()
-          val statements = readContentsDeferred[Statements]()
-          MatchCase(caseLoc, pattern, statements)
+          val count = reader.readVarInt()
+          (caseLoc, pattern, count)
         }.toSeq
-        val default = readContentsDeferred[Statements]()
-        MatchStatement(loc, expression, cases, default)
+        // Read default count
+        val defaultCount = reader.readVarInt()
+        // Phase 2: Read case items in order
+        val cases = caseHeaders.map { case (caseLoc, pattern, count) =>
+          val buffer = scala.collection.mutable.ArrayBuffer[Statements]()
+          var i = 0
+          while i < count do
+            buffer += readNode().asInstanceOf[Statements]
+            i += 1
+          end while
+          MatchCase(caseLoc, pattern, Contents(buffer.toSeq*))
+        }
+        // Phase 3: Read default items
+        val defaultBuffer = scala.collection.mutable.ArrayBuffer[Statements]()
+        var di = 0
+        while di < defaultCount do
+          defaultBuffer += readNode().asInstanceOf[Statements]
+          di += 1
+        end while
+        MatchStatement(loc, expression, cases, Contents(defaultBuffer.toSeq*))
 
       case 12 => // Let
         val identifier = readIdentifier()
         val hasTypeRef = reader.readU8() != 0
         val optTypeRef = if hasTypeRef then
+          reader.readU8() // consume NODE_PATH_IDENTIFIER tag
           val pid = readPathIdentifierNode()
           Some(TypeRef(loc, "type", pid))
         else None

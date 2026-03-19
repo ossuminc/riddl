@@ -79,12 +79,7 @@ class RiddlModelsRoundTripTest
     "--show-usage-warnings=false"
   )
 
-  // Models with pre-existing validation errors in riddl-models
-  // that are unrelated to BAST round-trip correctness. These
-  // need fixes in the riddl-models repo, not here.
-  private val pendingModels: Set[String] = Set(
-    "hospitality/food-service/reactive-bbq" // validation errors in command handlers (missing event sends)
-  )
+  private val pendingModels: Set[String] = Set.empty
 
   "BAST round-trip" should {
     val confFiles = discoverModels(riddlModelsDir)

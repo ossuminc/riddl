@@ -928,14 +928,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(11) // Match statement
     writeLocation(s.loc)
     writeLiteralString(s.expression)
-    // Write cases
+    // Write all case headers (loc + pattern + count) first
     writer.writeVarInt(s.cases.size)
     s.cases.foreach { mc =>
       writeLocation(mc.loc)
       writeLiteralString(mc.pattern)
       writeContents(mc.statements)
     }
-    // Write default
+    // Write default count
     writeContents(s.default)
     // NOTE: case and default statement items are written by the Pass's traverse() override
   }
