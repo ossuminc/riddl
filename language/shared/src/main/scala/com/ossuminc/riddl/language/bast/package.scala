@@ -58,7 +58,7 @@ package object bast {
     * with revision 0 (pre-check era) will be rejected with a
     * clear message.
     */
-  val FORMAT_REVISION: Short = 3
+  val FORMAT_REVISION: Short = 4
 
   /** Magic bytes for BAST file identification: "BAST" */
   val MAGIC_BYTES: Array[Byte] = Array('B'.toByte, 'A'.toByte, 'S'.toByte, 'T'.toByte)

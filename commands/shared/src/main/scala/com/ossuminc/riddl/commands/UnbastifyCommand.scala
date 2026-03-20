@@ -9,16 +9,18 @@ package com.ossuminc.riddl.commands
 import com.ossuminc.riddl.command.{Command, CommandOptions, PassCommandOptions}
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.toSeq
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.bast.BASTReader
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass}
+import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass, RiddlFileEmitter}
 import com.ossuminc.riddl.utils.PlatformContext
+import com.ossuminc.riddl.utils.StringHelpers.dropRightWhile
 import org.ekrich.config.Config
 import scopt.OParser
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, StandardOpenOption}
 
 object UnbastifyCommand {
   val cmdName = "unbastify"
@@ -26,6 +28,7 @@ object UnbastifyCommand {
   case class Options(
     inputFile: Option[Path] = None,
     outputDir: Option[Path] = None,
+    singleFile: Boolean = false,
     command: String = cmdName
   ) extends CommandOptions {
     override def check: Messages = {
@@ -63,7 +66,10 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
         opt[java.io.File]('o', "output-dir")
           .optional()
           .action((v, c) => c.copy(outputDir = Some(v.toPath)))
-          .text("Output directory for RIDDL files (default: next to input)")
+          .text("Output directory for RIDDL files (default: next to input)"),
+        opt[Boolean]('s', "single-file")
+          .action((v, c) => c.copy(singleFile = v))
+          .text("Resolve all includes and write a single flattened file")
       ) -> Options()
   }
 
@@ -71,7 +77,8 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
     val obj = config.getObject(commandName).toConfig
     val inputFile = Path.of(obj.getString("input-file"))
     val outputDir = if obj.hasPath("output-dir") then Some(Path.of(obj.getString("output-dir"))) else None
-    Options(Some(inputFile), outputDir, commandName)
+    val singleFile = if obj.hasPath("single-file") then obj.getBoolean("single-file") else false
+    Options(Some(inputFile), outputDir, singleFile, commandName)
   }
 
   override def run(
@@ -106,14 +113,33 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
         val inputName = inputPath.getFileName.toString
         val riddlName = inputName.replaceAll("\\.bast$", ".riddl")
 
-        // Step 5: Run PrettifyPass to convert AST back to RIDDL text
-        // Use Nebula directly as the PassRoot (since Nebula extends Branch[?])
-        val passInput = PassInput(nebula)
-        // BAST stores all content inline (includes are resolved), so
-        // flatten output to produce a single self-contained .riddl file
-        val prettifyOptions = PrettifyPass.Options(flatten = true, inputDir = "")
+        // Step 5: Derive inputDir from the nebula's first content node's
+        // source origin (the FILE_CHANGE_MARKER path from the original
+        // root .riddl file). Its parent directory = inputDir.
+        // Note: URL.apply("file:///path/to/file") stores path without
+        // leading '/', so inputDir must also omit the leading '/' to
+        // match when toDestination strips the prefix.
+        val inputDir =
+          val contents = nebula.contents.toSeq
+          if contents.nonEmpty then
+            val origin = contents.head.loc.source.origin
+            // Strip file:// scheme and leading '/' to match URL.path format
+            val path = origin.replace("file://", "")
+            val normalized = if path.startsWith("/") then path.drop(1) else path
+            val lastSlash = normalized.lastIndexOf('/')
+            if lastSlash >= 0 then normalized.substring(0, lastSlash)
+            else ""
+          else ""
 
-        // Create the pass and run it using Pass.runThesePasses
+        // Step 6: Run PrettifyPass to convert AST back to RIDDL text
+        val passInput = PassInput(nebula)
+        val prettifyOptions = PrettifyPass.Options(
+          flatten = options.singleFile,
+          topFile = riddlName,
+          outputDir = outputDir.toString,
+          inputDir = inputDir
+        )
+
         val passes: PassCreators = Seq(
           (input: PassInput, outputs: PassesOutput) =>
             PrettifyPass(input, outputs, prettifyOptions)
@@ -124,23 +150,43 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
           return Left(result.messages.justErrors)
         end if
 
-        // Step 6: Extract the prettify output
+        // Step 7: Extract the prettify output and write files
         result.outputOf[PrettifyOutput](PrettifyPass.name) match {
           case None =>
             return Left(Messages.errors("PrettifyPass did not produce output"))
           case Some(prettifyOutput) =>
-            // Step 7: Write output as a single flattened file
             try {
               Files.createDirectories(outputDir)
 
-              val filePath = outputDir.resolve(riddlName)
-              val content = prettifyOutput.state.filesAsString
-              Files.writeString(filePath, content, StandardCharsets.UTF_8)
-              pc.log.info(s"Generated: $filePath")
+              if options.singleFile then
+                // Single flattened file
+                val filePath = outputDir.resolve(riddlName)
+                val content = prettifyOutput.state.filesAsString
+                Files.writeString(filePath, content, StandardCharsets.UTF_8)
+                pc.log.info(s"Generated: $filePath")
+                pc.log.info(s"Unbastify complete: 1 file written to $outputDir")
+              else
+                // Multi-file: write each file emitter to its own path
+                var fileCount = 0
+                prettifyOutput.state.withFiles { (file: RiddlFileEmitter) =>
+                  val content = file.toString
+                  val path = outputDir.resolve(file.url.path)
+                  Files.createDirectories(path.getParent)
+                  Files.writeString(
+                    path,
+                    content,
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE
+                  )
+                  pc.log.info(s"Generated: $path")
+                  fileCount += 1
+                }
+                pc.log.info(s"Unbastify complete: $fileCount files written to $outputDir")
+              end if
 
-              pc.log.info(s"Unbastify complete: 1 file written to $outputDir")
               Right(result)
-
             } catch {
               case ex: Exception =>
                 Left(Messages.errors(s"Failed to write RIDDL files: ${ex.getMessage}"))

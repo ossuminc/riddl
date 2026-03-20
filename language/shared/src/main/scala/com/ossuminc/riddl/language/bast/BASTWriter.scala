@@ -1723,7 +1723,12 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeURL(url: URL): Unit = {
-    writeString(url.toExternalForm)
+    // Store basis and path separately to preserve the relative
+    // path structure through BAST round-trips. Previously we
+    // stored url.toExternalForm which flattened basis+path into
+    // a single path string, losing the split point.
+    writeString(url.basis)
+    writeString(url.path)
   }
 
   def writeOption[T](opt: Option[T])(writeValue: T => Unit): Unit = {

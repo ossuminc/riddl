@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.commands
 
-import com.ossuminc.riddl.utils.{PathUtils, Zip, pc, PlatformContext}
+import com.ossuminc.riddl.utils.StringHelpers.dropRightWhile
+import com.ossuminc.riddl.utils.{PathUtils, PlatformContext, Zip, pc}
 import org.apache.commons.io.FileUtils
 import org.ekrich.config.*
 import org.scalatest.BeforeAndAfterAll
@@ -20,23 +21,17 @@ import scala.jdk.StreamConverters.*
 /** Comprehensive BAST round-trip test against all riddl-models.
   *
   * For each model in the riddl-models repository:
-  *   1. Validate the original RIDDL source
-  *   2. Bastify (RIDDL -> BAST)
-  *   3. Unbastify (BAST -> RIDDL via PrettifyPass with flatten=true)
-  *   4. Prettify original with --single-file (same code path)
-  *   5. Compare unbastify output with prettified original
+  *   1. Validate the original RIDDL source 2. Bastify (RIDDL -> BAST) 3. Unbastify (BAST -> RIDDL
+  *      via PrettifyPass with flatten=true) 4. Prettify original with --single-file (same code
+  *      path) 5. Compare unbastify output with prettified original
   *
-  * Both outputs go through PrettifyPass, so any PrettifyPass
-  * formatting quirks cancel out. What we're testing is that
-  * the BAST serialization/deserialization is lossless.
+  * Both outputs go through PrettifyPass, so any PrettifyPass formatting quirks cancel out. What
+  * we're testing is that the BAST serialization/deserialization is lossless.
   *
-  * Uses local ../riddl-models if available (faster for local
-  * dev), otherwise downloads from GitHub (for CI).
+  * Uses local ../riddl-models if available (faster for local dev), otherwise downloads from GitHub
+  * (for CI).
   */
-class RiddlModelsRoundTripTest
-    extends AnyWordSpec
-    with Matchers
-    with BeforeAndAfterAll {
+class RiddlModelsRoundTripTest extends AnyWordSpec with Matchers with BeforeAndAfterAll {
 
   given io: PlatformContext = pc
 
@@ -53,8 +48,7 @@ class RiddlModelsRoundTripTest
   private val (riddlModelsDir, tmpDir) = resolveModelsDir()
 
   private def resolveModelsDir(): (Path, Option[Path]) = {
-    if Files.isDirectory(localDir) then
-      (localDir, None)
+    if Files.isDirectory(localDir) then (localDir, None)
     else
       val tmp = Files.createTempDirectory("riddl-models")
       val fileName = PathUtils.copyURLToDir(modelsURL, tmp)
@@ -66,9 +60,7 @@ class RiddlModelsRoundTripTest
   }
 
   override def afterAll(): Unit = {
-    tmpDir.foreach(dir =>
-      FileUtils.forceDeleteOnExit(dir.toFile)
-    )
+    tmpDir.foreach(dir => FileUtils.forceDeleteOnExit(dir.toFile))
     super.afterAll()
   }
 
@@ -106,8 +98,7 @@ class RiddlModelsRoundTripTest
     end if
   }
 
-  /** Discover models: find .conf files at depth 3,
-    * parse input-file
+  /** Discover models: find .conf files at depth 3, parse input-file
     */
   private def discoverModels(
     base: Path
@@ -115,17 +106,12 @@ class RiddlModelsRoundTripTest
     if !Files.isDirectory(base) then return Seq.empty
     val allConf = Files
       .walk(base, 5)
-      .filter(p =>
-        p.toString.endsWith(".conf") && Files.isRegularFile(p)
-      )
+      .filter(p => p.toString.endsWith(".conf") && Files.isRegularFile(p))
       .toScala(Seq)
 
     allConf.flatMap { confFile =>
       val depth = base.relativize(confFile).getNameCount - 1
-      if depth == 3 then
-        parseInputFile(confFile).map(riddlFile =>
-          (confFile, riddlFile)
-        )
+      if depth == 3 then parseInputFile(confFile).map(riddlFile => (confFile, riddlFile))
       else None
     }
   }
@@ -145,147 +131,141 @@ class RiddlModelsRoundTripTest
   }
 
   /** Run the round-trip for a single model:
-    *   1. Validate original
-    *   2. Bastify
-    *   3. Unbastify (produces flattened .riddl)
-    *   4. Prettify original with --single-file
-    *   5. Compare unbastify output with prettified original
+    *   1. Validate original 2. Bastify 3. Unbastify (produces flattened .riddl) 4. Prettify
+    *      original with --single-file 5. Compare unbastify output with prettified original
     */
   private def roundTripTest(
     confFile: Path,
     riddlFile: Path
   ): Unit = {
     val tempDir = Files.createTempDirectory("bast-roundtrip")
-    val unbastDir = tempDir.resolve("unbast")
     val prettyDir = tempDir.resolve("pretty-original")
 
-    try {
-      val riddlPath = riddlFile.toAbsolutePath.toString
-      val bastPath =
-        riddlPath.replaceAll("\\.riddl$", ".bast")
+    val riddlPath = riddlFile.toAbsolutePath.toString
+    val bastPath = riddlPath.replaceAll("\\.riddl$", ".bast")
 
-      // Step 1: Validate original
-      val validateArgs =
-        commonArgs ++ Array("validate", riddlPath)
-      Commands.runMainForTest(validateArgs) match {
+    val i = riddlPath.indexOfSlice("riddl-models/")
+    val partialRiddlPath = riddlPath.substring(i + "riddl-models/".length)
+    val partialRiddlPathDir = partialRiddlPath.dropRightWhile(_ != '/').dropRight(1)
+    val unbastDir: Path = tempDir.resolve("unbast").resolve(partialRiddlPathDir)
+
+    // Step 1: Validate original
+    val validateArgs =
+      commonArgs ++ Array("validate", riddlPath)
+    Commands.runMainForTest(validateArgs) match {
+      case Left(messages) =>
+        fail(
+          s"Step 1 (validate original) failed:\n" +
+            s"${messages.format}"
+        )
+      case Right(_) => // ok
+    }
+
+    // Step 2: Bastify
+    val bastifyArgs =
+      commonArgs ++ Array("bastify", riddlPath)
+    Commands.runMainForTest(bastifyArgs) match {
+      case Left(messages) =>
+        fail(
+          s"Step 2 (bastify) failed:\n" +
+            s"${messages.format}"
+        )
+      case Right(_) =>
+        assert(
+          Files.exists(Path.of(bastPath)),
+          s"BAST file not created: $bastPath"
+        )
+    }
+
+    try {
+      // Step 3: Unbastify
+      val unbastifyArgs = commonArgs ++ Array(
+        "unbastify",
+        "-o",
+        unbastDir.toAbsolutePath.toString,
+        "-s",
+        "true",
+        bastPath
+      )
+      Commands.runMainForTest(unbastifyArgs) match {
+        case Left(messages) =>
+          fail(s"Step 3 (unbastify) failed:\n${messages.format}")
+        case Right(_) =>
+          assert(
+            Files.exists(unbastDir),
+            s"Unbastify output dir not created"
+          )
+      }
+
+      // Find the unbastify output file
+      val outputRiddlFiles = Files
+        .list(unbastDir)
+        .filter(p => p.toString.endsWith(".riddl"))
+        .toScala(Seq)
+      assert(
+        outputRiddlFiles.nonEmpty,
+        "No .riddl files in unbastify output"
+      )
+      val unbastContent =
+        Files.readString(outputRiddlFiles.head)
+
+      // Step 4: Prettify original with --single-file
+      val prettyArgs = commonArgs ++ Array(
+        "prettify",
+        riddlPath,
+        "-o",
+        prettyDir.toAbsolutePath.toString,
+        "-s",
+        "true"
+      )
+      Commands.runMainForTest(prettyArgs) match {
         case Left(messages) =>
           fail(
-            s"Step 1 (validate original) failed:\n" +
+            s"Step 4 (prettify original) failed:\n" +
               s"${messages.format}"
           )
         case Right(_) => // ok
       }
 
-      // Step 2: Bastify
-      val bastifyArgs =
-        commonArgs ++ Array("bastify", riddlPath)
-      Commands.runMainForTest(bastifyArgs) match {
-        case Left(messages) =>
-          fail(
-            s"Step 2 (bastify) failed:\n" +
-              s"${messages.format}"
-          )
-        case Right(_) =>
-          assert(
-            Files.exists(Path.of(bastPath)),
-            s"BAST file not created: $bastPath"
-          )
-      }
+      val prettyFile =
+        prettyDir.resolve("prettify-output.riddl")
+      assert(
+        Files.exists(prettyFile),
+        "Prettified original not found"
+      )
+      val prettyContent = Files.readString(prettyFile)
 
-      try {
-        // Step 3: Unbastify
-        val unbastifyArgs = commonArgs ++ Array(
-          "unbastify",
-          bastPath,
-          "-o",
-          unbastDir.toAbsolutePath.toString
-        )
-        Commands.runMainForTest(unbastifyArgs) match {
-          case Left(messages) =>
+      // Step 5: Compare unbastify output with prettified
+      // original. Both go through PrettifyPass, so format
+      // quirks cancel out. Differences = BAST data loss.
+      if unbastContent != prettyContent then
+        val lines1 =
+          prettyContent.linesIterator.toIndexedSeq
+        val lines2 =
+          unbastContent.linesIterator.toIndexedSeq
+        val firstDiff = lines1
+          .zipAll(lines2, "<missing>", "<missing>")
+          .zipWithIndex
+          .find { case ((a, b), _) => a != b }
+
+        firstDiff match {
+          case Some(((line1, line2), idx)) =>
             fail(
-              s"Step 3 (unbastify) failed:\n" +
-                s"${messages.format}"
+              s"Round-trip differs at line " +
+                s"${idx + 1}:\n" +
+                s"  original:   $line1\n" +
+                s"  round-trip: $line2"
             )
-          case Right(_) =>
-            assert(
-              Files.exists(unbastDir),
-              s"Unbastify output dir not created"
-            )
-        }
-
-        // Find the unbastify output file
-        val outputRiddlFiles = Files
-          .list(unbastDir)
-          .filter(p => p.toString.endsWith(".riddl"))
-          .toScala(Seq)
-        assert(
-          outputRiddlFiles.nonEmpty,
-          "No .riddl files in unbastify output"
-        )
-        val unbastContent =
-          Files.readString(outputRiddlFiles.head)
-
-        // Step 4: Prettify original with --single-file
-        val prettyArgs = commonArgs ++ Array(
-          "prettify",
-          riddlPath,
-          "-o",
-          prettyDir.toAbsolutePath.toString,
-          "-s",
-          "true"
-        )
-        Commands.runMainForTest(prettyArgs) match {
-          case Left(messages) =>
-            fail(
-              s"Step 4 (prettify original) failed:\n" +
-                s"${messages.format}"
-            )
-          case Right(_) => // ok
-        }
-
-        val prettyFile =
-          prettyDir.resolve("prettify-output.riddl")
-        assert(
-          Files.exists(prettyFile),
-          "Prettified original not found"
-        )
-        val prettyContent = Files.readString(prettyFile)
-
-        // Step 5: Compare unbastify output with prettified
-        // original. Both go through PrettifyPass, so format
-        // quirks cancel out. Differences = BAST data loss.
-        if unbastContent != prettyContent then
-          val lines1 =
-            prettyContent.linesIterator.toIndexedSeq
-          val lines2 =
-            unbastContent.linesIterator.toIndexedSeq
-          val firstDiff = lines1
-            .zipAll(lines2, "<missing>", "<missing>")
-            .zipWithIndex
-            .find { case ((a, b), _) => a != b }
-
-          firstDiff match {
-            case Some(((line1, line2), idx)) =>
+          case None =>
+            if lines1.length != lines2.length then
               fail(
-                s"Round-trip differs at line " +
-                  s"${idx + 1}:\n" +
-                  s"  original:   $line1\n" +
-                  s"  round-trip: $line2"
+                s"Round-trip differs in length: " +
+                  s"${lines1.length} vs " +
+                  s"${lines2.length}"
               )
-            case None =>
-              if lines1.length != lines2.length then
-                fail(
-                  s"Round-trip differs in length: " +
-                    s"${lines1.length} vs " +
-                    s"${lines2.length}"
-                )
-              end if
-          }
-        end if
-      } finally {
-        // Clean up .bast file created next to source
-        Files.deleteIfExists(Path.of(bastPath))
-      }
+            end if
+        }
+      end if
     } finally {
       deleteRecursively(tempDir)
     }
@@ -295,9 +275,7 @@ class RiddlModelsRoundTripTest
     if Files.isDirectory(path) then
       Files
         .list(path)
-        .forEach(p =>
-          deleteRecursively(p.asInstanceOf[Path])
-        )
+        .forEach(p => deleteRecursively(p.asInstanceOf[Path]))
     end if
     Files.deleteIfExists(path)
   }

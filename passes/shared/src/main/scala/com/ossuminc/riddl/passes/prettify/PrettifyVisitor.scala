@@ -430,18 +430,21 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     state.withCurrent { (rfe: RiddlFileEmitter) =>
       if !state.flatten then
         val url = include.origin
-        val outputURL = state.toDestination(url)
-        // Compute include path relative to the current output file
+        // Use url.path (the relative portion of the include origin)
+        // to compute the include directive text relative to the
+        // current output file
         val currentDir = rfe.url.path.lastIndexOf('/') match
           case -1 => ""
           case i  => rfe.url.path.substring(0, i)
         val relativePath =
-          if currentDir.isEmpty then outputURL.path
-          else if outputURL.path.startsWith(currentDir + "/") then
-            outputURL.path.drop(currentDir.length + 1)
-          else outputURL.path
+          if currentDir.isEmpty then url.path
+          else if url.path.startsWith(currentDir + "/") then
+            url.path.drop(currentDir.length + 1)
+          else url.path
         rfe.addLine(s"""include "$relativePath"""")
-        val newRFE = RiddlFileEmitter(outputURL)
+        // Resolve the relative path from the current file's output
+        // URL to construct the RFE URL with correct output path
+        val newRFE = RiddlFileEmitter(rfe.url.resolve(relativePath))
         state.pushFile(newRFE)
       end if
     }

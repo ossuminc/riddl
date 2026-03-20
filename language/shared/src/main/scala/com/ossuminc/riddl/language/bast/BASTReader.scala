@@ -2240,8 +2240,13 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readURL(): URL = {
-    val urlStr = readString()
-    URL(urlStr)
+    // Read basis and path separately (format revision 4+).
+    // The writer stores these as two separate strings to
+    // preserve the relative path structure for includes.
+    val basis = readString()
+    val path = readString()
+    if basis.isEmpty && path.isEmpty then URL.empty
+    else URL(URL.fileScheme, "", basis, path)
   }
 
   private def readOption[T](readValue: => T): Option[T] = {
