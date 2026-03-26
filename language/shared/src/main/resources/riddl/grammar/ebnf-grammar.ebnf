@@ -97,7 +97,7 @@ real_predef_types = "Current" | "Length" | "Luminosity" | "Mass" | "Mole" | "Num
 time_predef_types = "Duration" | "DateTime" | "Date" | "TimeStamp" | "Time" ;
 zoned_predef_types = ("ZonedDate" | "ZonedDateTime") "(" [zone] ")" ;
 other_predef_types = "Abstract" | "Location" | "Nothing" | "UUID" | "UserId" ;
-zone = /[A-Za-z0-9:.+-]*/ ;
+zone = /[A-Z0-9:.+-]{2,}/ ;
 
 (* Type Expressions *)
 pattern_type = "Pattern" "(" {literal_string} ")" ;
