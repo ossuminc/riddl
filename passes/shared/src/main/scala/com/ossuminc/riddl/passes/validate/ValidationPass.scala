@@ -8,6 +8,7 @@ package com.ossuminc.riddl.passes.validate
 
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.Messages.*
+import com.ossuminc.riddl.language.parsing.PredefType
 import com.ossuminc.riddl.language.{Contents, Finder, Messages, *}
 import com.ossuminc.riddl.passes.resolve.{ResolutionOutput, ResolutionPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
@@ -455,12 +456,35 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkDefinition(parents, t)
+    val typeName = t.id.value
     check(
-      t.id.value.head.isUpper,
+      typeName.head.isUpper,
       s"${t.identify} should start with a capital letter",
       StyleWarning,
-      t.id.loc  // Fixed: use identifier location, not type keyword location
+      t.id.loc
     )
+    // Check if the type name exactly matches a predefined type name
+    check(
+      !PredefType.allPredefTypes.contains(typeName),
+      s"${t.identify} redefines built-in type '$typeName'",
+      Error,
+      t.id.loc
+    )
+    // Check if the type name is a case-variant of a predefined type
+    if !PredefType.allPredefTypes.contains(typeName) then
+      val caseMatch = PredefType.allPredefTypes.find(
+        pt => pt.equalsIgnoreCase(typeName) && pt != typeName
+      )
+      caseMatch.foreach { predef =>
+        check(
+          false,
+          s"${t.identify} is a redundant case-variant of " +
+            s"built-in type '$predef'",
+          StyleWarning,
+          t.id.loc
+        )
+      }
+    end if
     if !t.typEx.isInstanceOf[AggregateTypeExpression] then {
       checkTypeExpression(t.typEx, t, parents)
     }

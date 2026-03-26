@@ -46,6 +46,9 @@ passes/input/check/everything/everything.riddl(24:10->15):
 passes/input/check/everything/everything.riddl(25:10->13):
  Type 'url' should start with a capital letter:
      type url is URL
+passes/input/check/everything/everything.riddl(25:10->13):
+ Type 'url' is a redundant case-variant of built-in type 'URL':
+     type url is URL
 passes/input/check/everything/everything.riddl(27:25->26):
  Field identifier 'a' is too short. The minimum length is 3:
      type PeachType is { a: Integer }

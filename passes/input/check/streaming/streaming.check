@@ -1,3 +1,6 @@
+passes/input/check/streaming/streaming.riddl(3:8->19):
+ Type 'Temperature' redefines built-in type 'Temperature':
+   type Temperature is Real    type Forecast is any of { Rainy, Cloudy, Sunny }
 passes/input/check/streaming/streaming.riddl(4:3->28):
  Source 'GetWeatherForecast' should have a handler:
    source GetWeatherForecast is {
