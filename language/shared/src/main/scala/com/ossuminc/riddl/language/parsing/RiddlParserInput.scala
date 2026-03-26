@@ -173,8 +173,8 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
     val end =
       if lineNumberLookup.length == 1 then { data.length }
       else if endLine >= lineNumberLookup.length then {
-        // actually out of bounds but go to last line
-        lineNumberLookup(lineNumberLookup.length - 1)
+        // endOffset is on or past the last line, use end of data
+        data.length
       } else { lineNumberLookup(endLine) }
     start -> end
   }
