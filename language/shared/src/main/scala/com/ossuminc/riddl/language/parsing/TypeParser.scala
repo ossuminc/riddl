@@ -275,7 +275,8 @@ private[parsing] trait TypeParser {
   }
 
   private def zone[u: P]: P[Option[LiteralString]] = {
-    P(Index ~ StringIn("A-Z", "0-9", ":.+-").!.? ~ Index).map { case (start, str, end) =>
+    P(Index ~ CharsWhileIn("A-Z0-9:.+\\-",2).!.? ~ Index).map { case (start, str,
+    end) =>
       str.map(s => LiteralString(at(start, end), s))
     }
   }
@@ -472,6 +473,8 @@ private[parsing] trait TypeParser {
         case kind if kind == Keyword.query   => AggregateUseCase.QueryCase
         case kind if kind == Keyword.result  => AggregateUseCase.ResultCase
         case kind if kind == Keyword.record  => AggregateUseCase.RecordCase
+        case kind if kind == Keyword.graph   => AggregateUseCase.GraphCase
+        case kind if kind == Keyword.table   => AggregateUseCase.TableCase
       }
     }
   }

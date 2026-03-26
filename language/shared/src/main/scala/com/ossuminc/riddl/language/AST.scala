@@ -781,8 +781,8 @@ object AST:
   /** Type of definitions that occur in a [[Function]] */
   private type OccursInFunction = OccursInVitalDefinition | Statement | Function
 
-  /** Type of definitions that occur in a [[Function]].
-    * Functions are self-contained and do not support includes.
+  /** Type of definitions that occur in a [[Function]]. Functions are self-contained and do not
+    * support includes.
     */
   type FunctionContents = OccursInFunction
 
@@ -813,11 +813,11 @@ object AST:
     override def isParent: Boolean = false
     override def hasDefinitions: Boolean = false
 
-    /** Cheap hash based on id + loc to avoid O(subtree) traversal of contents fields.
-      * Case class auto-generated hashCode traverses ALL constructor fields including
-      * Contents (mutable.ArrayBuffer), making every HashMap operation O(subtree).
-      * Note: overriding hashCode here suppresses case class auto-generated equals too
-      * (Scala 3 spec), so we must also override equals to preserve structural comparison.
+    /** Cheap hash based on id + loc to avoid O(subtree) traversal of contents fields. Case class
+      * auto-generated hashCode traverses ALL constructor fields including Contents
+      * (mutable.ArrayBuffer), making every HashMap operation O(subtree). Note: overriding hashCode
+      * here suppresses case class auto-generated equals too (Scala 3 spec), so we must also
+      * override equals to preserve structural comparison.
       */
     override def hashCode: Int =
       val h = id.hashCode * 31 + loc.hashCode
@@ -826,16 +826,16 @@ object AST:
       case other: Definition =>
         (this eq other) || (
           getClass == other.getClass &&
-          id == other.id &&
-          loc == other.loc &&
-          metadata == other.metadata &&
-          productEquals(other)
+            id == other.id &&
+            loc == other.loc &&
+            metadata == other.metadata &&
+            productEquals(other)
         )
       case _ => false
 
-    /** Structural comparison of product elements, skipping Contents fields
-      * to avoid O(subtree) traversal. For two Definitions at the same loc
-      * with the same id, the non-contents fields determine equality.
+    /** Structural comparison of product elements, skipping Contents fields to avoid O(subtree)
+      * traversal. For two Definitions at the same loc with the same id, the non-contents fields
+      * determine equality.
       */
     private def productEquals(other: Definition): Boolean =
       (this, other) match
@@ -844,7 +844,7 @@ object AST:
           (0 until a.productArity).forall: i =>
             (a.productElement(i), b.productElement(i)) match
               case (_: Contents[?], _: Contents[?]) => true // skip contents
-              case (x, y) => x == y
+              case (x, y)                           => x == y
         case _ => false
   end Definition
 
@@ -878,8 +878,8 @@ object AST:
     def empty: Definitions = Seq.empty[Definition]
   end Definitions
 
-  /** A simple sequence of Parents from the closest all the way up to the Root.
-    * Contains only Branch (Definition) nodes - Include nodes are tracked separately via includeContext.
+  /** A simple sequence of Parents from the closest all the way up to the Root. Contains only Branch
+    * (Definition) nodes - Include nodes are tracked separately via includeContext.
     */
   type Parents = Seq[Branch[?]]
 
@@ -888,13 +888,12 @@ object AST:
     def apply(contents: Branch[?]*) = Seq(contents: _*)
   end Parents
 
-  /** A mutable stack of Branch[?] for keeping track of the parent hierarchy.
-    * Contains only Branch (Definition) nodes - Include nodes are tracked
-    * separately via includeContext in Pass.
+  /** A mutable stack of Branch[?] for keeping track of the parent hierarchy. Contains only Branch
+    * (Definition) nodes - Include nodes are tracked separately via includeContext in Pass.
     *
-    * Caches the `toParents` (toSeq) result for performance. The cache is
-    * invalidated on push/pop. This avoids O(N*D) allocations during AST
-    * traversal where N is the number of nodes and D is average depth.
+    * Caches the `toParents` (toSeq) result for performance. The cache is invalidated on push/pop.
+    * This avoids O(N*D) allocations during AST traversal where N is the number of nodes and D is
+    * average depth.
     */
   final class ParentStack private (
     private val stack: mutable.Stack[Branch[?]]
@@ -911,8 +910,8 @@ object AST:
       stack.pop()
     end pop
 
-    /** Convert the mutable ParentStack into an immutable Parents Seq.
-      * Result is cached until the next push or pop.
+    /** Convert the mutable ParentStack into an immutable Parents Seq. Result is cached until the
+      * next push or pop.
       */
     def toParents: Parents =
       if cachedSeq == null then cachedSeq = stack.toSeq
@@ -1074,8 +1073,7 @@ object AST:
         val selectorStr = selector.map(_.value).getOrElse("")
         val aliasStr = alias.map(a => s" as ${a.value}").getOrElse("")
         s"""$imp $kindStr $selectorStr from "${path.s}"$aliasStr"""
-      else
-        imp + " \"" + path.s + "\""
+      else imp + " \"" + path.s + "\""
     override def toString: String = format
   end BASTImport
 
@@ -1371,6 +1369,8 @@ object AST:
     case ResultCase extends AggregateUseCase("Result")
     case RecordCase extends AggregateUseCase("Record")
     case TypeCase extends AggregateUseCase("Type")
+    case GraphCase extends AggregateUseCase("Graph")
+    case TableCase extends AggregateUseCase("Table")
   end AggregateUseCase
 
   /** Base trait of the cardinality for type expressions */
@@ -1469,8 +1469,8 @@ object AST:
     */
   @JSExportTopLevel("Enumeration")
   case class Enumeration(loc: At, enumerators: Contents[Enumerator]) extends IntegerTypeExpression:
-    override def format: String = "{ " + enumerators
-      .toSeq.map(_.format)
+    override def format: String = "{ " + enumerators.toSeq
+      .map(_.format)
       .mkString(",") + " }"
   end Enumeration
 
@@ -2075,6 +2075,7 @@ object AST:
   @JSExportTopLevel("URI")
   case class URI(loc: At, scheme: Option[LiteralString] = None) extends PredefinedType {
     override def format: String = s"$kind(${scheme.map(_.format).getOrElse("\"https\"")})"
+    override def kind: String = "URL"
   }
 
   /** A predefined type expression for a location on earth given in latitude and longitude.
@@ -2307,8 +2308,8 @@ object AST:
   /** Base trait of all Statements that can occur in [[OnClause]]s */
   sealed trait Statement extends RiddlValue
 
-  /** A statement whose behavior is specified as a text string allowing a prompt for
-    * AI-based simulation to be specified.
+  /** A statement whose behavior is specified as a text string allowing a prompt for AI-based
+    * simulation to be specified.
     *
     * @param loc
     *   The location where the action occurs in the source
@@ -2341,7 +2342,6 @@ object AST:
     def format: String = s"error ${message.format}"
   }
 
-
   /** A statement that sets a value of a field
     *
     * @param loc
@@ -2361,7 +2361,6 @@ object AST:
     def format: String = s"set ${field.format} to ${value.format}"
   }
 
-
   /** An action that sends a message to an [[Inlet]] or [[Outlet]].
     *
     * @param loc
@@ -2380,7 +2379,6 @@ object AST:
     override def kind: String = "Send Statement"
     def format: String = s"send ${msg.format} to ${portlet.format}"
   }
-
 
   /** An statement that morphs the state of an entity to a new structure
     *
@@ -2450,8 +2448,8 @@ object AST:
     * @param loc
     *   The location of the statement in the model
     * @param condition
-    *   The boolean expression to evaluate - either a literal string description
-    *   or an identifier referencing a let binding
+    *   The boolean expression to evaluate - either a literal string description or an identifier
+    *   referencing a let binding
     * @param thenStatements
     *   The statements to execute if the condition is true
     * @param elseStatements
@@ -2471,10 +2469,12 @@ object AST:
         case ls: LiteralString => ls.format
         case id: Identifier    => if negated then s"!${id.format}" else id.format
       }
-      val thenStr = if thenStatements.isEmpty then "" else thenStatements.toSeq.map(_.format).mkString("\n  ")
+      val thenStr =
+        if thenStatements.isEmpty then "" else thenStatements.toSeq.map(_.format).mkString("\n  ")
       if elseStatements.isEmpty then s"when $condStr then\n$thenStr\n  end"
       else {
-        val elseStr = if elseStatements.isEmpty then "" else elseStatements.toSeq.map(_.format).mkString("\n  ")
+        val elseStr =
+          if elseStatements.isEmpty then "" else elseStatements.toSeq.map(_.format).mkString("\n  ")
         s"when $condStr then\n$thenStr\nelse\n$elseStr\n  end"
       }
     }
@@ -2488,7 +2488,8 @@ object AST:
     statements: Contents[Statements]
   ) extends RiddlValue {
     override def kind: String = "Match Case"
-    def format: String = s"case ${pattern.format} {\n${statements.toSeq.map(_.format).mkString("\n  ")}\n}"
+    def format: String =
+      s"case ${pattern.format} {\n${statements.toSeq.map(_.format).mkString("\n  ")}\n}"
   }
 
   /** A pattern matching statement for value-based branching
@@ -2557,7 +2558,6 @@ object AST:
     def format: String = s"```${language.s}\n$body```"
     override def kind: String = "Code Statement"
   }
-
 
   ///////////////////////////////////////////////////////////////////////////////////////// ADAPTOR
 
@@ -3468,17 +3468,17 @@ object AST:
   }
 
   /** An [[GenericInteraction]] that is vaguely written as a textual description
-   *
-   * @param loc
-   *   The location of the interaction definition
-   * @param from
-   *   A [[LiteralString]] for the originating end of the relationship
-   * @param relationship
-   *   The relationship between the from and to
-   * @param to
-   *   A [[LiteralString]] for the receiving end of the relationship
-   * @param metadata
-   */
+    *
+    * @param loc
+    *   The location of the interaction definition
+    * @param from
+    *   A [[LiteralString]] for the originating end of the relationship
+    * @param relationship
+    *   The relationship between the from and to
+    * @param to
+    *   A [[LiteralString]] for the receiving end of the relationship
+    * @param metadata
+    */
   @JSExportTopLevel("VagueInteraction")
   case class VagueInteraction(
     loc: At,

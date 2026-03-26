@@ -514,6 +514,8 @@ def keyword(definition: Definition): String =
             case AggregateUseCase.ResultCase  => Keyword.result
             case AggregateUseCase.RecordCase  => Keyword.record
             case AggregateUseCase.TypeCase    => Keyword.type_
+            case AggregateUseCase.GraphCase   => Keyword.graph
+            case AggregateUseCase.TableCase   => Keyword.table
           end match
         case _ => Keyword.type_
       end match

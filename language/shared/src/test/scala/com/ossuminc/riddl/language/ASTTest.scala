@@ -63,7 +63,7 @@ class ASTTest extends AbstractTestingBasis {
       )
       ZonedDateTime((0, 0)).format mustBe "ZonedDateTime(\"UTC\")"
       UUID((0, 0)).format mustBe "UUID"
-      URI((0, 0)).format mustBe "URI(\"https\")"
+      URI((0, 0)).format mustBe "URL(\"https\")"
       Location((0, 0)).format mustBe "Location"
 
       Blob((0, 0), BlobKind.Audio).format mustBe "Blob(Audio)"

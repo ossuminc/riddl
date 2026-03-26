@@ -38,9 +38,9 @@ object PredefTypes {
       PredefType.Time
     ).!
   )
-  
+
   def zonedDateTypes[u:P]: P[String] = keywords(
-    StringIn(PredefType.ZonedDate, PredefType.ZonedDate).!
+    StringIn(PredefType.ZonedDateTime, PredefType.ZonedDate).!
   )
 
   def otherTypes[u: P]: P[String] = keywords(
@@ -121,7 +121,7 @@ object PredefType {
   final val Time = "Time"
   final val TimeStamp = "TimeStamp"
   final val Unknown = "Unknown"
-  final val URI = "URI"
+  final val URL = "URL"
   final val UserId = "UserId"
   final val UUID = "UUID"
   final val Whole = "Whole"
@@ -157,7 +157,7 @@ object PredefType {
     Time,
     TimeStamp,
     Unknown,
-    URI,
+    URL,
     UserId,
     UUID,
     Whole,
