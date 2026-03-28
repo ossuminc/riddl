@@ -8,7 +8,7 @@ package com.ossuminc.riddl.language
 
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.utils.pc
-import com.ossuminc.riddl.language.AST.{Root, Parents, RootContents}
+import com.ossuminc.riddl.language.AST.{Root, Parents, RootContents, Type, Handler, Entity, Context}
 import com.ossuminc.riddl.language.parsing.{
   AbstractParsingTest,
   RiddlParserInput,
@@ -57,6 +57,44 @@ class SharedFinderTest extends AbstractTestingBasis {
         case s: Parents =>
           s must be(Parents(c, b, a, root))
       }
+    }
+    "findInParents finds definitions in ancestor chain" in {
+      val content2 =
+        """domain D {
+          |  type DomainCmd is command { ??? }
+          |  context C {
+          |    type CtxCmd is command { ??? }
+          |    entity E {
+          |      type EntCmd is command { ??? }
+          |      handler H { ??? }
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+      val input2 = RiddlParserInput(content2, "findInParentsTest")
+      val root2 = TopLevelParser.parseInput(input2, true) match
+        case Left(messages) => fail(messages.justErrors.format)
+        case Right(r: Root) => r
+      val dom = root2.domains.head
+      val ctx = dom.contexts.head
+      val ent = ctx.entities.head
+      val handler = ent.handlers.head
+      // Parents of handler: Entity, Context, Domain, Root
+      val handlerParents = Parents(ent, ctx, dom, root2)
+      val found = Finder.findInParents[Type](handlerParents)
+      // Should find EntCmd in Entity, CtxCmd in Context,
+      // DomainCmd in Domain — 3 total
+      found.size must be(3)
+      val names = found.map(_._1.id.value)
+      names must contain("EntCmd")
+      names must contain("CtxCmd")
+      names must contain("DomainCmd")
+      // Verify parents: EntCmd's parents should be
+      // [Context, Domain, Root] (Entity's parents)
+      val entCmdParents = found.find(
+        _._1.id.value == "EntCmd"
+      ).get._2
+      entCmdParents must be(Parents(ctx, dom, root2))
     }
     "build path map correctly" in {
       val a = root.modules.head

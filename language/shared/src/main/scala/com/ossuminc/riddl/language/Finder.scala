@@ -207,4 +207,32 @@ object Finder:
     val container = SimpleContainer[CV](contents)
     Finder[CV](container)
   end apply
+
+  /** Search the contents of each parent in a hierarchy chain
+    * for definitions of type `T`. Walks from nearest parent
+    * to furthest (e.g., Entity → Context → Domain).
+    *
+    * @tparam T
+    *   The type of definition to find
+    * @param parents
+    *   The parent chain to search, ordered nearest to furthest
+    * @return
+    *   Each matching definition paired with the parents of the
+    *   container it was found in, suitable for constructing a
+    *   [[AST.PathIdentifier]]
+    */
+  def findInParents[T <: RiddlValue: ClassTag](
+    parents: Parents
+  ): Seq[(T, Parents)] =
+    val lookingFor = classTag[T].runtimeClass
+    val buffer = mutable.ArrayBuffer.empty[(T, Parents)]
+    parents.zipWithIndex.foreach { case (parent, idx) =>
+      val parentsOfParent = parents.drop(idx + 1)
+      parent.contents.toSeq.foreach { child =>
+        if lookingFor.isAssignableFrom(child.getClass) then
+          buffer += (child.asInstanceOf[T] -> parentsOfParent)
+      }
+    }
+    buffer.toSeq
+  end findInParents
 end Finder
