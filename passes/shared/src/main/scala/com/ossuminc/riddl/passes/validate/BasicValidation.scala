@@ -201,10 +201,10 @@ trait BasicValidation(using pc: PlatformContext) {
         else if map.size == 1 then
           map.head._1 match {
             case name: String if name == Field.getClass.getSimpleName =>
-              val fields = map.head._2.asInstanceOf[Seq[Field]]
-              val types = fields.map(field => errorDescription(field.typeEx))
-              val locations = fields.map(_.loc.format)
-              reportNonDistinctTypes(types, locations, defList)
+              // Fields are fully scoped by their containing type,
+              // so same-named fields in different records within
+              // the same context are never ambiguous
+              ()
             case name: String if name == Type.getClass.getSimpleName =>
               val typeDefs = map.head._2.asInstanceOf[Seq[Type]]
               val types = typeDefs.map(type_ => errorDescription(type_.typEx))
