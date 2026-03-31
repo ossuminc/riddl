@@ -32,7 +32,7 @@ import scala.scalajs.js.annotation.*
 case class StateTransition(
   fromState: Option[State],
   toState: State,
-  trigger: OnMessageClause,
+  trigger: OnClause,
   mechanism: Statement
 )
 
@@ -124,25 +124,31 @@ case class EntityLifecyclePass(
     val transitions = mutable.ListBuffer.empty[StateTransition]
 
     // Walk entity-level handlers (fromState = None means any state)
+    val entityLevelTransitions = mutable.ListBuffer.empty[StateTransition]
     entity.handlers.foreach { handler =>
-      extractTransitions(handler, None, entity, transitions)
+      extractTransitions(handler, None, entity, entityLevelTransitions)
     }
 
-    // Walk state-specific handlers (if states have handlers)
-    // In RIDDL, handlers are at entity level, but we check if
-    // handler names match state names as a convention
-    // Also look for handlers defined within states if that
-    // pattern exists in the model
+    // Expand entity-level transitions (fromState=None) to one per state
+    entityLevelTransitions.foreach { t =>
+      states.foreach { state =>
+        transitions.addOne(t.copy(fromState = Some(state)))
+      }
+    }
 
-    val initialState = states.headOption
+    // Walk state-level handlers
+    states.foreach { state =>
+      state.handlers.foreach { handler =>
+        extractTransitions(handler, Some(state), entity, transitions)
+      }
+    }
+
+    // Detect initial state from on init + set state
+    val initialState = detectInitialState(entity, states)
+
     val statesWithOutgoing = transitions.map(_.fromState).collect {
       case Some(s) => s
-    }.toSet ++ (
-      // Entity-level transitions (fromState=None) mean any state
-      // can transition, so all states have potential outgoing
-      if transitions.exists(_.fromState.isEmpty) then states.toSet
-      else scala.collection.immutable.Set.empty[State]
-    )
+    }.toSet
     val terminalStates = states.filterNot(statesWithOutgoing.contains)
 
     EntityLifecycle(
@@ -154,59 +160,95 @@ case class EntityLifecyclePass(
     )
   }
 
+  /** Resolve a StateRef to a State, trying refMap first then
+    * falling back to matching by name within the entity.
+    */
+  private def resolveState(
+    stateRef: StateRef,
+    entity: Entity
+  ): Option[State] = {
+    refMap.definitionOf[State](stateRef.pathId).orElse {
+      // Fallback: match by last path component against entity states
+      val stateName = stateRef.pathId.value.lastOption.getOrElse("")
+      entity.states.find(_.id.value == stateName)
+    }
+  }
+
+  /** Detect initial state by searching for `set state X` inside
+    * `on init` clauses. Falls back to first declared state.
+    */
+  private def detectInitialState(
+    entity: Entity,
+    states: Seq[State]
+  ): Option[State] = {
+    // Collect all handlers from entity-level and state-level
+    val allHandlers = entity.handlers ++ states.flatMap(_.handlers)
+
+    // Search for OnInitializationClause containing SetStatement with StateRef
+    val initStateOpt = allHandlers.iterator.flatMap(_.clauses).collectFirst {
+      case oic: OnInitializationClause =>
+        val finder = Finder(oic.contents)
+        val sets = finder.recursiveFindByType[SetStatement]
+        sets.collectFirst {
+          case ss: SetStatement if ss.field.isInstanceOf[StateRef] =>
+            val stateRef = ss.field.asInstanceOf[StateRef]
+            resolveState(stateRef, entity)
+        }.flatten
+    }.flatten
+
+    initStateOpt.orElse(states.headOption)
+  }
+
   private def extractTransitions(
     handler: Handler,
     fromState: Option[State],
     entity: Entity,
     transitions: mutable.ListBuffer[StateTransition]
   ): Unit = {
-    handler.clauses.foreach {
-      case omc: OnMessageClause =>
-        val finder = Finder(omc.contents)
-        val morphs = finder.recursiveFindByType[MorphStatement]
-        val becomes = finder.recursiveFindByType[BecomeStatement]
+    handler.clauses.foreach { oc =>
+      val finder = Finder(oc.contents)
+      val morphs = finder.recursiveFindByType[MorphStatement]
+      val becomes = finder.recursiveFindByType[BecomeStatement]
 
-        morphs.foreach { morph =>
-          val maybeState =
-            refMap.definitionOf[State](morph.state, entity)
-          maybeState.foreach { targetState =>
+      morphs.foreach { morph =>
+        val maybeState = resolveState(morph.state, entity)
+        maybeState.foreach { targetState =>
+          transitions.addOne(
+            StateTransition(
+              fromState = fromState,
+              toState = targetState,
+              trigger = oc,
+              mechanism = morph
+            )
+          )
+        }
+      }
+
+      becomes.foreach { become =>
+        // become changes the handler, which implies a state
+        // transition in FSM semantics. Try to find the state
+        // associated with the target handler.
+        val maybeHandler =
+          refMap.definitionOf[Handler](become.handler.pathId)
+        maybeHandler.foreach { targetHandler =>
+          // See if we can associate this handler with a state
+          // by name convention or containment
+          entity.states.find { state =>
+            state.id.value == targetHandler.id.value ||
+            state.id.value + "Handler" ==
+              targetHandler.id.value
+          }.foreach { targetState =>
             transitions.addOne(
               StateTransition(
                 fromState = fromState,
                 toState = targetState,
-                trigger = omc,
-                mechanism = morph
+                trigger = oc,
+                mechanism = become
               )
             )
           }
         }
-
-        becomes.foreach { become =>
-          // become changes the handler, which implies a state
-          // transition in FSM semantics. Try to find the state
-          // associated with the target handler.
-          val maybeHandler =
-            refMap.definitionOf[Handler](become.handler, entity)
-          maybeHandler.foreach { targetHandler =>
-            // See if we can associate this handler with a state
-            // by name convention or containment
-            entity.states.find { state =>
-              state.id.value == targetHandler.id.value ||
-              state.id.value + "Handler" ==
-                targetHandler.id.value
-            }.foreach { targetState =>
-              transitions.addOne(
-                StateTransition(
-                  fromState = fromState,
-                  toState = targetState,
-                  trigger = omc,
-                  mechanism = become
-                )
-              )
-            }
-          }
-        }
-      case _ => ()
+      }
     }
   }
 
