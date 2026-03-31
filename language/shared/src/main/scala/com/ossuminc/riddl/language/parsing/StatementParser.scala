@@ -30,10 +30,19 @@ private[parsing] trait StatementParser {
     )./.map { case (start, str, end) => ErrorStatement(at(start, end), str) }
   }
 
+  private def requireStatement[u: P]: P[RequireStatement] = {
+    P(
+      Index ~ Keywords.require ~ literalString ~/ Index
+    )./.map { case (start, str, end) => RequireStatement(at(start, end), str) }
+  }
+
   private def theSetStatement[u: P]: P[SetStatement] = {
     P(
-      Index ~ Keywords.set ~/ fieldRef ~ to ~/ literalString ~/ Index
-    )./.map { (start, ref, str, end) => SetStatement(at(start, end), ref, str) }
+      Index ~ Keywords.set ~/ (fieldRef|stateRef) ~ to ~/ literalString ~/ Index
+    )./.map {
+      case (start, ref: FieldRef, str, end) => SetStatement(at(start, end), ref, str)
+      case (start, ref: StateRef, str, end) => SetStatement(at(start,end), ref, str)  
+    }
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
@@ -121,11 +130,11 @@ private[parsing] trait StatementParser {
     }
   }
 
-  private def backTickElipsis[u: P]: P[Unit] = { P("```") }
+  private def backTickEllipsis[u: P]: P[Unit] = { P("```") }
 
   private def codeStatement[u: P]: P[CodeStatement] = {
     P(
-      Index ~ backTickElipsis ~ Index ~ StringIn("scala", "java", "python", "mojo").! ~ Index ~
+      Index ~ backTickEllipsis ~ Index ~ StringIn("scala", "java", "python", "mojo").! ~ Index ~
         until3('`', '`', '`') ~ Index
     ).map { case (at1, at2, lang, at3, contents, at4) =>
       CodeStatement(at(at1, at4), LiteralString(at(at2, at3), lang), contents)
@@ -142,8 +151,8 @@ private[parsing] trait StatementParser {
       theSetStatement | letStatement |
       // GROUP 4: General statements
       promptStatement | codeStatement |
-      // GROUP 5: Error handling
-      errorStatement | comment
+      // GROUP 5: Error handling and preconditions
+      errorStatement | requireStatement | comment
     ).asInstanceOf[P[Statements]]
   }
 

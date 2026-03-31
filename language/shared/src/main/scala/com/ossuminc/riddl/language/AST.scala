@@ -2342,6 +2342,23 @@ object AST:
     def format: String = s"error ${message.format}"
   }
 
+  /** A statement that requires a boolean condition to be true for execution
+    * to continue. If the condition is false, an error is generated.
+    *
+    * @param loc
+    *   The location where the statement occurs in the source
+    * @param condition
+    *   The boolean expression (as a string) that must be true
+    */
+  @JSExportTopLevel("RequireStatement")
+  case class RequireStatement(
+    loc: At,
+    condition: LiteralString
+  ) extends Statement {
+    override def kind: String = "Require Statement"
+    def format: String = s"require ${condition.format}"
+  }
+
   /** A statement that sets a value of a field
     *
     * @param loc
@@ -2354,7 +2371,7 @@ object AST:
   @JSExportTopLevel("SetStatement")
   case class SetStatement(
     loc: At,
-    field: FieldRef,
+    field: FieldRef | StateRef,
     value: LiteralString
   ) extends Statement {
     override def kind: String = "Set Statement"

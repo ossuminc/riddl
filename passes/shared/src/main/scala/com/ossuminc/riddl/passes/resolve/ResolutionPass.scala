@@ -234,7 +234,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def resolveStatement(statement: Statement, parents: Parents): Unit = {
     statement match {
       case SetStatement(_, field, _) =>
-        associateUsage[Field](parents.head, resolveARef[Field](field, parents))
+        field match
+          case fr: FieldRef => associateUsage[Field](parents.head, resolveARef[Field](fr, parents))
+          case sr: StateRef => associateUsage[State](parents.head, resolveARef[State](sr, parents))
       case BecomeStatement(_, entity, handler) =>
         associateUsage[Entity](parents.head, resolveARef[Entity](entity, parents))
         associateUsage[Handler](parents.head, resolveARef[Handler](handler, parents))
@@ -248,8 +250,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case TellStatement(_, msg, processorRef) =>
         associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
         associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
-      case _: PromptStatement => () // no references
-      case _: ErrorStatement  => () // no references
+      case _: PromptStatement  => () // no references
+      case _: ErrorStatement   => () // no references
+      case _: RequireStatement => () // no references
       case _: WhenStatement   => () // no references (condition is a literal string)
       case _: MatchStatement  => () // no references (expression/patterns are literal strings)
       case ls: LetStatement =>

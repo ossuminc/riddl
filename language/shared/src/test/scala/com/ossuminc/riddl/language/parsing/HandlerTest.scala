@@ -6,7 +6,8 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{Context, Entity}
+import com.ossuminc.riddl.language.AST.{Context, Entity, RequireStatement}
+import com.ossuminc.riddl.language.Finder
 import com.ossuminc.riddl.language.parsing.AbstractParsingTest
 import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.TestData
@@ -223,6 +224,45 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           val msg = errors.map(_.format).mkString("\n")
           fail(msg)
         case Right(_) => succeed
+      }
+    }
+    "accept require statements" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """entity Account is {
+          |  type AccountState is { balance: Number }
+          |  state Active of Account.AccountState
+          |  handler Transactions is {
+          |    on command Withdraw {
+          |      require "balance >= amount"
+          |      set field Account.balance to "balance - amount"
+          |    }
+          |    on command Transfer {
+          |      require "balance >= amount"
+          |      require "recipient != sender"
+          |      prompt "execute transfer"
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseDefinition[Entity](input) match {
+        case Left(errors) =>
+          val msg = errors.map(_.format).mkString("\n")
+          fail(msg)
+        case Right((entity, _)) =>
+          val handler = entity.handlers.head
+          val clause = handler.clauses.head
+          val finder = Finder(clause.contents)
+          val requires = finder.findByType[RequireStatement]
+          requires.size must be(1)
+          requires.head.condition.s must be("balance >= amount")
+          // Second clause has two requires
+          val clause2 = handler.clauses(1)
+          val finder2 = Finder(clause2.contents)
+          val requires2 = finder2.findByType[RequireStatement]
+          requires2.size must be(2)
+          succeed
       }
     }
   }

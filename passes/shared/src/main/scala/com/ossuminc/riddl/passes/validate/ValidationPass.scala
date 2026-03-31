@@ -261,7 +261,9 @@ case class ValidationPass(
           required = true
         )
       case SetStatement(loc, field, value) =>
-        checkRef[Field](field, parents)
+        field match
+          case fr: FieldRef => checkRef[Field](fr, parents)
+          case sr: StateRef => checkRef[State](sr, parents)
         checkNonEmptyValue(value, "value to set", onClause, loc, MissingWarning, required = true)
       case SendStatement(_, msg, portlet) =>
         checkRef[Type](msg, parents)
@@ -312,6 +314,15 @@ case class ValidationPass(
       case CodeStatement(loc, language, body) =>
         checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true)
         check(body.nonEmpty, "Code statement body cannot be empty", MissingWarning, loc)
+      case RequireStatement(loc, condition) =>
+        checkNonEmptyValue(
+          condition,
+          "require condition",
+          onClause,
+          loc,
+          MissingWarning,
+          required = true
+        )
     end match
   end validateStatement
 

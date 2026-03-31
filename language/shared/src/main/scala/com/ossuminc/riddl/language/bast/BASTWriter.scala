@@ -235,9 +235,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case input: Input => writeInput(input)
       case output: Output => writeOutput(output)
 
-      // Statements (10 declarative statements per riddlsim spec)
+      // Statements (11 declarative statements)
       case s: PromptStatement => writePromptStatement(s)
       case s: ErrorStatement => writeErrorStatement(s)
+      case s: RequireStatement => writeRequireStatement(s)
       case s: SetStatement => writeSetStatement(s)
       case s: SendStatement => writeSendStatement(s)
       case s: MorphStatement => writeMorphStatement(s)
@@ -864,11 +865,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeLiteralString(s.message)
   }
 
+  def writeRequireStatement(s: RequireStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(14) // Require statement
+    writeLocation(s.loc)
+    writeLiteralString(s.condition)
+  }
+
   def writeSetStatement(s: SetStatement): Unit = {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(3) // Set statement
     writeLocation(s.loc)
-    writeFieldRef(s.field)
+    s.field match {
+      case fr: FieldRef => writeFieldRef(fr)
+      case sr: StateRef => writeStateRef(sr)
+    }
     writeLiteralString(s.value)
   }
 

@@ -784,8 +784,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val message = readLiteralString()
         ErrorStatement(loc, message)
 
-      case 3 => // Set
-        val field = readFieldRef()
+      case 3 => // Set (field ref or state ref)
+        val field: FieldRef | StateRef = reader.peekU8() match
+          case tag if tag == NODE_FIELD_REF => readFieldRef()
+          case tag if tag == NODE_STATE_REF => readStateRef()
         val value = readLiteralString()
         SetStatement(loc, field, value)
 
@@ -870,6 +872,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         val language = readLiteralString()
         val body = readString()
         CodeStatement(loc, language, body)
+
+      case 14 => // Require
+        val condition = readLiteralString()
+        RequireStatement(loc, condition)
 
       case _ =>
         PromptStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))
