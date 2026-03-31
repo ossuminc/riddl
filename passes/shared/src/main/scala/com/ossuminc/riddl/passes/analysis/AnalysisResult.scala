@@ -21,9 +21,6 @@ import com.ossuminc.riddl.passes.stats.{StatsOutput, StatsPass}
 import com.ossuminc.riddl.passes.symbols.{SymbolsOutput, SymbolsPass}
 import com.ossuminc.riddl.passes.validate.{HandlerCompleteness, ValidationOutput, ValidationPass}
 
-import java.time.Instant
-import java.util.UUID
-
 /** Unique token identifying a cached AnalysisResult.
   *
   * Tokens are opaque handles used by MCP tools to reference previously
@@ -32,8 +29,13 @@ import java.util.UUID
 opaque type AnalysisToken = String
 
 object AnalysisToken:
+  private val counter = new java.util.concurrent.atomic.AtomicLong(0)
+
   /** Generate a new unique token */
-  def generate(): AnalysisToken = UUID.randomUUID().toString
+  def generate(): AnalysisToken =
+    val time = System.currentTimeMillis()
+    val count = counter.incrementAndGet()
+    f"$time%x-$count%04x"
 
   /** Create token from string (for deserialization) */
   def fromString(s: String): AnalysisToken = s
@@ -43,8 +45,8 @@ end AnalysisToken
 
 /** Metadata about the analysis */
 case class AnalysisMetadata(
-  /** When the analysis was performed */
-  analyzedAt: Instant,
+  /** When the analysis was performed (epoch millis) */
+  analyzedAt: Long,
 
   /** Name of the root domain (primary identifier) */
   rootDomainName: Option[String],
@@ -63,7 +65,7 @@ object AnalysisMetadata:
   def apply(root: Root): AnalysisMetadata =
     val rootDomainName = root.domains.headOption.map(_.id.value)
     AnalysisMetadata(
-      analyzedAt = Instant.now(),
+      analyzedAt = System.currentTimeMillis(),
       rootDomainName = rootDomainName,
       sourceLocation = None,
       sourceHash = None,
@@ -75,7 +77,7 @@ object AnalysisMetadata:
       case root: Root => apply(root)
       case other =>
         AnalysisMetadata(
-          analyzedAt = Instant.now(),
+          analyzedAt = System.currentTimeMillis(),
           rootDomainName = Some(other.id.value),
           sourceLocation = None,
           sourceHash = None,

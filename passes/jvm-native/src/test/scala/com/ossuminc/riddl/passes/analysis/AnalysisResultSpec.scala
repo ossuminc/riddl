@@ -9,8 +9,6 @@ package com.ossuminc.riddl.passes.analysis
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.must.Matchers
 
-import java.time.Instant
-
 class AnalysisResultSpec extends AnyWordSpec with Matchers {
 
   "AnalysisToken" should {
@@ -29,15 +27,15 @@ class AnalysisResultSpec extends AnyWordSpec with Matchers {
 
   "AnalysisMetadata" should {
     "capture analysis timestamp" in {
-      val before = Instant.now()
+      val before = System.currentTimeMillis()
       val metadata = AnalysisMetadata(
-        analyzedAt = Instant.now(),
+        analyzedAt = System.currentTimeMillis(),
         rootDomainName = Some("TestDomain"),
         sourceLocation = None,
         sourceHash = None,
         riddlVersion = None
       )
-      val after = Instant.now()
+      val after = System.currentTimeMillis()
 
       metadata.analyzedAt must (be >= before and be <= after)
       metadata.rootDomainName mustBe Some("TestDomain")
