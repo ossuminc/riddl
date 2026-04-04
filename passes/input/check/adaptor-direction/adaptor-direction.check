@@ -4,3 +4,9 @@ passes/input/check/adaptor-direction/adaptor-direction.riddl(12:9->34):
 passes/input/check/adaptor-direction/adaptor-direction.riddl(22:9->34):
  Outbound Adaptor 'BadOutbound' handles Event 'SourceCtx.ItDone' from Context 'SourceCtx', but outbound adaptors should handle commands and queries (the target's input):
          on event SourceCtx.ItDone {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(11:7->24):
+ Handler 'InHandler' in Adaptor 'BadInbound' contains only prompt statements; executable statements (tell, send, morph, set, etc.) are needed:
+       handler InHandler is {
+passes/input/check/adaptor-direction/adaptor-direction.riddl(21:7->25):
+ Handler 'OutHandler' in Adaptor 'BadOutbound' contains only prompt statements; executable statements (tell, send, morph, set, etc.) are needed:
+       handler OutHandler is {

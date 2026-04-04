@@ -181,3 +181,24 @@ passes/input/check/everything/everything.riddl(7:24->39):
 passes/input/check/everything/everything.riddl(8:5->14):
  Sink 'Sink' should have a handler:
      sink Sink is { inlet Commands is DoAThing } with { explained as "Data Sink" }
+passes/input/check/everything/everything.riddl(16:3->15):
+ Context 'full' has entities but no Sink streamlet to receive and dispatch incoming messages:
+   context full is {
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' in Context 'full' has no outlet streamlet to publish events on:
+     entity Something is {
+passes/input/check/everything/everything.riddl(48:7->22):
+ State 'someState' in Entity 'Something' has no 'on init' clause to initialize its state:
+       state someState of type Everything.StateType
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' has no 'on query' clause; information cannot be extracted from it:
+     entity Something is {
+passes/input/check/everything/everything.riddl(66:5->26):
+ Entity 'SomeOtherThing' has no 'on query' clause; information cannot be extracted from it:
+     entity SomeOtherThing is {
+passes/input/check/everything/everything.riddl(66:5->26):
+ Entity 'SomeOtherThing' in Context 'full' has no outlet streamlet to publish events on:
+     entity SomeOtherThing is {
+passes/input/check/everything/everything.riddl(69:7->28):
+ State 'otherThingState' in Entity 'SomeOtherThing' has no 'on init' clause to initialize its state:
+       state otherThingState of type Everything.StateType

@@ -50,6 +50,13 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
     this
   }
 
+  protected var repositories: Seq[Repository] = Seq.empty[Repository]
+
+  def addRepository(repo: Repository): this.type = {
+    repositories = repositories :+ repo
+    this
+  }
+
   def associateUsage[T <: Definition: ClassTag](user: Definition, resolution: Resolution[T]): Resolution[T] =
     resolution match
       case None => None
@@ -82,6 +89,7 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
       checkList(entities)
       checkList(types)
       checkList(functions)
+      checkList(repositories)
     }
     this
   }

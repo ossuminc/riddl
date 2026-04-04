@@ -65,6 +65,19 @@ class MessagesTest extends AbstractTestingBasis {
       Warning.isMissing mustBe false
       Warning.toString mustBe "Warning"
     }
+    "have CompletenessWarning with correct queries" in {
+      CompletenessWarning.isSevereError mustBe false
+      CompletenessWarning.isError mustBe false
+      CompletenessWarning.isWarning mustBe true
+      CompletenessWarning.isInfo mustBe false
+      CompletenessWarning.isActionable mustBe true
+      CompletenessWarning.isIgnorable mustBe false
+      CompletenessWarning.isCompleteness mustBe true
+      CompletenessWarning.isUsage mustBe false
+      CompletenessWarning.isStyle mustBe false
+      CompletenessWarning.isMissing mustBe false
+      CompletenessWarning.toString mustBe "Completeness"
+    }
     "have Error with correct queries" in {
       Error.isSevereError mustBe false
       Error.isError mustBe true
@@ -90,19 +103,20 @@ class MessagesTest extends AbstractTestingBasis {
       SevereError.toString mustBe "Severe"
     }
     "have Severities from lowest to highest" in {
-      Info.severity mustBe 0
-      StyleWarning.severity mustBe 1
-      MissingWarning.severity mustBe 2
-      UsageWarning.severity mustBe 3
-      Warning.severity mustBe 4
-      Error.severity mustBe 5
-      SevereError.severity mustBe 6
+      (Info.severity < StyleWarning.severity) mustBe true
+      (StyleWarning.severity < MissingWarning.severity) mustBe true
+      (MissingWarning.severity < UsageWarning.severity) mustBe true
+      (UsageWarning.severity < CompletenessWarning.severity) mustBe true
+      (CompletenessWarning.severity < Warning.severity) mustBe true
+      (Warning.severity < Error.severity) mustBe true
+      (Error.severity < SevereError.severity) mustBe true
     }
     "have KindOfMessage that supports comparison" in {
       (Info < StyleWarning &&
         StyleWarning < MissingWarning &&
         MissingWarning < UsageWarning &&
-        UsageWarning < Warning &&
+        UsageWarning < CompletenessWarning &&
+        CompletenessWarning < Warning &&
         Warning < Error &&
         Error < SevereError) mustBe true
     }

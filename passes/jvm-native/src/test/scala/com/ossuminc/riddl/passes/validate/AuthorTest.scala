@@ -141,7 +141,7 @@ class AuthorTest extends AbstractValidatingTest {
         td
       )
       parseAndValidateDomain(input) { case (_, _, msgs) =>
-        msgs.isOnlyIgnorable must be(true)
+        msgs.hasErrors must be(false)
         msgs.isOnlyWarnings must be(true)
       }
     }

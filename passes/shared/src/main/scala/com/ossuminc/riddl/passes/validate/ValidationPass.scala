@@ -68,6 +68,10 @@ case class ValidationPass(
   private val handlerParents: mutable.ListBuffer[(Handler, Definition)] =
     mutable.ListBuffer.empty
 
+  /** Accumulated projectors for cross-cutting completeness checks */
+  private val collectedProjectors: mutable.ListBuffer[(Projector, Parents)] =
+    mutable.ListBuffer.empty
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -94,7 +98,34 @@ case class ValidationPass(
     if mode == ValidationMode.Full then
       checkStreaming(root)
       computedHandlerCompleteness = classifyHandlers()
+      checkCompletenessPostProcess()
     end if
+  }
+
+  private def checkCompletenessPostProcess(): Unit = {
+    // Completeness 4e: handlers that are empty or prompt-only
+    computedHandlerCompleteness.foreach { hc =>
+      val isExternal = hc.parent match {
+        case c: Context => c.hasOption("external")
+        case _ => false
+      }
+      if !isExternal then {
+        hc.category match {
+          case BehaviorCategory.Empty =>
+            messages.addCompleteness(
+              hc.handler.errorLoc,
+              s"${hc.handler.identify} in ${hc.parent.identify} has no executable statements"
+            )
+          case BehaviorCategory.PromptOnly =>
+            messages.addCompleteness(
+              hc.handler.errorLoc,
+              s"${hc.handler.identify} in ${hc.parent.identify} contains only prompt statements; " +
+                "executable statements (tell, send, morph, set, etc.) are needed"
+            )
+          case BehaviorCategory.Executable => ()
+        }
+      }
+    }
   }
 
   def process(value: RiddlValue, parents: ParentStack): Unit = {
@@ -153,6 +184,7 @@ case class ValidationPass(
       case s: Streamlet =>
         validateStreamlet(s, parentsAsSeq)
       case p: Projector =>
+        collectedProjectors.addOne((p, parentsAsSeq))
         validateProjector(p, parentsAsSeq)
       case r: Repository =>
         validateRepository(r, parentsAsSeq)
@@ -198,37 +230,43 @@ case class ValidationPass(
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
     checkDefinition(parents, omc)
     validateOnClause(omc)
-    val isAdaptor: Boolean = parents.exists(_.isInstanceOf[Adaptor])
+    val maybeEntity: Option[Entity] = parents.collectFirst { case e: Entity => e }
     val isExternalContext: Boolean = parents.collectFirst { case c: Context => c }
       .exists(_.hasOption("external"))
     if omc.msg.nonEmpty then {
       checkMessageRef(omc.msg, parents, Seq(omc.msg.messageKind))
-      omc.msg.messageKind match {
-        case AggregateUseCase.CommandCase =>
-          val finder = Finder(omc.contents)
-          val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
-          val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
-          val foundSend = sends.nonEmpty &&
-            sends.exists(_.msg.messageKind == AggregateUseCase.EventCase)
-          val foundTell = tells.nonEmpty &&
-            tells.exists(_.msg.messageKind == AggregateUseCase.EventCase)
-          if !(foundSend || foundTell) && !isAdaptor && !isExternalContext then
-            messages.add(
-              warning("Processing for commands should result in sending an event", omc.errorLoc)
-            )
-        case AggregateUseCase.QueryCase =>
-          val finder = Finder(omc.contents)
-          val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
-          val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
-          val foundSend = sends.nonEmpty &&
-            sends.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
-          val foundTell = tells.nonEmpty &&
-            tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
-          if !(foundSend || foundTell) && !isAdaptor then
-            messages.add(
-              warning("Processing for queries should result in sending a result", omc.errorLoc)
-            )
-        case _ =>
+      // Command→event and query→result checks apply only to entities
+      if maybeEntity.isDefined && !isExternalContext then {
+        val entity = maybeEntity.get
+        omc.msg.messageKind match {
+          case AggregateUseCase.CommandCase =>
+            val finder = Finder(omc.contents)
+            val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
+            val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
+            val foundSend = sends.nonEmpty &&
+              sends.exists(_.msg.messageKind == AggregateUseCase.EventCase)
+            val foundTell = tells.nonEmpty &&
+              tells.exists(_.msg.messageKind == AggregateUseCase.EventCase)
+            if !(foundSend || foundTell) then
+              messages.addCompleteness(
+                omc.errorLoc,
+                s"Command processing in ${entity.identify} should result in sending an event"
+              )
+          case AggregateUseCase.QueryCase =>
+            val finder = Finder(omc.contents)
+            val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
+            val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
+            val foundSend = sends.nonEmpty &&
+              sends.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+            val foundTell = tells.nonEmpty &&
+              tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+            if !(foundSend || foundTell) then
+              messages.addCompleteness(
+                omc.errorLoc,
+                s"Query processing in ${entity.identify} should result in sending a result"
+              )
+          case _ =>
+        }
       }
     } else {}
     omc.from.foreach { (_: Option[Identifier], ref: Reference[Definition]) =>
@@ -760,7 +798,7 @@ case class ValidationPass(
         }
       }
       if !hasMorphOrBecome then
-        messages.addWarning(
+        messages.addCompleteness(
           entity.errorLoc,
           s"${entity.identify} is declared as a finite-state-machine but its handlers contain no morph or become statements"
         )
@@ -788,6 +826,59 @@ case class ValidationPass(
         )
       )
     }
+    // Completeness 4a: each state should have on-init with set statement
+    if entity.states.nonEmpty && !entity.isEmpty then
+      entity.states.foreach { state =>
+        val allHandlers = state.handlers ++ entity.handlers
+        val onInits = allHandlers.flatMap(_.clauses.collect {
+          case oic: OnInitializationClause => oic
+        })
+        if onInits.isEmpty then
+          messages.addCompleteness(
+            state.errorLoc,
+            s"${state.identify} in ${entity.identify} has no 'on init' clause to initialize its state"
+          )
+        else
+          val hasSet = onInits.exists { oic =>
+            val finder = Finder(oic.contents)
+            finder.recursiveFindByType[SetStatement].nonEmpty
+          }
+          if !hasSet then
+            messages.addCompleteness(
+              state.errorLoc,
+              s"${state.identify} in ${entity.identify} has an 'on init' clause but no 'set' statement to initialize state values"
+            )
+      }
+    // Completeness 4f: entity with no handlers at all
+    if entity.nonEmpty && entity.handlers.isEmpty && entity.states.forall(_.handlers.isEmpty) then
+      messages.addCompleteness(
+        entity.errorLoc,
+        s"${entity.identify} has no handlers to process messages"
+      )
+    // Completeness 4g: entity without query handlers
+    if entity.nonEmpty && entity.handlers.nonEmpty then
+      val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
+      val hasQueryHandler = allHandlers.exists { handler =>
+        handler.clauses.exists {
+          case omc: OnMessageClause => omc.msg.messageKind == AggregateUseCase.QueryCase
+          case _ => false
+        }
+      }
+      if !hasQueryHandler then
+        messages.addCompleteness(
+          entity.errorLoc,
+          s"${entity.identify} has no 'on query' clause; information cannot be extracted from it"
+        )
+    // Completeness 4h: entity without event outlet in parent context
+    if entity.nonEmpty then
+      parents.headOption.collect { case c: Context => c }.foreach { context =>
+        val hasOutlet = context.streamlets.exists(_.outlets.nonEmpty)
+        if !hasOutlet then
+          messages.addCompleteness(
+            entity.errorLoc,
+            s"${entity.identify} in ${context.identify} has no outlet streamlet to publish events on"
+          )
+      }
   }
 
   private def validateProjector(
@@ -816,6 +907,12 @@ case class ValidationPass(
     projector.repositories.foreach { repoRef =>
       checkRef[Repository](repoRef, parents)
     }
+    // Completeness 4c: projectors should reference at least one repository
+    if projector.repositories.isEmpty && projector.nonEmpty then
+      messages.addCompleteness(
+        projector.errorLoc,
+        s"${projector.identify} does not reference any repository to persist its projection"
+      )
     if projector.handlers.nonEmpty then {
       val allClauses = projector.handlers.flatMap(_.clauses).collect {
         case omc: OnMessageClause => omc
@@ -829,6 +926,31 @@ case class ValidationPass(
             projector.errorLoc,
             s"${projector.identify} handler does not handle any events; projectors typically handle events to build read models"
           )
+      }
+      // Completeness: projector handlers must tell to a repository
+      val allTells = projector.handlers.flatMap { handler =>
+        val finder = Finder(handler)
+        finder.recursiveFindByType[TellStatement]
+      }
+      if allTells.isEmpty then {
+        messages.addCompleteness(
+          projector.errorLoc,
+          s"${projector.identify} does not persist its projection; projector handlers should tell messages to a repository"
+        )
+      }
+      // Check each declared repository is actually used in a tell
+      if projector.repositories.nonEmpty && allTells.nonEmpty then {
+        projector.repositories.foreach { repoRef =>
+          val repoName = repoRef.pathId.value.lastOption.getOrElse("")
+          val isTold = allTells.exists { tell =>
+            tell.processorRef.pathId.value.lastOption.contains(repoName)
+          }
+          if !isTold then
+            messages.addUsage(
+              repoRef.loc,
+              s"${projector.identify} declares ${repoRef.format} but does not send it any messages"
+            )
+        }
       }
     }
   }
@@ -1074,6 +1196,37 @@ case class ValidationPass(
     parents: Parents
   ): Unit = {
     checkContainer(parents, c)
+    val nonEmptyEntities = c.entities.filter(_.nonEmpty)
+    if nonEmptyEntities.nonEmpty && c.nonEmpty then {
+      // Completeness 4i: context with entities must have a Sink
+      val hasSinkOrInlet = c.streamlets.exists(_.inlets.nonEmpty)
+      if !hasSinkOrInlet then {
+        messages.addCompleteness(
+          c.errorLoc,
+          s"${c.identify} has entities but no Sink streamlet to receive and dispatch incoming messages"
+        )
+      }
+    }
+    if c.streamlets.nonEmpty && nonEmptyEntities.nonEmpty then {
+      // Completeness 4b: streamlet handlers should dispatch to entities via tell
+      c.streamlets.foreach { streamlet =>
+        if streamlet.inlets.nonEmpty && streamlet.handlers.nonEmpty then {
+          streamlet.handlers.foreach { handler =>
+            val messageClauses = handler.clauses.collect { case omc: OnMessageClause => omc }
+            if messageClauses.nonEmpty then {
+              val finder = Finder(handler)
+              val tells = finder.recursiveFindByType[TellStatement]
+              if tells.isEmpty then {
+                messages.addCompleteness(
+                  handler.errorLoc,
+                  s"${handler.identify} in ${streamlet.identify} handles messages but does not dispatch to any entity via 'tell'"
+                )
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   private def validateEpic(

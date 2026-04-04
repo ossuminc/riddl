@@ -71,7 +71,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           case _: Void => () // Void streamlets are excluded
           case _ =>
             if !connectedStreamlets.contains(streamlet) then
-              messages.addWarning(
+              messages.addCompleteness(
                 streamlet.errorLoc,
                 s"${streamlet.identify} has no connections to any connector"
               )
@@ -104,7 +104,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           end while
 
           if !reachesSink then
-            messages.addWarning(
+            messages.addCompleteness(
               source.errorLoc,
               s"${source.identify} is a source but has no downstream path to any sink"
             )
@@ -141,7 +141,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
           end while
 
           if !reachedBySource then
-            messages.addWarning(
+            messages.addCompleteness(
               sink.errorLoc,
               s"${sink.identify} is a sink but has no upstream path from any source"
             )
@@ -201,7 +201,7 @@ trait StreamingValidation(using pc: PlatformContext) extends TypeValidation {
     def findUnconnected[OI <: Portlet](portlets: scala.collection.Set[OI]): Unit = {
       portlets.foreach { portlet =>
         val message = s"${portlet.identify} is not connected"
-        messages.addWarning(portlet.errorLoc, message)
+        messages.addCompleteness(portlet.errorLoc, message)
       }
     }
 

@@ -10,7 +10,7 @@ passes/input/check/references/bad-pids.riddl(13:20->26):
  and it should refer to a Type:
          on command DooFoo {
 passes/input/check/references/bad-pids.riddl(13:9->26):
- Processing for commands should result in sending an event:
+ Command processing in Entity 'FooEntity' should result in sending an event:
          on command DooFoo {
 passes/input/check/references/bad-pids.riddl(14:21->43):
  Path 'FooExamplexxxx.garbage' was not resolved, in OnMessageClause 'command DooFoo'
@@ -47,3 +47,15 @@ passes/input/check/references/bad-pids.riddl(7:5->21):
 passes/input/check/references/bad-pids.riddl(7:5->21):
  Metadata in Entity 'FooEntity' should not be empty:
      entity FooEntity is {
+passes/input/check/references/bad-pids.riddl(11:7->23):
+ State 'FooExample' in Entity 'FooEntity' has no 'on init' clause to initialize its state:
+       state FooExample of FooExampleState
+passes/input/check/references/bad-pids.riddl(7:5->21):
+ Entity 'FooEntity' has no 'on query' clause; information cannot be extracted from it:
+     entity FooEntity is {
+passes/input/check/references/bad-pids.riddl(7:5->21):
+ Entity 'FooEntity' in Context 'ExampleContext' has no outlet streamlet to publish events on:
+     entity FooEntity is {
+passes/input/check/references/bad-pids.riddl(2:3->25):
+ Context 'ExampleContext' has entities but no Sink streamlet to receive and dispatch incoming messages:
+   context ExampleContext is {

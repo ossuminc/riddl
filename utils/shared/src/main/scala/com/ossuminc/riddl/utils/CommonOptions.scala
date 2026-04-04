@@ -30,6 +30,8 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   Controls whether any style Warnings are printed out
   * @param showUsageWarnings
   *   Controls whether any usage Warnings are printed out
+  * @param showCompletenessWarnings
+  *   Controls whether any completeness Warnings are printed out
   * @param showInfoMessages
   *   Controls whether any informative messages are printed out
   * @param debug
@@ -64,6 +66,7 @@ case class CommonOptions(
   showMissingWarnings: Boolean = true,
   showStyleWarnings: Boolean = true,
   showUsageWarnings: Boolean = true,
+  showCompletenessWarnings: Boolean = true,
   showInfoMessages: Boolean = true,
   debug: Boolean = false,
   sortMessagesByLocation: Boolean = false,

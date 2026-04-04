@@ -130,6 +130,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case p: Projector =>
         p.repositories.foreach { ref => associateUsage(p, resolveARef[Repository](ref, parents)) }
       case r: Repository =>
+        addRepository(r)
       case s: Saga       =>
       case r: Relationship =>
         resolveARef[Processor[?]](r.withProcessor, parents)

@@ -47,6 +47,7 @@ object CommonOptionsHelper:
   private inline def show_missing_warnings = "show-missing-warnings"
   private inline def show_style_warnings = "show-style-warnings"
   private inline def show_usage_warnings = "show-usage-warnings"
+  private inline def show_completeness_warnings = "show-completeness-warnings"
   private inline def show_info_messages = "show-info-messages"
   private inline def sort_messages_by_location = "sort-messages-by-location"
   private inline def group_messages_by_kind = "group-messages-by-kind"
@@ -114,6 +115,10 @@ object CommonOptionsHelper:
         .optional()
         .action((s, c) => c.copy(showUsageWarnings = s))
         .text("Suppress warnings about usage of definitions. "),
+      opt[Boolean]('c', name = show_completeness_warnings)
+        .optional()
+        .action((s, c) => c.copy(showCompletenessWarnings = s))
+        .text("Suppress warnings about model completeness. "),
       opt[Boolean]('i', name = show_info_messages)
         .optional()
         .action((s, c) => c.copy(showInfoMessages = s))
@@ -221,6 +226,9 @@ object CommonOptionsHelper:
       if obj.hasPath(show_missing_warnings) then obj.getBoolean(show_missing_warnings) else default.showMissingWarnings
     val showUsageWarnings =
       if obj.hasPath(show_usage_warnings) then obj.getBoolean(show_usage_warnings) else default.showUsageWarnings
+    val showCompletenessWarnings =
+      if obj.hasPath(show_completeness_warnings) then obj.getBoolean(show_completeness_warnings)
+      else default.showCompletenessWarnings
     val showInfoMessages =
       if obj.hasPath(show_info_messages) then obj.getBoolean(show_info_messages) else default.showInfoMessages
     val maxParallelParsing =
@@ -246,6 +254,7 @@ object CommonOptionsHelper:
       showMissingWarnings,
       showStyleWarnings,
       showUsageWarnings,
+      showCompletenessWarnings,
       showInfoMessages,
       debugV,
       sortMessagesByLocation,

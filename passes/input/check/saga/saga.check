@@ -62,3 +62,12 @@ passes/input/check/saga/saga.riddl(35:7->36:7):
  Option 'parallel' in Saga 'name' is not a recognized RIDDL option:
        option parallel
        described as "ignore"
+passes/input/check/saga/saga.riddl(12:5->16):
+ Entity 'blah' has no handlers to process messages:
+     entity blah is {
+passes/input/check/saga/saga.riddl(12:5->16):
+ Entity 'blah' in Context 'ignore2' has no outlet streamlet to publish events on:
+     entity blah is {
+passes/input/check/saga/saga.riddl(2:3->18):
+ Context 'ignore2' has entities but no Sink streamlet to receive and dispatch incoming messages:
+   context ignore2 is {

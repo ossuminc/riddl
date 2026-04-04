@@ -26,6 +26,7 @@ object Logging {
   case object Severe extends Lvl
   case object Error extends Lvl
   case object Warning extends Lvl
+  case object Completeness extends Lvl
   case object Usage extends Lvl
   case object Style extends Lvl
   case object Missing extends Lvl
@@ -57,6 +58,9 @@ trait Logger(using pc: PlatformContext) {
   /** Syntactic sugar for write(Warning, s) */
   final def warn(s: => String): Unit = { write(Warning, s) }
 
+  /** Syntactic sugar for write(Completeness, s) */
+  final def completeness(s: => String): Unit = { write(Completeness, s) }
+
   /** Syntactic sugar for write(Usage, s) */
   final def usage(s: => String): Unit = { write(Usage, s) }
 
@@ -74,6 +78,7 @@ trait Logger(using pc: PlatformContext) {
   private var nMissing = 0
   private var nStyle = 0
   private var nUsage = 0
+  private var nCompleteness = 0
   private var nWarning = 0
   private var nInfo = 0
 
@@ -83,11 +88,12 @@ trait Logger(using pc: PlatformContext) {
       val prefix = level match {
         case Logging.Severe  => s"$RED_B$BLACK"
         case Logging.Error   => s"$RED"
-        case Logging.Warning => s"$YELLOW"
-        case Logging.Usage   => s"$GREEN"
-        case Logging.Style   => s"$GREEN"
-        case Logging.Missing => s"$GREEN"
-        case Logging.Info    => s"$BLUE"
+        case Logging.Completeness => s"$YELLOW"
+        case Logging.Warning      => s"$YELLOW"
+        case Logging.Usage        => s"$GREEN"
+        case Logging.Style        => s"$GREEN"
+        case Logging.Missing      => s"$GREEN"
+        case Logging.Info         => s"$BLUE"
       }
       val lines = s.split(pc.newline)
       val head = s"$prefix$BOLD[$level] ${lines.head}$RESET"
@@ -101,13 +107,14 @@ trait Logger(using pc: PlatformContext) {
 
   protected def count(level: Lvl): Unit = {
     level match {
-      case Severe  => nSevere += 1
-      case Error   => nError += 1
-      case Warning => nWarning += 1
-      case Style   => nStyle += 1
-      case Usage   => nUsage += 1
-      case Missing => nMissing += 1
-      case Info    => nInfo += 1
+      case Severe       => nSevere += 1
+      case Error        => nError += 1
+      case Completeness => nCompleteness += 1
+      case Warning      => nWarning += 1
+      case Style        => nStyle += 1
+      case Usage        => nUsage += 1
+      case Missing      => nMissing += 1
+      case Info         => nInfo += 1
     }
   }
 
@@ -116,9 +123,10 @@ trait Logger(using pc: PlatformContext) {
     s"""Severe Errors: $nSevere
        |Normal Errors: $nError
        |     Warnings: $nWarning
+       |Completeness: $nCompleteness
        |        Usage: $nUsage
        |        Style: $nStyle
-       |     Misasing: $nMissing
+       |      Missing: $nMissing
        |         Info: $nInfo
        |""".stripMargin
   }

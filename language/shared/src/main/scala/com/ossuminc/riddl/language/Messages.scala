@@ -30,12 +30,14 @@ object Messages {
 
     def isUsage: Boolean = false
 
+    def isCompleteness: Boolean = false
+
     def isInfo: Boolean = false
 
     def severity: Int
 
-    def isIgnorable: Boolean = severity < Warning.severity
-    def isActionable: Boolean = severity >= Warning.severity
+    def isIgnorable: Boolean = severity < CompletenessWarning.severity
+    def isActionable: Boolean = severity >= CompletenessWarning.severity
 
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
@@ -82,12 +84,25 @@ object Messages {
 
   }
 
+  /** A case object for the Completeness kind of warning message.
+    * These warnings indicate that a model is incomplete for
+    * simulation, code generation, or analysis purposes.
+    */
+  case object CompletenessWarning extends KindOfMessage {
+    override def isWarning: Boolean = true
+
+    override def isCompleteness: Boolean = true
+
+    override def toString: String = "Completeness"
+    def severity = 4
+  }
+
   /** A case object for the generic kind of warning message */
   case object Warning extends KindOfMessage {
     override def isWarning: Boolean = true
 
     override def toString: String = "Warning"
-    def severity = 4
+    def severity = 5
   }
 
   /** A case object for Error messages */
@@ -95,7 +110,7 @@ object Messages {
     override def isError: Boolean = true
 
     override def toString: String = "Error"
-    def severity = 5
+    def severity = 6
   }
 
   /** A case object for Severe Error messages */
@@ -105,7 +120,7 @@ object Messages {
     override def isSevereError: Boolean = true
 
     override def toString: String = "Severe"
-    def severity = 6
+    def severity = 7
   }
 
   /** The system's notion of a newline for sensible error message termination.
@@ -132,6 +147,7 @@ object Messages {
     def isWarning: Boolean = kind.isWarning
     def isStyle: Boolean = kind.isStyle
     def isUsage: Boolean = kind.isUsage
+    def isCompleteness: Boolean = kind.isCompleteness
     def isError: Boolean = kind.isError
     def isSevere: Boolean = kind.isSevereError
 
@@ -232,14 +248,16 @@ object Messages {
       msgs.map(_.format).mkString(nl)
     }
 
-    /** Return true iff all the messages are only warnings */
+    /** Return true iff all the messages are only warnings (including completeness) */
     @JSExport def isOnlyWarnings: Boolean = {
       msgs.isEmpty || !msgs.exists(_.kind > Warning)
     }
 
-    /** Return true iff all the messages are considered ignorable (all warnings) */
+    /** Return true iff all the messages are considered ignorable
+      * (below CompletenessWarning severity)
+      */
     @JSExport def isOnlyIgnorable: Boolean = {
-      msgs.isEmpty || !msgs.exists(_.kind >= Warning)
+      msgs.isEmpty || !msgs.exists(_.kind >= CompletenessWarning)
     }
 
     /** Return true iff at least one of the messages is an [[Error]] */
@@ -295,13 +313,14 @@ object Messages {
 
   private def logMessage(message: Message)(using io: PlatformContext): Unit = {
     message.kind match {
-      case Info           => io.log.info(message.format)
-      case StyleWarning   => io.log.style(message.format)
-      case MissingWarning => io.log.missing(message.format)
-      case UsageWarning   => io.log.usage(message.format)
-      case Warning        => io.log.warn(message.format)
-      case Error          => io.log.error(message.format)
-      case SevereError    => io.log.severe(message.format)
+      case Info                => io.log.info(message.format)
+      case StyleWarning        => io.log.style(message.format)
+      case MissingWarning      => io.log.missing(message.format)
+      case UsageWarning        => io.log.usage(message.format)
+      case CompletenessWarning => io.log.completeness(message.format)
+      case Warning             => io.log.warn(message.format)
+      case Error               => io.log.error(message.format)
+      case SevereError         => io.log.severe(message.format)
     }
   }
 
@@ -322,7 +341,9 @@ object Messages {
             io.log.style(s"""$kind Message Count: ${messages.length}""")
           case MissingWarning =>
             io.log.missing(s"""$kind Message Count: ${messages.length}""")
-          case Warning => // everything else is a warning
+          case CompletenessWarning =>
+            io.log.completeness(s"""$kind Message Count: ${messages.length}""")
+          case Warning =>
             io.log.warn(s"""$kind Message Count: ${messages.length}""")
           case Error =>
             io.log.error(s"""$kind Message Count: ${messages.length}""")
@@ -340,6 +361,9 @@ object Messages {
       logMsgs(Error, groups.get(Error))
 
       if io.options.showWarnings then {
+        if io.options.showCompletenessWarnings then {
+          logMsgs(CompletenessWarning, groups.get(CompletenessWarning))
+        }
         if io.options.showUsageWarnings then {
           logMsgs(UsageWarning, groups.get(UsageWarning))
         }
@@ -380,6 +404,8 @@ object Messages {
       message.kind match {
         case Warning =>
           if pc.options.showWarnings then msgs.append(message)
+        case CompletenessWarning =>
+          if pc.options.showCompletenessWarnings && pc.options.showWarnings then msgs.append(message)
         case StyleWarning =>
           if pc.options.showStyleWarnings && pc.options.showWarnings then msgs.append(message)
         case MissingWarning =>
@@ -482,6 +508,10 @@ object Messages {
       */
     @inline def addUsage(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, UsageWarning))
+    }
+
+    @inline def addCompleteness(loc: At, msg: String)(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, CompletenessWarning))
     }
 
     /** Add a [[MissingWarning]] message to the accumulated [[Messages]]

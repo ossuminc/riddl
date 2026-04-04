@@ -10,9 +10,6 @@ passes/input/check/handler-types/handler-types.riddl(22:7->22):
 passes/input/check/handler-types/handler-types.riddl(23:7->25):
  Handler 'CmdHandler' in Projector 'CmdProjector' handles commands or queries; projectors typically handle events to build read models:
        handler CmdHandler is {
-passes/input/check/handler-types/handler-types.riddl(24:9->31):
- Processing for commands should result in sending an event:
-         on command SomeCommand {
 passes/input/check/handler-types/handler-types.riddl(5:5->20):
  Record 'RecordType' is unused:
      type RecordType is record { field1: String }
@@ -22,3 +19,18 @@ passes/input/check/handler-types/handler-types.riddl(7:5->25):
 passes/input/check/handler-types/handler-types.riddl(8:7->24):
  Schema 'RepoSchema' should have a description:
        schema RepoSchema is flat
+passes/input/check/handler-types/handler-types.riddl(12:7->27):
+ Handler 'EventHandler' in Repository 'EventRepo' contains only prompt statements; executable statements (tell, send, morph, set, etc.) are needed:
+       handler EventHandler is {
+passes/input/check/handler-types/handler-types.riddl(23:7->25):
+ Handler 'CmdHandler' in Projector 'CmdProjector' contains only prompt statements; executable statements (tell, send, morph, set, etc.) are needed:
+       handler CmdHandler is {
+passes/input/check/handler-types/handler-types.riddl(21:5->27):
+ Projector 'CmdProjector' does not persist its projection; projector handlers should tell messages to a repository:
+     projector CmdProjector is {
+passes/input/check/handler-types/handler-types.riddl(21:5->27):
+ Projector 'CmdProjector' does not reference any repository to persist its projection:
+     projector CmdProjector is {
+passes/input/check/handler-types/handler-types.riddl(7:5->25):
+ Repository 'EventRepo' is unused:
+     repository EventRepo is {

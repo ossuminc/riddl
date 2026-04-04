@@ -145,7 +145,7 @@ class HandlerValidatorTest extends AbstractValidatingTest {
             val warnings = messages.justWarnings.format
             // info(warnings)
             warnings mustNot be(empty)
-            warnings must include("commands should result in sending an event")
+            warnings must include("should result in sending an event")
         }
       }
     }
