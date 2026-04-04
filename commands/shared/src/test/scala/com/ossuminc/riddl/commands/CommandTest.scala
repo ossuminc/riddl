@@ -8,6 +8,7 @@ package com.ossuminc.riddl.commands
 
 /** Unit Tests For Running Riddlc Commands from Plugins */
 
+import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.utils.{AbstractTestingBasis, ec, pc}
 import org.ekrich.config.*
 import scopt.*
@@ -64,7 +65,7 @@ class CommandTest extends AbstractTestingBasis {
         "hugo"
       )
       val rc = Commands.runMain(args)
-      rc must be(6)
+      rc must be(Messages.Error.severity + 1)
     }
 
     "handle wrong command as target" in {
@@ -77,7 +78,7 @@ class CommandTest extends AbstractTestingBasis {
         "flumox" // unknown command
       )
       val rc = Commands.runMain(args)
-      rc must be(6)
+      rc must be(Messages.Error.severity + 1)
     }
   }
 }
