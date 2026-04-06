@@ -1,0 +1,35 @@
+domain Restaurant is {
+  context FrontOfHouse is {
+    include "context-types.riddl"
+
+    entity Reservation is {
+      record ReservationFields is { partySize: Number }
+      state Active of Reservation.ReservationFields
+      handler ReservationHandler is {
+        on init { set field Reservation.ReservationFields.partySize to "0" }
+        on command Restaurant.FrontOfHouse.MakeReservation {
+          send event Restaurant.FrontOfHouse.ReservationMade
+            to outlet Restaurant.FrontOfHouse.Events.out
+        }
+        on query Restaurant.FrontOfHouse.GetReservation {
+          reply result Restaurant.FrontOfHouse.ReservationResult
+        }
+      }
+    }
+
+    source Events is { outlet out is type ReservationMade }
+    sink Incoming is {
+      inlet in is type MakeReservation
+      handler Dispatch is {
+        on command Restaurant.FrontOfHouse.MakeReservation {
+          tell command Restaurant.FrontOfHouse.MakeReservation
+            to entity Restaurant.FrontOfHouse.Reservation
+        }
+      }
+    }
+    connector Pipe {
+      from outlet FrontOfHouse.Events.out
+        to inlet FrontOfHouse.Incoming.in
+    }
+  }
+}

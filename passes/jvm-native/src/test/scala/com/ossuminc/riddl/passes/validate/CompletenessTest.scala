@@ -464,6 +464,58 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "not warn when entity Id type is defined in containing context" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context FrontOfHouse is {
+          |    type ReservationId is Id(FrontOfHouse.Reservation)
+          |    type Evt is event { data: String }
+          |    entity Reservation is {
+          |      record Fields is { data: String }
+          |      state Main of Reservation.Fields
+          |      handler H is {
+          |        on init { set field Reservation.Fields.data to "x" }
+          |        on event D.FrontOfHouse.Evt {
+          |          set field Reservation.Fields.data to "updated"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          val cw = completenessWarnings(msgs)
+          val idWarnings = cw.filter(m =>
+            m.message.contains("Id type") || m.message.contains("Id(")
+          )
+          if idWarnings.nonEmpty then {
+            info(s"Unexpected Id warnings:\n${idWarnings.map(_.format).mkString("\n")}")
+          }
+          idWarnings mustBe empty
+      }
+    }
+
+    "not warn when entity Id type is in an included file within the context" in { (td: TestData) =>
+      val path = java.nio.file.Path.of("passes/input/id-in-include/main.riddl").toAbsolutePath
+      val data = java.nio.file.Files.readString(path)
+      val url = com.ossuminc.riddl.utils.URL.fromFullPath(path.toString)
+      val rpi = RiddlParserInput(data, url, td.name)
+      parseAndValidateInput(rpi, shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          val cw = completenessWarnings(msgs)
+          val idWarnings = cw.filter(m =>
+            m.message.contains("Id type") || m.message.contains("Id(")
+          )
+          if idWarnings.nonEmpty then {
+            info(s"Unexpected Id warnings:\n${idWarnings.map(_.format).mkString("\n")}")
+          }
+          idWarnings mustBe empty
+      }
+    }
+
     "warn when entity Id type is defined inside entity body" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {
