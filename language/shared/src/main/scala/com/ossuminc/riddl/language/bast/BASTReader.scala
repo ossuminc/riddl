@@ -874,8 +874,22 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         CodeStatement(loc, language, body)
 
       case 14 => // Require
-        val condition = readLiteralString()
-        RequireStatement(loc, condition)
+        val conditionKind = reader.readU8()
+        conditionKind match {
+          case 0 => // literal string
+            val condition = readLiteralString()
+            RequireStatement(loc, condition)
+          case 1 => // invariant ref
+            val pathId = readPathIdentifierInline()
+            RequireStatement(loc, InvariantRef(loc, pathId))
+          case _ =>
+            val condition = readLiteralString()
+            RequireStatement(loc, condition)
+        }
+
+      case 15 => // Reply
+        val msg = readMessageRef()
+        ReplyStatement(loc, msg)
 
       case _ =>
         PromptStatement(loc, LiteralString(loc, s"<unknown statement $stmtType>"))

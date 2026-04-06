@@ -2266,6 +2266,14 @@ object AST:
     override def format: String = s"field ${pathId.format}"
   }
 
+  @JSExportTopLevel("InvariantRef")
+  case class InvariantRef(
+    loc: At = At.empty,
+    pathId: PathIdentifier = PathIdentifier.empty
+  ) extends Reference[Invariant] {
+    override def format: String = s"invariant ${pathId.format}"
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////// CONSTANT
 
   /** A definition that represents a constant value for reference in behaviors
@@ -2344,19 +2352,24 @@ object AST:
 
   /** A statement that requires a boolean condition to be true for execution
     * to continue. If the condition is false, an error is generated.
+    * The condition can be either a literal string expression or a reference
+    * to a named invariant.
     *
     * @param loc
     *   The location where the statement occurs in the source
     * @param condition
-    *   The boolean expression (as a string) that must be true
+    *   Either a boolean expression as a string or a reference to a named invariant
     */
   @JSExportTopLevel("RequireStatement")
   case class RequireStatement(
     loc: At,
-    condition: LiteralString
+    condition: LiteralString | InvariantRef
   ) extends Statement {
     override def kind: String = "Require Statement"
-    def format: String = s"require ${condition.format}"
+    def format: String = condition match {
+      case ls: LiteralString => s"require ${ls.format}"
+      case ir: InvariantRef  => s"require ${ir.format}"
+    }
   }
 
   /** A statement that sets a value of a field
@@ -2458,6 +2471,24 @@ object AST:
   ) extends Statement {
     override def kind: String = "Tell Statement"
     def format: String = s"tell ${msg.format} to ${processorRef.format}"
+  }
+
+  /** A statement that sends a result message back to the sender of the
+    * current message. Used in query handlers to return results without
+    * needing to know the sender's identity.
+    *
+    * @param loc
+    *   The location of the reply statement
+    * @param msg
+    *   The result message to send back
+    */
+  @JSExportTopLevel("ReplyStatement")
+  case class ReplyStatement(
+    loc: At,
+    msg: MessageRef
+  ) extends Statement {
+    override def kind: String = "Reply Statement"
+    def format: String = s"reply ${msg.format}"
   }
 
   /** A conditional statement for branching logic

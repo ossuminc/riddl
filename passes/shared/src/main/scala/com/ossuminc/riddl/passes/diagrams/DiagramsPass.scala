@@ -281,6 +281,7 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     statement match
       case SendStatement(_, msg, portlet)   => Seq(msg, portlet)
       case TellStatement(_, msg, processor) => Seq(msg, processor)
+      case ReplyStatement(_, msg)           => Seq(msg)
       case SetStatement(_, field, _)        => Seq(field)
       case MorphStatement(_, entity, state, value) => Seq(entity, state, value)
       case BecomeStatement(_, entity, handler) => Seq(entity, handler)

@@ -32,8 +32,19 @@ private[parsing] trait StatementParser {
 
   private def requireStatement[u: P]: P[RequireStatement] = {
     P(
-      Index ~ Keywords.require ~ literalString ~/ Index
-    )./.map { case (start, str, end) => RequireStatement(at(start, end), str) }
+      Index ~ Keywords.require ~/ (literalString | (Keywords.invariant ~ pathIdentifier).map {
+        case pid => pid
+      }) ~/ Index
+    )./.map {
+      case (start, str: LiteralString, end) => RequireStatement(at(start, end), str)
+      case (start, pid: PathIdentifier, end) => RequireStatement(at(start, end), InvariantRef(at(start, end), pid))
+    }
+  }
+
+  private def replyStatement[u: P]: P[ReplyStatement] = {
+    P(
+      Index ~ Keywords.reply ~/ messageRef ~/ Index
+    )./.map { case (start, msg, end) => ReplyStatement(at(start, end), msg) }
   }
 
   private def theSetStatement[u: P]: P[SetStatement] = {
@@ -146,7 +157,7 @@ private[parsing] trait StatementParser {
       // GROUP 1: Control flow statements
       whenStatement(set) | matchStatement(set) |
       // GROUP 2: Common message operations
-      sendStatement | tellStatement |
+      sendStatement | tellStatement | replyStatement |
       // GROUP 3: Variable operations
       theSetStatement | letStatement |
       // GROUP 4: General statements

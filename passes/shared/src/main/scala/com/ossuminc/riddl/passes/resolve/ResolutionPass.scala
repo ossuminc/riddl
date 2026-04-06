@@ -253,7 +253,13 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         associateUsage(parents.head, resolveARef[Processor[?]](processorRef, parents))
       case _: PromptStatement  => () // no references
       case _: ErrorStatement   => () // no references
-      case _: RequireStatement => () // no references
+      case rs: RequireStatement =>
+        rs.condition match {
+          case _: LiteralString => () // no references
+          case ir: InvariantRef => resolveARef[Invariant](ir, parents)
+        }
+      case ReplyStatement(_, msg) =>
+        associateUsage[Type](parents.head, resolveARef[Type](msg, parents))
       case _: WhenStatement   => () // no references (condition is a literal string)
       case _: MatchStatement  => () // no references (expression/patterns are literal strings)
       case ls: LetStatement =>

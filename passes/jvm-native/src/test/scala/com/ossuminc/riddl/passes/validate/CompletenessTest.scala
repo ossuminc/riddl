@@ -9,7 +9,7 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.CompletenessWarning
 import com.ossuminc.riddl.language.parsing.RiddlParserInput
-import com.ossuminc.riddl.utils.{pc, ec}
+import com.ossuminc.riddl.utils.{CommonOptions, pc, ec}
 
 import org.scalatest.TestData
 
@@ -185,7 +185,7 @@ class CompletenessTest extends AbstractValidatingTest {
         (_, _, msgs) =>
           val cw = completenessWarnings(msgs)
           cw.exists(_.message.contains(
-            "should result in sending a result"
+            "should result in a reply or sending a result"
           )) mustBe true
       }
     }
@@ -703,7 +703,7 @@ class CompletenessTest extends AbstractValidatingTest {
           |          send event D.C.Evt to outlet D.C.Events.out
           |        }
           |        on query D.C.GetData {
-          |          send result D.C.DataResult to outlet D.C.Events.out
+          |          reply result D.C.DataResult
           |        }
           |      }
           |    }
@@ -734,6 +734,103 @@ class CompletenessTest extends AbstractValidatingTest {
             info(s"Unexpected completeness warnings:\n${cw.map(_.format).mkString("\n")}")
           }
           cw mustBe empty
+      }
+    }
+
+    "accept reply statement in query handlers" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type EId is Id(C.E)
+          |    type GetData is query { id: String }
+          |    type DataResult is result { data: String }
+          |    entity E is {
+          |      record Fields is { data: String }
+          |      state Main of E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on query D.C.GetData {
+          |          reply result D.C.DataResult
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          val cw = completenessWarnings(msgs)
+          cw.exists(_.message.contains("reply or sending a result")) mustBe false
+      }
+    }
+
+    "accept require with invariant reference" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type EId is Id(C.E)
+          |    type Cmd is command { amount: Number }
+          |    type Evt is event { amount: Number }
+          |    entity E is {
+          |      record Fields is { balance: Number }
+          |      invariant BalanceNonNegative is "balance >= 0"
+          |      state Main of E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.balance to "0" }
+          |        on command D.C.Cmd {
+          |          require invariant BalanceNonNegative
+          |          send event D.C.Evt to outlet D.C.Events.out
+          |        }
+          |      }
+          |    }
+          |    source Events is { outlet out is type Evt }
+          |    sink Incoming is { inlet in is type Cmd }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          msgs.hasErrors mustBe false
+          // The invariant should be referenced, no usage warning
+          msgs.filter(_.isUsage).exists(
+            _.message.contains("BalanceNonNegative")
+          ) mustBe false
+      }
+    }
+
+    "warn when invariant is not referenced by require" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Evt is event { data: String }
+          |    entity E is {
+          |      record Fields is { data: String }
+          |      invariant DataNotEmpty is "data.nonEmpty"
+          |      state Main of E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on event D.C.Evt {
+          |          set field E.Fields.data to "updated"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+          (_, _, msgs) =>
+            val usageWarnings = msgs.filter(_.isUsage)
+            usageWarnings.exists(
+              _.message.contains("DataNotEmpty")
+            ) mustBe true
+        }
       }
     }
   }

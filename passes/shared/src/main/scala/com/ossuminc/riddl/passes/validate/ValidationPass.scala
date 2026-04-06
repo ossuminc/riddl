@@ -76,6 +76,10 @@ case class ValidationPass(
   private val collectedContexts: mutable.ListBuffer[Context] =
     mutable.ListBuffer.empty
 
+  /** Accumulated invariants for usage checks */
+  private val collectedInvariants: mutable.ListBuffer[(Invariant, Parents)] =
+    mutable.ListBuffer.empty
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -208,6 +212,28 @@ case class ValidationPass(
         )
       }
     }
+    // #23: Invariants not referenced by any require statement
+    if collectedInvariants.nonEmpty then {
+      // Collect all invariant refs from require statements across all handlers
+      val referencedInvariantNames = mutable.Set.empty[String]
+      handlerParents.foreach { case (handler, _) =>
+        handler.clauses.foreach { clause =>
+          walkStatements(clause.contents) {
+            case RequireStatement(_, ir: InvariantRef) =>
+              referencedInvariantNames += ir.pathId.value.lastOption.getOrElse("")
+            case _ => ()
+          }
+        }
+      }
+      collectedInvariants.foreach { case (inv, _) =>
+        if inv.nonEmpty && !referencedInvariantNames.contains(inv.id.value) then {
+          messages.addUsage(
+            inv.errorLoc,
+            s"${inv.identify} is defined but not referenced by any 'require invariant' statement"
+          )
+        }
+      }
+    }
   }
 
   def process(value: RiddlValue, parents: ParentStack): Unit = {
@@ -223,6 +249,7 @@ case class ValidationPass(
       case e: Enumerator =>
         validateEnumerator(e, parentsAsSeq)
       case i: Invariant =>
+        collectedInvariants.addOne((i, parentsAsSeq))
         validateInvariant(i, parentsAsSeq)
       case t: Term =>
         validateTerm(t)
@@ -345,14 +372,17 @@ case class ValidationPass(
             val finder = Finder(omc.contents)
             val sends: Seq[SendStatement] = finder.recursiveFindByType[SendStatement]
             val tells: Seq[TellStatement] = finder.recursiveFindByType[TellStatement]
+            val replies: Seq[ReplyStatement] = finder.recursiveFindByType[ReplyStatement]
             val foundSend = sends.nonEmpty &&
               sends.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
             val foundTell = tells.nonEmpty &&
               tells.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
-            if !(foundSend || foundTell) then
+            val foundReply = replies.nonEmpty &&
+              replies.exists(_.msg.messageKind == AggregateUseCase.ResultCase)
+            if !(foundSend || foundTell || foundReply) then
               messages.addCompleteness(
                 omc.errorLoc,
-                s"Query processing in ${entity.identify} should result in sending a result"
+                s"Query processing in ${entity.identify} should result in a reply or sending a result"
               )
           case _ =>
         }
@@ -442,14 +472,21 @@ case class ValidationPass(
         checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true)
         check(body.nonEmpty, "Code statement body cannot be empty", MissingWarning, loc)
       case RequireStatement(loc, condition) =>
-        checkNonEmptyValue(
-          condition,
-          "require condition",
-          onClause,
-          loc,
-          MissingWarning,
-          required = true
-        )
+        condition match {
+          case ls: LiteralString =>
+            checkNonEmptyValue(
+              ls,
+              "require condition",
+              onClause,
+              loc,
+              MissingWarning,
+              required = true
+            )
+          case ir: InvariantRef =>
+            checkRef[Invariant](ir, parents)
+        }
+      case ReplyStatement(_, msg) =>
+        checkRef[Type](msg, parents)
     end match
   end validateStatement
 
@@ -1668,9 +1705,9 @@ case class ValidationPass(
 
       handler.clauses.foreach { clause =>
         walkStatements(clause.contents) {
-          case _: TellStatement | _: SendStatement | _: MorphStatement |
-               _: SetStatement | _: BecomeStatement | _: ErrorStatement |
-               _: CodeStatement =>
+          case _: TellStatement | _: SendStatement | _: ReplyStatement |
+               _: MorphStatement | _: SetStatement | _: BecomeStatement |
+               _: ErrorStatement | _: CodeStatement =>
             executableCount += 1
           case _: PromptStatement =>
             promptCount += 1

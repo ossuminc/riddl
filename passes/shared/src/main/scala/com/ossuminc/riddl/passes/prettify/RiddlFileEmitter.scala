@@ -350,10 +350,15 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
         addLine(s"send ${msg.format} to ${portlet.format}")
       case TellStatement(_, msg, to) =>
         addLine(s"tell ${msg.format} to ${to.format}")
+      case ReplyStatement(_, msg) =>
+        addLine(s"reply ${msg.format}")
       case CodeStatement(_, lang, body) =>
         addIndent(s"```${lang.s}").add(body).nl.addIndent("```")
       case RequireStatement(_, condition) =>
-        addLine(s"require ${condition.format}")
+        condition match {
+          case ls: LiteralString => addLine(s"require ${ls.format}")
+          case ir: InvariantRef  => addLine(s"require ${ir.format}")
+        }
       case statement: Statement => addLine(statement.format)
       case comment: Comment     => emitComment(comment)
     end match

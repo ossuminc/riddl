@@ -190,7 +190,7 @@ message_origins = inlet_ref | processor_ref | user_ref | epic_ref ;
 (* Statements *)
 (* Core statements available in all contexts *)
 statement = when_statement | match_statement | send_statement | tell_statement |
-    the_set_statement | let_statement | prompt_statement | code_statement |
+    reply_statement | the_set_statement | let_statement | prompt_statement | code_statement |
     error_statement | require_statement | morph_statement | become_statement | comment ;
 
 (* Control flow *)
@@ -201,6 +201,7 @@ match_case = "case" literal_string "{" {statement} "}" ;
 (* Message operations *)
 send_statement = "send" message_ref "to" (outlet_ref | inlet_ref) ;
 tell_statement = "tell" message_ref "to" processor_ref ;
+reply_statement = "reply" message_ref ;
 
 (* Variable operations *)
 the_set_statement = "set" (field_ref | state_ref) "to" literal_string ;
@@ -211,7 +212,8 @@ prompt_statement = ("prompt" | "do") literal_string ;
 code_statement = "```" ("scala" | "java" | "python" | "mojo") code_contents "```" ;
 code_contents = {any_char_except_triple_backtick} ;
 error_statement = "error" literal_string ;
-require_statement = "require" literal_string ;
+require_statement = "require" (literal_string | invariant_ref) ;
+invariant_ref = "invariant" path_identifier ;
 
 (* Entity state transitions *)
 morph_statement = "morph" entity_ref "to" state_ref "with" message_ref ;

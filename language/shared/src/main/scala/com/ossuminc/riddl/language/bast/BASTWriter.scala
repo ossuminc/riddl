@@ -239,6 +239,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case s: PromptStatement => writePromptStatement(s)
       case s: ErrorStatement => writeErrorStatement(s)
       case s: RequireStatement => writeRequireStatement(s)
+      case s: ReplyStatement => writeReplyStatement(s)
       case s: SetStatement => writeSetStatement(s)
       case s: SendStatement => writeSendStatement(s)
       case s: MorphStatement => writeMorphStatement(s)
@@ -869,7 +870,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writer.writeU8(NODE_STATEMENT)
     writer.writeU8(14) // Require statement
     writeLocation(s.loc)
-    writeLiteralString(s.condition)
+    s.condition match {
+      case ls: LiteralString =>
+        writer.writeU8(0) // literal string condition
+        writeLiteralString(ls)
+      case ir: InvariantRef =>
+        writer.writeU8(1) // invariant reference condition
+        writePathIdentifier(ir.pathId)
+    }
+  }
+
+  def writeReplyStatement(s: ReplyStatement): Unit = {
+    writer.writeU8(NODE_STATEMENT)
+    writer.writeU8(15) // Reply statement
+    writeLocation(s.loc)
+    writeMessageRef(s.msg)
   }
 
   def writeSetStatement(s: SetStatement): Unit = {

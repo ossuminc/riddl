@@ -6,7 +6,7 @@
 
 package com.ossuminc.riddl.language.parsing
 
-import com.ossuminc.riddl.language.AST.{Context, Entity, RequireStatement}
+import com.ossuminc.riddl.language.AST.{Context, Entity, LiteralString, RequireStatement}
 import com.ossuminc.riddl.language.Finder
 import com.ossuminc.riddl.language.parsing.AbstractParsingTest
 import com.ossuminc.riddl.utils.PlatformContext
@@ -256,7 +256,10 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           val finder = Finder(clause.contents)
           val requires = finder.findByType[RequireStatement]
           requires.size must be(1)
-          requires.head.condition.s must be("balance >= amount")
+          requires.head.condition match {
+            case ls: LiteralString => ls.s must be("balance >= amount")
+            case _ => fail("Expected LiteralString condition")
+          }
           // Second clause has two requires
           val clause2 = handler.clauses(1)
           val finder2 = Finder(clause2.contents)
