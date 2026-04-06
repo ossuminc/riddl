@@ -464,6 +464,62 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "warn when entity Id type is defined inside entity body" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type Evt is event { data: String }
+          |    entity E is {
+          |      type EId is Id(E)
+          |      record Fields is { data: String }
+          |      state Main of E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on event D.C.Evt {
+          |          set field E.Fields.data to "updated"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          val cw = completenessWarnings(msgs)
+          cw.exists(_.message.contains("move it to the containing context")) mustBe true
+      }
+    }
+
+    "warn when entity Id type is defined at domain level" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  type EId is Id(C.E)
+          |  context C is {
+          |    type Evt is event { data: String }
+          |    entity E is {
+          |      record Fields is { data: String }
+          |      state Main of E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on event D.C.Evt {
+          |          set field E.Fields.data to "updated"
+          |        }
+          |      }
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          val cw = completenessWarnings(msgs)
+          cw.exists(_.message.contains("outside the containing context")) mustBe true
+      }
+    }
+
     "warn when event-sourced entity command handler does not emit event" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

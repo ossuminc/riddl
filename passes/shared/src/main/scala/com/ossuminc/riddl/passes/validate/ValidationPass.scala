@@ -1005,21 +1005,67 @@ case class ValidationPass(
             s"${entity.identify} in ${context.identify} has no outlet streamlet to publish events on"
           )
       }
-    // Completeness: entity should define an Id type for its identity
+    // Completeness: entity Id type placement checks
     if entity.nonEmpty then {
       val parentContext = parents.collectFirst { case c: Context => c }
-      val entityTypes = entity.types ++ parentContext.toSeq.flatMap(_.types)
-      val hasIdType = entityTypes.exists { t =>
-        t.typEx match {
-          case _: UniqueId => true
-          case _ => false
-        }
+
+      // Search all known types via symbols table for Id types referencing this entity
+      def isIdForEntity(t: Type): Boolean = t.typEx match {
+        case uid: UniqueId =>
+          uid.entityPath.value.lastOption.contains(entity.id.value)
+        case _ => false
       }
-      if !hasIdType then {
+
+      // Find all Id types for this entity and determine their scope
+      val allIdTypes = symbols.parentage.keys.collect {
+        case t: Type if isIdForEntity(t) => t
+      }.toSeq
+
+      if allIdTypes.isEmpty then {
+        // (b) Not defined at all
         messages.addCompleteness(
           entity.errorLoc,
           s"${entity.identify} does not define an Id type for its identity"
         )
+      } else {
+        allIdTypes.foreach { idType =>
+          val idParents = symbols.parentsOf(idType)
+          val directParent = idParents.headOption
+          directParent match {
+            case Some(e: Entity) if e == entity =>
+              // (a) Id defined inside entity — too narrow
+              messages.addCompleteness(
+                idType.errorLoc,
+                s"${idType.identify} is defined inside ${entity.identify}; " +
+                  "move it to the containing context so other entities can reference it"
+              )
+            case Some(c: Context) if parentContext.contains(c) =>
+              // Correct placement — no warning
+            case Some(_: Include[?]) =>
+              // Id is in an include — check if the include's context matches
+              val idContext = symbols.contextOf(idType)
+              if idContext == parentContext then {
+                // Correct — in an included file within the same context
+              } else {
+                // (c) Outside the containing context
+                messages.addCompleteness(
+                  idType.errorLoc,
+                  s"${idType.identify} for ${entity.identify} is defined outside the containing context; " +
+                    "constrain it to the context scope and use adaptors for inter-context invocations"
+                )
+              }
+            case _ =>
+              // (c) Defined at domain level or elsewhere — too broad
+              val idContext = symbols.contextOf(idType)
+              if idContext != parentContext then {
+                messages.addCompleteness(
+                  idType.errorLoc,
+                  s"${idType.identify} for ${entity.identify} is defined outside the containing context; " +
+                    "constrain it to the context scope and use adaptors for inter-context invocations"
+                )
+              }
+          }
+        }
       }
     }
     // Completeness: event-sourced entity must emit events on every command
