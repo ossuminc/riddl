@@ -667,7 +667,13 @@ Items below are NOT duplicated elsewhere in this file.
 1. **Always check sbt-ossuminc version** - API may have changed
 2. **BAST version is single integer** - `VERSION: Int = 1`,
    stays at 1 until schema finalized for users
-3. **BAST location comparisons use offsets** - Compare
+3. **BAST FORMAT_REVISION must be incremented** whenever a
+   change to BASTWriter produces output that a previous
+   BASTReader cannot correctly read. This includes: new
+   statement subtypes, changed wire formats (added/removed
+   bytes), new node tags, or reordered fields. The constant
+   is in `language/shared/.../bast/package.scala`.
+4. **BAST location comparisons use offsets** - Compare
    offset/endOffset, not line/col
 4. **FileBuilder requires PlatformContext** - `trait
    FileBuilder(using PlatformContext)` — all subclasses must
