@@ -833,5 +833,55 @@ class CompletenessTest extends AbstractValidatingTest {
         }
       }
     }
+
+    "accept auto-id option on entities" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type EId is Id(C.E)
+          |    type Evt is event { data: String }
+          |    entity E is {
+          |      record Fields is { data: String }
+          |      state Main of E.Fields
+          |      handler H is {
+          |        on init { set field E.Fields.data to "x" }
+          |        on event D.C.Evt {
+          |          set field E.Fields.data to "updated"
+          |        }
+          |      }
+          |    } with { option auto-id }
+          |  }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          // auto-id should be accepted without "not recognized" warning
+          msgs.exists(m =>
+            m.message.contains("auto-id") && m.message.contains("not a recognized")
+          ) mustBe false
+      }
+    }
+
+    "reject auto-id option on non-entity definitions" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type T is String
+          |  } with { option auto-id }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+          (_, _, msgs) =>
+            msgs.exists(m =>
+              m.message.contains("auto-id") && m.message.contains("not typically used")
+            ) mustBe true
+        }
+      }
+    }
   }
 }

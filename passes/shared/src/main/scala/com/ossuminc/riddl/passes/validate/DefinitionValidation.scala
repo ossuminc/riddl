@@ -52,6 +52,7 @@ object RecognizedOptions:
   val registry: Map[String, OptionSpec] = Map(
     // Existing well-known options
     "aggregate" -> OptionSpec(Seq("Entity"), 0, 0),
+    "auto-id" -> OptionSpec(Seq("Entity"), 0, 0),
     "finite-state-machine" -> OptionSpec(Seq("Entity"), 0, 0),
     "persistent" -> OptionSpec(Seq("Connector"), 0, 0),
     "css" -> OptionSpec(Seq.empty, 1, 10),
