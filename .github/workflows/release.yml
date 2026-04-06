@@ -195,12 +195,16 @@ jobs:
       - name: Dispatch blog post creation
         env:
           GH_TOKEN: ${{ secrets.BLOG_DISPATCH }}
-          RELEASE_BODY: ${{ github.event.release.body }}
         run: |
+          # Fetch release body - works for both release events and manual dispatch
+          BODY=$(gh api repos/ossuminc/riddl/releases/tags/${TAG} --jq '.body' 2>/dev/null || echo "")
+          if [ -z "$BODY" ]; then
+            echo "::warning::Could not fetch release body for ${TAG}"
+          fi
           gh api repos/ossuminc/ossum.ai/dispatches \
             --method POST \
             -f event_type=riddl-release \
             -f "client_payload[product]=riddl" \
             -f "client_payload[version]=${TAG}" \
             -f "client_payload[release_url]=https://github.com/ossuminc/riddl/releases/tag/${TAG}" \
-            -f "client_payload[body]=${RELEASE_BODY}"
+            -f "client_payload[body]=${BODY}"
