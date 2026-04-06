@@ -72,6 +72,10 @@ case class ValidationPass(
   private val collectedProjectors: mutable.ListBuffer[(Projector, Parents)] =
     mutable.ListBuffer.empty
 
+  /** Accumulated contexts for cross-cutting type checks */
+  private val collectedContexts: mutable.ListBuffer[Context] =
+    mutable.ListBuffer.empty
+
   /** Generate the output of this Pass. This will only be called after all the calls to process have
     * completed.
     *
@@ -126,6 +130,84 @@ case class ValidationPass(
         }
       }
     }
+    // Completeness: type pairing checks across all contexts
+    collectedContexts.foreach { context =>
+      val contextTypes = context.types
+      val commands = contextTypes.filter { t =>
+        t.typEx match {
+          case auc: AggregateUseCaseTypeExpression => auc.usecase == AggregateUseCase.CommandCase
+          case _ => false
+        }
+      }
+      val events = contextTypes.filter { t =>
+        t.typEx match {
+          case auc: AggregateUseCaseTypeExpression => auc.usecase == AggregateUseCase.EventCase
+          case _ => false
+        }
+      }
+      val queries = contextTypes.filter { t =>
+        t.typEx match {
+          case auc: AggregateUseCaseTypeExpression => auc.usecase == AggregateUseCase.QueryCase
+          case _ => false
+        }
+      }
+      val results = contextTypes.filter { t =>
+        t.typEx match {
+          case auc: AggregateUseCaseTypeExpression => auc.usecase == AggregateUseCase.ResultCase
+          case _ => false
+        }
+      }
+      // #16: Command types with no fields (skip ??? placeholders)
+      commands.foreach { cmd =>
+        cmd.typEx match {
+          case auc: AggregateUseCaseTypeExpression if auc.fields.isEmpty && !cmd.isEmpty =>
+            messages.addMissing(
+              cmd.errorLoc,
+              s"${cmd.identify} is a command with no fields; commands should carry data"
+            )
+          case _ => ()
+        }
+      }
+      // #17: Event type not produced by any command handler
+      if events.nonEmpty && context.entities.exists(_.nonEmpty) then {
+        val allHandlers = context.entities.flatMap { e =>
+          e.handlers ++ e.states.flatMap(_.handlers)
+        }
+        val producedEventNames = mutable.Set.empty[String]
+        allHandlers.foreach { handler =>
+          handler.clauses.foreach { clause =>
+            val finder = Finder(clause.contents)
+            val sends = finder.recursiveFindByType[SendStatement]
+            val tells = finder.recursiveFindByType[TellStatement]
+            sends.filter(_.msg.messageKind == AggregateUseCase.EventCase)
+              .foreach(s => producedEventNames += s.msg.pathId.value.lastOption.getOrElse(""))
+            tells.filter(_.msg.messageKind == AggregateUseCase.EventCase)
+              .foreach(t => producedEventNames += t.msg.pathId.value.lastOption.getOrElse(""))
+          }
+        }
+        events.foreach { evt =>
+          if !producedEventNames.contains(evt.id.value) then {
+            messages.addCompleteness(
+              evt.errorLoc,
+              s"${evt.identify} is defined but no handler produces it"
+            )
+          }
+        }
+      }
+      // #18: Query without corresponding result (and vice versa)
+      if queries.nonEmpty && results.isEmpty then {
+        messages.addCompleteness(
+          context.errorLoc,
+          s"${context.identify} defines queries but no result types"
+        )
+      }
+      if results.nonEmpty && queries.isEmpty then {
+        messages.addCompleteness(
+          context.errorLoc,
+          s"${context.identify} defines results but no query types"
+        )
+      }
+    }
   }
 
   def process(value: RiddlValue, parents: ParentStack): Unit = {
@@ -154,6 +236,12 @@ case class ValidationPass(
         checkDefinition(parentsAsSeq, otc)
       case ooc: OnOtherClause =>
         checkDefinition(parentsAsSeq, ooc)
+        if ooc.statements.isEmpty then {
+          messages.addCompleteness(
+            ooc.errorLoc,
+            "Empty 'on other' clause will silently discard unhandled messages"
+          )
+        }
       case statement: Statement =>
         validateStatement(statement, parentsAsSeq)
       case h: Handler =>
@@ -191,6 +279,7 @@ case class ValidationPass(
       case s: Saga =>
         validateSaga(s, parentsAsSeq)
       case c: Context =>
+        collectedContexts.addOne(c)
         validateContext(c, parentsAsSeq)
       case d: Domain =>
         validateDomain(d, parentsAsSeq)
@@ -879,6 +968,43 @@ case class ValidationPass(
             s"${entity.identify} in ${context.identify} has no outlet streamlet to publish events on"
           )
       }
+    // Completeness: entity should define an Id type for its identity
+    if entity.nonEmpty then {
+      val parentContext = parents.collectFirst { case c: Context => c }
+      val entityTypes = entity.types ++ parentContext.toSeq.flatMap(_.types)
+      val hasIdType = entityTypes.exists { t =>
+        t.typEx match {
+          case _: UniqueId => true
+          case _ => false
+        }
+      }
+      if !hasIdType then {
+        messages.addCompleteness(
+          entity.errorLoc,
+          s"${entity.identify} does not define an Id type for its identity"
+        )
+      }
+    }
+    // Completeness: event-sourced entity must emit events on every command
+    if entity.nonEmpty && entity.hasOption("event-sourced") then {
+      val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
+      val commandClauses = allHandlers.flatMap(_.clauses).collect {
+        case omc: OnMessageClause if omc.msg.messageKind == AggregateUseCase.CommandCase => omc
+      }
+      commandClauses.foreach { omc =>
+        val finder = Finder(omc.contents)
+        val sends = finder.recursiveFindByType[SendStatement]
+        val tells = finder.recursiveFindByType[TellStatement]
+        val emitsEvent = (sends.nonEmpty && sends.exists(_.msg.messageKind == AggregateUseCase.EventCase)) ||
+          (tells.nonEmpty && tells.exists(_.msg.messageKind == AggregateUseCase.EventCase))
+        if !emitsEvent then {
+          messages.addCompleteness(
+            omc.errorLoc,
+            s"${entity.identify} is event-sourced but this command handler does not emit an event"
+          )
+        }
+      }
+    }
   }
 
   private def validateProjector(
@@ -1117,6 +1243,38 @@ case class ValidationPass(
     end if
     if streamlet.handlers.isEmpty && streamlet.nonEmpty then
       messages.addMissing(streamlet.errorLoc, s"${streamlet.identify} should have a handler")
+    // Completeness: Flow/Split/Router handlers should send to their outlets
+    if streamlet.nonEmpty && streamlet.handlers.nonEmpty then {
+      streamlet.shape match {
+        case _: Flow | _: Split | _: Router =>
+          val allSends = streamlet.handlers.flatMap { handler =>
+            val finder = Finder(handler)
+            finder.recursiveFindByType[SendStatement]
+          }
+          if allSends.isEmpty then {
+            messages.addCompleteness(
+              streamlet.errorLoc,
+              s"${streamlet.identify} handlers do not send any messages to its outlets"
+            )
+          }
+        case _: Source =>
+          // Source has no inlets, so it must generate data via on-init or on-other
+          val hasInitOrOther = streamlet.handlers.exists { handler =>
+            handler.clauses.exists {
+              case _: OnInitializationClause => true
+              case _: OnOtherClause => true
+              case _ => false
+            }
+          }
+          if !hasInitOrOther then {
+            messages.addCompleteness(
+              streamlet.errorLoc,
+              s"${streamlet.identify} is a source but has no 'on init' or 'on other' clause to generate data"
+            )
+          }
+        case _ => ()
+      }
+    }
   }
 
   private def validateDomain(
@@ -1186,6 +1344,21 @@ case class ValidationPass(
               s.errorLoc
             )
           )
+      }
+    }
+    // Completeness: saga steps should have tell command statements
+    if s.doStatements.nonEmpty then {
+      var hasTellCommand = false
+      walkStatements(s.doStatements) {
+        case t: TellStatement if t.msg.messageKind == AggregateUseCase.CommandCase =>
+          hasTellCommand = true
+        case _ => ()
+      }
+      if !hasTellCommand then {
+        messages.addCompleteness(
+          s.errorLoc,
+          s"${s.identify} do-statements contain no 'tell command' to effect state changes"
+        )
       }
     }
     checkMetadata(s)

@@ -71,3 +71,12 @@ passes/input/check/saga/saga.riddl(12:5->16):
 passes/input/check/saga/saga.riddl(2:3->18):
  Context 'ignore2' has entities but no Sink streamlet to receive and dispatch incoming messages:
    context ignore2 is {
+passes/input/check/saga/saga.riddl(12:5->16):
+ Entity 'blah' does not define an Id type for its identity:
+     entity blah is {
+passes/input/check/saga/saga.riddl(18:7->15):
+ SagaStep 'One' do-statements contain no 'tell command' to effect state changes:
+       step One is {
+passes/input/check/saga/saga.riddl(25:7->15):
+ SagaStep 'Two' do-statements contain no 'tell command' to effect state changes:
+       step Two is {

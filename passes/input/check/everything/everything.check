@@ -202,3 +202,9 @@ passes/input/check/everything/everything.riddl(66:5->26):
 passes/input/check/everything/everything.riddl(69:7->28):
  State 'otherThingState' in Entity 'SomeOtherThing' has no 'on init' clause to initialize its state:
        state otherThingState of type Everything.StateType
+passes/input/check/everything/everything.riddl(42:5->21):
+ Entity 'Something' does not define an Id type for its identity:
+     entity Something is {
+passes/input/check/everything/everything.riddl(66:5->26):
+ Entity 'SomeOtherThing' does not define an Id type for its identity:
+     entity SomeOtherThing is {

@@ -59,3 +59,6 @@ passes/input/check/references/bad-pids.riddl(7:5->21):
 passes/input/check/references/bad-pids.riddl(2:3->25):
  Context 'ExampleContext' has entities but no Sink streamlet to receive and dispatch incoming messages:
    context ExampleContext is {
+passes/input/check/references/bad-pids.riddl(7:5->21):
+ Entity 'FooEntity' does not define an Id type for its identity:
+     entity FooEntity is {

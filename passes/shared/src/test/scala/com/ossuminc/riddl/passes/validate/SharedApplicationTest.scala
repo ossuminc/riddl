@@ -49,7 +49,7 @@ trait SharedApplicationTest extends AbstractValidatingTest {
           outputs must not be (empty)
           outputs.head.brief must be(empty)
           outputs.head.descriptions must not be (empty)
-          messages.isOnlyIgnorable mustBe true
+          messages.hasErrors mustBe false
       }
     }
   }
