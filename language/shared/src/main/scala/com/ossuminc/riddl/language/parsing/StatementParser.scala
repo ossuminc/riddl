@@ -52,7 +52,7 @@ private[parsing] trait StatementParser {
       Index ~ Keywords.set ~/ (fieldRef|stateRef) ~ to ~/ literalString ~/ Index
     )./.map {
       case (start, ref: FieldRef, str, end) => SetStatement(at(start, end), ref, str)
-      case (start, ref: StateRef, str, end) => SetStatement(at(start,end), ref, str)  
+      case (start, ref: StateRef, str, end) => SetStatement(at(start,end), ref, str)
     }
   }
 
@@ -157,7 +157,7 @@ private[parsing] trait StatementParser {
       // GROUP 1: Control flow statements
       whenStatement(set) | matchStatement(set) |
       // GROUP 2: Common message operations
-      sendStatement | tellStatement | replyStatement |
+      sendStatement | tellStatement |
       // GROUP 3: Variable operations
       theSetStatement | letStatement |
       // GROUP 4: General statements
@@ -170,11 +170,12 @@ private[parsing] trait StatementParser {
   def statement[u: P](set: StatementsSet): P[Statements] = {
     set match {
       case StatementsSet.AdaptorStatements     => anyDefStatements(set)
-      case StatementsSet.ContextStatements     => anyDefStatements(set)
-      case StatementsSet.EntityStatements      => anyDefStatements(set) | morphStatement | becomeStatement
+      case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
+      case StatementsSet.EntityStatements      => anyDefStatements(set) |
+        morphStatement | becomeStatement | replyStatement
       case StatementsSet.FunctionStatements    => anyDefStatements(set)
       case StatementsSet.ProjectorStatements   => anyDefStatements(set)
-      case StatementsSet.RepositoryStatements  => anyDefStatements(set)
+      case StatementsSet.RepositoryStatements  => anyDefStatements(set) | replyStatement
       case StatementsSet.SagaStatements        => anyDefStatements(set)
       case StatementsSet.StreamStatements      => anyDefStatements(set)
     }
