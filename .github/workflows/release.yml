@@ -192,19 +192,33 @@ jobs:
     env:
       TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
     steps:
-      - name: Dispatch blog post creation
+      - name: Fetch release body
+        id: release
         env:
           GH_TOKEN: ${{ secrets.BLOG_DISPATCH }}
         run: |
-          # Fetch release body - works for both release events and manual dispatch
           BODY=$(gh api repos/ossuminc/riddl/releases/tags/${TAG} --jq '.body' 2>/dev/null || echo "")
           if [ -z "$BODY" ]; then
             echo "::warning::Could not fetch release body for ${TAG}"
           fi
+          # Write to file to avoid shell quoting issues
+          echo "$BODY" > /tmp/release-body.txt
+
+      - name: Dispatch blog post creation
+        env:
+          GH_TOKEN: ${{ secrets.BLOG_DISPATCH }}
+        run: |
+          BODY=$(cat /tmp/release-body.txt)
           gh api repos/ossuminc/ossum.ai/dispatches \
             --method POST \
-            -f event_type=riddl-release \
-            -f "client_payload[product]=riddl" \
-            -f "client_payload[version]=${TAG}" \
-            -f "client_payload[release_url]=https://github.com/ossuminc/riddl/releases/tag/${TAG}" \
-            -f "client_payload[body]=${BODY}"
+            --input - <<PAYLOAD
+          {
+            "event_type": "riddl-release",
+            "client_payload": {
+              "product": "riddl",
+              "version": "${TAG}",
+              "release_url": "https://github.com/ossuminc/riddl/releases/tag/${TAG}",
+              "body": $(echo "$BODY" | jq -Rs .)
+            }
+          }
+          PAYLOAD
