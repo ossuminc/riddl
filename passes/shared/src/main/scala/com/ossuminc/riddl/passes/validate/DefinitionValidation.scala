@@ -55,7 +55,6 @@ object RecognizedOptions:
     "auto-id" -> OptionSpec(Seq("Entity"), 0, 0),
     "finite-state-machine" -> OptionSpec(Seq("Entity"), 0, 0),
     "persistent" -> OptionSpec(Seq("Connector"), 0, 0),
-    "css" -> OptionSpec(Seq.empty, 1, 10),
     "technology" -> OptionSpec(Seq.empty, 1, 1),
     "kind" -> OptionSpec(Seq.empty, 1, 1),
     "color" -> OptionSpec(Seq.empty, 1, 1),
@@ -99,8 +98,9 @@ object RecognizedOptions:
     "faicon" -> OptionSpec(Seq.empty, 1, 1),
     // Domain/Context structural options
     "external" -> OptionSpec(Seq("Domain", "Context"), 0, 0),
+    "microservice" -> OptionSpec(Seq("Context","Entity","Projector","Repository", "Saga"), 0,0),
     "namespace" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
-    "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1)
+    "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
   )
 end RecognizedOptions
 
