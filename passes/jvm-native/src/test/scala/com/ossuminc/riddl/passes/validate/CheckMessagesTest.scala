@@ -17,7 +17,6 @@ import org.scalatest.{Assertion, TestData}
 import java.nio.file.{Files, Path}
 import scala.collection.mutable
 import scala.jdk.StreamConverters.StreamHasToScala
-import scala.runtime.stdLibPatches.Predef.assert
 import scala.concurrent.duration.DurationInt
 
 /** CheckMessage This test suite runs through the files in input/check directory and validates them each as their own

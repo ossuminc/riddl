@@ -14,7 +14,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 
 enablePlugins(OssumIncPlugin)
 
-// NOTE: All modules override scalaVersion to 3.7.4 (from sbt-ossuminc's 3.3.7 LTS default).
+// NOTE: All modules override scalaVersion to 3.8.3 (from sbt-ossuminc's 3.3.7 LTS default).
 // Scala 3.3.x has an infinite loop bug in the compiler's type system (hasClassSymbol
 // recursion when computing union/intersection types). Fixed in later versions.
 // TASTy format is forward-compatible: 3.7.4 output can be consumed by 3.3.7 code (e.g., Akka servers).
@@ -55,13 +55,13 @@ lazy val Utils = config("utils")
 lazy val utils_cp: CrossProject = CrossModule("utils", "riddl-utils")(JVM, JS, Native)
   .configure(With.typical, With.GithubPublishing)
   .settings(
-    scalaVersion := "3.7.4", // Override 3.3.7 LTS - see top of file for reason
+    scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     scalacOptions += "-explain-cyclic",
     description := "Various utilities used throughout riddl libraries"
   )
   .jvmConfigure(With.coverage(70))
   .jvmConfigure(With.BuildInfo)
-  .jvmConfigure(With.MiMa("0.57.0", Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
+  .jvmConfigure(With.MiMa(V.previous, Seq("com.ossuminc.riddl.utils.RiddlBuildInfo")))
   .jvmSettings(
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
@@ -144,13 +144,13 @@ lazy val language_cp: CrossProject = CrossModule("language", "riddl-language")(J
   .dependsOn(cpDep(utils_cp))
   .configure(With.typical, With.GithubPublishing)
   .settings(
-    scalaVersion := "3.7.4", // Override 3.3.7 LTS - see top of file for reason
+    scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "Abstract Syntax Tree and basic RIDDL language parser",
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     Test / parallelExecution := false
   )
   .jvmConfigure(With.coverage(65))
-  .jvmConfigure(With.MiMa("0.57.0"))
+  .jvmConfigure(With.MiMa(V.previous))
   .jvmSettings(
     tastyMiMaConfig ~= { prevConfig =>
       import java.util.Arrays.asList
@@ -211,13 +211,13 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp))
   .configure(With.typical, With.GithubPublishing)
   .settings(
-    scalaVersion := "3.7.4", // Override 3.3.7 LTS - see top of file for reason
+    scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     Test / parallelExecution := false,
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic"),
     description := "AST Pass infrastructure and essential passes"
   )
   .jvmConfigure(With.coverage(30))
-  .jvmConfigure(With.MiMa("0.57.0"))
+  .jvmConfigure(With.MiMa(V.previous))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
     mimaBinaryIssueFilters ++= Seq(
@@ -250,7 +250,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
   .dependsOn(tkDep(utils_cp), tkDep(language_cp), tkDep(passes_cp))
   .configure(With.typical, With.GithubPublishing)
   .settings(
-    scalaVersion := "3.7.4", // Override 3.3.7 LTS - see top of file for reason
+    scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "Testing kit for RIDDL language and passes"
   )
   .jvmSettings(
@@ -259,7 +259,7 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit")(JVM, JS, Native)
       Dep.scalactic_nojvm.value
     )
   )
-  .jvmConfigure(With.MiMa("0.57.0"))
+  .jvmConfigure(With.MiMa(V.previous))
   .jsConfigure(With.ScalaJS("RIDDL: language", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
   .jsSettings(
@@ -290,11 +290,11 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   )
   .configure(With.typical, With.GithubPublishing)
   .settings(
-    scalaVersion := "3.7.4", // Override 3.3.7 LTS - see top of file for reason
+    scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "Bundling of essential RIDDL libraries"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.57.0"))
+  .jvmConfigure(With.MiMa(V.previous))
   .jvmConfigure(
     With.Packaging.universal(
       maintainerEmail = "reid@ossuminc.com",
@@ -334,12 +334,12 @@ lazy val commands_cp: CrossProject = CrossModule("commands", "riddl-commands")(J
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp))
   .configure(With.typical, With.GithubPublishing)
   .settings(
-    scalaVersion := "3.7.4", // Override 3.3.7 LTS - see top of file for reason
+    scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     scalacOptions ++= Seq("-explain", "--explain-types", "--explain-cyclic", "--no-warnings"),
     description := "RIDDL Command Infrastructure and command definitions"
   )
   .jvmConfigure(With.coverage(50))
-  .jvmConfigure(With.MiMa("0.57.0"))
+  .jvmConfigure(With.MiMa(V.previous))
   .jvmSettings(
     libraryDependencies ++= Seq(Dep.scopt, Dep.sconfig, Dep.scalajs_stubs),
     coverageExcludedFiles := """<empty>;$anon"""
@@ -365,7 +365,7 @@ lazy val riddlc_cp: CrossProject = CrossModule("riddlc", "riddlc")(JVM, Native)
   .configure(With.noMiMa)
   .dependsOn(cpDep(utils_cp), cpDep(language_cp), cpDep(passes_cp), cpDep(commands_cp))
   .settings(
-    scalaVersion := "3.7.4", // Override 3.3.7 LTS - see top of file for reason
+    scalaVersion := V.scala, // Override 3.3.7 LTS - see top of file for reason
     description := "The `riddlc` compiler and tests, the only executable in RIDDL",
     maintainer := "reid@ossuminc.com",
     mainClass := Option("com.ossuminc.riddl.RIDDLC")

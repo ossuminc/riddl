@@ -10,8 +10,6 @@ import com.ossuminc.riddl.utils.CommonOptions
 import com.ossuminc.riddl.utils.pc
 import org.scalatest.TestData
 
-import scala.runtime.stdLibPatches.Predef.assert
-
 /** Validate files */
 class ValidateExamplesTest extends JVMAbstractValidatingTest {
 

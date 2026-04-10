@@ -15,7 +15,64 @@ to the task file and note completion in this notebook.
 
 ## Current Status
 
-**Last Updated**: March 14, 2026
+**Last Updated**: April 7, 2026
+
+### Release 1.20.0 Published (Apr 6, 2026)
+
+Major validation and language extension release.
+
+**New language features:**
+- `reply result SomeResult` statement for query handlers
+- `require invariant InvariantName` form (extends `require`)
+- `option auto-id` for entities (ULID at instantiation)
+
+**CompletenessWarning system (1.19.0):**
+- New message kind at severity 4, "hard" (actionable)
+- 20+ completeness checks for simulation/codegen readiness
+- Entity: Id type scope, on-init, event-sourced events,
+  query handlers, outlet streamlets
+- Context: Sink for entities, streamlet dispatch
+- Projector: repository refs, tell persistence
+- Saga: tell command in do-steps
+- Streamlet: output on flow/split/router, source generation
+- Types: empty commands, orphan events, query/result pairing
+- Handler: empty on-other, prompt-only, empty handlers
+
+**Other changes in 1.18.0-1.20.0:**
+- EntityLifecyclePass: state-level handlers, entity-level
+  expansion, initial state detection
+- AnalysisPass/AnalysisResult copied from riddl-gen
+- `require` statement added to language
+- BAST FORMAT_REVISION bumped to 6
+- Repository usage tracking in UsageResolution
+- release.yml: peter-evans replaced with gh api
+- notify-blog: fetches release body via API
+
+### Releases Since Last Notebook Update
+
+- **1.20.0** (Apr 6): Validation + language extensions
+- **1.19.0** (Apr 4): CompletenessWarning system
+- **1.18.0** (Mar 31): EntityLifecyclePass + AnalysisPass +
+  require statement
+- **1.17.1** (Mar 30): Validation fixes
+- **1.17.0**, **1.16.5**, **1.16.4**, **1.16.3** (Mar)
+
+### Pending Tasks in `task/`
+
+- `auto-id-entity-option.md` — DONE (1.20.0)
+- `entitylifecyclepass-no-transitions.md` — DONE (1.18.0)
+- `move-analysis-pass-from-riddl-gen.md` — DONE (1.18.0)
+- `replace-peter-evans-dispatch.md` — DONE (1.18.0)
+- `error-location-end-of-line.md` — open
+- `sbt-riddl-validate-on-compile-fix.md` — open
+- `scope-based-parsing-api.md` — open
+- `optimize-treepass-performance.md` — open
+- `optimize-resolutionpass-performance.md` — open
+- `messageflowpass-empty-results.md` — DONE (1.15.3)
+- `add-blog-release-dispatch.md` — DONE
+- `upgrade-sbt-riddl-1.15.4.md` — open
+
+---
 
 ### Release 1.15.3 Published (Mar 14, 2026)
 

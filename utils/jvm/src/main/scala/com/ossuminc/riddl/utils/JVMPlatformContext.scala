@@ -60,7 +60,7 @@ class JVMPlatformContext extends PlatformContext {
   override def read(file: URL): String =
     val source = Source.fromFile(file.toString)
     try {
-      source.getLines.mkString("\n")
+      source.getLines().mkString("\n")
     } finally {
       source.close()
     }
