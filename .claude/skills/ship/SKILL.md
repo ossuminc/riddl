@@ -89,10 +89,48 @@ not provided:
     git push origin main <VERSION>
     ```
 
-11. Create a GitHub release:
+11. **Write detailed release notes** and create the GitHub
+    release. Do NOT use `--generate-notes` — the auto-generated
+    notes are just commit titles and are not suitable for a
+    public repository.
+
+    Instead, read all commits since the previous tag:
+    ```
+    git log --format="%H %s" <PREV_TAG>..<VERSION>
+    ```
+    Then read the diffs for any non-trivial commits to
+    understand what actually changed. Write human-readable
+    release notes in this format:
+
+    ```markdown
+    ## What's New
+
+    ### Features
+    - **Feature name** — Clear description of what was added
+      and why it matters to users.
+
+    ### Bug Fixes
+    - **Area affected** — What was broken and how it's fixed.
+
+    ### Improvements
+    - **Area affected** — What changed and why it's better.
+
+    ### Internal
+    - Dependency upgrades, CI fixes, documentation updates,
+      and other changes that don't affect end users directly.
+    ```
+
+    Omit any section that has no entries. Focus on what users
+    and consumers of the library need to know. Use clear,
+    complete sentences — not just commit message echo.
+
+    Create the release:
     ```
     unset GITHUB_TOKEN && gh release create <VERSION> \
-      --title "Release <VERSION>" --generate-notes
+      --title "Release <VERSION>" --notes "$(cat <<'EOF'
+    <release notes here>
+    EOF
+    )"
     ```
     This triggers the Release Artifacts workflow (native
     builds, Homebrew formula update) and the npm-publish
