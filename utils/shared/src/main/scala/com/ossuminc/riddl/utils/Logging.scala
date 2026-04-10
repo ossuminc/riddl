@@ -30,6 +30,7 @@ object Logging {
   case object Usage extends Lvl
   case object Style extends Lvl
   case object Missing extends Lvl
+  case object Tip extends Lvl
   case object Info extends Lvl
 
 }
@@ -70,6 +71,9 @@ trait Logger(using pc: PlatformContext) {
   /** Syntactic sugar for write(Missing, s) */
   final def missing(s: => String): Unit = { write(Missing, s) }
 
+  /** Syntactic sugar for write(Tip, s) */
+  final def tip(s: => String): Unit = { write(Tip, s) }
+
   /** Syntactic sugar for write(Info, s) */
   final def info(s: => String): Unit = { write(Info, s) }
 
@@ -80,6 +84,7 @@ trait Logger(using pc: PlatformContext) {
   private var nUsage = 0
   private var nCompleteness = 0
   private var nWarning = 0
+  private var nTip = 0
   private var nInfo = 0
 
   protected def highlight(level: Lvl, s: String): String = {
@@ -93,6 +98,7 @@ trait Logger(using pc: PlatformContext) {
         case Logging.Usage        => s"$GREEN"
         case Logging.Style        => s"$GREEN"
         case Logging.Missing      => s"$GREEN"
+        case Logging.Tip          => s"$CYAN"
         case Logging.Info         => s"$BLUE"
       }
       val lines = s.split(pc.newline)
@@ -114,6 +120,7 @@ trait Logger(using pc: PlatformContext) {
       case Style        => nStyle += 1
       case Usage        => nUsage += 1
       case Missing      => nMissing += 1
+      case Tip          => nTip += 1
       case Info         => nInfo += 1
     }
   }
@@ -127,6 +134,7 @@ trait Logger(using pc: PlatformContext) {
        |        Usage: $nUsage
        |        Style: $nStyle
        |      Missing: $nMissing
+       |         Tips: $nTip
        |         Info: $nInfo
        |""".stripMargin
   }

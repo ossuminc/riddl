@@ -32,6 +32,8 @@ object Messages {
 
     def isCompleteness: Boolean = false
 
+    def isTip: Boolean = false
+
     def isInfo: Boolean = false
 
     def severity: Int
@@ -40,6 +42,15 @@ object Messages {
     def isActionable: Boolean = severity >= CompletenessWarning.severity
 
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
+  }
+
+  /** A case object for the Tip kind of message, used by AIHelperPass
+    * to provide proactive guidance for improving RIDDL models.
+    */
+  case object Tip extends KindOfMessage {
+    override def isTip: Boolean = true
+    override def toString: String = "Tip"
+    def severity = 0
   }
 
   /** A case object for the Info kind of message */
@@ -143,6 +154,7 @@ object Messages {
   case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
       extends Ordered[Message] {
     def isInfo: Boolean = kind.isInfo
+    def isTip: Boolean = kind.isTip
     def isMissing: Boolean = kind.isMissing
     def isWarning: Boolean = kind.isWarning
     def isStyle: Boolean = kind.isStyle
@@ -175,6 +187,11 @@ object Messages {
   /** Generate a style warning */
   @JSExport def style(message: String, loc: At = At.empty): Message = {
     Message(loc, message, StyleWarning)
+  }
+
+  /** Generate a tip message */
+  @JSExport def tip(message: String, loc: At = At.empty): Message = {
+    Message(loc, message, Tip)
   }
 
   /** Generate a missing warning */
@@ -273,6 +290,9 @@ object Messages {
     /** Return a filtered list of just the [[Info]] messages. */
     @JSExport def justInfo: Messages = msgs.filter(_.isInfo)
 
+    /** Return a filtered list of just the [[Tip]] messages. */
+    @JSExport def justTips: Messages = msgs.filter(_.isTip)
+
     /** Return a filtered list of just the [[MissingWarning]] messages. */
     @JSExport def justMissing: Messages = msgs.filter(_.isMissing)
 
@@ -313,6 +333,7 @@ object Messages {
 
   private def logMessage(message: Message)(using io: PlatformContext): Unit = {
     message.kind match {
+      case Tip                 => io.log.tip(message.format)
       case Info                => io.log.info(message.format)
       case StyleWarning        => io.log.style(message.format)
       case MissingWarning      => io.log.missing(message.format)
@@ -335,6 +356,8 @@ object Messages {
       val messages = maybeMessages.getOrElse(Seq.empty[Message])
       if messages.nonEmpty then {
         kind match {
+          case Tip =>
+            io.log.tip(s"""$kind Message Count: ${messages.length}""")
           case UsageWarning =>
             io.log.usage(s"""$kind Message Count: ${messages.length}""")
           case StyleWarning =>
@@ -374,6 +397,9 @@ object Messages {
           logMsgs(StyleWarning, groups.get(StyleWarning))
         }
       }
+      if io.options.showTipMessages then {
+        logMsgs(Tip, groups.get(Tip))
+      }
       logMsgs(Info, groups.get(Info))
     }
   }
@@ -412,6 +438,8 @@ object Messages {
           if pc.options.showMissingWarnings && pc.options.showWarnings then msgs.append(message)
         case UsageWarning =>
           if pc.options.showUsageWarnings && pc.options.showWarnings then msgs.append(message)
+        case Tip =>
+          if pc.options.showTipMessages then msgs.append(message)
         case Info =>
           if pc.options.showInfoMessages then msgs.append(message)
         case Error | SevereError => msgs.append(message)
@@ -512,6 +540,19 @@ object Messages {
 
     @inline def addCompleteness(loc: At, msg: String)(using pc: PlatformContext): this.type = {
       add(Message(loc, msg, CompletenessWarning))
+    }
+
+    /** Add a [[Tip]] message to the accumulated [[Messages]]
+      *
+      * @param loc
+      *   The location in the source related to the message.
+      * @param msg
+      *   The text of the message to add
+      * @return
+      *   This type, so you can chain another call to this accumulator
+      */
+    @inline def addTip(loc: At, msg: String)(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, Tip))
     }
 
     /** Add a [[MissingWarning]] message to the accumulated [[Messages]]

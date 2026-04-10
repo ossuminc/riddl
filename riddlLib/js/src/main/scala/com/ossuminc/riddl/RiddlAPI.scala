@@ -469,6 +469,59 @@ object RiddlAPI {
   @JSExport("formatInfo")
   def formatInfo: String = RiddlLib.formatInfo
 
+  /** Analyze RIDDL source for AI-friendly tips.
+    *
+    * Returns tips, filtered warnings, and errors from
+    * the AIHelperPass pipeline. Tips suggest what to add
+    * or fix to improve the model.
+    *
+    * @param source RIDDL source code
+    * @param origin Origin identifier for error messages
+    * @return {succeeded, value: {tips, errors, warnings,
+    *         all}, errors?}
+    */
+  @JSExport("analyzeSourceForTips")
+  def analyzeSourceForTips(
+    source: String,
+    origin: String = "string"
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.analyzeSourceForTips(source, origin),
+      (msgs: Messages) => tipsToJsObject(msgs)
+    )
+  end analyzeSourceForTips
+
+  /** Analyze a pre-parsed AST for AI-friendly tips.
+    *
+    * @param root An opaque Root AST from a prior parse
+    * @return {succeeded, value: {tips, errors, warnings,
+    *         all}, errors?}
+    */
+  @JSExport("analyzeForTips")
+  def analyzeForTips(root: js.Any): js.Dynamic =
+    val rootAST = root.asInstanceOf[Root]
+    toJsResult(
+      RiddlLib.analyzeForTips(rootAST),
+      (msgs: Messages) => tipsToJsObject(msgs)
+    )
+  end analyzeForTips
+
+  /** Convert categorized messages to a JS object */
+  private def tipsToJsObject(
+    msgs: Messages
+  ): js.Dynamic =
+    js.Dynamic.literal(
+      tips = formatMessagesAsArray(msgs.justTips),
+      errors = formatMessagesAsArray(msgs.justErrors),
+      warnings = formatMessagesAsArray(
+        msgs.justWarnings.filterNot(m =>
+          m.isTip || m.isInfo
+        )
+      ),
+      all = formatMessagesAsArray(msgs)
+    )
+  end tipsToJsObject
+
   /** Get a flat outline of all named definitions. */
   @JSExport("getOutline")
   def getOutline(

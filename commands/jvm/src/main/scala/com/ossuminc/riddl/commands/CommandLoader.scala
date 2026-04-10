@@ -24,6 +24,7 @@ object CommandLoader:
     if io.options.verbose then io.log.info(s"Loading command: $name") else ()
     name match
       case "about"   => Right(AboutCommand())
+      case "advise"    => Right(AdviseCommand())
       case "bastify"   => Right(BastifyCommand())
       case "dump"      => Right(DumpCommand())
       case "unbastify" => Right(UnbastifyCommand())
@@ -45,6 +46,7 @@ object CommandLoader:
   def commandOptionsParser(using io: PlatformContext): OParser[Unit, ?] = {
     val optionParsers = Seq(
       AboutCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
+      AdviseCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       BastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       DumpCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],
       UnbastifyCommand().getOptionsParser._1.asInstanceOf[OParser[Unit, CommandOptions]],

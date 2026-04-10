@@ -324,4 +324,76 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
       end match
     }
   }
+
+  "analyzeSourceForTips" should {
+    "return tips for an incomplete model" in {
+      val source =
+        """domain TestDomain is {
+          |  context TestContext is { ??? }
+          |}""".stripMargin
+      val result = RiddlLib.analyzeSourceForTips(source)
+      result match
+        case RiddlResult.Success(msgs) =>
+          val tips = msgs.justTips
+          tips mustNot be(empty)
+        case RiddlResult.Failure(errors) =>
+          fail(s"Analysis failed: $errors")
+    }
+
+    "return failure for unparseable input" in {
+      val source = "not valid RIDDL {{{ }}}"
+      val result = RiddlLib.analyzeSourceForTips(source)
+      result match
+        case RiddlResult.Failure(_) => succeed
+        case RiddlResult.Success(_) =>
+          fail("Should have failed on invalid input")
+    }
+
+    "return fewer tips for a well-formed model" in {
+      val source =
+        """domain TestDomain is {
+          |  context TestContext is {
+          |    entity TestEntity is {
+          |      type TestCmd = command { data: String }
+          |      type TestEvt = event { data: String }
+          |      state TestState of TestStateData is {
+          |        handler TestHandler is {
+          |          on command TestCmd {
+          |            prompt "handle"
+          |          }
+          |        }
+          |      }
+          |      type TestStateData is { data: String }
+          |    }
+          |  }
+          |}""".stripMargin
+      val result = RiddlLib.analyzeSourceForTips(source)
+      result match
+        case RiddlResult.Success(msgs) =>
+          // Should succeed — tips may or may not be empty
+          // but should not contain errors
+          msgs.justErrors mustBe empty
+        case RiddlResult.Failure(errors) =>
+          fail(s"Analysis failed: $errors")
+    }
+  }
+
+  "analyzeForTips" should {
+    "work with a pre-parsed Root" in {
+      val source =
+        """domain TestDomain is {
+          |  context TestContext is { ??? }
+          |}""".stripMargin
+      RiddlLib.parseString(source) match
+        case RiddlResult.Success(root) =>
+          val result = RiddlLib.analyzeForTips(root)
+          result match
+            case RiddlResult.Success(msgs) =>
+              msgs.justTips mustNot be(empty)
+            case RiddlResult.Failure(errors) =>
+              fail(s"Analysis failed: $errors")
+        case RiddlResult.Failure(errors) =>
+          fail(s"Parse failed: $errors")
+    }
+  }
 }

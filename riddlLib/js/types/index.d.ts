@@ -995,7 +995,45 @@ export declare const RiddlAPI: {
    * @returns RIDDL source code as a string
    */
   root2RiddlSource(root: RootAST): string;
+
+  /**
+   * Analyze RIDDL source for AI-friendly tips.
+   *
+   * Returns tips, filtered warnings, and errors from
+   * the AIHelperPass pipeline. Tips suggest what to add
+   * or fix to improve the model.
+   *
+   * @param source - RIDDL source code
+   * @param origin - Origin identifier for error messages
+   * @returns Result with categorized messages including tips
+   */
+  analyzeSourceForTips(
+    source: string,
+    origin?: string
+  ): RiddlResult<TipAnalysisResult>;
+
+  /**
+   * Analyze a pre-parsed AST for AI-friendly tips.
+   *
+   * @param root - An opaque Root AST from a prior parse
+   * @returns Result with categorized messages including tips
+   */
+  analyzeForTips(root: RootAST): RiddlResult<TipAnalysisResult>;
 };
+
+/**
+ * Result from AI helper tip analysis.
+ */
+export interface TipAnalysisResult {
+  /** AI-friendly tip messages with guidance */
+  tips: ErrorInfo[];
+  /** Error messages (passed through from validation) */
+  errors: ErrorInfo[];
+  /** Warning messages (passed through from validation) */
+  warnings: ErrorInfo[];
+  /** All messages combined */
+  all: ErrorInfo[];
+}
 
 /**
  * Handler behavioral completeness classification.

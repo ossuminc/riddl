@@ -22,8 +22,12 @@ import com.ossuminc.riddl.language.parsing.{
 import com.ossuminc.riddl.passes.{
   BASTOutput, BASTWriterPass, IncrementalValidator,
   Pass, PassCreators, PassInput, PassOptions, PassesOutput,
+  PassesResult,
   OutlinePass, OutlineOutput, OutlineEntry,
   TreePass, TreeOutput, TreeNode
+}
+import com.ossuminc.riddl.passes.ai.{
+  AIHelperOutput, AIHelperPass
 }
 import com.ossuminc.riddl.passes.analysis.{
   EntityLifecycle, EntityLifecycleOutput, EntityLifecyclePass,
@@ -343,6 +347,31 @@ trait RiddlLib:
     origin: String = "string",
     verbose: Boolean = false
   )(using PlatformContext): RiddlResult[Saga]
+
+  /** Analyze RIDDL source for AI-friendly tips.
+    *
+    * Runs the AIHelperPass pipeline which filters
+    * validation output, converts warnings to actionable
+    * tips, and generates additional guidance for
+    * iterative model building.
+    *
+    * @param source The RIDDL source code to analyze
+    * @param origin Origin identifier for error messages
+    * @return Tip messages and filtered warnings/errors
+    */
+  def analyzeSourceForTips(
+    source: String,
+    origin: String = "string"
+  )(using PlatformContext): RiddlResult[Messages]
+
+  /** Analyze a pre-parsed AST for AI-friendly tips.
+    *
+    * @param root A previously parsed Root AST
+    * @return Tip messages and filtered warnings/errors
+    */
+  def analyzeForTips(
+    root: Root
+  )(using PlatformContext): RiddlResult[Messages]
 
   /** Get the RIDDL library version string. */
   def version: String
@@ -862,6 +891,33 @@ object RiddlLib extends RiddlLib:
       )
     )
   end parseAsSaga
+
+  override def analyzeSourceForTips(
+    source: String,
+    origin: String
+  )(using PlatformContext): RiddlResult[Messages] =
+    val rpi = RiddlParserInput(source, originToURL(origin))
+    AIHelperPass.analyzeSource(rpi) match
+      case Left(parseErrors) =>
+        RiddlResult.Failure(parseErrors)
+      case Right(result) =>
+        val aiMsgs = result
+          .outputOf[AIHelperOutput](AIHelperPass.name)
+          .map(_.messages)
+          .getOrElse(Messages.empty)
+        RiddlResult.Success(aiMsgs)
+  end analyzeSourceForTips
+
+  override def analyzeForTips(
+    root: Root
+  )(using PlatformContext): RiddlResult[Messages] =
+    val result = AIHelperPass.analyze(root)
+    val aiMsgs = result
+      .outputOf[AIHelperOutput](AIHelperPass.name)
+      .map(_.messages)
+      .getOrElse(Messages.empty)
+    RiddlResult.Success(aiMsgs)
+  end analyzeForTips
 
   override def version: String =
     RiddlBuildInfo.version

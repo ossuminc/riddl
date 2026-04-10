@@ -32,6 +32,7 @@ object Commands:
     if io.options.verbose then io.log.info(s"Loading command: $name") else ()
     name match
       case "about"     => Right(AboutCommand())
+      case "advise"    => Right(AdviseCommand())
       case "bastify"   => Right(BastifyCommand())
       case "dump"      => Right(DumpCommand())
       case "flatten"   => Right(FlattenCommand())

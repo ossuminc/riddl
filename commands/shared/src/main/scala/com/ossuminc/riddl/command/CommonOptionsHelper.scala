@@ -229,6 +229,8 @@ object CommonOptionsHelper:
     val showCompletenessWarnings =
       if obj.hasPath(show_completeness_warnings) then obj.getBoolean(show_completeness_warnings)
       else default.showCompletenessWarnings
+    val showTipMessages =
+      if obj.hasPath("show-tip-messages") then obj.getBoolean("show-tip-messages") else default.showTipMessages
     val showInfoMessages =
       if obj.hasPath(show_info_messages) then obj.getBoolean(show_info_messages) else default.showInfoMessages
     val maxParallelParsing =
@@ -255,6 +257,7 @@ object CommonOptionsHelper:
       showStyleWarnings,
       showUsageWarnings,
       showCompletenessWarnings,
+      showTipMessages,
       showInfoMessages,
       debugV,
       sortMessagesByLocation,
