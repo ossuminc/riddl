@@ -77,7 +77,7 @@ jobs:
     - name: Package Native Binary
       run: |
         mkdir -p staging/bin
-        cp riddlc/native/target/scala-3.7.4/riddlc staging/bin/riddlc
+        cp riddlc/native/target/scala-3.8.3/riddlc staging/bin/riddlc
         cd staging && zip -r ../${{ matrix.artifact }}.zip bin/
 
     - name: Upload to Release

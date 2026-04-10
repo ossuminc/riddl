@@ -50,6 +50,7 @@ INCLUDE_FRAGMENTS = {
     "context.riddl",                 # Context fragment in full/
     "588included.riddl",             # Fragment included by 588.riddl
     "foo.riddl",                     # Fragment in issues/584/Foo/
+    "context-types.riddl",           # Context-level types for id-in-include test
 }
 
 # Files that are intentionally invalid for testing error handling.

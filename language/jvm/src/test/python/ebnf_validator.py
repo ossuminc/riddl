@@ -43,6 +43,7 @@ INCLUDE_FRAGMENTS = {
     "page.riddl",                    # Group definitions fragment
     "application.riddl",             # Context fragment in full/ and includes/
     "context.riddl",                 # Context fragment in full/
+    "context-types.riddl",           # Context-level types for id-in-include test
 }
 
 # Files that are intentionally invalid for testing error handling
