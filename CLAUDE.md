@@ -47,28 +47,24 @@ When in doubt, **add, don't change**.
 ## Critical Build Information
 
 ### Scala Version & Syntax
-- **Scala 3.7.4** (not Scala 2!) — overrides sbt-ossuminc's 3.3.7 LTS
-  default due to a compiler infinite loop bug in 3.3.x with opaque
-  types and intersection types (see `build.sbt` header comment)
+- **Scala 3.8.3** (not Scala 2!) — overrides sbt-ossuminc's
+  3.3.7 LTS default. RIDDL originally pinned 3.8.3 to dodge a
+  3.3.x compiler infinite loop on opaque + intersection types;
+  the override has been kept while we ride ahead of LTS.
 - **ALWAYS use Scala 3 syntax**:
   - `while i < end do ... end while` (NOT `while (i < end) { ... }`)
-  - No `null` checks - use `Option(x)` instead
+  - No `null` checks — use `Option(x)` instead
   - New control flow syntax with `do`/`then`/`end`
 
 ### sbt-ossuminc Plugin
 
-**Current version: 1.3.0** (updated Feb 2026)
-
-#### API Changes from 0.x to 1.0.0:
-- `With.Javascript(...)` → `With.ScalaJS(...)`  or `With.scalajs` (lowercase for default)
-- `With.Native()` → `With.Native(...)` (now requires parameter list, not just `()`)
-- `With.BuildInfo.withKeys(...)` → `With.BuildInfo.withKeys(...)(project)` (curried function)
+**Current version: 1.4.0** (1.21.0 upgrade).
 
 #### Common Configurations:
 ```scala
-// Scala 3.7.4 (overridden from sbt-ossuminc's 3.3.7 LTS default)
+// Scala 3.8.3 (overridden from sbt-ossuminc's 3.3.7 LTS default)
 .configure(With.scala3)  // Sets scalaVersion to 3.3.7 LTS
-// Then override: scalaVersion := "3.7.4"
+// Then override: scalaVersion := "3.8.3"
 
 // Scala.js configuration
 .jsConfigure(With.ScalaJS(
@@ -105,22 +101,31 @@ utils → language → passes → commands → riddlc
 **Note**: The `diagrams` and `hugo` modules have been moved to the `riddl-gen` repository.
 
 ### BAST Module (Binary AST)
-**Purpose**: Binary AST serialization for fast module imports
+**Purpose**: Binary AST serialization for fast module imports.
+**Status**: Complete; ~6-10x faster than reparsing source; output
+~63-67% of source size on non-trivial inputs.
 
-- **Location**: `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/` (inside language module)
-- **Package**: `com.ossuminc.riddl.language.bast`
+- **Package**: `com.ossuminc.riddl.language.bast` in
+  `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`
 - **Cross-platform**: JVM, JS, Native
-- **Status**: Core functionality complete (as of Jan 2026)
+- **Pass**: `passes/shared/.../BASTWriterPass.scala`
+- **CLI**: `riddlc bastify <file.riddl>` (write);
+  `riddlc unbastify` (read — pending)
+- **Format docs**: live at ossum.tech/riddl, not in this repo
 
-**Note**: The legacy standalone `bast/` directory has been removed (Jan 16, 2026). All BAST code lives in the `language` module's `bast` package.
+**Key files** in the bast package:
+- `package.scala` — constants and node type tags (NODE_*, TYPE_*,
+  STREAMLET_*, …)
+- `BASTWriter.scala` — serialization (extends HierarchyPass)
+- `BASTReader.scala` — deserialization
+- `BASTLoader.scala` — import-loading utility
+- `BASTUtils.scala` — shared utilities
+- `StringTable.scala`, `PathTable.scala` — interning tables
 
-**Key files** (all in `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`):
-- `package.scala` - Constants and node type tags (NODE_*, TYPE_*, STREAMLET_*, etc.)
-- `BASTWriter.scala` - Serialization pass (extends HierarchyPass)
-- `BASTReader.scala` - Deserialization
-- `BASTLoader.scala` - Import loading utility
-- `BASTUtils.scala` - Shared utilities
-- `StringTable.scala` - String interning for compression
+**HAZARD — disjoint tag sets**: `readNode()` only handles `NODE_*`
+tags; `readTypeExpression()` only handles `TYPE_*` tags. Crossing
+them causes byte misalignment that surfaces as "Invalid string
+table index" errors during deserialization.
 
 ## NPM Packaging (JavaScript/TypeScript API)
 
@@ -135,7 +140,7 @@ The `riddlLib` module exports a TypeScript-friendly API via `RiddlAPI` object.
   - Case classes → Plain objects
   - `Either` → `{ succeeded, value, errors }`
 
-**Building npm packages** (via sbt-ossuminc 1.3.0 helpers):
+**Building npm packages** (via sbt-ossuminc 1.4.0 helpers):
 ```bash
 sbt riddlLibJS/npmPrepare        # Assemble package (pure sbt)
 sbt riddlLibJS/npmPack           # Create .tgz tarball
@@ -264,8 +269,7 @@ sbt-ossuminc updates its default), the following files **MUST** be updated:
 **sbt-ossuminc Version Policy**:
 - sbt-ossuminc always defaults to the latest Scala LTS version
 - When sbt-ossuminc is updated, check if its default Scala version changed
-- Current LTS: **3.3.7** (3.3.x series), but riddl uses **3.7.4**
-  due to compiler bug (see build.sbt)
+- Current LTS: **3.3.7**; riddl runs ahead on **3.8.3**
 - Next LTS expected: **3.9.x** (Q2 2026)
 
 **Quick Search to Find All References**:
@@ -273,10 +277,9 @@ sbt-ossuminc updates its default), the following files **MUST** be updated:
 grep -r "scala-3\." .github/workflows/
 ```
 
-**Example Fix** (3.7.4 → 3.9.0):
+**Example Fix** (3.8.3 → 3.9.0):
 ```bash
-# In each workflow file, replace all occurrences:
-sed -i 's/scala-3.7.4/scala-3.9.0/g' .github/workflows/*.yml
+sed -i 's/scala-3.8.3/scala-3.9.0/g' .github/workflows/*.yml
 ```
 
 ## Testing Patterns
@@ -332,13 +335,13 @@ When implementing new code:
 **Fix**: Use `With.ScalaJS` instead
 
 ### Error: "No given instance of PlatformContext for default parameter"
-**Cause**: Scala 3.7.4 limitation — default parameter values in a case
+**Cause**: Scala 3.8.3 limitation — default parameter values in a case
 class's first parameter list cannot resolve `given` instances from a
 subsequent `using` clause in the generated companion `apply` method.
 **Fix**: Remove the default value. May be fixed in 3.9.x LTS.
 **Example**:
 ```scala
-// This fails in 3.7.4:
+// This fails in 3.8.3:
 case class Foo(x: Bar = Bar())(using PlatformContext)
 // Fix: remove default (or provide explicit given)
 case class Foo(x: Bar)(using PlatformContext)
@@ -386,28 +389,13 @@ Short description (imperative mood)
 Detailed explanation of what changed and why.
 Focus on "why" rather than "what".
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude <model-name> <noreply@anthropic.com>
 ```
 
 ### Branch Strategy
 - **main**: Production releases
 - **development**: Active development (current work)
 - Always push to `development` unless releasing
-
-## Documentation
-
-### Key Documentation Files
-- `README.md` - Project overview
-- `NPM_PACKAGING.md` - npm build guide
-- `TYPESCRIPT_API.md` - TypeScript API reference
-- `.github/workflows/*.yml` - CI/CD configuration
-- `CLAUDE.md` (this file) - AI assistant guidance
-
-### Updating Documentation
-- Keep npm packaging docs in sync with actual build
-- Update version numbers when releasing
-- Add examples for new features
-- Link related documents
 
 ## Quick Reference Commands
 
@@ -434,108 +422,6 @@ sbt tJVM tJS tNative
 sbt riddlc/stage
 # Result: riddlc/jvm/target/universal/stage/bin/riddlc
 ```
-
-## Current Work Priorities
-
-### 1. AIHelperPass
-AI-friendly validation pass for MCP server integration. Design complete in NOTEBOOK.md.
-
-- Provides proactive guidance (Tips) rather than just errors/warnings
-- Works on incomplete models (no ResolutionPass dependency)
-- Designed for iterative AI-driven model building
-
----
-
-## BAST Module (Binary AST) - COMPLETE ✅
-
-BAST serialization is **fully implemented** with 60 tests passing and 6-10x speedup.
-
-### CLI Commands
-- `riddlc bastify <input.riddl>` - Convert RIDDL to BAST
-- `riddlc unbastify <input.bast>` - Convert BAST back to RIDDL (pending)
-
-### Performance Results
-- **Speed**: 6-10x faster than parsing RIDDL source
-- **Size**: 63-67% of source file size for non-trivial inputs
-- **Cross-platform**: JVM, JS, Native all supported
-
-### Key Files
-**Language module** (`language/shared/.../bast/`):
-- `BASTWriter.scala`, `BASTReader.scala` - Serialization/deserialization
-- `BASTLoader.scala`, `BASTUtils.scala` - Loading utilities
-- `StringTable.scala`, `PathTable.scala` - Interning tables
-
-**Passes module**: `BASTWriterPass.scala` - Pass wrapper for AST traversal
-
-### Documentation
-BAST format specification and API documentation should be added to
-**ossum.tech/riddl** (not this repository). See the Documentation section above.
-
-### Critical Implementation Notes
-
-**readNode() vs readTypeExpression()** - These handle DISJOINT tag sets:
-- `readNode()` → NODE_* tags (definitions)
-- `readTypeExpression()` → TYPE_* tags (type expressions)
-- Mixing them causes byte misalignment ("Invalid string table index" errors)
-
-## Git Workflow & Commit Discipline
-
-### CRITICAL: Selective Committing
-
-**Problem**: This repository often has multiple work streams happening concurrently (BAST development, API fixes, documentation, etc.). Files from different work streams may be staged simultaneously.
-
-**Rule**: ONLY commit files related to the specific task you're working on.
-
-**How to commit selectively**:
-
-```bash
-# Check what's staged
-git status
-
-# Unstage files not related to current task
-git restore --staged path/to/file1 path/to/file2
-
-# Stage only what you need
-git add path/to/related/file
-
-# Commit
-git commit -m "Focused commit message"
-```
-
-### Amending Commits
-
-If you accidentally commit too many files:
-
-```bash
-# Undo the commit but keep changes staged
-git reset --soft HEAD~1
-
-# Unstage the unrelated files
-git restore --staged unrelated/files
-
-# Recommit with only the relevant files
-git commit -m "Corrected commit message"
-
-# Re-stage the other work for future commits
-git add unrelated/files
-```
-
-### Common Files to Check
-
-Files that often appear staged but may not be related to your work:
-- `CLAUDE.md` - Documentation updates
-- `build.sbt.bak` - Backup files (should be in .gitignore)
-- `examples/` - Example code
-- `language/.../Keywords.scala` - Keyword updates
-- `passes/.../ValidationPass.scala` - Validation rule updates
-
-### .gitignore Best Practices
-
-Always add backup files and temporary files to `.gitignore`:
-- `*.bak` - Backup files
-- `*.tmp` - Temporary files
-- `target/` - Build artifacts (already present)
-- `.metals/` - Metals IDE files (already present)
 
 ## RiddlLib & RiddlAPI Patterns
 
@@ -660,150 +546,173 @@ Then add to root aggregation: `.aggregate(..., mymodule, mymoduleJS, mymoduleNat
 
 ---
 
-## Notes for Future Sessions
+## Subtle Patterns and Gotchas
 
-Items below are NOT duplicated elsewhere in this file.
+Each subsection is a topic, not a serial number — add new entries
+to the right group rather than appending to a list.
 
-1. **Always check sbt-ossuminc version** - API may have changed
-2. **BAST version is single integer** - `VERSION: Int = 1`,
-   stays at 1 until schema finalized for users
-3. **BAST FORMAT_REVISION must be incremented** whenever a
-   change to BASTWriter produces output that a previous
-   BASTReader cannot correctly read. This includes: new
-   statement subtypes, changed wire formats (added/removed
-   bytes), new node tags, or reordered fields. The constant
-   is in `language/shared/.../bast/package.scala`.
-4. **BAST location comparisons use offsets** - Compare
-   offset/endOffset, not line/col
-4. **FileBuilder requires PlatformContext** - `trait
-   FileBuilder(using PlatformContext)` — all subclasses must
-   propagate the using clause
-5. **npm requires --tag for prerelease versions** - sbt-dynver
-   versions like `1.2.3-1-hash` are prerelease per npm semver.
-   Must pass `--tag dev` when publishing
-6. **gh auth needs write:packages for npm** - Run
-   `gh auth refresh -s write:packages` if publishing to GH
-   Packages npm registry
-7. **OutlinePass and TreePass** - Lightweight HierarchyPass
-   subclasses in `passes/shared/.../passes/`. OutlinePass
-   produces flat `Seq[OutlineEntry]`; TreePass produces
-   recursive `Seq[TreeNode]`. Exposed via
-   `RiddlAPI.getOutline()` and `RiddlAPI.getTree()`
-8. **riddlLibJS tests** - `Test / scalaJSLinkerConfig` overridden
-   to `CommonJSModule`. Production stays ESModule
-9. **NEVER put `import '`, `import "`, or `import(` in shared
-   string literals** - ESM shim plugins rewrite these patterns.
-   Use string concatenation. `ESMSafetyTest` enforces this
-10. **Container.flatten()** - Recursively removes
-    Include/BASTImport wrappers in-place. Use base `Pass` not
-    `DepthFirstPass` — mutating contents during traversal
-    corrupts ArrayBuffer iteration
-11. **release.yml** - Triggered by `gh release create`. Builds
-    native riddlc (macOS ARM64, Linux x86_64) + JVM universal.
-    Sends `repository_dispatch` to homebrew-tap with SHA256
-    hashes. Requires `HOMEBREW_TAP_SECRET` repo secret
-12. **parseString returns opaque Root in JS** - Use
-    `getDomains(root)` or `inspectRoot(root)` to access data.
-    TypeScript type is branded `RootAST`
-13. **Schema match ordering** - Schema extends Leaf (Definition)
-    but is also in `NonDefinitionValues` union. Its match case
-    must appear BEFORE `case _: NonDefinitionValues`. Similarly,
-    Relationship before `case _: Definition`
-14. **CheckMessagesTest .check file format** - Lines starting
-    with space are continuation lines. Non-space lines begin new
-    entries. Don't insert entries mid-continuation
-15. **Streamlet shape validation** - Guard on `nonEmpty` before
-    checking inlet/outlet counts (empty = placeholder)
-16. **Analysis passes** - MessageFlowPass, EntityLifecyclePass,
-    DependencyAnalysisPass in `passes/shared/.../analysis/`.
-    Each extends `CollectingPass`, requires ResolutionPass
-17. **RecognizedOptions registry** - Validates option names,
-    argument counts, parent types. Unrecognized → StyleWarning
-18. **RiddlLib analysis API** - `getHandlerCompleteness()`,
-    `getMessageFlow()`, `getEntityLifecycles()` on shared
-    RiddlLib trait + JS facade
-19. **PR merge with branch protection** - Use
-    `gh pr merge --admin --merge --delete-branch=false`
-20. **RiddlLib.ast2bast(root)** - Returns
-    `RiddlResult[Array[Byte]]` (shared) /
-    `RiddlResult<Int8Array>` (TS)
-21. **Schema parser** - `schemaKind` uses `"time-series"`
-    (hyphenated). Consecutive schemas need `with { ... }` blocks
-22. **Adaptor cross-context type resolution** - Use parent-
-    independent `resolution.refMap.definitionOf[Type](pathId)`
-23. **RiddlResult[T] replaces Either[Messages, T]** — Sealed
-    ADT with `Success[T]` and `Failure`. Use `result.toEither`
-    for backward compat
-24. **sbt-dynver requires clean working tree** — `git stash`
-    modified files before `sbt publish` on a release tag
-25. **ParentStack is a class** — Use `ParentStack.empty` (not
-    `mutable.Stack.empty`). Same API: push, pop, toParents, etc.
-26. **ValidationMode enum** — `Full` or `Quick`. Quick skips
-    `checkStreaming` and `classifyHandlers` in postProcess
-27. **IncrementalValidator** — Caches messages per-Context using
-    FNV-1a fingerprints. `validator.reset()` forces full recheck
-28. **AST.Set shadows scala Set** — Use selective imports or
-    qualify as `scala.collection.immutable.Set`
-29. **Contents[?] extensions don't work** — Need concrete type
-    parameter `Contents[CV]` where `CV <: RiddlValue`
-30. **walkStatements helper** — Private method in ValidationPass,
-    recursively walks into WhenStatement/MatchStatement nesting
-31. **sbt-ossuminc 1.3.3 adds npmPublishLocal** — Auto-produces
-    npm `.tgz` on `publishLocal`
-32. **sbt version is 1.12.1**
-33. **Tests needing external repos** — Download at construction
-    time (not `beforeAll`) for ScalaTest `AnyWordSpec`
-34. **TatSu 5.17.0 is broken** — Pin `TatSu>=5.12.0,<5.17.0`
-35. **No `inline` on Contents extensions** — ScalaDoc 3.7.4
-    crashes. Filed: scala/scala3#25306
-36. **Current release is 1.15.3** — MessageFlowPass fix + perf opts
-45. **State is a Branch** — State extends `Branch[StateContents]`
-    where `StateContents = Handler | Comment`. PassVisitor uses
-    `openState`/`closeState` (not `doState`). ResolutionPass
-    prepends State to parents (as with all Branches), so refMap
-    keys for State's type ref use State as parent, not Entity
-46. **`do` is alias for `prompt`** — Both `do "text"` and
-    `prompt "text"` produce `PromptStatement`
-37. **PrettifyPass multi-file mode** — `flatten=false` (default)
-    preserves include/import structure. `-s true` for single file
-38. **BASTImport in HierarchyPass** — `openBASTImport`/
-    `closeBASTImport` hooks + `traverseBASTImportContents(bi)`.
-    All `PassVisitor` implementors must add them (even as no-ops)
-39. **PrettifyState URL normalization** — `toDestination()`
-    strips leading/trailing `/` from `outDir`
-40. **Hugo submodules removed** — `.gitmodules` deleted (Feb 2026)
-41. **RiddlFileEmitter.trimTrailingNewline()** — Used in
-    `closeType` to join `}` with ` with {` on same line
-42. **Include paths use url.path** — `openInclude` in
-    `PrettifyVisitor` uses relative filename, not absolute URL
-43. **sbt-riddl auto-downloads riddlc** — Caches in
-    `~/.cache/riddlc/<version>/`. Three-tier: explicit path >
-    download > PATH. Use `--no-ansi-messages` and strip ANSI
-    for version parsing. Pin `riddlcVersion` in scripted tests
-44. **sbt plugin visibility** — Use `private[plugin] def` to
-    avoid "private method never used" in sbt plugins (Scala 2.12)
-47. **Definition hashCode/equals override** — `Definition` trait
-    overrides `hashCode` (cheap: id+loc+class) and `equals`
-    (structural but skips `Contents` fields via `productEquals`).
-    This prevents O(subtree) hashing in all `HashMap[Definition,X]`
-    operations. Opaque type `Contents[?]` erases to `ArrayBuffer`
-    at runtime, so `case (_: Contents[?], ...)` matches correctly
-48. **TreePass uses Stack not HashMap** — `mutable.Stack` of
-    `ListBuffer[TreeNode]` replaces `Map[Definition, ListBuffer]`
-    for pure O(n) tree building
-49. **UsageResolution uses mutable.Set** — `uses`/`usedBy` value
-    types are `mutable.Set[Definition]` not `Seq[Definition]`.
-    API boundary methods (`getUsers`, `getUses`) return `.toSeq`
-50. **MessageFlowEdge.messageType is Option[Type]** — Changed
-    in 1.15.3. Adaptor declarations produce edges with `None`.
-    JS facade returns `""` for missing type. Consumers must use
-    `.map()`/`.getOrElse()`
-51. **MessageFlowPass direction-aware** — `InboundAdaptor` →
-    producer=referent, consumer=source. `OutboundAdaptor` →
-    producer=source, consumer=referent. Fixed in 1.15.3
-52. **MessageFlowOutput scoping helpers** — `edgesForDomain()`
-    and `edgesForContext()` take `SymbolsOutput` parameter to
-    walk parent chains
-53. **EBNF TatSu syntax** — Use `{rule}+` not `rule+` for
-    positive closure. TatSu requires curly braces around
-    repeated elements
+### BAST
+
+- **VERSION is a single integer** (`VERSION: Int = 1`) and stays
+  at 1 until the schema is finalized for external users.
+- **FORMAT_REVISION** must be incremented whenever a BASTWriter
+  change produces output that an older BASTReader can't read
+  correctly: new statement subtypes, wire-format changes,
+  reordered fields, new node tags. Constant lives in
+  `language/shared/.../bast/package.scala`.
+- **Location comparisons use offsets**, not `line`/`col`.
+- **BASTImport in HierarchyPass** — `openBASTImport` /
+  `closeBASTImport` hooks plus `traverseBASTImportContents(bi)`.
+  All `PassVisitor` implementors must define these (even as
+  no-ops); `BASTImport` extends `Container` but not `Branch`, so
+  without the hooks it falls through and its contents are never
+  visited.
+
+### AST / Language Internals
+
+- **AST.Set shadows scala.Set** — use selective imports or
+  qualify as `scala.collection.immutable.Set`.
+- **Schema match ordering** — Schema extends `Leaf` (Definition)
+  but is also in the `NonDefinitionValues` union. Its case must
+  appear BEFORE `case _: NonDefinitionValues`. Same trap for
+  `Relationship` vs `case _: Definition`.
+- **State is a Branch**, not a Leaf, of `Branch[StateContents]`
+  where `StateContents = Handler | Comment`. `PassVisitor` uses
+  `openState` / `closeState` (not `doState`). ResolutionPass
+  prepends State to parents (as with all Branches), so refMap
+  keys for State's type ref use State as parent, not Entity.
+- **`do "..."` is an alias for `prompt "..."`** — both produce
+  `PromptStatement`.
+- **walkStatements helper** — private in ValidationPass; walks
+  into `WhenStatement` / `MatchStatement` nesting.
+- **Definition hashCode/equals override** — `Definition` trait
+  overrides both: `hashCode` cheap (id + loc + class); `equals`
+  structural via `productEquals`, skipping `Contents` fields.
+  Prevents O(subtree) hashing in any `HashMap[Definition, X]`.
+  Opaque type `Contents[?]` erases to `ArrayBuffer` at runtime,
+  so `case (_: Contents[?], …)` matches correctly.
+
+### Pass Framework & Standard Passes
+
+- **OutlinePass / TreePass** — lightweight `HierarchyPass`
+  subclasses in `passes/shared/.../passes/`. OutlinePass →
+  flat `Seq[OutlineEntry]`. TreePass → recursive `Seq[TreeNode]`,
+  exposed via `RiddlAPI.getOutline()` / `getTree()`. TreePass
+  uses a `mutable.Stack[ListBuffer[TreeNode]]` for pure O(n)
+  building (not a `HashMap[Definition, ListBuffer]`).
+- **Analysis passes** — MessageFlowPass, EntityLifecyclePass,
+  DependencyAnalysisPass, AIHelperPass (1.22.0). All in
+  `passes/shared/.../analysis/` (or `passes/ai/`); each extends
+  `CollectingPass` (or HierarchyPass for AIHelperPass) and
+  requires ResolutionPass.
+- **MessageFlowPass** — `MessageFlowEdge.messageType` is
+  `Option[Type]` (adaptor declarations produce `None`; typed
+  handler edges produce `Some`). Direction-aware:
+  `InboundAdaptor`("from") → producer=referent, consumer=source;
+  `OutboundAdaptor`("to") → producer=source, consumer=referent.
+  `MessageFlowOutput.edgesForDomain()` / `edgesForContext()` take
+  a `SymbolsOutput` parameter for parent-chain walking.
+- **UsageResolution** uses `mutable.Set[Definition]` for
+  `uses` / `usedBy` (was `Seq`). API boundary methods (`getUsers`,
+  `getUses`) return `.toSeq`.
+- **ParentStack is a class**, not a type alias. Use
+  `ParentStack.empty` (not `mutable.Stack.empty`). Same API
+  (push, pop, toParents). It caches `toParents` (toSeq).
+- **ValidationMode enum** — `Full` or `Quick`. Quick skips
+  `checkStreaming` and `classifyHandlers` in postProcess.
+- **IncrementalValidator** — caches messages per-Context using
+  FNV-1a fingerprints. `validator.reset()` forces a full recheck.
+- **RecognizedOptions registry** — validates option names,
+  argument counts, parent types. Unrecognized → StyleWarning.
+- **RiddlLib analysis API** — `getHandlerCompleteness()`,
+  `getMessageFlow()`, `getEntityLifecycles()` on the shared
+  RiddlLib trait and JS facade. JS facade returns `""` for the
+  untyped (None) MessageFlow edges.
+
+### Validation Specifics
+
+- **Streamlet shape check** — guard on `nonEmpty` before
+  checking inlet/outlet counts (empty = placeholder).
+- **Adaptor cross-context type resolution** — use the
+  parent-independent
+  `resolution.refMap.definitionOf[Type](pathId)`.
+- **Schema parser** — `schemaKind` uses `"time-series"`
+  (hyphenated). Consecutive schemas need `with { ... }` blocks.
+- **CheckMessagesTest `.check` file format** — lines starting
+  with space are continuation lines; non-space lines begin new
+  entries. Don't insert mid-continuation.
+- **RiddlResult[T]** replaces `Either[Messages, T]` — sealed ADT
+  with `Success[T]` / `Failure`; use `result.toEither` for
+  backward compat.
+
+### Container / Flatten / FileBuilder
+
+- **Container.flatten()** recursively removes Include / BASTImport
+  wrappers in place. Use base `Pass`, not `DepthFirstPass` —
+  mutating contents during traversal corrupts ArrayBuffer
+  iteration.
+- **FileBuilder requires PlatformContext** — `trait FileBuilder
+  (using PlatformContext)`. All subclasses must propagate the
+  `using` clause.
+
+### PrettifyPass
+
+- **Multi-file mode** — `flatten=false` (default) preserves
+  include/import structure; `-s true` collapses to single file.
+- **`PrettifyState.toDestination()`** strips leading/trailing
+  `/` from `outDir` (URL basis can't start with `/`).
+- **Include paths** — `openInclude` uses `url.path` (relative
+  filename), not `url.toExternalForm` (absolute URL).
+- **`RiddlFileEmitter.trimTrailingNewline()`** — used in
+  `closeType` to join `}` with ` with {` on the same line.
+
+### JS / npm / TypeScript
+
+- **parseString returns an opaque Root in JS** — use
+  `getDomains(root)` or `inspectRoot(root)` to access data;
+  TypeScript type is branded `RootAST`.
+- **RiddlLib.ast2bast(root)** returns `RiddlResult[Array[Byte]]`
+  on the shared side / `RiddlResult<Int8Array>` in TS.
+- **riddlLibJS tests** override `Test / scalaJSLinkerConfig` to
+  `CommonJSModule`. Production stays ESModule.
+- **ESM shim hazard** — never put `import '`, `import "`, or
+  `import(` in shared string literals; ESM shim plugins rewrite
+  these patterns. Use string concatenation. `ESMSafetyTest`
+  enforces it.
+- **npm prerelease publishing** — sbt-dynver versions like
+  `1.2.3-1-hash` are prerelease per npm semver; pass `--tag dev`.
+- **GitHub Packages npm auth** — `gh auth refresh -s write:packages`
+  is required.
+
+### Build / CI / Tooling
+
+- **release.yml** — triggered by `gh release create`. Builds
+  native riddlc (macOS ARM64, Linux x86_64) + JVM universal.
+  Sends `repository_dispatch` to homebrew-tap with SHA256s.
+  Requires the `HOMEBREW_TAP_SECRET` repo secret.
+- **sbt-dynver wants a clean working tree** — `git stash`
+  modified files before `sbt publish` on a release tag.
+- **External-repo tests** — download at construction time (not
+  in `beforeAll`) for ScalaTest `AnyWordSpec`.
+- **TatSu pin** — `TatSu>=5.12.0,<5.17.0`. 5.17.0 has a missing
+  `rich` dependency that breaks import.
+- **EBNF TatSu syntax** — `{rule}+` not `rule+` for positive
+  closure; TatSu requires curly braces around the repeated
+  element.
+- **ScalaDoc + inline + opaque types** — keep `inline` off
+  `Contents` extension methods (NPE in
+  `ScalaSignatureProvider.methodSignature`). Filed:
+  scala/scala3#25306.
+- **sbt-riddl auto-downloads riddlc** — caches in
+  `~/.cache/riddlc/<version>/`; three-tier resolution: explicit
+  path > download > PATH. Use `--no-ansi-messages` and strip
+  ANSI for version parsing. Pin `riddlcVersion` to a real
+  release tag in scripted tests, not the dynver snapshot.
+- **sbt plugin visibility** — use `private[plugin] def` (not
+  `private def`) so Scala 2.12 doesn't warn "private method
+  never used" when sbt macros generate the usage.
+
+### Git Workflow
+
+- **PR merge with branch protection** —
+  `gh pr merge --admin --merge --delete-branch=false`.
