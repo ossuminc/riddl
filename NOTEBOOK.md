@@ -24,12 +24,12 @@ in sync with origin. No work-in-progress; no stashes.
 
 ## Open Tasks in `task/`
 
-- `error-location-end-of-line.md`
-- `sbt-riddl-validate-on-compile-fix.md`
-- `scope-based-parsing-api.md`
-- `optimize-treepass-performance.md`
-- `optimize-resolutionpass-performance.md`
-- `upgrade-sbt-riddl-1.15.4.md`
+- `upgrade-sbt-riddl-1.15.4.md` — downstream task for
+  riddl-models; sbt-riddl in this repo is already past 1.15.4
+  via the normal release cadence
+
+Completed task files live in `task/done/` (gitignored, local
+hygiene only).
 
 ## Active Work Queue
 
