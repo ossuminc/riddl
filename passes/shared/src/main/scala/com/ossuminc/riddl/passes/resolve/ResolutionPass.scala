@@ -73,7 +73,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   val symbols: SymbolsOutput = outputs.outputOf[SymbolsOutput](SymbolsPass.name).get
 
   override def result(root: PassRoot): ResolutionOutput =
-    ResolutionOutput(root, messages.toMessages, refMap, Usages(uses, usedBy))
+    ResolutionOutput(root, messages.toMessages, refMap, Usages(uses, usedBy, usesInPath, usedInPathBy))
 
   override def close(): Unit = ()
 
@@ -475,6 +475,16 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     else stack.pushAll(parents_to_add)
     stack.push(anchor)
     val pathIdStart = pathId.value.drop(1) // we already resolved the anchor
+    // The anchor is the first component of a multi-element path; it's an
+    // intermediate (not the final target), so record it as a path usage —
+    // unless the anchor is itself an ancestor of the authoring site
+    // (e.g., `state AState of fooBar.fields` inside `entity fooBar`),
+    // in which case the reference is internal to the definition itself
+    // and should not count as external usage.
+    if pathIdStart.nonEmpty && parents.nonEmpty &&
+       !parents.exists(_ eq anchor)
+    then
+      associatePathUsage(parents.head, anchor)
     var continue: Boolean = true
     var resolution: Resolution[T] = None
     var elementCounter: Int = pathIdStart.length
@@ -504,7 +514,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
             resolution = checkMatch[T](pathId, definition, parents)
           else
             // We have matched the current element and found some candidates for
-            // the next round, so we must push and continue
+            // the next round, so we must push and continue. This is an
+            // intermediate path component — record as path usage.
+            if parents.nonEmpty then associatePathUsage(parents.head, definition)
             stack.push(definition)
           end if
       end match

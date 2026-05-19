@@ -143,9 +143,6 @@ passes/input/check/everything/everything.riddl(66:5->26):
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' should have a description:
      entity SomeOtherThing is {
-passes/input/check/everything/everything.riddl(66:5->26):
- Entity 'SomeOtherThing' is unused:
-     entity SomeOtherThing is {
 passes/input/check/everything/everything.riddl(67:7->20):
  Metadata in Sink 'trashBin' should not be empty:
        sink trashBin is { inlet SOT_In is SomeOtherThing.ItHappened }

@@ -40,7 +40,7 @@ class PassTest extends AbstractTestingBasisWithTestData {
       po.resolution mustBe ResolutionOutput()
       po.validation mustBe ValidationOutput()
       po.refMap mustBe ReferenceMap(Messages.Accumulator.empty)
-      po.usage mustBe Usages(mutable.HashMap.empty, mutable.HashMap.empty)
+      po.usage mustBe Usages.empty
     }
   }
 

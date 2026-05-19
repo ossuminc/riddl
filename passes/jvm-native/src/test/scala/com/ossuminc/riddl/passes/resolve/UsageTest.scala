@@ -134,5 +134,208 @@ class UsageTest extends ParsingTest {
           warnMessage must include("Type 'Bar' is unused")
       }
     }
+    // Path-identifier usage tracking and the "only used in path"
+    // CompletenessWarning. See plan: validated-discovering-rivest.md
+    "record referenced only via path identifier emits CompletenessWarning, not 'is unused'" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain D is {
+            |  context C is {
+            |    record R is { f: Number }
+            |    command DoIt is { ??? }
+            |    entity E is {
+            |      record EState is { x: Number }
+            |      state S of E.EState
+            |      handler H is {
+            |        on command DoIt {
+            |          set field R.f to "1"
+            |        } with { described as "uses R only via path" }
+            |      } with { described as "h" }
+            |    } with { described as "e" }
+            |  } with { described as "c" }
+            |} with { described as "d" }
+            |""".stripMargin,
+          td
+        )
+        Riddl.parseAndValidate(input, shouldFailOnError = false) match {
+          case Left(messages) => fail(messages.format)
+          case Right(result) =>
+            val model = result.root
+            val R = model.contents
+              .filter[Domain]
+              .head
+              .contexts
+              .head
+              .types
+              .find(_.id.value == "R")
+              .get
+
+            // No "is unused" for R
+            result.messages.justUsage.exists(_.format.contains("'R' is unused")) mustBe false
+
+            // CompletenessWarning naming R, with the new message
+            val completenessAboutR = result.messages.filter(m =>
+              m.isCompleteness && m.format.contains("'R'") &&
+                m.format.contains("only referenced in path identifiers")
+            )
+            completenessAboutR.size mustBe 1
+
+            // Usage map reflects the path-only state
+            result.usage.isUsedInPath(R) mustBe true
+            result.usage.getUsers(R) mustBe empty
+        }
+    }
+    "record used as the type of a field emits no path-only warning" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    record R is { f: Number }
+          |    command DoIt is { ??? }
+          |    entity E is {
+          |      record EState is { r: R }
+          |      state S of E.EState
+          |      handler H is {
+          |        on command DoIt { ??? }
+          |      } with { described as "h" }
+          |    } with { described as "e" }
+          |  } with { described as "c" }
+          |} with { described as "d" }
+          |""".stripMargin,
+        td
+      )
+      Riddl.parseAndValidate(input, shouldFailOnError = false) match {
+        case Left(messages) => fail(messages.format)
+        case Right(result) =>
+          val model = result.root
+          val R = model.contents
+            .filter[Domain]
+            .head
+            .contexts
+            .head
+            .types
+            .find(_.id.value == "R")
+            .get
+
+          // No "only referenced in path identifiers" for R
+          result.messages.exists(m =>
+            m.isCompleteness && m.format.contains("'R'") &&
+              m.format.contains("only referenced in path identifiers")
+          ) mustBe false
+
+          // No "is unused" for R
+          result.messages.justUsage.exists(_.format.contains("'R' is unused")) mustBe false
+
+          // R is directly used (by the field `r: R`)
+          result.usage.getUsers(R).nonEmpty mustBe true
+      }
+    }
+    "record used both as a field's type and via path emits no path-only warning" in {
+      (td: TestData) =>
+        val input = RiddlParserInput(
+          """domain D is {
+            |  context C is {
+            |    record R is { f: Number }
+            |    command DoIt is { ??? }
+            |    entity E is {
+            |      record EState is { r: R }
+            |      state S of E.EState
+            |      handler H is {
+            |        on command DoIt {
+            |          set field R.f to "1"
+            |        } with { described as "path use" }
+            |      } with { described as "h" }
+            |    } with { described as "e" }
+            |  } with { described as "c" }
+            |} with { described as "d" }
+            |""".stripMargin,
+          td
+        )
+        Riddl.parseAndValidate(input, shouldFailOnError = false) match {
+          case Left(messages) => fail(messages.format)
+          case Right(result) =>
+            val model = result.root
+            val R = model.contents
+              .filter[Domain]
+              .head
+              .contexts
+              .head
+              .types
+              .find(_.id.value == "R")
+              .get
+
+            // No "only referenced in path identifiers" warning for R
+            result.messages.exists(m =>
+              m.isCompleteness && m.format.contains("'R'") &&
+                m.format.contains("only referenced in path identifiers")
+            ) mustBe false
+
+            // Both direct and path usage are recorded
+            result.usage.getUsers(R).nonEmpty mustBe true
+            result.usage.isUsedInPath(R) mustBe true
+        }
+    }
+    "path-only completeness warning is scoped to Types, not Entities" in { (td: TestData) =>
+      // E is referenced via path in `tell command E.DoIt to entity Other`,
+      // making E an intermediate path component. It has no other direct
+      // usage as a type (Entities never are typed-into-fields anyway), so
+      // the path-only warning would fire if it were not Types-scoped.
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    entity E is {
+          |      record EState is { x: Number }
+          |      state S of E.EState
+          |      command DoIt is { ??? }
+          |      handler H is {
+          |        on command DoIt { ??? }
+          |      } with { described as "h" }
+          |    } with { described as "e" }
+          |    entity Other is {
+          |      record OState is { y: Number }
+          |      state S2 of Other.OState
+          |      handler H2 is {
+          |        on command E.DoIt {
+          |          ???
+          |        } with { described as "uses E via path" }
+          |      } with { described as "h2" }
+          |    } with { described as "other" }
+          |  } with { described as "c" }
+          |} with { described as "d" }
+          |""".stripMargin,
+        td
+      )
+      Riddl.parseAndValidate(input, shouldFailOnError = false) match {
+        case Left(messages) => fail(messages.format)
+        case Right(result) =>
+          // No "only referenced in path identifiers" warning for E (or any
+          // non-Type definition).
+          result.messages.exists(m =>
+            m.isCompleteness && m.format.contains("'E'") &&
+              m.format.contains("only referenced in path identifiers")
+          ) mustBe false
+      }
+    }
+    "is unused still fires for a type with no references of any kind" in { (td: TestData) =>
+      // Regression check: existing semantics preserved when there are
+      // neither direct nor path-identifier references.
+      val input = RiddlParserInput(
+        """domain D is {
+          |  type Orphan = Number with { described as "untouched" }
+          |} with { described as "d" }
+          |""".stripMargin,
+        td
+      )
+      Riddl.parseAndValidate(input, shouldFailOnError = false) match {
+        case Left(messages) => fail(messages.format)
+        case Right(result) =>
+          val unused = result.messages.justUsage.filter(_.format.contains("'Orphan' is unused"))
+          unused.size mustBe 1
+          // And no spurious completeness warning, since it's not path-used.
+          result.messages.exists(m =>
+            m.isCompleteness && m.format.contains("'Orphan'") &&
+              m.format.contains("only referenced in path identifiers")
+          ) mustBe false
+      }
+    }
   }
 }
