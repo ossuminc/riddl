@@ -157,7 +157,6 @@ object Commands:
         end if
       }
     }
-    handleCommandResult(result)
     result
   end runFromConfig
 
