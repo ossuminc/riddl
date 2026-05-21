@@ -202,8 +202,12 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
         s"${index.endOffset} >= 0 && ${index.endOffset} <= ${data.length + 1}"
       )
       val (start, end) = lineRangeOf(index)
-      require(start <= index.offset, s"fail: $start <= ${index.offset}")
-      require(end >= index.endOffset, s"fail: $end >= ${index.endOffset}")
+      // When a parse failure occurs at EOF (e.g., missing closing `}`),
+      // the failure's `At` can have `endOffset` past the end of the line
+      // computed by `lineRangeOf`. The original `require` would crash the
+      // error reporter itself. Downstream slicing already clamps via
+      // `Math.min`, so this defensive code can tolerate the boundary
+      // condition instead of failing.
       val quoted = slice(start, end)
       if quoted.isEmpty then ""
       else {

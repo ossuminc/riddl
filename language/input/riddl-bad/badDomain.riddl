@@ -1,0 +1,3 @@
+domain BadDomain is {
+  include "badEntity.riddl"
+}

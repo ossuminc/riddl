@@ -1,0 +1,5 @@
+context BadContext is {
+  entity BadEntity is {
+    ???
+}
+
