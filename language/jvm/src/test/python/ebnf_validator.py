@@ -44,6 +44,7 @@ INCLUDE_FRAGMENTS = {
     "application.riddl",             # Context fragment in full/ and includes/
     "context.riddl",                 # Context fragment in full/
     "context-types.riddl",           # Context-level types for id-in-include test
+    "badEntity.riddl",                # Context-level fragment in riddl-bad/ (intentionally malformed; included by badDomain.riddl to exercise the missing-`}` error-reporter regression)
 }
 
 # Files that are intentionally invalid for testing error handling
