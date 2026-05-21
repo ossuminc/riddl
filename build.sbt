@@ -242,6 +242,11 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes")(JVM, JS, Native)
   .jsConfigure(With.noMiMa)
   .nativeConfigure(With.Native(mode = "fast"))
   .nativeConfigure(With.noMiMa)
+  // Scala 3.8.3 scaladoc has a race condition in
+  // Resources.allResources that crashes intermittently when multiple `doc`
+  // tasks run concurrently under `publish`. Disabling Native scaladoc
+  // avoids the race; Native consumers rarely consult the docs jar.
+  .nativeSettings(Compile / doc / sources := Seq.empty)
 val passes = passes_cp.jvm
 val passesJS = passes_cp.js
 val passesNative = passes_cp.native
@@ -325,6 +330,8 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   ))
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
+  // See note on passes_cp re: Scala 3.8.3 scaladoc race condition.
+  .nativeSettings(Compile / doc / sources := Seq.empty)
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
 val riddlLibNative = riddlLib_cp.native
