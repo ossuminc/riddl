@@ -309,9 +309,11 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
     state.withCurrent { rfe =>
       if riddl_state.contents.isEmpty then
         rfe.addLine(s"${keyword(riddl_state)} ${riddl_state.id.format} of ${riddl_state.typ.format}")
-      else
-        rfe.addLine(s"${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format}")
-        rfe.openDef(riddl_state)
+      else {
+        rfe.addLine(
+          s"${keyword(riddl_state)} ${riddl_state.id.format} is ${riddl_state.typ.format} {"
+        ).incr
+      }
       end if
     }
   end openState
