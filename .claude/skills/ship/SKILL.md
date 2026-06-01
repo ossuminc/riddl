@@ -17,19 +17,34 @@ not provided:
 
 ## Pre-Flight Checks
 
-1. Assert current branch is `main`:
+1. **Always ship from `main`; bring it up to date with
+   `development` first.** **We NEVER publish from
+   `development` or feature branches.** The release commits
+   normally live on `development`, so the standard process is
+   to fast-forward `main` up to `development` before tagging.
+   This is part of every release — do NOT ask the user whether
+   to do it:
    ```
-   git branch --show-current
+   git checkout main
+   git pull origin main
+   git merge --ff-only development
    ```
-   If not on `main`, ask the user before switching. **Never
-   publish from `development` or feature branches.**
+   - If `--ff-only` fails because `main` has commits not on
+     `development` (genuine divergence), STOP and ask the user
+     how to reconcile before proceeding. A clean fast-forward
+     is the expected case.
+   - Confirm you ended up on `main`:
+     ```
+     git branch --show-current
+     ```
 
 2. Assert working tree is clean:
    ```
    git status --porcelain
    ```
    If dirty, list the uncommitted files and ask the user how
-   to proceed.
+   to proceed. Scratch/test files that aren't part of the
+   release should be removed or set aside, not committed.
 
 3. **GITHUB_TOKEN handling**: Do NOT `unset GITHUB_TOKEN`
    globally — sbt needs it for GitHub Packages resolution.
@@ -38,10 +53,7 @@ not provided:
    unset GITHUB_TOKEN && gh ...
    ```
 
-4. When switching to `main`, always `git pull` first to
-   ensure local main is up to date with origin.
-
-5. Verify the version tag does not already exist:
+4. Verify the version tag does not already exist:
    ```
    git tag -l <VERSION>
    ```
