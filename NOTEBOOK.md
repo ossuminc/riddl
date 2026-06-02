@@ -17,10 +17,16 @@ to the task file and note the disposition below.
 
 ## Current Status
 
-**Last Updated**: 2026-05-18
+**Last Updated**: 2026-06-01
 
-HEAD is at tag **1.23.0** on `development`, clean working tree,
-in sync with origin. No work-in-progress; no stashes.
+HEAD is at tag **1.23.4** on `main` (and `development` matches),
+clean working tree, in sync with origin. No work-in-progress;
+no stashes. Four bug-fix releases shipped since the May
+notebook update: 1.23.1 (path-identifier usage tracking +
+duplicate-logging fix), 1.23.3 (EOF-brace crash + EBNF skip
+for malformed fixtures; 1.23.2 was a failed partial publish
+that never made it to a GitHub release), and 1.23.4 (Prettify
+state brace + Native scaladoc disable).
 
 ## Open Tasks in `task/`
 
@@ -96,6 +102,63 @@ actionable Tips on a second path. Tip categories: Completeness,
 Pattern, BestPractice, Relationship, Documentation. Entry points
 exposed cross-platform via `RiddlLib.analyzeForTips` /
 `analyzeSourceForTips`; `riddlc advise` is the CLI surface.
+
+### Path-Identifier Usage Tracking (1.23.1)
+
+`ResolutionPass.resolvePathFromAnchor` now records each anchor
+and non-terminal intermediate component of every path
+identifier as a **path usage** of `parents.head`. Storage is
+in parallel maps `usesInPath` / `usedInPathBy` on `UsageBase`
+(separate from the existing `uses` / `usedBy` to keep
+`Usages.getUsers` semantics unchanged for downstream callers).
+
+Filters:
+- Self-references skipped via `user ne use`.
+- Ancestor-qualified self references (e.g.,
+  `state AState of fooBar.fields` inside `entity fooBar`)
+  are filtered by `parents.exists(_ eq anchor)` — internal
+  qualification does not count as external usage.
+
+`UsageResolution.checkUnused`:
+- Suppresses `is unused` when either direct or path usage
+  exists.
+- Emits a new `CompletenessWarning` for Types only when usage
+  is path-only (addressable by path but never declared as a
+  field's / state's type).
+
+Public API on `Usages`: `isUsedInPath(d)` and
+`getPathUsers(d)`. Tests in `UsageTest.scala` cover
+positive / negative / mixed / scope / regression cases.
+
+### EOF Brace Crash in Error Reporter (1.23.3)
+
+Two `require` calls in `RiddlParserInput.annotateErrorLine`
+were over-strict for parse failures at EOF — when a closing
+`}` is missing, the failure's `At.endOffset` lands one past
+the line range computed by `lineRangeOf`, the requires threw
+`IllegalArgumentException`, and the outer `runMain` catch
+surfaced it as `[severe] Exception Thrown` instead of a
+normal `[error]` with file/line context. Removed the
+requires; downstream slicing already clamps via `Math.min`.
+
+Regression fixtures at `language/input/riddl-bad/{badDomain,
+badEntity}.riddl` (3 opens / 2 closes by design) + a
+`TopLevelParserTest` case lock this in. `badEntity.riddl` is
+listed in `INCLUDE_FRAGMENTS` of both `ebnf_tatsu_validator.py`
+and `ebnf_validator.py` so the EBNF-grammar CI job skips it.
+
+### Native Scaladoc Race (1.23.4 mitigation)
+
+Scala 3.8.3 scaladoc has a race in
+`dotty.tools.scaladoc.renderers.Resources.allResources` that
+crashes intermittently when multiple `doc` tasks run in
+parallel under `publish`. It cost two releases (1.23.2 never
+shipped; 1.23.3 needed a hand recovery). Workaround in
+`build.sbt`: `passesNative` and `riddlLibNative` set
+`Compile / doc / sources := Seq.empty` so the Native scaladoc
+task is a no-op. JVM and JS scaladoc are unaffected. If the
+race ever bites another Native module, apply the same one
+line to its `.nativeSettings`.
 
 ### Scala.js Validation Performance
 

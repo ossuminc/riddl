@@ -628,6 +628,23 @@ to the right group rather than appending to a list.
   `getMessageFlow()`, `getEntityLifecycles()` on the shared
   RiddlLib trait and JS facade. JS facade returns `""` for the
   untyped (None) MessageFlow edges.
+- **Path-identifier usages tracked separately** (1.23.1).
+  `ResolutionPass.resolvePathFromAnchor` calls
+  `associatePathUsage(parents.head, intermediate)` for each
+  anchor + non-terminal component, into the new
+  `usesInPath` / `usedInPathBy` maps on `UsageBase`. Existing
+  `uses` / `usedBy` semantics are intentionally unchanged so
+  `Usages.getUsers` and `AnalysisResult.getUsers` don't shift
+  underneath callers. Filtered against `user eq use` and
+  `parents.exists(_ eq anchor)` so internal self-references
+  don't leak in. Public accessors: `Usages.isUsedInPath(d)` /
+  `getPathUsers(d)`.
+- **Path-only usage triggers a CompletenessWarning** (Types
+  only). When a Type's `usedBy` is empty but `usedInPathBy`
+  is non-empty, `UsageResolution.checkUnused` emits "only
+  referenced in path identifiers" — the type is addressable
+  but can't carry data because nothing declares a field /
+  state of that type.
 
 ### Validation Specifics
 
@@ -703,6 +720,27 @@ to the right group rather than appending to a list.
   `Contents` extension methods (NPE in
   `ScalaSignatureProvider.methodSignature`). Filed:
   scala/scala3#25306.
+- **Scala 3.8.3 scaladoc parallel race** — multiple `doc`
+  tasks running concurrently under `publish` crash in
+  `dotty.tools.scaladoc.renderers.Resources.allResources`.
+  Symptom: `(<module>Native / Compile / doc)
+  java.lang.reflect.InvocationTargetException` partway
+  through `sbt clean test publish`, leaving partial Maven
+  artifacts on GitHub Packages. Workaround applied to
+  `passesNative` and `riddlLibNative` in `build.sbt`:
+  `.nativeSettings(Compile / doc / sources := Seq.empty)`.
+  If a future Native module trips the same race, add the same
+  one line.
+- **`annotateErrorLine` tolerates EOF-boundary `At`** — when a
+  parser failure points one past EOF (typical "missing `}`"
+  case), the failure's `endOffset` can exceed the line range
+  computed by `lineRangeOf`. Downstream slicing in
+  `annotateErrorLine` already clamps via `Math.min`, so the
+  function does NOT assert on the boundary. Don't reintroduce
+  the `require(end >= index.endOffset, …)` check that lived
+  there before 1.23.3 — it crashes the error reporter itself
+  and surfaces the real parse error as `[severe] Exception
+  Thrown` instead of a normal `[error]`.
 - **sbt-riddl auto-downloads riddlc** — caches in
   `~/.cache/riddlc/<version>/`; three-tier resolution: explicit
   path > download > PATH. Use `--no-ansi-messages` and strip
