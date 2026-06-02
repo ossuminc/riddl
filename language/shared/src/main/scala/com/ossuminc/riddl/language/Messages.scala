@@ -44,8 +44,10 @@ object Messages {
     def compare(that: KindOfMessage): Int = { this.severity - that.severity }
   }
 
-  /** A case object for the Tip kind of message, used by AIHelperPass
-    * to provide proactive guidance for improving RIDDL models.
+  /** A case object for the Tip kind of message. Retained for backward
+    * compatibility; remediation guidance is now carried as the `suggestion`
+    * field on every [[Message]] (gated by `CommonOptions.provideTips`) rather
+    * than as a separate message kind. No pass currently produces Tip messages.
     */
   case object Tip extends KindOfMessage {
     override def isTip: Boolean = true
@@ -149,9 +151,13 @@ object Messages {
     *   The kind of message as one of the case objects of [[KindOfMessage]]
     * @param context
     *   Additional referent that indicates the conditions that produced the message
+    * @param suggestion
+    *   An optional remediation suggestion (tip) for resolving the condition that produced this message. It is only
+    *   retained and rendered when [[com.ossuminc.riddl.utils.CommonOptions.provideTips]] is enabled; otherwise the
+    *   [[Accumulator]] strips it. Any pass may attach one. Placeholders in the text should mirror those in `message`.
     */
   @JSExportTopLevel("Message")
-  case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "")
+  case class Message(loc: At, message: String, kind: KindOfMessage = Error, context: String = "", suggestion: String = "")
       extends Ordered[Message] {
     def isInfo: Boolean = kind.isInfo
     def isTip: Boolean = kind.isTip
@@ -174,52 +180,56 @@ object Messages {
       val ctxt = if context.nonEmpty then {
         s"${nl}Context: $context"
       } else ""
+      val sugg = if suggestion.nonEmpty then {
+        s"${nl}Suggestion: $suggestion"
+      } else ""
       val location = loc.format
       val errorLine = loc.source.annotateErrorLine(loc)
       if loc.isEmpty || errorLine.isEmpty then {
-        s"$location:$nl$message$ctxt"
+        s"$location:$nl$message$ctxt$sugg"
       } else {
-        s"$location:$nl$message:$nl$errorLine$ctxt"
+        s"$location:$nl$message:$nl$errorLine$ctxt$sugg"
       }
     }
   }
 
   /** Generate a style warning */
-  @JSExport def style(message: String, loc: At = At.empty): Message = {
-    Message(loc, message, StyleWarning)
+  @JSExport def style(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
+    Message(loc, message, StyleWarning, suggestion = suggestion)
   }
 
   /** Generate a tip message */
-  @JSExport def tip(message: String, loc: At = At.empty): Message = {
-    Message(loc, message, Tip)
+  @JSExport def tip(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
+    Message(loc, message, Tip, suggestion = suggestion)
   }
 
   /** Generate a missing warning */
-  @JSExport def missing(message: String, loc: At = At.empty): Message = {
-    Message(loc, message, MissingWarning)
+  @JSExport def missing(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
+    Message(loc, message, MissingWarning, suggestion = suggestion)
   }
 
   /** Generate a usage warning */
-  @JSExport def usage(message: String, loc: At = At.empty): Message = {
-    Message(loc, message, UsageWarning)
+  @JSExport def usage(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
+    Message(loc, message, UsageWarning, suggestion = suggestion)
   }
 
   /** Generate an informative message */
-  @JSExport def info(message: String, loc: At = At.empty): Message = {
-    Message(loc, message, Info)
+  @JSExport def info(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
+    Message(loc, message, Info, suggestion = suggestion)
   }
 
   /** Generate a generic warning */
-  @JSExport def warning(message: String, loc: At = At.empty): Message = {
-    Message(loc, message, Warning)
+  @JSExport def warning(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
+    Message(loc, message, Warning, suggestion = suggestion)
   }
 
   /** Generate an error message */
   @JSExport
   def error(
     message: String,
-    loc: At = At.empty
-  ): Message = { Message(loc, message) }
+    loc: At = At.empty,
+    suggestion: String = ""
+  ): Message = { Message(loc, message, suggestion = suggestion) }
 
   /** Generate an error message resulting from an exception received */
   private def exceptionToError(exception: Throwable, loc: At = At.empty, context: String = ""): Message = {
@@ -233,8 +243,8 @@ object Messages {
   }
 
   /** Generate a severe error message */
-  @JSExport def severe(message: String, loc: At = At.empty): Message = {
-    Message(loc, message, SevereError)
+  @JSExport def severe(message: String, loc: At = At.empty, suggestion: String = ""): Message = {
+    Message(loc, message, SevereError, suggestion = suggestion)
   }
 
   /** Generate a [[scala.List]] with a single error message in it */
@@ -426,7 +436,11 @@ object Messages {
       *   This type, so you can chain another call to this accumulator
       */
     @JSExport
-    def add(message: Message)(using pc: PlatformContext): this.type = {
+    def add(message0: Message)(using pc: PlatformContext): this.type = {
+      // The provideTips option is the single chokepoint that governs whether a message's
+      // remediation suggestion is retained. When disabled, strip it so output stays concise
+      // and existing snapshot/`.check` tests are unaffected.
+      val message = if pc.options.provideTips then message0 else message0.copy(suggestion = "")
       message.kind match {
         case Warning =>
           if pc.options.showWarnings then msgs.append(message)
@@ -456,8 +470,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def style(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
-      add(Message(loc, message, StyleWarning))
+    @inline def style(message: String, loc: At = At.empty, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, message, StyleWarning, suggestion = suggestion))
     }
 
     /** Add an [[Info]] message to the accumulated [[Messages]]
@@ -469,8 +483,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def info(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
-      add(Message(loc, message, Info))
+    @inline def info(message: String, loc: At = At.empty, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, message, Info, suggestion = suggestion))
     }
 
     /** Add a [[Warning]] message to the accumulated [[Messages]]
@@ -482,8 +496,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def warning(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
-      add(Message(loc, message, Warning))
+    @inline def warning(message: String, loc: At = At.empty, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, message, Warning, suggestion = suggestion))
     }
 
     /** Add an [[Error]] message to the accumulated [[Messages]]
@@ -495,8 +509,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def error(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
-      add(Message(loc, message, Error))
+    @inline def error(message: String, loc: At = At.empty, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, message, Error, suggestion = suggestion))
     }
 
     /** Add a [[SevereError]] message to the accumulated [[Messages]]
@@ -508,8 +522,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def severe(message: String, loc: At = At.empty)(using pc: PlatformContext): this.type = {
-      add(Message(loc, message, SevereError))
+    @inline def severe(message: String, loc: At = At.empty, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, message, SevereError, suggestion = suggestion))
     }
 
     /** Add a [[StyleWarning]] message to the accumulated [[Messages]]
@@ -521,8 +535,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addStyle(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, StyleWarning))
+    @inline def addStyle(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, StyleWarning, suggestion = suggestion))
     }
 
     /** Add a [[UsageWarning]] message to the accumulated [[Messages]]
@@ -534,12 +548,12 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addUsage(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, UsageWarning))
+    @inline def addUsage(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, UsageWarning, suggestion = suggestion))
     }
 
-    @inline def addCompleteness(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, CompletenessWarning))
+    @inline def addCompleteness(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, CompletenessWarning, suggestion = suggestion))
     }
 
     /** Add a [[Tip]] message to the accumulated [[Messages]]
@@ -551,8 +565,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addTip(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, Tip))
+    @inline def addTip(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, Tip, suggestion = suggestion))
     }
 
     /** Add a [[MissingWarning]] message to the accumulated [[Messages]]
@@ -564,8 +578,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addMissing(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, MissingWarning))
+    @inline def addMissing(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, MissingWarning, suggestion = suggestion))
     }
 
     /** Add a [[Warning]] message to the accumulated [[Messages]]
@@ -577,8 +591,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addWarning(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, Warning))
+    @inline def addWarning(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, Warning, suggestion = suggestion))
     }
 
     /** Add an [[Error]] message to the accumulated [[Messages]]
@@ -590,8 +604,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addError(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, Error))
+    @inline def addError(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, Error, suggestion = suggestion))
     }
 
     /** Add a [[SevereError]] message to the accumulated [[Messages]]
@@ -603,8 +617,8 @@ object Messages {
       * @return
       *   This type, so you can chain another call to this accumulator
       */
-    @inline def addSevere(loc: At, msg: String)(using pc: PlatformContext): this.type = {
-      add(Message(loc, msg, SevereError))
+    @inline def addSevere(loc: At, msg: String, suggestion: String = "")(using pc: PlatformContext): this.type = {
+      add(Message(loc, msg, SevereError, suggestion = suggestion))
     }
   }
 

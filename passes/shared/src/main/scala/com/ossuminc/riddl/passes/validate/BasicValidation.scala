@@ -65,7 +65,12 @@ trait BasicValidation(using pc: PlatformContext) {
       val tc = classTag[T].runtimeClass
       val message =
         s"An empty path cannot be resolved to ${article(tc.getSimpleName)}"
-      messages.addError(pid.loc, message)
+      messages.addError(
+        pid.loc,
+        message,
+        suggestion = s"Provide a non-empty path that names ${article(tc.getSimpleName)}, " +
+          s"e.g. 'EnclosingScope.${tc.getSimpleName}Name'."
+      )
       Option.empty[T]
     else resolvePath[T](pid, parents)
   }
@@ -109,7 +114,11 @@ trait BasicValidation(using pc: PlatformContext) {
     kinds: Seq[AggregateUseCase]
   ): this.type = {
     if ref.isEmpty then {
-      messages.addError(ref.pathId.loc, s"${ref.identify} is empty")
+      messages.addError(
+        ref.pathId.loc,
+        s"${ref.identify} is empty",
+        suggestion = s"Name a message type here, e.g. '${kinds.headOption.map(_.useCase).getOrElse("command")} DoSomething'."
+      )
       this
     } else {
       checkRefAndExamine[Type](ref, parents) { (definition: Definition) =>
@@ -122,18 +131,23 @@ trait BasicValidation(using pc: PlatformContext) {
                   s"'${ref.identify} should be one of these message types: ${kinds.mkString(",")}" +
                     s" but is ${article(mk.useCase)} type instead",
                   Error,
-                  ref.pathId.loc
+                  ref.pathId.loc,
+                  suggestion = s"Reference a type declared as one of: ${kinds.map(_.useCase).mkString(", ")}; " +
+                    s"or redeclare the target type with one of those aggregate use cases."
                 )
               case te: TypeExpression =>
                 messages.addError(
                   ref.pathId.loc,
-                  s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${errorDescription(te)} type " + s"instead"
+                  s"'${ref.identify} should reference one of these types: ${kinds.mkString(",")} but is a ${errorDescription(te)} type " + s"instead",
+                  suggestion = s"Point the reference at a type declared as one of: ${kinds.map(_.useCase).mkString(", ")} " +
+                    s"(e.g. 'type X = ${kinds.headOption.map(_.useCase).getOrElse("command")} { ??? }')."
                 )
             }
           case _ =>
             messages.addError(
               ref.pathId.loc,
-              s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead"
+              s"${ref.identify} was expected to be one of these types; ${kinds.mkString(",")}, but is ${article(definition.kind)} instead",
+              suggestion = s"Reference a message type (${kinds.map(_.useCase).mkString(", ")}) rather than ${article(definition.kind)}."
             )
         }
       }
@@ -151,9 +165,10 @@ trait BasicValidation(using pc: PlatformContext) {
     predicate: Boolean = true,
     message: => String,
     kind: KindOfMessage,
-    loc: At
+    loc: At,
+    suggestion: => String = ""
   ): this.type = {
-    if !predicate then messages.add(Message(loc, message, kind))
+    if !predicate then messages.add(Message(loc, message, kind, suggestion = suggestion))
     this
   }
 
@@ -176,7 +191,11 @@ trait BasicValidation(using pc: PlatformContext) {
       if distinct.size > 1 then
         val message = defList.head.identify + " is overloaded with " +
           distinct.size.toString + " distinct field types:\n  " + typeLoc
-        messages.addWarning(defList.head.loc, message)
+        messages.addWarning(
+          defList.head.loc,
+          message,
+          suggestion = "Give the same-named fields a single consistent type, or rename them so each name maps to one type."
+        )
       end if
 
     end reportNonDistinctTypes
@@ -196,7 +215,8 @@ trait BasicValidation(using pc: PlatformContext) {
           val tailStr: String = defList.map(d => d.identifyWithLoc).mkString(s",\n  ")
           messages.addWarning(
             defList.head.errorLoc,
-            s"${defList.head.identify} is overloaded with ${map.size} kinds:\n  $tailStr"
+            s"${defList.head.identify} is overloaded with ${map.size} kinds:\n  $tailStr",
+            suggestion = "Rename one of the definitions so the same name does not refer to different kinds of definition."
           )
         else if map.size == 1 then
           map.head._1 match {
@@ -217,7 +237,11 @@ trait BasicValidation(using pc: PlatformContext) {
                 .mkString(",\n  ")
               val message = defList.head.identify + " is overloaded with " +
                 definitions.size.toString + s" distinct $name definitions:\n  " + typeLoc
-              messages.addError(defList.head.errorLoc, message)
+              messages.addError(
+                defList.head.errorLoc,
+                message,
+                suggestion = s"Rename or merge the duplicate $name definitions so each name is unique within its scope."
+              )
             case _ => ()
           }
         end if
@@ -231,12 +255,14 @@ trait BasicValidation(using pc: PlatformContext) {
       d.id.nonEmpty | d.isAnonymous,
       "Identifiers must not be empty",
       Error,
-      d.errorLoc
+      d.errorLoc,
+      suggestion = s"Give this ${d.kind} a name of at least $min characters."
     )
     if !d.isAnonymous && d.id.value.length < min then {
       messages.addStyle(
         d.id.loc,
-        s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min"
+        s"${d.kind} identifier '${d.id.value}' is too short. The minimum length is $min",
+        suggestion = s"Rename '${d.id.value}' to a more descriptive identifier of at least $min characters."
       )
     }
     this
@@ -253,7 +279,8 @@ trait BasicValidation(using pc: PlatformContext) {
       value.nonEmpty,
       message = s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
-      thing.errorLoc
+      thing.errorLoc,
+      suggestion = s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
     )
   }
 
@@ -270,7 +297,8 @@ trait BasicValidation(using pc: PlatformContext) {
       message =
         s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
       kind,
-      thing.errorLoc
+      thing.errorLoc,
+      suggestion = s"Provide a value for '$name' in ${thing.identify}, or remove the empty declaration."
     )
   }
 
@@ -285,7 +313,8 @@ trait BasicValidation(using pc: PlatformContext) {
       list.nonEmpty,
       s"$name in ${thing.identify} ${if required then "must" else "should"} not be empty",
       kind,
-      thing.errorLoc
+      thing.errorLoc,
+      suggestion = s"Add at least one $name to ${thing.identify}, or remove the empty declaration."
     )
   }
 
@@ -301,7 +330,8 @@ trait BasicValidation(using pc: PlatformContext) {
       list.nonEmpty,
       s"$name in ${thing.identify} at $loc ${if required then "must" else "should"} not be empty",
       kind,
-      loc
+      loc,
+      suggestion = s"Add at least one $name to ${thing.identify}, or remove the empty declaration."
     )
   }
 
@@ -327,7 +357,10 @@ trait BasicValidation(using pc: PlatformContext) {
                     " Cross-context references violate the 'bounded' aspect of bounded contexts and lead to" +
                     " model confusion. Instead, use an Adaptor to translate message types between contexts" +
                     " or a Streamlet pipeline (Source/Sink/Flow) to decouple the communication",
-                  ref.loc.extend(formatted.length)
+                  ref.loc.extend(formatted.length),
+                  suggestion = s"Add an Adaptor in ${containerContext.identify} to translate messages from " +
+                    s"${definitionContext.identify}, or connect the contexts with a Streamlet (Source/Sink/Flow) " +
+                    "instead of referencing across the context boundary directly."
                 )
               )
             else ()

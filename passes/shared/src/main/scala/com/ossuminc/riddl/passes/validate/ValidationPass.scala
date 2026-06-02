@@ -122,13 +122,15 @@ case class ValidationPass(
           case BehaviorCategory.Empty =>
             messages.addCompleteness(
               hc.handler.errorLoc,
-              s"${hc.handler.identify} in ${hc.parent.identify} has no executable statements"
+              s"${hc.handler.identify} in ${hc.parent.identify} has no executable statements",
+              suggestion = "Add executable statements (tell, send, set, morph, become, reply) to the handler's on-clauses."
             )
           case BehaviorCategory.PromptOnly =>
             messages.addCompleteness(
               hc.handler.errorLoc,
               s"${hc.handler.identify} in ${hc.parent.identify} contains only prompt statements; " +
-                "executable statements (tell, send, morph, set, etc.) are needed"
+                "executable statements (tell, send, morph, set, etc.) are needed",
+              suggestion = "Add executable statements (tell, send, set, morph) alongside the 'prompt' statements so the handler does real work."
             )
           case BehaviorCategory.Executable => ()
         }
@@ -167,7 +169,8 @@ case class ValidationPass(
           case auc: AggregateUseCaseTypeExpression if auc.fields.isEmpty && !cmd.isEmpty =>
             messages.addMissing(
               cmd.errorLoc,
-              s"${cmd.identify} is a command with no fields; commands should carry data"
+              s"${cmd.identify} is a command with no fields; commands should carry data",
+              suggestion = s"Add fields to ${cmd.identify}, e.g. 'command X is { someField: Type }'."
             )
           case _ => ()
         }
@@ -193,7 +196,8 @@ case class ValidationPass(
           if !producedEventNames.contains(evt.id.value) then {
             messages.addCompleteness(
               evt.errorLoc,
-              s"${evt.identify} is defined but no handler produces it"
+              s"${evt.identify} is defined but no handler produces it",
+              suggestion = s"Send or tell ${evt.identify} from a command handler so the event is produced, or remove the unused event."
             )
           }
         }
@@ -202,13 +206,15 @@ case class ValidationPass(
       if queries.nonEmpty && results.isEmpty then {
         messages.addCompleteness(
           context.errorLoc,
-          s"${context.identify} defines queries but no result types"
+          s"${context.identify} defines queries but no result types",
+          suggestion = s"Add a result type to ${context.identify}, e.g. 'type XResult = result { ??? }'."
         )
       }
       if results.nonEmpty && queries.isEmpty then {
         messages.addCompleteness(
           context.errorLoc,
-          s"${context.identify} defines results but no query types"
+          s"${context.identify} defines results but no query types",
+          suggestion = s"Add a query type to ${context.identify}, e.g. 'type XQuery = query { ??? }'."
         )
       }
     }
@@ -229,7 +235,8 @@ case class ValidationPass(
         if inv.nonEmpty && !referencedInvariantNames.contains(inv.id.value) then {
           messages.addUsage(
             inv.errorLoc,
-            s"${inv.identify} is defined but not referenced by any 'require invariant' statement"
+            s"${inv.identify} is defined but not referenced by any 'require invariant' statement",
+            suggestion = s"Reference ${inv.identify} from a handler with 'require invariant ${inv.id.value}', or remove it if unused."
           )
         }
       }
@@ -266,7 +273,8 @@ case class ValidationPass(
         if ooc.statements.isEmpty then {
           messages.addCompleteness(
             ooc.errorLoc,
-            "Empty 'on other' clause will silently discard unhandled messages"
+            "Empty 'on other' clause will silently discard unhandled messages",
+            suggestion = "Add statements to the 'on other' clause (e.g. log or error), or remove it if discarding is intentional."
           )
         }
       case statement: Statement =>
@@ -340,7 +348,13 @@ case class ValidationPass(
   }
   private def validateOnClause(onClause: OnClause): Unit =
     if onClause.statements.isEmpty then
-      messages.add(missing(s"${onClause.identify} should have statements", onClause.loc))
+      messages.add(
+        missing(
+          s"${onClause.identify} should have statements",
+          onClause.loc,
+          suggestion = s"Add one or more statements to ${onClause.identify} (use '???' as a placeholder if needed)."
+        )
+      )
   end validateOnClause
 
   private def validateOnMessageClause(omc: OnMessageClause, parents: Parents): Unit = {
@@ -366,7 +380,8 @@ case class ValidationPass(
             if !(foundSend || foundTell) then
               messages.addCompleteness(
                 omc.errorLoc,
-                s"Command processing in ${entity.identify} should result in sending an event"
+                s"Command processing in ${entity.identify} should result in sending an event",
+                suggestion = "Send or tell an event from this command handler, e.g. 'send event SomethingHappened to outlet ...'."
               )
           case AggregateUseCase.QueryCase =>
             val finder = Finder(omc.contents)
@@ -382,7 +397,8 @@ case class ValidationPass(
             if !(foundSend || foundTell || foundReply) then
               messages.addCompleteness(
                 omc.errorLoc,
-                s"Query processing in ${entity.identify} should result in a reply or sending a result"
+                s"Query processing in ${entity.identify} should result in a reply or sending a result",
+                suggestion = "Reply with a result or send a result type from this query handler, e.g. 'reply result QueryResult'."
               )
           case _ =>
         }
@@ -465,12 +481,19 @@ case class ValidationPass(
           identifier.value.length >= 3,
           s"Identifier '${identifier.value}' is too short",
           MissingWarning,
-          identifier.loc
+          identifier.loc,
+          suggestion = "Use an identifier of at least 3 characters in the 'let' statement."
         )
         checkNonEmptyValue(expression, "expression", onClause, loc, MissingWarning, required = true)
       case CodeStatement(loc, language, body) =>
         checkNonEmptyValue(language, "language", onClause, loc, MissingWarning, required = true)
-        check(body.nonEmpty, "Code statement body cannot be empty", MissingWarning, loc)
+        check(
+          body.nonEmpty,
+          "Code statement body cannot be empty",
+          MissingWarning,
+          loc,
+          suggestion = "Provide a non-empty code body, or remove the empty code statement."
+        )
       case RequireStatement(loc, condition) =>
         condition match {
           case ls: LiteralString =>
@@ -513,7 +536,8 @@ case class ValidationPass(
         Message(
           f.id.loc,
           "Field names should begin with a lower case letter",
-          StyleWarning
+          StyleWarning,
+          suggestion = s"Start the field name with a lower-case letter, e.g. '${f.id.value.take(1).toLowerCase + f.id.value.drop(1)}'."
         )
       )
     }
@@ -529,7 +553,8 @@ case class ValidationPass(
         Message(
           m.id.loc,
           "Method names should begin with a lower case letter",
-          StyleWarning
+          StyleWarning,
+          suggestion = s"Start the method name with a lower-case letter, e.g. '${m.id.value.take(1).toLowerCase + m.id.value.drop(1)}'."
         )
       )
     checkTypeExpression(m.typeEx, m, parents)
@@ -539,7 +564,8 @@ case class ValidationPass(
         messages.add(
           Messages.style(
             "Method argument names should begin with a lower case letter",
-            arg.loc  // Fixed: use argument location, not method identifier location
+            arg.loc, // Fixed: use argument location, not method identifier location
+            suggestion = s"Start the argument name with a lower-case letter, e.g. '${arg.name.take(1).toLowerCase + arg.name.drop(1)}'."
           )
         )
     checkMetadata(m)
@@ -594,20 +620,23 @@ case class ValidationPass(
                   inlet.loc,
                   s"Type mismatch in ${connector.identify}: ${inlet.identify} " +
                     s"requires ${inlet.type_.identify} and ${outlet.identify} requires ${outlet.type_.identify} " +
-                    s"which are not the same types"
+                    s"which are not the same types",
+                  suggestion = "Make the inlet and outlet use the same type, or insert a Flow streamlet to transform between them."
                 )
               end if
             case _ =>
               if outType.isEmpty then
                 messages.addError(
                   outlet.loc,
-                  s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}"
+                  s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}",
+                  suggestion = s"Define the type '${outlet.type_.pathId.format}', or correct the outlet's type reference."
                 )
               end if
               if inType.isEmpty then
                 messages.addError(
                   inlet.loc,
-                  s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}"
+                  s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}",
+                  suggestion = s"Define the type '${inlet.type_.pathId.format}', or correct the inlet's type reference."
                 )
               end if
           end match
@@ -636,14 +665,16 @@ case class ValidationPass(
       typeName.head.isUpper,
       s"${t.identify} should start with a capital letter",
       StyleWarning,
-      t.id.loc
+      t.id.loc,
+      suggestion = s"Capitalize the type name, e.g. '${typeName.capitalize}'."
     )
     // Check if the type name exactly matches a predefined type name
     check(
       !PredefType.allPredefTypes.contains(typeName),
       s"${t.identify} redefines built-in type '$typeName'",
       Error,
-      t.id.loc
+      t.id.loc,
+      suggestion = s"Rename the type to something other than the built-in '$typeName'."
     )
     // Check if the type name is a case-variant of a predefined type
     if !PredefType.allPredefTypes.contains(typeName) then
@@ -656,7 +687,8 @@ case class ValidationPass(
           s"${t.identify} is a redundant case-variant of " +
             s"built-in type '$predef'",
           StyleWarning,
-          t.id.loc
+          t.id.loc,
+          suggestion = s"Rename the type so it is not a case-variant of built-in '$predef', or use the built-in '$predef' directly."
         )
       }
     end if
@@ -686,7 +718,8 @@ case class ValidationPass(
             messages.addError(
               s.typ.loc,
               s"${s.identify} references an empty aggregate but must have " +
-                s"at least one field"
+                s"at least one field",
+              suggestion = s"Add at least one field to the aggregate type used by ${s.identify}, e.g. 'field someName: Type'."
             )
           }
         case _ =>
@@ -695,7 +728,8 @@ case class ValidationPass(
         typ.id.value != s.id.value,
         s"${s.identify} and ${typ.identify} must not have the same name so path resolution can succeed",
         Messages.Error,
-        s.loc
+        s.loc,
+        suggestion = s"Rename either the state or the type so they do not share the name '${s.id.value}'."
       )
     }
   }
@@ -710,7 +744,8 @@ case class ValidationPass(
       f.contents.filter[Statement].nonEmpty,
       s"${f.identify} in ${parent.identify} should have statements",
       MissingWarning,
-      f.errorLoc
+      f.errorLoc,
+      suggestion = s"Add statements to the body of ${f.identify} (use '???' as a placeholder if needed)."
     )
     f.input.foreach { agg =>
       checkTypeExpression(agg, f, parents)
@@ -736,7 +771,8 @@ case class ValidationPass(
           if !handlesCommandOrQuery then
             messages.addWarning(
               h.errorLoc,
-              s"${h.identify} in ${entity.identify} handles no commands or queries; entity handlers typically handle commands and queries"
+              s"${h.identify} in ${entity.identify} handles no commands or queries; entity handlers typically handle commands and queries",
+              suggestion = s"Add 'on command ...' or 'on query ...' clauses to ${h.identify}."
             )
         }
       case Some(repo: Repository) =>
@@ -747,7 +783,8 @@ case class ValidationPass(
           if handlesEvents then
             messages.addWarning(
               h.errorLoc,
-              s"${h.identify} in ${repo.identify} handles events; repositories typically handle commands and queries, not events"
+              s"${h.identify} in ${repo.identify} handles events; repositories typically handle commands and queries, not events",
+              suggestion = "Move event handling to a projector; have the repository handle commands (writes) and queries (reads) instead."
             )
         }
       case Some(proj: Projector) =>
@@ -759,7 +796,8 @@ case class ValidationPass(
           if handlesCommandsOrQueries then
             messages.addWarning(
               h.errorLoc,
-              s"${h.identify} in ${proj.identify} handles commands or queries; projectors typically handle events to build read models"
+              s"${h.identify} in ${proj.identify} handles commands or queries; projectors typically handle events to build read models",
+              suggestion = "Have the projector handle events ('on event ...') to build its read model instead of commands or queries."
             )
         }
       case _ => ()
@@ -768,15 +806,39 @@ case class ValidationPass(
 
   // FIXME: This should be used:
   private def validateInclude[T <: RiddlValue](i: Include[T]): Unit = {
-    check(i.contents.nonEmpty, "Include has no included content", Messages.Error, i.loc)
-    check(i.origin.nonEmpty, "Include has no source provided", Messages.Error, i.loc)
+    check(
+      i.contents.nonEmpty,
+      "Include has no included content",
+      Messages.Error,
+      i.loc,
+      suggestion = "Ensure the included file exists and contains valid RIDDL content for this scope."
+    )
+    check(
+      i.origin.nonEmpty,
+      "Include has no source provided",
+      Messages.Error,
+      i.loc,
+      suggestion = "Provide a file path to include, e.g. 'include \"entities.riddl\"'."
+    )
   }
 
   // NOTE: avoid "import '" in string literals — ESM shim plugins
   // misinterpret it as an ES module import statement.
   private def validateBASTImport(bi: BASTImport, parents: Parents): Unit = {
-    check(bi.path.s.nonEmpty, "BAST load has no path specified", Messages.Error, bi.loc)
-    check(bi.path.s.endsWith(".bast"), s"BAST load path '${bi.path.s}' should end with .bast", Messages.Warning, bi.loc)
+    check(
+      bi.path.s.nonEmpty,
+      "BAST load has no path specified",
+      Messages.Error,
+      bi.loc,
+      suggestion = "Provide a .bast file path to import, e.g. 'import \"model.bast\"'."
+    )
+    check(
+      bi.path.s.endsWith(".bast"),
+      s"BAST load path '${bi.path.s}' should end with .bast",
+      Messages.Warning,
+      bi.loc,
+      suggestion = "Give the imported file a '.bast' extension."
+    )
   }
 
   private def validateSchema(
@@ -798,49 +860,57 @@ case class ValidationPass(
         if schema.links.nonEmpty then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is ${schema.schemaKind} and should not define links"
+            s"${schema.identify} is ${schema.schemaKind} and should not define links",
+            suggestion = s"Remove the links from this ${schema.schemaKind} schema, or change the schema kind to one that supports links."
           )
         if schema.data.size > 1 then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is flat but defines ${schema.data.size} data nodes; flat schemas typically represent a single table or collection"
+            s"${schema.identify} is flat but defines ${schema.data.size} data nodes; flat schemas typically represent a single table or collection",
+            suggestion = "Reduce the flat schema to a single data node, or change its kind to one that models multiple tables (e.g. relational)."
           )
       case RepositorySchemaKind.Document | RepositorySchemaKind.Columnar |
            RepositorySchemaKind.Vector =>
         if schema.links.nonEmpty then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is ${schema.schemaKind} and should not define links"
+            s"${schema.identify} is ${schema.schemaKind} and should not define links",
+            suggestion = s"Remove the links from this ${schema.schemaKind} schema, or change the schema kind to one that supports links."
           )
       case RepositorySchemaKind.TimeSeries =>
         if schema.indices.isEmpty then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is a time-series schema but has no indices; time-series schemas should index the time dimension"
+            s"${schema.identify} is a time-series schema but has no indices; time-series schemas should index the time dimension",
+            suggestion = "Add an index on the time dimension of the time-series schema."
           )
       case RepositorySchemaKind.Hierarchical =>
         if schema.links.isEmpty && schema.data.size > 1 then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is hierarchical with ${schema.data.size} data nodes but has no links; consider adding links to define the tree structure"
+            s"${schema.identify} is hierarchical with ${schema.data.size} data nodes but has no links; consider adding links to define the tree structure",
+            suggestion = "Add links between data nodes to define the parent/child tree structure of the hierarchical schema."
           )
       case RepositorySchemaKind.Star =>
         if schema.links.isEmpty && schema.data.size > 1 then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is a star schema with ${schema.data.size} data nodes but has no links; consider adding links from fact table to dimension tables"
+            s"${schema.identify} is a star schema with ${schema.data.size} data nodes but has no links; consider adding links from fact table to dimension tables",
+            suggestion = "Add links from the fact table to the dimension tables in the star schema."
           )
       case RepositorySchemaKind.Graphical =>
         if schema.links.isEmpty && schema.data.nonEmpty then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is graphical but has no links (edges)"
+            s"${schema.identify} is graphical but has no links (edges)",
+            suggestion = "Add links to define the edges connecting the nodes of the graphical schema."
           )
       case RepositorySchemaKind.Relational =>
         if schema.links.isEmpty && schema.data.size > 1 then
           messages.addWarning(
             schema.errorLoc,
-            s"${schema.identify} is relational with ${schema.data.size} data nodes but has no links; consider adding links to define relationships"
+            s"${schema.identify} is relational with ${schema.data.size} data nodes but has no links; consider adding links to define relationships",
+            suggestion = "Add links between data nodes to define foreign-key relationships in the relational schema."
           )
         schema.links.values.foreach { case (fromRef, toRef) =>
           val fromType = resolvePath[Field](fromRef.pathId, parents).map(_.typeEx)
@@ -850,7 +920,8 @@ case class ValidationPass(
               if ft != tt then
                 messages.addError(
                   fromRef.loc,
-                  s"Link in ${schema.identify} connects fields with incompatible types: ${fromRef.pathId.format} is ${ft.format} but ${toRef.pathId.format} is ${tt.format}"
+                  s"Link in ${schema.identify} connects fields with incompatible types: ${fromRef.pathId.format} is ${ft.format} but ${toRef.pathId.format} is ${tt.format}",
+                  suggestion = "Make the two linked fields share the same type so the relationship is type-consistent."
                 )
             case _ => () // unresolved fields already reported elsewhere
           }
@@ -860,7 +931,8 @@ case class ValidationPass(
     if schema.schemaKind == RepositorySchemaKind.Vector && schema.data.size > 1 then
       messages.addWarning(
         schema.errorLoc,
-        s"${schema.identify} is a vector schema but defines ${schema.data.size} data nodes; typically only one is expected"
+        s"${schema.identify} is a vector schema but defines ${schema.data.size} data nodes; typically only one is expected",
+        suggestion = "Keep the vector schema to a single data node."
       )
     schema.data.values.foreach { typeRef =>
       checkRef[Type](typeRef, parents)
@@ -893,7 +965,8 @@ case class ValidationPass(
         Message(
           entity.errorLoc,
           s"${entity.identify} must define at least one state",
-          Messages.MissingWarning
+          Messages.MissingWarning,
+          suggestion = s"Add a state to ${entity.identify}, e.g. 'state ${entity.id.value}State of ${entity.id.value}Data is { ??? }'."
         )
       )
     }
@@ -902,7 +975,8 @@ case class ValidationPass(
         Message(
           entity.errorLoc,
           s"${entity.identify} has only empty handlers",
-          Messages.MissingWarning
+          Messages.MissingWarning,
+          suggestion = "Add on-clauses to the entity's handlers, e.g. 'on command DoThing { ??? }'."
         )
       )
     }
@@ -911,7 +985,8 @@ case class ValidationPass(
         Message(
           entity.errorLoc,
           s"${entity.identify} is declared as an fsm, but doesn't have at least two states",
-          Messages.Error
+          Messages.Error,
+          suggestion = "Define at least two states for the finite-state-machine entity (a state machine needs states to transition between)."
         )
       )
     }
@@ -926,7 +1001,8 @@ case class ValidationPass(
       if !hasMorphOrBecome then
         messages.addCompleteness(
           entity.errorLoc,
-          s"${entity.identify} is declared as a finite-state-machine but its handlers contain no morph or become statements"
+          s"${entity.identify} is declared as a finite-state-machine but its handlers contain no morph or become statements",
+          suggestion = "Add 'morph' or 'become' statements so the FSM transitions between its states."
         )
     }
     if entity.states.nonEmpty then {
@@ -938,7 +1014,8 @@ case class ValidationPass(
           Message(
             state.errorLoc,
             s"${state.identify} in ${entity.identify} has no handlers.",
-            Messages.Error
+            Messages.Error,
+            suggestion = s"Add a handler to ${state.identify} (or to ${entity.identify}) to process messages in this state."
           )
         )
       end for
@@ -948,7 +1025,8 @@ case class ValidationPass(
           entity.errorLoc,
           s"${entity.identify} has no handlers and no states with handlers. " +
             "Add a handler to the entity or add a state with a handler.",
-          Messages.Error
+          Messages.Error,
+          suggestion = "Add a handler to the entity, or add a state containing a handler, so the entity can process messages."
         )
       )
     }
@@ -962,7 +1040,8 @@ case class ValidationPass(
         if onInits.isEmpty then
           messages.addCompleteness(
             state.errorLoc,
-            s"${state.identify} in ${entity.identify} has no 'on init' clause to initialize its state"
+            s"${state.identify} in ${entity.identify} has no 'on init' clause to initialize its state",
+            suggestion = s"Add an 'on init' clause to a handler of ${state.identify} to initialize its fields."
           )
         else
           val hasSet = onInits.exists { oic =>
@@ -972,14 +1051,16 @@ case class ValidationPass(
           if !hasSet then
             messages.addCompleteness(
               state.errorLoc,
-              s"${state.identify} in ${entity.identify} has an 'on init' clause but no 'set' statement to initialize state values"
+              s"${state.identify} in ${entity.identify} has an 'on init' clause but no 'set' statement to initialize state values",
+              suggestion = "Add 'set' statements in the 'on init' clause to initialize the state's fields."
             )
       }
     // Completeness 4f: entity with no handlers at all
     if entity.nonEmpty && entity.handlers.isEmpty && entity.states.forall(_.handlers.isEmpty) then
       messages.addCompleteness(
         entity.errorLoc,
-        s"${entity.identify} has no handlers to process messages"
+        s"${entity.identify} has no handlers to process messages",
+        suggestion = "Add a handler (on the entity or its state) to process incoming messages."
       )
     // Completeness 4g: entity without query handlers
     if entity.nonEmpty && entity.handlers.nonEmpty then
@@ -993,7 +1074,8 @@ case class ValidationPass(
       if !hasQueryHandler then
         messages.addCompleteness(
           entity.errorLoc,
-          s"${entity.identify} has no 'on query' clause; information cannot be extracted from it"
+          s"${entity.identify} has no 'on query' clause; information cannot be extracted from it",
+          suggestion = "Add an 'on query' clause so the entity's state can be read."
         )
     // Completeness 4h: entity without event outlet in parent context
     if entity.nonEmpty then
@@ -1002,7 +1084,8 @@ case class ValidationPass(
         if !hasOutlet then
           messages.addCompleteness(
             entity.errorLoc,
-            s"${entity.identify} in ${context.identify} has no outlet streamlet to publish events on"
+            s"${entity.identify} in ${context.identify} has no outlet streamlet to publish events on",
+            suggestion = s"Add a Source or Flow streamlet with an outlet to ${context.identify} so ${entity.identify} can publish its events."
           )
       }
     // Completeness: entity Id type placement checks
@@ -1025,7 +1108,8 @@ case class ValidationPass(
         // (b) Not defined at all
         messages.addCompleteness(
           entity.errorLoc,
-          s"${entity.identify} does not define an Id type for its identity"
+          s"${entity.identify} does not define an Id type for its identity",
+          suggestion = s"Define an Id type for ${entity.identify} in its context, e.g. 'type Id = Id(${entity.id.value})'."
         )
       } else {
         allIdTypes.foreach { idType =>
@@ -1037,7 +1121,8 @@ case class ValidationPass(
               messages.addCompleteness(
                 idType.errorLoc,
                 s"${idType.identify} is defined inside ${entity.identify}; " +
-                  "move it to the containing context so other entities can reference it"
+                  "move it to the containing context so other entities can reference it",
+                suggestion = s"Move ${idType.identify} from ${entity.identify} up to the containing context so other entities can reference it."
               )
             case Some(c: Context) if parentContext.contains(c) =>
               // Correct placement — no warning
@@ -1051,7 +1136,8 @@ case class ValidationPass(
                 messages.addCompleteness(
                   idType.errorLoc,
                   s"${idType.identify} for ${entity.identify} is defined outside the containing context; " +
-                    "constrain it to the context scope and use adaptors for inter-context invocations"
+                    "constrain it to the context scope and use adaptors for inter-context invocations",
+                  suggestion = s"Move ${idType.identify} into ${entity.identify}'s context, and use adaptors for any inter-context references to it."
                 )
               }
             case _ =>
@@ -1061,7 +1147,8 @@ case class ValidationPass(
                 messages.addCompleteness(
                   idType.errorLoc,
                   s"${idType.identify} for ${entity.identify} is defined outside the containing context; " +
-                    "constrain it to the context scope and use adaptors for inter-context invocations"
+                    "constrain it to the context scope and use adaptors for inter-context invocations",
+                  suggestion = s"Move ${idType.identify} into ${entity.identify}'s context, and use adaptors for any inter-context references to it."
                 )
               }
           }
@@ -1083,10 +1170,47 @@ case class ValidationPass(
         if !emitsEvent then {
           messages.addCompleteness(
             omc.errorLoc,
-            s"${entity.identify} is event-sourced but this command handler does not emit an event"
+            s"${entity.identify} is event-sourced but this command handler does not emit an event",
+            suggestion = "Send or tell an event from this command handler so the event-sourced entity records its state change."
           )
         }
       }
+    }
+    // Completeness: an entity should define command and event types, and its
+    // handlers should cover each command. These checks were previously emitted
+    // as AIHelperPass tips. They are advisory (message types are often defined
+    // at context scope rather than inside the entity), so they are emitted only
+    // when provideTips is enabled (i.e. `riddlc advise` / `--provide-tips`),
+    // each carrying a remediation suggestion.
+    if entity.nonEmpty && summon[PlatformContext].options.provideTips then {
+      val entityTypes = entity.types
+      val commandTypes = entityTypes.filter(_.typEx.isAggregateOf(AggregateUseCase.CommandCase))
+      val eventTypes = entityTypes.filter(_.typEx.isAggregateOf(AggregateUseCase.EventCase))
+      if commandTypes.isEmpty then
+        messages.addCompleteness(
+          entity.errorLoc,
+          s"${entity.identify} defines no command types; commands are the input messages an entity receives",
+          suggestion = s"Add a command type, e.g. 'type ${entity.id.value}Command = command { ??? }'."
+        )
+      if eventTypes.isEmpty then
+        messages.addCompleteness(
+          entity.errorLoc,
+          s"${entity.identify} defines no event types; events record what happened when a command is processed",
+          suggestion = s"Add an event type, e.g. 'type ${entity.id.value}Event = event { ??? }'."
+        )
+      if commandTypes.nonEmpty then
+        val allHandlers = entity.handlers ++ entity.states.flatMap(_.handlers)
+        val handledCommandNames = allHandlers.flatMap(_.clauses).collect {
+          case omc: OnMessageClause if omc.msg.messageKind == AggregateUseCase.CommandCase =>
+            omc.msg.pathId.value.lastOption.getOrElse("")
+        }.toSet
+        for cmd <- commandTypes if !handledCommandNames.contains(cmd.id.value) do
+          messages.addCompleteness(
+            cmd.errorLoc,
+            s"Command ${cmd.identify} in ${entity.identify} is not handled by any on-clause",
+            suggestion = s"Add an on-clause for it, e.g. 'on command ${cmd.id.value} { ??? }'."
+          )
+        end for
     }
   }
 
@@ -1105,13 +1229,15 @@ case class ValidationPass(
       },
       s"${projector.identify} lacks a required ${AggregateUseCase.RecordCase.useCase} definition.",
       Messages.Error,
-      projector.errorLoc
+      projector.errorLoc,
+      suggestion = s"Add a record type to ${projector.identify}, e.g. 'type ${projector.id.value}Record = record { ??? }'."
     )
     check(
       projector.handlers.length == 1,
       s"${projector.identify} must have exactly one Handler but has ${projector.handlers.length}",
       Messages.Error,
-      projector.errorLoc
+      projector.errorLoc,
+      suggestion = "Define exactly one handler for the projector."
     )
     projector.repositories.foreach { repoRef =>
       checkRef[Repository](repoRef, parents)
@@ -1120,7 +1246,8 @@ case class ValidationPass(
     if projector.repositories.isEmpty && projector.nonEmpty then
       messages.addCompleteness(
         projector.errorLoc,
-        s"${projector.identify} does not reference any repository to persist its projection"
+        s"${projector.identify} does not reference any repository to persist its projection",
+        suggestion = s"Reference a repository from ${projector.identify}, e.g. 'updates repository SomeRepository'."
       )
     if projector.handlers.nonEmpty then {
       val allClauses = projector.handlers.flatMap(_.clauses).collect {
@@ -1133,7 +1260,8 @@ case class ValidationPass(
         if !handlesEvents then
           messages.addWarning(
             projector.errorLoc,
-            s"${projector.identify} handler does not handle any events; projectors typically handle events to build read models"
+            s"${projector.identify} handler does not handle any events; projectors typically handle events to build read models",
+            suggestion = "Add 'on event ...' clauses to the projector's handler to build its read model."
           )
       }
       // Completeness: projector handlers must tell to a repository
@@ -1144,7 +1272,8 @@ case class ValidationPass(
       if allTells.isEmpty then {
         messages.addCompleteness(
           projector.errorLoc,
-          s"${projector.identify} does not persist its projection; projector handlers should tell messages to a repository"
+          s"${projector.identify} does not persist its projection; projector handlers should tell messages to a repository",
+          suggestion = "Add 'tell' statements in the projector's handler to write its read model to a repository."
         )
       }
       // Check each declared repository is actually used in a tell
@@ -1157,7 +1286,8 @@ case class ValidationPass(
           if !isTold then
             messages.addUsage(
               repoRef.loc,
-              s"${projector.identify} declares ${repoRef.format} but does not send it any messages"
+              s"${projector.identify} declares ${repoRef.format} but does not send it any messages",
+              suggestion = s"Send messages to ${repoRef.format} with 'tell', or remove the unused repository reference."
             )
         }
       }
@@ -1180,7 +1310,8 @@ case class ValidationPass(
     if repository.handlers.isEmpty && repository.nonEmpty then
       messages.addMissing(
         repository.errorLoc,
-        s"${repository.identify} should have at least one handler"
+        s"${repository.identify} should have at least one handler",
+        suggestion = s"Add a handler to ${repository.identify} to process commands (writes) and queries (reads)."
       )
     if repository.handlers.nonEmpty then {
       val allClauses = repository.handlers.flatMap(_.clauses).collect {
@@ -1194,7 +1325,8 @@ case class ValidationPass(
         if !handlesCommandOrQuery then
           messages.addWarning(
             repository.errorLoc,
-            s"${repository.identify} handlers do not handle any commands or queries; repositories typically handle commands (for mutations) and queries (for reads)"
+            s"${repository.identify} handlers do not handle any commands or queries; repositories typically handle commands (for mutations) and queries (for reads)",
+            suggestion = "Add 'on command ...' (for mutations) and 'on query ...' (for reads) clauses to the repository's handler."
           )
       }
     }
@@ -1212,18 +1344,24 @@ case class ValidationPass(
             val message =
               s"${adaptor.identify} may not specify a target context that is " +
                 s"the same as the containing ${c.identify}"
-            messages.addError(adaptor.errorLoc, message)
+            messages.addError(
+              adaptor.errorLoc,
+              message,
+              suggestion = s"Point the adaptor at a different context than its containing ${c.identify}."
+            )
           }
         }
         if adaptor.handlers.isEmpty && adaptor.nonEmpty then
           messages.addMissing(
             adaptor.errorLoc,
-            s"${adaptor.identify} should have at least one handler"
+            s"${adaptor.identify} should have at least one handler",
+            suggestion = s"Add a handler to ${adaptor.identify} to translate messages between the contexts."
           )
         else if adaptor.handlers.nonEmpty && adaptor.handlers.forall(_.clauses.isEmpty) then
           messages.addMissing(
             adaptor.errorLoc,
-            s"${adaptor.identify} has only empty handlers"
+            s"${adaptor.identify} has only empty handlers",
+            suggestion = "Add on-clauses to the adaptor's handlers to translate messages between contexts."
           )
         // Check if adaptor handlers reference message types from the adapted context
         resolvePath[Context](adaptor.referent.pathId, parents).foreach { targetContext =>
@@ -1256,7 +1394,8 @@ case class ValidationPass(
               if !referencesTargetType then {
                 messages.addWarning(
                   adaptor.errorLoc,
-                  s"${adaptor.identify} is ${adaptor.direction.format} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}"
+                  s"${adaptor.identify} is ${adaptor.direction.format} ${targetContext.identify} but its handlers do not reference any message types defined in ${targetContext.identify}",
+                  suggestion = s"Reference message types from ${targetContext.identify} in the adaptor's on-clauses."
                 )
               }
               // Check direction-specific message kind compatibility
@@ -1269,7 +1408,8 @@ case class ValidationPass(
                           case AggregateUseCase.CommandCase | AggregateUseCase.QueryCase =>
                             messages.addError(
                               omc.errorLoc,
-                              s"Inbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but inbound adaptors should handle events and results (the target's output)"
+                              s"Inbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but inbound adaptors should handle events and results (the target's output)",
+                              suggestion = "Inbound adaptors should handle the target's output (events and results). Move command/query handling to an outbound adaptor."
                             )
                           case _ => ()
                         }
@@ -1278,7 +1418,8 @@ case class ValidationPass(
                           case AggregateUseCase.EventCase | AggregateUseCase.ResultCase =>
                             messages.addError(
                               omc.errorLoc,
-                              s"Outbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but outbound adaptors should handle commands and queries (the target's input)"
+                              s"Outbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but outbound adaptors should handle commands and queries (the target's input)",
+                              suggestion = "Outbound adaptors should handle the target's input (commands and queries). Move event/result handling to an inbound adaptor."
                             )
                           case _ => ()
                         }
@@ -1289,7 +1430,11 @@ case class ValidationPass(
           }
         }
       case None | Some(_) =>
-        messages.addError(adaptor.errorLoc, "Adaptor not contained within Context")
+        messages.addError(
+          adaptor.errorLoc,
+          "Adaptor not contained within Context",
+          suggestion = "Define the adaptor inside a context."
+        )
     }
   }
 
@@ -1304,28 +1449,32 @@ case class ValidationPass(
       val numOutlets = streamlet.outlets.size
       streamlet.shape match {
         case _: Source =>
-          check(numInlets == 0, s"${streamlet.identify} is a source but has $numInlets inlets; sources must have none", Messages.Error, streamlet.errorLoc)
-          check(numOutlets >= 1, s"${streamlet.identify} is a source but has no outlets; sources must have at least one", Messages.Error, streamlet.errorLoc)
+          check(numInlets == 0, s"${streamlet.identify} is a source but has $numInlets inlets; sources must have none", Messages.Error, streamlet.errorLoc, suggestion = "Remove the inlets from the source; sources only produce data.")
+          check(numOutlets >= 1, s"${streamlet.identify} is a source but has no outlets; sources must have at least one", Messages.Error, streamlet.errorLoc, suggestion = "Add at least one outlet to the source so it can emit data.")
         case _: Sink =>
-          check(numInlets >= 1, s"${streamlet.identify} is a sink but has no inlets; sinks must have at least one", Messages.Error, streamlet.errorLoc)
-          check(numOutlets == 0, s"${streamlet.identify} is a sink but has $numOutlets outlets; sinks must have none", Messages.Error, streamlet.errorLoc)
+          check(numInlets >= 1, s"${streamlet.identify} is a sink but has no inlets; sinks must have at least one", Messages.Error, streamlet.errorLoc, suggestion = "Add at least one inlet to the sink so it can receive data.")
+          check(numOutlets == 0, s"${streamlet.identify} is a sink but has $numOutlets outlets; sinks must have none", Messages.Error, streamlet.errorLoc, suggestion = "Remove the outlets from the sink; sinks only consume data.")
         case _: Flow =>
-          check(numInlets >= 1, s"${streamlet.identify} is a flow but has no inlets; flows must have at least one", Messages.Error, streamlet.errorLoc)
-          check(numOutlets >= 1, s"${streamlet.identify} is a flow but has no outlets; flows must have at least one", Messages.Error, streamlet.errorLoc)
+          check(numInlets >= 1, s"${streamlet.identify} is a flow but has no inlets; flows must have at least one", Messages.Error, streamlet.errorLoc, suggestion = "Add at least one inlet to the flow.")
+          check(numOutlets >= 1, s"${streamlet.identify} is a flow but has no outlets; flows must have at least one", Messages.Error, streamlet.errorLoc, suggestion = "Add at least one outlet to the flow.")
         case _: Merge =>
-          check(numInlets >= 2, s"${streamlet.identify} is a merge but has $numInlets inlets; merges must have at least two", Messages.Error, streamlet.errorLoc)
-          check(numOutlets >= 1, s"${streamlet.identify} is a merge but has no outlets; merges must have at least one", Messages.Error, streamlet.errorLoc)
+          check(numInlets >= 2, s"${streamlet.identify} is a merge but has $numInlets inlets; merges must have at least two", Messages.Error, streamlet.errorLoc, suggestion = "Give the merge at least two inlets.")
+          check(numOutlets >= 1, s"${streamlet.identify} is a merge but has no outlets; merges must have at least one", Messages.Error, streamlet.errorLoc, suggestion = "Add at least one outlet to the merge.")
         case _: Split =>
-          check(numInlets >= 1, s"${streamlet.identify} is a split but has no inlets; splits must have at least one", Messages.Error, streamlet.errorLoc)
-          check(numOutlets >= 2, s"${streamlet.identify} is a split but has $numOutlets outlets; splits must have at least two", Messages.Error, streamlet.errorLoc)
+          check(numInlets >= 1, s"${streamlet.identify} is a split but has no inlets; splits must have at least one", Messages.Error, streamlet.errorLoc, suggestion = "Add at least one inlet to the split.")
+          check(numOutlets >= 2, s"${streamlet.identify} is a split but has $numOutlets outlets; splits must have at least two", Messages.Error, streamlet.errorLoc, suggestion = "Give the split at least two outlets.")
         case _: Router =>
-          check(numInlets >= 2, s"${streamlet.identify} is a router but has $numInlets inlets; routers must have at least two", Messages.Error, streamlet.errorLoc)
-          check(numOutlets >= 2, s"${streamlet.identify} is a router but has $numOutlets outlets; routers must have at least two", Messages.Error, streamlet.errorLoc)
+          check(numInlets >= 2, s"${streamlet.identify} is a router but has $numInlets inlets; routers must have at least two", Messages.Error, streamlet.errorLoc, suggestion = "Give the router at least two inlets.")
+          check(numOutlets >= 2, s"${streamlet.identify} is a router but has $numOutlets outlets; routers must have at least two", Messages.Error, streamlet.errorLoc, suggestion = "Give the router at least two outlets.")
         case _: Void => ()
       }
     end if
     if streamlet.handlers.isEmpty && streamlet.nonEmpty then
-      messages.addMissing(streamlet.errorLoc, s"${streamlet.identify} should have a handler")
+      messages.addMissing(
+        streamlet.errorLoc,
+        s"${streamlet.identify} should have a handler",
+        suggestion = s"Add a handler to ${streamlet.identify} to process streamed messages."
+      )
     // Completeness: Flow/Split/Router handlers should send to their outlets
     if streamlet.nonEmpty && streamlet.handlers.nonEmpty then {
       streamlet.shape match {
@@ -1337,7 +1486,8 @@ case class ValidationPass(
           if allSends.isEmpty then {
             messages.addCompleteness(
               streamlet.errorLoc,
-              s"${streamlet.identify} handlers do not send any messages to its outlets"
+              s"${streamlet.identify} handlers do not send any messages to its outlets",
+              suggestion = "Add 'send' statements to the handler so the streamlet emits to its outlets."
             )
           }
         case _: Source =>
@@ -1352,7 +1502,8 @@ case class ValidationPass(
           if !hasInitOrOther then {
             messages.addCompleteness(
               streamlet.errorLoc,
-              s"${streamlet.identify} is a source but has no 'on init' or 'on other' clause to generate data"
+              s"${streamlet.identify} is a source but has no 'on init' or 'on other' clause to generate data",
+              suggestion = "Add an 'on init' or 'on other' clause so the source generates data."
             )
           }
         case _ => ()
@@ -1369,7 +1520,8 @@ case class ValidationPass(
       domain.domains.isEmpty || domain.domains.size > 2,
       "Singly nested domains do not add value",
       StyleWarning,
-      domain.errorLoc
+      domain.errorLoc,
+      suggestion = "Merge the single nested domain into its parent, or add sibling domains to justify the nesting."
     )
   }
 
@@ -1382,13 +1534,15 @@ case class ValidationPass(
       saga.nonEmpty && saga.sagaSteps.size >= 2,
       "Sagas must define at least 2 steps",
       Messages.Error,
-      saga.errorLoc
+      saga.errorLoc,
+      suggestion = "Define at least two saga steps so the saga coordinates a multi-step transaction."
     )
     check(
       saga.nonEmpty && saga.sagaSteps.size >= 2 && saga.sagaSteps.map(_.id.value).allUnique,
       "Saga step names must all be distinct",
       Messages.Error,
-      saga.errorLoc
+      saga.errorLoc,
+      suggestion = "Give each saga step a unique name."
     )
   }
 
@@ -1403,7 +1557,8 @@ case class ValidationPass(
       s.doStatements.nonEmpty == s.undoStatements.nonEmpty,
       "A saga step with do statements must also have revert statements, and vice versa",
       Messages.Error,
-      s.errorLoc
+      s.errorLoc,
+      suggestion = "Provide both 'do' and 'revert' statements for the saga step so its action can be compensated on failure."
     )
     if s.doStatements.nonEmpty && s.undoStatements.nonEmpty then {
       val doTargets = mutable.Set.empty[String]
@@ -1424,7 +1579,8 @@ case class ValidationPass(
           messages.add(
             Messages.style(
               s"${s.identify} do-step targets ${uncompensated.mkString(", ")} but the undo-step does not target the same; consider adding compensation",
-              s.errorLoc
+              s.errorLoc,
+              suggestion = s"Add compensating revert statements targeting ${uncompensated.mkString(", ")} in the saga step's undo block."
             )
           )
       }
@@ -1440,7 +1596,8 @@ case class ValidationPass(
       if !hasTellCommand then {
         messages.addCompleteness(
           s.errorLoc,
-          s"${s.identify} do-statements contain no 'tell command' to effect state changes"
+          s"${s.identify} do-statements contain no 'tell command' to effect state changes",
+          suggestion = "Add a 'tell command' statement to the saga step's do-statements to effect a state change."
         )
       }
     }
@@ -1459,7 +1616,21 @@ case class ValidationPass(
       if !hasSinkOrInlet then {
         messages.addCompleteness(
           c.errorLoc,
-          s"${c.identify} has entities but no Sink streamlet to receive and dispatch incoming messages"
+          s"${c.identify} has entities but no Sink streamlet to receive and dispatch incoming messages",
+          suggestion = s"Add a Sink streamlet with an inlet to ${c.identify} to receive and dispatch incoming messages."
+        )
+      }
+      // Completeness: a context with entities should persist them. Entities are
+      // stateful and generally require durable storage, so a context that has
+      // entities but no repository at all is incomplete. This is an always-on
+      // completeness warning (gated only by showCompletenessWarnings); the
+      // remediation suggestion is surfaced when provideTips is enabled. A
+      // placeholder repository (`repository X is { ??? }`) counts as addressed.
+      if c.repositories.isEmpty then {
+        messages.addCompleteness(
+          c.errorLoc,
+          s"${c.identify} has entities but no repository to persist them; entities are stateful and should be persisted",
+          suggestion = s"Add a repository to ${c.identify}, e.g. 'repository ${c.id.value}Repository is { ??? }'."
         )
       }
     }
@@ -1475,7 +1646,8 @@ case class ValidationPass(
               if tells.isEmpty then {
                 messages.addCompleteness(
                   handler.errorLoc,
-                  s"${handler.identify} in ${streamlet.identify} handles messages but does not dispatch to any entity via 'tell'"
+                  s"${handler.identify} in ${streamlet.identify} handles messages but does not dispatch to any entity via 'tell'",
+                  suggestion = "Add 'tell' statements so the streamlet handler dispatches incoming messages to an entity."
                 )
               }
             }
@@ -1491,7 +1663,11 @@ case class ValidationPass(
   ): Unit = {
     checkContainer(parents, epic)
     if epic.userStory.isEmpty then
-      messages.addMissing(epic.errorLoc, s"${epic.identify} is missing a user story")
+      messages.addMissing(
+        epic.errorLoc,
+        s"${epic.identify} is missing a user story",
+        suggestion = s"Add a user story to ${epic.identify}, e.g. 'by user SomeUser I want to ... so that ...'."
+      )
     else
       checkRef[User](epic.userStory.user, parents)
   }
@@ -1544,7 +1720,8 @@ case class ValidationPass(
     if user.is_a.isEmpty then {
       messages.addMissing(
         user.loc,
-        s"${user.identify} is missing its role kind ('is a')"
+        s"${user.identify} is missing its role kind ('is a')",
+        suggestion = s"Specify the user's role, e.g. '${user.id.value} is a \"customer\"'."
       )
     }
     checkMetadata(user)
@@ -1561,20 +1738,26 @@ case class ValidationPass(
       uc.contents.foreach {
         case seq: SequentialInteractions =>
           if seq.contents.isEmpty then {
-            messages.addMissing(seq.loc, "Sequential interactions should not be empty")
+            messages.addMissing(
+              seq.loc,
+              "Sequential interactions should not be empty",
+              suggestion = "Add interactions to the sequential block, or remove the empty block."
+            )
           }
         case par: ParallelInteractions =>
           if par.contents.isEmpty then {
             messages.addMissing(
               par.loc,
-              "Parallel interaction should not be empty"
+              "Parallel interaction should not be empty",
+              suggestion = "Add interactions to the parallel block, or remove the empty block."
             )
           }
         case opt: OptionalInteractions =>
           if opt.contents.isEmpty then {
             messages.addMissing(
               opt.loc,
-              "Optional interaction should not be empty"
+              "Optional interaction should not be empty",
+              suggestion = "Add interactions to the optional block, or remove the empty block."
             )
           }
         case gi: GenericInteraction =>
@@ -1586,7 +1769,8 @@ case class ValidationPass(
               if is.relationship.isEmpty then {
                 messages.addMissing(
                   is.loc,
-                  s"Interactions must have a non-empty relationship"
+                  s"Interactions must have a non-empty relationship",
+                  suggestion = "Describe the relationship for the interaction, e.g. '... \"places\" order'."
                 )
               }
             case _ => // Other interaction types handled by validateInteraction
@@ -1598,7 +1782,8 @@ case class ValidationPass(
       if uc.contents.isEmpty then
         messages.addMissing(
           uc.loc,
-          s"${uc.identify} doesn't define any interactions"
+          s"${uc.identify} doesn't define any interactions",
+          suggestion = s"Add interactions to ${uc.identify} describing the steps between users and the system."
         )
     }
     checkMetadata(uc)
@@ -1628,7 +1813,8 @@ case class ValidationPass(
                               error(
                                 s"${output.identify} showing ${typRef.format} of type ${ty.format} is invalid " +
                                   s" because ${o.identify} is a vital definition which can only send Events and Results",
-                                loc
+                                loc,
+                                suggestion = "Show an Event or Result here; vital definitions can only emit events and results."
                               )
                             )
                         }
@@ -1660,7 +1846,8 @@ case class ValidationPass(
                         Some(
                           error(
                             s"${input.identify} sending ${putIn.format} of type ${ty.format} is invalid " +
-                              s" because ${d.identify} is a vital definition which can only receive Commands and Queries"
+                              s" because ${d.identify} is a vital definition which can only receive Commands and Queries",
+                            suggestion = "Send a Command or Query here; vital definitions can only receive commands and queries."
                           )
                         )
                     }

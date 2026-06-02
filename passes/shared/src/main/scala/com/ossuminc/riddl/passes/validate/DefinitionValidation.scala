@@ -122,7 +122,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           .mkString("", "\n  ", "\n")
         messages.addError(
           definition.errorLoc,
-          s"${definition.identify} has duplicate content names:\n  $details"
+          s"${definition.identify} has duplicate content names:\n  $details",
+          suggestion = s"Rename or remove the duplicate definitions so each name is unique within ${definition.identify}."
         )
       }
     }
@@ -141,7 +142,9 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             case None =>
               messages.addError(
                 authorRef.loc,
-                s"${authorRef.format} is not defined"
+                s"${authorRef.format} is not defined",
+                suggestion = "Define the referenced author (e.g. 'author Name is { name is \"...\" email is \"...\" }'), " +
+                  "or correct the author reference to name an existing author."
               )
             case _ =>
           end match
@@ -155,7 +158,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       if matches.isEmpty then {
         messages.addSevere(
           definition.id.loc,
-          s"'${definition.id.value}' evaded inclusion in symbol table!"
+          s"'${definition.id.value}' evaded inclusion in symbol table!",
+          suggestion = "This is an internal RIDDL error; please report it with the model that triggered it."
         )
       }
     }
@@ -170,7 +174,9 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       container.contents.definitions.nonEmpty || container.isInstanceOf[Field],
       s"${container.identify} in ${parent.identify} should have content",
       MissingWarning,
-      container.errorLoc
+      container.errorLoc,
+      suggestion = s"Add at least one definition inside ${container.identify} (or '???' as a placeholder), " +
+        "or remove it if it is not needed."
     )
   end checkContents
 
@@ -190,7 +196,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
       definition.metadata.nonEmpty,
       s"Metadata in $identity should not be empty",
       MissingWarning,
-      loc
+      loc,
+      suggestion = s"Add metadata to $identity, such as 'briefly \"...\"', 'described as { ... }', or 'by author ...'."
     )
     var hasAuthorRef = false
     var hasDescription = false
@@ -201,20 +208,23 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             bd.brief.s.length < 80,
             s"In $identity, brief description at ${bd.loc.format} is too long. Max is 80 chars",
             Warning,
-            bd.loc
+            bd.loc,
+            suggestion = "Shorten the 'briefly' text to 80 characters or fewer; move any detail into a 'described as { ... }' block."
           )
         case bd: BlockDescription =>
           check(
             bd.lines.nonEmpty && !bd.lines.forall(_.s.isEmpty),
             s"For $identity, description at ${bd.loc.format} is declared but empty",
             MissingWarning,
-            bd.loc
+            bd.loc,
+            suggestion = s"Add description text to the 'described as' block for $identity, or remove the empty block."
           )
           check(
             bd.lines.nonEmpty,
             s"For $identity, description is declared but empty",
             MissingWarning,
-            bd.loc
+            bd.loc,
+            suggestion = s"Add description text to the 'described as' block for $identity, or remove the empty block."
           )
 
           hasDescription = true
@@ -223,7 +233,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             ud.url.isValid,
             s"For $identity, description at ${ud.loc.format} has an invalid URL: ${ud.url}",
             Error,
-            ud.loc
+            ud.loc,
+            suggestion = "Use a valid absolute URL for the description link, e.g. 'https://example.com/docs'."
           )
           hasDescription = true
         case t: Term =>
@@ -231,14 +242,16 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             t.definition.map(_.s.length).sum >= 10,
             s"${t.identify}'s definition is too short. It must be at least 10 characters'",
             Warning,
-            t.loc
+            t.loc,
+            suggestion = s"Expand the definition of ${t.identify} to at least 10 characters so the glossary term is meaningful."
           )
         case o: OptionValue =>
           check(
             o.name.length >= 3,
             s"Option ${o.name}'s name is too short. It must be at least 3 characters'",
             StyleWarning,
-            o.loc
+            o.loc,
+            suggestion = "Use an option name of at least 3 characters."
           )
           validateRecognizedOption(o, identity, loc)
         case _: AuthorRef        => hasAuthorRef = true
@@ -248,7 +261,13 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         case _: Description      => () // No validation needed
         case _: Comment          => () // No validation needed
     }
-    check(hasDescription, s"$identity should have a description", MissingWarning, loc)
+    check(
+      hasDescription,
+      s"$identity should have a description",
+      MissingWarning,
+      loc,
+      suggestion = s"Add documentation to $identity, e.g. 'briefly \"A short summary\"' or 'described as { | ... | }'."
+    )
   end checkMetadata
 
   /** Validate an option against the recognized options registry.
@@ -265,7 +284,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
         option.loc,
         s"Option '${option.name}' in $identity is deprecated" +
           s" since ${dep.sinceVersion}." +
-          s" Use '${dep.replacement}' instead"
+          s" Use '${dep.replacement}' instead",
+        suggestion = s"Replace option '${option.name}' with '${dep.replacement}'."
       )
     }
     RecognizedOptions.registry.get(option.name) match
@@ -279,7 +299,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             predicate = false,
             s"Option '${option.name}' in $identity expects $expected argument(s) but has $argCount",
             Warning,
-            option.loc
+            option.loc,
+            suggestion = s"Provide $expected argument(s) to option '${option.name}'."
           )
         end if
         if spec.validParents.nonEmpty then
@@ -292,7 +313,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
             s"Option '${option.name}' is not typically used on ${identity.split(" ").head} definitions" +
               s" (expected: ${spec.validParents.mkString(", ")})",
             StyleWarning,
-            option.loc
+            option.loc,
+            suggestion = s"Move option '${option.name}' to one of: ${spec.validParents.mkString(", ")}, or remove it here."
           )
         end if
       case None =>
@@ -300,7 +322,8 @@ trait DefinitionValidation(using pc: PlatformContext) extends BasicValidation:
           predicate = false,
           s"Option '${option.name}' in $identity is not a recognized RIDDL option",
           StyleWarning,
-          option.loc
+          option.loc,
+          suggestion = s"Check the spelling of '${option.name}' against the recognized RIDDL options, or remove it if unintended."
         )
     end match
   end validateRecognizedOption

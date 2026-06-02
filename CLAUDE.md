@@ -601,10 +601,10 @@ to the right group rather than appending to a list.
   uses a `mutable.Stack[ListBuffer[TreeNode]]` for pure O(n)
   building (not a `HashMap[Definition, ListBuffer]`).
 - **Analysis passes** — MessageFlowPass, EntityLifecyclePass,
-  DependencyAnalysisPass, AIHelperPass (1.22.0). All in
-  `passes/shared/.../analysis/` (or `passes/ai/`); each extends
-  `CollectingPass` (or HierarchyPass for AIHelperPass) and
-  requires ResolutionPass.
+  DependencyAnalysisPass (1.22.0). All in
+  `passes/shared/.../analysis/`; each extends `CollectingPass`
+  and requires ResolutionPass. (AIHelperPass was removed in
+  1.24.0 — see "Message suggestions" under Validation Specifics.)
 - **MessageFlowPass** — `MessageFlowEdge.messageType` is
   `Option[Type]` (adaptor declarations produce `None`; typed
   handler edges produce `Some`). Direction-aware:
@@ -648,6 +648,29 @@ to the right group rather than appending to a list.
 
 ### Validation Specifics
 
+- **Message suggestions / `provideTips` (1.24.0)** — every
+  `Messages.Message` carries a `suggestion: String`; any pass
+  attaches one at the message-creation site (via the `addX`/
+  `check` helpers' trailing `suggestion` param). The single
+  chokepoint `Messages.Accumulator.add` STRIPS the suggestion
+  unless `CommonOptions.provideTips` is set, and `Message.format`
+  appends a `Suggestion:` line only when present — so default
+  output is unchanged (no `.check` churn). `riddlc advise` ==
+  `validate` with `provideTips=true`; `--provide-tips` /
+  HOCON `provide-tips` toggle it. This replaced `AIHelperPass`:
+  the pass and its tests are deleted; the `Tip` message kind is
+  retained but has no producer; `RiddlLib.analyzeForTips`/
+  `analyzeSourceForTips` + the `advise` command are kept,
+  re-implemented to run standard passes with `provideTips=true`
+  (analyze* are `@deprecated`). Human/AI catalog of every
+  message→suggestion pair: `MESSAGE_SUGGESTIONS.md` (repo root).
+  Three entity completeness checks promoted from old AIHelper
+  tips (no command types, no event types, unhandled command) are
+  ADVISORY — gated behind `provideTips` because message types are
+  often context-scoped (`summon[PlatformContext].options.provideTips`
+  in `validateEntity`). The context-with-entities-but-no-repository
+  check is ALWAYS-ON (`c.repositories.isEmpty`), gated only by
+  `showCompletenessWarnings`.
 - **Streamlet shape check** — guard on `nonEmpty` before
   checking inlet/outlet counts (empty = placeholder).
 - **Adaptor cross-context type resolution** — use the

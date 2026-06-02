@@ -111,7 +111,12 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
         usedInPathBy.get(d).exists(_.nonEmpty)
       def checkList(definitions: Seq[Definition]): Unit = {
         for defn <- definitions if !hasDirectUsage(defn) && !hasPathUsage(defn) do {
-          messages.addUsage(defn.errorLoc, s"${defn.identify} is unused")
+          messages.addUsage(
+            defn.errorLoc,
+            s"${defn.identify} is unused",
+            suggestion = s"Reference ${defn.identify} from a handler, message flow, or another definition, " +
+              "or remove it if it is no longer needed."
+          )
         }
       }
       checkList(entities)
@@ -132,7 +137,9 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
           ty.errorLoc,
           s"${ty.identify} is only referenced in path identifiers; " +
             "for it to be a useful addressable type, it should be used " +
-            "as the type of a field or state."
+            "as the type of a field or state.",
+          suggestion = s"Declare a field or state of type ${ty.identify} so it can actually carry data, " +
+            s"e.g. 'field someName: ${ty.id.value}'."
         )
       }
     }

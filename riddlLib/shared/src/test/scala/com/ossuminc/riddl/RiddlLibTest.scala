@@ -325,31 +325,37 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
     }
   }
 
+  // analyzeSourceForTips/analyzeForTips are deprecated facades retained for
+  // backward compatibility; they now run the standard passes with
+  // provideTips = true so each returned message carries a remediation
+  // suggestion (the former Tip-kind messages no longer exist).
   "analyzeSourceForTips" should {
-    "return tips for an incomplete model" in {
+    "return suggestions for an incomplete model" in {
       val source =
         """domain TestDomain is {
           |  context TestContext is { ??? }
           |}""".stripMargin
-      val result = RiddlLib.analyzeSourceForTips(source)
+      val result =
+        (RiddlLib.analyzeSourceForTips(source): @annotation.nowarn("cat=deprecation"))
       result match
         case RiddlResult.Success(msgs) =>
-          val tips = msgs.justTips
-          tips mustNot be(empty)
+          val withSuggestions = msgs.filter(_.suggestion.nonEmpty)
+          withSuggestions mustNot be(empty)
         case RiddlResult.Failure(errors) =>
           fail(s"Analysis failed: $errors")
     }
 
     "return failure for unparseable input" in {
       val source = "not valid RIDDL {{{ }}}"
-      val result = RiddlLib.analyzeSourceForTips(source)
+      val result =
+        (RiddlLib.analyzeSourceForTips(source): @annotation.nowarn("cat=deprecation"))
       result match
         case RiddlResult.Failure(_) => succeed
         case RiddlResult.Success(_) =>
           fail("Should have failed on invalid input")
     }
 
-    "return fewer tips for a well-formed model" in {
+    "return no errors for a well-formed model" in {
       val source =
         """domain TestDomain is {
           |  context TestContext is {
@@ -367,11 +373,12 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
           |    }
           |  }
           |}""".stripMargin
-      val result = RiddlLib.analyzeSourceForTips(source)
+      val result =
+        (RiddlLib.analyzeSourceForTips(source): @annotation.nowarn("cat=deprecation"))
       result match
         case RiddlResult.Success(msgs) =>
-          // Should succeed — tips may or may not be empty
-          // but should not contain errors
+          // Should succeed — completeness warnings may be present
+          // but there should be no errors
           msgs.justErrors mustBe empty
         case RiddlResult.Failure(errors) =>
           fail(s"Analysis failed: $errors")
@@ -386,10 +393,11 @@ class RiddlLibTest extends AnyWordSpec with Matchers {
           |}""".stripMargin
       RiddlLib.parseString(source) match
         case RiddlResult.Success(root) =>
-          val result = RiddlLib.analyzeForTips(root)
+          val result =
+            (RiddlLib.analyzeForTips(root): @annotation.nowarn("cat=deprecation"))
           result match
             case RiddlResult.Success(msgs) =>
-              msgs.justTips mustNot be(empty)
+              msgs.filter(_.suggestion.nonEmpty) mustNot be(empty)
             case RiddlResult.Failure(errors) =>
               fail(s"Analysis failed: $errors")
         case RiddlResult.Failure(errors) =>

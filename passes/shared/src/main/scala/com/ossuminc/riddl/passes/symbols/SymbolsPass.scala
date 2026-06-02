@@ -75,7 +75,11 @@ case class SymbolsPass(input: PassInput, outputs: PassesOutput)(using pc: Platfo
             parentage.update(namedValue, parentsCopy)
           end if
         } else {
-          messages.addError(namedValue.loc, "Non implicit value with empty name should not happen")
+          messages.addError(
+            namedValue.loc,
+            "Non implicit value with empty name should not happen",
+            suggestion = "This is an internal RIDDL symbol-table error; please report it with the model that triggered it."
+          )
         }
       // case rv: RiddlValue => // everything should be handled above
       //    assert(false, s"SymTab didn't process: $rv") // NOTE: nothing else has a name

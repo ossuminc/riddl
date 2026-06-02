@@ -17,12 +17,33 @@ to the task file and note the disposition below.
 
 ## Current Status
 
-**Last Updated**: 2026-06-01
+**Last Updated**: 2026-06-02
 
-HEAD is at tag **1.23.4** on `main` (and `development` matches),
-clean working tree, in sync with origin. No work-in-progress;
-no stashes. Four bug-fix releases shipped since the May
-notebook update: 1.23.1 (path-identifier usage tracking +
+`development` is **ahead of tag 1.23.4** (on `main`) by one
+feature: per-message remediation **suggestions** + the
+`CommonOptions.provideTips` option, which retires `AIHelperPass`.
+Targeted for **1.24.0**. Summary:
+
+- Every `Messages.Message` now carries a `suggestion: String`;
+  `Message.format` renders a `Suggestion:` line, and
+  `Accumulator.add` strips it unless `provideTips` is on (one
+  chokepoint → no default-output / `.check` churn).
+- Suggestions authored for **all ~155** validation + resolution
+  messages. Catalog: `MESSAGE_SUGGESTIONS.md` (repo root).
+- `AIHelperPass` + its two test files **deleted**; `Tip` kind,
+  the `advise` command, and `RiddlLib`/`RiddlAPI`
+  `analyzeForTips`/`analyzeSourceForTips` kept but re-implemented
+  off `provideTips` (`advise` == `validate --provide-tips`;
+  analyze* are `@deprecated` for 1.24.0).
+- New `--provide-tips` CLI flag + HOCON `provide-tips`.
+- New always-on completeness check: a context with entities but
+  no repository. Three entity tip-checks (no command/event types,
+  unhandled command) are advisory (provideTips-gated).
+- Verified: JVM/JS/Native compile; passes 350, language 314,
+  commands 232, riddlLib JVM 26 / JS 25 — 0 failures.
+
+Four bug-fix releases preceded this since the May notebook
+update: 1.23.1 (path-identifier usage tracking +
 duplicate-logging fix), 1.23.3 (EOF-brace crash + EBNF skip
 for malformed fixtures; 1.23.2 was a failed partial publish
 that never made it to a GitHub release), and 1.23.4 (Prettify

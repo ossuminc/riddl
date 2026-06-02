@@ -71,6 +71,9 @@ passes/input/check/saga/saga.riddl(12:5->16):
 passes/input/check/saga/saga.riddl(2:3->18):
  Context 'ignore2' has entities but no Sink streamlet to receive and dispatch incoming messages:
    context ignore2 is {
+passes/input/check/saga/saga.riddl(2:3->18):
+ Context 'ignore2' has entities but no repository to persist them; entities are stateful and should be persisted:
+   context ignore2 is {
 passes/input/check/saga/saga.riddl(12:5->16):
  Entity 'blah' does not define an Id type for its identity:
      entity blah is {

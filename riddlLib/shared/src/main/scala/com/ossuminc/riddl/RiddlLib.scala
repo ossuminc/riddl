@@ -26,9 +26,6 @@ import com.ossuminc.riddl.passes.{
   OutlinePass, OutlineOutput, OutlineEntry,
   TreePass, TreeOutput, TreeNode
 }
-import com.ossuminc.riddl.passes.ai.{
-  AIHelperOutput, AIHelperPass
-}
 import com.ossuminc.riddl.passes.analysis.{
   EntityLifecycle, EntityLifecycleOutput, EntityLifecyclePass,
   MessageFlowOutput, MessageFlowPass
@@ -350,15 +347,20 @@ trait RiddlLib:
 
   /** Analyze RIDDL source for AI-friendly tips.
     *
-    * Runs the AIHelperPass pipeline which filters
-    * validation output, converts warnings to actionable
-    * tips, and generates additional guidance for
-    * iterative model building.
+    * Runs the standard validation passes with
+    * [[com.ossuminc.riddl.utils.CommonOptions.provideTips]] enabled and
+    * returns all resulting messages. Each message carries a remediation
+    * `suggestion` describing how to fix the reported condition.
     *
     * @param source The RIDDL source code to analyze
     * @param origin Origin identifier for error messages
-    * @return Tip messages and filtered warnings/errors
+    * @return All validation messages, each with its suggestion populated
     */
+  @deprecated(
+    "Use validateString with CommonOptions.provideTips = true (or `riddlc advise`); " +
+      "tips are now remediation suggestions carried on every message.",
+    "1.24.0"
+  )
   def analyzeSourceForTips(
     source: String,
     origin: String = "string"
@@ -367,8 +369,13 @@ trait RiddlLib:
   /** Analyze a pre-parsed AST for AI-friendly tips.
     *
     * @param root A previously parsed Root AST
-    * @return Tip messages and filtered warnings/errors
+    * @return All validation messages, each with its suggestion populated
     */
+  @deprecated(
+    "Use validateString with CommonOptions.provideTips = true (or `riddlc advise`); " +
+      "tips are now remediation suggestions carried on every message.",
+    "1.24.0"
+  )
   def analyzeForTips(
     root: Root
   )(using PlatformContext): RiddlResult[Messages]
@@ -892,32 +899,40 @@ object RiddlLib extends RiddlLib:
     )
   end parseAsSaga
 
+  @deprecated(
+    "Use validateString with CommonOptions.provideTips = true (or `riddlc advise`); " +
+      "tips are now remediation suggestions carried on every message.",
+    "1.24.0"
+  )
   override def analyzeSourceForTips(
     source: String,
     origin: String
-  )(using PlatformContext): RiddlResult[Messages] =
+  )(using pc: PlatformContext): RiddlResult[Messages] =
     val rpi = RiddlParserInput(source, originToURL(origin))
-    AIHelperPass.analyzeSource(rpi) match
+    TopLevelParser.parseInput(rpi) match
       case Left(parseErrors) =>
         RiddlResult.Failure(parseErrors)
-      case Right(result) =>
-        val aiMsgs = result
-          .outputOf[AIHelperOutput](AIHelperPass.name)
-          .map(_.messages)
-          .getOrElse(Messages.empty)
-        RiddlResult.Success(aiMsgs)
+      case Right(root) =>
+        tipsFor(root)
   end analyzeSourceForTips
 
   override def analyzeForTips(
     root: Root
-  )(using PlatformContext): RiddlResult[Messages] =
-    val result = AIHelperPass.analyze(root)
-    val aiMsgs = result
-      .outputOf[AIHelperOutput](AIHelperPass.name)
-      .map(_.messages)
-      .getOrElse(Messages.empty)
-    RiddlResult.Success(aiMsgs)
+  )(using pc: PlatformContext): RiddlResult[Messages] =
+    tipsFor(root)
   end analyzeForTips
+
+  /** Run the standard passes with tip generation enabled so each message
+    * retains its remediation suggestion, then return all messages. This
+    * replaces the former AIHelperPass, which produced separate Tip messages.
+    */
+  private def tipsFor(root: Root)(using pc: PlatformContext): RiddlResult[Messages] =
+    pc.withOptions(pc.options.copy(provideTips = true)) { _ =>
+      val passInput = PassInput(root)
+      val passesResult = Pass.runThesePasses(passInput, Pass.standardPasses)
+      RiddlResult.Success(passesResult.messages)
+    }
+  end tipsFor
 
   override def version: String =
     RiddlBuildInfo.version

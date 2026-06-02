@@ -56,6 +56,12 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   *   When set to true, automatically generate .bast files next to .riddl files after successful parsing. The .bast
   *   files serve as a cache (like Python's .pyc files) - if the .bast is newer than the .riddl, it will be loaded
   *   instead of parsing the .riddl file.
+  * @param provideTips
+  *   When set to true, the remediation `suggestion` carried by each [[com.ossuminc.riddl.language.Messages.Message]]
+  *   is retained and included in the message's formatted output. When false (the default), suggestions are stripped
+  *   so normal output stays concise. This is the generic replacement for the former AIHelperPass: any pass may attach
+  *   a suggestion to a message and it surfaces only when this option is enabled (e.g. `riddlc --provide-tips ...` or
+  *   `riddlc advise ...`).
   */
 @JSExportTopLevel("CommonOptions")
 case class CommonOptions(
@@ -78,7 +84,8 @@ case class CommonOptions(
   maxParallelParsing: Int = Runtime.getRuntime.availableProcessors,
   maxIncludeWait: FiniteDuration = 10.second,
   warningsAreFatal: Boolean = false,
-  autoGenerateBAST: Boolean = false
+  autoGenerateBAST: Boolean = false,
+  provideTips: Boolean = false
 )
 
 @JSExportTopLevel("CommonOptions$")

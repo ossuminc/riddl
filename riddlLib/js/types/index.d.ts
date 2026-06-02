@@ -999,10 +999,13 @@ export declare const RiddlAPI: {
   /**
    * Analyze RIDDL source for AI-friendly tips.
    *
-   * Returns tips, filtered warnings, and errors from
-   * the AIHelperPass pipeline. Tips suggest what to add
-   * or fix to improve the model.
+   * Runs the standard validation passes with provideTips enabled and returns
+   * all resulting messages; each message's formatted text now includes a
+   * remediation "Suggestion:" line. The `tips` field of the result holds the
+   * messages that carry a suggestion.
    *
+   * @deprecated Use validateString with provideTips, or `riddlc advise`.
+   *   Tips are now remediation suggestions carried on every message.
    * @param source - RIDDL source code
    * @param origin - Origin identifier for error messages
    * @returns Result with categorized messages including tips
@@ -1015,6 +1018,8 @@ export declare const RiddlAPI: {
   /**
    * Analyze a pre-parsed AST for AI-friendly tips.
    *
+   * @deprecated Use validateString with provideTips, or `riddlc advise`.
+   *   Tips are now remediation suggestions carried on every message.
    * @param root - An opaque Root AST from a prior parse
    * @returns Result with categorized messages including tips
    */
@@ -1023,9 +1028,13 @@ export declare const RiddlAPI: {
 
 /**
  * Result from AI helper tip analysis.
+ *
+ * @deprecated Produced only by the deprecated analyzeForTips/
+ *   analyzeSourceForTips facades. Prefer reading the `suggestion` embedded in
+ *   each validation message's formatted text.
  */
 export interface TipAnalysisResult {
-  /** AI-friendly tip messages with guidance */
+  /** Messages that carry a remediation suggestion */
   tips: ErrorInfo[];
   /** Error messages (passed through from validation) */
   errors: ErrorInfo[];

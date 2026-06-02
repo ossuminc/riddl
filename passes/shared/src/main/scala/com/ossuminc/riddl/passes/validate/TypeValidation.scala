@@ -32,7 +32,13 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
       java.util.regex.Pattern.compile(compound)
     } catch {
       case x: PatternSyntaxException =>
-        messages.add(Message(p.loc, x.getMessage))
+        messages.add(
+          Message(
+            p.loc,
+            x.getMessage,
+            suggestion = "Correct the regular-expression syntax in this pattern (RIDDL uses Java regex syntax)."
+          )
+        )
     }
     this
   }
@@ -47,7 +53,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           id.value.head.isUpper,
           s"Enumerator '${id.format}' must start with upper case",
           StyleWarning,
-          id.loc
+          id.loc,
+          suggestion = s"Start the enumerator name with an upper-case letter, e.g. '${id.value.capitalize}'."
         )
     }
     this
@@ -69,13 +76,15 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
       rt.min >= BigInt.long2bigInt(Long.MinValue),
       "Minimum value might be too small to store in a Long",
       Warning,
-      rt.loc
+      rt.loc,
+      suggestion = "Keep the minimum within the range of a 64-bit Long, or model the value with a different numeric type."
     )
       .check(
         rt.max <= BigInt.long2bigInt(Long.MaxValue),
         "Maximum value might be too large to store in a Long",
         Warning,
-        rt.loc
+        rt.loc,
+        suggestion = "Keep the maximum within the range of a 64-bit Long, or model the value with a different numeric type."
       )
   }
 
@@ -86,7 +95,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           field.id.value.head.isLower,
           "Field names in aggregates should start with a lower case letter",
           StyleWarning,
-          field.loc
+          field.loc,
+          suggestion = s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
         )
         .checkMetadata(field)
     }
@@ -104,7 +114,8 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           field.id.value.head.isLower,
           s"Field names in ${mt.usecase.useCase} should start with a lower case letter",
           StyleWarning,
-          field.loc
+          field.loc,
+          suggestion = s"Start the field name with a lower-case letter, e.g. '${field.id.value.take(1).toLowerCase + field.id.value.drop(1)}'."
         )
         .checkTypeExpression(field.typeEx, typeDef, parents)
         .checkMetadata(field)
@@ -155,9 +166,17 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
     replica.of match {
       case _: Mapping | _: Sequence | _: Set | _: IntegerTypeExpression => // these are okay
       case _: Cardinality =>
-        messages.addError(replica.loc, s"Replica type expressions may not have cardinality")
+        messages.addError(
+          replica.loc,
+          s"Replica type expressions may not have cardinality",
+          suggestion = "Remove the cardinality from the replica's element type; a replica wraps a single replicable type."
+        )
       case _: TypeExpression =>
-        messages.addError(replica.loc, s"Type expression in Replica is not a replicable type")
+        messages.addError(
+          replica.loc,
+          s"Type expression in Replica is not a replicable type",
+          suggestion = "Use a replicable element type for the replica: a mapping, sequence, set, or integer type."
+        )
     }
   }
 
@@ -191,24 +210,39 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
           min >= 0,
           "Minimum cardinality must be non-negative",
           Error,
-          typ.loc
+          typ.loc,
+          suggestion = "Use a minimum cardinality of 0 or greater."
         )
         check(
           max >= 0,
           "Maximum cardinality must be non-negative",
           Error,
-          typ.loc
+          typ.loc,
+          suggestion = "Use a maximum cardinality of 0 or greater."
         )
         check(
           min < max,
           "Minimum cardinality must be less than maximum cardinality",
           Error,
-          typ.loc
+          typ.loc,
+          suggestion = "Make the minimum cardinality strictly less than the maximum (e.g. {1..5})."
         )
       case UniqueId(_, pid) => checkPathRef[Entity](pid, parents)
       case Decimal(loc, whole, fractional) =>
-        check(whole >= 1, "The whole number part must be positive", Error, loc)
-        check(fractional >= 1, "The fractional part must be positive", Error, loc)
+        check(
+          whole >= 1,
+          "The whole number part must be positive",
+          Error,
+          loc,
+          suggestion = "Specify a whole-number part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
+        )
+        check(
+          fractional >= 1,
+          "The fractional part must be positive",
+          Error,
+          loc,
+          suggestion = "Specify a fractional part of at least 1 for the Decimal, e.g. 'Decimal(10,2)'."
+        )
       case EntityReferenceTypeExpression(_, pid) =>
         checkPathRef[Entity](pid, parents)
       case _: PredefinedType => () // nothing needed

@@ -91,7 +91,8 @@ case class ReferenceMap(messages: Messages.Accumulator) {
         val className = classTag[T].runtimeClass.getSimpleName
         messages.addError(
           pid.loc,
-          s"Path Id '${pid.format} found ${x.identify} but a $className was expected"
+          s"Path Id '${pid.format} found ${x.identify} but a $className was expected",
+          suggestion = s"Point '${pid.format}' at a $className, or rename the reference to match the intended $className."
         )
         None
   }

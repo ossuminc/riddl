@@ -827,6 +827,8 @@ class CompletenessTest extends AbstractValidatingTest {
           |      }
           |    }
           |
+          |    repository Store is { ??? }
+          |
           |    connector CmdPipe {
           |      from outlet C.Events.out to inlet C.Incoming.in
           |    }

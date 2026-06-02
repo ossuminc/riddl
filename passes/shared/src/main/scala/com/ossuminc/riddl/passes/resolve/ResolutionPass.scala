@@ -445,19 +445,22 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               case anfis: AnchorCase =>
                 messages.addSevere(
                   pathId.loc,
-                  s"Invalid result from findAnchorInSymTab($topName, $parents): $anfis"
+                  s"Invalid result from findAnchorInSymTab($topName, $parents): $anfis",
+                  suggestion = "This is an internal RIDDL resolver error; please report it with the model that triggered it."
                 )
                 anfis
           case anfis: AnchorCase =>
             messages.addSevere(
               pathId.loc,
-              s"Invalid result from findAnchorInParents($topName, $parents): $anfis"
+              s"Invalid result from findAnchorInParents($topName, $parents): $anfis",
+              suggestion = "This is an internal RIDDL resolver error; please report it with the model that triggered it."
             )
             anfis
       case None =>
         messages.addSevere(
           pathId.loc,
-          "PathId is empty; this should already be checked in resolveAPathId"
+          "PathId is empty; this should already be checked in resolveAPathId",
+          suggestion = "This is an internal RIDDL resolver error; please report it with the model that triggered it."
         )
         AnchorNotFoundAnywhere("<unknown>")
   }
@@ -572,7 +575,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     val referTo = classTag[T].runtimeClass.getSimpleName
     val message = s"Path '${pathId.format}' resolved to ${foundDef.identifyWithLoc}," +
       s" in ${container.identify}, but ${article(referTo)} was expected"
-    messages.addError(pathId.loc, message)
+    messages.addError(
+      pathId.loc,
+      message,
+      suggestion = s"'${pathId.format}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
+        s"instead, or rename the reference to match the intended ${referTo}."
+    )
     if io.options.debug then
       println(
         s"WrongType: ${pathId.format} ==> ${foundDef.identifyWithLoc} not ${article(referTo)}"
@@ -602,7 +610,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       message + {
         if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
         else ""
-      }
+      },
+      suggestion = s"Define ${article(referTo)} named by '${pathId.format}', or correct the path so it names " +
+        s"an existing ${referTo} reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
     )
     if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
   end notResolved
@@ -696,13 +706,17 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           case typeEx: Alternation =>
             messages.addError(
               loc,
-              s"All alternates of `${typeEx.format}` must be ${kind.useCase.dropRight(4)} aggregates"
+              s"All alternates of `${typeEx.format}` must be ${kind.useCase.dropRight(4)} aggregates",
+              suggestion = s"Declare every alternative as ${article(kind.useCase.dropRight(4))} aggregate, " +
+                s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
             )
             None
           case typeEx: TypeExpression =>
             messages.addError(
               loc,
-              s"Type expression `${typeEx.format}` needs to be an aggregate for `${kind.useCase.dropRight(4)}`"
+              s"Type expression `${typeEx.format}` needs to be an aggregate for `${kind.useCase.dropRight(4)}`",
+              suggestion = s"Declare the referenced type as ${article(kind.useCase.dropRight(4))} aggregate, " +
+                s"e.g. 'type X = ${kind.useCase.dropRight(4)} { ??? }'."
             )
             None
         end match
@@ -724,19 +738,25 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       case typeEx: Alternation =>
         messages.addError(
           typ.loc,
-          s"All alternates of `${typeEx.format}` must be $useCase aggregates"
+          s"All alternates of `${typeEx.format}` must be $useCase aggregates",
+          suggestion = s"Declare every alternative as ${article(useCase.useCase)} aggregate, " +
+            s"e.g. 'type X = ${useCase.useCase} { ??? }'."
         )
         None
       case typEx: AggregateUseCaseTypeExpression =>
         messages.addError(
           typ.loc,
-          s"Type expression `${typEx.format}` is not compatible with keyword `$useCase`"
+          s"Type expression `${typEx.format}` is not compatible with keyword `$useCase`",
+          suggestion = s"Declare the type with the matching aggregate use case so it is compatible with " +
+            s"`$useCase`, e.g. 'type X = ${useCase.useCase} { ??? }'."
         )
         None
       case typEx: TypeExpression =>
         messages.addError(
           typ.loc,
-          s"Type expression `${typEx.format}` needs to be an aggregate for `$useCase`"
+          s"Type expression `${typEx.format}` needs to be an aggregate for `$useCase`",
+          suggestion = s"Declare the type as ${article(useCase.useCase)} aggregate, " +
+            s"e.g. 'type X = ${useCase.useCase} { ??? }'."
         )
         None
     end match
@@ -766,7 +786,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                 else
                   messages.addError(
                     typeEx.loc,
-                    s"Type expression `${typeEx.format}` needs all elements to be a graph type for keyword `graph` at $loc"
+                    s"Type expression `${typeEx.format}` needs all elements to be a graph type for keyword `graph` at $loc",
+                    suggestion = "Make every alternative a graph type, e.g. 'type X = graph of NodeType'."
                   )
                   None
                 end if
@@ -782,7 +803,8 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                 else
                   messages.addError(
                     typ.typEx.loc,
-                    s"Type expression `${typ.typEx.format}` needs to be a table for keyword `table` at $loc"
+                    s"Type expression `${typ.typEx.format}` needs to be a table for keyword `table` at $loc",
+                    suggestion = "Declare the referenced type as a table, e.g. 'type X = table of RowType'."
                   )
                   None
                 end if
@@ -886,7 +908,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
           .mkString("\n")
         val message = s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity" +
           context.map(_ + "\n").getOrElse("")
-        messages.addError(pid.loc, message)
+        messages.addError(
+          pid.loc,
+          message,
+          suggestion = s"Disambiguate '${pid.format}' with a more specific, fully-qualified path " +
+            "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition."
+        )
         Seq.empty[WithIdentifier]
     }
   }

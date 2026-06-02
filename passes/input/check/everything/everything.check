@@ -205,3 +205,6 @@ passes/input/check/everything/everything.riddl(42:5->21):
 passes/input/check/everything/everything.riddl(66:5->26):
  Entity 'SomeOtherThing' does not define an Id type for its identity:
      entity SomeOtherThing is {
+passes/input/check/everything/everything.riddl(16:3->15):
+ Context 'full' has entities but no repository to persist them; entities are stateful and should be persisted:
+   context full is {

@@ -486,7 +486,7 @@ object RiddlAPI {
     origin: String = "string"
   ): js.Dynamic =
     toJsResult(
-      RiddlLib.analyzeSourceForTips(source, origin),
+      (RiddlLib.analyzeSourceForTips(source, origin): @annotation.nowarn("cat=deprecation")),
       (msgs: Messages) => tipsToJsObject(msgs)
     )
   end analyzeSourceForTips
@@ -501,22 +501,24 @@ object RiddlAPI {
   def analyzeForTips(root: js.Any): js.Dynamic =
     val rootAST = root.asInstanceOf[Root]
     toJsResult(
-      RiddlLib.analyzeForTips(rootAST),
+      (RiddlLib.analyzeForTips(rootAST): @annotation.nowarn("cat=deprecation")),
       (msgs: Messages) => tipsToJsObject(msgs)
     )
   end analyzeForTips
 
-  /** Convert categorized messages to a JS object */
+  /** Convert categorized messages to a JS object. The `tips` field now holds
+    * every message that carries a remediation suggestion (the suggestion text
+    * is embedded in each formatted message), replacing the former Tip-kind
+    * messages produced by AIHelperPass.
+    */
   private def tipsToJsObject(
     msgs: Messages
   ): js.Dynamic =
     js.Dynamic.literal(
-      tips = formatMessagesAsArray(msgs.justTips),
+      tips = formatMessagesAsArray(msgs.filter(_.suggestion.nonEmpty)),
       errors = formatMessagesAsArray(msgs.justErrors),
       warnings = formatMessagesAsArray(
-        msgs.justWarnings.filterNot(m =>
-          m.isTip || m.isInfo
-        )
+        msgs.justWarnings.filterNot(m => m.isInfo)
       ),
       all = formatMessagesAsArray(msgs)
     )

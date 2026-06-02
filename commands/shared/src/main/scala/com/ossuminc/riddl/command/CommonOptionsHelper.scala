@@ -55,6 +55,7 @@ object CommonOptionsHelper:
   private inline def max_include_wait = "max-include-wait"
   private inline def warnings_are_fatal = "warnings-are-fatal"
   private inline def autoGenerateBastKey = "auto-generate-bast"
+  private inline def provide_tips = "provide-tips"
 
   lazy val commonOptionsParser: OParser[Unit, CommonOptions] = {
     val builder: OParserBuilder[CommonOptions] = OParser.builder[CommonOptions]
@@ -156,6 +157,12 @@ object CommonOptionsHelper:
         .action((_, c) => c.copy(autoGenerateBAST = true))
         .text(
           "Automatically generate .bast files next to .riddl files after parsing (like Python's .pyc)"
+        ),
+      opt[Unit]('P', provide_tips)
+        .optional()
+        .action((_, c) => c.copy(provideTips = true))
+        .text(
+          "Include a remediation suggestion (tip) with each message that provides one (for AI-assisted fixing)"
         )
     )
   }
@@ -245,6 +252,8 @@ object CommonOptionsHelper:
       if obj.hasPath(warnings_are_fatal) then obj.getBoolean(warnings_are_fatal) else default.warningsAreFatal
     val autoGenerateBAST =
       if obj.hasPath(autoGenerateBastKey) then obj.getBoolean(autoGenerateBastKey) else default.autoGenerateBAST
+    val provideTips =
+      if obj.hasPath(provide_tips) then obj.getBoolean(provide_tips) else default.provideTips
 
     CommonOptions(
       showTimes,
@@ -266,7 +275,8 @@ object CommonOptionsHelper:
       maxParallelParsing,
       maxIncludeWait,
       warningsAreFatal,
-      autoGenerateBAST
+      autoGenerateBAST,
+      provideTips
     )
   end commonOptionsReader
 
