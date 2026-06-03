@@ -36,10 +36,10 @@ jobs:
         cache: sbt
 
     - name: Set Up SBT
-      uses: sbt/setup-sbt@7e33f738678e47369c83dcb4b1d9c65d66eb3cdd # v1
+      uses: sbt/setup-sbt@v1
 
     - name: Coursier Caching
-      uses: coursier/cache-action@2addd381bd2c931f42d4b734b9d0c9b73aac16fb # v6
+      uses: coursier/cache-action@v7
 
     - name: Configure sbt GitHub Packages credentials
       run: |
@@ -54,7 +54,7 @@ jobs:
         EOF
 
     - name: Cache SBT Build Outputs
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           **/target/scala-3.8.3
@@ -123,7 +123,7 @@ jobs:
 
     - name: Collect Release Artifacts (JVM)
       if: matrix.platform == 'JVM'
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: collect-release-artifacts-jvm
         retention-days: 30
@@ -224,6 +224,6 @@ jobs:
           --enableExperimental
 
     - name: Upload Dependency Check Results
-      uses: github/codeql-action/upload-sarif@a4fda0891d53e117609b7ddb3570638c2c6d7c89 # v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: reports/dependency-check-report.sarif
