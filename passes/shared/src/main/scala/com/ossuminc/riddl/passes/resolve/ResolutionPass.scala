@@ -423,6 +423,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     }
   }
 
+  private val internalErrorSuggestion = 
+    "This is an internal RIDDL resolver error; please report it with the model that triggered it."
+    
   private def findAnchor[T <: Definition: ClassTag](
     pathId: PathIdentifier,
     parents: Parents
@@ -446,21 +449,21 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
                 messages.addSevere(
                   pathId.loc,
                   s"Invalid result from findAnchorInSymTab($topName, $parents): $anfis",
-                  suggestion = "This is an internal RIDDL resolver error; please report it with the model that triggered it."
+                  suggestion = internalErrorSuggestion
                 )
                 anfis
           case anfis: AnchorCase =>
             messages.addSevere(
               pathId.loc,
               s"Invalid result from findAnchorInParents($topName, $parents): $anfis",
-              suggestion = "This is an internal RIDDL resolver error; please report it with the model that triggered it."
+              suggestion = internalErrorSuggestion
             )
             anfis
       case None =>
         messages.addSevere(
           pathId.loc,
           "PathId is empty; this should already be checked in resolveAPathId",
-          suggestion = "This is an internal RIDDL resolver error; please report it with the model that triggered it."
+          suggestion = internalErrorSuggestion
         )
         AnchorNotFoundAnywhere("<unknown>")
   }
@@ -579,7 +582,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
       pathId.loc,
       message,
       suggestion = s"'${pathId.format}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
-        s"instead, or rename the reference to match the intended ${referTo}."
+        s"instead, or rename the reference to match the intended $referTo."
     )
     if io.options.debug then
       println(
@@ -612,7 +615,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         else ""
       },
       suggestion = s"Define ${article(referTo)} named by '${pathId.format}', or correct the path so it names " +
-        s"an existing ${referTo} reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
+        s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
     )
     if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
   end notResolved
@@ -980,42 +983,19 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
   private def candidatesFromContents(
     contents: Contents[RiddlValue]
   ): Contents[Definition] =
-    contents.flatMap { item =>
-      item match
-        case Include(_, _, contents) =>
-          // NOTE: An included file can include another file at the same definitional level.
-          // NOTE: We need to recursively descend that stack.  An include in a nested definitional level
-          // NOTE: will not be picked up by contents.includes because it would be inside another definition.
-          // NOTE: So we take the WithIdentifiers from the contents as well as from the includes
-          val nested = candidatesFromContents(contents.includes.toContents)
-          val current = contents.definitions
-          current ++ nested.toSeq
-        case definition: Definition =>
-          Seq(definition)
-        case _ =>
-          Seq.empty
-      end match
+    contents.flatMap {
+      case Include(_, _, contents) =>
+        // NOTE: An included file can include another file at the same definitional level.
+        // NOTE: We need to recursively descend that stack.  An include in a nested definitional level
+        // NOTE: will not be picked up by contents.includes because it would be inside another definition.
+        // NOTE: So we take the WithIdentifiers from the contents as well as from the includes
+        val nested = candidatesFromContents(contents.includes.toContents)
+        val current = contents.definitions
+        current ++ nested.toSeq
+      case definition: Definition =>
+        Seq(definition)
+      case _ =>
+        Seq.empty
     }
   end candidatesFromContents
-
-  // private def candidatesFromStateTypeRef(typeRef: TypeRef, parents: Parents): Contents[Definition] = {
-  //   val resolution: Resolution[Type] = resolveATypeRef(typeRef, parents)
-  //   resolution match {
-  //     case None => Contents.empty[Definition] // not found
-  //     case Some((typ: Type, _: Parents)) =>
-  //       typ.typEx match {
-  //         case agg: AggregateTypeExpression => agg.fields.toContents
-  //         case _                            => Contents.empty[Definition]
-  //       }
-  //   }
-  // }
-
-  // private def findResolution(soughtName: String, candidate: Definition): Boolean = {
-  //   candidate match {
-  //     case omc: OnMessageClause if omc.msg.id.nonEmpty =>
-  //       omc.msg.id.getOrElse(Identifier.empty).value == soughtName
-  //     case other: Definition =>
-  //       other.id.value == soughtName
-  //   }
-  // }
 }

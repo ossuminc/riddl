@@ -438,24 +438,18 @@ object Messages {
     @JSExport
     def add(message0: Message)(using pc: PlatformContext): this.type = {
       // The provideTips option is the single chokepoint that governs whether a message's
-      // remediation suggestion is retained. When disabled, strip it so output stays concise
-      // and existing snapshot/`.check` tests are unaffected.
+      // remediation suggestion is retained. When disabled, strip it so the output stays 
+      // concise and existing snapshot/`.check` tests are unaffected.
       val message = if pc.options.provideTips then message0 else message0.copy(suggestion = "")
+      val o = pc.options
       message.kind match {
-        case Warning =>
-          if pc.options.showWarnings then msgs.append(message)
-        case CompletenessWarning =>
-          if pc.options.showCompletenessWarnings && pc.options.showWarnings then msgs.append(message)
-        case StyleWarning =>
-          if pc.options.showStyleWarnings && pc.options.showWarnings then msgs.append(message)
-        case MissingWarning =>
-          if pc.options.showMissingWarnings && pc.options.showWarnings then msgs.append(message)
-        case UsageWarning =>
-          if pc.options.showUsageWarnings && pc.options.showWarnings then msgs.append(message)
-        case Tip =>
-          if pc.options.showTipMessages then msgs.append(message)
-        case Info =>
-          if pc.options.showInfoMessages then msgs.append(message)
+        case Warning if o.showWarnings => msgs.append(message)
+        case CompletenessWarning if o.showWarnings && o.showCompletenessWarnings => msgs.append(message)
+        case StyleWarning if o.showWarnings && o.showStyleWarnings => msgs.append(message)
+        case MissingWarning if o.showWarnings && o.showMissingWarnings => msgs.append(message)
+        case UsageWarning if o.showWarnings && o.showUsageWarnings => msgs.append(message)
+        case Tip if o.showTipMessages => msgs.append(message)
+        case Info if o.showInfoMessages => msgs.append(message)
         case Error | SevereError => msgs.append(message)
       }
       this
