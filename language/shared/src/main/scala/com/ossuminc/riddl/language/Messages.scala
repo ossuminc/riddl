@@ -438,7 +438,7 @@ object Messages {
     @JSExport
     def add(message0: Message)(using pc: PlatformContext): this.type = {
       // The provideTips option is the single chokepoint that governs whether a message's
-      // remediation suggestion is retained. When disabled, strip it so the output stays 
+      // remediation suggestion is retained. When disabled, strip it so the output stays
       // concise and existing snapshot/`.check` tests are unaffected.
       val message = if pc.options.provideTips then message0 else message0.copy(suggestion = "")
       val o = pc.options
@@ -451,6 +451,7 @@ object Messages {
         case Tip if o.showTipMessages => msgs.append(message)
         case Info if o.showInfoMessages => msgs.append(message)
         case Error | SevereError => msgs.append(message)
+        case _ => ()
       }
       this
     }
