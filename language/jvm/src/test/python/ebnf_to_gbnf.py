@@ -340,6 +340,23 @@ def regex_to_gbnf(pattern: str) -> str:
                 j += 1
             j += 1  # past ]
             char_class = pattern[i:j]
+            # Strip GBNF-invalid escapes from the char class: regex escapes
+            # like \/ are literals in GBNF (llama.cpp rejects unknown escapes).
+            # Keep \\ \] and control/hex/unicode escapes (n r t x u \).
+            _cc, _k = [], 0
+            while _k < len(char_class):
+                if char_class[_k] == "\\" and _k + 1 < len(char_class):
+                    _nx = char_class[_k + 1]
+                    if _nx in "nrtxu]\\":
+                        _cc.append(char_class[_k])
+                        _cc.append(_nx)
+                    else:
+                        _cc.append(_nx)
+                    _k += 2
+                else:
+                    _cc.append(char_class[_k])
+                    _k += 1
+            char_class = "".join(_cc)
             # Check for trailing quantifier and attach it
             quant = ""
             if j < len(pattern) and pattern[j] in "+*?":
@@ -389,8 +406,10 @@ def regex_to_gbnf(pattern: str) -> str:
                     result.append(f'"{pattern[i:i+6]}"')
                     i += 6
                 else:
-                    # Other escaped char (literal)
-                    result.append(f'"\\{nc}"')
+                    # Other escaped char (literal): drop the backslash — the
+                    # bare char is a literal in a GBNF double-quoted string
+                    # (e.g. regex \. -> ".", \* -> "*"). GBNF rejects "\.".
+                    result.append(f'"{nc}"')
                     i += 2
             else:
                 result.append('"\\\\"')
@@ -646,12 +665,16 @@ def tokenize_ebnf(body: str) -> list:
             tokens.append(("STRING", body[i:j+1]))
             i = j + 1
 
-        # Single-quoted string (in quoted_identifier regex)
+        # Single-quoted EBNF literal -> GBNF double-quoted literal.
         elif c == "'":
             j = i + 1
             while j < len(body) and body[j] != "'":
                 j += 1
-            tokens.append(("STRING", body[i:j+1]))
+            content = body[i + 1:j]
+            # GBNF has no single-quoted literals; escape " and \ for a proper
+            # double-quoted GBNF literal (e.g. '"' -> "\"").
+            escaped = content.replace("\\", "\\\\").replace('"', '\\"')
+            tokens.append(("STRING", '"' + escaped + '"'))
             i = j + 1
 
         # Regex
