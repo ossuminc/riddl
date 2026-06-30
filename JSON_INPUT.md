@@ -357,6 +357,23 @@ Interactions (a generic ref is `{ "kind": "user"|"entity"|"context"|"group"|"out
 { "kind": "sequential"|"parallel"|"optional", "interactions": [ <interaction> ] }
 ```
 
+## Phase 8 additions — UI groups
+
+`groups` are valid at context level. A group nests groups, contained groups,
+inputs, and outputs.
+
+```jsonc
+{ "name": "Home", "alias": "page",          // alias default "group"
+  "inputs":  [ { "name": "Login", "nounAlias": "form", "verbAlias": "takes", "takeIn": "<typePath>" } ],
+  "outputs": [ { "name": "Greeting", "putOut": { "kind": "literal", "value": "hi" } },
+               { "name": "Data", "putOut": { "kind": "type", "value": "<typePath>", "keyword": "record" } } ],
+  "containedGroups": [ { "name": "Footer", "group": "<groupPath>" } ],
+  "groups": [ { "name": "Sidebar", "alias": "pane", ... } ] }
+```
+
+`putOut.kind` is `type` (optional `keyword`, default "type"), `constant`, or
+`literal`. Input `nounAlias` defaults to "input", `verbAlias` to "acquires".
+
 ## Example
 
 ```jsonc

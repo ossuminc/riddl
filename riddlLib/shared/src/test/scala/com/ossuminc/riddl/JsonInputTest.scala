@@ -334,6 +334,24 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON round-trips (Phase 8)" should {
+
+    "UI groups: a page with inputs, outputs, a contained group, and a nested group" in {
+      assertRendersAndReparses(
+        """{ "domains": [ { "name": "P8", "contexts": [ { "name": "C",
+          |  "types": [ { "name": "Form", "typeExpression": { "kind": "Record", "fields": [ { "name": "x", "type": { "kind": "String" } } ] } } ],
+          |  "groups": [ { "name": "Home", "alias": "page",
+          |    "inputs": [ { "name": "Login", "nounAlias": "form", "verbAlias": "takes", "takeIn": "Form" } ],
+          |    "outputs": [
+          |      { "name": "Greeting", "putOut": { "kind": "literal", "value": "hello there" } },
+          |      { "name": "Data", "putOut": { "kind": "type", "value": "Form", "keyword": "record" } } ],
+          |    "containedGroups": [ { "name": "Footer", "group": "FooterGroup" } ],
+          |    "groups": [ { "name": "Sidebar", "alias": "pane",
+          |      "outputs": [ { "name": "Links", "putOut": { "kind": "literal", "value": "links" } } ] } ] } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")

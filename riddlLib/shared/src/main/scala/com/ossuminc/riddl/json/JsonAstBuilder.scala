@@ -128,6 +128,7 @@ object JsonAstBuilder:
     val connectors = c.connectors.map(buildConnector)
     val relationships = c.relationships.map(buildRelationship)
     val sagas = c.sagas.map(buildSaga)
+    val groups = c.groups.map(buildGroup)
     val handlers = c.handlers.map(buildHandler)
     Context(
       At(),
@@ -148,6 +149,7 @@ object JsonAstBuilder:
         connectors,
         relationships,
         sagas,
+        groups,
         handlers
       ),
       meta(c.brief)
@@ -395,6 +397,57 @@ object JsonAstBuilder:
       buildUserStory(e.userStory),
       contentsOf[EpicContents](types, shownBy, useCases),
       meta(e.brief)
+    )
+
+  // ---------------------------------------------------------------------------
+  // UI groups (Phase 8)
+  // ---------------------------------------------------------------------------
+
+  private def buildPutOut(p: PutOutDto)(using ctx: Ctx): TypeRef | ConstantRef | LiteralString =
+    p.kind match
+      case "type"     => TypeRef(At(), p.keyword.getOrElse("type"), pathId(p.value))
+      case "constant" => ConstantRef(At(), pathId(p.value))
+      case "literal"  => LiteralString(At(), p.value)
+      case other =>
+        ctx.err(s"unknown output putOut kind '$other' (expected type|constant|literal)")
+        LiteralString(At(), p.value)
+
+  private def buildInput(i: InputDto)(using Ctx): Input =
+    Input(
+      At(),
+      i.nounAlias.getOrElse("input"),
+      ident(i.name),
+      i.verbAlias.getOrElse("acquires"),
+      TypeRef(At(), "type", pathId(i.takeIn)),
+      contentsOf[OccursInInput](i.inputs.map(buildInput)),
+      meta(i.brief)
+    )
+
+  private def buildOutput(o: OutputDto)(using Ctx): Output =
+    Output(
+      At(),
+      o.nounAlias.getOrElse("output"),
+      ident(o.name),
+      o.verbAlias.getOrElse("displays"),
+      buildPutOut(o.putOut),
+      contentsOf[OccursInOutput](o.outputs.map(buildOutput)),
+      meta(o.brief)
+    )
+
+  private def buildContainedGroup(cg: ContainedGroupDto): ContainedGroup =
+    ContainedGroup(At(), ident(cg.name), GroupRef(At(), "group", pathId(cg.group)), meta(cg.brief))
+
+  private def buildGroup(g: GroupDto)(using Ctx): Group =
+    val groups = g.groups.map(buildGroup)
+    val contained = g.containedGroups.map(buildContainedGroup)
+    val inputs = g.inputs.map(buildInput)
+    val outputs = g.outputs.map(buildOutput)
+    Group(
+      At(),
+      g.alias.getOrElse("group"),
+      ident(g.name),
+      contentsOf[OccursInGroup](groups, contained, inputs, outputs),
+      meta(g.brief)
     )
 
   private def buildStatements(stmts: Seq[StatementDto])(using Ctx): Contents[Statements] =

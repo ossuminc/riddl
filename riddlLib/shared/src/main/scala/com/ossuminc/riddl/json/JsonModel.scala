@@ -173,6 +173,7 @@ object JsonModel:
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
     sagas: Seq[SagaDto] = Nil,
+    groups: Seq[GroupDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
 
@@ -446,6 +447,55 @@ object JsonModel:
     shownBy: Seq[String] = Nil,
     types: Seq[TypeDefDto] = Nil,
     useCases: Seq[UseCaseDto] = Nil
+  )
+
+  // ---------------------------------------------------------------------------
+  // UI groups (Phase 8)
+  // ---------------------------------------------------------------------------
+
+  /** What an output emits: `{ "kind": "type"|"constant"|"literal", "value": "<path or text>",
+    * "keyword"?: "record" }` (keyword only for the "type" kind; default "type").
+    */
+  case class PutOutDto(kind: String, value: String, keyword: Option[String] = None)
+
+  /** `{ "name": "Form", "nounAlias"?: "input", "verbAlias"?: "acquires", "takeIn": "<typePath>",
+    * "inputs"?: [<input>], "brief"?: ... }`
+    */
+  case class InputDto(
+    name: String,
+    takeIn: String,
+    nounAlias: Option[String] = None,
+    verbAlias: Option[String] = None,
+    brief: Option[String] = None,
+    inputs: Seq[InputDto] = Nil
+  )
+
+  /** `{ "name": "Page", "nounAlias"?: "output", "verbAlias"?: "displays", "putOut": <putOut>,
+    * "outputs"?: [<output>], "brief"?: ... }`
+    */
+  case class OutputDto(
+    name: String,
+    putOut: PutOutDto,
+    nounAlias: Option[String] = None,
+    verbAlias: Option[String] = None,
+    brief: Option[String] = None,
+    outputs: Seq[OutputDto] = Nil
+  )
+
+  /** `{ "name": "Sub", "group": "<groupPath>", "brief"?: ... }` */
+  case class ContainedGroupDto(name: String, group: String, brief: Option[String] = None)
+
+  /** `{ "name": "Main", "alias"?: "group", "groups"?: [...], "containedGroups"?: [...], "inputs"?:
+    * [...], "outputs"?: [...], "brief"?: ... }`
+    */
+  case class GroupDto(
+    name: String,
+    alias: Option[String] = None,
+    brief: Option[String] = None,
+    groups: Seq[GroupDto] = Nil,
+    containedGroups: Seq[ContainedGroupDto] = Nil,
+    inputs: Seq[InputDto] = Nil,
+    outputs: Seq[OutputDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -913,6 +963,11 @@ object JsonModel:
   given repositoryRW: ReadWriter[RepositoryDto] = macroRW
   given sagaStepRW: ReadWriter[SagaStepDto] = macroRW
   given sagaRW: ReadWriter[SagaDto] = macroRW
+  given putOutRW: ReadWriter[PutOutDto] = macroRW
+  given inputRW: ReadWriter[InputDto] = macroRW
+  given outputRW: ReadWriter[OutputDto] = macroRW
+  given containedGroupRW: ReadWriter[ContainedGroupDto] = macroRW
+  given groupRW: ReadWriter[GroupDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW

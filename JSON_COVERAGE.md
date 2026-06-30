@@ -73,10 +73,10 @@ is covered in that construct's phase. The builder emits references as
 | ParallelInteractions | ✅ Phase 7 | |
 | SequentialInteractions | ✅ Phase 7 | |
 | OptionalInteractions | ✅ Phase 7 | |
-| Group | 🔜 Phase 8 | |
-| Input | 🔜 Phase 8 | |
-| Output | 🔜 Phase 8 | |
-| ContainedGroup | 🔜 Phase 8 | |
+| Group | ✅ Phase 8 | |
+| Input | ✅ Phase 8 | |
+| Output | ✅ Phase 8 | |
+| ContainedGroup | ✅ Phase 8 | |
 | Nebula | 🚫 deferred | a parse target, not a self-contained JSON document; Root is the JSON top level |
 | Include | 🚫 deferred | file-reference mechanism; JSON is self-contained and the builder is no-I/O / Native-safe |
 | BASTImport | 🚫 deferred | same reason as Include |
