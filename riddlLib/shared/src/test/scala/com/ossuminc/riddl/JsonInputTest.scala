@@ -352,6 +352,33 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON round-trips (Phase 9)" should {
+
+    "rich metadata: description, terms, options, byAuthor, attachment, comments" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "P9",
+          |  "authors": [ { "name": "reid", "fullName": "Reid Spencer", "email": "reid@ossuminc.com" } ],
+          |  "metadata": {
+          |    "description": [ "The P9 domain", "second line" ],
+          |    "terms": [ { "name": "SKU", "definition": [ "a stock keeping unit" ] } ],
+          |    "attachments": [ { "name": "note", "mimeType": "text/plain", "value": "some attached text" } ],
+          |    "comments": [ "a domain comment" ] },
+          |  "contexts": [ { "name": "C",
+          |    "metadata": {
+          |      "options": [ { "name": "microservice" } ],
+          |      "byAuthors": [ "reid" ],
+          |      "description": [ "The C context" ],
+          |      "comments": [ "a context comment" ] },
+          |    "types": [
+          |      { "name": "T", "typeExpression": { "kind": "Boolean" }, "metadata": { "description": [ "a flag type" ] } },
+          |      { "name": "R", "typeExpression": { "kind": "Record", "fields": [ { "name": "n", "type": { "kind": "Integer" } } ] } } ],
+          |    "entities": [ { "name": "E", "state": { "name": "s", "recordType": "R" },
+          |      "metadata": { "comments": [ "an entity comment" ] },
+          |      "handlers": [ { "name": "H", "onClauses": [ { "kind": "init", "statements": [ "init it" ] } ] } ] } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")

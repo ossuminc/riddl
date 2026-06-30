@@ -54,11 +54,31 @@ object JsonAstBuilder:
     groups.foreach(g => buf ++= g)
     Contents[T](buf.toSeq*)
 
-  /** A brief, if present, as a one-element metadata block (otherwise empty). */
-  private def meta(brief: Option[String]): Contents[MetaData] =
-    brief match
-      case Some(b) => Contents[MetaData](BriefDescription(At(), LiteralString(At(), b)))
-      case None    => Contents.empty[MetaData]()
+  /** Build a definition's metadata: a `brief` shorthand plus, optionally, the richer
+    * [[JsonModel.MetaDto]] (description, terms, options, author refs, attachments, comments). Pure
+    * — references are resolved later by the passes.
+    */
+  private def meta(brief: Option[String], md: Option[MetaDto] = None): Contents[MetaData] =
+    val items = mutable.ArrayBuffer.empty[MetaData]
+    brief.foreach(b => items += BriefDescription(At(), LiteralString(At(), b)))
+    md.foreach { m =>
+      if m.description.nonEmpty then
+        items += BlockDescription(At(), m.description.map(LiteralString(At(), _)))
+      m.terms.foreach(t =>
+        items += Term(At(), ident(t.name), t.definition.map(LiteralString(At(), _)))
+      )
+      m.options.foreach(o => items += OptionValue(At(), o.name, o.args.map(LiteralString(At(), _))))
+      m.byAuthors.foreach(a => items += AuthorRef(At(), pathId(a)))
+      m.attachments.foreach { a =>
+        if a.inFile then
+          items += FileAttachment(At(), ident(a.name), a.mimeType, LiteralString(At(), a.value))
+        else
+          items += StringAttachment(At(), ident(a.name), a.mimeType, LiteralString(At(), a.value))
+      }
+      m.comments.foreach(c => items += LineComment(At(), c))
+    }
+    Contents[MetaData](items.toSeq*)
+  end meta
 
   private def ident(name: String): Identifier = Identifier(At(), name)
 
@@ -82,7 +102,7 @@ object JsonAstBuilder:
       At(),
       ident(d.name),
       contentsOf[DomainContents](authors, users, types, sagas, epics, subdomains, contexts),
-      meta(d.brief)
+      meta(d.brief, d.metadata)
     )
 
   private def buildUser(u: UserDto): User =
@@ -110,7 +130,7 @@ object JsonAstBuilder:
     )
 
   private def buildType(t: TypeDefDto)(using Ctx): Type =
-    Type(At(), ident(t.name), buildTypeExpr(t.typeExpression), meta(t.brief))
+    Type(At(), ident(t.name), buildTypeExpr(t.typeExpression), meta(t.brief, t.metadata))
 
   private def buildContext(c: ContextDto)(using Ctx): Context =
     val types = c.types.map(buildType)
@@ -152,7 +172,7 @@ object JsonAstBuilder:
         groups,
         handlers
       ),
-      meta(c.brief)
+      meta(c.brief, c.metadata)
     )
 
   /** A message (command/event/query/result) is a `Type` whose expression is an aggregate tagged
@@ -188,7 +208,7 @@ object JsonAstBuilder:
       At(),
       ident(e.name),
       contentsOf[EntityContents](types, constants, states, functions, handlers, invariants),
-      meta(e.brief)
+      meta(e.brief, e.metadata)
     )
 
   /** A state references a record type; RIDDL holds no fields in a state. */

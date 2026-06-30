@@ -139,7 +139,8 @@ object JsonModel:
     sagas: Seq[SagaDto] = Nil,
     epics: Seq[EpicDto] = Nil,
     domains: Seq[DomainDto] = Nil,
-    contexts: Seq[ContextDto] = Nil
+    contexts: Seq[ContextDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
@@ -153,7 +154,12 @@ object JsonModel:
     title: Option[String] = None
   )
 
-  case class TypeDefDto(name: String, typeExpression: TypeExprDto, brief: Option[String] = None)
+  case class TypeDefDto(
+    name: String,
+    typeExpression: TypeExprDto,
+    brief: Option[String] = None,
+    metadata: Option[MetaDto] = None
+  )
 
   case class ContextDto(
     name: String,
@@ -174,7 +180,8 @@ object JsonModel:
     relationships: Seq[RelationshipDto] = Nil,
     sagas: Seq[SagaDto] = Nil,
     groups: Seq[GroupDto] = Nil,
-    handlers: Seq[HandlerDto] = Nil
+    handlers: Seq[HandlerDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   case class MessageDto(name: String, brief: Option[String] = None, fields: Seq[FieldDto] = Nil)
@@ -187,7 +194,8 @@ object JsonModel:
     constants: Seq[ConstantDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
     handlers: Seq[HandlerDto] = Nil,
-    invariants: Seq[InvariantDto] = Nil
+    invariants: Seq[InvariantDto] = Nil,
+    metadata: Option[MetaDto] = None
   )
 
   /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
@@ -496,6 +504,33 @@ object JsonModel:
     containedGroups: Seq[ContainedGroupDto] = Nil,
     inputs: Seq[InputDto] = Nil,
     outputs: Seq[OutputDto] = Nil
+  )
+
+  // ---------------------------------------------------------------------------
+  // Metadata (Phase 9) — richer than `brief`, on the primary containers.
+  // ---------------------------------------------------------------------------
+
+  /** `{ "name": "SKU", "definition": ["a stock keeping unit"] }` (glossary term) */
+  case class TermDto(name: String, definition: Seq[String] = Nil)
+
+  /** `{ "name": "microservice", "args": [] }` (an option value) */
+  case class OptionDto(name: String, args: Seq[String] = Nil)
+
+  /** `{ "name": "diagram", "mimeType": "image/svg", "value": "<text or path>", "inFile"?: false }`.
+    * `inFile: true` -> a FileAttachment (value is a path); otherwise a StringAttachment.
+    */
+  case class AttachmentDto(name: String, mimeType: String, value: String, inFile: Boolean = false)
+
+  /** Rich metadata shared by the primary containers (domain/context/entity/type). `brief` remains a
+    * convenient top-level shorthand alongside this.
+    */
+  case class MetaDto(
+    description: Seq[String] = Nil,
+    terms: Seq[TermDto] = Nil,
+    options: Seq[OptionDto] = Nil,
+    byAuthors: Seq[String] = Nil,
+    attachments: Seq[AttachmentDto] = Nil,
+    comments: Seq[String] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -968,6 +1003,10 @@ object JsonModel:
   given outputRW: ReadWriter[OutputDto] = macroRW
   given containedGroupRW: ReadWriter[ContainedGroupDto] = macroRW
   given groupRW: ReadWriter[GroupDto] = macroRW
+  given termDtoRW: ReadWriter[TermDto] = macroRW
+  given optionDtoRW: ReadWriter[OptionDto] = macroRW
+  given attachmentDtoRW: ReadWriter[AttachmentDto] = macroRW
+  given metaDtoRW: ReadWriter[MetaDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW

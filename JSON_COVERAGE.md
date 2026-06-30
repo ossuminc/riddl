@@ -10,8 +10,11 @@ listed with a status:
 - 🔜 **phase-N** — planned for phase N
 - 🚫 **deferred** — intentionally out of scope (with reason)
 
-When RIDDL gains a new construct, add a row here. Phase 9 adds an
-automated guard test that fails if a concrete AST node has no entry.
+When RIDDL gains a new construct, add a row here. The
+`JsonCoverageGuardTest` (riddlLib JVM tests) enforces this: it scans
+`AST.scala` and fails if a definition / type-expression / statement /
+interaction case class has no ledger entry. (Metadata nodes use category
+names and are tracked manually in the Metadata section.)
 
 **Schema reference:** `JSON_INPUT.md`. **Roadmap:** NOTEBOOK.md
 ("JSON input method — phased roadmap").
@@ -44,7 +47,7 @@ is covered in that construct's phase. The builder emits references as
 | Enumerator | ✅ Phase 2 | names + explicit `value` |
 | Constant | ✅ Phase 2 | in context/entity |
 | User | ✅ Phase 2 | at domain level |
-| Term | 🔜 Phase 9 | glossary entry (it is metadata) |
+| Term | ✅ Phase 9 | glossary entry (metadata; see Metadata section) |
 | Method | ✅ Phase 3 | aggregate method with args |
 | Function | ✅ Phase 3 | input/output aggregation + statement body + nested |
 | Adaptor | ✅ Phase 4 | direction + ContextRef |
@@ -141,12 +144,15 @@ is covered in that construct's phase. The builder emits references as
 
 ## Metadata
 
+Rich metadata (below) is carried by `metadata` on the primary containers
+(domain, context, entity, type); `brief` remains a shorthand everywhere.
+
 | Construct | Status | Notes |
 |---|---|---|
 | BriefDescription | ✅ Phase 1 | `brief` on most constructs |
-| Description (block) | 🔜 Phase 9 | |
-| Term (as metadata) | 🔜 Phase 9 | |
-| OptionValue (options) | 🔜 Phase 9 | |
-| AuthorRef (byAuthor) | 🔜 Phase 9 | |
-| FileAttachment / StringAttachment / ULIDAttachment | 🔜 Phase 9 | |
-| Comment | 🔜 Phase 9 | |
+| Description (block) | ✅ Phase 9 | `description` lines |
+| Term (as metadata) | ✅ Phase 9 | `terms` |
+| OptionValue (options) | ✅ Phase 9 | `options` |
+| AuthorRef (byAuthor) | ✅ Phase 9 | `byAuthors` |
+| FileAttachment / StringAttachment | ✅ Phase 9 | `attachments` (ULIDAttachment is builder-internal) |
+| Comment | ✅ Phase 9 | `comments` (line comments) |

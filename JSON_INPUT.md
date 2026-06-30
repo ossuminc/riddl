@@ -374,6 +374,26 @@ inputs, and outputs.
 `putOut.kind` is `type` (optional `keyword`, default "type"), `constant`, or
 `literal`. Input `nounAlias` defaults to "input", `verbAlias` to "acquires".
 
+## Phase 9 additions — rich metadata
+
+Beyond the `brief` shorthand, the primary containers (domain, context,
+entity, type) accept a `metadata` object:
+
+```jsonc
+"metadata": {
+  "description": [ "line one", "line two" ],            // a block description
+  "terms":   [ { "name": "SKU", "definition": [ "a stock keeping unit" ] } ],
+  "options": [ { "name": "microservice", "args": [] } ],
+  "byAuthors": [ "<authorPath>" ],                       // author references
+  "attachments": [ { "name": "note", "mimeType": "text/plain", "value": "...", "inFile": false } ],
+  "comments": [ "a line comment" ]
+}
+```
+
+`attachments` with `inFile: true` become file attachments (value is a path);
+otherwise string attachments. Coverage of the definition / type-expression /
+statement / interaction surface is enforced by `JsonCoverageGuardTest`.
+
 ## Example
 
 ```jsonc
