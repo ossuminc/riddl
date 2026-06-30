@@ -68,7 +68,7 @@ ledger + a Phase-9 guard test keep coverage honest.
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Core DDD: domain/context/entity/type/field/state/handler/on-clauses/invariant/author/messages + common type exprs + `do` statement | **done** |
-| 2 | Remaining type expressions (SI units, time, collections, URI/Blob/…, SpecificRange) + Constant/Term/User/Method/Enumerator values | in progress |
+| 2 | Remaining type expressions (SI units, time, collections, URI/Blob/…, SpecificRange) + Constant/User/Enumerator values (Method→P3, Term→P9) | **done** |
 | 3 | Full statement language + Function | |
 | 4 | Adaptor/Streamlet/Inlet/Outlet/Connector/Relationship/Projector/Repository+Schema | |
 | 5 | Saga/SagaStep | |
