@@ -221,6 +221,29 @@ object RiddlAPI {
     )
   end parseString
 
+  /** Build a RIDDL AST Root from a JSON model document.
+    *
+    * The JSON is mapped onto the AST correct-by-construction (see the
+    * `JsonModel` wire schema), applying RIDDL's required type-expression
+    * defaults. The returned `value` is an opaque Scala Root handle — use
+    * `inspectRoot()` or `getDomains()` to read it, or `validate*` / prettify
+    * helpers to process it further.
+    *
+    * @param json The JSON model document
+    * @param origin Origin identifier for error messages
+    * @return Result with opaque Root handle or errors
+    */
+  @JSExport("parseJson")
+  def parseJson(
+    json: String,
+    origin: String = "string"
+  ): js.Dynamic =
+    toJsResult(
+      RiddlLib.parseJson(json, origin),
+      root => root.asInstanceOf[js.Any]
+    )
+  end parseJson
+
   /** Parse a RIDDL source string with custom platform
     * context.
     */

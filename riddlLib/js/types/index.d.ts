@@ -445,6 +445,39 @@ export declare const RiddlAPI: {
   parseString(source: string, origin?: string, verbose?: boolean): RiddlResult<RootAST>;
 
   /**
+   * Build a RIDDL AST Root from a JSON model document.
+   *
+   * The JSON describes a RIDDL model and is mapped onto the AST
+   * correct-by-construction, applying RIDDL's required type-expression
+   * defaults. This is an alternative input method to `parseString`, intended
+   * for programmatic/AI generation: the producer emits structured JSON (its
+   * strong suit) and RIDDL guarantees a well-formed model. The returned
+   * `value` is an opaque Root handle — use `inspectRoot()`, `getDomains()`,
+   * `flattenAST()`, or the validation helpers to process it.
+   *
+   * References in the JSON are emitted as path identifiers and resolved by
+   * the standard passes when the Root is validated; malformed JSON or a
+   * builder-level error (e.g. a missing `Id` entity) yields `succeeded:false`
+   * with `errors`.
+   *
+   * @param json - The JSON model document
+   * @param origin - Optional origin identifier (e.g., filename) for error messages
+   * @returns Result object with opaque Root handle or errors
+   *
+   * @example
+   * ```typescript
+   * const result = RiddlAPI.parseJson(JSON.stringify({
+   *   domains: [{ name: "Banking", contexts: [{ name: "Accounts" }] }]
+   * }));
+   * if (result.succeeded) {
+   *   const info = RiddlAPI.inspectRoot(result.value);
+   *   console.log("Domains:", info.domains.length);
+   * }
+   * ```
+   */
+  parseJson(json: string, origin?: string): RiddlResult<RootAST>;
+
+  /**
    * Parse a RIDDL source string with a custom platform context.
    *
    * @param source - The RIDDL source code to parse
