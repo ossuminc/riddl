@@ -1,0 +1,246 @@
+# RIDDL JSON Input Method
+
+`RiddlLib.parseJson(json, origin)` builds a RIDDL AST `Root` from a
+structured JSON document, as an alternative to parsing RIDDL surface
+text with `parseString`. It is **correct-by-construction**: the JSON
+maps onto the typed AST, RIDDL's required type-expression arguments are
+defaulted by the builder, and the result is then validated and/or
+prettified by the existing machinery (there is no JSON-specific
+validation path). References in the JSON are emitted as path identifiers
+and resolved later by the standard passes.
+
+This input method exists so that programmatic producers — particularly
+AI models — can emit JSON (a format they handle reliably, and one that
+supports schema-constrained decoding) and have RIDDL guarantee a
+well-formed model. `root2RiddlSource` then renders guaranteed-valid
+`.riddl` text.
+
+The whole path is **Native-safe** (no I/O; upickle cross-compiled for
+JVM/JS/Native). On JS it is exposed as `RiddlAPI.parseJson` (see
+`riddlLib/js/types/index.d.ts`).
+
+**Coverage:** this document describes the **Phase 1** subset. The JSON
+schema grows additively each phase; `JSON_COVERAGE.md` tracks which AST
+nodes are supported, planned, or deferred, and NOTEBOOK.md holds the
+phased roadmap. Examples live in `riddlLib/json-examples/`.
+
+## Pipeline
+
+```
+JSON string
+  -> upickle.read[JsonModel.RootDto]   (parse + shape-check)
+  -> JsonAstBuilder.build              (construct AST + apply defaults)
+  -> RiddlResult[Root]
+then (caller's choice, existing machinery):
+  -> RiddlLib.validateRoot(root)       (standard passes)
+  -> RiddlLib.root2RiddlSource(root)   (PrettifyPass -> valid RIDDL text)
+```
+
+Malformed JSON, an unknown `kind`, or a builder-level error (a missing
+`Id` entity, an empty `Enum`/`Pattern`) yields a clean
+`RiddlResult.Failure` — never a thrown exception. Undefined references
+(to a type, message, entity, …) are **not** builder errors; they
+surface as normal validation errors when the `Root` is validated.
+
+## Top level
+
+```jsonc
+{ "domains": [ <domain>, ... ] }
+```
+
+Every named construct takes a `name` and an optional `brief` (a short
+description string).
+
+### domain
+
+```jsonc
+{
+  "name": "Commerce",
+  "brief": "online shopping",        // optional
+  "authors":  [ <author>, ... ],     // optional
+  "types":    [ <type>, ... ],       // optional
+  "contexts": [ <context>, ... ]     // optional
+}
+```
+
+### author
+
+```jsonc
+{
+  "name": "reid",                     // the author's id
+  "fullName": "Reid Spencer",
+  "email": "reid@ossuminc.com",
+  "organization": "Ossum Inc.",       // optional
+  "title": "Architect"                // optional
+}
+```
+
+### context
+
+```jsonc
+{
+  "name": "Orders",
+  "brief": "...",                     // optional
+  "types":    [ <type>, ... ],        // optional
+  "commands": [ <message>, ... ],     // optional
+  "events":   [ <message>, ... ],     // optional
+  "queries":  [ <message>, ... ],     // optional
+  "results":  [ <message>, ... ],     // optional
+  "entities": [ <entity>, ... ],      // optional
+  "handlers": [ <handler>, ... ]      // optional
+}
+```
+
+### type
+
+```jsonc
+{ "name": "OrderInfo", "brief": "...", "typeExpression": <typeExpression> }
+```
+
+### message (command / event / query / result)
+
+A message is a `Type` whose expression is an aggregate tagged with the
+appropriate use case; its `kind` is determined by which context array it
+appears in.
+
+```jsonc
+{ "name": "PlaceOrder", "brief": "...", "fields": [ <field>, ... ] }
+```
+
+### entity
+
+```jsonc
+{
+  "name": "Order",
+  "brief": "...",                                   // optional
+  "state": { "name": "current", "recordType": "OrderInfo" },  // optional
+  "types":      [ <type>, ... ],                    // optional
+  "handlers":   [ <handler>, ... ],                 // optional
+  "invariants": [ <invariant>, ... ]                // optional
+}
+```
+
+**State references a record by name** — RIDDL holds no fields directly
+in a `state`; the fields belong to the named `record` type the state
+references.
+
+### handler / on-clause
+
+```jsonc
+{ "name": "Behavior", "onClauses": [ <onClause>, ... ] }
+```
+
+```jsonc
+{
+  "kind": "message" | "init" | "other" | "term",
+  "message": { "ref": "PlaceOrder", "kind": "command" },  // for kind "message"
+  "statements": [ "record the order details" ]            // Phase 1: prompt/`do` texts
+}
+```
+
+`message.kind` is one of `command | event | query | result`. In Phase 1,
+each statement string becomes a `prompt`/`do` statement.
+
+### invariant
+
+```jsonc
+{ "name": "positive", "condition": "total > 0", "brief": "..." }
+```
+
+### field
+
+```jsonc
+{ "name": "sku", "brief": "...", "type": <typeExpression> }
+```
+
+## typeExpression
+
+Tagged by `kind`, or wrapped with `cardinality`. Omitted arguments are
+defaulted by the builder (see the table below).
+
+```jsonc
+{ "kind": "String", "min": 0, "max": 255 }   // both optional
+{ "kind": "Id", "entity": "Order" }          // entity path REQUIRED
+{ "kind": "UUID" }
+{ "kind": "Boolean" }
+{ "kind": "Date" }
+{ "kind": "TimeStamp" }
+{ "kind": "Integer" }                        // also Whole | Natural | Number | Real
+{ "kind": "Decimal", "whole": 12, "fractional": 2 }
+{ "kind": "Currency", "country": "USD" }
+{ "kind": "Range", "min": 0, "max": 100 }
+{ "kind": "Pattern", "pattern": ["^[a-z]+$"] }      // >= 1 required
+{ "kind": "Enum", "values": ["Red", "Green"] }      // >= 1 required
+{ "kind": "Alternation", "of": ["TypeA", "TypeB"] } // names of declared types
+{ "kind": "Record", "fields": [ <field>, ... ] }    // a RIDDL `record`
+{ "kind": "Alias", "ref": "SomeDeclaredType" }
+
+// optional outer wrapper:
+{ "cardinality": "optional" | "zeroOrMore" | "oneOrMore", "of": <typeExpression> }
+```
+
+### Defaults applied by the builder
+
+| Omission | Result |
+|---|---|
+| `String` no `min`/`max` | `String(0, 255)` |
+| `String` only `max` | `String(0, max)` |
+| `String` only `min` | `String(min, 255)` |
+| `Decimal` no/partial args | `Decimal(12, 2)` |
+| `Range` no args | `range(0, 100)` |
+| `Currency` no `country` | `Currency(USD)` |
+| `Id` no `entity` | **error** (a path can't be defaulted) |
+| `Enum`/`Pattern` empty | **error** (need ≥ 1) |
+| no `brief` | omitted (legal) |
+
+## Example
+
+```jsonc
+{
+  "domains": [
+    {
+      "name": "Commerce",
+      "brief": "online shopping",
+      "contexts": [
+        {
+          "name": "Orders",
+          "types": [
+            { "name": "OrderInfo", "typeExpression": { "kind": "Record", "fields": [
+              { "name": "sku", "type": { "kind": "String" } },
+              { "name": "quantity", "type": { "kind": "Integer" } } ] } }
+          ],
+          "commands": [
+            { "name": "PlaceOrder", "brief": "place an order",
+              "fields": [ { "name": "sku", "type": { "kind": "String", "max": 64 } } ] }
+          ],
+          "entities": [
+            { "name": "Order",
+              "state": { "name": "current", "recordType": "OrderInfo" },
+              "handlers": [
+                { "name": "Behavior", "onClauses": [
+                  { "kind": "message", "message": { "ref": "PlaceOrder", "kind": "command" },
+                    "statements": [ "record the order details" ] } ] } ] }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+renders (via `root2RiddlSource`) to:
+
+```riddl
+domain Commerce is {
+  context Orders is {
+    record OrderInfo is { sku: String(0,255)  quantity: Integer }
+    command PlaceOrder is { sku: String(0,64) } with { briefly "place an order" }
+    entity Order is {
+      state current of record OrderInfo
+      handler Behavior is {
+        on command PlaceOrder is { prompt "record the order details" }
+      }
+    }
+  }
+} with { briefly "online shopping" }
+```

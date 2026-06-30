@@ -1,0 +1,32 @@
+{
+  "domains": [
+    {
+      "name": "Catalog",
+      "contexts": [
+        {
+          "name": "Products",
+          "types": [
+            { "name": "Color", "typeExpression": { "kind": "Enum", "values": [ "Red", "Green", "Blue" ] } },
+            { "name": "Sku", "typeExpression": { "kind": "Pattern", "pattern": [ "^[A-Z]{3}-[0-9]+$" ] } },
+            { "name": "Small", "typeExpression": { "kind": "Record", "fields": [ { "name": "a", "type": { "kind": "Integer" } } ] } },
+            { "name": "Large", "typeExpression": { "kind": "Record", "fields": [ { "name": "b", "type": { "kind": "Integer" } } ] } },
+            { "name": "Either", "typeExpression": { "kind": "Alternation", "of": [ "Small", "Large" ] } },
+            {
+              "name": "Product",
+              "typeExpression": {
+                "kind": "Record",
+                "fields": [
+                  { "name": "color", "type": { "kind": "Alias", "ref": "Color" } },
+                  { "name": "sku", "type": { "kind": "Alias", "ref": "Sku" } },
+                  { "name": "tags", "type": { "cardinality": "zeroOrMore", "of": { "kind": "String" } } },
+                  { "name": "nickname", "type": { "cardinality": "optional", "of": { "kind": "String" } } },
+                  { "name": "variants", "type": { "cardinality": "oneOrMore", "of": { "kind": "Alias", "ref": "Either" } } }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

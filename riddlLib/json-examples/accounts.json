@@ -1,0 +1,42 @@
+{
+  "domains": [
+    {
+      "name": "Accounts",
+      "contexts": [
+        {
+          "name": "Customers",
+          "types": [
+            {
+              "name": "Profile",
+              "typeExpression": {
+                "kind": "Record",
+                "fields": [
+                  { "name": "id", "type": { "kind": "Id", "entity": "Customer" } },
+                  { "name": "balance", "type": { "kind": "Currency" } },
+                  { "name": "score", "type": { "kind": "Range", "min": 0, "max": 850 } },
+                  { "name": "active", "type": { "kind": "Boolean" } },
+                  { "name": "born", "type": { "kind": "Date" } },
+                  { "name": "seen", "type": { "kind": "TimeStamp" } }
+                ]
+              }
+            }
+          ],
+          "entities": [
+            {
+              "name": "Customer",
+              "state": { "name": "profile", "recordType": "Profile" },
+              "handlers": [
+                {
+                  "name": "H",
+                  "onClauses": [
+                    { "kind": "init", "statements": [ "create the customer" ] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

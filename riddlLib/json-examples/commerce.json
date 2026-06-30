@@ -1,0 +1,52 @@
+{
+  "domains": [
+    {
+      "name": "Commerce",
+      "brief": "online shopping",
+      "contexts": [
+        {
+          "name": "Orders",
+          "types": [
+            {
+              "name": "OrderInfo",
+              "typeExpression": {
+                "kind": "Record",
+                "fields": [
+                  { "name": "sku", "type": { "kind": "String" } },
+                  { "name": "quantity", "type": { "kind": "Integer" } }
+                ]
+              }
+            }
+          ],
+          "commands": [
+            {
+              "name": "PlaceOrder",
+              "brief": "place an order",
+              "fields": [
+                { "name": "sku", "type": { "kind": "String", "max": 64 } }
+              ]
+            }
+          ],
+          "entities": [
+            {
+              "name": "Order",
+              "state": { "name": "current", "recordType": "OrderInfo" },
+              "handlers": [
+                {
+                  "name": "Behavior",
+                  "onClauses": [
+                    {
+                      "kind": "message",
+                      "message": { "ref": "PlaceOrder", "kind": "command" },
+                      "statements": [ "record the order details" ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
