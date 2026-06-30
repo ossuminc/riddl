@@ -118,7 +118,17 @@ object JsonModel:
   // Structural DTOs
   // ---------------------------------------------------------------------------
 
-  case class RootDto(domains: Seq[DomainDto] = Nil)
+  case class RootDto(domains: Seq[DomainDto] = Nil, modules: Seq[ModuleDto] = Nil)
+
+  /** A module groups domains (and authors): `{ "name": "M", "domains": [...], "authors": [...] }`
+    * (Phase 6)
+    */
+  case class ModuleDto(
+    name: String,
+    brief: Option[String] = None,
+    authors: Seq[AuthorDto] = Nil,
+    domains: Seq[DomainDto] = Nil
+  )
 
   case class DomainDto(
     name: String,
@@ -127,6 +137,7 @@ object JsonModel:
     users: Seq[UserDto] = Nil,
     types: Seq[TypeDefDto] = Nil,
     sagas: Seq[SagaDto] = Nil,
+    domains: Seq[DomainDto] = Nil,
     contexts: Seq[ContextDto] = Nil
   )
 
@@ -758,6 +769,7 @@ object JsonModel:
   given contextRW: ReadWriter[ContextDto] = macroRW
   given authorRW: ReadWriter[AuthorDto] = macroRW
   given domainRW: ReadWriter[DomainDto] = macroRW
+  given moduleRW: ReadWriter[ModuleDto] = macroRW
   given rootRW: ReadWriter[RootDto] = macroRW
 
   /** Parse a JSON string into the wire model. Throws on malformed JSON or an unknown

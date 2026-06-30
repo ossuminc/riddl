@@ -320,6 +320,16 @@ New context-level arrays: `adaptors`, `streamlets`, `projectors`,
   "steps": [ { "name": "Reserve", "do": [ <stmt> ], "undo": [ <stmt> ] } ] }
 ```
 
+## Phase 6 additions — modules & deep nesting
+
+Top level may carry `modules` alongside `domains`; a module groups domains
+(and authors). A domain may carry nested `domains` (subdomains).
+
+```jsonc
+{ "domains": [ { "name": "Outer", "domains": [ { "name": "Inner", ... } ], "contexts": [...] } ],
+  "modules": [ { "name": "M", "authors": [...], "domains": [ ... ] } ] }
+```
+
 ## Example
 
 ```jsonc

@@ -30,9 +30,15 @@ object JsonAstBuilder:
   def build(dto: RootDto): Either[Messages, Root] =
     given ctx: Ctx = new Ctx
     val domains = dto.domains.map(buildDomain)
-    val root = Root(At(), Contents[RootContents](domains*))
+    val modules = dto.modules.map(buildModule)
+    val root = Root(At(), contentsOf[RootContents](domains, modules))
     if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
   end build
+
+  private def buildModule(m: ModuleDto)(using Ctx): Module =
+    val authors = m.authors.map(buildAuthor)
+    val domains = m.domains.map(buildDomain)
+    Module(At(), ident(m.name), contentsOf[ModuleContents](authors, domains), meta(m.brief))
 
   /** Mutable error sink threaded through construction. */
   private final class Ctx:
@@ -68,11 +74,12 @@ object JsonAstBuilder:
     val users = d.users.map(buildUser)
     val types = d.types.map(buildType)
     val sagas = d.sagas.map(buildSaga)
+    val subdomains = d.domains.map(buildDomain)
     val contexts = d.contexts.map(buildContext)
     Domain(
       At(),
       ident(d.name),
-      contentsOf[DomainContents](authors, users, types, sagas, contexts),
+      contentsOf[DomainContents](authors, users, types, sagas, subdomains, contexts),
       meta(d.brief)
     )
 

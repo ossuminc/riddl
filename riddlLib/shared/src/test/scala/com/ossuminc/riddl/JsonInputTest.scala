@@ -290,6 +290,23 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON round-trips (Phase 6)" should {
+
+    "a module with a domain, and a domain with a subdomain" in {
+      assertRoundTrips(
+        """{
+          |  "domains": [ { "name": "Outer",
+          |    "contexts": [ { "name": "C", "types": [ { "name": "T", "typeExpression": { "kind": "Boolean" } } ] } ],
+          |    "domains": [ { "name": "Inner",
+          |      "contexts": [ { "name": "IC", "types": [ { "name": "IT", "typeExpression": { "kind": "Integer" } } ] } ] } ] } ],
+          |  "modules": [ { "name": "Mod",
+          |    "domains": [ { "name": "ModDomain",
+          |      "contexts": [ { "name": "MC", "types": [ { "name": "MT", "typeExpression": { "kind": "String" } } ] } ] } ] } ]
+          |}""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")
