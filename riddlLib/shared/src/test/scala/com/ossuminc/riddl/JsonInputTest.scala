@@ -252,6 +252,29 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON round-trips (Phase 4)" should {
+
+    "streaming & integration: adaptor, streamlet, connector, projector, repository+schema, relationship" in {
+      assertRendersAndReparses(
+        """{ "domains": [ { "name": "P4", "contexts": [ { "name": "C",
+          |  "types": [ { "name": "Evt", "typeExpression": { "kind": "Record", "fields": [ { "name": "x", "type": { "kind": "Integer" } } ] } } ],
+          |  "adaptors": [ { "name": "Adapt", "direction": "inbound", "context": "Other",
+          |    "handlers": [ { "name": "AH", "onClauses": [ { "kind": "init", "statements": [ "adapt it" ] } ] } ] } ],
+          |  "streamlets": [ { "name": "Pipe", "shape": "flow",
+          |    "inlets": [ { "name": "in", "type": "Evt" } ],
+          |    "outlets": [ { "name": "out", "type": "Evt" } ],
+          |    "handlers": [ { "name": "SH", "onClauses": [ { "kind": "init", "statements": [ "flow it" ] } ] } ] } ],
+          |  "connectors": [ { "name": "Conn", "from": "Pipe.out", "to": "Pipe.in" } ],
+          |  "projectors": [ { "name": "Proj", "repository": "Repo",
+          |    "handlers": [ { "name": "PH", "onClauses": [ { "kind": "init", "statements": [ "project it" ] } ] } ] } ],
+          |  "repositories": [ { "name": "Repo",
+          |    "schema": { "name": "Sch", "kind": "Relational", "data": { "order": "Evt" }, "indices": [ "order" ] },
+          |    "handlers": [ { "name": "RH", "onClauses": [ { "kind": "init", "statements": [ "store it" ] } ] } ] } ],
+          |  "relationships": [ { "name": "Rel", "withProcessor": "Proj", "processor": "projector", "cardinality": "1:N", "label": "feeds" } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")

@@ -111,6 +111,12 @@ object JsonAstBuilder:
     val results = c.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val entities = c.entities.map(buildEntity)
     val functions = c.functions.map(buildFunction)
+    val adaptors = c.adaptors.map(buildAdaptor)
+    val streamlets = c.streamlets.map(buildStreamlet)
+    val projectors = c.projectors.map(buildProjector)
+    val repositories = c.repositories.map(buildRepository)
+    val connectors = c.connectors.map(buildConnector)
+    val relationships = c.relationships.map(buildRelationship)
     val handlers = c.handlers.map(buildHandler)
     Context(
       At(),
@@ -124,6 +130,12 @@ object JsonAstBuilder:
         results,
         entities,
         functions,
+        adaptors,
+        streamlets,
+        projectors,
+        repositories,
+        connectors,
+        relationships,
         handlers
       ),
       meta(c.brief)
@@ -315,6 +327,144 @@ object JsonAstBuilder:
           s"unknown processor kind '$other' (expected entity|context|projector|repository|adaptor)"
         )
         EntityRef(At(), pathId(path))
+
+  // ---------------------------------------------------------------------------
+  // Streaming & integration (Phase 4)
+  // ---------------------------------------------------------------------------
+
+  private def adaptorDirection(s: String)(using ctx: Ctx): AdaptorDirection =
+    s match
+      case "inbound"  => InboundAdaptor(At())
+      case "outbound" => OutboundAdaptor(At())
+      case other =>
+        ctx.err(s"unknown adaptor direction '$other' (expected inbound|outbound)")
+        InboundAdaptor(At())
+
+  private def buildAdaptor(a: AdaptorDto)(using Ctx): Adaptor =
+    val types = a.types.map(buildType)
+    val constants = a.constants.map(buildConstant)
+    val functions = a.functions.map(buildFunction)
+    val handlers = a.handlers.map(buildHandler)
+    Adaptor(
+      At(),
+      ident(a.name),
+      adaptorDirection(a.direction),
+      ContextRef(At(), pathId(a.context)),
+      contentsOf[AdaptorContents](types, constants, functions, handlers),
+      meta(a.brief)
+    )
+
+  private def streamletShape(s: String)(using ctx: Ctx): StreamletShape =
+    s match
+      case "source" => Source(At())
+      case "sink"   => Sink(At())
+      case "flow"   => Flow(At())
+      case "merge"  => Merge(At())
+      case "split"  => Split(At())
+      case "router" => Router(At())
+      case "void"   => Void(At())
+      case other =>
+        ctx.err(s"unknown streamlet shape '$other' (source|sink|flow|merge|split|router|void)")
+        Void(At())
+
+  private def buildInlet(p: PortletDto): Inlet =
+    Inlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief))
+
+  private def buildOutlet(p: PortletDto): Outlet =
+    Outlet(At(), ident(p.name), TypeRef(At(), "type", pathId(p.`type`)), meta(p.brief))
+
+  private def buildConnector(c: ConnectorDto): Connector =
+    Connector(
+      At(),
+      ident(c.name),
+      OutletRef(At(), pathId(c.from)),
+      InletRef(At(), pathId(c.to)),
+      meta(c.brief)
+    )
+
+  private def buildStreamlet(s: StreamletDto)(using Ctx): Streamlet =
+    val inlets = s.inlets.map(buildInlet)
+    val outlets = s.outlets.map(buildOutlet)
+    val connectors = s.connectors.map(buildConnector)
+    val types = s.types.map(buildType)
+    val handlers = s.handlers.map(buildHandler)
+    Streamlet(
+      At(),
+      ident(s.name),
+      streamletShape(s.shape),
+      contentsOf[StreamletContents](types, inlets, outlets, connectors, handlers),
+      meta(s.brief)
+    )
+
+  private def relationshipCardinality(s: String)(using ctx: Ctx): RelationshipCardinality =
+    s match
+      case "1:1" | "OneToOne"   => RelationshipCardinality.OneToOne
+      case "1:N" | "OneToMany"  => RelationshipCardinality.OneToMany
+      case "N:1" | "ManyToOne"  => RelationshipCardinality.ManyToOne
+      case "N:N" | "ManyToMany" => RelationshipCardinality.ManyToMany
+      case other =>
+        ctx.err(s"unknown relationship cardinality '$other' (expected 1:1|1:N|N:1|N:N)")
+        RelationshipCardinality.OneToOne
+
+  private def buildRelationship(r: RelationshipDto)(using Ctx): Relationship =
+    Relationship(
+      At(),
+      ident(r.name),
+      processorRef(r.withProcessor, r.processor),
+      relationshipCardinality(r.cardinality),
+      r.label.map(LiteralString(At(), _)),
+      meta(r.brief)
+    )
+
+  private def buildProjector(p: ProjectorDto)(using Ctx): Projector =
+    val types = p.types.map(buildType)
+    val constants = p.constants.map(buildConstant)
+    val functions = p.functions.map(buildFunction)
+    val handlers = p.handlers.map(buildHandler)
+    val repoRefs = p.repository.toSeq.map(r => RepositoryRef(At(), pathId(r)))
+    Projector(
+      At(),
+      ident(p.name),
+      contentsOf[ProjectorContents](types, constants, functions, handlers, repoRefs),
+      meta(p.brief)
+    )
+
+  private def schemaKind(s: Option[String])(using ctx: Ctx): RepositorySchemaKind =
+    s match
+      case None => RepositorySchemaKind.Other
+      case Some(k) =>
+        scala.util.Try(RepositorySchemaKind.valueOf(k)).toOption.getOrElse {
+          ctx.err(s"unknown schema kind '$k'")
+          RepositorySchemaKind.Other
+        }
+
+  private def buildSchema(s: SchemaDto)(using ctx: Ctx): Schema =
+    val data = s.data.map { case (k, v) => Identifier(At(), k) -> TypeRef(At(), "type", pathId(v)) }
+    val links = s.links.flatMap { case (k, fields) =>
+      if fields.sizeIs >= 2 then
+        Some(
+          Identifier(At(), k) -> (
+            FieldRef(At(), pathId(fields(0))),
+            FieldRef(At(), pathId(fields(1)))
+          )
+        )
+      else
+        ctx.err(s"schema link '$k' needs two field references")
+        None
+    }
+    val indices = s.indices.map(f => FieldRef(At(), pathId(f)))
+    Schema(At(), ident(s.name), schemaKind(s.kind), data, links, indices, meta(s.brief))
+
+  private def buildRepository(r: RepositoryDto)(using Ctx): Repository =
+    val types = r.types.map(buildType)
+    val handlers = r.handlers.map(buildHandler)
+    val schemas = r.schema.toSeq.map(buildSchema)
+    Repository(
+      At(),
+      ident(r.name),
+      contentsOf[RepositoryContents](types, schemas, handlers),
+      meta(r.brief)
+    )
 
   // ---------------------------------------------------------------------------
   // Type expressions (with the defaults table applied here, in the builder)

@@ -276,6 +276,41 @@ Records may carry `methods` alongside `fields`:
                  "args": [ { "name": "by", "type": { "kind": "Integer" } } ] } ] }
 ```
 
+## Phase 4 additions — streaming & integration
+
+New context-level arrays: `adaptors`, `streamlets`, `projectors`,
+`repositories`, `connectors`, `relationships`.
+
+```jsonc
+// adaptor
+{ "name": "A", "direction": "inbound"|"outbound", "context": "<contextPath>",
+  "types": [...], "constants": [...], "functions": [...], "handlers": [...] }
+
+// streamlet (shape: source|sink|flow|merge|split|router|void)
+{ "name": "S", "shape": "flow",
+  "inlets":  [ { "name": "in",  "type": "<typePath>" } ],
+  "outlets": [ { "name": "out", "type": "<typePath>" } ],
+  "connectors": [ <connector> ], "types": [...], "handlers": [...] }
+
+// connector (also valid at context level)
+{ "name": "C", "from": "<outletPath>", "to": "<inletPath>" }
+
+// projector
+{ "name": "P", "repository": "<repositoryPath>", "handlers": [...], "types": [...] }
+
+// repository + schema
+{ "name": "Repo", "schema": {
+    "name": "S", "kind": "Relational",          // RepositorySchemaKind name; default Other
+    "data":    { "<field>": "<typePath>" },
+    "links":   { "<name>": [ "<fieldA>", "<fieldB>" ] },
+    "indices": [ "<field>" ] },
+  "handlers": [...], "types": [...] }
+
+// relationship (processor: entity|context|projector|repository|adaptor)
+{ "name": "R", "withProcessor": "<path>", "processor": "projector",
+  "cardinality": "1:1"|"1:N"|"N:1"|"N:N", "label": "..." }
+```
+
 ## Example
 
 ```jsonc

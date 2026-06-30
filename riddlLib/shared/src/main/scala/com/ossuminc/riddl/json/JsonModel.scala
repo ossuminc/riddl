@@ -153,6 +153,12 @@ object JsonModel:
     results: Seq[MessageDto] = Nil,
     entities: Seq[EntityDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
+    adaptors: Seq[AdaptorDto] = Nil,
+    streamlets: Seq[StreamletDto] = Nil,
+    projectors: Seq[ProjectorDto] = Nil,
+    repositories: Seq[RepositoryDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil,
+    relationships: Seq[RelationshipDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
 
@@ -275,6 +281,84 @@ object JsonModel:
 
   /** `{ "pattern": "...", "statements": [<stmt>] }` */
   case class MatchCaseDto(pattern: String, statements: Seq[StatementDto])
+
+  // ---------------------------------------------------------------------------
+  // Streaming & integration (Phase 4)
+  // ---------------------------------------------------------------------------
+
+  /** `{ "name": "A", "direction": "inbound"|"outbound", "context": "<path>", ... }` */
+  case class AdaptorDto(
+    name: String,
+    direction: String,
+    context: String,
+    brief: Option[String] = None,
+    types: Seq[TypeDefDto] = Nil,
+    constants: Seq[ConstantDto] = Nil,
+    functions: Seq[FunctionDto] = Nil,
+    handlers: Seq[HandlerDto] = Nil
+  )
+
+  /** An inlet or outlet: `{ "name": "in", "type": "<typePath>", "brief"?: ... }` */
+  case class PortletDto(name: String, `type`: String, brief: Option[String] = None)
+
+  /** `{ "name": "C", "from": "<outletPath>", "to": "<inletPath>", "brief"?: ... }` */
+  case class ConnectorDto(name: String, from: String, to: String, brief: Option[String] = None)
+
+  /** `{ "name": "S", "shape": "source"|"sink"|"flow"|"merge"|"split"|"router"|"void", ... }` */
+  case class StreamletDto(
+    name: String,
+    shape: String,
+    brief: Option[String] = None,
+    inlets: Seq[PortletDto] = Nil,
+    outlets: Seq[PortletDto] = Nil,
+    connectors: Seq[ConnectorDto] = Nil,
+    types: Seq[TypeDefDto] = Nil,
+    handlers: Seq[HandlerDto] = Nil
+  )
+
+  /** `{ "name": "R", "withProcessor": "<path>", "processor": "entity"|..., "cardinality":
+    * "1:1"|..., "label"?: "...", "brief"?: ... }`
+    */
+  case class RelationshipDto(
+    name: String,
+    withProcessor: String,
+    processor: String,
+    cardinality: String,
+    label: Option[String] = None,
+    brief: Option[String] = None
+  )
+
+  /** `{ "name": "P", "repository"?: "<path>", ... }` */
+  case class ProjectorDto(
+    name: String,
+    brief: Option[String] = None,
+    repository: Option[String] = None,
+    types: Seq[TypeDefDto] = Nil,
+    constants: Seq[ConstantDto] = Nil,
+    functions: Seq[FunctionDto] = Nil,
+    handlers: Seq[HandlerDto] = Nil
+  )
+
+  /** A repository schema: `{ "name": "S", "kind"?: "Relational"|..., "data"?: {field->typePath},
+    * "links"?: {name->[fieldA,fieldB]}, "indices"?: [field], "brief"?: ... }`
+    */
+  case class SchemaDto(
+    name: String,
+    kind: Option[String] = None,
+    data: Map[String, String] = Map.empty,
+    links: Map[String, Seq[String]] = Map.empty,
+    indices: Seq[String] = Nil,
+    brief: Option[String] = None
+  )
+
+  /** `{ "name": "Repo", "schema"?: <schema>, ... }` */
+  case class RepositoryDto(
+    name: String,
+    brief: Option[String] = None,
+    schema: Option[SchemaDto] = None,
+    types: Seq[TypeDefDto] = Nil,
+    handlers: Seq[HandlerDto] = Nil
+  )
 
   // ---------------------------------------------------------------------------
   // upickle wiring
@@ -624,6 +708,14 @@ object JsonModel:
   given statementRW: ReadWriter[StatementDto] =
     readwriter[ujson.Value].bimap[StatementDto](writeStatement, readStatement)
   given functionRW: ReadWriter[FunctionDto] = macroRW
+  given portletRW: ReadWriter[PortletDto] = macroRW
+  given connectorDtoRW: ReadWriter[ConnectorDto] = macroRW
+  given adaptorRW: ReadWriter[AdaptorDto] = macroRW
+  given streamletRW: ReadWriter[StreamletDto] = macroRW
+  given relationshipRW: ReadWriter[RelationshipDto] = macroRW
+  given projectorRW: ReadWriter[ProjectorDto] = macroRW
+  given schemaDtoRW: ReadWriter[SchemaDto] = macroRW
+  given repositoryRW: ReadWriter[RepositoryDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW

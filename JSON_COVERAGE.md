@@ -47,15 +47,15 @@ is covered in that construct's phase. The builder emits references as
 | Term | 🔜 Phase 9 | glossary entry (it is metadata) |
 | Method | ✅ Phase 3 | aggregate method with args |
 | Function | ✅ Phase 3 | input/output aggregation + statement body + nested |
-| Adaptor | 🔜 Phase 4 | direction + ContextRef |
-| Projector | 🔜 Phase 4 | RepositoryRef |
-| Repository | 🔜 Phase 4 | Schema |
-| Schema | 🔜 Phase 4 | Map-based data/links/indices |
-| Streamlet | 🔜 Phase 4 | shape ↔ inlet/outlet cardinality |
-| Inlet | 🔜 Phase 4 | |
-| Outlet | 🔜 Phase 4 | |
-| Connector | 🔜 Phase 4 | OutletRef → InletRef |
-| Relationship | 🔜 Phase 4 | ProcessorRef + cardinality |
+| Adaptor | ✅ Phase 4 | direction + ContextRef |
+| Projector | ✅ Phase 4 | RepositoryRef |
+| Repository | ✅ Phase 4 | Schema |
+| Schema | ✅ Phase 4 | Map-based data/links/indices |
+| Streamlet | ✅ Phase 4 | shape ↔ inlet/outlet cardinality |
+| Inlet | ✅ Phase 4 | |
+| Outlet | ✅ Phase 4 | |
+| Connector | ✅ Phase 4 | OutletRef → InletRef |
+| Relationship | ✅ Phase 4 | ProcessorRef + cardinality |
 | Saga | 🔜 Phase 5 | input/output + steps |
 | SagaStep | 🔜 Phase 5 | do/undo statements |
 | Module | 🔜 Phase 6 | nested modules/domains |
