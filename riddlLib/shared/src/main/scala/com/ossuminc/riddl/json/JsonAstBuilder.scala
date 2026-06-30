@@ -1,0 +1,245 @@
+/*
+ * Copyright 2019-2026 Ossum Inc.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.ossuminc.riddl.json
+
+import com.ossuminc.riddl.language.AST.*
+import com.ossuminc.riddl.language.{At, Contents}
+import com.ossuminc.riddl.language.Messages
+import com.ossuminc.riddl.language.Messages.{Message, Messages}
+
+import scala.collection.mutable
+
+/** Pure, Native-safe construction of a RIDDL [[AST.Root]] from the JSON wire
+  * model ([[JsonModel]]). No I/O. References are emitted as `PathIdentifier`s
+  * and left for `ResolutionPass`/`ValidationPass` to resolve — the builder only
+  * guarantees structural correctness and supplies RIDDL's required defaults.
+  *
+  * Builder-level errors (the few things the AST cannot express or default —
+  * a missing `Id.entity`, an empty `Enum`/`Pattern`, an unknown `kind`) are
+  * collected and returned as `Left(Messages)`; everything else becomes a
+  * structurally-valid `Root`.
+  */
+object JsonAstBuilder:
+
+  import JsonModel.*
+
+  /** Build a `Root` from the wire model, or the accumulated builder errors. */
+  def build(dto: RootDto): Either[Messages, Root] =
+    given ctx: Ctx = new Ctx
+    val domains = dto.domains.map(buildDomain)
+    val root = Root(At(), Contents[RootContents](domains*))
+    if ctx.errors.isEmpty then Right(root) else Left(ctx.errors.toList)
+  end build
+
+  /** Mutable error sink threaded through construction. */
+  private final class Ctx:
+    val errors: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
+    def err(message: String): Unit = errors += Messages.error(message)
+
+  /** Collect heterogeneous child groups (each a subtype of `T`) into a typed
+    * `Contents[T]`. `Seq[? <: T]` keeps each call-site group correctly typed.
+    */
+  private def contentsOf[T <: RiddlValue](groups: Seq[? <: T]*): Contents[T] =
+    val buf = mutable.ArrayBuffer.empty[T]
+    groups.foreach(g => buf ++= g)
+    Contents[T](buf.toSeq*)
+
+  /** A brief, if present, as a one-element metadata block (otherwise empty). */
+  private def meta(brief: Option[String]): Contents[MetaData] =
+    brief match
+      case Some(b) => Contents[MetaData](BriefDescription(At(), LiteralString(At(), b)))
+      case None    => Contents.empty[MetaData]()
+
+  private def ident(name: String): Identifier = Identifier(At(), name)
+
+  /** A dotted reference string -> PathIdentifier segments. */
+  private def pathId(ref: String): PathIdentifier =
+    PathIdentifier(At(), ref.split('.').iterator.filter(_.nonEmpty).toSeq)
+
+  // ---------------------------------------------------------------------------
+  // Definitions
+  // ---------------------------------------------------------------------------
+
+  private def buildDomain(d: DomainDto)(using Ctx): Domain =
+    val authors = d.authors.map(buildAuthor)
+    val types = d.types.map(buildType)
+    val contexts = d.contexts.map(buildContext)
+    Domain(At(), ident(d.name), contentsOf[DomainContents](authors, types, contexts), meta(d.brief))
+
+  private def buildAuthor(a: AuthorDto): Author =
+    Author(
+      At(),
+      ident(a.name),
+      LiteralString(At(), a.fullName),
+      LiteralString(At(), a.email),
+      a.organization.map(LiteralString(At(), _)),
+      a.title.map(LiteralString(At(), _)),
+      None,
+      Contents.empty[MetaData]()
+    )
+
+  private def buildType(t: TypeDefDto)(using Ctx): Type =
+    Type(At(), ident(t.name), buildTypeExpr(t.typeExpression), meta(t.brief))
+
+  private def buildContext(c: ContextDto)(using Ctx): Context =
+    val types = c.types.map(buildType)
+    val commands = c.commands.map(m => buildMessage(m, AggregateUseCase.CommandCase))
+    val events = c.events.map(m => buildMessage(m, AggregateUseCase.EventCase))
+    val queries = c.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
+    val results = c.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
+    val entities = c.entities.map(buildEntity)
+    val handlers = c.handlers.map(buildHandler)
+    Context(
+      At(),
+      ident(c.name),
+      contentsOf[ContextContents](types, commands, events, queries, results, entities, handlers),
+      meta(c.brief)
+    )
+
+  /** A message (command/event/query/result) is a `Type` whose expression is an
+    * aggregate tagged with the appropriate use case.
+    */
+  private def buildMessage(m: MessageDto, useCase: AggregateUseCase)(using Ctx): Type =
+    val fields = m.fields.map(buildField)
+    val typEx = AggregateUseCaseTypeExpression(At(), useCase, Contents[AggregateContents](fields*))
+    Type(At(), ident(m.name), typEx, meta(m.brief))
+
+  private def buildField(f: FieldDto)(using Ctx): Field =
+    Field(At(), ident(f.name), buildTypeExpr(f.`type`), meta(f.brief))
+
+  private def buildEntity(e: EntityDto)(using Ctx): Entity =
+    val types = e.types.map(buildType)
+    val states = e.state.toSeq.map(buildState)
+    val handlers = e.handlers.map(buildHandler)
+    val invariants = e.invariants.map(buildInvariant)
+    Entity(At(), ident(e.name), contentsOf[EntityContents](types, states, handlers, invariants), meta(e.brief))
+
+  /** A state references a record type; RIDDL holds no fields in a state. */
+  private def buildState(s: StateDto): State =
+    State(
+      At(),
+      ident(s.name),
+      TypeRef(At(), "record", pathId(s.recordType)),
+      Contents.empty[StateContents](),
+      Contents.empty[MetaData]()
+    )
+
+  private def buildHandler(h: HandlerDto)(using Ctx): Handler =
+    val clauses = h.onClauses.map(buildOnClause)
+    Handler(At(), ident(h.name), contentsOf[HandlerContents](clauses), meta(h.brief))
+
+  private def buildOnClause(oc: OnClauseDto)(using ctx: Ctx): OnClause =
+    val statements = Contents[Statements](
+      oc.statements.map(s => PromptStatement(At(), LiteralString(At(), s)))*
+    )
+    oc.kind match
+      case "message" =>
+        oc.message match
+          case Some(mr) =>
+            OnMessageClause(At(), messageRef(mr), None, statements, Contents.empty[MetaData]())
+          case None =>
+            ctx.err("on-clause of kind 'message' requires a 'message' reference")
+            OnMessageClause(At(), CommandRef(At(), PathIdentifier.empty), None, statements, Contents.empty[MetaData]())
+      case "init"  => OnInitializationClause(At(), statements, Contents.empty[MetaData]())
+      case "other" => OnOtherClause(At(), statements, Contents.empty[MetaData]())
+      case "term"  => OnTerminationClause(At(), statements, Contents.empty[MetaData]())
+      case other =>
+        ctx.err(s"unknown on-clause kind '$other' (expected message|init|other|term)")
+        OnOtherClause(At(), statements, Contents.empty[MetaData]())
+    end match
+  end buildOnClause
+
+  private def messageRef(mr: MessageRefDto)(using ctx: Ctx): MessageRef =
+    mr.kind match
+      case "command" => CommandRef(At(), pathId(mr.ref))
+      case "event"   => EventRef(At(), pathId(mr.ref))
+      case "query"   => QueryRef(At(), pathId(mr.ref))
+      case "result"  => ResultRef(At(), pathId(mr.ref))
+      case other =>
+        ctx.err(s"unknown message kind '$other' (expected command|event|query|result)")
+        CommandRef(At(), pathId(mr.ref))
+
+  private def buildInvariant(i: InvariantDto): Invariant =
+    Invariant(At(), ident(i.name), Some(LiteralString(At(), i.condition)), meta(i.brief))
+
+  // ---------------------------------------------------------------------------
+  // Type expressions (with the defaults table applied here, in the builder)
+  // ---------------------------------------------------------------------------
+
+  private def buildTypeExpr(dto: TypeExprDto)(using ctx: Ctx): TypeExpression =
+    dto match
+      case StringDto(min, max) => String_(At(), Some(min.getOrElse(0L)), Some(max.getOrElse(255L)))
+
+      case IdDto(entity) =>
+        entity match
+          case Some(e) => UniqueId(At(), pathId(e))
+          case None =>
+            ctx.err("Id type requires an 'entity' path (it cannot be defaulted)")
+            UniqueId(At(), PathIdentifier.empty)
+
+      case PredefDto(kind) =>
+        kind match
+          case "UUID"      => UUID(At())
+          case "Boolean"   => Bool(At())
+          case "Date"      => Date(At())
+          case "TimeStamp" => TimeStamp(At())
+          case "Integer"   => Integer(At())
+          case "Whole"     => Whole(At())
+          case "Natural"   => Natural(At())
+          case "Number"    => Number(At())
+          case "Real"      => Real(At())
+          case other =>
+            ctx.err(s"unknown predefined type kind '$other'")
+            Abstract(At())
+
+      case DecimalDto(w, f)  => Decimal(At(), w.getOrElse(12L), f.getOrElse(2L))
+      case CurrencyDto(c)    => Currency(At(), c.getOrElse("USD"))
+      case RangeDto(min, max) => RangeType(At(), min.getOrElse(0L), max.getOrElse(100L))
+
+      case PatternDto(ps) =>
+        if ps.isEmpty then
+          ctx.err("Pattern type requires at least one regular expression")
+          Pattern(At(), Seq.empty)
+        else Pattern(At(), ps.map(LiteralString(At(), _)))
+
+      case EnumDto(vs) =>
+        if vs.isEmpty then
+          ctx.err("Enum type requires at least one value")
+          Enumeration(At(), Contents.empty[Enumerator]())
+        else
+          val enumerators = vs.map(v => Enumerator(At(), ident(v), None, Contents.empty[MetaData]()))
+          Enumeration(At(), Contents[Enumerator](enumerators*))
+
+      case AlternationDto(of) =>
+        val aliases = of.map(t => AliasedTypeExpression(At(), "type", pathId(t)))
+        Alternation(At(), Contents[AliasedTypeExpression](aliases*))
+
+      case RecordDto(fields) =>
+        // A named Record becomes a proper RIDDL `record` (an aggregate tagged
+        // RecordCase), not a bare aggregation, so that a `state ... of record X`
+        // reference resolves (ResolutionPass.handleTypeResolution).
+        AggregateUseCaseTypeExpression(
+          At(),
+          AggregateUseCase.RecordCase,
+          Contents[AggregateContents](fields.map(buildField)*)
+        )
+
+      case AliasDto(ref) => AliasedTypeExpression(At(), "type", pathId(ref))
+
+      case CardinalityDto(card, of) =>
+        val inner = buildTypeExpr(of)
+        card match
+          case "optional"   => Optional(At(), inner)
+          case "zeroOrMore" => ZeroOrMore(At(), inner)
+          case "oneOrMore"  => OneOrMore(At(), inner)
+          case other =>
+            ctx.err(s"unknown cardinality '$other' (expected optional|zeroOrMore|oneOrMore)")
+            inner
+    end match
+  end buildTypeExpr
+
+end JsonAstBuilder

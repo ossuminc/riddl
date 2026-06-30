@@ -309,14 +309,16 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
     )
   )
   .jvmSettings(
-    coverageExcludedFiles := """<empty>;$anon"""
+    coverageExcludedFiles := """<empty>;$anon""",
+    libraryDependencies += Dep.upickle
   )
   .jsConfigure(With.ScalaJS("RIDDL: riddl-lib"))
   .jsConfigure(With.noMiMa)
   .jsSettings(
     Test / scalaJSLinkerConfig ~= {
       _.withModuleKind(ModuleKind.CommonJSModule)
-    }
+    },
+    libraryDependencies += Dep.upickle_nojvm.value
   )
   .jsConfigure(With.Packaging.npm(
     scope = "@ossuminc",
@@ -331,7 +333,10 @@ lazy val riddlLib_cp: CrossProject = CrossModule("riddlLib", "riddl-lib")(JS, JV
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
   // See note on passes_cp re: Scala 3.8.3 scaladoc race condition.
-  .nativeSettings(Compile / doc / sources := Seq.empty)
+  .nativeSettings(
+    Compile / doc / sources := Seq.empty,
+    libraryDependencies += Dep.upickle_nojvm.value
+  )
 val riddlLib = riddlLib_cp.jvm
 val riddlLibJS = riddlLib_cp.js
 val riddlLibNative = riddlLib_cp.native

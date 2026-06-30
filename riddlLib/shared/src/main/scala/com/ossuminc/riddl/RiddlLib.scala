@@ -38,6 +38,9 @@ import com.ossuminc.riddl.passes.validate.{
 import com.ossuminc.riddl.utils.{
   CommonOptions, PlatformContext, RiddlBuildInfo, URL
 }
+import com.ossuminc.riddl.json.{JsonAstBuilder, JsonModel}
+
+import scala.util.control.NonFatal
 
 /** Cross-platform core API for RIDDL parsing, validation,
   * and AST manipulation. Usable on JVM, JS, and Native.
@@ -61,6 +64,26 @@ trait RiddlLib:
     source: String,
     origin: String = "string",
     verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Root]
+
+  /** Build a RIDDL AST Root from a JSON document.
+    *
+    * The JSON describes a RIDDL model using the schema in
+    * [[com.ossuminc.riddl.json.JsonModel]]; it is mapped onto the AST
+    * correct-by-construction, applying RIDDL's required type-expression
+    * defaults. The returned `Root` is then validated and/or prettified by the
+    * existing machinery — there is no JSON-specific validation path.
+    * References are emitted as path identifiers and resolved later by the
+    * standard passes.
+    *
+    * @param json   The JSON model document
+    * @param origin Origin identifier (e.g., filename) for error messages
+    * @return Success(Root) on success, Failure(Messages) on malformed JSON or
+    *         a builder-level error (e.g., missing `Id.entity`)
+    */
+  def parseJson(
+    json: String,
+    origin: String = "string"
   )(using PlatformContext): RiddlResult[Root]
 
   /** Parse arbitrary RIDDL definitions (nebula).
@@ -111,6 +134,15 @@ trait RiddlLib:
     origin: String = "string",
     verbose: Boolean = false,
     noANSIMessages: Boolean = true
+  )(using PlatformContext): RiddlLib.ValidateResult
+
+  /** Validate an already-built AST Root with the standard passes.
+    *
+    * Convenience for callers (e.g. [[parseJson]]) that hold a `Root` and want
+    * categorized validation messages without round-tripping through text.
+    */
+  def validateRoot(
+    root: Root
   )(using PlatformContext): RiddlLib.ValidateResult
 
   /** Get a flat outline of all named definitions. */
@@ -425,6 +457,20 @@ object RiddlLib extends RiddlLib:
     )
   end parseString
 
+  override def parseJson(
+    json: String,
+    origin: String
+  )(using PlatformContext): RiddlResult[Root] =
+    val parsed: Either[Messages, JsonModel.RootDto] =
+      try Right(JsonModel.readRoot(json))
+      catch
+        case NonFatal(e) =>
+          Left(List(Messages.error(
+            s"Invalid JSON for RIDDL model ($origin): ${e.getMessage}"
+          )))
+    RiddlResult.fromEither(parsed.flatMap(JsonAstBuilder.build))
+  end parseJson
+
   override def parseNebula(
     source: String,
     origin: String,
@@ -540,6 +586,42 @@ object RiddlLib extends RiddlLib:
     doValidate(source, origin, verbose, noANSIMessages,
       Pass.quickValidationPasses)
   end validateStringQuick
+
+  /** Categorize a pass run's messages into a ValidateResult. */
+  private def summarize(messages: Messages): ValidateResult =
+    val errs = messages.filter(_.isError).distinct
+    val warns = messages.filter(_.isWarning).distinct
+    val infos = messages.filter(_.kind.severity == 0).distinct
+    ValidateResult(
+      succeeded = !messages.hasErrors,
+      parseErrors = List.empty,
+      errors = errs,
+      warnings = warns,
+      info = infos,
+      all = messages
+    )
+  end summarize
+
+  override def validateRoot(
+    root: Root
+  )(using pc: PlatformContext): ValidateResult =
+    pc.withOptions(CommonOptions(noANSIMessages = true)) { _ =>
+      try
+        val passesResult =
+          Pass.runThesePasses(PassInput(root), Pass.standardPasses)
+        summarize(passesResult.messages)
+      catch
+        case NonFatal(_) =>
+          ValidateResult(
+            succeeded = false,
+            parseErrors = List.empty,
+            errors = List.empty,
+            warnings = List.empty,
+            info = List.empty,
+            all = List.empty
+          )
+    }
+  end validateRoot
 
   override def getOutline(
     source: String,
