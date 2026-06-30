@@ -142,10 +142,13 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
 
   def openOutput(output: Output, parents: Parents): Unit =
     state.withCurrent { rfe =>
+      // Use id.format (not identify, which already prepends verbAlias) so the
+      // rendered `<nounAlias> <id> <verbAlias> <putOut>` re-parses. Mirrors
+      // openInput.
       rfe
         .addIndent(output.nounAlias)
         .add(" ")
-        .add(output.identify)
+        .add(output.id.format)
         .add(" ")
         .add(output.verbAlias)
         .add(" ")
