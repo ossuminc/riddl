@@ -229,6 +229,53 @@ New definitions:
 // context/entity: "constants": [ { "name": "MaxItems", "type": <typeExpression>, "value": "100", "brief"?: "..." } ]
 ```
 
+## Phase 3 additions — statements and functions
+
+Each statement is its own tagged object. A bare JSON string is shorthand for a
+`prompt` statement (so `"statements": ["do X"]` from Phase 1 still works).
+Statements appear in handler on-clauses and function bodies.
+
+```jsonc
+"text"                                                        // shorthand for prompt
+{ "kind": "prompt", "text": "..." }
+{ "kind": "error", "message": "..." }
+{ "kind": "let", "name": "x", "type": "<typePath>", "expression": "..." }   // type optional
+{ "kind": "code", "language": "scala", "body": "..." }
+{ "kind": "require", "condition": "..." }                     // or "invariant": "<name>"
+{ "kind": "set", "field": "<path>", "value": "..." }          // or "state": "<path>"
+{ "kind": "send", "message": {"ref":"M","kind":"command"}, "to": "<path>", "portlet": "inlet" }  // inlet|outlet
+{ "kind": "tell", "message": {"ref":"M","kind":"command"}, "to": "<path>", "processor": "entity" } // entity|context|projector|repository|adaptor
+{ "kind": "morph", "entity": "<path>", "state": "<path>", "value": {"ref":"E","kind":"event"} }
+{ "kind": "become", "entity": "<path>", "handler": "<path>" }
+{ "kind": "reply", "message": {"ref":"R","kind":"result"} }
+{ "kind": "when", "condition": "...", "negated": false, "then": [<stmt>], "else": [<stmt>] }   // or "conditionIdentifier"
+{ "kind": "match", "expression": "...", "cases": [ { "pattern": "...", "statements": [<stmt>] } ], "default": [<stmt>] }
+```
+
+`message.kind` for statement refs accepts `command|event|query|result|record`.
+
+Functions live in context/entity `functions`; `input`/`output` are field lists
+(aggregations), `statements` is the body, `functions` nests:
+
+```jsonc
+{
+  "name": "calc",
+  "input":  [ { "name": "a", "type": { "kind": "Integer" } } ],
+  "output": [ { "name": "r", "type": { "kind": "Integer" } } ],
+  "statements": [ "compute r from a" ],
+  "functions": [ { "name": "helper", "statements": [ "assist" ] } ]
+}
+```
+
+Records may carry `methods` alongside `fields`:
+
+```jsonc
+{ "kind": "Record",
+  "fields":  [ { "name": "n", "type": { "kind": "Integer" } } ],
+  "methods": [ { "name": "scaled", "type": { "kind": "Integer" },
+                 "args": [ { "name": "by", "type": { "kind": "Integer" } } ] } ] }
+```
+
 ## Example
 
 ```jsonc

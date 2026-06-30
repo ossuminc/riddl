@@ -45,8 +45,8 @@ is covered in that construct's phase. The builder emits references as
 | Constant | ✅ Phase 2 | in context/entity |
 | User | ✅ Phase 2 | at domain level |
 | Term | 🔜 Phase 9 | glossary entry (it is metadata) |
-| Method | 🔜 Phase 3 | aggregate method with args |
-| Function | 🔜 Phase 3 | input/output aggregation + statement body + nested |
+| Method | ✅ Phase 3 | aggregate method with args |
+| Function | ✅ Phase 3 | input/output aggregation + statement body + nested |
 | Adaptor | 🔜 Phase 4 | direction + ContextRef |
 | Projector | 🔜 Phase 4 | RepositoryRef |
 | Repository | 🔜 Phase 4 | Schema |
@@ -126,18 +126,18 @@ is covered in that construct's phase. The builder emits references as
 | Construct | Status | Notes |
 |---|---|---|
 | PromptStatement | ✅ Phase 1 | `do`/prompt text |
-| ErrorStatement | 🔜 Phase 3 | |
-| LetStatement | 🔜 Phase 3 | |
-| CodeStatement | 🔜 Phase 3 | |
-| RequireStatement | 🔜 Phase 3 | |
-| SetStatement | 🔜 Phase 3 | FieldRef/StateRef |
-| SendStatement | 🔜 Phase 3 | MessageRef + PortletRef |
-| MorphStatement | 🔜 Phase 3 | |
-| BecomeStatement | 🔜 Phase 3 | |
-| TellStatement | 🔜 Phase 3 | |
-| ReplyStatement | 🔜 Phase 3 | |
-| WhenStatement | 🔜 Phase 3 | nested statements |
-| MatchStatement / MatchCase | 🔜 Phase 3 | nested statements |
+| ErrorStatement | ✅ Phase 3 | |
+| LetStatement | ✅ Phase 3 | |
+| CodeStatement | ✅ Phase 3 | |
+| RequireStatement | ✅ Phase 3 | |
+| SetStatement | ✅ Phase 3 | FieldRef/StateRef |
+| SendStatement | ✅ Phase 3 | MessageRef + PortletRef |
+| MorphStatement | ✅ Phase 3 | |
+| BecomeStatement | ✅ Phase 3 | |
+| TellStatement | ✅ Phase 3 | |
+| ReplyStatement | ✅ Phase 3 | |
+| WhenStatement | ✅ Phase 3 | nested statements |
+| MatchStatement / MatchCase | ✅ Phase 3 | nested statements |
 
 ## Metadata
 

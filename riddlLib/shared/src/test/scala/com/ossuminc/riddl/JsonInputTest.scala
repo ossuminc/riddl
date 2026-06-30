@@ -39,6 +39,23 @@ class JsonInputTest extends AnyWordSpec with Matchers {
       case RiddlResult.Failure(errors) =>
         fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
     end match
+  /** Assert a model parses and its rendered RIDDL re-parses (syntax-level round-trip). Used for
+    * statements whose references are the JSON author's concern to resolve — here we only prove the
+    * emitted RIDDL is well-formed.
+    */
+  private def assertRendersAndReparses(json: String): Unit =
+    RiddlLib.parseJson(json) match
+      case RiddlResult.Success(root) =>
+        val riddl = RiddlLib.root2RiddlSource(root)
+        RiddlLib.parseString(riddl) match
+          case RiddlResult.Success(_) => ()
+          case RiddlResult.Failure(errors) =>
+            fail(
+              s"rendered RIDDL did not re-parse:\n$riddl\n" + errors.map(_.format).mkString("\n")
+            )
+      case RiddlResult.Failure(errors) =>
+        fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
+    end match
   /** Render a single field's type expression to RIDDL text (for defaults). */
   private def renderFieldType(typeExpr: String): String =
     val json =
@@ -171,6 +188,66 @@ class JsonInputTest extends AnyWordSpec with Matchers {
           |      { "name": "loc", "type": { "kind": "Location" } },
           |      { "name": "len", "type": { "kind": "Length" } },
           |      { "name": "mass", "type": { "kind": "Mass" } } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
+  "JSON round-trips (Phase 3)" should {
+
+    "self-contained and control-flow statements (prompt/error/code/let/require/when/match)" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "P3a", "contexts": [ { "name": "C",
+          |  "entities": [ { "name": "E", "state": { "name": "s", "recordType": "R" },
+          |    "handlers": [ { "name": "H", "onClauses": [ { "kind": "init", "statements": [
+          |      "a bare-string prompt",
+          |      { "kind": "prompt", "text": "a tagged prompt" },
+          |      { "kind": "error", "message": "something went wrong" },
+          |      { "kind": "code", "language": "scala", "body": "val x = 1" },
+          |      { "kind": "let", "name": "x", "expression": "compute a value" },
+          |      { "kind": "require", "condition": "x > 0" },
+          |      { "kind": "when", "condition": "x > 0", "then": [ "do the then" ], "else": [ "do the else" ] },
+          |      { "kind": "match", "expression": "x", "cases": [ { "pattern": "1", "statements": [ "matched one" ] } ], "default": [ "no match" ] }
+          |    ] } ] } ] } ],
+          |  "types": [ { "name": "R", "typeExpression": { "kind": "Record", "fields": [ { "name": "n", "type": { "kind": "Integer" } } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "a function with input/output aggregations and a nested function" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "P3f", "contexts": [ { "name": "C",
+          |  "functions": [ { "name": "calc", "brief": "compute a result",
+          |    "input": [ { "name": "a", "type": { "kind": "Integer" } } ],
+          |    "output": [ { "name": "r", "type": { "kind": "Integer" } } ],
+          |    "statements": [ "compute r from a" ],
+          |    "functions": [ { "name": "helper", "statements": [ "assist the computation" ] } ] } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "a record with a method" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "P3m", "contexts": [ { "name": "C", "types": [
+          |  { "name": "R", "typeExpression": { "kind": "Record", "fields": [ { "name": "n", "type": { "kind": "Integer" } } ],
+          |    "methods": [ { "name": "scaled", "type": { "kind": "Integer" }, "args": [ { "name": "by", "type": { "kind": "Integer" } } ] } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "reference-carrying statements (set/send/tell/morph/become/require-invariant) render to valid RIDDL" in {
+      assertRendersAndReparses(
+        """{ "domains": [ { "name": "P3b", "contexts": [ { "name": "C",
+          |  "entities": [ { "name": "Thing", "state": { "name": "Active", "recordType": "R" },
+          |    "handlers": [ { "name": "H", "onClauses": [ { "kind": "message",
+          |      "message": { "ref": "Go", "kind": "command" }, "statements": [
+          |        { "kind": "set", "field": "count", "value": "0" },
+          |        { "kind": "set", "state": "Active", "value": "on" },
+          |        { "kind": "send", "message": { "ref": "Notify", "kind": "command" }, "to": "Out", "portlet": "outlet" },
+          |        { "kind": "tell", "message": { "ref": "Notify", "kind": "command" }, "to": "Other", "processor": "entity" },
+          |        { "kind": "morph", "entity": "Thing", "state": "Active", "value": { "ref": "Switched", "kind": "event" } },
+          |        { "kind": "become", "entity": "Thing", "handler": "H" },
+          |        { "kind": "reply", "message": { "ref": "Done", "kind": "result" } },
+          |        { "kind": "require", "invariant": "MustHold" }
+          |      ] } ] } ] } ],
+          |  "commands": [ { "name": "Go" } ],
+          |  "types": [ { "name": "R", "typeExpression": { "kind": "Record", "fields": [ { "name": "count", "type": { "kind": "Integer" } } ] } } ] } ] } ] }""".stripMargin
       )
     }
   }

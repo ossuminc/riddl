@@ -110,6 +110,7 @@ object JsonAstBuilder:
     val queries = c.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
     val results = c.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val entities = c.entities.map(buildEntity)
+    val functions = c.functions.map(buildFunction)
     val handlers = c.handlers.map(buildHandler)
     Context(
       At(),
@@ -122,6 +123,7 @@ object JsonAstBuilder:
         queries,
         results,
         entities,
+        functions,
         handlers
       ),
       meta(c.brief)
@@ -138,16 +140,21 @@ object JsonAstBuilder:
   private def buildField(f: FieldDto)(using Ctx): Field =
     Field(At(), ident(f.name), buildTypeExpr(f.`type`), meta(f.brief))
 
+  private def buildMethod(m: MethodDto)(using Ctx): Method =
+    val args = m.args.map(a => MethodArgument(At(), a.name, buildTypeExpr(a.`type`)))
+    Method(At(), ident(m.name), buildTypeExpr(m.`type`), args, meta(m.brief))
+
   private def buildEntity(e: EntityDto)(using Ctx): Entity =
     val types = e.types.map(buildType)
     val constants = e.constants.map(buildConstant)
     val states = e.state.toSeq.map(buildState)
+    val functions = e.functions.map(buildFunction)
     val handlers = e.handlers.map(buildHandler)
     val invariants = e.invariants.map(buildInvariant)
     Entity(
       At(),
       ident(e.name),
-      contentsOf[EntityContents](types, constants, states, handlers, invariants),
+      contentsOf[EntityContents](types, constants, states, functions, handlers, invariants),
       meta(e.brief)
     )
 
@@ -166,9 +173,7 @@ object JsonAstBuilder:
     Handler(At(), ident(h.name), contentsOf[HandlerContents](clauses), meta(h.brief))
 
   private def buildOnClause(oc: OnClauseDto)(using ctx: Ctx): OnClause =
-    val statements = Contents[Statements](
-      oc.statements.map(s => PromptStatement(At(), LiteralString(At(), s)))*
-    )
+    val statements = buildStatements(oc.statements)
     oc.kind match
       case "message" =>
         oc.message match
@@ -198,12 +203,118 @@ object JsonAstBuilder:
       case "event"   => EventRef(At(), pathId(mr.ref))
       case "query"   => QueryRef(At(), pathId(mr.ref))
       case "result"  => ResultRef(At(), pathId(mr.ref))
+      case "record"  => RecordRef(At(), pathId(mr.ref))
       case other =>
-        ctx.err(s"unknown message kind '$other' (expected command|event|query|result)")
+        ctx.err(s"unknown message kind '$other' (expected command|event|query|result|record)")
         CommandRef(At(), pathId(mr.ref))
 
   private def buildInvariant(i: InvariantDto): Invariant =
     Invariant(At(), ident(i.name), Some(LiteralString(At(), i.condition)), meta(i.brief))
+
+  // ---------------------------------------------------------------------------
+  // Functions and statements (Phase 3)
+  // ---------------------------------------------------------------------------
+
+  private def buildFunction(f: FunctionDto)(using Ctx): Function =
+    def agg(fields: Seq[FieldDto]): Option[Aggregation] =
+      if fields.isEmpty then None
+      else Some(Aggregation(At(), Contents[AggregateContents](fields.map(buildField)*)))
+    val types = f.types.map(buildType)
+    val statements = f.statements.map(buildStatement)
+    val functions = f.functions.map(buildFunction)
+    Function(
+      At(),
+      ident(f.name),
+      agg(f.input),
+      agg(f.output),
+      contentsOf[FunctionContents](types, statements, functions),
+      meta(f.brief)
+    )
+
+  private def buildStatements(stmts: Seq[StatementDto])(using Ctx): Contents[Statements] =
+    Contents[Statements](stmts.map(buildStatement)*)
+
+  private def buildStatement(s: StatementDto)(using ctx: Ctx): Statement =
+    s match
+      case PromptStmtDto(text)   => PromptStatement(At(), LiteralString(At(), text))
+      case ErrorStmtDto(message) => ErrorStatement(At(), LiteralString(At(), message))
+      case LetStmtDto(name, t, expression) =>
+        LetStatement(
+          At(),
+          ident(name),
+          t.map(p => TypeRef(At(), "type", pathId(p))),
+          LiteralString(At(), expression)
+        )
+      case CodeStmtDto(language, body) => CodeStatement(At(), LiteralString(At(), language), body)
+      case RequireStmtDto(condition, invariant) =>
+        val cond: LiteralString | InvariantRef = invariant match
+          case Some(name) => InvariantRef(At(), pathId(name))
+          case None =>
+            condition match
+              case Some(c) => LiteralString(At(), c)
+              case None =>
+                ctx.err("require statement needs a 'condition' or an 'invariant'")
+                LiteralString(At(), "")
+        RequireStatement(At(), cond)
+      case SetStmtDto(field, state, value) =>
+        val target: FieldRef | StateRef = (field, state) match
+          case (Some(f), _)     => FieldRef(At(), pathId(f))
+          case (None, Some(st)) => StateRef(At(), pathId(st))
+          case (None, None) =>
+            ctx.err("set statement needs a 'field' or a 'state' target")
+            FieldRef(At(), PathIdentifier.empty)
+        SetStatement(At(), target, LiteralString(At(), value))
+      case SendStmtDto(message, to, portlet) =>
+        SendStatement(At(), messageRef(message), portletRef(to, portlet))
+      case MorphStmtDto(entity, state, value) =>
+        MorphStatement(
+          At(),
+          EntityRef(At(), pathId(entity)),
+          StateRef(At(), pathId(state)),
+          messageRef(value)
+        )
+      case BecomeStmtDto(entity, handler) =>
+        BecomeStatement(At(), EntityRef(At(), pathId(entity)), HandlerRef(At(), pathId(handler)))
+      case TellStmtDto(message, to, processor) =>
+        TellStatement(At(), messageRef(message), processorRef(to, processor))
+      case ReplyStmtDto(message) => ReplyStatement(At(), messageRef(message))
+      case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
+        val cond: LiteralString | Identifier = conditionId match
+          case Some(id) => ident(id)
+          case None     => LiteralString(At(), condition.getOrElse(""))
+        WhenStatement(At(), cond, buildStatements(thenS), buildStatements(elseS), negated)
+      case MatchStmtDto(expression, cases, default) =>
+        MatchStatement(
+          At(),
+          LiteralString(At(), expression),
+          cases.map(buildMatchCase),
+          buildStatements(default)
+        )
+  end buildStatement
+
+  private def buildMatchCase(c: MatchCaseDto)(using Ctx): MatchCase =
+    MatchCase(At(), LiteralString(At(), c.pattern), buildStatements(c.statements))
+
+  private def portletRef(path: String, kind: String)(using ctx: Ctx): PortletRef[Portlet] =
+    kind match
+      case "inlet"  => InletRef(At(), pathId(path))
+      case "outlet" => OutletRef(At(), pathId(path))
+      case other =>
+        ctx.err(s"unknown portlet kind '$other' (expected inlet|outlet)")
+        InletRef(At(), pathId(path))
+
+  private def processorRef(path: String, kind: String)(using ctx: Ctx): ProcessorRef[Processor[?]] =
+    kind match
+      case "entity"     => EntityRef(At(), pathId(path))
+      case "context"    => ContextRef(At(), pathId(path))
+      case "projector"  => ProjectorRef(At(), pathId(path))
+      case "repository" => RepositoryRef(At(), pathId(path))
+      case "adaptor"    => AdaptorRef(At(), pathId(path))
+      case other =>
+        ctx.err(
+          s"unknown processor kind '$other' (expected entity|context|projector|repository|adaptor)"
+        )
+        EntityRef(At(), pathId(path))
 
   // ---------------------------------------------------------------------------
   // Type expressions (with the defaults table applied here, in the builder)
@@ -271,14 +382,14 @@ object JsonAstBuilder:
         val aliases = of.map(t => AliasedTypeExpression(At(), "type", pathId(t)))
         Alternation(At(), Contents[AliasedTypeExpression](aliases*))
 
-      case RecordDto(fields) =>
+      case RecordDto(fields, methods) =>
         // A named Record becomes a proper RIDDL `record` (an aggregate tagged
         // RecordCase), not a bare aggregation, so that a `state ... of record X`
         // reference resolves (ResolutionPass.handleTypeResolution).
         AggregateUseCaseTypeExpression(
           At(),
           AggregateUseCase.RecordCase,
-          Contents[AggregateContents](fields.map(buildField)*)
+          contentsOf[AggregateContents](fields.map(buildField), methods.map(buildMethod))
         )
 
       case AliasDto(ref) => AliasedTypeExpression(At(), "type", pathId(ref))

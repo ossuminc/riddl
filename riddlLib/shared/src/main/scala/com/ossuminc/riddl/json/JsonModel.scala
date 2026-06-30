@@ -64,8 +64,21 @@ object JsonModel:
   /** `{ "kind": "Alternation", "of": ["TypeA", "TypeB"] }` */
   case class AlternationDto(of: Seq[String] = Nil) extends TypeExprDto
 
-  /** `{ "kind": "Record", "fields": [ <field> ] }` -> Aggregation. */
-  case class RecordDto(fields: Seq[FieldDto] = Nil) extends TypeExprDto
+  /** A method argument: `{ "name": "x", "type": <typeExpr> }` (Phase 3) */
+  case class MethodArgDto(name: String, `type`: TypeExprDto)
+
+  /** A record method: `{ "name": "total", "type": <typeExpr>, "args"?: [<arg>], "brief"?: ... }`.
+    */
+  case class MethodDto(
+    name: String,
+    `type`: TypeExprDto,
+    args: Seq[MethodArgDto] = Nil,
+    brief: Option[String] = None
+  )
+
+  /** `{ "kind": "Record", "fields": [ <field> ], "methods"?: [ <method> ] }` -> aggregate. */
+  case class RecordDto(fields: Seq[FieldDto] = Nil, methods: Seq[MethodDto] = Nil)
+      extends TypeExprDto
 
   /** `{ "kind": "Alias", "ref": "SomeDeclaredType" }` */
   case class AliasDto(ref: String) extends TypeExprDto
@@ -139,6 +152,7 @@ object JsonModel:
     queries: Seq[MessageDto] = Nil,
     results: Seq[MessageDto] = Nil,
     entities: Seq[EntityDto] = Nil,
+    functions: Seq[FunctionDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
 
@@ -150,6 +164,7 @@ object JsonModel:
     state: Option[StateDto] = None,
     types: Seq[TypeDefDto] = Nil,
     constants: Seq[ConstantDto] = Nil,
+    functions: Seq[FunctionDto] = Nil,
     handlers: Seq[HandlerDto] = Nil,
     invariants: Seq[InvariantDto] = Nil
   )
@@ -171,12 +186,12 @@ object JsonModel:
   )
 
   /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message
-    * ref + its kind. `statements` are v1 prompt/`do` texts.
+    * ref + its kind. `statements` are tagged statement objects (or a bare string = prompt).
     */
   case class OnClauseDto(
     kind: String,
     message: Option[MessageRefDto] = None,
-    statements: Seq[String] = Nil
+    statements: Seq[StatementDto] = Nil
   )
 
   case class MessageRefDto(ref: String, kind: String)
@@ -184,6 +199,82 @@ object JsonModel:
   case class InvariantDto(name: String, condition: String, brief: Option[String] = None)
 
   case class FieldDto(name: String, `type`: TypeExprDto, brief: Option[String] = None)
+
+  /** A function: `input`/`output` are field lists (aggregations), `statements` is the body,
+    * `functions` are nested. (Phase 3)
+    */
+  case class FunctionDto(
+    name: String,
+    brief: Option[String] = None,
+    input: Seq[FieldDto] = Nil,
+    output: Seq[FieldDto] = Nil,
+    types: Seq[TypeDefDto] = Nil,
+    statements: Seq[StatementDto] = Nil,
+    functions: Seq[FunctionDto] = Nil
+  )
+
+  // ---------------------------------------------------------------------------
+  // Statements (Phase 3) — each kind is its own tagged object. A bare JSON
+  // string is shorthand for a `prompt` statement.
+  // ---------------------------------------------------------------------------
+
+  sealed trait StatementDto
+
+  /** `"text"` or `{ "kind": "prompt", "text": "..." }` */
+  case class PromptStmtDto(text: String) extends StatementDto
+
+  /** `{ "kind": "error", "message": "..." }` */
+  case class ErrorStmtDto(message: String) extends StatementDto
+
+  /** `{ "kind": "let", "name": "x", "type"?: "<typePath>", "expression": "..." }` */
+  case class LetStmtDto(name: String, `type`: Option[String], expression: String)
+      extends StatementDto
+
+  /** `{ "kind": "code", "language": "scala", "body": "..." }` */
+  case class CodeStmtDto(language: String, body: String) extends StatementDto
+
+  /** `{ "kind": "require", "condition": "..." }` or `{ ..., "invariant": "<name>" }` */
+  case class RequireStmtDto(condition: Option[String], invariant: Option[String])
+      extends StatementDto
+
+  /** `{ "kind": "set", "field"|"state": "<path>", "value": "..." }` */
+  case class SetStmtDto(field: Option[String], state: Option[String], value: String)
+      extends StatementDto
+
+  /** `{ "kind": "send", "message": <msgRef>, "to": "<path>", "portlet": "inlet"|"outlet" }` */
+  case class SendStmtDto(message: MessageRefDto, to: String, portlet: String) extends StatementDto
+
+  /** `{ "kind": "morph", "entity": "<path>", "state": "<path>", "value": <msgRef> }` */
+  case class MorphStmtDto(entity: String, state: String, value: MessageRefDto) extends StatementDto
+
+  /** `{ "kind": "become", "entity": "<path>", "handler": "<path>" }` */
+  case class BecomeStmtDto(entity: String, handler: String) extends StatementDto
+
+  /** `{ "kind": "tell", "message": <msgRef>, "to": "<path>", "processor":
+    * "entity"|"context"|"projector"|"repository"|"adaptor" }`
+    */
+  case class TellStmtDto(message: MessageRefDto, to: String, processor: String) extends StatementDto
+
+  /** `{ "kind": "reply", "message": <msgRef> }` */
+  case class ReplyStmtDto(message: MessageRefDto) extends StatementDto
+
+  /** `{ "kind": "when", "condition"|"conditionIdentifier": "...", "negated"?: bool, "then":
+    * [<stmt>], "else"?: [<stmt>] }`
+    */
+  case class WhenStmtDto(
+    condition: Option[String],
+    conditionIdentifier: Option[String],
+    negated: Boolean,
+    thenStatements: Seq[StatementDto],
+    elseStatements: Seq[StatementDto]
+  ) extends StatementDto
+
+  /** `{ "kind": "match", "expression": "...", "cases": [<matchCase>], "default"?: [<stmt>] }` */
+  case class MatchStmtDto(expression: String, cases: Seq[MatchCaseDto], default: Seq[StatementDto])
+      extends StatementDto
+
+  /** `{ "pattern": "...", "statements": [<stmt>] }` */
+  case class MatchCaseDto(pattern: String, statements: Seq[StatementDto])
 
   // ---------------------------------------------------------------------------
   // upickle wiring
@@ -248,7 +339,10 @@ object JsonModel:
           EnumDto(fromValues ++ fromEnums)
         case "Alternation" => AlternationDto(m.get("of").map(_.arr.map(_.str).toSeq).getOrElse(Nil))
         case "Record" =>
-          RecordDto(m.get("fields").map(_.arr.map(j => readJson[FieldDto](j)).toSeq).getOrElse(Nil))
+          val fields =
+            m.get("fields").map(_.arr.map(j => readJson[FieldDto](j)).toSeq).getOrElse(Nil)
+          val methods = m.get("methods").map(_.arr.map(readMethod).toSeq).getOrElse(Nil)
+          RecordDto(fields, methods)
         case "Alias"                             => AliasDto(m("ref").str)
         case "URI" | "URL"                       => URIDto(m.get("scheme").map(_.str))
         case "Blob"                              => BlobDto(m.get("blobKind").map(_.str))
@@ -265,6 +359,29 @@ object JsonModel:
         case other => throw new IllegalArgumentException(s"Unknown type expression kind: '$other'")
     end if
   end readTypeExpr
+
+  private def readMethod(j: ujson.Value): MethodDto =
+    val o = j.obj
+    val args = o
+      .get("args")
+      .map(_.arr.map(a => MethodArgDto(a.obj("name").str, readTypeExpr(a.obj("type")))).toSeq)
+      .getOrElse(Nil)
+    MethodDto(o("name").str, readTypeExpr(o("type")), args, o.get("brief").map(_.str))
+
+  private def writeMethod(mth: MethodDto): ujson.Value =
+    ujson.Obj.from(
+      Seq[(String, ujson.Value)]("name" -> ujson.Str(mth.name), "type" -> writeTypeExpr(mth.`type`))
+        ++ (if mth.args.nonEmpty then
+              Seq[(String, ujson.Value)](
+                "args" -> ujson.Arr.from(
+                  mth.args.map(a =>
+                    ujson.Obj("name" -> ujson.Str(a.name), "type" -> writeTypeExpr(a.`type`))
+                  )
+                )
+              )
+            else Nil)
+        ++ mth.brief.map(b => "brief" -> (ujson.Str(b): ujson.Value))
+    )
 
   private def writeTypeExpr(dto: TypeExprDto): ujson.Value =
     dto match
@@ -311,10 +428,14 @@ object JsonModel:
         )
       case AlternationDto(of) =>
         ujson.Obj("kind" -> ujson.Str("Alternation"), "of" -> ujson.Arr.from(of.map(ujson.Str(_))))
-      case RecordDto(fields) =>
-        ujson.Obj(
-          "kind" -> ujson.Str("Record"),
-          "fields" -> ujson.Arr.from(fields.map(f => writeJs(f)))
+      case RecordDto(fields, methods) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)](
+            "kind" -> ujson.Str("Record"),
+            "fields" -> ujson.Arr.from(fields.map(f => writeJs(f)))
+          ) ++ (if methods.nonEmpty then
+                  Seq[(String, ujson.Value)]("methods" -> ujson.Arr.from(methods.map(writeMethod)))
+                else Nil)
         )
       case AliasDto(ref) => ujson.Obj("kind" -> ujson.Str("Alias"), "ref" -> ujson.Str(ref))
       case URIDto(scheme) =>
@@ -359,10 +480,150 @@ object JsonModel:
         )
   end writeTypeExpr
 
+  // ujson <-> StatementDto. A bare string is read as a `prompt` statement.
+
+  private def msgRef(v: ujson.Value): MessageRefDto =
+    MessageRefDto(v.obj("ref").str, v.obj("kind").str)
+  private def msgRefJs(mr: MessageRefDto): ujson.Value =
+    ujson.Obj("ref" -> ujson.Str(mr.ref), "kind" -> ujson.Str(mr.kind))
+  private def readStmts(o: Option[ujson.Value]): Seq[StatementDto] =
+    o.map(_.arr.map(readStatement).toSeq).getOrElse(Nil)
+
+  private def readStatement(v: ujson.Value): StatementDto =
+    v match
+      case ujson.Str(s) => PromptStmtDto(s)
+      case _ =>
+        val m = v.obj
+        m("kind").str match
+          case "prompt" => PromptStmtDto(m("text").str)
+          case "error"  => ErrorStmtDto(m("message").str)
+          case "let"    => LetStmtDto(m("name").str, m.get("type").map(_.str), m("expression").str)
+          case "code"   => CodeStmtDto(m("language").str, m("body").str)
+          case "require" =>
+            RequireStmtDto(m.get("condition").map(_.str), m.get("invariant").map(_.str))
+          case "set" =>
+            SetStmtDto(m.get("field").map(_.str), m.get("state").map(_.str), m("value").str)
+          case "send"   => SendStmtDto(msgRef(m("message")), m("to").str, m("portlet").str)
+          case "morph"  => MorphStmtDto(m("entity").str, m("state").str, msgRef(m("value")))
+          case "become" => BecomeStmtDto(m("entity").str, m("handler").str)
+          case "tell"   => TellStmtDto(msgRef(m("message")), m("to").str, m("processor").str)
+          case "reply"  => ReplyStmtDto(msgRef(m("message")))
+          case "when" =>
+            WhenStmtDto(
+              m.get("condition").map(_.str),
+              m.get("conditionIdentifier").map(_.str),
+              m.get("negated").exists(_.bool),
+              readStmts(m.get("then")),
+              readStmts(m.get("else"))
+            )
+          case "match" =>
+            val cases = m
+              .get("cases")
+              .map(
+                _.arr
+                  .map(c => MatchCaseDto(c.obj("pattern").str, readStmts(c.obj.get("statements"))))
+                  .toSeq
+              )
+              .getOrElse(Nil)
+            MatchStmtDto(m("expression").str, cases, readStmts(m.get("default")))
+          case other => throw new IllegalArgumentException(s"Unknown statement kind: '$other'")
+    end match
+  end readStatement
+
+  private def stmtArr(stmts: Seq[StatementDto]): ujson.Value =
+    ujson.Arr.from(stmts.map(writeStatement))
+
+  private def writeStatement(dto: StatementDto): ujson.Value =
+    dto match
+      case PromptStmtDto(text) =>
+        ujson.Obj("kind" -> ujson.Str("prompt"), "text" -> ujson.Str(text))
+      case ErrorStmtDto(message) =>
+        ujson.Obj("kind" -> ujson.Str("error"), "message" -> ujson.Str(message))
+      case LetStmtDto(name, t, e) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("let"), "name" -> ujson.Str(name))
+            ++ t.map(x => "type" -> (ujson.Str(x): ujson.Value))
+            ++ Seq("expression" -> (ujson.Str(e): ujson.Value))
+        )
+      case CodeStmtDto(language, body) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("code"),
+          "language" -> ujson.Str(language),
+          "body" -> ujson.Str(body)
+        )
+      case RequireStmtDto(condition, invariant) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("require"))
+            ++ condition.map(x => "condition" -> (ujson.Str(x): ujson.Value))
+            ++ invariant.map(x => "invariant" -> (ujson.Str(x): ujson.Value))
+        )
+      case SetStmtDto(field, state, value) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("set"))
+            ++ field.map(x => "field" -> (ujson.Str(x): ujson.Value))
+            ++ state.map(x => "state" -> (ujson.Str(x): ujson.Value))
+            ++ Seq("value" -> (ujson.Str(value): ujson.Value))
+        )
+      case SendStmtDto(message, to, portlet) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("send"),
+          "message" -> msgRefJs(message),
+          "to" -> ujson.Str(to),
+          "portlet" -> ujson.Str(portlet)
+        )
+      case MorphStmtDto(entity, state, value) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("morph"),
+          "entity" -> ujson.Str(entity),
+          "state" -> ujson.Str(state),
+          "value" -> msgRefJs(value)
+        )
+      case BecomeStmtDto(entity, handler) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("become"),
+          "entity" -> ujson.Str(entity),
+          "handler" -> ujson.Str(handler)
+        )
+      case TellStmtDto(message, to, processor) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("tell"),
+          "message" -> msgRefJs(message),
+          "to" -> ujson.Str(to),
+          "processor" -> ujson.Str(processor)
+        )
+      case ReplyStmtDto(message) =>
+        ujson.Obj("kind" -> ujson.Str("reply"), "message" -> msgRefJs(message))
+      case WhenStmtDto(condition, conditionId, negated, thenS, elseS) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("when"))
+            ++ condition.map(x => "condition" -> (ujson.Str(x): ujson.Value))
+            ++ conditionId.map(x => "conditionIdentifier" -> (ujson.Str(x): ujson.Value))
+            ++ Seq[(String, ujson.Value)](
+              "negated" -> ujson.Bool(negated),
+              "then" -> stmtArr(thenS),
+              "else" -> stmtArr(elseS)
+            )
+        )
+      case MatchStmtDto(expression, cases, default) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("match"),
+          "expression" -> ujson.Str(expression),
+          "cases" -> ujson.Arr.from(
+            cases.map(c =>
+              ujson.Obj("pattern" -> ujson.Str(c.pattern), "statements" -> stmtArr(c.statements))
+            )
+          ),
+          "default" -> stmtArr(default)
+        )
+  end writeStatement
+
   // Given ReadWriters. These are lazy (Scala 3 parameterless givens), so the
   // mutual recursion FieldDto <-> TypeExprDto resolves correctly.
   given typeExprRW: ReadWriter[TypeExprDto] =
     readwriter[ujson.Value].bimap[TypeExprDto](writeTypeExpr, readTypeExpr)
+  given statementRW: ReadWriter[StatementDto] =
+    readwriter[ujson.Value].bimap[StatementDto](writeStatement, readStatement)
+  given functionRW: ReadWriter[FunctionDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW
