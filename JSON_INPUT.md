@@ -330,6 +330,33 @@ Top level may carry `modules` alongside `domains`; a module groups domains
   "modules": [ { "name": "M", "authors": [...], "domains": [ ... ] } ] }
 ```
 
+## Phase 7 additions — epics, use cases, interactions
+
+`epics` are valid at domain level. An epic and each use case carry a user
+story; interactions are tagged per kind.
+
+```jsonc
+{ "name": "Checkout",
+  "userStory": { "user": "<userPath>", "capability": "...", "benefit": "..." },
+  "shownBy": [ "https://..." ], "types": [...],
+  "useCases": [ { "name": "Pay", "userStory": {...}, "interactions": [ <interaction> ] } ] }
+```
+
+Interactions (a generic ref is `{ "kind": "user"|"entity"|"context"|"group"|"output"|"input"|"adaptor"|"projector", "path": "..." }`):
+
+```jsonc
+{ "kind": "vague", "from": "...", "relationship": "...", "to": "..." }
+{ "kind": "sendMessage", "from": <ref>, "message": {"ref":"M","kind":"command"}, "to": "<path>", "processor": "context" }
+{ "kind": "arbitrary", "from": <ref>, "relationship": "...", "to": <ref> }
+{ "kind": "self", "from": <ref>, "relationship": "..." }
+{ "kind": "focusOnGroup", "user": "<path>", "group": "<path>" }
+{ "kind": "directToURL", "user": "<path>", "url": "https://..." }
+{ "kind": "showOutput", "output": "<path>", "relationship": "...", "user": "<path>" }
+{ "kind": "selectInput", "user": "<path>", "input": "<path>" }
+{ "kind": "takeInput", "user": "<path>", "input": "<path>" }
+{ "kind": "sequential"|"parallel"|"optional", "interactions": [ <interaction> ] }
+```
+
 ## Example
 
 ```jsonc

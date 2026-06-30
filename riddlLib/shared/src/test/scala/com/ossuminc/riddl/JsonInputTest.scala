@@ -307,6 +307,33 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON round-trips (Phase 7)" should {
+
+    "an epic with a user story, shownBy, and a use case covering all 12 interaction kinds" in {
+      assertRendersAndReparses(
+        """{ "domains": [ { "name": "P7", "epics": [ { "name": "Checkout", "brief": "checkout flow",
+          |  "userStory": { "user": "Shopper", "capability": "buy items", "benefit": "receive goods" },
+          |  "shownBy": [ "https://example.com/checkout" ],
+          |  "useCases": [ { "name": "Pay",
+          |    "userStory": { "user": "Shopper", "capability": "pay", "benefit": "complete the order" },
+          |    "interactions": [
+          |      { "kind": "vague", "from": "Shopper", "relationship": "does", "to": "something" },
+          |      { "kind": "sendMessage", "from": { "kind": "entity", "path": "Cart" }, "message": { "ref": "Pay", "kind": "command" }, "to": "Orders", "processor": "context" },
+          |      { "kind": "arbitrary", "from": { "kind": "user", "path": "Shopper" }, "relationship": "reviews", "to": { "kind": "entity", "path": "Cart" } },
+          |      { "kind": "self", "from": { "kind": "entity", "path": "Cart" }, "relationship": "recomputes totals" },
+          |      { "kind": "focusOnGroup", "user": "Shopper", "group": "MainGroup" },
+          |      { "kind": "directToURL", "user": "Shopper", "url": "https://example.com/help" },
+          |      { "kind": "showOutput", "output": "Receipt", "relationship": "shows", "user": "Shopper" },
+          |      { "kind": "selectInput", "user": "Shopper", "input": "CardField" },
+          |      { "kind": "takeInput", "user": "Shopper", "input": "CardField" },
+          |      { "kind": "sequential", "interactions": [ { "kind": "vague", "from": "a", "relationship": "b", "to": "c" } ] },
+          |      { "kind": "parallel", "interactions": [ { "kind": "vague", "from": "d", "relationship": "e", "to": "f" } ] },
+          |      { "kind": "optional", "interactions": [ { "kind": "vague", "from": "g", "relationship": "h", "to": "i" } ] }
+          |    ] } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")

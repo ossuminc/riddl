@@ -59,20 +59,20 @@ is covered in that construct's phase. The builder emits references as
 | Saga | ✅ Phase 5 | input/output + steps |
 | SagaStep | ✅ Phase 5 | do/undo statements |
 | Module | ✅ Phase 6 | nested modules/domains |
-| Epic | 🔜 Phase 7 | user story + use cases + shownBy |
-| UseCase | 🔜 Phase 7 | user story + interactions |
-| VagueInteraction | 🔜 Phase 7 | |
-| SendMessageInteraction | 🔜 Phase 7 | |
-| ArbitraryInteraction | 🔜 Phase 7 | |
-| SelfInteraction | 🔜 Phase 7 | |
-| FocusOnGroupInteraction | 🔜 Phase 7 | |
-| DirectUserToURLInteraction | 🔜 Phase 7 | |
-| ShowOutputInteraction | 🔜 Phase 7 | |
-| SelectInputInteraction | 🔜 Phase 7 | |
-| TakeInputInteraction | 🔜 Phase 7 | |
-| ParallelInteractions | 🔜 Phase 7 | |
-| SequentialInteractions | 🔜 Phase 7 | |
-| OptionalInteractions | 🔜 Phase 7 | |
+| Epic | ✅ Phase 7 | user story + use cases + shownBy |
+| UseCase | ✅ Phase 7 | user story + interactions |
+| VagueInteraction | ✅ Phase 7 | |
+| SendMessageInteraction | ✅ Phase 7 | |
+| ArbitraryInteraction | ✅ Phase 7 | |
+| SelfInteraction | ✅ Phase 7 | |
+| FocusOnGroupInteraction | ✅ Phase 7 | |
+| DirectUserToURLInteraction | ✅ Phase 7 | |
+| ShowOutputInteraction | ✅ Phase 7 | |
+| SelectInputInteraction | ✅ Phase 7 | |
+| TakeInputInteraction | ✅ Phase 7 | |
+| ParallelInteractions | ✅ Phase 7 | |
+| SequentialInteractions | ✅ Phase 7 | |
+| OptionalInteractions | ✅ Phase 7 | |
 | Group | 🔜 Phase 8 | |
 | Input | 🔜 Phase 8 | |
 | Output | 🔜 Phase 8 | |

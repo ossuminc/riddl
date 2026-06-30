@@ -10,6 +10,7 @@ import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Contents}
 import com.ossuminc.riddl.language.Messages
 import com.ossuminc.riddl.language.Messages.{Message, Messages}
+import com.ossuminc.riddl.utils.URL
 
 import scala.collection.mutable
 
@@ -74,12 +75,13 @@ object JsonAstBuilder:
     val users = d.users.map(buildUser)
     val types = d.types.map(buildType)
     val sagas = d.sagas.map(buildSaga)
+    val epics = d.epics.map(buildEpic)
     val subdomains = d.domains.map(buildDomain)
     val contexts = d.contexts.map(buildContext)
     Domain(
       At(),
       ident(d.name),
-      contentsOf[DomainContents](authors, users, types, sagas, subdomains, contexts),
+      contentsOf[DomainContents](authors, users, types, sagas, epics, subdomains, contexts),
       meta(d.brief)
     )
 
@@ -276,6 +278,123 @@ object JsonAstBuilder:
       aggregationOf(s.output),
       contentsOf[SagaContents](types, steps),
       meta(s.brief)
+    )
+
+  // ---------------------------------------------------------------------------
+  // Epics, use cases, interactions (Phase 7)
+  // ---------------------------------------------------------------------------
+
+  private def buildUserStory(us: UserStoryDto): UserStory =
+    UserStory(
+      At(),
+      UserRef(At(), pathId(us.user)),
+      LiteralString(At(), us.capability),
+      LiteralString(At(), us.benefit)
+    )
+
+  /** A generic definition reference for an interaction's from/to. */
+  private def buildRef(r: RefDto)(using ctx: Ctx): Reference[Definition] =
+    r.kind match
+      case "user"      => UserRef(At(), pathId(r.path))
+      case "entity"    => EntityRef(At(), pathId(r.path))
+      case "context"   => ContextRef(At(), pathId(r.path))
+      case "group"     => GroupRef(At(), "group", pathId(r.path))
+      case "output"    => OutputRef(At(), "output", pathId(r.path))
+      case "input"     => InputRef(At(), "input", pathId(r.path))
+      case "adaptor"   => AdaptorRef(At(), pathId(r.path))
+      case "projector" => ProjectorRef(At(), pathId(r.path))
+      case other =>
+        ctx.err(s"unknown reference kind '$other' for an interaction")
+        UserRef(At(), pathId(r.path))
+
+  private def buildInteraction(i: InteractionDto)(using ctx: Ctx): Interaction =
+    val nm = Contents.empty[MetaData]()
+    i match
+      case VagueIxnDto(from, rel, to) =>
+        VagueInteraction(
+          At(),
+          LiteralString(At(), from),
+          LiteralString(At(), rel),
+          LiteralString(At(), to),
+          nm
+        )
+      case SendMessageIxnDto(from, msg, to, proc) =>
+        SendMessageInteraction(At(), buildRef(from), messageRef(msg), processorRef(to, proc), nm)
+      case ArbitraryIxnDto(from, rel, to) =>
+        ArbitraryInteraction(At(), buildRef(from), LiteralString(At(), rel), buildRef(to), nm)
+      case SelfIxnDto(from, rel) =>
+        SelfInteraction(At(), buildRef(from), LiteralString(At(), rel), nm)
+      case FocusOnGroupIxnDto(user, group) =>
+        FocusOnGroupInteraction(
+          At(),
+          UserRef(At(), pathId(user)),
+          GroupRef(At(), "group", pathId(group)),
+          nm
+        )
+      case DirectToURLIxnDto(user, url) =>
+        DirectUserToURLInteraction(At(), UserRef(At(), pathId(user)), URL(url), nm)
+      case ShowOutputIxnDto(output, rel, user) =>
+        ShowOutputInteraction(
+          At(),
+          OutputRef(At(), "output", pathId(output)),
+          LiteralString(At(), rel),
+          UserRef(At(), pathId(user)),
+          nm
+        )
+      case SelectInputIxnDto(user, input) =>
+        SelectInputInteraction(
+          At(),
+          UserRef(At(), pathId(user)),
+          InputRef(At(), "input", pathId(input)),
+          nm
+        )
+      case TakeInputIxnDto(user, input) =>
+        TakeInputInteraction(
+          At(),
+          UserRef(At(), pathId(user)),
+          InputRef(At(), "input", pathId(input)),
+          nm
+        )
+      case ParallelIxnDto(ixns) =>
+        ParallelInteractions(
+          At(),
+          contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
+          nm
+        )
+      case SequentialIxnDto(ixns) =>
+        SequentialInteractions(
+          At(),
+          contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
+          nm
+        )
+      case OptionalIxnDto(ixns) =>
+        OptionalInteractions(
+          At(),
+          contentsOf[InteractionContainerContents](ixns.map(buildInteraction)),
+          nm
+        )
+    end match
+  end buildInteraction
+
+  private def buildUseCase(u: UseCaseDto)(using Ctx): UseCase =
+    UseCase(
+      At(),
+      ident(u.name),
+      buildUserStory(u.userStory),
+      contentsOf[UseCaseContents](u.interactions.map(buildInteraction)),
+      meta(u.brief)
+    )
+
+  private def buildEpic(e: EpicDto)(using Ctx): Epic =
+    val types = e.types.map(buildType)
+    val useCases = e.useCases.map(buildUseCase)
+    val shownBy = if e.shownBy.isEmpty then Nil else Seq(ShownBy(At(), e.shownBy.map(u => URL(u))))
+    Epic(
+      At(),
+      ident(e.name),
+      buildUserStory(e.userStory),
+      contentsOf[EpicContents](types, shownBy, useCases),
+      meta(e.brief)
     )
 
   private def buildStatements(stmts: Seq[StatementDto])(using Ctx): Contents[Statements] =

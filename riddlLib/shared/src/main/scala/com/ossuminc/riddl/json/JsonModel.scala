@@ -137,6 +137,7 @@ object JsonModel:
     users: Seq[UserDto] = Nil,
     types: Seq[TypeDefDto] = Nil,
     sagas: Seq[SagaDto] = Nil,
+    epics: Seq[EpicDto] = Nil,
     domains: Seq[DomainDto] = Nil,
     contexts: Seq[ContextDto] = Nil
   )
@@ -395,6 +396,56 @@ object JsonModel:
     output: Seq[FieldDto] = Nil,
     types: Seq[TypeDefDto] = Nil,
     steps: Seq[SagaStepDto] = Nil
+  )
+
+  // ---------------------------------------------------------------------------
+  // Epics, use cases, interactions (Phase 7)
+  // ---------------------------------------------------------------------------
+
+  /** A generic definition reference: `{ "kind": "user"|"entity"|"context"|"group"|"output"|"input"|
+    * "adaptor"|"projector", "path": "<path>" }`
+    */
+  case class RefDto(kind: String, path: String)
+
+  /** `{ "user": "<userPath>", "capability": "...", "benefit": "..." }` */
+  case class UserStoryDto(user: String, capability: String, benefit: String)
+
+  /** An interaction step. Tagged by `kind`; containers nest `interactions`. */
+  sealed trait InteractionDto
+  case class VagueIxnDto(from: String, relationship: String, to: String) extends InteractionDto
+  case class SendMessageIxnDto(from: RefDto, message: MessageRefDto, to: String, processor: String)
+      extends InteractionDto
+  case class ArbitraryIxnDto(from: RefDto, relationship: String, to: RefDto) extends InteractionDto
+  case class SelfIxnDto(from: RefDto, relationship: String) extends InteractionDto
+  case class FocusOnGroupIxnDto(user: String, group: String) extends InteractionDto
+  case class DirectToURLIxnDto(user: String, url: String) extends InteractionDto
+  case class ShowOutputIxnDto(output: String, relationship: String, user: String)
+      extends InteractionDto
+  case class SelectInputIxnDto(user: String, input: String) extends InteractionDto
+  case class TakeInputIxnDto(user: String, input: String) extends InteractionDto
+  case class ParallelIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
+  case class SequentialIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
+  case class OptionalIxnDto(interactions: Seq[InteractionDto]) extends InteractionDto
+
+  /** `{ "name": "Pay", "userStory": <userStory>, "interactions": [<interaction>], "brief"?: ... }`
+    */
+  case class UseCaseDto(
+    name: String,
+    userStory: UserStoryDto,
+    interactions: Seq[InteractionDto] = Nil,
+    brief: Option[String] = None
+  )
+
+  /** `{ "name": "Checkout", "userStory": <userStory>, "shownBy"?: [url], "types"?: [...],
+    * "useCases": [<useCase>], "brief"?: ... }`
+    */
+  case class EpicDto(
+    name: String,
+    userStory: UserStoryDto,
+    brief: Option[String] = None,
+    shownBy: Seq[String] = Nil,
+    types: Seq[TypeDefDto] = Nil,
+    useCases: Seq[UseCaseDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -740,10 +791,117 @@ object JsonModel:
 
   // Given ReadWriters. These are lazy (Scala 3 parameterless givens), so the
   // mutual recursion FieldDto <-> TypeExprDto resolves correctly.
+  // ujson <-> InteractionDto. Containers nest `interactions` recursively.
+
+  private def refJs(r: RefDto): ujson.Value =
+    ujson.Obj("kind" -> ujson.Str(r.kind), "path" -> ujson.Str(r.path))
+  private def readRef(v: ujson.Value): RefDto = RefDto(v.obj("kind").str, v.obj("path").str)
+  private def readIxns(o: Option[ujson.Value]): Seq[InteractionDto] =
+    o.map(_.arr.map(readInteraction).toSeq).getOrElse(Nil)
+
+  private def readInteraction(v: ujson.Value): InteractionDto =
+    val m = v.obj
+    m("kind").str match
+      case "vague" => VagueIxnDto(m("from").str, m("relationship").str, m("to").str)
+      case "sendMessage" =>
+        SendMessageIxnDto(readRef(m("from")), msgRef(m("message")), m("to").str, m("processor").str)
+      case "arbitrary" =>
+        ArbitraryIxnDto(readRef(m("from")), m("relationship").str, readRef(m("to")))
+      case "self"         => SelfIxnDto(readRef(m("from")), m("relationship").str)
+      case "focusOnGroup" => FocusOnGroupIxnDto(m("user").str, m("group").str)
+      case "directToURL"  => DirectToURLIxnDto(m("user").str, m("url").str)
+      case "showOutput"   => ShowOutputIxnDto(m("output").str, m("relationship").str, m("user").str)
+      case "selectInput"  => SelectInputIxnDto(m("user").str, m("input").str)
+      case "takeInput"    => TakeInputIxnDto(m("user").str, m("input").str)
+      case "parallel"     => ParallelIxnDto(readIxns(m.get("interactions")))
+      case "sequential"   => SequentialIxnDto(readIxns(m.get("interactions")))
+      case "optional"     => OptionalIxnDto(readIxns(m.get("interactions")))
+      case other => throw new IllegalArgumentException(s"Unknown interaction kind: '$other'")
+    end match
+  end readInteraction
+
+  private def ixnArr(ixns: Seq[InteractionDto]): ujson.Value =
+    ujson.Arr.from(ixns.map(writeInteraction))
+
+  private def writeInteraction(dto: InteractionDto): ujson.Value =
+    dto match
+      case VagueIxnDto(from, rel, to) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("vague"),
+          "from" -> ujson.Str(from),
+          "relationship" -> ujson.Str(rel),
+          "to" -> ujson.Str(to)
+        )
+      case SendMessageIxnDto(from, msg, to, proc) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("sendMessage"),
+          "from" -> refJs(from),
+          "message" -> msgRefJs(msg),
+          "to" -> ujson.Str(to),
+          "processor" -> ujson.Str(proc)
+        )
+      case ArbitraryIxnDto(from, rel, to) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("arbitrary"),
+          "from" -> refJs(from),
+          "relationship" -> ujson.Str(rel),
+          "to" -> refJs(to)
+        )
+      case SelfIxnDto(from, rel) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("self"),
+          "from" -> refJs(from),
+          "relationship" -> ujson.Str(rel)
+        )
+      case FocusOnGroupIxnDto(user, group) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("focusOnGroup"),
+          "user" -> ujson.Str(user),
+          "group" -> ujson.Str(group)
+        )
+      case DirectToURLIxnDto(user, url) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("directToURL"),
+          "user" -> ujson.Str(user),
+          "url" -> ujson.Str(url)
+        )
+      case ShowOutputIxnDto(output, rel, user) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("showOutput"),
+          "output" -> ujson.Str(output),
+          "relationship" -> ujson.Str(rel),
+          "user" -> ujson.Str(user)
+        )
+      case SelectInputIxnDto(user, input) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("selectInput"),
+          "user" -> ujson.Str(user),
+          "input" -> ujson.Str(input)
+        )
+      case TakeInputIxnDto(user, input) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("takeInput"),
+          "user" -> ujson.Str(user),
+          "input" -> ujson.Str(input)
+        )
+      case ParallelIxnDto(ixns) =>
+        ujson.Obj("kind" -> ujson.Str("parallel"), "interactions" -> ixnArr(ixns))
+      case SequentialIxnDto(ixns) =>
+        ujson.Obj("kind" -> ujson.Str("sequential"), "interactions" -> ixnArr(ixns))
+      case OptionalIxnDto(ixns) =>
+        ujson.Obj("kind" -> ujson.Str("optional"), "interactions" -> ixnArr(ixns))
+    end match
+  end writeInteraction
+
   given typeExprRW: ReadWriter[TypeExprDto] =
     readwriter[ujson.Value].bimap[TypeExprDto](writeTypeExpr, readTypeExpr)
   given statementRW: ReadWriter[StatementDto] =
     readwriter[ujson.Value].bimap[StatementDto](writeStatement, readStatement)
+  given interactionRW: ReadWriter[InteractionDto] =
+    readwriter[ujson.Value].bimap[InteractionDto](writeInteraction, readInteraction)
+  given userStoryRW: ReadWriter[UserStoryDto] = macroRW
+  given useCaseRW: ReadWriter[UseCaseDto] = macroRW
+  given epicRW: ReadWriter[EpicDto] = macroRW
   given functionRW: ReadWriter[FunctionDto] = macroRW
   given portletRW: ReadWriter[PortletDto] = macroRW
   given connectorDtoRW: ReadWriter[ConnectorDto] = macroRW
