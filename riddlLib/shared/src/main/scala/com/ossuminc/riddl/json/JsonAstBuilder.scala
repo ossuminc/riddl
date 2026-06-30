@@ -67,11 +67,12 @@ object JsonAstBuilder:
     val authors = d.authors.map(buildAuthor)
     val users = d.users.map(buildUser)
     val types = d.types.map(buildType)
+    val sagas = d.sagas.map(buildSaga)
     val contexts = d.contexts.map(buildContext)
     Domain(
       At(),
       ident(d.name),
-      contentsOf[DomainContents](authors, users, types, contexts),
+      contentsOf[DomainContents](authors, users, types, sagas, contexts),
       meta(d.brief)
     )
 
@@ -117,6 +118,7 @@ object JsonAstBuilder:
     val repositories = c.repositories.map(buildRepository)
     val connectors = c.connectors.map(buildConnector)
     val relationships = c.relationships.map(buildRelationship)
+    val sagas = c.sagas.map(buildSaga)
     val handlers = c.handlers.map(buildHandler)
     Context(
       At(),
@@ -136,6 +138,7 @@ object JsonAstBuilder:
         repositories,
         connectors,
         relationships,
+        sagas,
         handlers
       ),
       meta(c.brief)
@@ -151,6 +154,13 @@ object JsonAstBuilder:
 
   private def buildField(f: FieldDto)(using Ctx): Field =
     Field(At(), ident(f.name), buildTypeExpr(f.`type`), meta(f.brief))
+
+  /** A field list as an optional Aggregation (None when empty) — used for function and saga
+    * input/output.
+    */
+  private def aggregationOf(fields: Seq[FieldDto])(using Ctx): Option[Aggregation] =
+    if fields.isEmpty then None
+    else Some(Aggregation(At(), Contents[AggregateContents](fields.map(buildField)*)))
 
   private def buildMethod(m: MethodDto)(using Ctx): Method =
     val args = m.args.map(a => MethodArgument(At(), a.name, buildTypeExpr(a.`type`)))
@@ -228,19 +238,37 @@ object JsonAstBuilder:
   // ---------------------------------------------------------------------------
 
   private def buildFunction(f: FunctionDto)(using Ctx): Function =
-    def agg(fields: Seq[FieldDto]): Option[Aggregation] =
-      if fields.isEmpty then None
-      else Some(Aggregation(At(), Contents[AggregateContents](fields.map(buildField)*)))
     val types = f.types.map(buildType)
     val statements = f.statements.map(buildStatement)
     val functions = f.functions.map(buildFunction)
     Function(
       At(),
       ident(f.name),
-      agg(f.input),
-      agg(f.output),
+      aggregationOf(f.input),
+      aggregationOf(f.output),
       contentsOf[FunctionContents](types, statements, functions),
       meta(f.brief)
+    )
+
+  private def buildSagaStep(st: SagaStepDto)(using Ctx): SagaStep =
+    SagaStep(
+      At(),
+      ident(st.name),
+      buildStatements(st.`do`),
+      buildStatements(st.undo),
+      meta(st.brief)
+    )
+
+  private def buildSaga(s: SagaDto)(using Ctx): Saga =
+    val types = s.types.map(buildType)
+    val steps = s.steps.map(buildSagaStep)
+    Saga(
+      At(),
+      ident(s.name),
+      aggregationOf(s.input),
+      aggregationOf(s.output),
+      contentsOf[SagaContents](types, steps),
+      meta(s.brief)
     )
 
   private def buildStatements(stmts: Seq[StatementDto])(using Ctx): Contents[Statements] =

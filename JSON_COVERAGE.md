@@ -56,8 +56,8 @@ is covered in that construct's phase. The builder emits references as
 | Outlet | ✅ Phase 4 | |
 | Connector | ✅ Phase 4 | OutletRef → InletRef |
 | Relationship | ✅ Phase 4 | ProcessorRef + cardinality |
-| Saga | 🔜 Phase 5 | input/output + steps |
-| SagaStep | 🔜 Phase 5 | do/undo statements |
+| Saga | ✅ Phase 5 | input/output + steps |
+| SagaStep | ✅ Phase 5 | do/undo statements |
 | Module | 🔜 Phase 6 | nested modules/domains |
 | Epic | 🔜 Phase 7 | user story + use cases + shownBy |
 | UseCase | 🔜 Phase 7 | user story + interactions |

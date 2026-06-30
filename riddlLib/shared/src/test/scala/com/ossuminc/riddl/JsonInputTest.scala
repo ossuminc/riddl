@@ -275,6 +275,21 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON round-trips (Phase 5)" should {
+
+    "a saga with input/output and do/undo steps" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "P5", "contexts": [ { "name": "C",
+          |  "sagas": [ { "name": "Booking", "brief": "book a trip",
+          |    "input": [ { "name": "tripId", "type": { "kind": "UUID" } } ],
+          |    "output": [ { "name": "confirmed", "type": { "kind": "Boolean" } } ],
+          |    "steps": [
+          |      { "name": "Reserve", "do": [ "reserve the seat" ], "undo": [ "release the seat" ] },
+          |      { "name": "Pay", "do": [ "charge the card" ], "undo": [ "refund the card" ] } ] } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")

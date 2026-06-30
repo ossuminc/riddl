@@ -311,6 +311,15 @@ New context-level arrays: `adaptors`, `streamlets`, `projectors`,
   "cardinality": "1:1"|"1:N"|"N:1"|"N:N", "label": "..." }
 ```
 
+## Phase 5 additions — sagas
+
+`sagas` are valid at domain and context level.
+
+```jsonc
+{ "name": "Booking", "input": [ <field> ], "output": [ <field> ], "types": [...],
+  "steps": [ { "name": "Reserve", "do": [ <stmt> ], "undo": [ <stmt> ] } ] }
+```
+
 ## Example
 
 ```jsonc

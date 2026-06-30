@@ -126,6 +126,7 @@ object JsonModel:
     authors: Seq[AuthorDto] = Nil,
     users: Seq[UserDto] = Nil,
     types: Seq[TypeDefDto] = Nil,
+    sagas: Seq[SagaDto] = Nil,
     contexts: Seq[ContextDto] = Nil
   )
 
@@ -159,6 +160,7 @@ object JsonModel:
     repositories: Seq[RepositoryDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
     relationships: Seq[RelationshipDto] = Nil,
+    sagas: Seq[SagaDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
 
@@ -358,6 +360,30 @@ object JsonModel:
     schema: Option[SchemaDto] = None,
     types: Seq[TypeDefDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
+  )
+
+  // ---------------------------------------------------------------------------
+  // Sagas (Phase 5)
+  // ---------------------------------------------------------------------------
+
+  /** `{ "name": "Reserve", "do": [<stmt>], "undo": [<stmt>], "brief"?: ... }` */
+  case class SagaStepDto(
+    name: String,
+    `do`: Seq[StatementDto] = Nil,
+    undo: Seq[StatementDto] = Nil,
+    brief: Option[String] = None
+  )
+
+  /** `{ "name": "Booking", "input"?: [<field>], "output"?: [<field>], "types"?: [...], "steps":
+    * [<sagaStep>], "brief"?: ... }`
+    */
+  case class SagaDto(
+    name: String,
+    brief: Option[String] = None,
+    input: Seq[FieldDto] = Nil,
+    output: Seq[FieldDto] = Nil,
+    types: Seq[TypeDefDto] = Nil,
+    steps: Seq[SagaStepDto] = Nil
   )
 
   // ---------------------------------------------------------------------------
@@ -716,6 +742,8 @@ object JsonModel:
   given projectorRW: ReadWriter[ProjectorDto] = macroRW
   given schemaDtoRW: ReadWriter[SchemaDto] = macroRW
   given repositoryRW: ReadWriter[RepositoryDto] = macroRW
+  given sagaStepRW: ReadWriter[SagaStepDto] = macroRW
+  given sagaRW: ReadWriter[SagaDto] = macroRW
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW
