@@ -65,6 +65,15 @@ Coverage ledger: `JSON_COVERAGE.md`.
 incrementally; hardest constructs last, none silently dropped. The
 ledger + a Phase-9 guard test keep coverage honest.
 
+**Status: all 9 phases complete.** Every RIDDL definition, type
+expression, statement, and interaction is expressible in JSON;
+`JsonCoverageGuardTest` enforces that the ledger stays complete as
+the AST evolves. 28 `JsonInputTest` cases pass on JVM + JS; Native
+compiles. Remaining work is review/merge and any follow-on polish
+(e.g. extending `metadata` beyond the four primary containers if
+desired). Found+fixed a pre-existing prettify bug along the way
+(Output double-rendered its verb alias).
+
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Core DDD: domain/context/entity/type/field/state/handler/on-clauses/invariant/author/messages + common type exprs + `do` statement | **done** |
@@ -75,7 +84,7 @@ ledger + a Phase-9 guard test keep coverage honest.
 | 6 | Module + deep nesting | **done** |
 | 7 | Epic/UseCase + interactions (the hardest tier) | **done** |
 | 8 | Group/Input/Output/ContainedGroup | **done** |
-| 9 | Metadata (Description/Terms/options/attachments/AuthorRef/Comment) + automated coverage guard test | |
+| 9 | Metadata (Description/Terms/options/attachments/AuthorRef/Comment) + automated coverage guard test | **done** |
 
 Deferred (out of scope, documented in the ledger): Include /
 Import / BAST — file-reference mechanisms incompatible with a
