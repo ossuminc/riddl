@@ -516,53 +516,12 @@ object RiddlLib extends RiddlLib:
       noANSIMessages = noANSIMessages
     )
     pc.withOptions(options) { _ =>
-      val input = RiddlParserInput(
-        source, originToURL(origin)
-      )
-      val parseResult = TopLevelParser.parseInput(
-        input, verbose
-      )
-      parseResult match
+      val input = RiddlParserInput(source, originToURL(origin))
+      TopLevelParser.parseInput(input, verbose) match
         case Right(root) =>
-          try
-            val passInput = PassInput(root)
-            val passesResult =
-              Pass.runThesePasses(passInput, passes)
-            val messages = passesResult.messages
-            val errs =
-              messages.filter(_.isError).distinct
-            val warns =
-              messages.filter(_.isWarning).distinct
-            val infos = messages
-              .filter(_.kind.severity == 0).distinct
-            ValidateResult(
-              succeeded = !messages.hasErrors,
-              parseErrors = List.empty,
-              errors = errs,
-              warnings = warns,
-              info = infos,
-              all = messages
-            )
-          catch
-            case e: Exception =>
-              ValidateResult(
-                succeeded = false,
-                parseErrors = List.empty,
-                errors = List.empty,
-                warnings = List.empty,
-                info = List.empty,
-                all = List.empty
-              )
-          end try
+          resultOf(Pass.runThesePasses(PassInput(root), passes).messages)
         case Left(parseMessages) =>
-          ValidateResult(
-            succeeded = false,
-            parseErrors = parseMessages,
-            errors = List.empty,
-            warnings = List.empty,
-            info = List.empty,
-            all = List.empty
-          )
+          parseFailure(parseMessages)
       end match
     }
   end doValidate
@@ -602,24 +561,33 @@ object RiddlLib extends RiddlLib:
     )
   end summarize
 
+  /** An empty failed ValidateResult (used when a pass run throws). */
+  private val noValidateResult: ValidateResult =
+    ValidateResult(
+      succeeded = false,
+      parseErrors = List.empty,
+      errors = List.empty,
+      warnings = List.empty,
+      info = List.empty,
+      all = List.empty
+    )
+
+  /** A failed ValidateResult carrying parse errors only. */
+  private def parseFailure(parseMessages: Messages): ValidateResult =
+    noValidateResult.copy(parseErrors = parseMessages)
+
+  /** Categorize the messages from a pass run, mapping any thrown exception to
+    * an empty failure. The argument is by-name so the whole run is guarded.
+    */
+  private def resultOf(messages: => Messages): ValidateResult =
+    try summarize(messages)
+    catch case NonFatal(_) => noValidateResult
+
   override def validateRoot(
     root: Root
   )(using pc: PlatformContext): ValidateResult =
     pc.withOptions(CommonOptions(noANSIMessages = true)) { _ =>
-      try
-        val passesResult =
-          Pass.runThesePasses(PassInput(root), Pass.standardPasses)
-        summarize(passesResult.messages)
-      catch
-        case NonFatal(_) =>
-          ValidateResult(
-            succeeded = false,
-            parseErrors = List.empty,
-            errors = List.empty,
-            warnings = List.empty,
-            info = List.empty,
-            all = List.empty
-          )
+      resultOf(Pass.runThesePasses(PassInput(root), Pass.standardPasses).messages)
     }
   end validateRoot
 
@@ -808,51 +776,10 @@ object RiddlLib extends RiddlLib:
   )(using pc: PlatformContext): ValidateResult =
     val options = CommonOptions(verbose = verbose)
     pc.withOptions(options) { _ =>
-      val input = RiddlParserInput(
-        source, originToURL(origin)
-      )
-      val parseResult = TopLevelParser.parseInput(
-        input, verbose
-      )
-      parseResult match
-        case Right(root) =>
-          try
-            val passesResult = validator.validate(root)
-            val messages = passesResult.messages
-            val errs =
-              messages.filter(_.isError).distinct
-            val warns =
-              messages.filter(_.isWarning).distinct
-            val infos = messages
-              .filter(_.kind.severity == 0).distinct
-            ValidateResult(
-              succeeded = !messages.hasErrors,
-              parseErrors = List.empty,
-              errors = errs,
-              warnings = warns,
-              info = infos,
-              all = messages
-            )
-          catch
-            case e: Exception =>
-              ValidateResult(
-                succeeded = false,
-                parseErrors = List.empty,
-                errors = List.empty,
-                warnings = List.empty,
-                info = List.empty,
-                all = List.empty
-              )
-          end try
-        case Left(parseMessages) =>
-          ValidateResult(
-            succeeded = false,
-            parseErrors = parseMessages,
-            errors = List.empty,
-            warnings = List.empty,
-            info = List.empty,
-            all = List.empty
-          )
+      val input = RiddlParserInput(source, originToURL(origin))
+      TopLevelParser.parseInput(input, verbose) match
+        case Right(root)         => resultOf(validator.validate(root).messages)
+        case Left(parseMessages) => parseFailure(parseMessages)
       end match
     }
   end validateIncremental
