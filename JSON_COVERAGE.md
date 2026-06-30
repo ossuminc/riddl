@@ -41,11 +41,11 @@ is covered in that construct's phase. The builder emits references as
 | OnTerminationClause | ✅ Phase 1 | `kind: "term"` |
 | Invariant | ✅ Phase 1 | string condition |
 | Author | ✅ Phase 1 | at domain level |
-| Enumerator | ✅ Phase 1 (names) | 🔜 Phase 2 for explicit `enumVal` |
-| Constant | 🔜 Phase 2 | |
-| Term | 🔜 Phase 2 | glossary entry |
-| User | 🔜 Phase 2 | |
-| Method | 🔜 Phase 2 | aggregate method with args |
+| Enumerator | ✅ Phase 2 | names + explicit `value` |
+| Constant | ✅ Phase 2 | in context/entity |
+| User | ✅ Phase 2 | at domain level |
+| Term | 🔜 Phase 9 | glossary entry (it is metadata) |
+| Method | 🔜 Phase 3 | aggregate method with args |
 | Function | 🔜 Phase 3 | input/output aggregation + statement body + nested |
 | Adaptor | 🔜 Phase 4 | direction + ContextRef |
 | Projector | 🔜 Phase 4 | RepositoryRef |
@@ -106,20 +106,20 @@ is covered in that construct's phase. The builder emits references as
 | Aggregation | ✅ Phase 1 | exposed via `Record` (mapped to a RecordCase aggregate) |
 | AliasedTypeExpression | ✅ Phase 1 | `kind: "Alias"` |
 | Optional / ZeroOrMore / OneOrMore | ✅ Phase 1 | `cardinality` wrapper |
-| SpecificRange | 🔜 Phase 2 | cardinality with explicit min/max |
-| UserId | 🔜 Phase 2 | |
-| Abstract | 🔜 Phase 2 | |
-| Location | 🔜 Phase 2 | |
-| URI | 🔜 Phase 2 | optional scheme |
-| Blob | 🔜 Phase 2 | blob kind |
-| Nothing | 🔜 Phase 2 | |
-| Time / DateTime / Duration | 🔜 Phase 2 | |
-| ZonedDate / ZonedDateTime | 🔜 Phase 2 | optional zone |
-| Current/Length/Luminosity/Mass/Mole/Temperature | 🔜 Phase 2 | SI base units |
-| Sequence / Set / Graph / Replica | 🔜 Phase 2 | `of` element type |
-| Mapping | 🔜 Phase 2 | from/to |
-| Table | 🔜 Phase 2 | `of` + dimensions |
-| EntityReferenceTypeExpression | 🔜 Phase 2 | entity path |
+| SpecificRange | ✅ Phase 2 | `cardinality: "range"` with min/max |
+| UserId | ✅ Phase 2 | |
+| Abstract | ✅ Phase 2 | |
+| Location | ✅ Phase 2 | |
+| URI | ✅ Phase 2 | optional scheme |
+| Blob | ✅ Phase 2 | blob kind (default Text) |
+| Nothing | ✅ Phase 2 | |
+| Time / DateTime / Duration | ✅ Phase 2 | |
+| ZonedDate / ZonedDateTime | ✅ Phase 2 | optional zone |
+| Current/Length/Luminosity/Mass/Mole/Temperature | ✅ Phase 2 | SI base units |
+| Sequence / Set / Graph / Replica | ✅ Phase 2 | `of` element type |
+| Mapping | ✅ Phase 2 | from/to |
+| Table | ✅ Phase 2 | `of` + dimensions |
+| EntityReferenceTypeExpression | ✅ Phase 2 | entity path |
 
 ## Statements (handler / function bodies)
 

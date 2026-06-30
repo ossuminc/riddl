@@ -8,19 +8,17 @@ package com.ossuminc.riddl.json
 
 /** The JSON wire schema for the RIDDL JSON input method.
   *
-  * These DTO (data transfer object) case classes describe the JSON document an
-  * external producer (e.g. an AI model) emits. They are decoupled from the
-  * RIDDL [[com.ossuminc.riddl.language.AST]]: [[JsonAstBuilder]] maps a
-  * [[JsonModel.RootDto]] onto an `AST.Root`, applying RIDDL's required defaults
-  * so the result is correct-by-construction for the supported subset.
+  * These DTO (data transfer object) case classes describe the JSON document an external producer
+  * (e.g. an AI model) emits. They are decoupled from the RIDDL [[com.ossuminc.riddl.language.AST]]:
+  * [[JsonAstBuilder]] maps a [[JsonModel.RootDto]] onto an `AST.Root`, applying RIDDL's required
+  * defaults so the result is correct-by-construction for the supported subset.
   *
-  * Serialization uses upickle, which is cross-compiled for JVM, JS, and Native,
-  * keeping the whole path Native-safe (no I/O, no JVM-only dependency).
+  * Serialization uses upickle, which is cross-compiled for JVM, JS, and Native, keeping the whole
+  * path Native-safe (no I/O, no JVM-only dependency).
   *
   * Phase 1 subset: domains, contexts, entities, types, fields, messages
-  * (command/event/query/result), state (record reference), handlers with
-  * on-clauses, invariants, authors, and the common type expressions. Later
-  * phases extend the schema additively.
+  * (command/event/query/result), state (record reference), handlers with on-clauses, invariants,
+  * authors, and the common type expressions. Later phases extend the schema additively.
   */
 object JsonModel:
 
@@ -37,13 +35,14 @@ object JsonModel:
   /** `{ "kind": "Id", "entity": "<path>" }` — entity path required by builder. */
   case class IdDto(entity: Option[String] = None) extends TypeExprDto
 
-  /** Argument-less predefined kinds: UUID, Boolean, Date, TimeStamp, Integer,
-    * Whole, Natural, Number, Real.
+  /** Argument-less predefined kinds: UUID, Boolean, Date, TimeStamp, Integer, Whole, Natural,
+    * Number, Real.
     */
   case class PredefDto(kind: String) extends TypeExprDto
 
   /** `{ "kind": "Decimal", "whole"?: Int, "fractional"?: Int }` */
-  case class DecimalDto(whole: Option[Long] = None, fractional: Option[Long] = None) extends TypeExprDto
+  case class DecimalDto(whole: Option[Long] = None, fractional: Option[Long] = None)
+      extends TypeExprDto
 
   /** `{ "kind": "Currency", "country"?: String }` */
   case class CurrencyDto(country: Option[String] = None) extends TypeExprDto
@@ -54,8 +53,13 @@ object JsonModel:
   /** `{ "kind": "Pattern", "pattern": ["regex", ...] }` — builder requires >=1. */
   case class PatternDto(pattern: Seq[String] = Nil) extends TypeExprDto
 
-  /** `{ "kind": "Enum", "values": ["A", "B"] }` — builder requires >=1. */
-  case class EnumDto(values: Seq[String] = Nil) extends TypeExprDto
+  /** An enumerator: `"Red"` (name only) or `{ "name": "Red", "value": 0 }`. */
+  case class EnumeratorDto(name: String, value: Option[Long] = None)
+
+  /** `{ "kind": "Enum", "values": [...] }` and/or `{ ..., "enumerators": [...] }`; builder requires
+    * >= 1 enumerator.
+    */
+  case class EnumDto(enumerators: Seq[EnumeratorDto] = Nil) extends TypeExprDto
 
   /** `{ "kind": "Alternation", "of": ["TypeA", "TypeB"] }` */
   case class AlternationDto(of: Seq[String] = Nil) extends TypeExprDto
@@ -66,8 +70,36 @@ object JsonModel:
   /** `{ "kind": "Alias", "ref": "SomeDeclaredType" }` */
   case class AliasDto(ref: String) extends TypeExprDto
 
-  /** `{ "cardinality": "optional"|"zeroOrMore"|"oneOrMore", "of": <typeExpr> }` */
-  case class CardinalityDto(cardinality: String, of: TypeExprDto) extends TypeExprDto
+  /** `{ "kind": "URI", "scheme"?: "https" }` (Phase 2) */
+  case class URIDto(scheme: Option[String] = None) extends TypeExprDto
+
+  /** `{ "kind": "Blob", "blobKind"?: "JSON" }` (Phase 2; default Text) */
+  case class BlobDto(blobKind: Option[String] = None) extends TypeExprDto
+
+  /** `{ "kind": "ZonedDate"|"ZonedDateTime", "zone"?: "UTC" }` (Phase 2) */
+  case class ZonedDto(kind: String, zone: Option[String] = None) extends TypeExprDto
+
+  /** `{ "kind": "Sequence"|"Set"|"Graph"|"Replica", "of": <typeExpr> }` (Phase 2) */
+  case class CollectionDto(kind: String, of: TypeExprDto) extends TypeExprDto
+
+  /** `{ "kind": "Mapping", "from": <typeExpr>, "to": <typeExpr> }` (Phase 2) */
+  case class MappingDto(from: TypeExprDto, to: TypeExprDto) extends TypeExprDto
+
+  /** `{ "kind": "Table", "of": <typeExpr>, "dimensions": [Int, ...] }` (Phase 2) */
+  case class TableDto(of: TypeExprDto, dimensions: Seq[Long] = Nil) extends TypeExprDto
+
+  /** `{ "kind": "EntityReference", "entity": "<path>" }` (Phase 2; required path) */
+  case class EntityRefDto(entity: Option[String] = None) extends TypeExprDto
+
+  /** `{ "cardinality": "optional"|"zeroOrMore"|"oneOrMore"|"range", "of": <typeExpr>, "min"?: Int,
+    * "max"?: Int }` — min/max only used by "range" (SpecificRange).
+    */
+  case class CardinalityDto(
+    cardinality: String,
+    of: TypeExprDto,
+    min: Option[Long] = None,
+    max: Option[Long] = None
+  ) extends TypeExprDto
 
   // ---------------------------------------------------------------------------
   // Structural DTOs
@@ -79,9 +111,13 @@ object JsonModel:
     name: String,
     brief: Option[String] = None,
     authors: Seq[AuthorDto] = Nil,
+    users: Seq[UserDto] = Nil,
     types: Seq[TypeDefDto] = Nil,
     contexts: Seq[ContextDto] = Nil
   )
+
+  /** `{ "name": "Shopper", "isA": "a person", "brief"?: ... }` (Phase 2) */
+  case class UserDto(name: String, isA: String, brief: Option[String] = None)
 
   case class AuthorDto(
     name: String,
@@ -97,6 +133,7 @@ object JsonModel:
     name: String,
     brief: Option[String] = None,
     types: Seq[TypeDefDto] = Nil,
+    constants: Seq[ConstantDto] = Nil,
     commands: Seq[MessageDto] = Nil,
     events: Seq[MessageDto] = Nil,
     queries: Seq[MessageDto] = Nil,
@@ -112,16 +149,29 @@ object JsonModel:
     brief: Option[String] = None,
     state: Option[StateDto] = None,
     types: Seq[TypeDefDto] = Nil,
+    constants: Seq[ConstantDto] = Nil,
     handlers: Seq[HandlerDto] = Nil,
     invariants: Seq[InvariantDto] = Nil
   )
 
+  /** `{ "name": "MaxItems", "type": <typeExpr>, "value": "100", "brief"?: ... }` (Phase 2) */
+  case class ConstantDto(
+    name: String,
+    `type`: TypeExprDto,
+    value: String,
+    brief: Option[String] = None
+  )
+
   case class StateDto(name: String, recordType: String)
 
-  case class HandlerDto(name: String, brief: Option[String] = None, onClauses: Seq[OnClauseDto] = Nil)
+  case class HandlerDto(
+    name: String,
+    brief: Option[String] = None,
+    onClauses: Seq[OnClauseDto] = Nil
+  )
 
-  /** `kind`: "message" | "init" | "other" | "term". For "message", `message`
-    * carries the message ref + its kind. `statements` are v1 prompt/`do` texts.
+  /** `kind`: "message" | "init" | "other" | "term". For "message", `message` carries the message
+    * ref + its kind. `statements` are v1 prompt/`do` texts.
     */
   case class OnClauseDto(
     kind: String,
@@ -139,10 +189,9 @@ object JsonModel:
   // upickle wiring
   // ---------------------------------------------------------------------------
 
-  /** Custom pickler that encodes `Option[T]` as null-or-value (the upickle
-    * default encodes Option as a 0/1-element JSON array, which would force
-    * callers to write `"brief": ["text"]`). Absent keys still fall back to the
-    * DTO's default argument.
+  /** Custom pickler that encodes `Option[T]` as null-or-value (the upickle default encodes Option
+    * as a 0/1-element JSON array, which would force callers to write `"brief": ["text"]`). Absent
+    * keys still fall back to the DTO's default argument.
     */
   object Pickle extends upickle.AttributeTagged:
     override implicit def OptionWriter[T: Writer]: Writer[Option[T]] =
@@ -158,29 +207,62 @@ object JsonModel:
 
   import Pickle.{ReadWriter, macroRW, readwriter, read => readJson, writeJs}
 
-  /** ujson <-> TypeExprDto. Hand-written so the dual discriminator
-    * (`cardinality` wrapper vs `kind` tag) and the defaults are explicit.
+  /** ujson <-> TypeExprDto. Hand-written so the dual discriminator (`cardinality` wrapper vs `kind`
+    * tag) and the defaults are explicit.
     */
   private def readTypeExpr(v: ujson.Value): TypeExprDto =
     val m = v.obj
-    if m.contains("cardinality") then CardinalityDto(m("cardinality").str, readTypeExpr(m("of")))
+    if m.contains("cardinality") then
+      CardinalityDto(
+        m("cardinality").str,
+        readTypeExpr(m("of")),
+        m.get("min").map(_.num.toLong),
+        m.get("max").map(_.num.toLong)
+      )
     else
       m("kind").str match
         case "String" => StringDto(m.get("min").map(_.num.toLong), m.get("max").map(_.num.toLong))
         case "Id"     => IdDto(m.get("entity").map(_.str))
-        case k @ ("UUID" | "Boolean" | "Date" | "TimeStamp" | "Integer" | "Whole" | "Natural" | "Number" |
-            "Real") =>
+        // Argument-less predefined kinds (Phase 1 + Phase 2)
+        case k @ ("UUID" | "Boolean" | "Date" | "TimeStamp" | "Integer" | "Whole" | "Natural" |
+            "Number" | "Real" | "UserId" | "Abstract" | "Location" | "Nothing" | "Time" |
+            "DateTime" | "Duration" | "Current" | "Length" | "Luminosity" | "Mass" | "Mole" |
+            "Temperature") =>
           PredefDto(k)
-        case "Decimal"  => DecimalDto(m.get("whole").map(_.num.toLong), m.get("fractional").map(_.num.toLong))
+        case "Decimal" =>
+          DecimalDto(m.get("whole").map(_.num.toLong), m.get("fractional").map(_.num.toLong))
         case "Currency" => CurrencyDto(m.get("country").map(_.str))
         case "Range"    => RangeDto(m.get("min").map(_.num.toLong), m.get("max").map(_.num.toLong))
         case "Pattern"  => PatternDto(m.get("pattern").map(_.arr.map(_.str).toSeq).getOrElse(Nil))
-        case "Enum"     => EnumDto(m.get("values").map(_.arr.map(_.str).toSeq).getOrElse(Nil))
+        case "Enum" =>
+          val fromValues =
+            m.get("values").map(_.arr.map(x => EnumeratorDto(x.str)).toSeq).getOrElse(Nil)
+          val fromEnums = m
+            .get("enumerators")
+            .map(
+              _.arr
+                .map(j => EnumeratorDto(j.obj("name").str, j.obj.get("value").map(_.num.toLong)))
+                .toSeq
+            )
+            .getOrElse(Nil)
+          EnumDto(fromValues ++ fromEnums)
         case "Alternation" => AlternationDto(m.get("of").map(_.arr.map(_.str).toSeq).getOrElse(Nil))
         case "Record" =>
           RecordDto(m.get("fields").map(_.arr.map(j => readJson[FieldDto](j)).toSeq).getOrElse(Nil))
-        case "Alias" => AliasDto(m("ref").str)
-        case other   => throw new IllegalArgumentException(s"Unknown type expression kind: '$other'")
+        case "Alias"                             => AliasDto(m("ref").str)
+        case "URI" | "URL"                       => URIDto(m.get("scheme").map(_.str))
+        case "Blob"                              => BlobDto(m.get("blobKind").map(_.str))
+        case k @ ("ZonedDate" | "ZonedDateTime") => ZonedDto(k, m.get("zone").map(_.str))
+        case k @ ("Sequence" | "Set" | "Graph" | "Replica") =>
+          CollectionDto(k, readTypeExpr(m("of")))
+        case "Mapping" => MappingDto(readTypeExpr(m("from")), readTypeExpr(m("to")))
+        case "Table" =>
+          TableDto(
+            readTypeExpr(m("of")),
+            m.get("dimensions").map(_.arr.map(_.num.toLong).toSeq).getOrElse(Nil)
+          )
+        case "EntityReference" => EntityRefDto(m.get("entity").map(_.str))
+        case other => throw new IllegalArgumentException(s"Unknown type expression kind: '$other'")
     end if
   end readTypeExpr
 
@@ -217,25 +299,77 @@ object JsonModel:
         )
       case PatternDto(ps) =>
         ujson.Obj("kind" -> ujson.Str("Pattern"), "pattern" -> ujson.Arr.from(ps.map(ujson.Str(_))))
-      case EnumDto(vs) =>
-        ujson.Obj("kind" -> ujson.Str("Enum"), "values" -> ujson.Arr.from(vs.map(ujson.Str(_))))
+      case EnumDto(enumerators) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("Enum"),
+          "enumerators" -> ujson.Arr.from(enumerators.map { e =>
+            ujson.Obj.from(
+              Seq[(String, ujson.Value)]("name" -> ujson.Str(e.name))
+                ++ e.value.map(x => "value" -> (ujson.Num(x.toDouble): ujson.Value))
+            )
+          })
+        )
       case AlternationDto(of) =>
         ujson.Obj("kind" -> ujson.Str("Alternation"), "of" -> ujson.Arr.from(of.map(ujson.Str(_))))
       case RecordDto(fields) =>
-        ujson.Obj("kind" -> ujson.Str("Record"), "fields" -> ujson.Arr.from(fields.map(f => writeJs(f))))
+        ujson.Obj(
+          "kind" -> ujson.Str("Record"),
+          "fields" -> ujson.Arr.from(fields.map(f => writeJs(f)))
+        )
       case AliasDto(ref) => ujson.Obj("kind" -> ujson.Str("Alias"), "ref" -> ujson.Str(ref))
-      case CardinalityDto(card, of) =>
-        ujson.Obj("cardinality" -> ujson.Str(card), "of" -> writeTypeExpr(of))
+      case URIDto(scheme) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("URI"))
+            ++ scheme.map(s => "scheme" -> (ujson.Str(s): ujson.Value))
+        )
+      case BlobDto(blobKind) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("Blob"))
+            ++ blobKind.map(s => "blobKind" -> (ujson.Str(s): ujson.Value))
+        )
+      case ZonedDto(kind, zone) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str(kind))
+            ++ zone.map(s => "zone" -> (ujson.Str(s): ujson.Value))
+        )
+      case CollectionDto(kind, of) =>
+        ujson.Obj("kind" -> ujson.Str(kind), "of" -> writeTypeExpr(of))
+      case MappingDto(from, to) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("Mapping"),
+          "from" -> writeTypeExpr(from),
+          "to" -> writeTypeExpr(to)
+        )
+      case TableDto(of, dimensions) =>
+        ujson.Obj(
+          "kind" -> ujson.Str("Table"),
+          "of" -> writeTypeExpr(of),
+          "dimensions" -> ujson.Arr.from(dimensions.map(d => ujson.Num(d.toDouble)))
+        )
+      case EntityRefDto(entity) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("kind" -> ujson.Str("EntityReference"))
+            ++ entity.map(e => "entity" -> (ujson.Str(e): ujson.Value))
+        )
+      case CardinalityDto(card, of, min, max) =>
+        ujson.Obj.from(
+          Seq[(String, ujson.Value)]("cardinality" -> ujson.Str(card), "of" -> writeTypeExpr(of))
+            ++ min.map(x => "min" -> (ujson.Num(x.toDouble): ujson.Value))
+            ++ max.map(x => "max" -> (ujson.Num(x.toDouble): ujson.Value))
+        )
   end writeTypeExpr
 
   // Given ReadWriters. These are lazy (Scala 3 parameterless givens), so the
   // mutual recursion FieldDto <-> TypeExprDto resolves correctly.
-  given typeExprRW: ReadWriter[TypeExprDto] = readwriter[ujson.Value].bimap[TypeExprDto](writeTypeExpr, readTypeExpr)
+  given typeExprRW: ReadWriter[TypeExprDto] =
+    readwriter[ujson.Value].bimap[TypeExprDto](writeTypeExpr, readTypeExpr)
   given fieldRW: ReadWriter[FieldDto] = macroRW
   given messageRefRW: ReadWriter[MessageRefDto] = macroRW
   given onClauseRW: ReadWriter[OnClauseDto] = macroRW
   given handlerRW: ReadWriter[HandlerDto] = macroRW
   given invariantRW: ReadWriter[InvariantDto] = macroRW
+  given constantRW: ReadWriter[ConstantDto] = macroRW
+  given userRW: ReadWriter[UserDto] = macroRW
   given stateRW: ReadWriter[StateDto] = macroRW
   given messageRW: ReadWriter[MessageDto] = macroRW
   given typeDefRW: ReadWriter[TypeDefDto] = macroRW
@@ -245,9 +379,9 @@ object JsonModel:
   given domainRW: ReadWriter[DomainDto] = macroRW
   given rootRW: ReadWriter[RootDto] = macroRW
 
-  /** Parse a JSON string into the wire model. Throws on malformed JSON or an
-    * unknown type-expression kind; [[com.ossuminc.riddl.RiddlLib.parseJson]]
-    * catches and converts to a clean failure.
+  /** Parse a JSON string into the wire model. Throws on malformed JSON or an unknown
+    * type-expression kind; [[com.ossuminc.riddl.RiddlLib.parseJson]] catches and converts to a
+    * clean failure.
     */
   def readRoot(json: String): RootDto = readJson[RootDto](json)
 

@@ -13,15 +13,14 @@ import com.ossuminc.riddl.language.Messages.{Message, Messages}
 
 import scala.collection.mutable
 
-/** Pure, Native-safe construction of a RIDDL [[AST.Root]] from the JSON wire
-  * model ([[JsonModel]]). No I/O. References are emitted as `PathIdentifier`s
-  * and left for `ResolutionPass`/`ValidationPass` to resolve — the builder only
-  * guarantees structural correctness and supplies RIDDL's required defaults.
+/** Pure, Native-safe construction of a RIDDL [[AST.Root]] from the JSON wire model ([[JsonModel]]).
+  * No I/O. References are emitted as `PathIdentifier`s and left for
+  * `ResolutionPass`/`ValidationPass` to resolve — the builder only guarantees structural
+  * correctness and supplies RIDDL's required defaults.
   *
-  * Builder-level errors (the few things the AST cannot express or default —
-  * a missing `Id.entity`, an empty `Enum`/`Pattern`, an unknown `kind`) are
-  * collected and returned as `Left(Messages)`; everything else becomes a
-  * structurally-valid `Root`.
+  * Builder-level errors (the few things the AST cannot express or default — a missing `Id.entity`,
+  * an empty `Enum`/`Pattern`, an unknown `kind`) are collected and returned as `Left(Messages)`;
+  * everything else becomes a structurally-valid `Root`.
   */
 object JsonAstBuilder:
 
@@ -40,8 +39,8 @@ object JsonAstBuilder:
     val errors: mutable.ListBuffer[Message] = mutable.ListBuffer.empty
     def err(message: String): Unit = errors += Messages.error(message)
 
-  /** Collect heterogeneous child groups (each a subtype of `T`) into a typed
-    * `Contents[T]`. `Seq[? <: T]` keeps each call-site group correctly typed.
+  /** Collect heterogeneous child groups (each a subtype of `T`) into a typed `Contents[T]`. `Seq[?
+    * <: T]` keeps each call-site group correctly typed.
     */
   private def contentsOf[T <: RiddlValue](groups: Seq[? <: T]*): Contents[T] =
     val buf = mutable.ArrayBuffer.empty[T]
@@ -66,9 +65,27 @@ object JsonAstBuilder:
 
   private def buildDomain(d: DomainDto)(using Ctx): Domain =
     val authors = d.authors.map(buildAuthor)
+    val users = d.users.map(buildUser)
     val types = d.types.map(buildType)
     val contexts = d.contexts.map(buildContext)
-    Domain(At(), ident(d.name), contentsOf[DomainContents](authors, types, contexts), meta(d.brief))
+    Domain(
+      At(),
+      ident(d.name),
+      contentsOf[DomainContents](authors, users, types, contexts),
+      meta(d.brief)
+    )
+
+  private def buildUser(u: UserDto): User =
+    User(At(), ident(u.name), LiteralString(At(), u.isA), meta(u.brief))
+
+  private def buildConstant(c: ConstantDto)(using Ctx): Constant =
+    Constant(
+      At(),
+      ident(c.name),
+      buildTypeExpr(c.`type`),
+      LiteralString(At(), c.value),
+      meta(c.brief)
+    )
 
   private def buildAuthor(a: AuthorDto): Author =
     Author(
@@ -87,6 +104,7 @@ object JsonAstBuilder:
 
   private def buildContext(c: ContextDto)(using Ctx): Context =
     val types = c.types.map(buildType)
+    val constants = c.constants.map(buildConstant)
     val commands = c.commands.map(m => buildMessage(m, AggregateUseCase.CommandCase))
     val events = c.events.map(m => buildMessage(m, AggregateUseCase.EventCase))
     val queries = c.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
@@ -96,12 +114,21 @@ object JsonAstBuilder:
     Context(
       At(),
       ident(c.name),
-      contentsOf[ContextContents](types, commands, events, queries, results, entities, handlers),
+      contentsOf[ContextContents](
+        types,
+        constants,
+        commands,
+        events,
+        queries,
+        results,
+        entities,
+        handlers
+      ),
       meta(c.brief)
     )
 
-  /** A message (command/event/query/result) is a `Type` whose expression is an
-    * aggregate tagged with the appropriate use case.
+  /** A message (command/event/query/result) is a `Type` whose expression is an aggregate tagged
+    * with the appropriate use case.
     */
   private def buildMessage(m: MessageDto, useCase: AggregateUseCase)(using Ctx): Type =
     val fields = m.fields.map(buildField)
@@ -113,10 +140,16 @@ object JsonAstBuilder:
 
   private def buildEntity(e: EntityDto)(using Ctx): Entity =
     val types = e.types.map(buildType)
+    val constants = e.constants.map(buildConstant)
     val states = e.state.toSeq.map(buildState)
     val handlers = e.handlers.map(buildHandler)
     val invariants = e.invariants.map(buildInvariant)
-    Entity(At(), ident(e.name), contentsOf[EntityContents](types, states, handlers, invariants), meta(e.brief))
+    Entity(
+      At(),
+      ident(e.name),
+      contentsOf[EntityContents](types, constants, states, handlers, invariants),
+      meta(e.brief)
+    )
 
   /** A state references a record type; RIDDL holds no fields in a state. */
   private def buildState(s: StateDto): State =
@@ -143,7 +176,13 @@ object JsonAstBuilder:
             OnMessageClause(At(), messageRef(mr), None, statements, Contents.empty[MetaData]())
           case None =>
             ctx.err("on-clause of kind 'message' requires a 'message' reference")
-            OnMessageClause(At(), CommandRef(At(), PathIdentifier.empty), None, statements, Contents.empty[MetaData]())
+            OnMessageClause(
+              At(),
+              CommandRef(At(), PathIdentifier.empty),
+              None,
+              statements,
+              Contents.empty[MetaData]()
+            )
       case "init"  => OnInitializationClause(At(), statements, Contents.empty[MetaData]())
       case "other" => OnOtherClause(At(), statements, Contents.empty[MetaData]())
       case "term"  => OnTerminationClause(At(), statements, Contents.empty[MetaData]())
@@ -183,21 +222,34 @@ object JsonAstBuilder:
 
       case PredefDto(kind) =>
         kind match
-          case "UUID"      => UUID(At())
-          case "Boolean"   => Bool(At())
-          case "Date"      => Date(At())
-          case "TimeStamp" => TimeStamp(At())
-          case "Integer"   => Integer(At())
-          case "Whole"     => Whole(At())
-          case "Natural"   => Natural(At())
-          case "Number"    => Number(At())
-          case "Real"      => Real(At())
+          case "UUID"        => UUID(At())
+          case "Boolean"     => Bool(At())
+          case "Date"        => Date(At())
+          case "TimeStamp"   => TimeStamp(At())
+          case "Integer"     => Integer(At())
+          case "Whole"       => Whole(At())
+          case "Natural"     => Natural(At())
+          case "Number"      => Number(At())
+          case "Real"        => Real(At())
+          case "UserId"      => UserId(At())
+          case "Abstract"    => Abstract(At())
+          case "Location"    => Location(At())
+          case "Nothing"     => Nothing(At())
+          case "Time"        => Time(At())
+          case "DateTime"    => DateTime(At())
+          case "Duration"    => Duration(At())
+          case "Current"     => Current(At())
+          case "Length"      => Length(At())
+          case "Luminosity"  => Luminosity(At())
+          case "Mass"        => Mass(At())
+          case "Mole"        => Mole(At())
+          case "Temperature" => Temperature(At())
           case other =>
             ctx.err(s"unknown predefined type kind '$other'")
             Abstract(At())
 
-      case DecimalDto(w, f)  => Decimal(At(), w.getOrElse(12L), f.getOrElse(2L))
-      case CurrencyDto(c)    => Currency(At(), c.getOrElse("USD"))
+      case DecimalDto(w, f)   => Decimal(At(), w.getOrElse(12L), f.getOrElse(2L))
+      case CurrencyDto(c)     => Currency(At(), c.getOrElse("USD"))
       case RangeDto(min, max) => RangeType(At(), min.getOrElse(0L), max.getOrElse(100L))
 
       case PatternDto(ps) =>
@@ -206,12 +258,13 @@ object JsonAstBuilder:
           Pattern(At(), Seq.empty)
         else Pattern(At(), ps.map(LiteralString(At(), _)))
 
-      case EnumDto(vs) =>
-        if vs.isEmpty then
+      case EnumDto(es) =>
+        if es.isEmpty then
           ctx.err("Enum type requires at least one value")
           Enumeration(At(), Contents.empty[Enumerator]())
         else
-          val enumerators = vs.map(v => Enumerator(At(), ident(v), None, Contents.empty[MetaData]()))
+          val enumerators =
+            es.map(e => Enumerator(At(), ident(e.name), e.value, Contents.empty[MetaData]()))
           Enumeration(At(), Contents[Enumerator](enumerators*))
 
       case AlternationDto(of) =>
@@ -230,14 +283,57 @@ object JsonAstBuilder:
 
       case AliasDto(ref) => AliasedTypeExpression(At(), "type", pathId(ref))
 
-      case CardinalityDto(card, of) =>
+      case URIDto(scheme) => URI(At(), scheme.map(LiteralString(At(), _)))
+
+      case BlobDto(blobKind) =>
+        val bk = blobKind match
+          case None => BlobKind.Text
+          case Some(s) =>
+            scala.util.Try(BlobKind.valueOf(s)).toOption.getOrElse {
+              ctx.err(s"unknown blob kind '$s'")
+              BlobKind.Text
+            }
+        Blob(At(), bk)
+
+      case ZonedDto(kind, zone) =>
+        kind match
+          case "ZonedDate"     => ZonedDate(At(), zone.map(LiteralString(At(), _)))
+          case "ZonedDateTime" => ZonedDateTime(At(), zone.map(LiteralString(At(), _)))
+          case other =>
+            ctx.err(s"unknown zoned time kind '$other'")
+            ZonedDateTime(At(), zone.map(LiteralString(At(), _)))
+
+      case CollectionDto(kind, of) =>
+        val inner = buildTypeExpr(of)
+        kind match
+          case "Sequence" => Sequence(At(), inner)
+          case "Set"      => Set(At(), inner)
+          case "Graph"    => Graph(At(), inner)
+          case "Replica"  => Replica(At(), inner)
+          case other =>
+            ctx.err(s"unknown collection kind '$other'")
+            Sequence(At(), inner)
+
+      case MappingDto(from, to) => Mapping(At(), buildTypeExpr(from), buildTypeExpr(to))
+
+      case TableDto(of, dimensions) => Table(At(), buildTypeExpr(of), dimensions)
+
+      case EntityRefDto(entity) =>
+        entity match
+          case Some(e) => EntityReferenceTypeExpression(At(), pathId(e))
+          case None =>
+            ctx.err("EntityReference type requires an 'entity' path")
+            EntityReferenceTypeExpression(At(), PathIdentifier.empty)
+
+      case CardinalityDto(card, of, min, max) =>
         val inner = buildTypeExpr(of)
         card match
           case "optional"   => Optional(At(), inner)
           case "zeroOrMore" => ZeroOrMore(At(), inner)
           case "oneOrMore"  => OneOrMore(At(), inner)
+          case "range"      => SpecificRange(At(), inner, min.getOrElse(0L), max.getOrElse(1L))
           case other =>
-            ctx.err(s"unknown cardinality '$other' (expected optional|zeroOrMore|oneOrMore)")
+            ctx.err(s"unknown cardinality '$other' (expected optional|zeroOrMore|oneOrMore|range)")
             inner
     end match
   end buildTypeExpr

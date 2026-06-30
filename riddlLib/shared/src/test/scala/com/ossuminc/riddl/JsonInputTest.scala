@@ -10,16 +10,15 @@ import com.ossuminc.riddl.utils.{pc, PlatformContext}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-/** Phase 1 of the JSON -> RIDDL AST input method. Each model must round-trip
-  * clean both ways:
+/** Phase 1 of the JSON -> RIDDL AST input method. Each model must round-trip clean both ways:
   *   - parseJson -> validateRoot (no errors)
   *   - parseJson -> root2RiddlSource -> validateString (no errors)
   * plus defaults, builder-error, and undefined-reference coverage.
   */
 class JsonInputTest extends AnyWordSpec with Matchers {
 
-  /** Assert a model parses and validates with no errors both directly and
-    * through a prettify round-trip. Warnings are allowed; errors are not.
+  /** Assert a model parses and validates with no errors both directly and through a prettify
+    * round-trip. Warnings are allowed; errors are not.
     */
   private def assertRoundTrips(json: String): Unit =
     RiddlLib.parseJson(json) match
@@ -30,13 +29,16 @@ class JsonInputTest extends AnyWordSpec with Matchers {
         }
         val riddl = RiddlLib.root2RiddlSource(root)
         val vr2 = RiddlLib.validateString(riddl)
-        withClue(s"rendered RIDDL:\n$riddl\nvalidateString errors:\n" + vr2.errors.map(_.format).mkString("\n")) {
+        withClue(
+          s"rendered RIDDL:\n$riddl\nvalidateString errors:\n" + vr2.errors
+            .map(_.format)
+            .mkString("\n")
+        ) {
           vr2.errors mustBe empty
         }
       case RiddlResult.Failure(errors) =>
         fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
     end match
-
   /** Render a single field's type expression to RIDDL text (for defaults). */
   private def renderFieldType(typeExpr: String): String =
     val json =
@@ -44,8 +46,9 @@ class JsonInputTest extends AnyWordSpec with Matchers {
          |{"name":"T","typeExpression":{"kind":"Record","fields":[
          |{"name":"f","type":$typeExpr}]}}]}]}]}""".stripMargin
     RiddlLib.parseJson(json) match
-      case RiddlResult.Success(root)   => RiddlLib.root2RiddlSource(root)
-      case RiddlResult.Failure(errors) => fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
+      case RiddlResult.Success(root) => RiddlLib.root2RiddlSource(root)
+      case RiddlResult.Failure(errors) =>
+        fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
 
   "JSON round-trips (Phase 1)" should {
 
@@ -128,6 +131,50 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON round-trips (Phase 2)" should {
+
+    "collection and reference type expressions" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "P2c", "contexts": [ { "name": "C",
+          |  "entities": [ { "name": "Anchor", "state": { "name": "s", "recordType": "R" },
+          |    "handlers": [ { "name": "H", "onClauses": [ { "kind": "init", "statements": [ "x" ] } ] } ] } ],
+          |  "types": [ { "name": "R", "typeExpression": { "kind": "Record", "fields": [
+          |    { "name": "seq", "type": { "kind": "Sequence", "of": { "kind": "Integer" } } },
+          |    { "name": "set", "type": { "kind": "Set", "of": { "kind": "String" } } },
+          |    { "name": "map", "type": { "kind": "Mapping", "from": { "kind": "String" }, "to": { "kind": "Integer" } } },
+          |    { "name": "tab", "type": { "kind": "Table", "of": { "kind": "Integer" }, "dimensions": [ 2, 3 ] } },
+          |    { "name": "gr", "type": { "kind": "Graph", "of": { "kind": "Integer" } } },
+          |    { "name": "rep", "type": { "kind": "Replica", "of": { "kind": "Integer" } } },
+          |    { "name": "ref", "type": { "kind": "EntityReference", "entity": "Anchor" } },
+          |    { "name": "rng", "type": { "cardinality": "range", "of": { "kind": "String" }, "min": 1, "max": 5 } } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "scalar/time/SI type expressions, plus a domain user, a constant, and valued enumerators" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "P2s",
+          |  "users": [ { "name": "Shopper", "isA": "a person who shops" } ],
+          |  "contexts": [ { "name": "C",
+          |  "constants": [ { "name": "MaxItems", "type": { "kind": "Integer" }, "value": "100" } ],
+          |  "types": [
+          |    { "name": "Status", "typeExpression": { "kind": "Enum", "enumerators": [ { "name": "Off", "value": 0 }, { "name": "On", "value": 1 } ] } },
+          |    { "name": "R", "typeExpression": { "kind": "Record", "fields": [
+          |      { "name": "uri", "type": { "kind": "URI" } },
+          |      { "name": "secureUri", "type": { "kind": "URI", "scheme": "https" } },
+          |      { "name": "blob", "type": { "kind": "Blob", "blobKind": "JSON" } },
+          |      { "name": "dur", "type": { "kind": "Duration" } },
+          |      { "name": "t", "type": { "kind": "Time" } },
+          |      { "name": "dt", "type": { "kind": "DateTime" } },
+          |      { "name": "zd", "type": { "kind": "ZonedDate", "zone": "UTC" } },
+          |      { "name": "zdt", "type": { "kind": "ZonedDateTime" } },
+          |      { "name": "uid", "type": { "kind": "UserId" } },
+          |      { "name": "loc", "type": { "kind": "Location" } },
+          |      { "name": "len", "type": { "kind": "Length" } },
+          |      { "name": "mass", "type": { "kind": "Mass" } } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")
@@ -192,7 +239,9 @@ class JsonInputTest extends AnyWordSpec with Matchers {
           val vr = RiddlLib.validateRoot(root)
           vr.errors must not be empty
         case RiddlResult.Failure(errors) =>
-          fail("parseJson should succeed (refs resolve later): " + errors.map(_.format).mkString("\n"))
+          fail(
+            "parseJson should succeed (refs resolve later): " + errors.map(_.format).mkString("\n")
+          )
       end match
     }
   }

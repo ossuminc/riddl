@@ -193,6 +193,42 @@ defaulted by the builder (see the table below).
 | `Enum`/`Pattern` empty | **error** (need ≥ 1) |
 | no `brief` | omitted (legal) |
 
+## Phase 2 additions
+
+More type expressions:
+
+```jsonc
+{ "kind": "UserId" } | { "kind": "Abstract" } | { "kind": "Location" } | { "kind": "Nothing" }
+{ "kind": "Time" } | { "kind": "DateTime" } | { "kind": "Duration" }
+{ "kind": "ZonedDate", "zone": "UTC" } | { "kind": "ZonedDateTime", "zone": "UTC" }   // zone optional
+{ "kind": "Current" } | { "kind": "Length" } | { "kind": "Luminosity" }               // SI base units
+{ "kind": "Mass" } | { "kind": "Mole" } | { "kind": "Temperature" }
+{ "kind": "URI", "scheme": "https" }                  // scheme optional
+{ "kind": "Blob", "blobKind": "JSON" }                // Text|XML|JSON|Image|Audio|Video|CSV|FileSystem; default Text
+{ "kind": "Sequence", "of": <typeExpression> }
+{ "kind": "Set", "of": <typeExpression> }
+{ "kind": "Graph", "of": <typeExpression> }
+{ "kind": "Replica", "of": <typeExpression> }
+{ "kind": "Mapping", "from": <typeExpression>, "to": <typeExpression> }
+{ "kind": "Table", "of": <typeExpression>, "dimensions": [2, 3] }
+{ "kind": "EntityReference", "entity": "Order" }
+{ "cardinality": "range", "of": <typeExpression>, "min": 1, "max": 5 }   // SpecificRange
+```
+
+Enumerators may carry explicit values; both forms may be combined:
+
+```jsonc
+{ "kind": "Enum", "values": ["Red", "Green"] }
+{ "kind": "Enum", "enumerators": [ { "name": "Off", "value": 0 }, { "name": "On", "value": 1 } ] }
+```
+
+New definitions:
+
+```jsonc
+// domain:  "users": [ { "name": "Shopper", "isA": "a person who shops", "brief"?: "..." } ]
+// context/entity: "constants": [ { "name": "MaxItems", "type": <typeExpression>, "value": "100", "brief"?: "..." } ]
+```
+
 ## Example
 
 ```jsonc
