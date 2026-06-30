@@ -69,7 +69,7 @@ ledger + a Phase-9 guard test keep coverage honest.
 |---|---|---|
 | 1 | Core DDD: domain/context/entity/type/field/state/handler/on-clauses/invariant/author/messages + common type exprs + `do` statement | **done** |
 | 2 | Remaining type expressions (SI units, time, collections, URI/Blob/…, SpecificRange) + Constant/User/Enumerator values (Method→P3, Term→P9) | **done** |
-| 3 | Full statement language + Function | |
+| 3 | Full statement language + Function + Method | **done** |
 | 4 | Adaptor/Streamlet/Inlet/Outlet/Connector/Relationship/Projector/Repository+Schema | |
 | 5 | Saga/SagaStep | |
 | 6 | Module + deep nesting | |
