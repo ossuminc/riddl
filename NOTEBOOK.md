@@ -70,11 +70,11 @@ ledger + a Phase-9 guard test keep coverage honest.
 | 1 | Core DDD: domain/context/entity/type/field/state/handler/on-clauses/invariant/author/messages + common type exprs + `do` statement | **done** |
 | 2 | Remaining type expressions (SI units, time, collections, URI/Blob/…, SpecificRange) + Constant/User/Enumerator values (Method→P3, Term→P9) | **done** |
 | 3 | Full statement language + Function + Method | **done** |
-| 4 | Adaptor/Streamlet/Inlet/Outlet/Connector/Relationship/Projector/Repository+Schema | |
-| 5 | Saga/SagaStep | |
-| 6 | Module + deep nesting | |
-| 7 | Epic/UseCase + interactions (the hardest tier) | |
-| 8 | Group/Input/Output/ContainedGroup | |
+| 4 | Adaptor/Streamlet/Inlet/Outlet/Connector/Relationship/Projector/Repository+Schema | **done** |
+| 5 | Saga/SagaStep | **done** |
+| 6 | Module + deep nesting | **done** |
+| 7 | Epic/UseCase + interactions (the hardest tier) | **done** |
+| 8 | Group/Input/Output/ContainedGroup | **done** |
 | 9 | Metadata (Description/Terms/options/attachments/AuthorRef/Comment) + automated coverage guard test | |
 
 Deferred (out of scope, documented in the ledger): Include /
