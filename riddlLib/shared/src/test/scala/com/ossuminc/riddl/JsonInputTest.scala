@@ -379,6 +379,102 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  /** parseJson -> root2Json -> parseJson preserves the validation error profile
+    * and root2Json is stable (idempotent) under a second round-trip.
+    */
+  private def profileOf(vr: RiddlLib.ValidateResult): Set[String] =
+    (vr.errors ++ vr.warnings).map(_.format).toSet
+
+  private def assertJsonRoundTrips(json: String): Unit =
+    RiddlLib.parseJson(json) match
+      case RiddlResult.Success(root) =>
+        val before = profileOf(RiddlLib.validateRoot(root))
+        val json2 = RiddlLib.root2Json(root)
+        RiddlLib.parseJson(json2) match
+          case RiddlResult.Success(root2) =>
+            withClue(s"serialized JSON:\n$json2\n") {
+              profileOf(RiddlLib.validateRoot(root2)) mustBe before
+              RiddlLib.root2Json(root2) mustBe json2 // stable / idempotent
+            }
+          case RiddlResult.Failure(errors) =>
+            fail(s"root2Json output did not re-parse:\n$json2\n" + errors.map(_.format).mkString("\n"))
+        end match
+      case RiddlResult.Failure(errors) =>
+        fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
+    end match
+
+  "root2Json (inverse of parseJson)" should {
+
+    "round-trip the core DDD subset (record/command/state/handler/do)" in {
+      assertJsonRoundTrips(
+        """{ "domains": [ { "name": "Commerce", "brief": "shopping", "contexts": [ { "name": "Orders",
+          |  "types": [ { "name": "OrderInfo", "typeExpression": { "kind": "Record", "fields": [
+          |    { "name": "sku", "type": { "kind": "String" } }, { "name": "qty", "type": { "kind": "Integer" } } ] } } ],
+          |  "commands": [ { "name": "PlaceOrder", "fields": [ { "name": "sku", "type": { "kind": "String", "max": 64 } } ] } ],
+          |  "entities": [ { "name": "Order", "state": { "name": "current", "recordType": "OrderInfo" },
+          |    "handlers": [ { "name": "B", "onClauses": [ { "kind": "message",
+          |      "message": { "ref": "PlaceOrder", "kind": "command" }, "statements": [ "record it" ] } ] } ] } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "round-trip the type-expression surface (enum/pattern/alternation/alias/collections/cardinality)" in {
+      assertJsonRoundTrips(
+        """{ "domains": [ { "name": "Catalog", "contexts": [ { "name": "Products", "types": [
+          |  { "name": "Color", "typeExpression": { "kind": "Enum", "enumerators": [ { "name": "Red", "value": 0 }, { "name": "Green" } ] } },
+          |  { "name": "Sku", "typeExpression": { "kind": "Pattern", "pattern": [ "^[A-Z]+$" ] } },
+          |  { "name": "A", "typeExpression": { "kind": "Record", "fields": [ { "name": "x", "type": { "kind": "Integer" } } ] } },
+          |  { "name": "B", "typeExpression": { "kind": "Record", "fields": [ { "name": "y", "type": { "kind": "Integer" } } ] } },
+          |  { "name": "E", "typeExpression": { "kind": "Alternation", "of": [ "A", "B" ] } },
+          |  { "name": "P", "typeExpression": { "kind": "Record", "fields": [
+          |    { "name": "c", "type": { "kind": "Alias", "ref": "Color" } },
+          |    { "name": "tags", "type": { "cardinality": "zeroOrMore", "of": { "kind": "String" } } },
+          |    { "name": "score", "type": { "kind": "Range", "min": 0, "max": 9 } },
+          |    { "name": "amt", "type": { "kind": "Decimal", "whole": 8, "fractional": 2 } },
+          |    { "name": "seq", "type": { "kind": "Sequence", "of": { "kind": "Integer" } } },
+          |    { "name": "map", "type": { "kind": "Mapping", "from": { "kind": "String" }, "to": { "kind": "Integer" } } } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "round-trip streaming & integration constructs" in {
+      assertJsonRoundTrips(
+        """{ "domains": [ { "name": "P4", "contexts": [ { "name": "C",
+          |  "types": [ { "name": "Evt", "typeExpression": { "kind": "Record", "fields": [ { "name": "x", "type": { "kind": "Integer" } } ] } } ],
+          |  "adaptors": [ { "name": "A", "direction": "inbound", "context": "Other",
+          |    "handlers": [ { "name": "AH", "onClauses": [ { "kind": "init", "statements": [ "a" ] } ] } ] } ],
+          |  "streamlets": [ { "name": "Pipe", "shape": "flow", "inlets": [ { "name": "in", "type": "Evt" } ], "outlets": [ { "name": "out", "type": "Evt" } ] } ],
+          |  "connectors": [ { "name": "Cn", "from": "Pipe.out", "to": "Pipe.in" } ],
+          |  "repositories": [ { "name": "Repo", "schema": { "name": "S", "kind": "Relational", "data": { "o": "Evt" }, "indices": [ "o" ] } } ],
+          |  "projectors": [ { "name": "Pr", "repository": "Repo" } ],
+          |  "relationships": [ { "name": "R", "withProcessor": "Pr", "processor": "projector", "cardinality": "1:N" } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "round-trip epics with interactions" in {
+      assertJsonRoundTrips(
+        """{ "domains": [ { "name": "P7", "epics": [ { "name": "Checkout",
+          |  "userStory": { "user": "Shopper", "capability": "buy", "benefit": "goods" },
+          |  "shownBy": [ "https://example.com/x" ],
+          |  "useCases": [ { "name": "Pay", "userStory": { "user": "Shopper", "capability": "pay", "benefit": "done" },
+          |    "interactions": [
+          |      { "kind": "vague", "from": "a", "relationship": "does", "to": "b" },
+          |      { "kind": "sendMessage", "from": { "kind": "entity", "path": "Cart" }, "message": { "ref": "Pay", "kind": "command" }, "to": "Orders", "processor": "context" },
+          |      { "kind": "sequential", "interactions": [ { "kind": "self", "from": { "kind": "entity", "path": "Cart" }, "relationship": "recomputes" } ] } ] } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "round-trip rich metadata, functions, sagas, and modules" in {
+      assertJsonRoundTrips(
+        """{ "domains": [ { "name": "P9",
+          |  "authors": [ { "name": "reid", "fullName": "Reid", "email": "r@x.com" } ],
+          |  "metadata": { "description": [ "d1" ], "terms": [ { "name": "SKU", "definition": [ "unit" ] } ], "comments": [ "c" ] },
+          |  "contexts": [ { "name": "C", "metadata": { "options": [ { "name": "microservice" } ], "byAuthors": [ "reid" ] },
+          |    "functions": [ { "name": "calc", "input": [ { "name": "a", "type": { "kind": "Integer" } } ], "statements": [ "compute" ] } ],
+          |    "sagas": [ { "name": "Book", "steps": [ { "name": "Reserve", "do": [ "hold" ], "undo": [ "release" ] } ] } ] } ] } ],
+          |  "modules": [ { "name": "M", "domains": [ { "name": "MD", "contexts": [ { "name": "MC", "types": [ { "name": "T", "typeExpression": { "kind": "Boolean" } } ] } ] } ] } ] }""".stripMargin
+      )
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")

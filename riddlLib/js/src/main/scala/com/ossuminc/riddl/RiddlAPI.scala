@@ -7,16 +7,38 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.language.AST.{
-  Adaptor, AdaptorDirection, Aggregation, Context,
-  ContextRef, Domain, Entity, Epic, Inlet, Module,
-  Nebula, Outlet, Projector, Repository, Root, Saga,
-  Streamlet, StreamletShape, Token, UserStory
+  Adaptor,
+  AdaptorDirection,
+  Aggregation,
+  Context,
+  ContextRef,
+  Domain,
+  Entity,
+  Epic,
+  Inlet,
+  Module,
+  Nebula,
+  Outlet,
+  Projector,
+  Repository,
+  Root,
+  Saga,
+  Streamlet,
+  StreamletShape,
+  Token,
+  UserStory
 }
 import com.ossuminc.riddl.language.{Contents, *}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.passes.{IncrementalValidator, OutlineEntry, TreeNode}
 import com.ossuminc.riddl.passes.validate.{BehaviorCategory, HandlerCompleteness}
-import com.ossuminc.riddl.passes.analysis.{MessageFlowOutput, MessageFlowEdge, FlowMechanism, EntityLifecycle, StateTransition}
+import com.ossuminc.riddl.passes.analysis.{
+  MessageFlowOutput,
+  MessageFlowEdge,
+  FlowMechanism,
+  EntityLifecycle,
+  StateTransition
+}
 import com.ossuminc.riddl.utils.{CommonOptions, DOMPlatformContext, PlatformContext, URL}
 
 import scala.scalajs.js
@@ -25,18 +47,16 @@ import scala.scalajs.js.JSConverters.*
 
 /** JavaScript/TypeScript API facade for RIDDL parsing functionality.
   *
-  * This object provides a stable, clean API for JavaScript/TypeScript
-  * applications to parse RIDDL source code. All method names are
-  * preserved (not minified) even in production builds.
+  * This object provides a stable, clean API for JavaScript/TypeScript applications to parse RIDDL
+  * source code. All method names are preserved (not minified) even in production builds.
   *
-  * Core logic is delegated to [[RiddlLib]] (shared across all
-  * platforms). This facade converts Scala types to plain JavaScript
-  * objects.
+  * Core logic is delegated to [[RiddlLib]] (shared across all platforms). This facade converts
+  * Scala types to plain JavaScript objects.
   *
   * All methods return TypeScript-friendly result objects with:
-  * - `succeeded: boolean` - true if parsing succeeded
-  * - `value?: object` - the parsed result when succeeded is true
-  * - `errors?: Array<object>` - error objects when succeeded is false
+  *   - `succeeded: boolean` - true if parsing succeeded
+  *   - `value?: object` - the parsed result when succeeded is true
+  *   - `errors?: Array<object>` - error objects when succeeded is false
   *
   * Example usage from TypeScript:
   * ```typescript
@@ -58,8 +78,7 @@ object RiddlAPI {
 
   // ── JS conversion helpers ──────────────────────────────
 
-  /** Convert RiddlResult to JavaScript-friendly result
-    * object.
+  /** Convert RiddlResult to JavaScript-friendly result object.
     */
   private def toJsResult[T](
     result: RiddlResult[T],
@@ -85,7 +104,8 @@ object RiddlAPI {
   ): js.Array[js.Dynamic] =
     tokens.map { token =>
       val text = token.loc.source.data.substring(
-        token.loc.offset, token.loc.endOffset
+        token.loc.offset,
+        token.loc.endOffset
       )
       js.Dynamic.literal(
         text = text,
@@ -107,13 +127,15 @@ object RiddlAPI {
       kind = "Root",
       isEmpty = root.isEmpty,
       nonEmpty = root.nonEmpty,
-      domains = root.domains.map(d =>
-        js.Dynamic.literal(
-          id = d.id.value,
-          kind = "Domain",
-          isEmpty = d.isEmpty
+      domains = root.domains
+        .map(d =>
+          js.Dynamic.literal(
+            id = d.id.value,
+            kind = "Domain",
+            isEmpty = d.isEmpty
+          )
         )
-      ).toJSArray,
+        .toJSArray,
       location = js.Dynamic.literal(
         line = root.loc.line,
         col = root.loc.col,
@@ -197,17 +219,19 @@ object RiddlAPI {
 
   // ── Public API methods ─────────────────────────────────
 
-  /** Parse a RIDDL source string and return an opaque Root
-    * handle.
+  /** Parse a RIDDL source string and return an opaque Root handle.
     *
-    * The returned `value` is an opaque Scala Root object.
-    * Use `inspectRoot()` to get a plain JS summary, or
-    * `getDomains()` to extract domains.
+    * The returned `value` is an opaque Scala Root object. Use `inspectRoot()` to get a plain JS
+    * summary, or `getDomains()` to extract domains.
     *
-    * @param source The RIDDL source code to parse
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
-    * @return Result with opaque Root handle or errors
+    * @param source
+    *   The RIDDL source code to parse
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
+    * @return
+    *   Result with opaque Root handle or errors
     */
   @JSExport("parseString")
   def parseString(
@@ -223,15 +247,17 @@ object RiddlAPI {
 
   /** Build a RIDDL AST Root from a JSON model document.
     *
-    * The JSON is mapped onto the AST correct-by-construction (see the
-    * `JsonModel` wire schema), applying RIDDL's required type-expression
-    * defaults. The returned `value` is an opaque Scala Root handle — use
-    * `inspectRoot()` or `getDomains()` to read it, or `validate*` / prettify
+    * The JSON is mapped onto the AST correct-by-construction (see the `JsonModel` wire schema),
+    * applying RIDDL's required type-expression defaults. The returned `value` is an opaque Scala
+    * Root handle — use `inspectRoot()` or `getDomains()` to read it, or `validate*` / prettify
     * helpers to process it further.
     *
-    * @param json The JSON model document
-    * @param origin Origin identifier for error messages
-    * @return Result with opaque Root handle or errors
+    * @param json
+    *   The JSON model document
+    * @param origin
+    *   Origin identifier for error messages
+    * @return
+    *   Result with opaque Root handle or errors
     */
   @JSExport("parseJson")
   def parseJson(
@@ -244,8 +270,7 @@ object RiddlAPI {
     )
   end parseJson
 
-  /** Parse a RIDDL source string with custom platform
-    * context.
+  /** Parse a RIDDL source string with custom platform context.
     */
   @JSExport("parseStringWithContext")
   def parseStringWithContext(
@@ -261,11 +286,13 @@ object RiddlAPI {
     )
   end parseStringWithContext
 
-  /** Flatten Include and BASTImport wrapper nodes from the
-    * AST. The Root is modified in-place and returned.
+  /** Flatten Include and BASTImport wrapper nodes from the AST. The Root is modified in-place and
+    * returned.
     *
-    * @param root The opaque Root handle from parseString
-    * @return The same Root, with wrappers removed
+    * @param root
+    *   The opaque Root handle from parseString
+    * @return
+    *   The same Root, with wrappers removed
     */
   @JSExport("flattenAST")
   def flattenAST(root: Root): Root =
@@ -274,26 +301,30 @@ object RiddlAPI {
 
   /** Get domain definitions from an opaque Root handle.
     *
-    * @param root The opaque Root handle from parseString
-    * @return Array of domain objects with id, kind, isEmpty
+    * @param root
+    *   The opaque Root handle from parseString
+    * @return
+    *   Array of domain objects with id, kind, isEmpty
     */
   @JSExport("getDomains")
   def getDomains(root: Root): js.Array[js.Dynamic] =
-    root.domains.map(d =>
-      js.Dynamic.literal(
-        id = d.id.value,
-        kind = "Domain",
-        isEmpty = d.isEmpty
+    root.domains
+      .map(d =>
+        js.Dynamic.literal(
+          id = d.id.value,
+          kind = "Domain",
+          isEmpty = d.isEmpty
+        )
       )
-    ).toJSArray
+      .toJSArray
   end getDomains
 
-  /** Inspect an opaque Root handle, returning a plain JS
-    * summary object.
+  /** Inspect an opaque Root handle, returning a plain JS summary object.
     *
-    * @param root The opaque Root handle from parseString
-    * @return Plain JS object with kind, isEmpty, domains,
-    *         location
+    * @param root
+    *   The opaque Root handle from parseString
+    * @return
+    *   Plain JS object with kind, isEmpty, domains, location
     */
   @JSExport("inspectRoot")
   def inspectRoot(root: Root): js.Dynamic =
@@ -313,8 +344,7 @@ object RiddlAPI {
     )
   end parseNebula
 
-  /** Parse RIDDL source into a list of tokens for syntax
-    * highlighting.
+  /** Parse RIDDL source into a list of tokens for syntax highlighting.
     */
   @JSExport("parseToTokens")
   def parseToTokens(
@@ -328,8 +358,7 @@ object RiddlAPI {
     )
   end parseToTokens
 
-  /** Parse and validate RIDDL source, returning both syntax
-    * and semantic errors.
+  /** Parse and validate RIDDL source, returning both syntax and semantic errors.
     */
   @JSExport("validateString")
   def validateString(
@@ -339,7 +368,10 @@ object RiddlAPI {
     noANSIMessages: Boolean = true
   ): js.Dynamic =
     val vr = RiddlLib.validateString(
-      source, origin, verbose, noANSIMessages
+      source,
+      origin,
+      verbose,
+      noANSIMessages
     )
     js.Dynamic.literal(
       succeeded = vr.succeeded,
@@ -353,9 +385,8 @@ object RiddlAPI {
     )
   end validateString
 
-  /** Parse and validate RIDDL source using quick mode.
-    * Skips expensive streaming and handler classification
-    * checks for faster interactive feedback.
+  /** Parse and validate RIDDL source using quick mode. Skips expensive streaming and handler
+    * classification checks for faster interactive feedback.
     */
   @JSExport("validateStringQuick")
   def validateStringQuick(
@@ -365,7 +396,10 @@ object RiddlAPI {
     noANSIMessages: Boolean = true
   ): js.Dynamic =
     val vr = RiddlLib.validateStringQuick(
-      source, origin, verbose, noANSIMessages
+      source,
+      origin,
+      verbose,
+      noANSIMessages
     )
     js.Dynamic.literal(
       succeeded = vr.succeeded,
@@ -379,18 +413,16 @@ object RiddlAPI {
     )
   end validateStringQuick
 
-  /** Create an IncrementalValidator for efficient repeated
-    * validation. The validator caches results at the Context
-    * level, re-validating only changed Contexts on subsequent
-    * calls.
+  /** Create an IncrementalValidator for efficient repeated validation. The validator caches results
+    * at the Context level, re-validating only changed Contexts on subsequent calls.
     */
   @JSExport("createIncrementalValidator")
   def createIncrementalValidator(): IncrementalValidator =
     RiddlLib.createIncrementalValidator()
   end createIncrementalValidator
 
-  /** Validate using an IncrementalValidator. Parses the
-    * source, then uses cached results for unchanged Contexts.
+  /** Validate using an IncrementalValidator. Parses the source, then uses cached results for
+    * unchanged Contexts.
     */
   @JSExport("validateIncremental")
   def validateIncremental(
@@ -400,7 +432,10 @@ object RiddlAPI {
     verbose: Boolean = false
   ): js.Dynamic =
     val vr = RiddlLib.validateIncremental(
-      validator, source, origin, verbose
+      validator,
+      source,
+      origin,
+      verbose
     )
     js.Dynamic.literal(
       succeeded = vr.succeeded,
@@ -414,8 +449,7 @@ object RiddlAPI {
     )
   end validateIncremental
 
-  /** Create a custom platform context with specific
-    * options.
+  /** Create a custom platform context with specific options.
     */
   @JSExport("createContext")
   def createContext(
@@ -453,29 +487,29 @@ object RiddlAPI {
       copyright = RiddlBuildInfo.copyright,
       licenses = RiddlBuildInfo.licenses,
       projectHomepage = RiddlBuildInfo.projectHomepage,
-      organizationHomepage =
-        RiddlBuildInfo.organizationHomepage,
+      organizationHomepage = RiddlBuildInfo.organizationHomepage,
       builtAtString = RiddlBuildInfo.builtAtString,
       buildInstant = RiddlBuildInfo.buildInstant,
       isSnapshot = RiddlBuildInfo.isSnapshot
     )
   end buildInfo
 
-  /** Format an array of error objects as a human-readable
-    * string.
+  /** Format an array of error objects as a human-readable string.
     */
   @JSExport("formatErrorArray")
   def formatErrorArray(
     errors: js.Array[js.Dynamic]
   ): String =
-    errors.map { err =>
-      val kind = err.kind.asInstanceOf[String]
-      val message = err.message.asInstanceOf[String]
-      val loc = err.location.asInstanceOf[js.Dynamic]
-      val line = loc.line.asInstanceOf[Int]
-      val col = loc.col.asInstanceOf[Int]
-      s"[$kind] at line $line, column $col: $message"
-    }.mkString("\n")
+    errors
+      .map { err =>
+        val kind = err.kind.asInstanceOf[String]
+        val message = err.message.asInstanceOf[String]
+        val loc = err.location.asInstanceOf[js.Dynamic]
+        val line = loc.line.asInstanceOf[Int]
+        val col = loc.col.asInstanceOf[Int]
+        s"[$kind] at line $line, column $col: $message"
+      }
+      .mkString("\n")
   end formatErrorArray
 
   /** Convert errors array to a simple array of strings. */
@@ -494,14 +528,15 @@ object RiddlAPI {
 
   /** Analyze RIDDL source for AI-friendly tips.
     *
-    * Returns tips, filtered warnings, and errors from
-    * the AIHelperPass pipeline. Tips suggest what to add
-    * or fix to improve the model.
+    * Returns tips, filtered warnings, and errors from the AIHelperPass pipeline. Tips suggest what
+    * to add or fix to improve the model.
     *
-    * @param source RIDDL source code
-    * @param origin Origin identifier for error messages
-    * @return {succeeded, value: {tips, errors, warnings,
-    *         all}, errors?}
+    * @param source
+    *   RIDDL source code
+    * @param origin
+    *   Origin identifier for error messages
+    * @return
+    *   {succeeded, value: {tips, errors, warnings, all}, errors?}
     */
   @JSExport("analyzeSourceForTips")
   def analyzeSourceForTips(
@@ -516,9 +551,10 @@ object RiddlAPI {
 
   /** Analyze a pre-parsed AST for AI-friendly tips.
     *
-    * @param root An opaque Root AST from a prior parse
-    * @return {succeeded, value: {tips, errors, warnings,
-    *         all}, errors?}
+    * @param root
+    *   An opaque Root AST from a prior parse
+    * @return
+    *   {succeeded, value: {tips, errors, warnings, all}, errors?}
     */
   @JSExport("analyzeForTips")
   def analyzeForTips(root: js.Any): js.Dynamic =
@@ -529,10 +565,9 @@ object RiddlAPI {
     )
   end analyzeForTips
 
-  /** Convert categorized messages to a JS object. The `tips` field now holds
-    * every message that carries a remediation suggestion (the suggestion text
-    * is embedded in each formatted message), replacing the former Tip-kind
-    * messages produced by AIHelperPass.
+  /** Convert categorized messages to a JS object. The `tips` field now holds every message that
+    * carries a remediation suggestion (the suggestion text is embedded in each formatted message),
+    * replacing the former Tip-kind messages produced by AIHelperPass.
     */
   private def tipsToJsObject(
     msgs: Messages
@@ -555,8 +590,7 @@ object RiddlAPI {
   ): js.Dynamic =
     toJsResult(
       RiddlLib.getOutline(source, origin),
-      entries =>
-        entries.map(outlineEntryToJs).toJSArray
+      entries => entries.map(outlineEntryToJs).toJSArray
     )
   end getOutline
 
@@ -580,17 +614,18 @@ object RiddlAPI {
   ): js.Dynamic =
     toJsResult(
       RiddlLib.getHandlerCompleteness(source, origin),
-      entries => entries.map { hc =>
-        js.Dynamic.literal(
-          handlerId = hc.handler.id.value,
-          parentId = hc.parent.id.value,
-          parentKind = hc.parent.kind,
-          category = hc.category.toString,
-          executableCount = hc.executableCount,
-          promptCount = hc.promptCount,
-          totalClauses = hc.totalClauses
-        )
-      }.toJSArray
+      entries =>
+        entries.map { hc =>
+          js.Dynamic.literal(
+            handlerId = hc.handler.id.value,
+            parentId = hc.parent.id.value,
+            parentKind = hc.parent.kind,
+            category = hc.category.toString,
+            executableCount = hc.executableCount,
+            promptCount = hc.promptCount,
+            totalClauses = hc.totalClauses
+          )
+        }.toJSArray
     )
   end getHandlerCompleteness
 
@@ -602,26 +637,27 @@ object RiddlAPI {
   ): js.Dynamic =
     toJsResult(
       RiddlLib.getMessageFlow(source, origin),
-      mfo => js.Dynamic.literal(
-        edges = mfo.edges.map { edge =>
-          js.Dynamic.literal(
-            producerId = edge.producer.id.value,
-            producerKind = edge.producer.kind,
-            consumerId = edge.consumer.id.value,
-            consumerKind = edge.consumer.kind,
-            messageTypeId = edge.messageType.map(_.id.value).getOrElse(""),
-            mechanism = edge.mechanism.toString
-          )
-        }.toJSArray,
-        edgeCount = mfo.edges.size
-      )
+      mfo =>
+        js.Dynamic.literal(
+          edges = mfo.edges.map { edge =>
+            js.Dynamic.literal(
+              producerId = edge.producer.id.value,
+              producerKind = edge.producer.kind,
+              consumerId = edge.consumer.id.value,
+              consumerKind = edge.consumer.kind,
+              messageTypeId = edge.messageType.map(_.id.value).getOrElse(""),
+              mechanism = edge.mechanism.toString
+            )
+          }.toJSArray,
+          edgeCount = mfo.edges.size
+        )
     )
   end getMessageFlow
 
   /** Convert a parsed AST Root to BAST binary bytes.
     *
-    * Returns a RiddlResult containing an Int8Array suitable
-    * for structured-clone transfer (e.g., Electron IPC).
+    * Returns a RiddlResult containing an Int8Array suitable for structured-clone transfer (e.g.,
+    * Electron IPC).
     */
   @JSExport("ast2bast")
   def ast2bast(root: Root): js.Dynamic =
@@ -642,19 +678,19 @@ object RiddlAPI {
 
   /** Deserialize BAST binary bytes to a flattened AST Root.
     *
-    * Reads BAST binary data, converts to AST, flattens
-    * Include/BASTImport wrappers, and returns an opaque Root.
+    * Reads BAST binary data, converts to AST, flattens Include/BASTImport wrappers, and returns an
+    * opaque Root.
     *
-    * @param bytes BAST binary data as Int8Array
-    * @return Result with opaque Root handle or errors
+    * @param bytes
+    *   BAST binary data as Int8Array
+    * @return
+    *   Result with opaque Root handle or errors
     */
   @JSExport("bast2FlatAST")
   def bast2FlatAST(
     bytes: js.typedarray.Int8Array
   ): js.Dynamic =
-    val scalaBytes = Array.tabulate(bytes.length)(i =>
-      bytes(i)
-    )
+    val scalaBytes = Array.tabulate(bytes.length)(i => bytes(i))
     toJsResult(
       RiddlLib.bast2FlatAST(scalaBytes),
       root => root.asInstanceOf[js.Any]
@@ -663,25 +699,41 @@ object RiddlAPI {
 
   /** Convert an AST Root to RIDDL source text.
     *
-    * Runs PrettifyPass to regenerate RIDDL source code from
-    * the AST. Produces a single flattened string with all
-    * definitions inline (no include directives).
+    * Runs PrettifyPass to regenerate RIDDL source code from the AST. Produces a single flattened
+    * string with all definitions inline (no include directives).
     *
-    * @param root The opaque Root handle from parseString
-    *             or bast2FlatAST
-    * @return RIDDL source code as a string
+    * @param root
+    *   The opaque Root handle from parseString or bast2FlatAST
+    * @return
+    *   RIDDL source code as a string
     */
   @JSExport("root2RiddlSource")
   def root2RiddlSource(root: Root): String =
     RiddlLib.root2RiddlSource(root)
   end root2RiddlSource
 
+  /** Serialize an AST Root to the JSON wire schema (inverse of `parseJson`).
+    *
+    * Produces JSON that `parseJson` consumes; for any model in the supported subset,
+    * `parseJson(root2Json(root))` re-validates identically.
+    *
+    * @param root
+    *   The opaque Root handle from `parseString`, `parseJson`, or `bast2FlatAST`
+    * @param pretty
+    *   When true (default), pretty-print with indentation
+    * @return
+    *   JSON string in the JsonModel wire schema
+    */
+  @JSExport("root2Json")
+  def root2Json(root: Root, pretty: Boolean = true): String =
+    RiddlLib.root2Json(root, pretty)
+  end root2Json
+
   // ── Scope-based parsing methods ───────────────────────
 
   /** Parse content as if inside a Domain body.
     *
-    * Returns the Domain as an opaque handle. Use
-    * `inspectRoot()` pattern or pass to other APIs.
+    * Returns the Domain as an opaque handle. Use `inspectRoot()` pattern or pass to other APIs.
     */
   @JSExport("parseAsDomain")
   def parseAsDomain(
@@ -723,10 +775,14 @@ object RiddlAPI {
 
   /** Parse content as if inside an Epic body.
     *
-    * @param source The RIDDL source containing epic body content
-    * @param userStory Opaque UserStory handle from a parent parse
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
+    * @param source
+    *   The RIDDL source containing epic body content
+    * @param userStory
+    *   Opaque UserStory handle from a parent parse
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
     */
   @JSExport("parseAsEpic")
   def parseAsEpic(
@@ -739,7 +795,8 @@ object RiddlAPI {
       RiddlLib.parseAsEpic(
         source,
         userStory.asInstanceOf[UserStory],
-        origin, verbose
+        origin,
+        verbose
       ),
       e => e.asInstanceOf[js.Any]
     )
@@ -747,12 +804,18 @@ object RiddlAPI {
 
   /** Parse content as if inside a Streamlet body.
     *
-    * @param source The RIDDL source containing streamlet body
-    * @param shape Opaque StreamletShape from a parent parse
-    * @param inlets Opaque Inlet array from a parent parse
-    * @param outlets Opaque Outlet array from a parent parse
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
+    * @param source
+    *   The RIDDL source containing streamlet body
+    * @param shape
+    *   Opaque StreamletShape from a parent parse
+    * @param inlets
+    *   Opaque Inlet array from a parent parse
+    * @param outlets
+    *   Opaque Outlet array from a parent parse
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
     */
   @JSExport("parseAsStreamlet")
   def parseAsStreamlet(
@@ -769,7 +832,8 @@ object RiddlAPI {
         shape.asInstanceOf[StreamletShape],
         inlets.toSeq.map(_.asInstanceOf[Inlet]),
         outlets.toSeq.map(_.asInstanceOf[Outlet]),
-        origin, verbose
+        origin,
+        verbose
       ),
       s => s.asInstanceOf[js.Any]
     )
@@ -802,7 +866,8 @@ object RiddlAPI {
         source,
         direction.asInstanceOf[AdaptorDirection],
         contextRef.asInstanceOf[ContextRef],
-        origin, verbose
+        origin,
+        verbose
       ),
       a => a.asInstanceOf[js.Any]
     )
@@ -852,7 +917,8 @@ object RiddlAPI {
         sagaOutput.toOption.map(
           _.asInstanceOf[Aggregation]
         ),
-        origin, verbose
+        origin,
+        verbose
       ),
       s => s.asInstanceOf[js.Any]
     )
@@ -866,26 +932,28 @@ object RiddlAPI {
   ): js.Dynamic =
     toJsResult(
       RiddlLib.getEntityLifecycles(source, origin),
-      lifecycles => lifecycles.map { case (entity, lc) =>
-        js.Dynamic.literal(
-          entityId = entity.id.value,
-          states = lc.states.map(s =>
-            s.id.value
-          ).toJSArray,
-          transitions = lc.transitions.map { t =>
-            js.Dynamic.literal(
-              fromState = t.fromState.map(_.id.value)
-                .getOrElse("*"),
-              toState = t.toState.id.value,
-              trigger = t.trigger.id.value
-            )
-          }.toJSArray,
-          initialState = lc.initialState
-            .map(_.id.value).getOrElse(""),
-          terminalStates = lc.terminalStates
-            .map(_.id.value).toJSArray
-        )
-      }.toJSArray
+      lifecycles =>
+        lifecycles.map { case (entity, lc) =>
+          js.Dynamic.literal(
+            entityId = entity.id.value,
+            states = lc.states.map(s => s.id.value).toJSArray,
+            transitions = lc.transitions.map { t =>
+              js.Dynamic.literal(
+                fromState = t.fromState
+                  .map(_.id.value)
+                  .getOrElse("*"),
+                toState = t.toState.id.value,
+                trigger = t.trigger.id.value
+              )
+            }.toJSArray,
+            initialState = lc.initialState
+              .map(_.id.value)
+              .getOrElse(""),
+            terminalStates = lc.terminalStates
+              .map(_.id.value)
+              .toJSArray
+          )
+        }.toJSArray
     )
   end getEntityLifecycles
 }

@@ -394,6 +394,19 @@ entity, type) accept a `metadata` object:
 otherwise string attachments. Coverage of the definition / type-expression /
 statement / interaction surface is enforced by `JsonCoverageGuardTest`.
 
+## Inverse — `root2Json`
+
+`RiddlLib.root2Json(root, pretty)` (JS: `RiddlAPI.root2Json`) is the symmetric
+inverse of `parseJson`: it serializes an `AST.Root` back to this JSON wire
+schema. For any model in the supported subset,
+`parseJson(root2Json(root))` re-validates identically, and `root2Json` is
+stable under a second round-trip. It is **lossless for the documented subset**
+and **best-effort (non-crashing) beyond it** — constructs the schema cannot
+express (e.g. context-level invariants) are omitted rather than failing.
+Implemented as a plain recursive serializer (`JsonSerializer`, the inverse of
+`JsonAstBuilder`), Native-safe. Typical use: turn existing models into JSON,
+e.g. `root2Json(bast2FlatAST(bytes))`.
+
 ## Example
 
 ```jsonc

@@ -1030,4 +1030,9 @@ object JsonModel:
     */
   def readRoot(json: String): RootDto = readJson[RootDto](json)
 
+  /** Serialize the wire model back to JSON. `indent` = 2 for pretty-printed
+    * output, -1 for compact. Used by [[com.ossuminc.riddl.RiddlLib.root2Json]].
+    */
+  def writeRoot(dto: RootDto, indent: Int = 2): String = Pickle.write(dto, indent = indent)
+
 end JsonModel

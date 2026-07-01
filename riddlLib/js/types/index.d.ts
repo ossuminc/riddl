@@ -1030,6 +1030,21 @@ export declare const RiddlAPI: {
   root2RiddlSource(root: RootAST): string;
 
   /**
+   * Serialize an AST Root to the JSON wire schema — the inverse of `parseJson`.
+   *
+   * Produces JSON that `parseJson` consumes; for any model in the supported
+   * subset, `parseJson(root2Json(root))` re-validates identically. Lossless
+   * for the documented subset and best-effort (non-crashing) beyond it. Useful
+   * for turning existing models (e.g. via `bast2FlatAST`) into JSON.
+   *
+   * @param root - The opaque Root handle from parseString, parseJson,
+   *               or bast2FlatAST
+   * @param pretty - When true (default), pretty-print with indentation
+   * @returns JSON string in the JsonModel wire schema
+   */
+  root2Json(root: RootAST, pretty?: boolean): string;
+
+  /**
    * Analyze RIDDL source for AI-friendly tips.
    *
    * Runs the standard validation passes with provideTips enabled and returns

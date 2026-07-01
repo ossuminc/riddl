@@ -38,7 +38,7 @@ import com.ossuminc.riddl.passes.validate.{
 import com.ossuminc.riddl.utils.{
   CommonOptions, PlatformContext, RiddlBuildInfo, URL
 }
-import com.ossuminc.riddl.json.{JsonAstBuilder, JsonModel}
+import com.ossuminc.riddl.json.{JsonAstBuilder, JsonModel, JsonSerializer}
 
 import scala.util.control.NonFatal
 
@@ -225,6 +225,22 @@ trait RiddlLib:
     */
   def root2RiddlSource(
     root: Root
+  )(using PlatformContext): String
+
+  /** Serialize an AST Root to the JSON wire schema (the inverse of
+    * [[parseJson]]).
+    *
+    * Produces JSON that [[parseJson]] consumes; for any model in the supported
+    * subset, `parseJson(root2Json(root))` re-validates identically. Lossless
+    * for the documented subset and best-effort (non-crashing) beyond it.
+    *
+    * @param root   The AST Root to serialize
+    * @param pretty When true (default), pretty-print with indentation
+    * @return JSON string in the `JsonModel` wire schema
+    */
+  def root2Json(
+    root: Root,
+    pretty: Boolean = true
   )(using PlatformContext): String
 
   /** Create an IncrementalValidator for efficient repeated
@@ -761,6 +777,13 @@ object RiddlLib extends RiddlLib:
       case None     => ""
     end match
   end root2RiddlSource
+
+  override def root2Json(
+    root: Root,
+    pretty: Boolean
+  )(using PlatformContext): String =
+    JsonModel.writeRoot(JsonSerializer.serialize(root), indent = if pretty then 2 else -1)
+  end root2Json
 
   override def createIncrementalValidator()(
     using PlatformContext
