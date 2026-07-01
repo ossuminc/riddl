@@ -475,6 +475,36 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "JSON builder tolerance" should {
+
+    "treat an unknown `kind` as a reference to a declared type" in {
+      assertRoundTrips(
+        """{ "domains": [ { "name": "D", "contexts": [ { "name": "C", "types": [
+          |  { "name": "Username", "typeExpression": { "kind": "String", "min": 1, "max": 40 } },
+          |  { "name": "Account", "typeExpression": { "kind": "Record", "fields": [
+          |    { "name": "user", "type": { "kind": "Username" } } ] } } ] } ] } ] }""".stripMargin
+      )
+    }
+
+    "surface an undeclared `kind` as a validation error, not an exception" in {
+      val json =
+        """{ "domains": [ { "name": "D", "contexts": [ { "name": "C", "types": [
+          |  { "name": "T", "typeExpression": { "kind": "Record", "fields": [
+          |    { "name": "f", "type": { "kind": "NoSuchType" } } ] } } ] } ] } ] }""".stripMargin
+      RiddlLib.parseJson(json) match
+        case RiddlResult.Success(root) =>
+          RiddlLib.validateRoot(root).errors must not be empty
+        case RiddlResult.Failure(errors) =>
+          fail("parseJson should succeed (unknown kind -> alias): " + errors.map(_.format).mkString("\n"))
+      end match
+    }
+
+    "accept inline cardinality identically to the wrapper form" in {
+      renderFieldType("""{ "kind": "Date", "cardinality": "optional" }""") mustBe
+        renderFieldType("""{ "cardinality": "optional", "of": { "kind": "Date" } }""")
+    }
+  }
+
   "JSON defaults (Phase 1)" should {
     "String with no bounds renders String(0,255)" in {
       renderFieldType("""{ "kind": "String" }""") must include("String(0,255)")

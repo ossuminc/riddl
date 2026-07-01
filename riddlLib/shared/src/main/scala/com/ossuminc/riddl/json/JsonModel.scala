@@ -561,9 +561,15 @@ object JsonModel:
   private def readTypeExpr(v: ujson.Value): TypeExprDto =
     val m = v.obj
     if m.contains("cardinality") then
+      // Tolerate inline cardinality (e.g. `{"kind":"Date","cardinality":"optional"}`)
+      // by wrapping the rest of the object as the inner type expression when `of`
+      // is absent.
+      val inner =
+        if m.contains("of") then readTypeExpr(m("of"))
+        else readTypeExpr(ujson.Obj.from(m.iterator.filter(_._1 != "cardinality")))
       CardinalityDto(
         m("cardinality").str,
-        readTypeExpr(m("of")),
+        inner,
         m.get("min").map(_.num.toLong),
         m.get("max").map(_.num.toLong)
       )
@@ -613,7 +619,10 @@ object JsonModel:
             m.get("dimensions").map(_.arr.map(_.num.toLong).toSeq).getOrElse(Nil)
           )
         case "EntityReference" => EntityRefDto(m.get("entity").map(_.str))
-        case other => throw new IllegalArgumentException(s"Unknown type expression kind: '$other'")
+        // Tolerate an unknown `kind` as a reference to a declared type of that
+        // name (the most natural AI/human mistake, and unambiguous). Undefined
+        // names then surface as normal ResolutionPass errors, not exceptions.
+        case other => AliasDto(other)
     end if
   end readTypeExpr
 
