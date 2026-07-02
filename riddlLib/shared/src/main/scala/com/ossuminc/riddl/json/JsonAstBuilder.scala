@@ -227,8 +227,8 @@ object JsonAstBuilder:
       meta(e.brief, e.metadata)
     )
 
-  /** A state references a record type and may carry nested handlers (RIDDL
-    * entity state machines put per-state handlers inside the state).
+  /** A state references a record type and may carry nested handlers (RIDDL entity state machines
+    * put per-state handlers inside the state).
     */
   private def buildState(s: StateDto)(using Ctx): State =
     State(
@@ -599,7 +599,16 @@ object JsonAstBuilder:
       ident(a.name),
       adaptorDirection(a.direction),
       ContextRef(At(), pathId(a.context)),
-      contentsOf[AdaptorContents](types, constants, commands, events, queries, results, functions, handlers),
+      contentsOf[AdaptorContents](
+        types,
+        constants,
+        commands,
+        events,
+        queries,
+        results,
+        functions,
+        handlers
+      ),
       meta(a.brief)
     )
 
@@ -753,6 +762,8 @@ object JsonAstBuilder:
 
   private def buildTypeExpr(dto: TypeExprDto)(using ctx: Ctx): TypeExpression =
     dto match
+      // AI-authored JSON may omit bounds; fill the canonical String(0,255)
+      // defaults. root2Json emits these explicitly too, so json1==json2 holds.
       case StringDto(min, max) => String_(At(), Some(min.getOrElse(0L)), Some(max.getOrElse(255L)))
 
       case IdDto(entity) =>
