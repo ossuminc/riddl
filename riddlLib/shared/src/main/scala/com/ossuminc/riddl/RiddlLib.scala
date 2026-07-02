@@ -38,7 +38,7 @@ import com.ossuminc.riddl.passes.validate.{
 import com.ossuminc.riddl.utils.{
   CommonOptions, PlatformContext, RiddlBuildInfo, URL
 }
-import com.ossuminc.riddl.json.{JsonAstBuilder, JsonModel, JsonSerializer}
+import com.ossuminc.riddl.json.{JsonAstBuilder, JsonifierOutput, JsonifierPass, JsonModel}
 
 import scala.util.control.NonFatal
 
@@ -782,7 +782,11 @@ object RiddlLib extends RiddlLib:
     root: Root,
     pretty: Boolean
   )(using PlatformContext): String =
-    JsonModel.writeRoot(JsonSerializer.serialize(root), indent = if pretty then 2 else -1)
+    val result = Pass.runThesePasses(PassInput(root), Seq(JsonifierPass.creator))
+    val dto = result.outputs.outputOf[JsonifierOutput](JsonifierPass.name) match
+      case Some(o) => o.rootDto
+      case None    => JsonModel.RootDto()
+    JsonModel.writeRoot(dto, indent = if pretty then 2 else -1)
   end root2Json
 
   override def createIncrementalValidator()(

@@ -200,25 +200,43 @@ object JsonAstBuilder:
   private def buildEntity(e: EntityDto)(using Ctx): Entity =
     val types = e.types.map(buildType)
     val constants = e.constants.map(buildConstant)
-    val states = e.state.toSeq.map(buildState)
+    val commands = e.commands.map(m => buildMessage(m, AggregateUseCase.CommandCase))
+    val events = e.events.map(m => buildMessage(m, AggregateUseCase.EventCase))
+    val queries = e.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
+    val results = e.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
+    // Accept both the singular `state` (back-compat) and plural `states`.
+    val states = (e.state.toSeq ++ e.states).map(buildState)
     val functions = e.functions.map(buildFunction)
     val handlers = e.handlers.map(buildHandler)
     val invariants = e.invariants.map(buildInvariant)
     Entity(
       At(),
       ident(e.name),
-      contentsOf[EntityContents](types, constants, states, functions, handlers, invariants),
+      contentsOf[EntityContents](
+        types,
+        constants,
+        commands,
+        events,
+        queries,
+        results,
+        states,
+        functions,
+        handlers,
+        invariants
+      ),
       meta(e.brief, e.metadata)
     )
 
-  /** A state references a record type; RIDDL holds no fields in a state. */
-  private def buildState(s: StateDto): State =
+  /** A state references a record type and may carry nested handlers (RIDDL
+    * entity state machines put per-state handlers inside the state).
+    */
+  private def buildState(s: StateDto)(using Ctx): State =
     State(
       At(),
       ident(s.name),
       TypeRef(At(), "record", pathId(s.recordType)),
-      Contents.empty[StateContents](),
-      Contents.empty[MetaData]()
+      contentsOf[StateContents](s.handlers.map(buildHandler)),
+      meta(s.brief)
     )
 
   private def buildHandler(h: HandlerDto)(using Ctx): Handler =
@@ -570,6 +588,10 @@ object JsonAstBuilder:
   private def buildAdaptor(a: AdaptorDto)(using Ctx): Adaptor =
     val types = a.types.map(buildType)
     val constants = a.constants.map(buildConstant)
+    val commands = a.commands.map(m => buildMessage(m, AggregateUseCase.CommandCase))
+    val events = a.events.map(m => buildMessage(m, AggregateUseCase.EventCase))
+    val queries = a.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
+    val results = a.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val functions = a.functions.map(buildFunction)
     val handlers = a.handlers.map(buildHandler)
     Adaptor(
@@ -577,7 +599,7 @@ object JsonAstBuilder:
       ident(a.name),
       adaptorDirection(a.direction),
       ContextRef(At(), pathId(a.context)),
-      contentsOf[AdaptorContents](types, constants, functions, handlers),
+      contentsOf[AdaptorContents](types, constants, commands, events, queries, results, functions, handlers),
       meta(a.brief)
     )
 
@@ -614,12 +636,26 @@ object JsonAstBuilder:
     val outlets = s.outlets.map(buildOutlet)
     val connectors = s.connectors.map(buildConnector)
     val types = s.types.map(buildType)
+    val commands = s.commands.map(m => buildMessage(m, AggregateUseCase.CommandCase))
+    val events = s.events.map(m => buildMessage(m, AggregateUseCase.EventCase))
+    val queries = s.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
+    val results = s.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val handlers = s.handlers.map(buildHandler)
     Streamlet(
       At(),
       ident(s.name),
       streamletShape(s.shape),
-      contentsOf[StreamletContents](types, inlets, outlets, connectors, handlers),
+      contentsOf[StreamletContents](
+        types,
+        commands,
+        events,
+        queries,
+        results,
+        inlets,
+        outlets,
+        connectors,
+        handlers
+      ),
       meta(s.brief)
     )
 
@@ -646,13 +682,27 @@ object JsonAstBuilder:
   private def buildProjector(p: ProjectorDto)(using Ctx): Projector =
     val types = p.types.map(buildType)
     val constants = p.constants.map(buildConstant)
+    val commands = p.commands.map(m => buildMessage(m, AggregateUseCase.CommandCase))
+    val events = p.events.map(m => buildMessage(m, AggregateUseCase.EventCase))
+    val queries = p.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
+    val results = p.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val functions = p.functions.map(buildFunction)
     val handlers = p.handlers.map(buildHandler)
     val repoRefs = p.repository.toSeq.map(r => RepositoryRef(At(), pathId(r)))
     Projector(
       At(),
       ident(p.name),
-      contentsOf[ProjectorContents](types, constants, functions, handlers, repoRefs),
+      contentsOf[ProjectorContents](
+        types,
+        constants,
+        commands,
+        events,
+        queries,
+        results,
+        functions,
+        handlers,
+        repoRefs
+      ),
       meta(p.brief)
     )
 
@@ -684,12 +734,16 @@ object JsonAstBuilder:
 
   private def buildRepository(r: RepositoryDto)(using Ctx): Repository =
     val types = r.types.map(buildType)
+    val commands = r.commands.map(m => buildMessage(m, AggregateUseCase.CommandCase))
+    val events = r.events.map(m => buildMessage(m, AggregateUseCase.EventCase))
+    val queries = r.queries.map(m => buildMessage(m, AggregateUseCase.QueryCase))
+    val results = r.results.map(m => buildMessage(m, AggregateUseCase.ResultCase))
     val handlers = r.handlers.map(buildHandler)
     val schemas = r.schema.toSeq.map(buildSchema)
     Repository(
       At(),
       ident(r.name),
-      contentsOf[RepositoryContents](types, schemas, handlers),
+      contentsOf[RepositoryContents](types, schemas, commands, events, queries, results, handlers),
       meta(r.brief)
     )
 

@@ -189,9 +189,16 @@ object JsonModel:
   case class EntityDto(
     name: String,
     brief: Option[String] = None,
+    // `state` (singular) is kept for back-compat; `states` (plural) models real
+    // entity state machines — multiple named states, each with nested handlers.
     state: Option[StateDto] = None,
+    states: Seq[StateDto] = Nil,
     types: Seq[TypeDefDto] = Nil,
     constants: Seq[ConstantDto] = Nil,
+    commands: Seq[MessageDto] = Nil,
+    events: Seq[MessageDto] = Nil,
+    queries: Seq[MessageDto] = Nil,
+    results: Seq[MessageDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
     handlers: Seq[HandlerDto] = Nil,
     invariants: Seq[InvariantDto] = Nil,
@@ -206,7 +213,12 @@ object JsonModel:
     brief: Option[String] = None
   )
 
-  case class StateDto(name: String, recordType: String)
+  case class StateDto(
+    name: String,
+    recordType: String,
+    handlers: Seq[HandlerDto] = Nil,
+    brief: Option[String] = None
+  )
 
   case class HandlerDto(
     name: String,
@@ -317,6 +329,10 @@ object JsonModel:
     brief: Option[String] = None,
     types: Seq[TypeDefDto] = Nil,
     constants: Seq[ConstantDto] = Nil,
+    commands: Seq[MessageDto] = Nil,
+    events: Seq[MessageDto] = Nil,
+    queries: Seq[MessageDto] = Nil,
+    results: Seq[MessageDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
@@ -336,6 +352,10 @@ object JsonModel:
     outlets: Seq[PortletDto] = Nil,
     connectors: Seq[ConnectorDto] = Nil,
     types: Seq[TypeDefDto] = Nil,
+    commands: Seq[MessageDto] = Nil,
+    events: Seq[MessageDto] = Nil,
+    queries: Seq[MessageDto] = Nil,
+    results: Seq[MessageDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
 
@@ -358,6 +378,10 @@ object JsonModel:
     repository: Option[String] = None,
     types: Seq[TypeDefDto] = Nil,
     constants: Seq[ConstantDto] = Nil,
+    commands: Seq[MessageDto] = Nil,
+    events: Seq[MessageDto] = Nil,
+    queries: Seq[MessageDto] = Nil,
+    results: Seq[MessageDto] = Nil,
     functions: Seq[FunctionDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
@@ -380,6 +404,10 @@ object JsonModel:
     brief: Option[String] = None,
     schema: Option[SchemaDto] = None,
     types: Seq[TypeDefDto] = Nil,
+    commands: Seq[MessageDto] = Nil,
+    events: Seq[MessageDto] = Nil,
+    queries: Seq[MessageDto] = Nil,
+    results: Seq[MessageDto] = Nil,
     handlers: Seq[HandlerDto] = Nil
   )
 
