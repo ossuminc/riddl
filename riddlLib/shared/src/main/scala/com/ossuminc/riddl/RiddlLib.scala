@@ -38,6 +38,9 @@ import com.ossuminc.riddl.passes.validate.{
 import com.ossuminc.riddl.utils.{
   CommonOptions, PlatformContext, RiddlBuildInfo, URL
 }
+import com.ossuminc.riddl.json.{JsonAstBuilder, JsonifierOutput, JsonifierPass, JsonModel}
+
+import scala.util.control.NonFatal
 
 /** Cross-platform core API for RIDDL parsing, validation,
   * and AST manipulation. Usable on JVM, JS, and Native.
@@ -61,6 +64,26 @@ trait RiddlLib:
     source: String,
     origin: String = "string",
     verbose: Boolean = false
+  )(using PlatformContext): RiddlResult[Root]
+
+  /** Build a RIDDL AST Root from a JSON document.
+    *
+    * The JSON describes a RIDDL model using the schema in
+    * [[com.ossuminc.riddl.json.JsonModel]]; it is mapped onto the AST
+    * correct-by-construction, applying RIDDL's required type-expression
+    * defaults. The returned `Root` is then validated and/or prettified by the
+    * existing machinery — there is no JSON-specific validation path.
+    * References are emitted as path identifiers and resolved later by the
+    * standard passes.
+    *
+    * @param json   The JSON model document
+    * @param origin Origin identifier (e.g., filename) for error messages
+    * @return Success(Root) on success, Failure(Messages) on malformed JSON or
+    *         a builder-level error (e.g., missing `Id.entity`)
+    */
+  def parseJson(
+    json: String,
+    origin: String = "string"
   )(using PlatformContext): RiddlResult[Root]
 
   /** Parse arbitrary RIDDL definitions (nebula).
@@ -111,6 +134,15 @@ trait RiddlLib:
     origin: String = "string",
     verbose: Boolean = false,
     noANSIMessages: Boolean = true
+  )(using PlatformContext): RiddlLib.ValidateResult
+
+  /** Validate an already-built AST Root with the standard passes.
+    *
+    * Convenience for callers (e.g. [[parseJson]]) that hold a `Root` and want
+    * categorized validation messages without round-tripping through text.
+    */
+  def validateRoot(
+    root: Root
   )(using PlatformContext): RiddlLib.ValidateResult
 
   /** Get a flat outline of all named definitions. */
@@ -193,6 +225,22 @@ trait RiddlLib:
     */
   def root2RiddlSource(
     root: Root
+  )(using PlatformContext): String
+
+  /** Serialize an AST Root to the JSON wire schema (the inverse of
+    * [[parseJson]]).
+    *
+    * Produces JSON that [[parseJson]] consumes; for any model in the supported
+    * subset, `parseJson(root2Json(root))` re-validates identically. Lossless
+    * for the documented subset and best-effort (non-crashing) beyond it.
+    *
+    * @param root   The AST Root to serialize
+    * @param pretty When true (default), pretty-print with indentation
+    * @return JSON string in the `JsonModel` wire schema
+    */
+  def root2Json(
+    root: Root,
+    pretty: Boolean = true
   )(using PlatformContext): String
 
   /** Create an IncrementalValidator for efficient repeated
@@ -425,6 +473,20 @@ object RiddlLib extends RiddlLib:
     )
   end parseString
 
+  override def parseJson(
+    json: String,
+    origin: String
+  )(using PlatformContext): RiddlResult[Root] =
+    val parsed: Either[Messages, JsonModel.RootDto] =
+      try Right(JsonModel.readRoot(json))
+      catch
+        case NonFatal(e) =>
+          Left(List(Messages.error(
+            s"Invalid JSON for RIDDL model ($origin): ${e.getMessage}"
+          )))
+    RiddlResult.fromEither(parsed.flatMap(JsonAstBuilder.build))
+  end parseJson
+
   override def parseNebula(
     source: String,
     origin: String,
@@ -470,53 +532,12 @@ object RiddlLib extends RiddlLib:
       noANSIMessages = noANSIMessages
     )
     pc.withOptions(options) { _ =>
-      val input = RiddlParserInput(
-        source, originToURL(origin)
-      )
-      val parseResult = TopLevelParser.parseInput(
-        input, verbose
-      )
-      parseResult match
+      val input = RiddlParserInput(source, originToURL(origin))
+      TopLevelParser.parseInput(input, verbose) match
         case Right(root) =>
-          try
-            val passInput = PassInput(root)
-            val passesResult =
-              Pass.runThesePasses(passInput, passes)
-            val messages = passesResult.messages
-            val errs =
-              messages.filter(_.isError).distinct
-            val warns =
-              messages.filter(_.isWarning).distinct
-            val infos = messages
-              .filter(_.kind.severity == 0).distinct
-            ValidateResult(
-              succeeded = !messages.hasErrors,
-              parseErrors = List.empty,
-              errors = errs,
-              warnings = warns,
-              info = infos,
-              all = messages
-            )
-          catch
-            case e: Exception =>
-              ValidateResult(
-                succeeded = false,
-                parseErrors = List.empty,
-                errors = List.empty,
-                warnings = List.empty,
-                info = List.empty,
-                all = List.empty
-              )
-          end try
+          resultOf(Pass.runThesePasses(PassInput(root), passes).messages)
         case Left(parseMessages) =>
-          ValidateResult(
-            succeeded = false,
-            parseErrors = parseMessages,
-            errors = List.empty,
-            warnings = List.empty,
-            info = List.empty,
-            all = List.empty
-          )
+          parseFailure(parseMessages)
       end match
     }
   end doValidate
@@ -540,6 +561,51 @@ object RiddlLib extends RiddlLib:
     doValidate(source, origin, verbose, noANSIMessages,
       Pass.quickValidationPasses)
   end validateStringQuick
+
+  /** Categorize a pass run's messages into a ValidateResult. */
+  private def summarize(messages: Messages): ValidateResult =
+    val errs = messages.filter(_.isError).distinct
+    val warns = messages.filter(_.isWarning).distinct
+    val infos = messages.filter(_.kind.severity == 0).distinct
+    ValidateResult(
+      succeeded = !messages.hasErrors,
+      parseErrors = List.empty,
+      errors = errs,
+      warnings = warns,
+      info = infos,
+      all = messages
+    )
+  end summarize
+
+  /** An empty failed ValidateResult (used when a pass run throws). */
+  private val noValidateResult: ValidateResult =
+    ValidateResult(
+      succeeded = false,
+      parseErrors = List.empty,
+      errors = List.empty,
+      warnings = List.empty,
+      info = List.empty,
+      all = List.empty
+    )
+
+  /** A failed ValidateResult carrying parse errors only. */
+  private def parseFailure(parseMessages: Messages): ValidateResult =
+    noValidateResult.copy(parseErrors = parseMessages)
+
+  /** Categorize the messages from a pass run, mapping any thrown exception to
+    * an empty failure. The argument is by-name so the whole run is guarded.
+    */
+  private def resultOf(messages: => Messages): ValidateResult =
+    try summarize(messages)
+    catch case NonFatal(_) => noValidateResult
+
+  override def validateRoot(
+    root: Root
+  )(using pc: PlatformContext): ValidateResult =
+    pc.withOptions(CommonOptions(noANSIMessages = true)) { _ =>
+      resultOf(Pass.runThesePasses(PassInput(root), Pass.standardPasses).messages)
+    }
+  end validateRoot
 
   override def getOutline(
     source: String,
@@ -712,6 +778,17 @@ object RiddlLib extends RiddlLib:
     end match
   end root2RiddlSource
 
+  override def root2Json(
+    root: Root,
+    pretty: Boolean
+  )(using PlatformContext): String =
+    val result = Pass.runThesePasses(PassInput(root), Seq(JsonifierPass.creator))
+    val dto = result.outputs.outputOf[JsonifierOutput](JsonifierPass.name) match
+      case Some(o) => o.rootDto
+      case None    => JsonModel.RootDto()
+    JsonModel.writeRoot(dto, indent = if pretty then 2 else -1)
+  end root2Json
+
   override def createIncrementalValidator()(
     using PlatformContext
   ): IncrementalValidator =
@@ -726,51 +803,10 @@ object RiddlLib extends RiddlLib:
   )(using pc: PlatformContext): ValidateResult =
     val options = CommonOptions(verbose = verbose)
     pc.withOptions(options) { _ =>
-      val input = RiddlParserInput(
-        source, originToURL(origin)
-      )
-      val parseResult = TopLevelParser.parseInput(
-        input, verbose
-      )
-      parseResult match
-        case Right(root) =>
-          try
-            val passesResult = validator.validate(root)
-            val messages = passesResult.messages
-            val errs =
-              messages.filter(_.isError).distinct
-            val warns =
-              messages.filter(_.isWarning).distinct
-            val infos = messages
-              .filter(_.kind.severity == 0).distinct
-            ValidateResult(
-              succeeded = !messages.hasErrors,
-              parseErrors = List.empty,
-              errors = errs,
-              warnings = warns,
-              info = infos,
-              all = messages
-            )
-          catch
-            case e: Exception =>
-              ValidateResult(
-                succeeded = false,
-                parseErrors = List.empty,
-                errors = List.empty,
-                warnings = List.empty,
-                info = List.empty,
-                all = List.empty
-              )
-          end try
-        case Left(parseMessages) =>
-          ValidateResult(
-            succeeded = false,
-            parseErrors = parseMessages,
-            errors = List.empty,
-            warnings = List.empty,
-            info = List.empty,
-            all = List.empty
-          )
+      val input = RiddlParserInput(source, originToURL(origin))
+      TopLevelParser.parseInput(input, verbose) match
+        case Right(root)         => resultOf(validator.validate(root).messages)
+        case Left(parseMessages) => parseFailure(parseMessages)
       end match
     }
   end validateIncremental

@@ -25,6 +25,7 @@ object V {
   val scopt = "4.1.0"
   val sttp = "4.0.0-M22"
   val slf4j = "2.0.4"
+  val upickle = "4.0.2"
 }
 
 object Dep {
@@ -38,6 +39,8 @@ object Dep {
   val commons_io = "commons-io" % "commons-io" % V.commons_io
   val fastparse = "com.lihaoyi" %% "fastparse" % V.fastparse
   val fastparse_nojvm = Def.setting { "com.lihaoyi" %%% "fastparse" % V.fastparse }
+  val upickle = "com.lihaoyi" %% "upickle" % V.upickle
+  val upickle_nojvm = Def.setting { "com.lihaoyi" %%% "upickle" % V.upickle }
   val jacabi_w3c = "com.jcabi" % "jcabi-w3c" % "1.4.0"
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % V.jgit
   val lang3 = "org.apache.commons" % "commons-lang3" % V.lang3

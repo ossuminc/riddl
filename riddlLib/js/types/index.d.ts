@@ -445,6 +445,39 @@ export declare const RiddlAPI: {
   parseString(source: string, origin?: string, verbose?: boolean): RiddlResult<RootAST>;
 
   /**
+   * Build a RIDDL AST Root from a JSON model document.
+   *
+   * The JSON describes a RIDDL model and is mapped onto the AST
+   * correct-by-construction, applying RIDDL's required type-expression
+   * defaults. This is an alternative input method to `parseString`, intended
+   * for programmatic/AI generation: the producer emits structured JSON (its
+   * strong suit) and RIDDL guarantees a well-formed model. The returned
+   * `value` is an opaque Root handle — use `inspectRoot()`, `getDomains()`,
+   * `flattenAST()`, or the validation helpers to process it.
+   *
+   * References in the JSON are emitted as path identifiers and resolved by
+   * the standard passes when the Root is validated; malformed JSON or a
+   * builder-level error (e.g. a missing `Id` entity) yields `succeeded:false`
+   * with `errors`.
+   *
+   * @param json - The JSON model document
+   * @param origin - Optional origin identifier (e.g., filename) for error messages
+   * @returns Result object with opaque Root handle or errors
+   *
+   * @example
+   * ```typescript
+   * const result = RiddlAPI.parseJson(JSON.stringify({
+   *   domains: [{ name: "Banking", contexts: [{ name: "Accounts" }] }]
+   * }));
+   * if (result.succeeded) {
+   *   const info = RiddlAPI.inspectRoot(result.value);
+   *   console.log("Domains:", info.domains.length);
+   * }
+   * ```
+   */
+  parseJson(json: string, origin?: string): RiddlResult<RootAST>;
+
+  /**
    * Parse a RIDDL source string with a custom platform context.
    *
    * @param source - The RIDDL source code to parse
@@ -995,6 +1028,21 @@ export declare const RiddlAPI: {
    * @returns RIDDL source code as a string
    */
   root2RiddlSource(root: RootAST): string;
+
+  /**
+   * Serialize an AST Root to the JSON wire schema — the inverse of `parseJson`.
+   *
+   * Produces JSON that `parseJson` consumes; for any model in the supported
+   * subset, `parseJson(root2Json(root))` re-validates identically. Lossless
+   * for the documented subset and best-effort (non-crashing) beyond it. Useful
+   * for turning existing models (e.g. via `bast2FlatAST`) into JSON.
+   *
+   * @param root - The opaque Root handle from parseString, parseJson,
+   *               or bast2FlatAST
+   * @param pretty - When true (default), pretty-print with indentation
+   * @returns JSON string in the JsonModel wire schema
+   */
+  root2Json(root: RootAST, pretty?: boolean): string;
 
   /**
    * Analyze RIDDL source for AI-friendly tips.

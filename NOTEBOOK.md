@@ -49,6 +49,53 @@ for malformed fixtures; 1.23.2 was a failed partial publish
 that never made it to a GitHub release), and 1.23.4 (Prettify
 state brace + Native scaladoc disable).
 
+## JSON Input Method — phased roadmap
+
+Branch `feature/json-input-method` (task:
+`json-to-ast-input-method.md`). Adds `RiddlLib.parseJson(json,
+origin)` + `validateRoot(root)`: a JSON document is mapped onto the
+AST correct-by-construction (defaults applied), then validated /
+prettified by the existing machinery. JSON is an alternative input
+method for programmatic/AI generation. Lives in
+`riddlLib/shared/.../json/` (`JsonModel`, `JsonAstBuilder`); uses
+upickle 4.0.2 (`%%%`, Native-safe). Schema: `JSON_INPUT.md`.
+Coverage ledger: `JSON_COVERAGE.md`.
+
+**Goal:** eventually cover the *entire* RIDDL language,
+incrementally; hardest constructs last, none silently dropped. The
+ledger + a Phase-9 guard test keep coverage honest.
+
+**Status: all 9 phases complete.** Every RIDDL definition, type
+expression, statement, and interaction is expressible in JSON;
+`JsonCoverageGuardTest` enforces that the ledger stays complete as
+the AST evolves. 28 `JsonInputTest` cases pass on JVM + JS; Native
+compiles. Remaining work is review/merge and any follow-on polish
+(e.g. extending `metadata` beyond the four primary containers if
+desired). Found+fixed a pre-existing prettify bug along the way
+(Output double-rendered its verb alias).
+
+| Phase | Scope | Status |
+|---|---|---|
+| 1 | Core DDD: domain/context/entity/type/field/state/handler/on-clauses/invariant/author/messages + common type exprs + `do` statement | **done** |
+| 2 | Remaining type expressions (SI units, time, collections, URI/Blob/…, SpecificRange) + Constant/User/Enumerator values (Method→P3, Term→P9) | **done** |
+| 3 | Full statement language + Function + Method | **done** |
+| 4 | Adaptor/Streamlet/Inlet/Outlet/Connector/Relationship/Projector/Repository+Schema | **done** |
+| 5 | Saga/SagaStep | **done** |
+| 6 | Module + deep nesting | **done** |
+| 7 | Epic/UseCase + interactions (the hardest tier) | **done** |
+| 8 | Group/Input/Output/ContainedGroup | **done** |
+| 9 | Metadata (Description/Terms/options/attachments/AuthorRef/Comment) + automated coverage guard test | **done** |
+
+Deferred (out of scope, documented in the ledger): Include /
+Import / BAST — file-reference mechanisms incompatible with a
+self-contained, no-I/O, Native-safe JSON document.
+
+Decisions: hand-written upickle ReadWriter for the polymorphic
+`typeExpression` (cardinality wrapper vs `kind` tag); `Option`
+encoded null-or-value via a custom `AttributeTagged` pickler; a
+named `Record` maps to a RecordCase aggregate (a real RIDDL
+`record`) so `state … of record X` resolves.
+
 ## Open Tasks in `task/`
 
 - `upgrade-sbt-riddl-1.15.4.md` — downstream task for
