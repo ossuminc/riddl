@@ -28,7 +28,8 @@ import com.ossuminc.riddl.passes.{
 }
 import com.ossuminc.riddl.passes.analysis.{
   EntityLifecycle, EntityLifecycleOutput, EntityLifecyclePass,
-  MessageFlowOutput, MessageFlowPass
+  MessageFlowOutput, MessageFlowPass,
+  RootComparison, RootSimilarity
 }
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass}
 import com.ossuminc.riddl.passes.transforms.FlattenPass
@@ -156,6 +157,24 @@ trait RiddlLib:
     source: String,
     origin: String = "string"
   )(using PlatformContext): RiddlResult[Seq[TreeNode]]
+
+  /** Compute a deterministic, model-free structural similarity between two
+    * `Root` ASTs.
+    *
+    * Matches on definition `kind` + fuzzy (location- and case-independent)
+    * name, never on `Definition.equals`/`hashCode`. Returns a
+    * [[com.ossuminc.riddl.passes.analysis.RootSimilarity]] carrying per-kind
+    * counts, matched/unmatched name lists, structural metrics (depth,
+    * breadth), and an overall weighted score in `[0.0, 1.0]` (`1.0` for
+    * identical inputs). See `RootComparison` for the weighting.
+    */
+  def compareRoots(a: Root, b: Root)(using PlatformContext): RootSimilarity
+
+  /** Render [[compareRoots]] between two `Root` ASTs as a Markdown report:
+    * a per-kind count table (a vs b), matched/unmatched name lists,
+    * structural metrics, and the overall score.
+    */
+  def similarityMarkdown(a: Root, b: Root)(using PlatformContext): String
 
   /** Get handler completeness classifications from validation.
     *
@@ -650,6 +669,20 @@ object RiddlLib extends RiddlLib:
       end match
     }
   end getTree
+
+  override def compareRoots(
+    a: Root,
+    b: Root
+  )(using PlatformContext): RootSimilarity =
+    RootComparison.compareRoots(a, b)
+  end compareRoots
+
+  override def similarityMarkdown(
+    a: Root,
+    b: Root
+  )(using PlatformContext): String =
+    RootComparison.similarityMarkdown(a, b)
+  end similarityMarkdown
 
   override def getHandlerCompleteness(
     source: String,
