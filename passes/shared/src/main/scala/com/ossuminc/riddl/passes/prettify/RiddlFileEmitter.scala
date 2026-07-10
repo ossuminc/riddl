@@ -37,7 +37,13 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     definition: Definition,
     withBrace: Boolean = true
   ): this.type = {
-    addIndent(s"${keyword(definition)} ${definition.id.format} is ")
+    // An OnMessageClause's id is a synthetic "keyword path" string (e.g.
+    // "command Go"); emit the message reference itself, which is the
+    // round-trippable source form, rather than quoting it as an identifier.
+    val name = definition match
+      case omc: OnMessageClause => omc.msg.format
+      case _                    => definition.id.format
+    addIndent(s"${keyword(definition)} $name is ")
     if withBrace then
       if definition.isEmpty then add("{ ??? }").nl
       else add("{").nl.incr
