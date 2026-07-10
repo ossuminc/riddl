@@ -576,12 +576,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     foundDef: WithIdentifier
   ): Unit =
     val referTo = classTag[T].runtimeClass.getSimpleName
-    val message = s"Path '${pathId.format}' resolved to ${foundDef.identifyWithLoc}," +
+    val message = s"Path '${pathId.value.mkString(".")}' resolved to ${foundDef.identifyWithLoc}," +
       s" in ${container.identify}, but ${article(referTo)} was expected"
     messages.addError(
       pathId.loc,
       message,
-      suggestion = s"'${pathId.format}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
+      suggestion = s"'${pathId.value.mkString(".")}' points at the wrong kind of definition. Point it at ${article(referTo)} " +
         s"instead, or rename the reference to match the intended $referTo."
     )
     if io.options.debug then
@@ -600,9 +600,9 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
     val tc = classTag[T].runtimeClass
     val message = container match
       case None =>
-        s"Path '${pathId.format}' is not resolvable, because it has no container"
+        s"Path '${pathId.value.mkString(".")}' is not resolvable, because it has no container"
       case Some(definition) =>
-        s"Path '${pathId.format}' was not resolved, in ${definition.identify}${
+        s"Path '${pathId.value.mkString(".")}' was not resolved, in ${definition.identify}${
             if why.isEmpty then "\n"
             else "\nbecause " + why + "\n"
           }"
@@ -614,7 +614,7 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
         if referTo.nonEmpty then s"and it should refer to ${article(referTo)}"
         else ""
       },
-      suggestion = s"Define ${article(referTo)} named by '${pathId.format}', or correct the path so it names " +
+      suggestion = s"Define ${article(referTo)} named by '${pathId.value.mkString(".")}', or correct the path so it names " +
         s"an existing $referTo reachable from this scope (try a fully-qualified path like 'Domain.Context.Name')."
     )
     if io.options.debug then println(s"Unresolved: ${pathId.format} ==> ???")
@@ -909,12 +909,12 @@ case class ResolutionPass(input: PassInput, outputs: PassesOutput)(using io: Pla
               definition.id.value + " (" + definition.loc + ")"
           }
           .mkString("\n")
-        val message = s"Path reference '${pid.format}' is ambiguous. Definitions are:\n$ambiguity" +
+        val message = s"Path reference '${pid.value.mkString(".")}' is ambiguous. Definitions are:\n$ambiguity" +
           context.map(_ + "\n").getOrElse("")
         messages.addError(
           pid.loc,
           message,
-          suggestion = s"Disambiguate '${pid.format}' with a more specific, fully-qualified path " +
+          suggestion = s"Disambiguate '${pid.value.mkString(".")}' with a more specific, fully-qualified path " +
             "(e.g. 'Domain.Context.Entity.Name') so it matches exactly one definition."
         )
         Seq.empty[WithIdentifier]

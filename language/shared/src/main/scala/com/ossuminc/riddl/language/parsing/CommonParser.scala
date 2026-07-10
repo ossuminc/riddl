@@ -208,10 +208,29 @@ private[parsing] trait CommonParser(using pc: PlatformContext)
     }
   }
 
+  private def dottedPathIdentifier[u: P]: P[Seq[String]] = {
+    P(anyIdentifier ~~ (Punctuation.dot ~~ anyIdentifier).repX(0)).map { case (first, strings) =>
+      first +: strings
+    }
+  }
+
+  /** A whole path wrapped in a single pair of quotes with `.` separating the
+    * components, e.g. `'a.CI/CD Pipeline.c'`. This lets an emitter quote a path
+    * containing special-character components without quoting each component.
+    * The character class is `quotedIdentifier`'s set plus `.`.
+    */
+  private def quotedPathIdentifier[u: P]: P[Seq[String]] = {
+    P("'" ~~ CharsWhileIn("a-zA-Z0-9_+\\-|/@$%&, :.", 1).! ~~ "'").map { s =>
+      s.split('.').toIndexedSeq
+    }
+  }
+
   def pathIdentifier[u: P]: P[PathIdentifier] = {
-    P(Index ~ anyIdentifier ~~ (Punctuation.dot ~~ anyIdentifier).repX(0) ~~ Index).map {
-      case (off1, first, strings, off2) =>
-        PathIdentifier(at(off1, off2), first +: strings)
+    // Try the dotted form first so existing inputs (including per-component
+    // quoted parts like `a.'x'.b`) parse unchanged; fall back to the
+    // whole-path quoted form only when a `.` appears inside the quotes.
+    P(Index ~ (dottedPathIdentifier | quotedPathIdentifier) ~~ Index).map { case (off1, parts, off2) =>
+      PathIdentifier(at(off1, off2), parts)
     }
   }
 

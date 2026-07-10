@@ -629,14 +629,14 @@ case class ValidationPass(
                 messages.addError(
                   outlet.loc,
                   s"Unresolved PathId, ${outlet.type_.pathId.format}, in ${outlet.identify}",
-                  suggestion = s"Define the type '${outlet.type_.pathId.format}', or correct the outlet's type reference."
+                  suggestion = s"Define the type '${outlet.type_.pathId.value.mkString(".")}', or correct the outlet's type reference."
                 )
               end if
               if inType.isEmpty then
                 messages.addError(
                   inlet.loc,
                   s"Unresolved PathId, ${inlet.type_.pathId.format}, in ${inlet.identify}",
-                  suggestion = s"Define the type '${inlet.type_.pathId.format}', or correct the inlet's type reference."
+                  suggestion = s"Define the type '${inlet.type_.pathId.value.mkString(".")}', or correct the inlet's type reference."
                 )
               end if
           end match
@@ -1408,7 +1408,7 @@ case class ValidationPass(
                           case AggregateUseCase.CommandCase | AggregateUseCase.QueryCase =>
                             messages.addError(
                               omc.errorLoc,
-                              s"Inbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but inbound adaptors should handle events and results (the target's output)",
+                              s"Inbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.value.mkString(".")}' from ${targetContext.identify}, but inbound adaptors should handle events and results (the target's output)",
                               suggestion = "Inbound adaptors should handle the target's output (events and results). Move command/query handling to an outbound adaptor."
                             )
                           case _ => ()
@@ -1418,7 +1418,7 @@ case class ValidationPass(
                           case AggregateUseCase.EventCase | AggregateUseCase.ResultCase =>
                             messages.addError(
                               omc.errorLoc,
-                              s"Outbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.format}' from ${targetContext.identify}, but outbound adaptors should handle commands and queries (the target's input)",
+                              s"Outbound ${adaptor.identify} handles ${omc.msg.messageKind} '${omc.msg.pathId.value.mkString(".")}' from ${targetContext.identify}, but outbound adaptors should handle commands and queries (the target's input)",
                               suggestion = "Outbound adaptors should handle the target's input (commands and queries). Move event/result handling to an inbound adaptor."
                             )
                           case _ => ()

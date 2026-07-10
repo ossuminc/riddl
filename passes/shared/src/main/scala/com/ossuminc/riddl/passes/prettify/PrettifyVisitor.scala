@@ -271,7 +271,7 @@ class PrettifyVisitor(options: PrettifyPass.Options)(using PlatformContext) exte
   def doUser(user: User): Unit =
     state.withCurrent { rfe =>
       rfe
-        .addIndent(s"user ${user.id.value} is \"${user.is_a.s}\"")
+        .addIndent(s"user ${user.id.format} is \"${user.is_a.s}\"")
         .emitMetaData(user.metadata)
     }
   end doUser

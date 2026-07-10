@@ -161,7 +161,7 @@ object AST:
     *   The parsed value of the [[Identifier]]
     */
   case class Identifier(loc: At, value: String) extends RiddlValue:
-    override def format: String = value
+    override def format: String = Identifier.format(value)
     override def isEmpty: Boolean = value.isEmpty
   end Identifier
 
@@ -169,6 +169,37 @@ object AST:
   object Identifier:
     /** Definition of the empty [[Identifier]] */
     val empty: Identifier = Identifier(At.empty, "")
+
+    private def isAsciiLetter(c: Char): Boolean =
+      (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+
+    /** A character permitted after the first in a bare identifier. Kept in
+      * sync with `CommonParser.simpleIdentifier`
+      * (`[A-Za-z][A-Za-z0-9_\-]*`) and the EBNF `simple_identifier` rule.
+      */
+    private def isBareIdChar(c: Char): Boolean =
+      isAsciiLetter(c) || (c >= '0' && c <= '9') || c == '_' || c == '-'
+
+    /** True when `value` is a bare (unquoted) identifier and therefore can be
+      * emitted to RIDDL source verbatim. Matches the parser's
+      * `simpleIdentifier` rule exactly: an ASCII letter followed by any number
+      * of ASCII letters, digits, underscores, or hyphens.
+      */
+    def isBareIdentifier(value: String): Boolean =
+      value.nonEmpty && isAsciiLetter(value.head) && value.tail.forall(isBareIdChar)
+
+    /** Render an identifier `value` as valid RIDDL source. A bare identifier is
+      * emitted unchanged; anything else is single-quoted using the parser's
+      * `quotedIdentifier` form (`'...'`). An empty value is preserved as empty.
+      *
+      * Note: RIDDL's quoted-identifier syntax has no escape for a single quote
+      * and only admits `[A-Za-z0-9_+\-|/@$%&, :]`; a value outside that set
+      * (e.g. containing `.` or `'`) cannot be represented in RIDDL at all, but
+      * such values never arise from parsing (only from in-memory / JSON
+      * construction). Quoting is the best available rendering.
+      */
+    def format(value: String): String =
+      if value.isEmpty || isBareIdentifier(value) then value else s"'$value'"
   end Identifier
 
   /** Represents a segmented identifier to a definition in the model. Path Identifiers are parsed
@@ -181,7 +212,15 @@ object AST:
     *   The list of strings that make up the path identifier
     */
   case class PathIdentifier(loc: At, value: Seq[String]) extends RiddlValue:
-    override def format: String = value.mkString(".")
+    /** Render the path to RIDDL source. When every component is bare (or
+      * empty), emit the plain dotted form `a.b.c`. When any component carries
+      * special characters, wrap the whole dotted path in a single pair of
+      * quotes — `'a.CI/CD Pipeline.c'` — using the parser's quoted-path form,
+      * rather than quoting each component individually.
+      */
+    override def format: String =
+      if value.forall(p => p.isEmpty || Identifier.isBareIdentifier(p)) then value.mkString(".")
+      else s"'${value.mkString(".")}'"
     override def isEmpty: Boolean = value.isEmpty || value.forall(_.isEmpty)
   end PathIdentifier
 
@@ -352,11 +391,13 @@ object AST:
       *   String A string that describes this reference
       */
     def identify: String =
+      // Human-readable display: supply our own quotes around the raw path, so
+      // special-character names are not double-quoted by Identifier.format.
       s"${classTag[T].runtimeClass.getSimpleName} ${
           if id.nonEmpty then {
-            id.map(_.format + ": ")
+            id.map(_.value + ": ")
           } else ""
-        }'${pathId.format}'"
+        }'${pathId.value.mkString(".")}'"
     end identify
 
     override def isEmpty: Boolean = pathId.isEmpty
@@ -385,7 +426,9 @@ object AST:
       if id.isEmpty then {
         s"Anonymous $kind"
       } else {
-        s"$kind '${id.format}'"
+        // Display supplies its own quotes; use the raw value so that
+        // special-character names are not double-quoted by Identifier.format.
+        s"$kind '${id.value}'"
       }
     end identify
 

@@ -33,6 +33,50 @@ class ASTTest extends AbstractTestingBasis {
     }
   }
 
+  "Identifier" should {
+    "emit bare names verbatim" in {
+      Identifier(At.empty, "Order").format mustBe "Order"
+      Identifier(At.empty, "Order_2").format mustBe "Order_2"
+    }
+    "treat hyphenated names as bare (matching the parser's rule)" in {
+      // simpleIdentifier is [A-Za-z][A-Za-z0-9_-]* — hyphens are allowed
+      Identifier(At.empty, "my-entity").format mustBe "my-entity"
+    }
+    "quote names with special characters" in {
+      Identifier(At.empty, "CI/CD Pipeline").format mustBe "'CI/CD Pipeline'"
+      Identifier(At.empty, "Order Item").format mustBe "'Order Item'"
+    }
+    "quote names that start with a digit" in {
+      Identifier(At.empty, "3dModel").format mustBe "'3dModel'"
+    }
+    "quote every character the quoted-identifier form allows" in {
+      Identifier(At.empty, "a+b-c|d/e@f$g%h&i,j:k").format mustBe "'a+b-c|d/e@f$g%h&i,j:k'"
+    }
+    "preserve an empty value" in {
+      Identifier(At.empty, "").format mustBe ""
+    }
+    "expose isBareIdentifier that agrees with simpleIdentifier" in {
+      Identifier.isBareIdentifier("Order") mustBe true
+      Identifier.isBareIdentifier("my-entity") mustBe true
+      Identifier.isBareIdentifier("A1_b-2") mustBe true
+      Identifier.isBareIdentifier("3d") mustBe false // starts with a digit
+      Identifier.isBareIdentifier("_x") mustBe false // must start with a letter
+      Identifier.isBareIdentifier("CI/CD") mustBe false
+      Identifier.isBareIdentifier("") mustBe false
+    }
+  }
+
+  "PathIdentifier quoting" should {
+    "emit an all-bare path as a plain dotted form" in {
+      PathIdentifier(At.empty, Seq("A", "B", "C")).format mustBe "A.B.C"
+      PathIdentifier(At.empty, Seq("my-ctx", "my-entity")).format mustBe "my-ctx.my-entity"
+    }
+    "wrap the whole path in one pair of quotes when a component is special" in {
+      PathIdentifier(At.empty, Seq("A", "CI/CD Pipeline", "C")).format mustBe "'A.CI/CD Pipeline.C'"
+      PathIdentifier(At.empty, Seq("CI/CD Pipeline")).format mustBe "'CI/CD Pipeline'"
+    }
+  }
+
   "Types" should {
     "support domain definitions" in {
       Domain((0, 0), Identifier((1, 1), "foo")) must be

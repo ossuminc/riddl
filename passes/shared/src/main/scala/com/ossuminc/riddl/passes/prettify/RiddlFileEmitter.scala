@@ -162,7 +162,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
     add(s"any of {").nl.incr
     val enumerators: String = enumeration.enumerators.toSeq
       .map { enumerator =>
-        enumerator.id.value + enumerator.enumVal.fold("")(x => s"($x)")
+        enumerator.id.format + enumerator.enumVal.fold("")(x => s"($x)")
       }
       .mkString(s"$spc", s",$new_line$spc", new_line)
     add(enumerators).decr.addLine("}")
@@ -179,14 +179,14 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   }
 
   def emitField(field: Field): this.type =
-    add(s"${field.id.value}: ")
+    add(s"${field.id.format}: ")
     emitTypeExpression(field.typeEx)
     emitMetaData(field.metadata)
     this
   end emitField
 
   def emitMethod(method: Method): this.type =
-    add(s"${method.id.value}(${method.args.map(_.format).mkString(", ")}): ")
+    add(s"${method.id.format}(${method.args.map(_.format).mkString(", ")}): ")
     emitTypeExpression(method.typeEx)
     emitMetaData(method.metadata)
     this
@@ -308,7 +308,7 @@ case class RiddlFileEmitter(url: URL)(using PlatformContext) extends FileBuilder
   }
 
   def emitType(t: Type): this.type = {
-    add(s"${spc}type ${t.id.value} is ")
+    add(s"${spc}type ${t.id.format} is ")
     emitTypeExpression(t.typEx)
     emitMetaData(t.metadata)
     this

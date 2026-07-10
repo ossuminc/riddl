@@ -2,7 +2,7 @@
 # (llama.cpp constrained generation)
 # AUTO-GENERATED from ebnf-grammar.ebnf by ebnf_to_gbnf.py
 # DO NOT EDIT - modify the source EBNF or gbnf_overrides.gbnf instead
-# Generated: 2026-06-25 00:35 UTC
+# Generated: 2026-07-10 19:08 UTC
 
 # Whitespace primitives
 ws ::= [ \t\n\r]*
@@ -24,7 +24,9 @@ any-char-except-triple-backtick ::= ([^`] | "`" [^`] | "``" [^`])+  # (from over
 identifier ::= simple-identifier | quoted-identifier
 simple-identifier ::= [A-Za-z] [A-Za-z0-9_-]*
 quoted-identifier ::= "'" [-A-Za-z0-9_+\\|/@$%&,: ]+ "'"
-path-identifier ::= identifier ("." identifier)*
+path-identifier ::= dotted-path-identifier | quoted-path-identifier
+dotted-path-identifier ::= identifier ws ("." identifier)*
+quoted-path-identifier ::= "'" ws [-A-Za-z0-9_+\\|/@$%&,: .]+ ws "'"
 literal-string ::= "\"" (string-char | escape-sequence)* "\""
 escape-sequence ::= "\\" [\\"aefnrt] | hex-escape | unicode-escape
 hex-escape ::= "\\x" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]? [0-9a-fA-F]?

@@ -51,7 +51,7 @@ trait TypeValidation(using pc: PlatformContext) extends DefinitionValidation {
       checkIdentifierLength(enumerator)
         .check(
           id.value.head.isUpper,
-          s"Enumerator '${id.format}' must start with upper case",
+          s"Enumerator '${id.value}' must start with upper case",
           StyleWarning,
           id.loc,
           suggestion = s"Start the enumerator name with an upper-case letter, e.g. '${id.value.capitalize}'."
