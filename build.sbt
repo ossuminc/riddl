@@ -381,8 +381,9 @@ lazy val docsite = DocSite(
     libraryDependencies ++= Dep.testing
   )
 
+// Plugin(...) auto-configures GitHub Packages publishing and scripted testing.
 lazy val plugin = OssumIncPlugin.autoImport.Plugin("sbt-riddl")
-  .configure(With.BuildInfo, With.noMiMa, With.GithubPublishing)
+  .configure(With.BuildInfo, With.noMiMa)
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",
     buildInfoObject := "SbtRiddlPluginBuildInfo",

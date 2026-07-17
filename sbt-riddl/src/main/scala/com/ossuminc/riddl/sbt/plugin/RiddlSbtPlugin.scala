@@ -117,8 +117,8 @@ object RiddlSbtPlugin extends AutoPlugin {
 
   // --- Input file extraction ---
   // Note: Methods are private[plugin] rather than private so
-  // that the Scala 2.12 compiler can see usage through sbt
-  // macro-generated task bodies.
+  // that the compiler can see usage through sbt macro-generated
+  // task bodies.
 
   private[plugin] val InputFilePattern: Regex =
     """input-file\s*=\s*"([^"]+)"""".r
@@ -293,7 +293,7 @@ object RiddlSbtPlugin extends AutoPlugin {
       // Also exclude standard build directories
       finder = finder --- (srcDir / "target" ** "*.conf")
       finder = finder --- (srcDir / "project" ** "*.conf")
-      finder.get.sorted
+      finder.get().sorted
     }
   }
 
@@ -458,7 +458,7 @@ object RiddlSbtPlugin extends AutoPlugin {
   private val userHome: File =
     file(System.getProperty("user.home"))
 
-  override def projectSettings: Seq[Setting[_]] = Seq(
+  override def projectSettings: Seq[Setting[?]] = Seq(
     // Setting defaults
     riddlcPath := None,
     riddlcVersion := SbtRiddlPluginBuildInfo.version,
