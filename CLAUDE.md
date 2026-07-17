@@ -47,10 +47,13 @@ When in doubt, **add, don't change**.
 ## Critical Build Information
 
 ### Scala Version & Syntax
-- **Scala 3.8.3** (not Scala 2!) — overrides sbt-ossuminc's
-  3.3.7 LTS default. RIDDL originally pinned 3.8.3 to dodge a
+- **Scala 3.8.4** (not Scala 2!) — matches sbt-ossuminc 2.0's
+  default (3.8.4). RIDDL originally pinned ahead of LTS to dodge a
   3.3.x compiler infinite loop on opaque + intersection types;
   the override has been kept while we ride ahead of LTS.
+- **Build files are Scala 3 too** — since the sbt 2 upgrade,
+  `build.sbt` and `project/*.scala` compile with Scala 3 (no more
+  Scala 2.12 build-def rule).
 - **ALWAYS use Scala 3 syntax**:
   - `while i < end do ... end while` (NOT `while (i < end) { ... }`)
   - No `null` checks — use `Option(x)` instead
@@ -58,13 +61,28 @@ When in doubt, **add, don't change**.
 
 ### sbt-ossuminc Plugin
 
-**Current version: 1.4.0** (1.21.0 upgrade).
+**Current version: 2.0.1** (sbt 2.0.2, projectMatrix-based
+CrossModule). Requires sbt **2.0.2+** — pinned in
+`project/build.properties`. sbt 2 credentials live in `~/.sbt/2/`.
+
+#### CrossModule / projectMatrix layout:
+- `CrossModule(dir, mod, V.scala)(JVM, JS, Native)` takes the Scala
+  version and wraps sbt 2's built-in `projectMatrix`. Extract rows
+  with `.jvm`/`.js`/`.native`; wire deps per-row (no cp-level
+  `.dependsOn`).
+- **Flat source tree** (no more `shared/jvm/js/native`):
+  `<mod>/src/{main,test}/scala` (shared), `.../scalajvm`,
+  `.../scalajs`, `.../scalanative`, and `.../scala-jvm-native`
+  (JVM+Native shared, wired via `unmanagedSourceDirectories`).
+- **Per-row targets**: `<mod>/target/{jvm,js,native}-3` (NOT
+  `target/scala-3.8.x`).
+- Cross-platform deps use plain `%%` (the `%%%` operator is gone).
 
 #### Common Configurations:
 ```scala
-// Scala 3.8.3 (overridden from sbt-ossuminc's 3.3.7 LTS default)
-.configure(With.scala3)  // Sets scalaVersion to 3.3.7 LTS
-// Then override: scalaVersion := "3.8.3"
+// Scala 3.8.4 (matches sbt-ossuminc 2.0's default)
+.configure(With.Scala3)
+// CrossModule sets the axis to V.scala (3.8.4); scalaVersion := V.scala
 
 // Scala.js configuration
 .jsConfigure(With.ScalaJS(
@@ -106,7 +124,7 @@ utils → language → passes → commands → riddlc
 ~63-67% of source size on non-trivial inputs.
 
 - **Package**: `com.ossuminc.riddl.language.bast` in
-  `language/shared/src/main/scala/com/ossuminc/riddl/language/bast/`
+  `language/src/main/scala/com/ossuminc/riddl/language/bast/`
 - **Cross-platform**: JVM, JS, Native
 - **Pass**: `passes/shared/.../BASTWriterPass.scala`
 - **CLI**: `riddlc bastify <file.riddl>` (write);
@@ -140,7 +158,7 @@ The `riddlLib` module exports a TypeScript-friendly API via `RiddlAPI` object.
   - Case classes → Plain objects
   - `Either` → `{ succeeded, value, errors }`
 
-**Building npm packages** (via sbt-ossuminc 1.4.0 helpers):
+**Building npm packages** (via sbt-ossuminc 2.0.1 helpers):
 ```bash
 sbt riddlLibJS/npmPrepare        # Assemble package (pure sbt)
 sbt riddlLibJS/npmPack           # Create .tgz tarball
@@ -250,37 +268,30 @@ class MyPass extends HierarchyPass {
 
 **All workflows use JDK 25** (standardized)
 
-### CRITICAL: Scala Version Change Impact
+### CRITICAL: Target-path layout (projectMatrix)
 
-When the Scala LTS version changes (either directly in build.sbt or when
-sbt-ossuminc updates its default), the following files **MUST** be updated:
+Since the sbt 2 upgrade, per-row target dirs are
+`<mod>/target/{jvm,js,native}-3` — the Scala **binary** version (`3`),
+NOT the full `scala-3.8.x`. This means CI/tooling paths are stable
+across 3.8.x → 3.9.x patch bumps (only a full binary-version change,
+e.g. Scala 3 → 4, would move them). Files that hardcode these paths:
 
-**GitHub Workflows** (`.github/workflows/`):
-1. **scala.yml**:
-   - `RIDDLC_PATH` env var: `riddlc/native/target/scala-X.Y.Z/riddlc`
-   - Cache paths: `**/target/scala-X.Y.Z`
-   - Native artifact path: `riddlc/native/target/scala-X.Y.Z/riddlc`
-   - Native artifact path: `riddlLib/native/target/scala-X.Y.Z/libriddl-lib.a`
-   - JS artifact path: `riddlLib/js/target/scala-X.Y.Z/riddl-lib-opt/main.js`
+- **scala.yml**: `RIDDLC_PATH` (`riddlc/target/native-3/riddlc`), cache
+  paths (`**/target/{jvm,js,native}-3`), and the JVM/Native/JS artifact
+  upload paths.
+- **coverage.yml** / **.sonarcloud.properties**: scoverage report paths
+  (`**/target/jvm-3/scoverage-report/`).
+- **release.yml**: native binary (`riddlc/target/native-3/riddlc`) and
+  the JVM stage zip (`riddlc/target/jvm-3/universal/stage`).
+- **Dockerfile**: staged copy (`/app/riddlc/target/jvm-3/universal/stage`).
 
-2. **coverage.yml**:
-   - Coverage report paths: `**/target/scala-X.Y.Z/scoverage-report/`
+**Quick search:** `grep -rn "target/\(jvm\|js\|native\)-3" .github/ Dockerfile .sonarcloud.properties`
 
 **sbt-ossuminc Version Policy**:
-- sbt-ossuminc always defaults to the latest Scala LTS version
-- When sbt-ossuminc is updated, check if its default Scala version changed
-- Current LTS: **3.3.7**; riddl runs ahead on **3.8.3**
-- Next LTS expected: **3.9.x** (Q2 2026)
-
-**Quick Search to Find All References**:
-```bash
-grep -r "scala-3\." .github/workflows/
-```
-
-**Example Fix** (3.8.3 → 3.9.0):
-```bash
-sed -i 's/scala-3.8.3/scala-3.9.0/g' .github/workflows/*.yml
-```
+- sbt-ossuminc 2.0 defaults to Scala **3.8.4** (Scala Next); riddl pins
+  `V.scala = 3.8.4`. Override via the `CrossModule(...)` scalaVersion arg.
+- When bumping Scala within the 3.x line, the target paths above do
+  **not** change (they use the `3` binary version).
 
 ## Testing Patterns
 
@@ -288,7 +299,7 @@ sed -i 's/scala-3.8.3/scala-3.9.0/g' .github/workflows/*.yml
 
 **Any change to the fastparse parser MUST have a corresponding change to the EBNF grammar.**
 
-The EBNF grammar at `language/shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
+The EBNF grammar at `language/src/main/resources/riddl/grammar/ebnf-grammar.ebnf`
 is the canonical specification of RIDDL syntax. It is validated by a TatSu-based parser
 that runs in CI on all `**/input/**/*.riddl` test files.
 
@@ -296,7 +307,7 @@ When modifying the fastparse parser:
 1. Update the corresponding rule(s) in `ebnf-grammar.ebnf`
 2. Run the EBNF validator locally:
    ```bash
-   cd language/jvm/src/test/python
+   cd language/src/test/scalajvm/python
    pip install -r requirements.txt  # first time only
    python ebnf_tatsu_validator.py
    ```
@@ -335,13 +346,13 @@ When implementing new code:
 **Fix**: Use `With.ScalaJS` instead
 
 ### Error: "No given instance of PlatformContext for default parameter"
-**Cause**: Scala 3.8.3 limitation — default parameter values in a case
+**Cause**: Scala 3.8.x limitation — default parameter values in a case
 class's first parameter list cannot resolve `given` instances from a
 subsequent `using` clause in the generated companion `apply` method.
 **Fix**: Remove the default value. May be fixed in 3.9.x LTS.
 **Example**:
 ```scala
-// This fails in 3.8.3:
+// This fails in 3.8.x:
 case class Foo(x: Bar = Bar())(using PlatformContext)
 // Fix: remove default (or provide explicit given)
 case class Foo(x: Bar)(using PlatformContext)
@@ -363,14 +374,16 @@ and its entire hierarchy use `(using PlatformContext)` for this.
 ## File Organization
 
 ### Creating New Modules
-1. Create directory: `<moduleName>/shared/src/{main,test}/scala/...`
-2. Add to `build.sbt` using `CrossModule`
-3. Add variants to root aggregation
-4. Dependencies go in both directions of `cpDep()`
+1. Create directory: `<moduleName>/src/{main,test}/scala/...`
+2. Add to `build.sbt` using `CrossModule` (pass `V.scala`)
+3. Add variants to root aggregation; wire deps per-row with `pDep()`
+4. Add platform-specific dirs as needed (see below)
 
-### Cross-Platform Considerations
-- **Shared code**: `<module>/shared/src/`
-- **Platform-specific**: `<module>/{jvm,js,native}/src/`
+### Cross-Platform Considerations (projectMatrix layout)
+- **Shared code**: `<module>/src/{main,test}/scala`
+- **Platform-specific**: `<module>/src/{main,test}/scala{jvm,js,native}`
+- **JVM+Native shared**: `<module>/src/{main,test}/scala-jvm-native`
+  (custom dir; wire with `jvmNativeSrc(...)` in build.sbt)
 - **Avoid** platform-specific APIs in shared code
 - Use `PlatformContext` for platform abstraction
 
@@ -476,7 +489,7 @@ When code needs to be shared between JVM (riddlc commands) and JS (RiddlAPI), pu
 - `riddlLib/RiddlAPI.scala` (JS via `@JSExport`)
 
 ```scala
-// utils/shared/src/main/scala/com/ossuminc/riddl/utils/InfoFormatter.scala
+// utils/src/main/scala/com/ossuminc/riddl/utils/InfoFormatter.scala
 object InfoFormatter {
   def formatInfo: String = {
     // Build info formatting logic
@@ -743,7 +756,7 @@ to the right group rather than appending to a list.
   `Contents` extension methods (NPE in
   `ScalaSignatureProvider.methodSignature`). Filed:
   scala/scala3#25306.
-- **Scala 3.8.3 scaladoc parallel race** — multiple `doc`
+- **Scala 3.8.x scaladoc parallel race** — multiple `doc`
   tasks running concurrently under `publish` crash in
   `dotty.tools.scaladoc.renderers.Resources.allResources`.
   Symptom: `(<module>Native / Compile / doc)
@@ -770,8 +783,9 @@ to the right group rather than appending to a list.
   ANSI for version parsing. Pin `riddlcVersion` to a real
   release tag in scripted tests, not the dynver snapshot.
 - **sbt plugin visibility** — use `private[plugin] def` (not
-  `private def`) so Scala 2.12 doesn't warn "private method
-  never used" when sbt macros generate the usage.
+  `private def`) so the compiler doesn't warn "private method
+  never used" when sbt macros generate the usage. (The sbt-riddl
+  plugin is now Scala 3 / sbt 2, but the pattern still holds.)
 
 ### Git Workflow
 
