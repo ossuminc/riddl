@@ -35,8 +35,8 @@ jobs:
 
       - name: Configure sbt GitHub Packages credentials
         run: |
-          mkdir -p ~/.sbt/1.0
-          cat > ~/.sbt/1.0/github.sbt << 'EOF'
+          mkdir -p ~/.sbt/2
+          cat > ~/.sbt/2/github.sbt << 'EOF'
           credentials += Credentials(
             "GitHub Package Registry",
             "maven.pkg.github.com",
@@ -51,7 +51,7 @@ jobs:
             utils/Test/compile language/Test/compile passes/Test/compile \
             commands/Test/compile riddlc/Test/compile \
             utils/test language/test passes/test commands/test riddlc/test \
-            coverageAggregate coveralls
+            coverageAggregate
 
       - name: Coverage Results Collection
         uses: actions/upload-artifact@v4
@@ -59,6 +59,5 @@ jobs:
           name: code-coverage-report
           retention-days: 30
           path: |
-            **/jvm/target/scala-3.8.3/scoverage-report/scoverage.xml
-            **/target/scala-3.8.3/scoverage-report/scoverage.xml
-            target/scala-3.8.3/scoverage-report/scoverage.xml
+            **/target/jvm-3/scoverage-report/scoverage.xml
+            target/jvm-3/scoverage-report/scoverage.xml

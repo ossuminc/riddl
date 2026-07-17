@@ -43,8 +43,8 @@ jobs:
 
       - name: Configure sbt GitHub Packages credentials
         run: |
-          mkdir -p ~/.sbt/1.0
-          cat > ~/.sbt/1.0/github.sbt << 'EOF'
+          mkdir -p ~/.sbt/2
+          cat > ~/.sbt/2/github.sbt << 'EOF'
           credentials += Credentials(
             "GitHub Package Registry",
             "maven.pkg.github.com",

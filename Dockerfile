@@ -19,8 +19,8 @@ ARG GITHUB_TOKEN
 WORKDIR /app
 
 # Configure sbt GitHub Packages credentials
-RUN mkdir -p /root/.sbt/1.0 && \
-    echo 'credentials += Credentials("GitHub Package Registry", "maven.pkg.github.com", "x-access-token", sys.env.getOrElse("GITHUB_TOKEN", ""))' > /root/.sbt/1.0/github.sbt
+RUN mkdir -p /root/.sbt/2 && \
+    echo 'credentials += Credentials("GitHub Package Registry", "maven.pkg.github.com", "x-access-token", sys.env.getOrElse("GITHUB_TOKEN", ""))' > /root/.sbt/2/github.sbt
 
 # Copy project files for sbt dependency resolution (cached layer)
 COPY project/build.properties project/plugins.sbt project/Dependencies.scala project/
@@ -61,8 +61,8 @@ LABEL org.opencontainers.image.licenses="Apache-2.0"
 # Copy custom JRE from builder
 COPY --from=jre-builder /custom-jre /opt/java
 
-# Copy staged application from sbt builder
-COPY --from=sbt-builder /app/riddlc/jvm/target/universal/stage /opt/riddlc
+# Copy staged application from sbt builder (projectMatrix JVM row target)
+COPY --from=sbt-builder /app/riddlc/target/jvm-3/universal/stage /opt/riddlc
 
 # Set up environment
 ENV JAVA_HOME=/opt/java

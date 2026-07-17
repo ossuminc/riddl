@@ -18,7 +18,7 @@ jobs:
       packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RIDDLC_PATH: riddlc/native/target/scala-3.8.3/riddlc
+      RIDDLC_PATH: riddlc/target/native-3/riddlc
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -43,8 +43,8 @@ jobs:
 
     - name: Configure sbt GitHub Packages credentials
       run: |
-        mkdir -p ~/.sbt/1.0
-        cat > ~/.sbt/1.0/github.sbt << 'EOF'
+        mkdir -p ~/.sbt/2
+        cat > ~/.sbt/2/github.sbt << 'EOF'
         credentials += Credentials(
           "GitHub Package Registry",
           "maven.pkg.github.com",
@@ -57,9 +57,11 @@ jobs:
       uses: actions/cache@v5
       with:
         path: |
-          **/target/scala-3.8.3
-          !**/target/scala-3.8.3/src_managed
-          !**/target/scala-3.8.3/resource_managed
+          **/target/jvm-3
+          **/target/js-3
+          **/target/native-3
+          !**/target/*-3/src_managed
+          !**/target/*-3/resource_managed
         key: ${{ runner.os }}-sbt-build-${{ matrix.platform }}-${{ hashFiles('**/*.sbt', 'project/**') }}
         restore-keys: |
           ${{ runner.os }}-sbt-build-${{ matrix.platform }}-
@@ -95,7 +97,7 @@ jobs:
     - name: Publish JVM RIDDL Libs & Test sbt-riddl plugin
       if: matrix.platform == 'JVM'
       env:
-        RIDDLC_PATH: riddlc/jvm/target/universal/stage/bin/riddlc
+        RIDDLC_PATH: riddlc/target/jvm-3/universal/stage/bin/riddlc
       run: |
         sbt \
           utils/publishLocal \
@@ -128,8 +130,8 @@ jobs:
         name: collect-release-artifacts-jvm
         retention-days: 30
         path: |
-          riddlc/jvm/target/universal/riddlc.zip
-          riddlLib/jvm/target/universal/riddlLib.zip
+          riddlc/target/jvm-3/universal/riddlc.zip
+          riddlLib/target/jvm-3/universal/riddlLib.zip
 
     - name: Collect Release Artifacts (Native)
       if: matrix.platform == 'Native'
@@ -138,8 +140,8 @@ jobs:
         name: collect-release-artifacts-native
         retention-days: 30
         path: |
-          riddlc/native/target/scala-3.8.3/riddlc
-          riddlLib/native/target/scala-3.8.3/libriddl-lib.a
+          riddlc/target/native-3/riddlc
+          riddlLib/target/native-3/libriddl-lib.a
 
     - name: Collect Release Artifacts (JS)
       if: matrix.platform == 'JS'
@@ -148,7 +150,7 @@ jobs:
         name: collect-release-artifacts-js
         retention-days: 30
         path: |
-          riddlLib/js/target/scala-3.8.3/riddl-lib-opt/main.js
+          riddlLib/target/js-3/riddl-lib-opt/main.js
           riddlLib/js/types/index.d.ts
 
     - name: Cleanup Before Caching
@@ -175,11 +177,11 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        pip install -r language/jvm/src/test/python/requirements.txt
+        pip install -r language/src/test/scalajvm/python/requirements.txt
 
     - name: Validate EBNF Grammar with TatSu (internal test files)
       run: |
-        cd language/jvm/src/test/python
+        cd language/src/test/scalajvm/python
         python ebnf_tatsu_validator.py --verbose
 
     - name: Checkout riddl-examples
@@ -190,17 +192,17 @@ jobs:
 
     - name: Validate EBNF Grammar against riddl-examples
       run: |
-        cd language/jvm/src/test/python
+        cd language/src/test/scalajvm/python
         python validate_external_riddl.py --repo ${{ github.workspace }}/riddl-examples
 
     - name: Verify GBNF is up-to-date
       run: |
-        cd language/jvm/src/test/python
+        cd language/src/test/scalajvm/python
         python ebnf_to_gbnf.py --check
 
     - name: Validate GBNF Grammar
       run: |
-        cd language/jvm/src/test/python
+        cd language/src/test/scalajvm/python
         python gbnf_validator.py --skip-freshness
 
   dependency-check:
