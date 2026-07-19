@@ -101,6 +101,8 @@ object RecognizedOptions:
     "microservice" -> OptionSpec(Seq("Context","Entity","Projector","Repository", "Saga"), 0,0),
     "namespace" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
     "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
+    // Transport/protocol option (used by AsyncAPI generation)
+    "protocol" -> OptionSpec(Seq("Context", "Streamlet"), 1, 1),
   )
 end RecognizedOptions
 

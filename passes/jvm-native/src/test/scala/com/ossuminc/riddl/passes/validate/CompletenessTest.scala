@@ -974,6 +974,28 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept protocol option on contexts" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type T is String
+          |  } with { option protocol("kafka") }
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          // protocol should be accepted without "not recognized" or
+          // "not typically used" style warnings
+          msgs.exists(m =>
+            m.message.contains("protocol") &&
+              (m.message.contains("not a recognized") ||
+                m.message.contains("not typically used"))
+          ) mustBe false
+      }
+    }
+
     "reject auto-id option on non-entity definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

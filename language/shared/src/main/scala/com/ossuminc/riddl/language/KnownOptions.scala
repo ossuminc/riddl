@@ -41,7 +41,8 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.protocol
   )
 
   final val domain: Seq[String] = Seq(
@@ -103,7 +104,8 @@ object KnownOptions {
   final val streamlet: Seq[String] = Seq(
     KnownOption.technology,
     KnownOption.css,
-    KnownOption.kind
+    KnownOption.kind,
+    KnownOption.protocol
   )
 }
 
@@ -126,6 +128,7 @@ object KnownOption {
   final val package_ = "package"
   final val parallel = "parallel"
   final val persistent = "persistent"
+  final val protocol = "protocol"
   final val reply = "reply"
   final val sequential = "sequential"
   final val service = "service"
