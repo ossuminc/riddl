@@ -3,7 +3,6 @@ import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProble
 import sbt.Keys.{description, libraryDependencies, scalacOptions}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 
-import scala.collection.Seq
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass, maintainer)
