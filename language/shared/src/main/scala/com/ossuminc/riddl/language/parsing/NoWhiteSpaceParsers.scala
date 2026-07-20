@@ -93,12 +93,16 @@ private[parsing] trait NoWhiteSpaceParsers {
   private final val zero: String = "0"
 
   private def hexDigit[u: P]: P[String] = CharIn("0-9a-fA-F").!./
-  private def hexEscape[u: P]: P[String] = P(backslash ~ "x" ~ hexDigit.rep(min = 2, max = 8, sep = "")).!./
-  private def unicodeEscape[u: P]: P[Unit] = P(backslash ~ "u" ~ hexDigit.rep(min = 4, max = 4, sep = "")).!./
+  private def hexEscape[u: P]: P[String] = P(
+    backslash ~ "x" ~ hexDigit.rep(min = 2, max = 8, sep = "")
+  ).!./
+  private def unicodeEscape[u: P]: P[Unit] = P(
+    backslash ~ "u" ~ hexDigit.rep(min = 4, max = 4, sep = "")
+  ).!./
 
   private final val escape_chars = "\\\\\\\"aefnrt"
   private def shortcut[u: P]: P[String] = P("\\" ~ CharIn(escape_chars)).!
-  
+
   def escape[u: P]: P[String] = P(shortcut | hexEscape | unicodeEscape).!./
 
   def stringChars(c: Char): Boolean = c != '\"' && c != '\\'
@@ -116,14 +120,14 @@ private[parsing] trait NoWhiteSpaceParsers {
   }
 
   private def portNum[u: P]: P[String] = {
-    P(Index ~~ CharsWhileIn("0-9").rep(min = 1, max = 5).! ~~ Index).map { (i1, numStr: String, i2) =>
-      val num = numStr.toInt
-      if num > 0 && num < 65535 then
-        numStr
-      else
-        error(at(i1,i2), s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
-        "0"
-      end if
+    P(Index ~~ CharsWhileIn("0-9").rep(min = 1, max = 5).! ~~ Index).map {
+      (i1, numStr: String, i2) =>
+        val num = numStr.toInt
+        if num > 0 && num < 65535 then numStr
+        else
+          error(at(i1, i2), s"Invalid port number: $numStr. Must be in range 0 <= port < 65536")
+          "0"
+        end if
     }
   }
 
@@ -131,14 +135,13 @@ private[parsing] trait NoWhiteSpaceParsers {
   private def urlPath[u: P]: P[String] = {
     P(
       CharsWhile(ch => ch.isLetterOrDigit || validURLChars.contains(ch))
-    ).repX(1,"/").!
+    ).repX(1, "/").!
   }
 
   def httpUrl[u: P]: P[URL] = {
     P(
-      StringIn("http","https") ~~ "://" ~~ hostString ~~ (":" ~~ portNum).? ~~ "/" ~~ urlPath.?
+      StringIn("http", "https") ~~ "://" ~~ hostString ~~ (":" ~~ portNum).? ~~ "/" ~~ urlPath.?
     ).!.map(URL)
   }
-
 
 }

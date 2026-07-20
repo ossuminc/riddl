@@ -35,7 +35,8 @@ object RepeatCommand {
   }
 }
 
-class RepeatCommand(using pc: PlatformContext) extends Command[RepeatCommand.Options](RepeatCommand.cmdName) {
+class RepeatCommand(using pc: PlatformContext)
+    extends Command[RepeatCommand.Options](RepeatCommand.cmdName) {
   import RepeatCommand.Options
 
   /** Provide a scopt OParser for the commands options type, OPT
@@ -102,11 +103,11 @@ class RepeatCommand(using pc: PlatformContext) extends Command[RepeatCommand.Opt
       FiniteDuration(obj.getDuration("refresh-rate", TimeUnit.SECONDS), TimeUnit.SECONDS)
     val maxCycles = obj.getInt("max-cycles")
     val interactive = obj.getBoolean("interactive")
-    Options(Some(inputFile),targetCommand, refreshRate, maxCycles, interactive)
+    Options(Some(inputFile), targetCommand, refreshRate, maxCycles, interactive)
   end interpretConfig
 
-  /** Execute the command given the options. Error should be returned as Left(messages) and not directly logged. The log
-    * is for verbose or debug output
+  /** Execute the command given the options. Error should be returned as Left(messages) and not
+    * directly logged. The log is for verbose or debug output
     *
     * @param options
     *   The command specific options

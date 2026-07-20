@@ -152,7 +152,9 @@ private[parsing] trait EpicParser {
   }
 
   private[parsing] def epicDefinitions[u: P]: P[Seq[EpicContents]] = {
-    P(vitalDefinitionContents | useCase | shownBy | epicInclude).asInstanceOf[P[EpicContents]].rep(1)
+    P(vitalDefinitionContents | useCase | shownBy | epicInclude)
+      .asInstanceOf[P[EpicContents]]
+      .rep(1)
   }
 
   private type EpicBody = (

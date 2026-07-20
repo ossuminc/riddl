@@ -92,7 +92,8 @@ case class ReferenceMap(messages: Messages.Accumulator) {
         messages.addError(
           pid.loc,
           s"Path Id '${pid.value.mkString(".")} found ${x.identify} but a $className was expected",
-          suggestion = s"Point '${pid.value.mkString(".")}' at a $className, or rename the reference to match the intended $className."
+          suggestion =
+            s"Point '${pid.value.mkString(".")}' at a $className, or rename the reference to match the intended $className."
         )
         None
   }

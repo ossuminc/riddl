@@ -24,12 +24,10 @@ trait UsageBase {
   protected val usedBy: UsedByMap = mutable.HashMap.empty[Definition, mutable.Set[Definition]]
 
   /** Tracks references that appear as intermediate components in a
-    * [[com.ossuminc.riddl.language.AST.PathIdentifier]] — e.g.,
-    * `R` in `set field R.f to "1"`. Distinct from
-    * `uses`/`usedBy` (which record the final resolved target and
-    * direct type references). Used by `checkUnused` to suppress
-    * the "is unused" warning and by the new path-only completeness
-    * check.
+    * [[com.ossuminc.riddl.language.AST.PathIdentifier]] — e.g., `R` in `set field R.f to "1"`.
+    * Distinct from `uses`/`usedBy` (which record the final resolved target and direct type
+    * references). Used by `checkUnused` to suppress the "is unused" warning and by the new
+    * path-only completeness check.
     */
   protected val usesInPath: UseInPathMap =
     mutable.HashMap.empty[Definition, mutable.Set[Definition]]
@@ -37,8 +35,8 @@ trait UsageBase {
     mutable.HashMap.empty[Definition, mutable.Set[Definition]]
 }
 
-/** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call associateUsage. After
-  * parsing ends, call checkUnused. Collects entities, types and functions too
+/** Validation State for Uses/UsedBy Tracking. During parsing, when usage is detected, call
+  * associateUsage. After parsing ends, call checkUnused. Collects entities, types and functions too
   */
 trait UsageResolution(using io: PlatformContext) extends UsageBase {
 
@@ -72,7 +70,10 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
     this
   }
 
-  def associateUsage[T <: Definition: ClassTag](user: Definition, resolution: Resolution[T]): Resolution[T] =
+  def associateUsage[T <: Definition: ClassTag](
+    user: Definition,
+    resolution: Resolution[T]
+  ): Resolution[T] =
     resolution match
       case None => None
       case resolution @ Some((use: Definition, _)) =>
@@ -87,14 +88,12 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
     this
   end associateUsage
 
-  /** Record `use` as appearing in a path identifier authored within `user`
-    * (i.e., an anchor or intermediate component, not the final resolved
-    * target). Mirrors [[associateUsage]] but writes to the separate
-    * `usesInPath` / `usedInPathBy` maps.
+  /** Record `use` as appearing in a path identifier authored within `user` (i.e., an anchor or
+    * intermediate component, not the final resolved target). Mirrors [[associateUsage]] but writes
+    * to the separate `usesInPath` / `usedInPathBy` maps.
     *
-    * Self-references are skipped: a definition referencing itself via its
-    * own name (e.g., `state AState of fooBar.fields` inside `entity fooBar`)
-    * does not count as external usage.
+    * Self-references are skipped: a definition referencing itself via its own name (e.g., `state
+    * AState of fooBar.fields` inside `entity fooBar`) does not count as external usage.
     */
   def associatePathUsage(user: Definition, use: Definition): this.type =
     if user ne use then
@@ -114,8 +113,9 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
           messages.addUsage(
             defn.errorLoc,
             s"${defn.identify} is unused",
-            suggestion = s"Reference ${defn.identify} from a handler, message flow, or another definition, " +
-              "or remove it if it is no longer needed."
+            suggestion =
+              s"Reference ${defn.identify} from a handler, message flow, or another definition, " +
+                "or remove it if it is no longer needed."
           )
         }
       }
@@ -129,17 +129,19 @@ trait UsageResolution(using io: PlatformContext) extends UsageBase {
     // as the type of a field or state. Emit a CompletenessWarning so the
     // author knows the type can't actually carry data.
     if io.options.showCompletenessWarnings then {
-      for ty <- types
-          if usedBy.get(ty).forall(_.isEmpty)
-          if usedInPathBy.get(ty).exists(_.nonEmpty)
+      for
+        ty <- types
+        if usedBy.get(ty).forall(_.isEmpty)
+        if usedInPathBy.get(ty).exists(_.nonEmpty)
       do {
         messages.addCompleteness(
           ty.errorLoc,
           s"${ty.identify} is only referenced in path identifiers; " +
             "for it to be a useful addressable type, it should be used " +
             "as the type of a field or state.",
-          suggestion = s"Declare a field or state of type ${ty.identify} so it can actually carry data, " +
-            s"e.g. 'field someName: ${ty.id.value}'."
+          suggestion =
+            s"Declare a field or state of type ${ty.identify} so it can actually carry data, " +
+              s"e.g. 'field someName: ${ty.id.value}'."
         )
       }
     }

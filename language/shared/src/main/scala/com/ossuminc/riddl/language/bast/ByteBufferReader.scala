@@ -8,8 +8,8 @@ package com.ossuminc.riddl.language.bast
 
 /** Platform-agnostic byte buffer reader for reading BAST binary data
   *
-  * Provides methods for reading primitive types, strings, and varints
-  * from a byte array with automatic position tracking.
+  * Provides methods for reading primitive types, strings, and varints from a byte array with
+  * automatic position tracking.
   */
 class ByteBufferReader(private val bytes: Array[Byte]) {
   private var pos = 0
@@ -19,8 +19,10 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
 
   /** Set the read position */
   def seek(newPosition: Int): Unit = {
-    require(newPosition >= 0 && newPosition <= bytes.length,
-      s"Invalid seek position: $newPosition (buffer size: ${bytes.length})")
+    require(
+      newPosition >= 0 && newPosition <= bytes.length,
+      s"Invalid seek position: $newPosition (buffer size: ${bytes.length})"
+    )
     pos = newPosition
   }
 
@@ -40,14 +42,14 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
 
   /** Read a single byte as unsigned value (0-255) */
   def readU8(): Int = {
-    readByte() & 0xFF
+    readByte() & 0xff
   }
 
   /** Read a 16-bit short (big-endian) */
   def readShort(): Short = {
     require(remaining >= 2, s"Not enough bytes for short at position $pos")
-    val b1 = bytes(pos) & 0xFF
-    val b2 = bytes(pos + 1) & 0xFF
+    val b1 = bytes(pos) & 0xff
+    val b2 = bytes(pos + 1) & 0xff
     pos += 2
     ((b1 << 8) | b2).toShort
   }
@@ -55,10 +57,10 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
   /** Read a 32-bit integer (big-endian) */
   def readInt(): Int = {
     require(remaining >= 4, s"Not enough bytes for int at position $pos")
-    val b1 = bytes(pos) & 0xFF
-    val b2 = bytes(pos + 1) & 0xFF
-    val b3 = bytes(pos + 2) & 0xFF
-    val b4 = bytes(pos + 3) & 0xFF
+    val b1 = bytes(pos) & 0xff
+    val b2 = bytes(pos + 1) & 0xff
+    val b3 = bytes(pos + 2) & 0xff
+    val b4 = bytes(pos + 3) & 0xff
     pos += 4
     (b1 << 24) | (b2 << 16) | (b3 << 8) | b4
   }
@@ -66,14 +68,14 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
   /** Read a 64-bit long (big-endian) */
   def readLong(): Long = {
     require(remaining >= 8, s"Not enough bytes for long at position $pos")
-    val b1 = (bytes(pos) & 0xFF).toLong
-    val b2 = (bytes(pos + 1) & 0xFF).toLong
-    val b3 = (bytes(pos + 2) & 0xFF).toLong
-    val b4 = (bytes(pos + 3) & 0xFF).toLong
-    val b5 = (bytes(pos + 4) & 0xFF).toLong
-    val b6 = (bytes(pos + 5) & 0xFF).toLong
-    val b7 = (bytes(pos + 6) & 0xFF).toLong
-    val b8 = (bytes(pos + 7) & 0xFF).toLong
+    val b1 = (bytes(pos) & 0xff).toLong
+    val b2 = (bytes(pos + 1) & 0xff).toLong
+    val b3 = (bytes(pos + 2) & 0xff).toLong
+    val b4 = (bytes(pos + 3) & 0xff).toLong
+    val b5 = (bytes(pos + 4) & 0xff).toLong
+    val b6 = (bytes(pos + 5) & 0xff).toLong
+    val b7 = (bytes(pos + 6) & 0xff).toLong
+    val b8 = (bytes(pos + 7) & 0xff).toLong
     pos += 8
     (b1 << 56) | (b2 << 48) | (b3 << 40) | (b4 << 32) |
       (b5 << 24) | (b6 << 16) | (b7 << 8) | b8
@@ -110,8 +112,10 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
   /** Read a byte array with length prefix */
   def readBytes(): Array[Byte] = {
     val length = readVarInt()
-    require(remaining >= length,
-      s"Not enough bytes: need $length, have $remaining at position $pos")
+    require(
+      remaining >= length,
+      s"Not enough bytes: need $length, have $remaining at position $pos"
+    )
 
     val result = new Array[Byte](length)
     System.arraycopy(bytes, pos, result, 0, length)
@@ -127,8 +131,10 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
 
   /** Read raw bytes of specified length without length prefix */
   def readRawBytes(length: Int): Array[Byte] = {
-    require(remaining >= length,
-      s"Not enough bytes: need $length, have $remaining at position $pos")
+    require(
+      remaining >= length,
+      s"Not enough bytes: need $length, have $remaining at position $pos"
+    )
 
     val result = new Array[Byte](length)
     System.arraycopy(bytes, pos, result, 0, length)
@@ -149,13 +155,15 @@ class ByteBufferReader(private val bytes: Array[Byte]) {
 
   /** Peek at the next unsigned byte without advancing position */
   def peekU8(): Int = {
-    peekByte() & 0xFF
+    peekByte() & 0xff
   }
 
   /** Skip the specified number of bytes */
   def skip(count: Int): Unit = {
-    require(remaining >= count,
-      s"Cannot skip $count bytes: only $remaining remaining at position $pos")
+    require(
+      remaining >= count,
+      s"Cannot skip $count bytes: only $remaining remaining at position $pos"
+    )
     pos += count
   }
 

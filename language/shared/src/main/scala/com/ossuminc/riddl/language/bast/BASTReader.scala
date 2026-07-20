@@ -23,9 +23,12 @@ object BASTReader {
 
   /** Read a BAST file from bytes
     *
-    * @param bytes The BAST file bytes
-    * @param pc Platform context for error reporting
-    * @return Either errors or the deserialized Nebula root
+    * @param bytes
+    *   The BAST file bytes
+    * @param pc
+    *   Platform context for error reporting
+    * @return
+    *   Either errors or the deserialized Nebula root
     */
   def read(bytes: Array[Byte])(using pc: PlatformContext): Either[Messages.Messages, Nebula] = {
     val reader = new BASTReader(bytes)
@@ -35,17 +38,19 @@ object BASTReader {
 
 /** BAST binary format deserializer
   *
-  * Reads a BAST file and reconstructs the AST. Mirrors the structure of BASTWriter
-  * to ensure correct round-trip serialization.
+  * Reads a BAST file and reconstructs the AST. Mirrors the structure of BASTWriter to ensure
+  * correct round-trip serialization.
   *
-  * @param bytes The BAST file bytes to deserialize
-  * @param pc Platform context for error reporting
+  * @param bytes
+  *   The BAST file bytes to deserialize
+  * @param pc
+  *   Platform context for error reporting
   */
 class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private val reader = new ByteBufferReader(bytes)
   private var stringTable: StringTable = _
-  private var pathTable: PathTable = _  // Phase 8: Path table for path interning
+  private var pathTable: PathTable = _ // Phase 8: Path table for path interning
   private var lastLocation: At = At.empty
   private var firstLocationRead: Boolean = false
   private var currentSourcePath: String = ""
@@ -54,8 +59,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   /** Phase 7 optimization: Track whether current node has metadata
     *
-    * Set by readNode() before dispatching to specific node reader.
-    * Node readers check this to know if they should read metadata.
+    * Set by readNode() before dispatching to specific node reader. Node readers check this to know
+    * if they should read metadata.
     */
   private var currentNodeHasMetadata: Boolean = false
 
@@ -92,27 +97,29 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     sb.append(s"  AST context: $contextPath\n")
     expectedValue.foreach(v => sb.append(s"  Expected: $v\n"))
     actualValue.foreach(v => sb.append(s"  Actual: $v\n"))
-    sb.append(s"  String table size: ${if stringTable != null then stringTable.size else "not loaded"}\n")
+    sb.append(
+      s"  String table size: ${if stringTable != null then stringTable.size else "not loaded"}\n"
+    )
     // Show surrounding bytes for debugging
     val pos = reader.position
     val start = math.max(0, pos - 8)
     val end = math.min(bytes.length, pos + 8)
-    val hexBytes = bytes.slice(start, end).map(b => f"${b & 0xFF}%02X").mkString(" ")
+    val hexBytes = bytes.slice(start, end).map(b => f"${b & 0xff}%02X").mkString(" ")
     sb.append(s"  Bytes around position [$start-$end]: $hexBytes")
     sb.toString()
   }
 
   /** Read and deserialize the BAST file
     *
-    * @return Either errors or the deserialized Nebula root
+    * @return
+    *   Either errors or the deserialized Nebula root
     */
   def read(): Either[Messages.Messages, Nebula] = {
     try {
       // Read and validate header
       val header = readHeader()
       if !header.isValid then
-        return Left(List(Messages.error(
-          s"Invalid BAST file: ${header.invalidReason}", At.empty)))
+        return Left(List(Messages.error(s"Invalid BAST file: ${header.invalidReason}", At.empty)))
       end if
 
       // Validate checksum
@@ -120,8 +127,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       val dataLength = bytes.length - HEADER_SIZE
       val calculatedChecksum = BinaryFormat.calculateChecksum(bytes, dataStart, dataLength)
       if calculatedChecksum != header.checksum then
-        return Left(List(Messages.error(
-          s"BAST checksum mismatch: expected ${header.checksum}, got $calculatedChecksum", At.empty)))
+        return Left(
+          List(
+            Messages.error(
+              s"BAST checksum mismatch: expected ${header.checksum}, got $calculatedChecksum",
+              At.empty
+            )
+          )
+        )
       end if
 
       // Load string table
@@ -138,10 +151,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       reader.seek(header.rootOffset)
       val nebula = readRootNode(stringTableBoundary)
 
-      if messages.nonEmpty then
-        Left(messages.toList)
-      else
-        Right(nebula)
+      if messages.nonEmpty then Left(messages.toList)
+      else Right(nebula)
 
     } catch {
       case e: Exception =>
@@ -185,7 +196,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def checkBoundary(context: String): Unit = {
     if reader.position > nodeDataBoundary then
       throw new IllegalStateException(
-        s"Reader exceeded node boundary at position ${reader.position} (boundary=$nodeDataBoundary) while reading $context. Last successful node: $lastNodeRead at position $lastNodePosition")
+        s"Reader exceeded node boundary at position ${reader.position} (boundary=$nodeDataBoundary) while reading $context. Last successful node: $lastNodeRead at position $lastNodePosition"
+      )
     end if
   }
 
@@ -212,9 +224,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     if nodeType == FILE_CHANGE_MARKER then
       val newPath = readString()
       currentSourcePath = newPath
-      val url = if newPath.isEmpty then URL.empty
-                else if newPath.startsWith("/") then URL.fromFullPath(newPath)
-                else URL.fromCwdPath(newPath)
+      val url =
+        if newPath.isEmpty then URL.empty
+        else if newPath.startsWith("/") then URL.fromFullPath(newPath)
+        else URL.fromCwdPath(newPath)
       val originStr = if newPath.isEmpty then "empty" else newPath
       currentSource = BASTParserInput(url, originStr, 10000)
       // Reset location tracking for new source - first location will be absolute
@@ -240,84 +253,84 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   /** Convert node type tag to human-readable name */
   private def nodeTypeName(nodeType: Int): String = nodeType match {
-    case NODE_NEBULA => "Nebula"
-    case NODE_DOMAIN => "Domain"
-    case NODE_CONTEXT => "Context"
-    case NODE_ENTITY => "Entity"
-    case NODE_MODULE => "Module"
-    case NODE_INCLUDE => "Include"
-    case NODE_BAST_IMPORT => "BASTImport"
-    case NODE_TYPE => "Type"
-    case NODE_FIELD => "Field"
-    case NODE_ENUMERATOR => "Enumerator"
-    case NODE_ADAPTOR => "Adaptor"
-    case NODE_FUNCTION => "Function"
-    case NODE_PROJECTOR => "Projector"
-    case NODE_REPOSITORY => "Repository"
-    case NODE_SCHEMA => "Schema"
-    case NODE_STREAMLET => "Streamlet"
-    case NODE_SAGA => "Saga"
-    case NODE_HANDLER => "Handler"
-    case NODE_SAGA_STEP => "SagaStep"
-    case NODE_STATE => "State"
-    case NODE_INVARIANT => "Invariant"
-    case NODE_ON_CLAUSE => "OnClause"
-    case NODE_INLET => "Inlet"
-    case NODE_OUTLET => "Outlet"
-    case NODE_CONNECTOR => "Connector"
-    case NODE_EPIC => "Epic"
-    case NODE_USER => "User"
-    case NODE_PIPE => "Pipe"
-    case NODE_GROUP => "Group"
-    case NODE_INPUT => "Input"
-    case NODE_OUTPUT => "Output"
-    case NODE_DESCRIPTION => "Description"
+    case NODE_NEBULA            => "Nebula"
+    case NODE_DOMAIN            => "Domain"
+    case NODE_CONTEXT           => "Context"
+    case NODE_ENTITY            => "Entity"
+    case NODE_MODULE            => "Module"
+    case NODE_INCLUDE           => "Include"
+    case NODE_BAST_IMPORT       => "BASTImport"
+    case NODE_TYPE              => "Type"
+    case NODE_FIELD             => "Field"
+    case NODE_ENUMERATOR        => "Enumerator"
+    case NODE_ADAPTOR           => "Adaptor"
+    case NODE_FUNCTION          => "Function"
+    case NODE_PROJECTOR         => "Projector"
+    case NODE_REPOSITORY        => "Repository"
+    case NODE_SCHEMA            => "Schema"
+    case NODE_STREAMLET         => "Streamlet"
+    case NODE_SAGA              => "Saga"
+    case NODE_HANDLER           => "Handler"
+    case NODE_SAGA_STEP         => "SagaStep"
+    case NODE_STATE             => "State"
+    case NODE_INVARIANT         => "Invariant"
+    case NODE_ON_CLAUSE         => "OnClause"
+    case NODE_INLET             => "Inlet"
+    case NODE_OUTLET            => "Outlet"
+    case NODE_CONNECTOR         => "Connector"
+    case NODE_EPIC              => "Epic"
+    case NODE_USER              => "User"
+    case NODE_PIPE              => "Pipe"
+    case NODE_GROUP             => "Group"
+    case NODE_INPUT             => "Input"
+    case NODE_OUTPUT            => "Output"
+    case NODE_DESCRIPTION       => "Description"
     case NODE_BLOCK_DESCRIPTION => "BlockDescription"
-    case NODE_COMMENT => "Comment"
-    case NODE_BLOCK_COMMENT => "BlockComment"
-    case NODE_IDENTIFIER => "Identifier"
-    case NODE_PATH_IDENTIFIER => "PathIdentifier"
-    case NODE_LITERAL_STRING => "LiteralString"
-    case NODE_STATEMENT => "Statement"
-    case NODE_AUTHOR => "Author"
-    case NODE_TERM => "Term"
-    case NODE_COMMAND_REF => "CommandRef"
-    case NODE_EVENT_REF => "EventRef"
-    case NODE_QUERY_REF => "QueryRef"
-    case NODE_RESULT_REF => "ResultRef"
-    case NODE_RECORD_REF => "RecordRef"
-    case STREAMLET_VOID => "Void"
-    case STREAMLET_SOURCE => "Source"
-    case STREAMLET_SINK => "Sink"
-    case STREAMLET_FLOW => "Flow"
-    case STREAMLET_MERGE => "Merge"
-    case STREAMLET_SPLIT => "Split"
-    case ADAPTOR_INBOUND => "InboundAdaptor"
-    case ADAPTOR_OUTBOUND => "OutboundAdaptor"
+    case NODE_COMMENT           => "Comment"
+    case NODE_BLOCK_COMMENT     => "BlockComment"
+    case NODE_IDENTIFIER        => "Identifier"
+    case NODE_PATH_IDENTIFIER   => "PathIdentifier"
+    case NODE_LITERAL_STRING    => "LiteralString"
+    case NODE_STATEMENT         => "Statement"
+    case NODE_AUTHOR            => "Author"
+    case NODE_TERM              => "Term"
+    case NODE_COMMAND_REF       => "CommandRef"
+    case NODE_EVENT_REF         => "EventRef"
+    case NODE_QUERY_REF         => "QueryRef"
+    case NODE_RESULT_REF        => "ResultRef"
+    case NODE_RECORD_REF        => "RecordRef"
+    case STREAMLET_VOID         => "Void"
+    case STREAMLET_SOURCE       => "Source"
+    case STREAMLET_SINK         => "Sink"
+    case STREAMLET_FLOW         => "Flow"
+    case STREAMLET_MERGE        => "Merge"
+    case STREAMLET_SPLIT        => "Split"
+    case ADAPTOR_INBOUND        => "InboundAdaptor"
+    case ADAPTOR_OUTBOUND       => "OutboundAdaptor"
     // Entity Reference tags (Phase 9)
-    case NODE_AUTHOR_REF => "AuthorRef"
-    case NODE_TYPE_REF => "TypeRef"
-    case NODE_FIELD_REF => "FieldRef"
-    case NODE_CONSTANT_REF => "ConstantRef"
-    case NODE_ADAPTOR_REF => "AdaptorRef"
-    case NODE_FUNCTION_REF => "FunctionRef"
-    case NODE_HANDLER_REF => "HandlerRef"
-    case NODE_STATE_REF => "StateRef"
-    case NODE_ENTITY_REF => "EntityRef"
+    case NODE_AUTHOR_REF     => "AuthorRef"
+    case NODE_TYPE_REF       => "TypeRef"
+    case NODE_FIELD_REF      => "FieldRef"
+    case NODE_CONSTANT_REF   => "ConstantRef"
+    case NODE_ADAPTOR_REF    => "AdaptorRef"
+    case NODE_FUNCTION_REF   => "FunctionRef"
+    case NODE_HANDLER_REF    => "HandlerRef"
+    case NODE_STATE_REF      => "StateRef"
+    case NODE_ENTITY_REF     => "EntityRef"
     case NODE_REPOSITORY_REF => "RepositoryRef"
-    case NODE_PROJECTOR_REF => "ProjectorRef"
-    case NODE_CONTEXT_REF => "ContextRef"
-    case NODE_STREAMLET_REF => "StreamletRef"
-    case NODE_INLET_REF => "InletRef"
-    case NODE_OUTLET_REF => "OutletRef"
-    case NODE_SAGA_REF => "SagaRef"
-    case NODE_USER_REF => "UserRef"
-    case NODE_EPIC_REF => "EpicRef"
-    case NODE_GROUP_REF => "GroupRef"
-    case NODE_INPUT_REF => "InputRef"
-    case NODE_OUTPUT_REF => "OutputRef"
-    case NODE_DOMAIN_REF => "DomainRef"
-    case _ => s"Unknown($nodeType)"
+    case NODE_PROJECTOR_REF  => "ProjectorRef"
+    case NODE_CONTEXT_REF    => "ContextRef"
+    case NODE_STREAMLET_REF  => "StreamletRef"
+    case NODE_INLET_REF      => "InletRef"
+    case NODE_OUTLET_REF     => "OutletRef"
+    case NODE_SAGA_REF       => "SagaRef"
+    case NODE_USER_REF       => "UserRef"
+    case NODE_EPIC_REF       => "EpicRef"
+    case NODE_GROUP_REF      => "GroupRef"
+    case NODE_INPUT_REF      => "InputRef"
+    case NODE_OUTPUT_REF     => "OutputRef"
+    case NODE_DOMAIN_REF     => "DomainRef"
+    case _                   => s"Unknown($nodeType)"
   }
 
   /** Read a RiddlValue node based on its type tag */
@@ -326,7 +339,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     checkBoundary(s"readNode at position $posBeforeNode")
     val savedMetadataFlag = currentNodeHasMetadata
     var tagByte = reader.readU8()
-    debugLog(f"[DEBUG] readNode at pos $posBeforeNode: tagByte=${tagByte & 0xFF}%d (0x${tagByte & 0xFF}%02X)")
+    debugLog(
+      f"[DEBUG] readNode at pos $posBeforeNode: tagByte=${tagByte & 0xff}%d (0x${tagByte & 0xff}%02X)"
+    )
 
     // Check for FILE_CHANGE_MARKER - indicates source file transition
     if tagByte == FILE_CHANGE_MARKER then
@@ -335,9 +350,10 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       currentSourcePath = newPath
       // Reconstruct URL and create BASTParserInput
       // Empty path means synthetic/test locations - still need a BASTParserInput
-      val url = if newPath.isEmpty then URL.empty
-                else if newPath.startsWith("/") then URL.fromFullPath(newPath)
-                else URL.fromCwdPath(newPath)
+      val url =
+        if newPath.isEmpty then URL.empty
+        else if newPath.startsWith("/") then URL.fromFullPath(newPath)
+        else URL.fromCwdPath(newPath)
       val originStr = if newPath.isEmpty then "empty" else newPath
       currentSource = BASTParserInput(url, originStr, 10000)
       // Reset location tracking for new source - first location will be absolute
@@ -345,12 +361,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       firstLocationRead = false
       // Now read the actual node tag
       tagByte = reader.readU8()
-      debugLog(f"[DEBUG] after FILE_CHANGE_MARKER: actual tagByte=${tagByte & 0xFF}%d (0x${tagByte & 0xFF}%02X)")
+      debugLog(
+        f"[DEBUG] after FILE_CHANGE_MARKER: actual tagByte=${tagByte & 0xff}%d (0x${tagByte & 0xff}%02X)"
+      )
     end if
 
     // Phase 7 optimization: Extract metadata flag from high bit
     currentNodeHasMetadata = (tagByte & HAS_METADATA_FLAG) != 0
-    val nodeType = (tagByte & 0x7F).toByte
+    val nodeType = (tagByte & 0x7f).toByte
 
     val nodeName = nodeTypeName(nodeType)
     pushContext(nodeName)
@@ -358,39 +376,39 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     try {
       val result: RiddlValue = nodeType match {
         // Root containers
-        case NODE_NEBULA => readNebulaNode()
-        case NODE_DOMAIN => readDomainNode()
-        case NODE_CONTEXT => readContextNode()
-        case NODE_ENTITY => readEntityNode()
-        case NODE_MODULE => readModuleNode()
-        case NODE_INCLUDE => readIncludeNode()
+        case NODE_NEBULA      => readNebulaNode()
+        case NODE_DOMAIN      => readDomainNode()
+        case NODE_CONTEXT     => readContextNode()
+        case NODE_ENTITY      => readEntityNode()
+        case NODE_MODULE      => readModuleNode()
+        case NODE_INCLUDE     => readIncludeNode()
         case NODE_BAST_IMPORT => readBASTImportNode()
 
         // Types
-        case NODE_TYPE => readTypeNode()
-        case NODE_FIELD => readFieldOrConstantOrMethod()
+        case NODE_TYPE       => readTypeNode()
+        case NODE_FIELD      => readFieldOrConstantOrMethod()
         case NODE_ENUMERATOR => readEnumeratorNode()
 
         // Processors
-        case NODE_ADAPTOR => readAdaptorNode()
-        case NODE_FUNCTION => readFunctionNode()
-        case NODE_PROJECTOR => readProjectorNode()
+        case NODE_ADAPTOR    => readAdaptorNode()
+        case NODE_FUNCTION   => readFunctionNode()
+        case NODE_PROJECTOR  => readProjectorNode()
         case NODE_REPOSITORY => readRepositoryNode()
-        case NODE_SCHEMA => readSchemaNode()
-        case NODE_STREAMLET => readStreamletNode()
-        case NODE_SAGA => readSagaNode()
+        case NODE_SCHEMA     => readSchemaNode()
+        case NODE_STREAMLET  => readStreamletNode()
+        case NODE_SAGA       => readSagaNode()
 
         // Handler components
-        case NODE_HANDLER => readHandlerNode()
+        case NODE_HANDLER   => readHandlerNode()
         case NODE_STATEMENT => readStatementNode()
         case NODE_SAGA_STEP => readSagaStepNode()
-        case NODE_STATE => readStateNode()
+        case NODE_STATE     => readStateNode()
         case NODE_INVARIANT => readInvariantNode()
         case NODE_ON_CLAUSE => readOnClauseNode()
 
         // Streamlet components
-        case NODE_INLET => readInletNode()
-        case NODE_OUTLET => readOutletOrShownByNode()
+        case NODE_INLET     => readInletNode()
+        case NODE_OUTLET    => readOutletOrShownByNode()
         case NODE_CONNECTOR => readConnectorNode()
 
         // Epic components
@@ -401,74 +419,76 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         case NODE_PIPE => readPipeOrRelationshipOrInteraction()
 
         // UI Components
-        case NODE_GROUP => readGroupOrContainedGroupNode()
-        case NODE_INPUT => readInputNode()
+        case NODE_GROUP  => readGroupOrContainedGroupNode()
+        case NODE_INPUT  => readInputNode()
         case NODE_OUTPUT => readOutputNode()
 
         // Metadata
-        case NODE_DESCRIPTION => readDescriptionOrOptionOrAttachment()
+        case NODE_DESCRIPTION       => readDescriptionOrOptionOrAttachment()
         case NODE_BLOCK_DESCRIPTION => readBlockDescriptionNode()
-        case NODE_COMMENT => readLineCommentNode()
-        case NODE_BLOCK_COMMENT => readInlineCommentNode()
+        case NODE_COMMENT           => readLineCommentNode()
+        case NODE_BLOCK_COMMENT     => readInlineCommentNode()
 
         // Simple values
-        case NODE_IDENTIFIER => readIdentifierNode()
+        case NODE_IDENTIFIER      => readIdentifierNode()
         case NODE_PATH_IDENTIFIER => readPathIdentifierNode()
-        case NODE_LITERAL_STRING => readLiteralStringNode()
+        case NODE_LITERAL_STRING  => readLiteralStringNode()
 
         // Authors
         case NODE_AUTHOR => readAuthorOrAuthorRefNode()
-        case NODE_TERM => readTermNode()
+        case NODE_TERM   => readTermNode()
 
         // Message References (dedicated tags)
         case NODE_COMMAND_REF => readCommandRefNode()
-        case NODE_EVENT_REF => readEventRefNode()
-        case NODE_QUERY_REF => readQueryRefNode()
-        case NODE_RESULT_REF => readResultRefNode()
-        case NODE_RECORD_REF => readRecordRefNode()
+        case NODE_EVENT_REF   => readEventRefNode()
+        case NODE_QUERY_REF   => readQueryRefNode()
+        case NODE_RESULT_REF  => readResultRefNode()
+        case NODE_RECORD_REF  => readRecordRefNode()
 
         // Entity References (dedicated tags - Phase 9 fix)
-        case NODE_AUTHOR_REF => readAuthorRefNode()
-        case NODE_TYPE_REF => readTypeRefNode()
-        case NODE_FIELD_REF => readFieldRefNode()
-        case NODE_CONSTANT_REF => readConstantRefNode()
-        case NODE_ADAPTOR_REF => readAdaptorRefNode()
-        case NODE_FUNCTION_REF => readFunctionRefNode()
-        case NODE_HANDLER_REF => readHandlerRefNode()
-        case NODE_STATE_REF => readStateRefNode()
-        case NODE_ENTITY_REF => readEntityRefNode()
+        case NODE_AUTHOR_REF     => readAuthorRefNode()
+        case NODE_TYPE_REF       => readTypeRefNode()
+        case NODE_FIELD_REF      => readFieldRefNode()
+        case NODE_CONSTANT_REF   => readConstantRefNode()
+        case NODE_ADAPTOR_REF    => readAdaptorRefNode()
+        case NODE_FUNCTION_REF   => readFunctionRefNode()
+        case NODE_HANDLER_REF    => readHandlerRefNode()
+        case NODE_STATE_REF      => readStateRefNode()
+        case NODE_ENTITY_REF     => readEntityRefNode()
         case NODE_REPOSITORY_REF => readRepositoryRefNode()
-        case NODE_PROJECTOR_REF => readProjectorRefNode()
-        case NODE_CONTEXT_REF => readContextRefNode()
-        case NODE_STREAMLET_REF => readStreamletRefNode()
-        case NODE_INLET_REF => readInletRefNode()
-        case NODE_OUTLET_REF => readOutletRefNode()
-        case NODE_SAGA_REF => readSagaRefNode()
-        case NODE_USER_REF => readUserRefNode()
-        case NODE_EPIC_REF => readEpicRefNode()
-        case NODE_GROUP_REF => readGroupRefNode()
-        case NODE_INPUT_REF => readInputRefNode()
-        case NODE_OUTPUT_REF => readOutputRefNode()
-        case NODE_DOMAIN_REF => readDomainRefNode()
+        case NODE_PROJECTOR_REF  => readProjectorRefNode()
+        case NODE_CONTEXT_REF    => readContextRefNode()
+        case NODE_STREAMLET_REF  => readStreamletRefNode()
+        case NODE_INLET_REF      => readInletRefNode()
+        case NODE_OUTLET_REF     => readOutletRefNode()
+        case NODE_SAGA_REF       => readSagaRefNode()
+        case NODE_USER_REF       => readUserRefNode()
+        case NODE_EPIC_REF       => readEpicRefNode()
+        case NODE_GROUP_REF      => readGroupRefNode()
+        case NODE_INPUT_REF      => readInputRefNode()
+        case NODE_OUTPUT_REF     => readOutputRefNode()
+        case NODE_DOMAIN_REF     => readDomainRefNode()
 
         // Streamlet shapes
-        case STREAMLET_VOID => readVoidNode()
+        case STREAMLET_VOID   => readVoidNode()
         case STREAMLET_SOURCE => readSourceNode()
-        case STREAMLET_SINK => readSinkNode()
-        case STREAMLET_FLOW => readFlowNode()
-        case STREAMLET_MERGE => readMergeNode()
-        case STREAMLET_SPLIT => readSplitNode()
+        case STREAMLET_SINK   => readSinkNode()
+        case STREAMLET_FLOW   => readFlowNode()
+        case STREAMLET_MERGE  => readMergeNode()
+        case STREAMLET_SPLIT  => readSplitNode()
 
         // Adaptor directions
-        case ADAPTOR_INBOUND => readInboundAdaptorNode()
+        case ADAPTOR_INBOUND  => readInboundAdaptorNode()
         case ADAPTOR_OUTBOUND => readOutboundAdaptorNode()
 
         case _ =>
-          addError(deserializationError(
-            s"Unknown node type tag",
-            expectedValue = Some("valid node type (1-255)"),
-            actualValue = Some(s"$nodeType at byte $posBeforeNode")
-          ))
+          addError(
+            deserializationError(
+              s"Unknown node type tag",
+              expectedValue = Some("valid node type (1-255)"),
+              actualValue = Some(s"$nodeType at byte $posBeforeNode")
+            )
+          )
           // Return a placeholder with lastLocation for best-effort location on error
           LiteralString(lastLocation, s"<unknown node type $nodeType>")
       }
@@ -476,7 +496,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       currentNodeHasMetadata = savedMetadataFlag
       val posAfterNode = reader.position
       recordNodeRead(nodeName, posBeforeNode)
-      debugLog(f"[DEBUG] finished $nodeName at pos $posAfterNode (read ${posAfterNode - posBeforeNode} bytes)")
+      debugLog(
+        f"[DEBUG] finished $nodeName at pos $posAfterNode (read ${posAfterNode - posBeforeNode} bytes)"
+      )
       result
     } catch {
       case e: Exception =>
@@ -497,12 +519,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   }
 
   private def readDomainNode(): Domain = {
-    debugLog(f"[DEBUG] readDomainNode: hasMetadata=$currentNodeHasMetadata at pos ${reader.position}")
+    debugLog(
+      f"[DEBUG] readDomainNode: hasMetadata=$currentNodeHasMetadata at pos ${reader.position}"
+    )
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     debugLog(f"[DEBUG] readDomainNode: domain '${id.value}' at pos ${reader.position}")
     val contents = readContentsDeferred[OccursInDomain]().asInstanceOf[Contents[DomainContents]]
-    debugLog(f"[DEBUG] readDomainNode: reading metadata (hasMetadata=$currentNodeHasMetadata) at pos ${reader.position}")
+    debugLog(
+      f"[DEBUG] readDomainNode: reading metadata (hasMetadata=$currentNodeHasMetadata) at pos ${reader.position}"
+    )
     val metadata = readMetadataDeferred()
     debugLog(f"[DEBUG] readDomainNode: finished, metadata count=${metadata.length}")
     Domain(loc, id, contents, metadata)
@@ -510,7 +536,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readContextNode(): Context = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val contents = readContentsDeferred[OccursInContext]().asInstanceOf[Contents[ContextContents]]
     val metadata = readMetadataDeferred()
     Context(loc, id, contents, metadata)
@@ -518,16 +544,18 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readEntityNode(): Entity = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
-    val contents = readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
+    val id = readIdentifierInline() // Inline - no tag
+    val contents =
+      readContentsDeferred[OccursInProcessor | State]().asInstanceOf[Contents[EntityContents]]
     val metadata = readMetadataDeferred()
     Entity(loc, id, contents, metadata)
   }
 
   private def readModuleNode(): Module = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
-    val contents = readContentsDeferred[Domain | Author | Comment]().asInstanceOf[Contents[ModuleContents]]
+    val id = readIdentifierInline() // Inline - no tag
+    val contents =
+      readContentsDeferred[Domain | Author | Comment]().asInstanceOf[Contents[ModuleContents]]
     val metadata = readMetadataDeferred()
     Module(loc, id, contents, metadata)
   }
@@ -555,7 +583,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readTypeNode(): Type = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val typEx = readTypeExpression()
     val metadata = readMetadataDeferred()
     Type(loc, id, typEx, metadata)
@@ -585,7 +613,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readEnumeratorNode(): Enumerator = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val enumVal = readOption(reader.readVarLong())
     val metadata = readMetadataDeferred()
     Enumerator(loc, id, enumVal, metadata)
@@ -595,12 +623,12 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readAdaptorNode(): Adaptor = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val directionTag = reader.readU8()
     val direction: AdaptorDirection = directionTag match {
-      case ADAPTOR_INBOUND => InboundAdaptor(loc)
+      case ADAPTOR_INBOUND  => InboundAdaptor(loc)
       case ADAPTOR_OUTBOUND => OutboundAdaptor(loc)
-      case _ => InboundAdaptor(loc) // Default
+      case _                => InboundAdaptor(loc) // Default
     }
     val referent = readContextRef()
     val contents = readContentsDeferred[OccursInProcessor]().asInstanceOf[Contents[AdaptorContents]]
@@ -610,14 +638,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readFunctionNode(): Function = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     // Debug: Read input with type checking
     val inputRaw = readOption(readTypeExpression())
     val input = inputRaw.map { te =>
       te match {
         case agg: Aggregation => agg
         case other =>
-          throw new RuntimeException(s"Function ${id.value} input expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}")
+          throw new RuntimeException(
+            s"Function ${id.value} input expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
+          )
       }
     }
     // Debug: Read output with type checking
@@ -626,24 +656,29 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       te match {
         case agg: Aggregation => agg
         case other =>
-          throw new RuntimeException(s"Function ${id.value} output expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}")
+          throw new RuntimeException(
+            s"Function ${id.value} output expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
+          )
       }
     }
-    val contents = readContentsDeferred[OccursInVitalDefinition | Statement | Function]().asInstanceOf[Contents[FunctionContents]]
+    val contents = readContentsDeferred[OccursInVitalDefinition | Statement | Function]()
+      .asInstanceOf[Contents[FunctionContents]]
     val metadata = readMetadataDeferred()
     Function(loc, id, input, output, contents, metadata)
   }
 
   private def readSagaNode(): Saga = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     // Debug: Read input with type checking
     val inputRaw = readOption(readTypeExpression())
     val input = inputRaw.map { te =>
       te match {
         case agg: Aggregation => agg
         case other =>
-          throw new RuntimeException(s"Saga ${id.value} input expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}")
+          throw new RuntimeException(
+            s"Saga ${id.value} input expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
+          )
       }
     }
     // Debug: Read output with type checking
@@ -652,26 +687,31 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       te match {
         case agg: Aggregation => agg
         case other =>
-          throw new RuntimeException(s"Saga ${id.value} output expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}")
+          throw new RuntimeException(
+            s"Saga ${id.value} output expected Aggregation but got ${other.getClass.getSimpleName} at byte pos ${reader.position}"
+          )
       }
     }
-    val contents = readContentsDeferred[OccursInVitalDefinition | SagaStep]().asInstanceOf[Contents[SagaContents]]
+    val contents = readContentsDeferred[OccursInVitalDefinition | SagaStep]()
+      .asInstanceOf[Contents[SagaContents]]
     val metadata = readMetadataDeferred()
     Saga(loc, id, input, output, contents, metadata)
   }
 
   private def readProjectorNode(): Projector = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
-    val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]().asInstanceOf[Contents[ProjectorContents]]
+    val id = readIdentifierInline() // Inline - no tag
+    val contents = readContentsDeferred[OccursInProcessor | RepositoryRef]()
+      .asInstanceOf[Contents[ProjectorContents]]
     val metadata = readMetadataDeferred()
     Projector(loc, id, contents, metadata)
   }
 
   private def readRepositoryNode(): Repository = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
-    val contents = readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
+    val id = readIdentifierInline() // Inline - no tag
+    val contents =
+      readContentsDeferred[OccursInProcessor | Schema]().asInstanceOf[Contents[RepositoryContents]]
     val metadata = readMetadataDeferred()
     Repository(loc, id, contents, metadata)
   }
@@ -680,7 +720,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     // Read schemaKind subtype: 0=Relational, 1=Document, 2=Graphical
     val subtype = reader.readU8()
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
 
     val schemaKind = RepositorySchemaKind.fromOrdinal(subtype)
 
@@ -710,18 +750,19 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readStreamletNode(): Streamlet = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val shapeTag = reader.readU8()
     val shape: StreamletShape = shapeTag match {
-      case STREAMLET_VOID => Void(loc)
+      case STREAMLET_VOID   => Void(loc)
       case STREAMLET_SOURCE => Source(loc)
-      case STREAMLET_SINK => Sink(loc)
-      case STREAMLET_FLOW => Flow(loc)
-      case STREAMLET_MERGE => Merge(loc)
-      case STREAMLET_SPLIT => Split(loc)
-      case _ => Void(loc)
+      case STREAMLET_SINK   => Sink(loc)
+      case STREAMLET_FLOW   => Flow(loc)
+      case STREAMLET_MERGE  => Merge(loc)
+      case STREAMLET_SPLIT  => Split(loc)
+      case _                => Void(loc)
     }
-    val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]().asInstanceOf[Contents[StreamletContents]]
+    val contents = readContentsDeferred[OccursInProcessor | Inlet | Outlet | Connector]()
+      .asInstanceOf[Contents[StreamletContents]]
     val metadata = readMetadataDeferred()
     Streamlet(loc, id, shape, contents, metadata)
   }
@@ -731,11 +772,12 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readEpicOrUseCaseNode(): RiddlValue = {
     val subtype = reader.readU8() // 0 = Epic, 1 = UseCase
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
 
     if subtype == 0 then
       val userStory = readUserStoryNode()
-      val contents = readContentsDeferred[OccursInVitalDefinition | ShownBy | UseCase]().asInstanceOf[Contents[EpicContents]]
+      val contents = readContentsDeferred[OccursInVitalDefinition | ShownBy | UseCase]()
+        .asInstanceOf[Contents[EpicContents]]
       val metadata = readMetadataDeferred()
       Epic(loc, id, userStory, contents, metadata)
     else
@@ -752,7 +794,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   /** Read a Handler node (Phase 7: handlers have dedicated NODE_HANDLER tag) */
   private def readHandlerNode(): Handler = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val contents = readContentsDeferred[HandlerContents]()
     val metadata = readMetadataDeferred()
     Handler(loc, id, contents, metadata)
@@ -767,7 +809,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readSagaStepNode(): SagaStep = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val doStatements = readContentsDeferred[Statements]()
     val undoStatements = readContentsDeferred[Statements]()
     val metadata = readMetadataDeferred()
@@ -898,8 +940,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readStateNode(): State = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
-    val typ = readTypeRefInline()    // Inline - position known
+    val id = readIdentifierInline() // Inline - no tag
+    val typ = readTypeRefInline() // Inline - position known
     val contents = readContentsDeferred[StateContents]()
     val metadata = readMetadataDeferred()
     State(loc, id, typ, contents, metadata)
@@ -907,7 +949,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readInvariantNode(): Invariant = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val condition = readOption(readLiteralString())
     val metadata = readMetadataDeferred()
     Invariant(loc, id, condition, metadata)
@@ -953,8 +995,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readInletNode(): Inlet = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
-    val type_ = readTypeRefInline()  // Inline - position known
+    val id = readIdentifierInline() // Inline - no tag
+    val type_ = readTypeRefInline() // Inline - position known
     val metadata = readMetadataDeferred()
     Inlet(loc, id, type_, metadata)
   }
@@ -969,7 +1011,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
     if nextTag == NODE_IDENTIFIER then
       val id = readIdentifier()
-      val type_ = readTypeRefInline()  // Inline - position known
+      val type_ = readTypeRefInline() // Inline - position known
       val metadata = readMetadataDeferred()
       Outlet(loc, id, type_, metadata)
     else
@@ -981,7 +1023,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readConnectorNode(): Connector = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val from = readOutletRef()
     val to = readInletRef()
     val metadata = readMetadataDeferred()
@@ -996,17 +1038,20 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
     interactionType match {
       case 0 => // Parallel
-        val contents = readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
+        val contents =
+          readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
         val metadata = readMetadataDeferred()
         ParallelInteractions(loc, contents, metadata)
 
       case 1 => // Sequential
-        val contents = readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
+        val contents =
+          readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
         val metadata = readMetadataDeferred()
         SequentialInteractions(loc, contents, metadata)
 
       case 2 => // Optional
-        val contents = readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
+        val contents =
+          readContentsDeferred[Interaction]().asInstanceOf[Contents[InteractionContainerContents]]
         val metadata = readMetadataDeferred()
         OptionalInteractions(loc, contents, metadata)
 
@@ -1069,7 +1114,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
         TakeInputInteraction(loc, from, to, metadata)
 
       case _ => // Relationship (default)
-        val id = readIdentifierInline()  // Inline - no tag
+        val id = readIdentifierInline() // Inline - no tag
         val withProcessor = readProcessorRef()
         val cardinality = RelationshipCardinality.fromOrdinal(reader.readU8())
         val label = readOption(readLiteralString())
@@ -1109,9 +1154,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readInputNode(): Input = {
     val loc = readLocation()
     val nounAlias = readString()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val verbAlias = readString()
-    val takeIn = readTypeRefInline()  // Inline - position known
+    val takeIn = readTypeRefInline() // Inline - position known
     val contents = readContentsDeferred[OccursInInput]()
     val metadata = readMetadataDeferred()
     Input(loc, nounAlias, id, verbAlias, takeIn, contents, metadata)
@@ -1120,16 +1165,16 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
   private def readOutputNode(): Output = {
     val loc = readLocation()
     val nounAlias = readString()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val verbAlias = readString()
 
     // Read union type
     val putOutType = reader.readU8()
     val putOut: TypeRef | ConstantRef | LiteralString = putOutType match {
-      case 0 => readTypeRefInline()  // Inline - discriminator identifies type
+      case 0 => readTypeRefInline() // Inline - discriminator identifies type
       case 1 => readConstantRef()
       case 2 => readLiteralString()
-      case _ => readTypeRefInline()  // Inline - discriminator identifies type
+      case _ => readTypeRefInline() // Inline - discriminator identifies type
     }
 
     val contents = readContentsDeferred[OccursInOutput]()
@@ -1153,7 +1198,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
       AuthorRef(loc, pathId)
     else
       // Author
-      val id = readIdentifierInline()  // Inline - no tag
+      val id = readIdentifierInline() // Inline - no tag
       val name = readLiteralString()
       val email = readLiteralString()
       val organization = readOption(readLiteralString())
@@ -1202,7 +1247,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readTermNode(): Term = {
     val loc = readLocation()
-    val id = readIdentifierInline()  // Inline - no tag
+    val id = readIdentifierInline() // Inline - no tag
     val definition = readSeq(() => readLiteralString())
     Term(loc, id, definition)
   }
@@ -1629,109 +1674,109 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
     refTag match {
       // Legacy definition tags used as refs (for backward compatibility)
-      case NODE_AUTHOR => readAuthorRef()
-      case NODE_TYPE => readTypeRef()
-      case NODE_FIELD => readFieldRefOrConstantRef()
-      case NODE_ADAPTOR => readAdaptorRef()
-      case NODE_FUNCTION => readFunctionRef()
-      case NODE_HANDLER => readHandlerRef()
-      case NODE_STATE => readStateRef()
-      case NODE_ENTITY => readEntityRef()
+      case NODE_AUTHOR     => readAuthorRef()
+      case NODE_TYPE       => readTypeRef()
+      case NODE_FIELD      => readFieldRefOrConstantRef()
+      case NODE_ADAPTOR    => readAdaptorRef()
+      case NODE_FUNCTION   => readFunctionRef()
+      case NODE_HANDLER    => readHandlerRef()
+      case NODE_STATE      => readStateRef()
+      case NODE_ENTITY     => readEntityRef()
       case NODE_REPOSITORY => readRepositoryRef()
-      case NODE_PROJECTOR => readProjectorRef()
-      case NODE_CONTEXT => readContextRef()
-      case NODE_STREAMLET => readStreamletRef()
-      case NODE_INLET => readInletRef()
-      case NODE_OUTLET => readOutletRef()
-      case NODE_SAGA => readSagaRef()
-      case NODE_USER => readUserRef()
-      case NODE_EPIC => readEpicRef()
-      case NODE_GROUP => readGroupRef()
-      case NODE_INPUT => readInputRef()
-      case NODE_OUTPUT => readOutputRef()
-      case NODE_DOMAIN => readDomainRef()
+      case NODE_PROJECTOR  => readProjectorRef()
+      case NODE_CONTEXT    => readContextRef()
+      case NODE_STREAMLET  => readStreamletRef()
+      case NODE_INLET      => readInletRef()
+      case NODE_OUTLET     => readOutletRef()
+      case NODE_SAGA       => readSagaRef()
+      case NODE_USER       => readUserRef()
+      case NODE_EPIC       => readEpicRef()
+      case NODE_GROUP      => readGroupRef()
+      case NODE_INPUT      => readInputRef()
+      case NODE_OUTPUT     => readOutputRef()
+      case NODE_DOMAIN     => readDomainRef()
       // Message References (dedicated tags)
       case NODE_COMMAND_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readCommandRefNode()
       case NODE_EVENT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readEventRefNode()
       case NODE_QUERY_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readQueryRefNode()
       case NODE_RESULT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readResultRefNode()
       case NODE_RECORD_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readRecordRefNode()
       // Entity References (dedicated tags - Phase 9)
       case NODE_AUTHOR_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readAuthorRefNode()
       case NODE_TYPE_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readTypeRefNode()
       case NODE_FIELD_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readFieldRefNode()
       case NODE_CONSTANT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readConstantRefNode()
       case NODE_ADAPTOR_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readAdaptorRefNode()
       case NODE_FUNCTION_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readFunctionRefNode()
       case NODE_HANDLER_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readHandlerRefNode()
       case NODE_STATE_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readStateRefNode()
       case NODE_ENTITY_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readEntityRefNode()
       case NODE_REPOSITORY_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readRepositoryRefNode()
       case NODE_PROJECTOR_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readProjectorRefNode()
       case NODE_CONTEXT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readContextRefNode()
       case NODE_STREAMLET_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readStreamletRefNode()
       case NODE_INLET_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readInletRefNode()
       case NODE_OUTLET_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readOutletRefNode()
       case NODE_SAGA_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readSagaRefNode()
       case NODE_USER_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readUserRefNode()
       case NODE_EPIC_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readEpicRefNode()
       case NODE_GROUP_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readGroupRefNode()
       case NODE_INPUT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readInputRefNode()
       case NODE_OUTPUT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readOutputRefNode()
       case NODE_DOMAIN_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readDomainRefNode()
       case _ =>
         reader.readU8() // consume the unknown tag
@@ -2093,19 +2138,19 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val refTag = reader.peekU8()
     refTag match {
       case NODE_COMMAND_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readCommandRefNode()
       case NODE_EVENT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readEventRefNode()
       case NODE_QUERY_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readQueryRefNode()
       case NODE_RESULT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readResultRefNode()
       case NODE_RECORD_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readRecordRefNode()
       case _ =>
         addError(s"Unknown message ref tag: $refTag")
@@ -2118,30 +2163,30 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val refTag = reader.peekU8()
     refTag match {
       // Legacy definition tags used as refs
-      case NODE_ADAPTOR => readAdaptorRef()
-      case NODE_ENTITY => readEntityRef()
+      case NODE_ADAPTOR    => readAdaptorRef()
+      case NODE_ENTITY     => readEntityRef()
       case NODE_REPOSITORY => readRepositoryRef()
-      case NODE_PROJECTOR => readProjectorRef()
-      case NODE_CONTEXT => readContextRef()
-      case NODE_STREAMLET => readStreamletRef()
+      case NODE_PROJECTOR  => readProjectorRef()
+      case NODE_CONTEXT    => readContextRef()
+      case NODE_STREAMLET  => readStreamletRef()
       // New dedicated REF tags (Phase 9)
       case NODE_ADAPTOR_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readAdaptorRefNode()
       case NODE_ENTITY_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readEntityRefNode()
       case NODE_REPOSITORY_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readRepositoryRefNode()
       case NODE_PROJECTOR_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readProjectorRefNode()
       case NODE_CONTEXT_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readContextRefNode()
       case NODE_STREAMLET_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readStreamletRefNode()
       case _ =>
         // Fallback - use lastLocation for best-effort location on error
@@ -2153,14 +2198,14 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
     val refTag = reader.peekU8()
     refTag match {
       // Legacy definition tags used as refs
-      case NODE_INLET => readInletRef()
+      case NODE_INLET  => readInletRef()
       case NODE_OUTLET => readOutletRef()
       // New dedicated REF tags (Phase 9)
       case NODE_INLET_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readInletRefNode()
       case NODE_OUTLET_REF =>
-        reader.readU8()  // consume tag
+        reader.readU8() // consume tag
         readOutletRefNode()
       case _ =>
         // Fallback - use lastLocation for best-effort location on error
@@ -2216,10 +2261,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   /** Read PathIdentifier without tag - position is always known within references
     *
-    * Phase 8 optimization: Uses path table interning for repeated paths.
-    * Encoding:
-    * - If count > 0: inline path (read count string indices)
-    * - If count == 0: next varint is path table index
+    * Phase 8 optimization: Uses path table interning for repeated paths. Encoding:
+    *   - If count > 0: inline path (read count string indices)
+    *   - If count == 0: next varint is path table index
     */
   private def readPathIdentifierInline(): PathIdentifier = {
     val loc = readLocation()
@@ -2254,7 +2298,8 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           s"Invalid string table index",
           expectedValue = Some(s"index < ${stringTable.size}"),
           actualValue = Some(s"index = $index (read at byte $posBeforeRead)")
-        ))
+        )
+      )
     end if
     stringTable.lookup(index)
   }
@@ -2281,9 +2326,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   /** Read type expressions as contents
     *
-    * Used for Alternation which contains AliasedTypeExpression items.
-    * These are written with TYPE_REF tags which readTypeExpression() handles,
-    * but readNode() does not handle type expression tags.
+    * Used for Alternation which contains AliasedTypeExpression items. These are written with
+    * TYPE_REF tags which readTypeExpression() handles, but readNode() does not handle type
+    * expression tags.
     */
   private def readTypeExpressionContents(): Contents[AliasedTypeExpression] = {
     val count = reader.readVarInt()
@@ -2298,7 +2343,9 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
           buffer += ate
         case other =>
           // If we get something else, wrap it in an error and continue
-          addError(s"Expected AliasedTypeExpression in Alternation, got ${other.getClass.getSimpleName}")
+          addError(
+            s"Expected AliasedTypeExpression in Alternation, got ${other.getClass.getSimpleName}"
+          )
           buffer += AliasedTypeExpression(other.loc, "", PathIdentifier.empty)
       }
       i += 1
@@ -2335,8 +2382,7 @@ class BASTReader(bytes: Array[Byte])(using pc: PlatformContext) {
 
   private def readMetadataDeferred(): Contents[MetaData] = {
     // Phase 7 optimization: Only read metadata if flag was set
-    if !currentNodeHasMetadata then
-      return Contents.empty[MetaData]()
+    if !currentNodeHasMetadata then return Contents.empty[MetaData]()
     end if
 
     val countPos = reader.position

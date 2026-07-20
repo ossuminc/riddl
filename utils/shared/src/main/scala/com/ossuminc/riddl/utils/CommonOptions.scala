@@ -9,8 +9,8 @@ package com.ossuminc.riddl.utils
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js.annotation.JSExportTopLevel
 
-/** The common options available to any pass. Common options occur before the command name on the <code>riddlc</code>
-  * command line
+/** The common options available to any pass. Common options occur before the command name on the
+  * <code>riddlc</code> command line
   *
   * @param showTimes
   *   Controls whether pass timing is printed out
@@ -21,7 +21,8 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * @param dryRun
   *   Controls whether everything should be done except the requested action (useful with verbose)
   * @param quiet
-  *   Controls whether riddlc should not print anything out but just do the requested action (opposite of dryRun)
+  *   Controls whether riddlc should not print anything out but just do the requested action
+  *   (opposite of dryRun)
   * @param showWarnings
   *   Controls whether any warnings, of any kind, are printed out
   * @param showMissingWarnings
@@ -37,31 +38,36 @@ import scala.scalajs.js.annotation.JSExportTopLevel
   * @param showInfoMessages
   *   Controls whether any informative messages are printed out
   * @param debug
-  *   Controls whether debug output should be printed out (this goes into the iterative data that verbose doesn't print)
+  *   Controls whether debug output should be printed out (this goes into the iterative data that
+  *   verbose doesn't print)
   * @param sortMessagesByLocation
-  *   When set to true, the messages put out will be sorted by their location in the model (file, line, column)
+  *   When set to true, the messages put out will be sorted by their location in the model (file,
+  *   line, column)
   * @param groupMessagesByKind
-  *   When set to true, the messages put out will be grouped by their kind and sorted with the most severe first.
+  *   When set to true, the messages put out will be grouped by their kind and sorted with the most
+  *   severe first.
   * @param noANSIMessages
   *   When set to true, ANSI coloring is not used in the output
   * @param maxParallelParsing
-  *   Provides the maximum number of threads to use when parsing in parallel. The default is the number of CPU cores on
-  *   the machine the program is running on.
+  *   Provides the maximum number of threads to use when parsing in parallel. The default is the
+  *   number of CPU cores on the machine the program is running on.
   * @param maxIncludeWait
-  *   Provides the maximum amount of time that the parser should wait for a parallel include to finish processing. The
-  *   default is 5 seconds.
+  *   Provides the maximum amount of time that the parser should wait for a parallel include to
+  *   finish processing. The default is 5 seconds.
   * @param warningsAreFatal
-  *   When set to true, any warnings are handled as if they were errors and terminate riddlc with a non-zero status
+  *   When set to true, any warnings are handled as if they were errors and terminate riddlc with a
+  *   non-zero status
   * @param autoGenerateBAST
-  *   When set to true, automatically generate .bast files next to .riddl files after successful parsing. The .bast
-  *   files serve as a cache (like Python's .pyc files) - if the .bast is newer than the .riddl, it will be loaded
-  *   instead of parsing the .riddl file.
+  *   When set to true, automatically generate .bast files next to .riddl files after successful
+  *   parsing. The .bast files serve as a cache (like Python's .pyc files) - if the .bast is newer
+  *   than the .riddl, it will be loaded instead of parsing the .riddl file.
   * @param provideTips
-  *   When set to true, the remediation `suggestion` carried by each [[com.ossuminc.riddl.language.Messages.Message]]
-  *   is retained and included in the message's formatted output. When false (the default), suggestions are stripped
-  *   so normal output stays concise. This is the generic replacement for the former AIHelperPass: any pass may attach
-  *   a suggestion to a message and it surfaces only when this option is enabled (e.g. `riddlc --provide-tips ...` or
-  *   `riddlc advise ...`).
+  *   When set to true, the remediation `suggestion` carried by each
+  *   [[com.ossuminc.riddl.language.Messages.Message]] is retained and included in the message's
+  *   formatted output. When false (the default), suggestions are stripped so normal output stays
+  *   concise. This is the generic replacement for the former AIHelperPass: any pass may attach a
+  *   suggestion to a message and it surfaces only when this option is enabled (e.g. `riddlc
+  *   --provide-tips ...` or `riddlc advise ...`).
   */
 @JSExportTopLevel("CommonOptions")
 case class CommonOptions(

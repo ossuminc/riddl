@@ -12,8 +12,8 @@ import com.ossuminc.riddl.utils.{OutputFile, PlatformContext, Timer}
 import java.nio.file.Path
 import scala.collection.mutable
 
-/** Base class for the state of a [[TranslatingState]] so it can do its work. This class just takes care of managing the
-  * output files.
+/** Base class for the state of a [[TranslatingState]] so it can do its work. This class just takes
+  * care of managing the output files.
   *
   * @tparam OF
   *   The type of the OutputFile that should be used to do the translation.

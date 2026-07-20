@@ -58,10 +58,8 @@ case class AdaptorBridge(
 case class DependencyOutput(
   root: PassRoot = Root.empty,
   messages: Messages.Messages = Messages.empty,
-  contextDeps: Map[Context, scala.collection.immutable.Set[Context]] =
-    Map.empty,
-  entityDeps: Map[Entity, scala.collection.immutable.Set[Definition]] =
-    Map.empty,
+  contextDeps: Map[Context, scala.collection.immutable.Set[Context]] = Map.empty,
+  entityDeps: Map[Entity, scala.collection.immutable.Set[Definition]] = Map.empty,
   typeDeps: Map[Type, scala.collection.immutable.Set[Type]] = Map.empty,
   adaptorBridges: Seq[AdaptorBridge] = Seq.empty
 ) extends PassOutput
@@ -71,16 +69,14 @@ object DependencyAnalysisPass extends PassInfo[PassOptions] {
   val name: String = "DependencyAnalysis"
   def creator(
     options: PassOptions = PassOptions.empty
-  )(using PlatformContext): PassCreator = {
-    (in: PassInput, out: PassesOutput) =>
-      DependencyAnalysisPass(in, out)
+  )(using PlatformContext): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    DependencyAnalysisPass(in, out)
   }
 }
 
-/** A pass that builds cross-context and cross-entity dependency
-  * graphs showing which definitions reference which others. It
-  * analyzes all resolved references to determine source/target
-  * contexts and builds adjacency sets.
+/** A pass that builds cross-context and cross-entity dependency graphs showing which definitions
+  * reference which others. It analyzes all resolved references to determine source/target contexts
+  * and builds adjacency sets.
   */
 @JSExportTopLevel("DependencyAnalysisPass")
 case class DependencyAnalysisPass(
@@ -125,8 +121,8 @@ case class DependencyAnalysisPass(
     adaptor: Adaptor,
     parents: Parents
   ): Unit = {
-    val maybeSourceContext = parents.collectFirst {
-      case c: Context => c
+    val maybeSourceContext = parents.collectFirst { case c: Context =>
+      c
     }
     val maybeTargetContext =
       refMap.definitionOf[Context](adaptor.referent, adaptor)
@@ -135,7 +131,8 @@ case class DependencyAnalysisPass(
       case (Some(source), Some(target)) =>
         // Add context dependency
         contextDeps.getOrElseUpdate(
-          source, mutable.Set.empty
+          source,
+          mutable.Set.empty
         ) += target
 
         // Collect bridged types
@@ -164,16 +161,16 @@ case class DependencyAnalysisPass(
     parents: Parents
   ): Unit = {
     // Find the context containing this tell statement
-    val sourceContext = parents.collectFirst {
-      case c: Context => c
+    val sourceContext = parents.collectFirst { case c: Context =>
+      c
     }
-    val sourceEntity = parents.collectFirst {
-      case e: Entity => e
+    val sourceEntity = parents.collectFirst { case e: Entity =>
+      e
     }
 
     // Find the OnMessageClause or handler containing this
-    val parentClause = parents.collectFirst {
-      case omc: OnMessageClause => omc
+    val parentClause = parents.collectFirst { case omc: OnMessageClause =>
+      omc
     }
 
     parentClause.foreach { omc =>
@@ -186,26 +183,29 @@ case class DependencyAnalysisPass(
         (sourceContext, targetContext) match
           case (Some(src), Some(tgt)) if src != tgt =>
             contextDeps.getOrElseUpdate(
-              src, mutable.Set.empty
+              src,
+              mutable.Set.empty
             ) += tgt
           case _ => ()
 
         // Record entity dependency
         sourceEntity.foreach { entity =>
           entityDeps.getOrElseUpdate(
-            entity, mutable.Set.empty
+            entity,
+            mutable.Set.empty
           ) += target
         }
 
         // Record type dependency for the message
         val maybeType = refMap.definitionOf[Type](tell.msg, omc)
         maybeType.foreach { msgType =>
-          val sourceType = parents.collectFirst {
-            case t: Type => t
+          val sourceType = parents.collectFirst { case t: Type =>
+            t
           }
           sourceType.foreach { src =>
             typeDepsMap.getOrElseUpdate(
-              src, mutable.Set.empty
+              src,
+              mutable.Set.empty
             ) += msgType
           }
         }
@@ -217,14 +217,14 @@ case class DependencyAnalysisPass(
     send: SendStatement,
     parents: Parents
   ): Unit = {
-    val sourceContext = parents.collectFirst {
-      case c: Context => c
+    val sourceContext = parents.collectFirst { case c: Context =>
+      c
     }
-    val sourceEntity = parents.collectFirst {
-      case e: Entity => e
+    val sourceEntity = parents.collectFirst { case e: Entity =>
+      e
     }
-    val parentClause = parents.collectFirst {
-      case omc: OnMessageClause => omc
+    val parentClause = parents.collectFirst { case omc: OnMessageClause =>
+      omc
     }
 
     parentClause.foreach { omc =>
@@ -236,13 +236,15 @@ case class DependencyAnalysisPass(
         (sourceContext, targetContext) match
           case (Some(src), Some(tgt)) if src != tgt =>
             contextDeps.getOrElseUpdate(
-              src, mutable.Set.empty
+              src,
+              mutable.Set.empty
             ) += tgt
           case _ => ()
 
         sourceEntity.foreach { entity =>
           entityDeps.getOrElseUpdate(
-            entity, mutable.Set.empty
+            entity,
+            mutable.Set.empty
           ) += portlet
         }
       }

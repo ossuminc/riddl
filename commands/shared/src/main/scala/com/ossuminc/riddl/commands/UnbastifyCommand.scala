@@ -32,26 +32,23 @@ object UnbastifyCommand {
     command: String = cmdName
   ) extends CommandOptions {
     override def check: Messages = {
-      if inputFile.isEmpty then
-        Messages.errors("A .bast input file is required.")
+      if inputFile.isEmpty then Messages.errors("A .bast input file is required.")
       else if !inputFile.get.toString.endsWith(".bast") then
         Messages.errors("Input file must have .bast extension.")
-      else
-        Messages.empty
+      else Messages.empty
     }
   }
 }
 
 /** A command to convert BAST (Binary AST) files back to RIDDL source.
   *
-  * This is the inverse of the bastify command. It reads a .bast file,
-  * deserializes the AST, and uses PrettifyPass to regenerate RIDDL source.
-  * Includes are reconstructed as separate files.
+  * This is the inverse of the bastify command. It reads a .bast file, deserializes the AST, and
+  * uses PrettifyPass to regenerate RIDDL source. Includes are reconstructed as separate files.
   *
-  * Usage:
-  *   riddlc unbastify <input.bast> -o <output-dir>
+  * Usage: riddlc unbastify <input.bast> -o <output-dir>
   */
-class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyCommand.Options](UnbastifyCommand.cmdName) {
+class UnbastifyCommand(using pc: PlatformContext)
+    extends Command[UnbastifyCommand.Options](UnbastifyCommand.cmdName) {
   import UnbastifyCommand.Options
 
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
@@ -76,7 +73,8 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
   override def interpretConfig(config: Config): Options = {
     val obj = config.getObject(commandName).toConfig
     val inputFile = Path.of(obj.getString("input-file"))
-    val outputDir = if obj.hasPath("output-dir") then Some(Path.of(obj.getString("output-dir"))) else None
+    val outputDir =
+      if obj.hasPath("output-dir") then Some(Path.of(obj.getString("output-dir"))) else None
     val singleFile = if obj.hasPath("single-file") then obj.getBoolean("single-file") else false
     Options(Some(inputFile), outputDir, singleFile, commandName)
   }
@@ -88,12 +86,13 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
     val inputPath = options.inputFile.get.toAbsolutePath
 
     // Step 1: Read the BAST file
-    val bytes = try {
-      Files.readAllBytes(inputPath)
-    } catch {
-      case ex: Exception =>
-        return Left(Messages.errors(s"Failed to read BAST file: ${ex.getMessage}"))
-    }
+    val bytes =
+      try {
+        Files.readAllBytes(inputPath)
+      } catch {
+        case ex: Exception =>
+          return Left(Messages.errors(s"Failed to read BAST file: ${ex.getMessage}"))
+      }
 
     // Step 2: Deserialize the AST
     pc.log.info(s"Read ${bytes.length} bytes from BAST file, now deserializing...")
@@ -106,7 +105,7 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
           .orElse(options.outputDir)
           .getOrElse(inputPath.getParent match {
             case null => Path.of(".")
-            case p => p
+            case p    => p
           })
 
         // Step 4: Determine the top-level output file name
@@ -140,14 +139,12 @@ class UnbastifyCommand(using pc: PlatformContext) extends Command[UnbastifyComma
           inputDir = inputDir
         )
 
-        val passes: PassCreators = Seq(
-          (input: PassInput, outputs: PassesOutput) =>
-            PrettifyPass(input, outputs, prettifyOptions)
+        val passes: PassCreators = Seq((input: PassInput, outputs: PassesOutput) =>
+          PrettifyPass(input, outputs, prettifyOptions)
         )
         val result = Pass.runThesePasses(passInput, passes)
 
-        if result.messages.hasErrors then
-          return Left(result.messages.justErrors)
+        if result.messages.hasErrors then return Left(result.messages.justErrors)
         end if
 
         // Step 7: Extract the prettify output and write files

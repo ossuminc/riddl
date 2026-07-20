@@ -33,10 +33,9 @@ object Riddl {
   def parse(input: RiddlParserInput)(using io: PlatformContext): Either[Messages, Root] = {
     TopLevelParser.parseInput(input) match {
       case Left(errors) => Left(errors)
-      case Right(root) =>
+      case Right(root)  =>
         // Auto-generate BAST if option is set
-        if io.options.autoGenerateBAST then
-          maybeGenerateBAST(root, input.root)
+        if io.options.autoGenerateBAST then maybeGenerateBAST(root, input.root)
         end if
         Right(root)
     }
@@ -44,12 +43,15 @@ object Riddl {
 
   /** Optionally generate a BAST file for the parsed root.
     *
-    * This is called when `CommonOptions.autoGenerateBAST` is true.
-    * The BAST file is written next to the source file with .bast extension.
+    * This is called when `CommonOptions.autoGenerateBAST` is true. The BAST file is written next to
+    * the source file with .bast extension.
     *
-    * @param root The parsed AST root
-    * @param sourceUrl The URL of the source file
-    * @param io The platform context
+    * @param root
+    *   The parsed AST root
+    * @param sourceUrl
+    *   The URL of the source file
+    * @param io
+    *   The platform context
     */
   private def maybeGenerateBAST(root: Root, sourceUrl: URL)(using io: PlatformContext): Unit = {
     // Only generate for file:// URLs
@@ -66,8 +68,7 @@ object Riddl {
         case Some(output) =>
           // Create parent directories if needed
           val parent = bastPath.getParent
-          if parent != null && !Files.exists(parent) then
-            Files.createDirectories(parent)
+          if parent != null && !Files.exists(parent) then Files.createDirectories(parent)
           end if
 
           Files.write(bastPath, output.bytes)
@@ -151,8 +152,7 @@ object Riddl {
   /** Convert a previously parsed Root to Tokens and corresponding string text */
   def mapTextAndToken[T](
     root: Branch[?]
-  )(f: (IndexedSeqView[Char],Token) => T)
-  (using pc: PlatformContext): Either[Messages, List[T]] =
+  )(f: (IndexedSeqView[Char], Token) => T)(using pc: PlatformContext): Either[Messages, List[T]] =
     val text = toRiddlText(root)
     val rpi = RiddlParserInput(text, "")
     TopLevelParser.mapTextAndToken[T](rpi)(f)

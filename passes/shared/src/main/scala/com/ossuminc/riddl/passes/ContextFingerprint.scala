@@ -6,13 +6,11 @@
 
 package com.ossuminc.riddl.passes
 
-import com.ossuminc.riddl.language.AST.{
-  Context, Definition, Domain, RiddlValue, Root
-}
+import com.ossuminc.riddl.language.AST.{Context, Definition, Domain, RiddlValue, Root}
 import com.ossuminc.riddl.language.{nonEmpty, toSeq}
 
-/** Identifies a Context within the AST by its domain path
-  * and context name, providing a stable key for caching.
+/** Identifies a Context within the AST by its domain path and context name, providing a stable key
+  * for caching.
   */
 case class ContextPath(
   domainPath: Seq[String],
@@ -22,8 +20,7 @@ case class ContextPath(
     (domainPath :+ contextName).mkString(".")
 end ContextPath
 
-/** Fingerprint of a Context's source text, used to detect
-  * changes between validation runs.
+/** Fingerprint of a Context's source text, used to detect changes between validation runs.
   */
 case class ContextFingerprint(
   path: ContextPath,
@@ -32,9 +29,8 @@ case class ContextFingerprint(
 
 object ContextFingerprint:
 
-  /** Compute fingerprints for all Contexts in a Root.
-    * Uses the source text between loc.offset and the end
-    * of the Context definition as the fingerprint input.
+  /** Compute fingerprints for all Contexts in a Root. Uses the source text between loc.offset and
+    * the end of the Context definition as the fingerprint input.
     */
   def computeAll(root: Root): Map[ContextPath, Long] =
     val result =
@@ -58,9 +54,8 @@ object ContextFingerprint:
     result.toMap
   end computeAll
 
-  /** Hash a Context by its source text span. Uses the
-    * FNV-1a hash for fast, cross-platform hashing with
-    * good collision resistance for change detection.
+  /** Hash a Context by its source text span. Uses the FNV-1a hash for fast, cross-platform hashing
+    * with good collision resistance for change detection.
     */
   private def hashContext(context: Context): Long =
     val source = context.loc.source
@@ -80,8 +75,7 @@ object ContextFingerprint:
     fnv1a64(text)
   end hashContext
 
-  /** FNV-1a 64-bit hash — fast, no external deps, works
-    * on all platforms (JVM, JS, Native).
+  /** FNV-1a 64-bit hash — fast, no external deps, works on all platforms (JVM, JS, Native).
     */
   private def fnv1a64(text: String): Long =
     var hash: Long = 0xcbf29ce484222325L // FNV offset basis

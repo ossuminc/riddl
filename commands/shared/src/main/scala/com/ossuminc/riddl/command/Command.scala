@@ -42,8 +42,9 @@ trait Command[OPT <: CommandOptions: ClassTag](val commandName: String)(using io
     result
   }
 
-  /** Provide a typesafe/Config reader for the commands options. This reader should read an object having the same name
-    * as the command. The fields of that object must correspond to the fields of the OPT type.
+  /** Provide a typesafe/Config reader for the commands options. This reader should read an object
+    * having the same name as the command. The fields of that object must correspond to the fields
+    * of the OPT type.
     * @return
     *   A pureconfig.ConfigReader[OPT] that knows how to read OPT
     */
@@ -74,8 +75,8 @@ trait Command[OPT <: CommandOptions: ClassTag](val commandName: String)(using io
     }
   }
 
-  /** Execute the command given the options. Error should be returned as Left(messages) and not directly logged. The log
-    * is for verbose or debug output
+  /** Execute the command given the options. Error should be returned as Left(messages) and not
+    * directly logged. The log is for verbose or debug output
     *
     * @param options
     *   The command specific options

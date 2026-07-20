@@ -17,8 +17,8 @@ import com.ossuminc.riddl.utils.PlatformContext
 import scala.collection.{immutable, mutable}
 import scala.scalajs.js.annotation.*
 
-/** A connection in a data flow diagram representing data flowing through a
-  * connector from one streamlet/outlet to another streamlet/inlet
+/** A connection in a data flow diagram representing data flowing through a connector from one
+  * streamlet/outlet to another streamlet/inlet
   *
   * @param from
   *   The source definition (outlet's parent streamlet or processor)
@@ -38,7 +38,8 @@ case class DataFlowConnection(
 )
 
 /** The information needed to generate a Data Flow Diagram. DFDs are generated for each
-  * [[com.ossuminc.riddl.language.AST.Context]] and consist of the streaming components that are connected.
+  * [[com.ossuminc.riddl.language.AST.Context]] and consist of the streaming components that are
+  * connected.
   *
   * @param context
   *   The context this diagram represents
@@ -57,8 +58,8 @@ case class DataFlowDiagramData(
   connections: Seq[DataFlowConnection] = Seq.empty
 )
 
-/** The information needed to generate a Use Case Diagram. The diagram for a use case is very similar to a Sequence
-  * Diagram showing the interactions between involved components of the model.
+/** The information needed to generate a Use Case Diagram. The diagram for a use case is very
+  * similar to a Sequence Diagram showing the interactions between involved components of the model.
   */
 @JSExportTopLevel("UseCaseDiagramData")
 case class UseCaseDiagramData(
@@ -69,7 +70,8 @@ case class UseCaseDiagramData(
 
 type ContextRelationship = (Context, String)
 
-/** The information needed to generate a Context Diagram showing the relationships between bounded contexts
+/** The information needed to generate a Context Diagram showing the relationships between bounded
+  * contexts
   *
   * @param domain
   *   The domain or subdomain to which the referent map pertains
@@ -85,8 +87,8 @@ case class ContextDiagramData(
   relationships: Seq[ContextRelationship] = Seq.empty
 )
 
-/** The information needed to generate a Domain-level diagram showing the
-  * domain's structure: processors, subdomains, contexts, and epics
+/** The information needed to generate a Domain-level diagram showing the domain's structure:
+  * processors, subdomains, contexts, and epics
   *
   * @param domain
   *   The domain this diagram represents
@@ -130,7 +132,8 @@ case class DiagramsPassOutput(
 ) extends PassOutput
 
 @JSExportTopLevel("DiagramsPass")
-class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContext) extends Pass(input, outputs) {
+class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContext)
+    extends Pass(input, outputs) {
 
   def name: String = DiagramsPass.name
 
@@ -141,7 +144,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
   private val refMap = outputs.refMap
   private val symTab = outputs.symbols
 
-  private val dataFlowDiagrams: mutable.HashMap[Context, DataFlowDiagramData] = mutable.HashMap.empty
+  private val dataFlowDiagrams: mutable.HashMap[Context, DataFlowDiagramData] =
+    mutable.HashMap.empty
   private val useCaseDiagrams: mutable.HashMap[UseCase, UseCaseDiagramData] = mutable.HashMap.empty
   private val contextDiagrams: mutable.HashMap[Context, ContextDiagramData] = mutable.HashMap.empty
   private val domainDiagramsMap: mutable.HashMap[Domain, DomainDiagramData] = mutable.HashMap.empty
@@ -151,7 +155,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
       case c: Context =>
         val aggregates = c.entities.filter(_.hasOption("aggregate"))
         val domain = parents.top.asInstanceOf[Domain]
-        val root = parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
+        val root =
+          parents.find(c => c.isRootContainer && c.isInstanceOf[Root]).get.asInstanceOf[Root]
         val relationships = makeRelationships(c, root)
         contextDiagrams.put(c, ContextDiagramData(domain, aggregates.toSeq, relationships))
         captureDataFlow(c)
@@ -166,7 +171,10 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
       case _ => ()
   }
 
-  private def makeRelationships(context: Context, root: Root): immutable.Seq[ContextRelationship] = {
+  private def makeRelationships(
+    context: Context,
+    root: Root
+  ): immutable.Seq[ContextRelationship] = {
     for {
       processor <- findProcessors(context)
       relationships <- makeProcessorRelationships(context, processor)
@@ -177,12 +185,12 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
 
   private def findProcessors(processor: Processor[?]): immutable.Seq[Processor[?]] = {
     val containedProcessors = processor match {
-      case a: Adaptor     => a.contents.processors
-      case c: Context     => c.contents.processors
-      case e: Entity      => e.contents.processors
-      case p: Projector   => p.contents.processors
-      case r: Repository  => r.contents.processors
-      case s: Streamlet   => s.contents.processors
+      case a: Adaptor    => a.contents.processors
+      case c: Context    => c.contents.processors
+      case e: Entity     => e.contents.processors
+      case p: Projector  => p.contents.processors
+      case r: Repository => r.contents.processors
+      case s: Streamlet  => s.contents.processors
     }
     val includedProcessors = processor.includes.toContents.processors
     val nestedProcessors = (containedProcessors ++ includedProcessors).flatMap(findProcessors)
@@ -200,11 +208,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     val rel4 = makeInletRelationships(context, processor.streamlets.flatMap(_.inlets), processor)
     val rel5 = makeOutletRelationships(context, processor.streamlets.flatMap(_.outlets), processor)
     val rel6 = processor match {
-      case a: Adaptor     => inferRelationship(context, a)
-      case _: Context     => Seq.empty[ContextRelationship]
-      case e: Entity      => makeHandlerRelationships(context, e.handlers)
-      case _: Projector   => Seq.empty[ContextRelationship]
-      case _: Repository  => Seq.empty[ContextRelationship]
+      case a: Adaptor    => inferRelationship(context, a)
+      case _: Context    => Seq.empty[ContextRelationship]
+      case e: Entity     => makeHandlerRelationships(context, e.handlers)
+      case _: Projector  => Seq.empty[ContextRelationship]
+      case _: Repository => Seq.empty[ContextRelationship]
       case s: Streamlet =>
         makeInletRelationships(context, s.inlets, s)
         makeOutletRelationships(context, s.outlets, s)
@@ -213,7 +221,10 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     result.distinct
   }
 
-  private def makeFunctionRelationships(context: Context, functions: Seq[Function]): Seq[ContextRelationship] = {
+  private def makeFunctionRelationships(
+    context: Context,
+    functions: Seq[Function]
+  ): Seq[ContextRelationship] = {
     for {
       f <- functions
       inputFields = f.input.map(_.fields).getOrElse(Seq.empty)
@@ -239,8 +250,11 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     }
   }
 
-  private def makeInletRelationships(context: Context, inlets: Seq[Inlet], parent: Branch[?]): Seq[ContextRelationship]
-  = {
+  private def makeInletRelationships(
+    context: Context,
+    inlets: Seq[Inlet],
+    parent: Branch[?]
+  ): Seq[ContextRelationship] = {
     for {
       i <- inlets
       t = i.type_
@@ -251,7 +265,10 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     }
   }
 
-  private def makeHandlerRelationships(context: Context, handlers: Seq[Handler]): Seq[ContextRelationship] = {
+  private def makeHandlerRelationships(
+    context: Context,
+    handlers: Seq[Handler]
+  ): Seq[ContextRelationship] = {
     for {
       h <- handlers
       oc: OnClause <- h.clauses if oc.isInstanceOf[OnMessageClause]
@@ -279,13 +296,13 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
 
   private def getStatementReferences(statement: Statements): Seq[Reference[Definition]] = {
     statement match
-      case SendStatement(_, msg, portlet)   => Seq(msg, portlet)
-      case TellStatement(_, msg, processor) => Seq(msg, processor)
-      case ReplyStatement(_, msg)           => Seq(msg)
-      case SetStatement(_, field, _)        => Seq(field)
+      case SendStatement(_, msg, portlet)          => Seq(msg, portlet)
+      case TellStatement(_, msg, processor)        => Seq(msg, processor)
+      case ReplyStatement(_, msg)                  => Seq(msg)
+      case SetStatement(_, field, _)               => Seq(field)
       case MorphStatement(_, entity, state, value) => Seq(entity, state, value)
-      case BecomeStatement(_, entity, handler) => Seq(entity, handler)
-      case _                                => Seq.empty
+      case BecomeStatement(_, entity, handler)     => Seq(entity, handler)
+      case _                                       => Seq.empty
   }
 
   private def getTypeReferences(typEx: TypeExpression): Seq[Reference[Definition]] = {
@@ -331,7 +348,10 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
     }
   }
 
-  private def inferRelationship(context: Context, definition: Definition): Option[ContextRelationship] = {
+  private def inferRelationship(
+    context: Context,
+    definition: Definition
+  ): Option[ContextRelationship] = {
     this.symTab.contextOf(definition) match {
       case Some(foreignContext) =>
         if foreignContext != context then
@@ -339,7 +359,8 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
             case a: Adaptor =>
               refMap.definitionOf[Context](a.referent, a) match {
                 case Some(foreignContext) =>
-                  if foreignContext != context then Some(foreignContext -> s"Adaptation ${a.direction.format}")
+                  if foreignContext != context then
+                    Some(foreignContext -> s"Adaptation ${a.direction.format}")
                   else None
                 case None => None
               }
@@ -368,25 +389,26 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
 
   private def captureUseCase(uc: UseCase): UseCaseDiagramData = {
     val actors: Map[String, Definition] = {
-      uc.contents.toSeq.map {
-        case tri: TwoReferenceInteraction =>
-          val fromDef = refMap.definitionOf[Definition](tri.from.pathId, uc)
-          val toDef = refMap.definitionOf[Definition](tri.to.pathId, uc)
-          Seq(
-            tri.from.pathId.format -> fromDef,
-            tri.to.pathId.format -> toDef
-          )
-        case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description | _: BriefDescription |
-            _: AuthorRef =>
-          Seq.empty
-      }
-      .filterNot(_.isEmpty) // ignore None values generated when ref not found
-      .flatten // get rid of seq of seq
-      .filterNot(_._1.isEmpty) // drop empty things
-      .map(x => x._1 -> x._2.getOrElse(Root.empty)) // get rid of no definition case
-      .distinctBy(_._1) // eliminate duplicates
-      .sortWith(actorsFirst) // always list actors first (left side of diagram)
-      .toMap
+      uc.contents.toSeq
+        .map {
+          case tri: TwoReferenceInteraction =>
+            val fromDef = refMap.definitionOf[Definition](tri.from.pathId, uc)
+            val toDef = refMap.definitionOf[Definition](tri.to.pathId, uc)
+            Seq(
+              tri.from.pathId.format -> fromDef,
+              tri.to.pathId.format -> toDef
+            )
+          case _: InteractionContainer | _: Interaction | _: Comment | _: Term | _: Description |
+              _: BriefDescription | _: AuthorRef =>
+            Seq.empty
+        }
+        .filterNot(_.isEmpty) // ignore None values generated when ref not found
+        .flatten // get rid of seq of seq
+        .filterNot(_._1.isEmpty) // drop empty things
+        .map(x => x._1 -> x._2.getOrElse(Root.empty)) // get rid of no definition case
+        .distinctBy(_._1) // eliminate duplicates
+        .sortWith(actorsFirst) // always list actors first (left side of diagram)
+        .toMap
     }
     val title = uc.identify + " in " + symTab.parentOf(uc).map(_.identify).getOrElse(" an Epic")
     UseCaseDiagramData(title, actors, uc.contents.filter[Interaction])
@@ -401,17 +423,28 @@ class DiagramsPass(input: PassInput, outputs: PassesOutput)(using PlatformContex
         val maybeInlet = refMap.definitionOf[Inlet](connector.to, context)
         (maybeOutlet, maybeInlet) match
           case (Some(outlet), Some(inlet)) =>
-            val fromDef: Definition = symTab.parentOf(outlet).collect {
-              case s: Streamlet => s: Definition
-            }.getOrElse(outlet)
-            val toDef: Definition = symTab.parentOf(inlet).collect {
-              case s: Streamlet => s: Definition
-            }.getOrElse(inlet)
-            val outletParent = symTab.parentOf(outlet).collect {
-              case b: Branch[?] => b
-            }.getOrElse(context)
-            val msgTypeName = refMap.definitionOf[Type](outlet.type_, outletParent)
-              .map(_.identify).getOrElse(outlet.type_.pathId.format)
+            val fromDef: Definition = symTab
+              .parentOf(outlet)
+              .collect { case s: Streamlet =>
+                s: Definition
+              }
+              .getOrElse(outlet)
+            val toDef: Definition = symTab
+              .parentOf(inlet)
+              .collect { case s: Streamlet =>
+                s: Definition
+              }
+              .getOrElse(inlet)
+            val outletParent = symTab
+              .parentOf(outlet)
+              .collect { case b: Branch[?] =>
+                b
+              }
+              .getOrElse(context)
+            val msgTypeName = refMap
+              .definitionOf[Type](outlet.type_, outletParent)
+              .map(_.identify)
+              .getOrElse(outlet.type_.pathId.format)
             Some(DataFlowConnection(fromDef, toDef, connector, msgTypeName))
           case _ => None
       else None

@@ -11,7 +11,7 @@ import com.ossuminc.riddl.language.{Contents, *}
 import fastparse.*
 import fastparse.MultiLineWhitespace.*
 
-private[parsing] trait GroupParser extends CommonParser :
+private[parsing] trait GroupParser extends CommonParser:
 
   def containedGroup[u: P]: P[ContainedGroup] = {
     P(
@@ -71,7 +71,10 @@ private[parsing] trait GroupParser extends CommonParser :
         case x: RiddlValue =>
           // this should never happen but the derived base class, RiddlValue, demands it
           val xval = x.format
-          error(loc, s"Expected a type reference, constant reference, or literal string, not: $xval")
+          error(
+            loc,
+            s"Expected a type reference, constant reference, or literal string, not: $xval"
+          )
           Output(
             loc,
             nounAlias,
@@ -115,7 +118,15 @@ private[parsing] trait GroupParser extends CommonParser :
     P(
       Index ~ inputAliases ~/ identifier ~/ acquisitionAliases ~/ typeRef ~ inputDefinitions ~ withMetaData ~ Index
     ).map { case (start, inputAlias, id, acquisitionAlias, putIn, contents, descriptives, end) =>
-      Input(at(start, end), inputAlias, id, acquisitionAlias, putIn, contents.toContents, descriptives.toContents)
+      Input(
+        at(start, end),
+        inputAlias,
+        id,
+        acquisitionAlias,
+        putIn,
+        contents.toContents,
+        descriptives.toContents
+      )
     }
   }
 end GroupParser

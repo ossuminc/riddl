@@ -38,11 +38,15 @@ class PrettifyCommand(using pc: PlatformContext)
 
   import PrettifyCommand.Options
 
-  def overrideOptions(options: PrettifyCommand.Options, newOutputDir: Path): PrettifyCommand.Options = {
+  def overrideOptions(
+    options: PrettifyCommand.Options,
+    newOutputDir: Path
+  ): PrettifyCommand.Options = {
     options.copy(outputDir = Some(newOutputDir))
   }
 
-  override def getOptionsParser: (OParser[Unit, PrettifyCommand.Options], PrettifyCommand.Options) = {
+  override def getOptionsParser
+    : (OParser[Unit, PrettifyCommand.Options], PrettifyCommand.Options) = {
     val builder = OParser.builder[PrettifyCommand.Options]
     import builder.*
     cmd(PrettifyCommand.cmdName)
@@ -67,47 +71,45 @@ class PrettifyCommand(using pc: PlatformContext)
   override def interpretConfig(config: Config): Options =
     val rootConfig = config.getObject(commandName).toConfig
     val inputFile =
-      if rootConfig.hasPath("input-file") then
-        Some(Path.of(rootConfig.getString("input-file")))
-      else
-        None
+      if rootConfig.hasPath("input-file") then Some(Path.of(rootConfig.getString("input-file")))
+      else None
     val outputDir =
-      if rootConfig.hasPath("output-dir") then
-        Some(Path.of(rootConfig.getString("output-dir")))
-      else
-        None
+      if rootConfig.hasPath("output-dir") then Some(Path.of(rootConfig.getString("output-dir")))
+      else None
     val projectName =
-      if rootConfig.hasPath("project-name") then
-        Some(rootConfig.getString("project-name"))
-      else
-       Some("No Project Name Specified")
+      if rootConfig.hasPath("project-name") then Some(rootConfig.getString("project-name"))
+      else Some("No Project Name Specified")
     val singleFile =
-      if rootConfig.hasPath("single-file") then
-        rootConfig.getBoolean("single-file")
-      else
-        false
+      if rootConfig.hasPath("single-file") then rootConfig.getBoolean("single-file")
+      else false
     PrettifyCommand.Options(inputFile, outputDir, projectName, singleFile)
   end interpretConfig
-
 
   override def getPasses(
     options: PrettifyCommand.Options
   ): PassCreators = {
     val topFile = options.inputFile
-      .map(_.getFileName.toString).getOrElse("")
+      .map(_.getFileName.toString)
+      .getOrElse("")
     val outDir = options.outputDir
-      .map(_.toString).getOrElse("")
+      .map(_.toString)
+      .getOrElse("")
     val inDir = options.inputFile
       .flatMap(p => Option(p.getParent))
-      .map(_.toString).getOrElse("")
+      .map(_.toString)
+      .getOrElse("")
     standardPasses ++ Seq(
       { (input: PassInput, outputs: PassesOutput) =>
-        PrettifyPass(input, outputs, PrettifyPass.Options(
-          flatten = options.singleFile,
-          topFile = topFile,
-          outputDir = outDir,
-          inputDir = inDir
-        ))
+        PrettifyPass(
+          input,
+          outputs,
+          PrettifyPass.Options(
+            flatten = options.singleFile,
+            topFile = topFile,
+            outputDir = outDir,
+            inputDir = inDir
+          )
+        )
       }
     )
   }

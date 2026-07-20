@@ -79,15 +79,14 @@ object EntityLifecyclePass extends PassInfo[PassOptions] {
   val name: String = "EntityLifecycle"
   def creator(
     options: PassOptions = PassOptions.empty
-  )(using PlatformContext): PassCreator = {
-    (in: PassInput, out: PassesOutput) =>
-      EntityLifecyclePass(in, out)
+  )(using PlatformContext): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    EntityLifecyclePass(in, out)
   }
 }
 
-/** A pass that extracts explicit state machines from entities that
-  * have multiple states and morph/become statements. This provides
-  * pre-computed lifecycle data for simulation and code generation.
+/** A pass that extracts explicit state machines from entities that have multiple states and
+  * morph/become statements. This provides pre-computed lifecycle data for simulation and code
+  * generation.
   */
 @JSExportTopLevel("EntityLifecyclePass")
 case class EntityLifecyclePass(
@@ -146,9 +145,12 @@ case class EntityLifecyclePass(
     // Detect initial state from on init + set state
     val initialState = detectInitialState(entity, states)
 
-    val statesWithOutgoing = transitions.map(_.fromState).collect {
-      case Some(s) => s
-    }.toSet
+    val statesWithOutgoing = transitions
+      .map(_.fromState)
+      .collect { case Some(s) =>
+        s
+      }
+      .toSet
     val terminalStates = states.filterNot(statesWithOutgoing.contains)
 
     EntityLifecycle(
@@ -160,8 +162,8 @@ case class EntityLifecyclePass(
     )
   }
 
-  /** Resolve a StateRef to a State, trying refMap first then
-    * falling back to matching by name within the entity.
+  /** Resolve a StateRef to a State, trying refMap first then falling back to matching by name
+    * within the entity.
     */
   private def resolveState(
     stateRef: StateRef,
@@ -174,8 +176,8 @@ case class EntityLifecyclePass(
     }
   }
 
-  /** Detect initial state by searching for `set state X` inside
-    * `on init` clauses. Falls back to first declared state.
+  /** Detect initial state by searching for `set state X` inside `on init` clauses. Falls back to
+    * first declared state.
     */
   private def detectInitialState(
     entity: Entity,
@@ -185,8 +187,9 @@ case class EntityLifecyclePass(
     val allHandlers = entity.handlers ++ states.flatMap(_.handlers)
 
     // Search for OnInitializationClause containing SetStatement with StateRef
-    val initStateOpt = allHandlers.iterator.flatMap(_.clauses).collectFirst {
-      case oic: OnInitializationClause =>
+    val initStateOpt = allHandlers.iterator
+      .flatMap(_.clauses)
+      .collectFirst { case oic: OnInitializationClause =>
         val finder = Finder(oic.contents)
         val sets = finder.recursiveFindByType[SetStatement]
         sets.collectFirst {
@@ -194,7 +197,8 @@ case class EntityLifecyclePass(
             val stateRef = ss.field.asInstanceOf[StateRef]
             resolveState(stateRef, entity)
         }.flatten
-    }.flatten
+      }
+      .flatten
 
     initStateOpt.orElse(states.headOption)
   }
@@ -233,20 +237,22 @@ case class EntityLifecyclePass(
         maybeHandler.foreach { targetHandler =>
           // See if we can associate this handler with a state
           // by name convention or containment
-          entity.states.find { state =>
-            state.id.value == targetHandler.id.value ||
-            state.id.value + "Handler" ==
-              targetHandler.id.value
-          }.foreach { targetState =>
-            transitions.addOne(
-              StateTransition(
-                fromState = fromState,
-                toState = targetState,
-                trigger = oc,
-                mechanism = become
+          entity.states
+            .find { state =>
+              state.id.value == targetHandler.id.value ||
+              state.id.value + "Handler" ==
+                targetHandler.id.value
+            }
+            .foreach { targetState =>
+              transitions.addOne(
+                StateTransition(
+                  fromState = fromState,
+                  toState = targetState,
+                  trigger = oc,
+                  mechanism = become
+                )
               )
-            )
-          }
+            }
         }
       }
     }

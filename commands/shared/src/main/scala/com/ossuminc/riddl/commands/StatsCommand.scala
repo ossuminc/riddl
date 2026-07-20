@@ -75,7 +75,8 @@ class StatsCommand(using pc: PlatformContext) extends PassCommand[StatsCommand.O
 
   private def logStats(stats: StatsOutput): Unit = {
     val totalStats: KindStats = stats.categories.getOrElse("All", KindStats())
-    val s: String = "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
+    val s: String =
+      "       Category Count Empty % Of All % Documented Completeness Complexity Containment"
     pc.log.info(s)
     for {
       key <- stats.categories.keys.toSeq.sorted

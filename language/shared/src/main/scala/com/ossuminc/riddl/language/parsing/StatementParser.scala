@@ -14,14 +14,16 @@ import fastparse.MultiLineWhitespace.*
 
 /** StatementParser
   *
-  * Parse the declarative statements per riddlsim specification:
-  * send, tell, morph, become, when, match, error, let, set, prompt, code
+  * Parse the declarative statements per riddlsim specification: send, tell, morph, become, when,
+  * match, error, let, set, prompt, code
   */
 private[parsing] trait StatementParser {
   this: ReferenceParser & CommonParser =>
 
   private def promptStatement[u: P]: P[PromptStatement] = {
-    P(Index ~ (Keywords.prompt | Keywords.do_) ~ literalString ~/ Index)./ map { case (start, str, end) => PromptStatement(at(start, end), str) }
+    P(Index ~ (Keywords.prompt | Keywords.do_) ~ literalString ~/ Index)./ map {
+      case (start, str, end) => PromptStatement(at(start, end), str)
+    }
   }
 
   private def errorStatement[u: P]: P[ErrorStatement] = {
@@ -37,7 +39,8 @@ private[parsing] trait StatementParser {
       }) ~/ Index
     )./.map {
       case (start, str: LiteralString, end) => RequireStatement(at(start, end), str)
-      case (start, pid: PathIdentifier, end) => RequireStatement(at(start, end), InvariantRef(at(start, end), pid))
+      case (start, pid: PathIdentifier, end) =>
+        RequireStatement(at(start, end), InvariantRef(at(start, end), pid))
     }
   }
 
@@ -49,17 +52,19 @@ private[parsing] trait StatementParser {
 
   private def theSetStatement[u: P]: P[SetStatement] = {
     P(
-      Index ~ Keywords.set ~/ (fieldRef|stateRef) ~ to ~/ literalString ~/ Index
+      Index ~ Keywords.set ~/ (fieldRef | stateRef) ~ to ~/ literalString ~/ Index
     )./.map {
       case (start, ref: FieldRef, str, end) => SetStatement(at(start, end), ref, str)
-      case (start, ref: StateRef, str, end) => SetStatement(at(start,end), ref, str)
+      case (start, ref: StateRef, str, end) => SetStatement(at(start, end), ref, str)
     }
   }
 
   private def sendStatement[u: P]: P[SendStatement] = {
     P(
       Index ~ Keywords.send ~/ messageRef ~/ to ~ (outletRef | inletRef) ~/ Index
-    ).map { case (start, messageRef, portlet, end) => SendStatement(at(start, end), messageRef, portlet) }
+    ).map { case (start, messageRef, portlet, end) =>
+      SendStatement(at(start, end), messageRef, portlet)
+    }
   }
 
   private def tellStatement[u: P]: P[TellStatement] = {
@@ -83,7 +88,9 @@ private[parsing] trait StatementParser {
   private def morphStatement[u: P]: P[MorphStatement] = {
     P(
       Index ~ Keywords.morph ~/ entityRef ~/ to ~ stateRef ~/ `with` ~ messageRef ~/ Index
-    )./.map { case (start, eRef, sRef, mRef, end) => MorphStatement(at(start, end), eRef, sRef, mRef) }
+    )./.map { case (start, eRef, sRef, mRef, end) =>
+      MorphStatement(at(start, end), eRef, sRef, mRef)
+    }
   }
 
   private def becomeStatement[u: P]: P[BecomeStatement] = {
@@ -95,8 +102,8 @@ private[parsing] trait StatementParser {
   private def whenCondition[u: P]: P[(LiteralString | Identifier, Boolean)] = {
     P(
       literalString.map(ls => (ls, false)) |
-      (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
-      identifier.map(id => (id, false))
+        (Punctuation.exclamation ~ identifier).map(id => (id, true)) |
+        identifier.map(id => (id, false))
     )
   }
 
@@ -156,28 +163,29 @@ private[parsing] trait StatementParser {
     P(
       // GROUP 1: Control flow statements
       whenStatement(set) | matchStatement(set) |
-      // GROUP 2: Common message operations
-      sendStatement | tellStatement |
-      // GROUP 3: Variable operations
-      theSetStatement | letStatement |
-      // GROUP 4: General statements
-      promptStatement | codeStatement |
-      // GROUP 5: Error handling and preconditions
-      errorStatement | requireStatement | comment
+        // GROUP 2: Common message operations
+        sendStatement | tellStatement |
+        // GROUP 3: Variable operations
+        theSetStatement | letStatement |
+        // GROUP 4: General statements
+        promptStatement | codeStatement |
+        // GROUP 5: Error handling and preconditions
+        errorStatement | requireStatement | comment
     ).asInstanceOf[P[Statements]]
   }
 
   def statement[u: P](set: StatementsSet): P[Statements] = {
     set match {
-      case StatementsSet.AdaptorStatements     => anyDefStatements(set)
-      case StatementsSet.ContextStatements     => anyDefStatements(set) | replyStatement
-      case StatementsSet.EntityStatements      => anyDefStatements(set) |
-        morphStatement | becomeStatement | replyStatement
-      case StatementsSet.FunctionStatements    => anyDefStatements(set)
-      case StatementsSet.ProjectorStatements   => anyDefStatements(set)
-      case StatementsSet.RepositoryStatements  => anyDefStatements(set) | replyStatement
-      case StatementsSet.SagaStatements        => anyDefStatements(set)
-      case StatementsSet.StreamStatements      => anyDefStatements(set)
+      case StatementsSet.AdaptorStatements => anyDefStatements(set)
+      case StatementsSet.ContextStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.EntityStatements =>
+        anyDefStatements(set) |
+          morphStatement | becomeStatement | replyStatement
+      case StatementsSet.FunctionStatements   => anyDefStatements(set)
+      case StatementsSet.ProjectorStatements  => anyDefStatements(set)
+      case StatementsSet.RepositoryStatements => anyDefStatements(set) | replyStatement
+      case StatementsSet.SagaStatements       => anyDefStatements(set)
+      case StatementsSet.StreamStatements     => anyDefStatements(set)
     }
   }
 

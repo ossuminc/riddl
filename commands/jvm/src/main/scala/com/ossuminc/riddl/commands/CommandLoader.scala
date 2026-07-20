@@ -13,33 +13,34 @@ import scopt.OParser
 
 object CommandLoader:
   /** Convert a string and some [[com.ossuminc.riddl.utils.CommonOptions]] into either a
-   * [[com.ossuminc.riddl.command.Command]] or some [[com.ossuminc.riddl.language.Messages.Messages]] Note that the
-   * [[com.ossuminc.riddl.command.CommandOptions]] will be passed to the command when you run it.
-   *
-   * @param name
-   *   The name of the command to be converted
-   * @return
-   */
+    * [[com.ossuminc.riddl.command.Command]] or some
+    * [[com.ossuminc.riddl.language.Messages.Messages]] Note that the
+    * [[com.ossuminc.riddl.command.CommandOptions]] will be passed to the command when you run it.
+    *
+    * @param name
+    *   The name of the command to be converted
+    * @return
+    */
   def loadCommandNamed(name: String)(using io: PlatformContext): Either[Messages, Command[?]] =
     if io.options.verbose then io.log.info(s"Loading command: $name") else ()
     name match
-      case "about"   => Right(AboutCommand())
+      case "about"     => Right(AboutCommand())
       case "advise"    => Right(AdviseCommand())
       case "bastify"   => Right(BastifyCommand())
       case "dump"      => Right(DumpCommand())
       case "unbastify" => Right(UnbastifyCommand())
-      case "flatten"  => Right(FlattenCommand())
-      case "from"     => Right(FromCommand())
-      case "help"     => Right(HelpCommand())
-      case "info"     => Right(InfoCommand())
-      case "onchange" => Right(OnChangeCommand())
-      case "parse"    => Right(ParseCommand())
-      case "prettify" => Right(PrettifyCommand())
-      case "repeat"   => Right(RepeatCommand())
-      case "stats"    => Right(StatsCommand())
-      case "validate" => Right(ValidateCommand())
-      case "version"  => Right(VersionCommand())
-      case _          => Left(errors(s"No command found for '$name'"))
+      case "flatten"   => Right(FlattenCommand())
+      case "from"      => Right(FromCommand())
+      case "help"      => Right(HelpCommand())
+      case "info"      => Right(InfoCommand())
+      case "onchange"  => Right(OnChangeCommand())
+      case "parse"     => Right(ParseCommand())
+      case "prettify"  => Right(PrettifyCommand())
+      case "repeat"    => Right(RepeatCommand())
+      case "stats"     => Right(StatsCommand())
+      case "validate"  => Right(ValidateCommand())
+      case "version"   => Right(VersionCommand())
+      case _           => Left(errors(s"No command found for '$name'"))
     end match
   end loadCommandNamed
 
@@ -66,4 +67,3 @@ object CommandLoader:
   }
 
 end CommandLoader
-

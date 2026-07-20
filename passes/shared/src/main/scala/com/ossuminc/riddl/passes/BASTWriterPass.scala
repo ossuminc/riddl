@@ -14,11 +14,16 @@ import com.ossuminc.riddl.utils.PlatformContext
 
 /** Output from BASTWriter pass
   *
-  * @param root The root of the AST (unchanged)
-  * @param messages Any messages generated during serialization
-  * @param bytes The serialized BAST bytes
-  * @param nodeCount Total number of nodes serialized
-  * @param stringTableSize Number of strings in string table
+  * @param root
+  *   The root of the AST (unchanged)
+  * @param messages
+  *   Any messages generated during serialization
+  * @param bytes
+  *   The serialized BAST bytes
+  * @param nodeCount
+  *   Total number of nodes serialized
+  * @param stringTableSize
+  *   Number of strings in string table
   */
 case class BASTOutput(
   root: PassRoot = Root.empty,
@@ -38,15 +43,16 @@ object BASTWriterPass extends PassInfo[PassOptions] {
 
 /** BAST serialization pass
   *
-  * Converts a RIDDL AST to Binary AST (BAST) format for efficient storage
-  * and fast loading. Uses string interning and variable-length encoding to
-  * minimize file size.
+  * Converts a RIDDL AST to Binary AST (BAST) format for efficient storage and fast loading. Uses
+  * string interning and variable-length encoding to minimize file size.
   *
-  * This pass uses the Pass framework for correct AST traversal and delegates
-  * the actual serialization to BASTWriter (in the language module).
+  * This pass uses the Pass framework for correct AST traversal and delegates the actual
+  * serialization to BASTWriter (in the language module).
   *
-  * @param input The AST to serialize
-  * @param outputs Output from previous passes
+  * @param input
+  *   The AST to serialize
+  * @param outputs
+  *   Output from previous passes
   */
 case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: PlatformContext)
     extends Pass(input, outputs, withIncludes = true) {
@@ -74,22 +80,22 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
         parents.pop()
 
       // Nodes with multiple Contents fields
-      case ss: SagaStep => traverseSagaStep(ss, parents)
-      case ws: WhenStatement => traverseWhenStatement(ws, parents)
+      case ss: SagaStep       => traverseSagaStep(ss, parents)
+      case ws: WhenStatement  => traverseWhenStatement(ws, parents)
       case ms: MatchStatement => traverseMatchStatement(ms, parents)
 
       // OnClauses (grouped for clarity)
       case oc: OnInitializationClause => traverseOnClause(oc, oc.contents, parents)
-      case oc: OnTerminationClause => traverseOnClause(oc, oc.contents, parents)
-      case oc: OnMessageClause => traverseOnClause(oc, oc.contents, parents)
-      case oc: OnOtherClause => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnTerminationClause    => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnMessageClause        => traverseOnClause(oc, oc.contents, parents)
+      case oc: OnOtherClause          => traverseOnClause(oc, oc.contents, parents)
 
       // Other Branch types with metadata
-      case h: Handler => traverseOnClause(h, h.contents, parents)
+      case h: Handler  => traverseOnClause(h, h.contents, parents)
       case uc: UseCase => traverseOnClause(uc, uc.contents, parents)
-      case g: Group => traverseOnClause(g, g.contents, parents)
-      case o: Output => traverseOnClause(o, o.contents, parents)
-      case i: Input => traverseOnClause(i, i.contents, parents)
+      case g: Group    => traverseOnClause(g, g.contents, parents)
+      case o: Output   => traverseOnClause(o, o.contents, parents)
+      case i: Input    => traverseOnClause(i, i.contents, parents)
 
       // Type: contents computed from typEx, no traversal needed
       case t: Type =>
@@ -160,8 +166,16 @@ case class BASTWriterPass(input: PassInput, outputs: PassesOutput)(using pc: Pla
   }
 
   override def result(root: PassRoot): BASTOutput = {
-    println(s"[info] BAST serialization complete: ${bastWriter.getNodeCount} nodes, ${finalizedBytes.length} bytes")
-    BASTOutput(root, Messages.empty, finalizedBytes, bastWriter.getNodeCount, bastWriter.stringTable.size)
+    println(
+      s"[info] BAST serialization complete: ${bastWriter.getNodeCount} nodes, ${finalizedBytes.length} bytes"
+    )
+    BASTOutput(
+      root,
+      Messages.empty,
+      finalizedBytes,
+      bastWriter.getNodeCount,
+      bastWriter.stringTable.size
+    )
   }
 
   override def close(): Unit = ()

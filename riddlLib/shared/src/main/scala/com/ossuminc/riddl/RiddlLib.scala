@@ -7,59 +7,86 @@
 package com.ossuminc.riddl
 
 import com.ossuminc.riddl.language.AST.{
-  Adaptor, AdaptorDirection, Aggregation, Author,
-  Context, ContextRef, Domain, Entity, Epic, Identifier,
-  Inlet, Module, Nebula, Outlet, Projector, Repository,
-  Root, RootContents, Saga, Streamlet, StreamletShape,
-  Token, UserStory
+  Adaptor,
+  AdaptorDirection,
+  Aggregation,
+  Author,
+  Context,
+  ContextRef,
+  Domain,
+  Entity,
+  Epic,
+  Identifier,
+  Inlet,
+  Module,
+  Nebula,
+  Outlet,
+  Projector,
+  Repository,
+  Root,
+  RootContents,
+  Saga,
+  Streamlet,
+  StreamletShape,
+  Token,
+  UserStory
 }
 import com.ossuminc.riddl.language.{At, Contents, Messages, toSeq}
 import com.ossuminc.riddl.language.Messages.Messages
 import com.ossuminc.riddl.language.bast.BASTReader
-import com.ossuminc.riddl.language.parsing.{
-  RiddlParserInput, TopLevelParser
-}
+import com.ossuminc.riddl.language.parsing.{RiddlParserInput, TopLevelParser}
 import com.ossuminc.riddl.passes.{
-  BASTOutput, BASTWriterPass, IncrementalValidator,
-  Pass, PassCreators, PassInput, PassOptions, PassesOutput,
+  BASTOutput,
+  BASTWriterPass,
+  IncrementalValidator,
+  Pass,
+  PassCreators,
+  PassInput,
+  PassOptions,
+  PassesOutput,
   PassesResult,
-  OutlinePass, OutlineOutput, OutlineEntry,
-  TreePass, TreeOutput, TreeNode
+  OutlinePass,
+  OutlineOutput,
+  OutlineEntry,
+  TreePass,
+  TreeOutput,
+  TreeNode
 }
 import com.ossuminc.riddl.passes.analysis.{
-  EntityLifecycle, EntityLifecycleOutput, EntityLifecyclePass,
-  MessageFlowOutput, MessageFlowPass,
-  RootComparison, RootSimilarity
+  EntityLifecycle,
+  EntityLifecycleOutput,
+  EntityLifecyclePass,
+  MessageFlowOutput,
+  MessageFlowPass,
+  RootComparison,
+  RootSimilarity
 }
 import com.ossuminc.riddl.passes.prettify.{PrettifyOutput, PrettifyPass}
 import com.ossuminc.riddl.passes.transforms.FlattenPass
-import com.ossuminc.riddl.passes.validate.{
-  HandlerCompleteness, ValidationOutput, ValidationPass
-}
-import com.ossuminc.riddl.utils.{
-  CommonOptions, PlatformContext, RiddlBuildInfo, URL
-}
+import com.ossuminc.riddl.passes.validate.{HandlerCompleteness, ValidationOutput, ValidationPass}
+import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext, RiddlBuildInfo, URL}
 import com.ossuminc.riddl.json.{JsonAstBuilder, JsonifierOutput, JsonifierPass, JsonModel}
 
 import scala.util.control.NonFatal
 
-/** Cross-platform core API for RIDDL parsing, validation,
-  * and AST manipulation. Usable on JVM, JS, and Native.
+/** Cross-platform core API for RIDDL parsing, validation, and AST manipulation. Usable on JVM, JS,
+  * and Native.
   *
-  * All methods require a `PlatformContext` via Scala 3 `using`
-  * clause. Each platform provides a default given instance in
-  * `com.ossuminc.riddl.utils.pc`.
+  * All methods require a `PlatformContext` via Scala 3 `using` clause. Each platform provides a
+  * default given instance in `com.ossuminc.riddl.utils.pc`.
   */
 trait RiddlLib:
 
   /** Parse a RIDDL source string and return the AST Root.
     *
-    * @param source The RIDDL source code to parse
-    * @param origin Origin identifier (e.g., filename) for error
-    *               messages
-    * @param verbose Enable verbose failure messages
-    * @return Success(Root) on success, Failure(Messages) on
-    *         failure
+    * @param source
+    *   The RIDDL source code to parse
+    * @param origin
+    *   Origin identifier (e.g., filename) for error messages
+    * @param verbose
+    *   Enable verbose failure messages
+    * @return
+    *   Success(Root) on success, Failure(Messages) on failure
     */
   def parseString(
     source: String,
@@ -69,18 +96,19 @@ trait RiddlLib:
 
   /** Build a RIDDL AST Root from a JSON document.
     *
-    * The JSON describes a RIDDL model using the schema in
-    * [[com.ossuminc.riddl.json.JsonModel]]; it is mapped onto the AST
-    * correct-by-construction, applying RIDDL's required type-expression
-    * defaults. The returned `Root` is then validated and/or prettified by the
-    * existing machinery — there is no JSON-specific validation path.
-    * References are emitted as path identifiers and resolved later by the
-    * standard passes.
+    * The JSON describes a RIDDL model using the schema in [[com.ossuminc.riddl.json.JsonModel]]; it
+    * is mapped onto the AST correct-by-construction, applying RIDDL's required type-expression
+    * defaults. The returned `Root` is then validated and/or prettified by the existing machinery —
+    * there is no JSON-specific validation path. References are emitted as path identifiers and
+    * resolved later by the standard passes.
     *
-    * @param json   The JSON model document
-    * @param origin Origin identifier (e.g., filename) for error messages
-    * @return Success(Root) on success, Failure(Messages) on malformed JSON or
-    *         a builder-level error (e.g., missing `Id.entity`)
+    * @param json
+    *   The JSON model document
+    * @param origin
+    *   Origin identifier (e.g., filename) for error messages
+    * @return
+    *   Success(Root) on success, Failure(Messages) on malformed JSON or a builder-level error
+    *   (e.g., missing `Id.entity`)
     */
   def parseJson(
     json: String,
@@ -89,8 +117,7 @@ trait RiddlLib:
 
   /** Parse arbitrary RIDDL definitions (nebula).
     *
-    * A nebula is a collection of RIDDL definitions that may
-    * not form a complete, valid Root.
+    * A nebula is a collection of RIDDL definitions that may not form a complete, valid Root.
     */
   def parseNebula(
     source: String,
@@ -98,8 +125,7 @@ trait RiddlLib:
     verbose: Boolean = false
   )(using PlatformContext): RiddlResult[Nebula]
 
-  /** Parse RIDDL source into a list of tokens for syntax
-    * highlighting.
+  /** Parse RIDDL source into a list of tokens for syntax highlighting.
     */
   def parseToTokens(
     source: String,
@@ -107,16 +133,14 @@ trait RiddlLib:
     verbose: Boolean = false
   )(using PlatformContext): RiddlResult[List[Token]]
 
-  /** Flatten Include and BASTImport wrapper nodes from the
-    * AST. Modifies the Root in-place and returns the same
-    * object.
+  /** Flatten Include and BASTImport wrapper nodes from the AST. Modifies the Root in-place and
+    * returns the same object.
     */
   def flattenAST(
     root: Root
   )(using PlatformContext): Root
 
-  /** Parse and validate RIDDL source, returning categorized
-    * messages.
+  /** Parse and validate RIDDL source, returning categorized messages.
     */
   def validateString(
     source: String,
@@ -125,10 +149,9 @@ trait RiddlLib:
     noANSIMessages: Boolean = true
   )(using PlatformContext): RiddlLib.ValidateResult
 
-  /** Parse and validate RIDDL source using quick mode.
-    * Skips expensive streaming analysis and handler
-    * classification for faster interactive feedback.
-    * Messages are a strict subset of full validation.
+  /** Parse and validate RIDDL source using quick mode. Skips expensive streaming analysis and
+    * handler classification for faster interactive feedback. Messages are a strict subset of full
+    * validation.
     */
   def validateStringQuick(
     source: String,
@@ -139,8 +162,8 @@ trait RiddlLib:
 
   /** Validate an already-built AST Root with the standard passes.
     *
-    * Convenience for callers (e.g. [[parseJson]]) that hold a `Root` and want
-    * categorized validation messages without round-tripping through text.
+    * Convenience for callers (e.g. [[parseJson]]) that hold a `Root` and want categorized
+    * validation messages without round-tripping through text.
     */
   def validateRoot(
     root: Root
@@ -158,28 +181,25 @@ trait RiddlLib:
     origin: String = "string"
   )(using PlatformContext): RiddlResult[Seq[TreeNode]]
 
-  /** Compute a deterministic, model-free structural similarity between two
-    * `Root` ASTs.
+  /** Compute a deterministic, model-free structural similarity between two `Root` ASTs.
     *
-    * Matches on definition `kind` + fuzzy (location- and case-independent)
-    * name, never on `Definition.equals`/`hashCode`. Returns a
-    * [[com.ossuminc.riddl.passes.analysis.RootSimilarity]] carrying per-kind
-    * counts, matched/unmatched name lists, structural metrics (depth,
-    * breadth), and an overall weighted score in `[0.0, 1.0]` (`1.0` for
-    * identical inputs). See `RootComparison` for the weighting.
+    * Matches on definition `kind` + fuzzy (location- and case-independent) name, never on
+    * `Definition.equals`/`hashCode`. Returns a
+    * [[com.ossuminc.riddl.passes.analysis.RootSimilarity]] carrying per-kind counts,
+    * matched/unmatched name lists, structural metrics (depth, breadth), and an overall weighted
+    * score in `[0.0, 1.0]` (`1.0` for identical inputs). See `RootComparison` for the weighting.
     */
   def compareRoots(a: Root, b: Root)(using PlatformContext): RootSimilarity
 
-  /** Render [[compareRoots]] between two `Root` ASTs as a Markdown report:
-    * a per-kind count table (a vs b), matched/unmatched name lists,
-    * structural metrics, and the overall score.
+  /** Render [[compareRoots]] between two `Root` ASTs as a Markdown report: a per-kind count table
+    * (a vs b), matched/unmatched name lists, structural metrics, and the overall score.
     */
   def similarityMarkdown(a: Root, b: Root)(using PlatformContext): String
 
   /** Get handler completeness classifications from validation.
     *
-    * Runs the standard pass pipeline and returns the handler
-    * completeness data from ValidationOutput.
+    * Runs the standard pass pipeline and returns the handler completeness data from
+    * ValidationOutput.
     */
   def getHandlerCompleteness(
     source: String,
@@ -188,8 +208,8 @@ trait RiddlLib:
 
   /** Get the message flow graph for a RIDDL model.
     *
-    * Runs standard passes plus the MessageFlowPass to build
-    * a directed graph of message producers and consumers.
+    * Runs standard passes plus the MessageFlowPass to build a directed graph of message producers
+    * and consumers.
     */
   def getMessageFlow(
     source: String,
@@ -198,22 +218,23 @@ trait RiddlLib:
 
   /** Get entity lifecycle (state machine) data.
     *
-    * Runs standard passes plus the EntityLifecyclePass to
-    * extract state machines from entities with multiple states.
+    * Runs standard passes plus the EntityLifecyclePass to extract state machines from entities with
+    * multiple states.
     */
   def getEntityLifecycles(
     source: String,
     origin: String = "string"
-  )(using PlatformContext
-  ): RiddlResult[Map[Entity, EntityLifecycle]]
+  )(using PlatformContext): RiddlResult[Map[Entity, EntityLifecycle]]
 
   /** Convert a parsed AST Root to BAST binary bytes.
     *
-    * Runs BASTWriterPass to serialize the AST into the compact
-    * binary format for efficient storage or IPC transport.
+    * Runs BASTWriterPass to serialize the AST into the compact binary format for efficient storage
+    * or IPC transport.
     *
-    * @param root The parsed AST Root
-    * @return Success(bytes) or Failure with diagnostics
+    * @param root
+    *   The parsed AST Root
+    * @return
+    *   Success(bytes) or Failure with diagnostics
     */
   def ast2bast(
     root: Root
@@ -221,13 +242,13 @@ trait RiddlLib:
 
   /** Deserialize BAST binary bytes to a flattened AST Root.
     *
-    * Reads BAST binary data, converts the resulting Nebula to
-    * a Root (filtering to valid RootContents), then flattens
-    * Include/BASTImport wrapper nodes.
+    * Reads BAST binary data, converts the resulting Nebula to a Root (filtering to valid
+    * RootContents), then flattens Include/BASTImport wrapper nodes.
     *
-    * @param bytes The BAST binary data
-    * @return Success(Root) on success, Failure(Messages) on
-    *         failure
+    * @param bytes
+    *   The BAST binary data
+    * @return
+    *   Success(Root) on success, Failure(Messages) on failure
     */
   def bast2FlatAST(
     bytes: Array[Byte]
@@ -235,44 +256,45 @@ trait RiddlLib:
 
   /** Convert a parsed AST Root to RIDDL source text.
     *
-    * Runs PrettifyPass with flatten=true to regenerate RIDDL
-    * source code from the AST as a single self-contained string
-    * with all definitions inline (no include directives).
+    * Runs PrettifyPass with flatten=true to regenerate RIDDL source code from the AST as a single
+    * self-contained string with all definitions inline (no include directives).
     *
-    * @param root The parsed AST Root
-    * @return RIDDL source code as a string
+    * @param root
+    *   The parsed AST Root
+    * @return
+    *   RIDDL source code as a string
     */
   def root2RiddlSource(
     root: Root
   )(using PlatformContext): String
 
-  /** Serialize an AST Root to the JSON wire schema (the inverse of
-    * [[parseJson]]).
+  /** Serialize an AST Root to the JSON wire schema (the inverse of [[parseJson]]).
     *
-    * Produces JSON that [[parseJson]] consumes; for any model in the supported
-    * subset, `parseJson(root2Json(root))` re-validates identically. Lossless
-    * for the documented subset and best-effort (non-crashing) beyond it.
+    * Produces JSON that [[parseJson]] consumes; for any model in the supported subset,
+    * `parseJson(root2Json(root))` re-validates identically. Lossless for the documented subset and
+    * best-effort (non-crashing) beyond it.
     *
-    * @param root   The AST Root to serialize
-    * @param pretty When true (default), pretty-print with indentation
-    * @return JSON string in the `JsonModel` wire schema
+    * @param root
+    *   The AST Root to serialize
+    * @param pretty
+    *   When true (default), pretty-print with indentation
+    * @return
+    *   JSON string in the `JsonModel` wire schema
     */
   def root2Json(
     root: Root,
     pretty: Boolean = true
   )(using PlatformContext): String
 
-  /** Create an IncrementalValidator for efficient repeated
-    * validation of the same model with small edits.
-    * The validator caches results at the Context level.
+  /** Create an IncrementalValidator for efficient repeated validation of the same model with small
+    * edits. The validator caches results at the Context level.
     */
-  def createIncrementalValidator()(
-    using PlatformContext
+  def createIncrementalValidator()(using
+    PlatformContext
   ): IncrementalValidator
 
-  /** Validate using an IncrementalValidator, parsing the
-    * source first. Reuses cached results for unchanged
-    * Contexts.
+  /** Validate using an IncrementalValidator, parsing the source first. Reuses cached results for
+    * unchanged Contexts.
     */
   def validateIncremental(
     validator: IncrementalValidator,
@@ -283,11 +305,14 @@ trait RiddlLib:
 
   /** Parse content as if inside a Domain body.
     *
-    * @param source The RIDDL source containing domain-level
-    *               definitions (contexts, types, epics, etc.)
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
-    * @return Success(Domain) or Failure(Messages)
+    * @param source
+    *   The RIDDL source containing domain-level definitions (contexts, types, epics, etc.)
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
+    * @return
+    *   Success(Domain) or Failure(Messages)
     */
   def parseAsDomain(
     source: String,
@@ -297,11 +322,14 @@ trait RiddlLib:
 
   /** Parse content as if inside a Context body.
     *
-    * @param source The RIDDL source containing context-level
-    *               definitions (entities, handlers, types, etc.)
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
-    * @return Success(Context) or Failure(Messages)
+    * @param source
+    *   The RIDDL source containing context-level definitions (entities, handlers, types, etc.)
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
+    * @return
+    *   Success(Context) or Failure(Messages)
     */
   def parseAsContext(
     source: String,
@@ -311,11 +339,14 @@ trait RiddlLib:
 
   /** Parse content as if inside an Entity body.
     *
-    * @param source The RIDDL source containing entity-level
-    *               definitions (states, handlers, types, etc.)
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
-    * @return Success(Entity) or Failure(Messages)
+    * @param source
+    *   The RIDDL source containing entity-level definitions (states, handlers, types, etc.)
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
+    * @return
+    *   Success(Entity) or Failure(Messages)
     */
   def parseAsEntity(
     source: String,
@@ -325,15 +356,19 @@ trait RiddlLib:
 
   /** Parse content as if inside an Epic body.
     *
-    * The caller provides the UserStory from the parent Epic
-    * definition. The source should contain use cases, types,
-    * and other epic body content.
+    * The caller provides the UserStory from the parent Epic definition. The source should contain
+    * use cases, types, and other epic body content.
     *
-    * @param source The RIDDL source containing epic body content
-    * @param userStory The UserStory from the parent Epic
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
-    * @return Success(Epic) or Failure(Messages)
+    * @param source
+    *   The RIDDL source containing epic body content
+    * @param userStory
+    *   The UserStory from the parent Epic
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
+    * @return
+    *   Success(Epic) or Failure(Messages)
     */
   def parseAsEpic(
     source: String,
@@ -344,17 +379,23 @@ trait RiddlLib:
 
   /** Parse content as if inside a Streamlet body.
     *
-    * The caller provides the shape, inlets, and outlets from
-    * the parent Streamlet definition. The source should contain
-    * handlers, types, functions, and other processor content.
+    * The caller provides the shape, inlets, and outlets from the parent Streamlet definition. The
+    * source should contain handlers, types, functions, and other processor content.
     *
-    * @param source The RIDDL source containing streamlet body
-    * @param shape The StreamletShape from the parent Streamlet
-    * @param inlets The Inlet definitions from the parent
-    * @param outlets The Outlet definitions from the parent
-    * @param origin Origin identifier for error messages
-    * @param verbose Enable verbose failure messages
-    * @return Success(Streamlet) or Failure(Messages)
+    * @param source
+    *   The RIDDL source containing streamlet body
+    * @param shape
+    *   The StreamletShape from the parent Streamlet
+    * @param inlets
+    *   The Inlet definitions from the parent
+    * @param outlets
+    *   The Outlet definitions from the parent
+    * @param origin
+    *   Origin identifier for error messages
+    * @param verbose
+    *   Enable verbose failure messages
+    * @return
+    *   Success(Streamlet) or Failure(Messages)
     */
   def parseAsStreamlet(
     source: String,
@@ -374,8 +415,7 @@ trait RiddlLib:
 
   /** Parse content as if inside an Adaptor body.
     *
-    * The caller provides the direction and context reference
-    * from the parent Adaptor definition.
+    * The caller provides the direction and context reference from the parent Adaptor definition.
     */
   def parseAsAdaptor(
     source: String,
@@ -401,8 +441,7 @@ trait RiddlLib:
 
   /** Parse content as if inside a Saga body.
     *
-    * The caller provides the optional input/output
-    * aggregations from the parent Saga definition.
+    * The caller provides the optional input/output aggregations from the parent Saga definition.
     */
   def parseAsSaga(
     source: String,
@@ -415,13 +454,16 @@ trait RiddlLib:
   /** Analyze RIDDL source for AI-friendly tips.
     *
     * Runs the standard validation passes with
-    * [[com.ossuminc.riddl.utils.CommonOptions.provideTips]] enabled and
-    * returns all resulting messages. Each message carries a remediation
-    * `suggestion` describing how to fix the reported condition.
+    * [[com.ossuminc.riddl.utils.CommonOptions.provideTips]] enabled and returns all resulting
+    * messages. Each message carries a remediation `suggestion` describing how to fix the reported
+    * condition.
     *
-    * @param source The RIDDL source code to analyze
-    * @param origin Origin identifier for error messages
-    * @return All validation messages, each with its suggestion populated
+    * @param source
+    *   The RIDDL source code to analyze
+    * @param origin
+    *   Origin identifier for error messages
+    * @return
+    *   All validation messages, each with its suggestion populated
     */
   @deprecated(
     "Use validateString with CommonOptions.provideTips = true (or `riddlc advise`); " +
@@ -435,8 +477,10 @@ trait RiddlLib:
 
   /** Analyze a pre-parsed AST for AI-friendly tips.
     *
-    * @param root A previously parsed Root AST
-    * @return All validation messages, each with its suggestion populated
+    * @param root
+    *   A previously parsed Root AST
+    * @return
+    *   All validation messages, each with its suggestion populated
     */
   @deprecated(
     "Use validateString with CommonOptions.provideTips = true (or `riddlc advise`); " +
@@ -454,9 +498,8 @@ trait RiddlLib:
   def formatInfo: String
 end RiddlLib
 
-/** Default implementations of all RiddlLib methods.
-  * Call via `RiddlLib.parseString(...)` etc. with a
-  * platform-specific `given PlatformContext` in scope.
+/** Default implementations of all RiddlLib methods. Call via `RiddlLib.parseString(...)` etc. with
+  * a platform-specific `given PlatformContext` in scope.
   */
 object RiddlLib extends RiddlLib:
 
@@ -470,14 +513,11 @@ object RiddlLib extends RiddlLib:
     all: Messages
   )
 
-  /** Convert an origin string to a URL for
-    * RiddlParserInput.
+  /** Convert an origin string to a URL for RiddlParserInput.
     */
   def originToURL(origin: String): URL =
-    if origin.startsWith("/") then
-      URL.fromFullPath(origin)
-    else
-      URL(URL.fileScheme, "", "", origin)
+    if origin.startsWith("/") then URL.fromFullPath(origin)
+    else URL(URL.fileScheme, "", "", origin)
     end if
   end originToURL
 
@@ -500,9 +540,13 @@ object RiddlLib extends RiddlLib:
       try Right(JsonModel.readRoot(json))
       catch
         case NonFatal(e) =>
-          Left(List(Messages.error(
-            s"Invalid JSON for RIDDL model ($origin): ${e.getMessage}"
-          )))
+          Left(
+            List(
+              Messages.error(
+                s"Invalid JSON for RIDDL model ($origin): ${e.getMessage}"
+              )
+            )
+          )
     RiddlResult.fromEither(parsed.flatMap(JsonAstBuilder.build))
   end parseJson
 
@@ -567,8 +611,7 @@ object RiddlLib extends RiddlLib:
     verbose: Boolean,
     noANSIMessages: Boolean
   )(using PlatformContext): ValidateResult =
-    doValidate(source, origin, verbose, noANSIMessages,
-      Pass.standardPasses)
+    doValidate(source, origin, verbose, noANSIMessages, Pass.standardPasses)
   end validateString
 
   override def validateStringQuick(
@@ -577,8 +620,7 @@ object RiddlLib extends RiddlLib:
     verbose: Boolean,
     noANSIMessages: Boolean
   )(using PlatformContext): ValidateResult =
-    doValidate(source, origin, verbose, noANSIMessages,
-      Pass.quickValidationPasses)
+    doValidate(source, origin, verbose, noANSIMessages, Pass.quickValidationPasses)
   end validateStringQuick
 
   /** Categorize a pass run's messages into a ValidateResult. */
@@ -611,8 +653,8 @@ object RiddlLib extends RiddlLib:
   private def parseFailure(parseMessages: Messages): ValidateResult =
     noValidateResult.copy(parseErrors = parseMessages)
 
-  /** Categorize the messages from a pass run, mapping any thrown exception to
-    * an empty failure. The argument is by-name so the whole run is guarded.
+  /** Categorize the messages from a pass run, mapping any thrown exception to an empty failure. The
+    * argument is by-name so the whole run is guarded.
     */
   private def resultOf(messages: => Messages): ValidateResult =
     try summarize(messages)
@@ -687,8 +729,7 @@ object RiddlLib extends RiddlLib:
   override def getHandlerCompleteness(
     source: String,
     origin: String
-  )(using PlatformContext
-  ): RiddlResult[Seq[HandlerCompleteness]] =
+  )(using PlatformContext): RiddlResult[Seq[HandlerCompleteness]] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
     RiddlResult.fromEither(parseResult).flatMap { root =>
@@ -709,8 +750,7 @@ object RiddlLib extends RiddlLib:
   override def getMessageFlow(
     source: String,
     origin: String
-  )(using PlatformContext
-  ): RiddlResult[MessageFlowOutput] =
+  )(using PlatformContext): RiddlResult[MessageFlowOutput] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
     RiddlResult.fromEither(parseResult).flatMap { root =>
@@ -734,8 +774,7 @@ object RiddlLib extends RiddlLib:
   override def getEntityLifecycles(
     source: String,
     origin: String
-  )(using PlatformContext
-  ): RiddlResult[Map[Entity, EntityLifecycle]] =
+  )(using PlatformContext): RiddlResult[Map[Entity, EntityLifecycle]] =
     val rpi = RiddlParserInput(source, originToURL(origin))
     val parseResult = TopLevelParser.parseInput(rpi)
     RiddlResult.fromEither(parseResult).flatMap { root =>
@@ -769,28 +808,29 @@ object RiddlLib extends RiddlLib:
       case Some(bastOutput) =>
         RiddlResult.Success(bastOutput.bytes)
       case None =>
-        RiddlResult.Failure(List(
-          Messages.error("BASTWriterPass produced no output")
-        ))
+        RiddlResult.Failure(
+          List(
+            Messages.error("BASTWriterPass produced no output")
+          )
+        )
     end match
   end ast2bast
 
   override def bast2FlatAST(
     bytes: Array[Byte]
   )(using PlatformContext): RiddlResult[Root] =
-    RiddlResult.fromEither(BASTReader.read(bytes)).map {
-      nebula =>
-        val rootItems: Seq[RootContents] =
-          nebula.contents.toSeq.collect {
-            case d: Domain => d
-            case m: Module => m
-            case a: Author => a
-          }
-        val root = Root(
-          nebula.loc,
-          Contents[RootContents](rootItems*)
-        )
-        flattenAST(root)
+    RiddlResult.fromEither(BASTReader.read(bytes)).map { nebula =>
+      val rootItems: Seq[RootContents] =
+        nebula.contents.toSeq.collect {
+          case d: Domain => d
+          case m: Module => m
+          case a: Author => a
+        }
+      val root = Root(
+        nebula.loc,
+        Contents[RootContents](rootItems*)
+      )
+      flattenAST(root)
     }
   end bast2FlatAST
 
@@ -822,8 +862,8 @@ object RiddlLib extends RiddlLib:
     JsonModel.writeRoot(dto, indent = if pretty then 2 else -1)
   end root2Json
 
-  override def createIncrementalValidator()(
-    using PlatformContext
+  override def createIncrementalValidator()(using
+    PlatformContext
   ): IncrementalValidator =
     new IncrementalValidator()
   end createIncrementalValidator
@@ -900,7 +940,11 @@ object RiddlLib extends RiddlLib:
     val input = RiddlParserInput(source, originToURL(origin))
     RiddlResult.fromEither(
       TopLevelParser.parseAsStreamlet(
-        input, shape, inlets, outlets, verbose
+        input,
+        shape,
+        inlets,
+        outlets,
+        verbose
       )
     )
   end parseAsStreamlet
@@ -926,7 +970,10 @@ object RiddlLib extends RiddlLib:
     val input = RiddlParserInput(source, originToURL(origin))
     RiddlResult.fromEither(
       TopLevelParser.parseAsAdaptor(
-        input, direction, contextRef, verbose
+        input,
+        direction,
+        contextRef,
+        verbose
       )
     )
   end parseAsAdaptor
@@ -963,7 +1010,10 @@ object RiddlLib extends RiddlLib:
     val input = RiddlParserInput(source, originToURL(origin))
     RiddlResult.fromEither(
       TopLevelParser.parseAsSaga(
-        input, sagaInput, sagaOutput, verbose
+        input,
+        sagaInput,
+        sagaOutput,
+        verbose
       )
     )
   end parseAsSaga
@@ -991,9 +1041,9 @@ object RiddlLib extends RiddlLib:
     tipsFor(root)
   end analyzeForTips
 
-  /** Run the standard passes with tip generation enabled so each message
-    * retains its remediation suggestion, then return all messages. This
-    * replaces the former AIHelperPass, which produced separate Tip messages.
+  /** Run the standard passes with tip generation enabled so each message retains its remediation
+    * suggestion, then return all messages. This replaces the former AIHelperPass, which produced
+    * separate Tip messages.
     */
   private def tipsFor(root: Root)(using pc: PlatformContext): RiddlResult[Messages] =
     pc.withOptions(pc.options.copy(provideTips = true)) { _ =>

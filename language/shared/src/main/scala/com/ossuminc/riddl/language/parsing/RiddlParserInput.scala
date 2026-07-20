@@ -19,9 +19,9 @@ import scala.util.{Failure, Success, Try}
 import scala.scalajs.js.annotation.*
 import scala.io.AnsiColor.{BOLD, RESET}
 
-/** Primary interface to setting up a RIDDL Parser's input. The idea here is to use one of the apply methods in this
-  * companion object to construct a RiddlParserInput for a specific input source (file, path, Source, data string, URL,
-  * etc.)
+/** Primary interface to setting up a RIDDL Parser's input. The idea here is to use one of the apply
+  * methods in this companion object to construct a RiddlParserInput for a specific input source
+  * (file, path, Source, data string, URL, etc.)
   */
 @JSExportTopLevel("RiddlParserInput")
 object RiddlParserInput {
@@ -64,35 +64,41 @@ object RiddlParserInput {
     * @return
     *   A Future[RiddlParserInput] with the RPI set up to load data from the provided url
     */
-  def fromURL(url: URL, purpose: String = "")(using io: PlatformContext): Future[RiddlParserInput] = {
+  def fromURL(url: URL, purpose: String = "")(using
+    io: PlatformContext
+  ): Future[RiddlParserInput] = {
     implicit val ec: ExecutionContext = io.ec
     io.load(url).map(data => apply(data, url, purpose))
   }
 
-  def fromPath(path: String, purpose: String = "")(using PlatformContext): Future[RiddlParserInput] = {
+  def fromPath(path: String, purpose: String = "")(using
+    PlatformContext
+  ): Future[RiddlParserInput] = {
     assert(path.nonEmpty, "Path provided to RiddlParserInput.fromPath is empty")
     val url: URL = if path.head == '/' then URL.fromFullPath(path) else URL.fromCwdPath(path)
     fromURL(url, purpose)
   }
 }
 
-/** This class provides the loaded data for fastparse to parse. It is the same as fastparse.IndexedParserInput but adds
-  * support for file locations with [[At]]. The class is abstract because
+/** This class provides the loaded data for fastparse to parse. It is the same as
+  * fastparse.IndexedParserInput but adds support for file locations with [[At]]. The class is
+  * abstract because
   */
 abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
 
   /** The data that will be parsed by fastparse */
   def data: String
 
-  /** The URL from which the [[data]] originated. If it didn't originate from a network or file location, then this
-    * should be empty, URL("") so that URL validity checking will be skipped.
+  /** The URL from which the [[data]] originated. If it didn't originate from a network or file
+    * location, then this should be empty, URL("") so that URL validity checking will be skipped.
     */
   def root: URL
 
-  /** The short origin name to use in error messages as the origin of the error. In test cases that do not use a URL,
-    * this should be overridden with the word "empty"
+  /** The short origin name to use in error messages as the origin of the error. In test cases that
+    * do not use a URL, this should be overridden with the word "empty"
     * @return
-    *   Typically the last filename in the URL is sufficient, and that is the default calculated from [[root]].
+    *   Typically the last filename in the URL is sufficient, and that is the default calculated
+    *   from [[root]].
     */
   def origin: String = if root.isEmpty then "empty" else root.path
 
@@ -129,8 +135,7 @@ abstract class RiddlParserInput(using pc: PlatformContext) extends ParserInput {
     // Check cache first - O(1) for recent lookups
     var i = 0
     while i < lineCache.length do
-      if lineCache(i)._1 == index then
-        return lineCache(i)._2
+      if lineCache(i)._1 == index then return lineCache(i)._2
       i += 1
 
     // Cache miss - do binary search

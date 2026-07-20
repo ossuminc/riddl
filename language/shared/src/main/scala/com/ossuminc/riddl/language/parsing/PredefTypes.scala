@@ -39,7 +39,7 @@ object PredefTypes {
     ).!
   )
 
-  def zonedDateTypes[u:P]: P[String] = keywords(
+  def zonedDateTypes[u: P]: P[String] = keywords(
     StringIn(PredefType.ZonedDateTime, PredefType.ZonedDate).!
   )
 
@@ -87,10 +87,12 @@ object PredefTypes {
   def UUID[u: P]: P[Unit] = keyword("UUID")
   def Whole[u: P]: P[Unit] = keyword("Whole")
 
-  def anyPredefType[u:P]: P[Unit] =
-    P(realTypes | integerTypes | timeTypes | otherTypes | Abstract | Boolean | Current | Currency | Date | DateTime |
-      Decimal | Duration | Id | Integer | Location | Length | Luminosity | Mass | Mole | Nothing | Natural | Number |
-      Pattern | Range | Real | String_ | Temperature | Time | TimeStamp | Unknown | URL | UserId | UUID | Whole)
+  def anyPredefType[u: P]: P[Unit] =
+    P(
+      realTypes | integerTypes | timeTypes | otherTypes | Abstract | Boolean | Current | Currency | Date | DateTime |
+        Decimal | Duration | Id | Integer | Location | Length | Luminosity | Mass | Mole | Nothing | Natural | Number |
+        Pattern | Range | Real | String_ | Temperature | Time | TimeStamp | Unknown | URL | UserId | UUID | Whole
+    )
 }
 
 object PredefType {

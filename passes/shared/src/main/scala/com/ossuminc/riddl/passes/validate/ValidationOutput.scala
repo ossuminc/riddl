@@ -15,13 +15,11 @@ import scala.scalajs.js.annotation.*
 
 /** Classification of a handler's behavioral completeness */
 enum BehaviorCategory:
-  /** Handler contains executable statements
-    * (tell, send, morph, set, become, error, code)
+  /** Handler contains executable statements (tell, send, morph, set, become, error, code)
     */
   case Executable
 
-  /** Handler contains only prompt statements
-    * (natural language descriptions of intended behavior)
+  /** Handler contains only prompt statements (natural language descriptions of intended behavior)
     */
   case PromptOnly
 
@@ -38,8 +36,7 @@ end BehaviorCategory
   * @param category
   *   The behavioral completeness classification
   * @param executableCount
-  *   Number of executable statements (tell, send, morph,
-  *   set, become, error, code)
+  *   Number of executable statements (tell, send, morph, set, become, error, code)
   * @param promptCount
   *   Number of prompt statements
   * @param totalClauses
@@ -63,6 +60,5 @@ case class ValidationOutput(
   outlets: Seq[Outlet] = Seq.empty[Outlet],
   connectors: Seq[Connector] = Seq.empty[Connector],
   streamlets: Seq[Streamlet] = Seq.empty[Streamlet],
-  handlerCompleteness: Seq[HandlerCompleteness] =
-    Seq.empty[HandlerCompleteness],
+  handlerCompleteness: Seq[HandlerCompleteness] = Seq.empty[HandlerCompleteness]
 ) extends PassOutput

@@ -18,14 +18,11 @@ import scala.concurrent.duration.DurationInt
 /** Advise Command.
   *
   * Behaves exactly like `validate` but turns on the
-  * [[com.ossuminc.riddl.utils.CommonOptions.provideTips]] option, so the
-  * remediation `suggestion` carried by each message is retained and shown.
-  * This is the convenient way to get AI-friendly fix-it hints for every
-  * diagnostic; it replaces the former AIHelperPass-based behavior.
+  * [[com.ossuminc.riddl.utils.CommonOptions.provideTips]] option, so the remediation `suggestion`
+  * carried by each message is retained and shown. This is the convenient way to get AI-friendly
+  * fix-it hints for every diagnostic; it replaces the former AIHelperPass-based behavior.
   *
-  * Usage:
-  *   riddlc advise <input.riddl>
-  * (equivalent to: riddlc --provide-tips validate <input.riddl>)
+  * Usage: riddlc advise <input.riddl> (equivalent to: riddlc --provide-tips validate <input.riddl>)
   */
 class AdviseCommand(using pc: PlatformContext) extends InputFileCommand("advise") {
   import InputFileCommand.Options

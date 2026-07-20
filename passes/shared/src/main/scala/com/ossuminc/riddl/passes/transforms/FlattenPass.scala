@@ -25,14 +25,12 @@ end FlattenPass
 
 /** A Pass for flattening the structure of a model.
   *
-  * Removes all Include and BASTImport wrapper nodes from the AST,
-  * promoting their children to the parent container. This produces
-  * a flat AST where all definitions are direct children of their
+  * Removes all Include and BASTImport wrapper nodes from the AST, promoting their children to the
+  * parent container. This produces a flat AST where all definitions are direct children of their
   * logical parent.
   *
-  * The pass uses a no-op process method; all work is done in
-  * result() via the Container.flatten() extension method to avoid
-  * modifying contents during traversal.
+  * The pass uses a no-op process method; all work is done in result() via the Container.flatten()
+  * extension method to avoid modifying contents during traversal.
   *
   * @param input
   *   Input from previous passes

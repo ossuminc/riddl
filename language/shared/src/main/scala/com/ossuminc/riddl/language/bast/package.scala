@@ -8,17 +8,17 @@ package com.ossuminc.riddl.language
 
 /** Binary AST (BAST) serialization package
   *
-  * BAST provides efficient binary serialization of RIDDL AST nodes (specifically Nebula)
-  * for fast loading via the `import` keyword. The format is optimized for quick
-  * deserialization at the expense of write speed.
+  * BAST provides efficient binary serialization of RIDDL AST nodes (specifically Nebula) for fast
+  * loading via the `import` keyword. The format is optimized for quick deserialization at the
+  * expense of write speed.
   *
   * Key features:
-  * - Compact binary format with string interning
-  * - Path identifier interning for repeated paths (Phase 8)
-  * - Delta-encoded location data with zigzag encoding
-  * - Variable-length integer encoding (LEB128)
-  * - Cross-platform compatible (JVM, JS, Native)
-  * - Versioned format for schema evolution
+  *   - Compact binary format with string interning
+  *   - Path identifier interning for repeated paths (Phase 8)
+  *   - Delta-encoded location data with zigzag encoding
+  *   - Variable-length integer encoding (LEB128)
+  *   - Cross-platform compatible (JVM, JS, Native)
+  *   - Versioned format for schema evolution
   *
   * File Structure:
   * {{{
@@ -44,19 +44,16 @@ package object bast {
 
   /** BAST format version - single monotonically incrementing integer.
     *
-    * TODO: Finalize BAST schema before releasing to users. Until then,
-    * version stays at 1 even as format evolves during development.
+    * TODO: Finalize BAST schema before releasing to users. Until then, version stays at 1 even as
+    * format evolves during development.
     *
-    * When finalizing, document the schema and increment version for
-    * any future breaking changes.
+    * When finalizing, document the schema and increment version for any future breaking changes.
     */
   val VERSION: Int = 1
 
-  /** Format revision — incremented for any internal serialization
-    * change (node tags, encoding, table layout). Independent of
-    * VERSION which tracks major header layout changes. Old files
-    * with revision 0 (pre-check era) will be rejected with a
-    * clear message.
+  /** Format revision — incremented for any internal serialization change (node tags, encoding,
+    * table layout). Independent of VERSION which tracks major header layout changes. Old files with
+    * revision 0 (pre-check era) will be rejected with a clear message.
     */
   val FORMAT_REVISION: Short = 6
 
@@ -73,9 +70,9 @@ package object bast {
   // Must fit in single byte (0-255)
   // Tag 0 is reserved for FILE_CHANGE_MARKER
 
-  /** Special marker indicating source file change (tag 0, unused as node tag)
-    * Written before a node when its source file differs from the current one.
-    * Format: FILE_CHANGE_MARKER (0) + path string
+  /** Special marker indicating source file change (tag 0, unused as node tag) Written before a node
+    * when its source file differs from the current one. Format: FILE_CHANGE_MARKER (0) + path
+    * string
     */
   val FILE_CHANGE_MARKER: Byte = 0
 
@@ -166,17 +163,17 @@ package object bast {
 
   // Predefined type expressions (69-79) - Phase 7 optimization
   // These are common types with no parameters that save the subtype byte
-  val TYPE_INTEGER: Byte = 69      // Saves: TYPE_NUMBER + subtype(1)
-  val TYPE_NATURAL: Byte = 70      // Saves: TYPE_NUMBER + subtype(3)
-  val TYPE_WHOLE: Byte = 71        // Saves: TYPE_NUMBER + subtype(2)
-  val TYPE_REAL: Byte = 72         // Saves: TYPE_NUMBER + subtype(11)
+  val TYPE_INTEGER: Byte = 69 // Saves: TYPE_NUMBER + subtype(1)
+  val TYPE_NATURAL: Byte = 70 // Saves: TYPE_NUMBER + subtype(3)
+  val TYPE_WHOLE: Byte = 71 // Saves: TYPE_NUMBER + subtype(2)
+  val TYPE_REAL: Byte = 72 // Saves: TYPE_NUMBER + subtype(11)
   val TYPE_STRING_DEFAULT: Byte = 73 // Saves: TYPE_STRING + subtype(0) + 2 option bytes
-  val TYPE_UUID: Byte = 74         // Saves: TYPE_UNIQUE_ID + subtype(1)
-  val TYPE_DATE: Byte = 75         // Saves: TYPE_NUMBER + subtype(30)
-  val TYPE_TIME: Byte = 76         // Saves: TYPE_NUMBER + subtype(31)
-  val TYPE_DATETIME: Byte = 77     // Saves: TYPE_NUMBER + subtype(32)
-  val TYPE_TIMESTAMP: Byte = 78    // Saves: TYPE_NUMBER + subtype(35)
-  val TYPE_DURATION: Byte = 79     // Saves: TYPE_NUMBER + subtype(36)
+  val TYPE_UUID: Byte = 74 // Saves: TYPE_UNIQUE_ID + subtype(1)
+  val TYPE_DATE: Byte = 75 // Saves: TYPE_NUMBER + subtype(30)
+  val TYPE_TIME: Byte = 76 // Saves: TYPE_NUMBER + subtype(31)
+  val TYPE_DATETIME: Byte = 77 // Saves: TYPE_NUMBER + subtype(32)
+  val TYPE_TIMESTAMP: Byte = 78 // Saves: TYPE_NUMBER + subtype(35)
+  val TYPE_DURATION: Byte = 79 // Saves: TYPE_NUMBER + subtype(36)
 
   // Reference node tags (80-105) - Distinct from definition tags
   // Refs have different structure: loc + pathId (no contents or metadata)
@@ -205,21 +202,21 @@ package object bast {
 
   /** Flag bit indicating metadata presence in node tag
     *
-    * Phase 7 optimization: Use high bit (0x80) of tag byte to indicate
-    * whether a node has metadata. If set, metadata count follows;
-    * if not set, no metadata is present (saves 1 byte per empty metadata).
+    * Phase 7 optimization: Use high bit (0x80) of tag byte to indicate whether a node has metadata.
+    * If set, metadata count follows; if not set, no metadata is present (saves 1 byte per empty
+    * metadata).
     *
     * Tag encoding:
-    * - Bits 0-6: Node type (0-127, we only use 0-67)
-    * - Bit 7: Has metadata flag (1 = has metadata, 0 = no metadata)
+    *   - Bits 0-6: Node type (0-127, we only use 0-67)
+    *   - Bit 7: Has metadata flag (1 = has metadata, 0 = no metadata)
     */
   val HAS_METADATA_FLAG: Byte = 0x80.toByte
 
   /** Flags for header */
   object Flags {
-    val COMPRESSED: Short = 0x0001       // Reserved for future compression
-    val WITH_LOCATIONS: Short = 0x0002   // Location data included
-    val WITH_COMMENTS: Short = 0x0004    // Comments included
+    val COMPRESSED: Short = 0x0001 // Reserved for future compression
+    val WITH_LOCATIONS: Short = 0x0002 // Location data included
+    val WITH_COMMENTS: Short = 0x0004 // Comments included
     val WITH_DESCRIPTIONS: Short = 0x0008 // Descriptions included
   }
 }

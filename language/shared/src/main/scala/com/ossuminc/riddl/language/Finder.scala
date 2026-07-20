@@ -82,7 +82,9 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
               case c: Container[?] =>
                 c.contents.foldLeft(list) { case (next, child) => consider(next, child) }
               case WhenStatement(_, _, thenStatements, elseStatements, _) =>
-                val r1 = thenStatements.foldLeft(list) { case (next, child) => consider(next, child) }
+                val r1 = thenStatements.foldLeft(list) { case (next, child) =>
+                  consider(next, child)
+                }
                 elseStatements.foldLeft(r1) { case (next, child) => consider(next, child) }
               case MatchStatement(_, _, cases, default) =>
                 val r1 = cases.foldLeft(list) { case (next, mc) =>
@@ -97,7 +99,9 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
           if lookingFor.isAssignableFrom(child.getClass) then nested :+ child.asInstanceOf[T]
           else nested
         end consider
-        val result = root.contents.foldLeft(Seq.empty[T]) { case (list, child) => consider(list, child) }
+        val result = root.contents.foldLeft(Seq.empty[T]) { case (list, child) =>
+          consider(list, child)
+        }
         recursiveFindByTypeCache(lookingFor) = result
         result
     end match
@@ -131,12 +135,12 @@ case class Finder[CV <: RiddlValue](root: Container[CV]) {
       if lookingFor.isAssignableFrom(definition.getClass) then
         val value: T = definition.asInstanceOf[T]
         if select(value) then
-          state += (value -> parents)  // O(1) amortized instead of O(n)
+          state += (value -> parents) // O(1) amortized instead of O(n)
           state
         else state
       else state
     }
-    buffer.toSeq  // Convert to immutable Seq at the end
+    buffer.toSeq // Convert to immutable Seq at the end
   end findWithParents
 
   /** Find the Parents for a given node in the root
@@ -208,18 +212,16 @@ object Finder:
     Finder[CV](container)
   end apply
 
-  /** Search the contents of each parent in a hierarchy chain
-    * for definitions of type `T`. Walks from nearest parent
-    * to furthest (e.g., Entity → Context → Domain).
+  /** Search the contents of each parent in a hierarchy chain for definitions of type `T`. Walks
+    * from nearest parent to furthest (e.g., Entity → Context → Domain).
     *
     * @tparam T
     *   The type of definition to find
     * @param parents
     *   The parent chain to search, ordered nearest to furthest
     * @return
-    *   Each matching definition paired with the parents of the
-    *   container it was found in, suitable for constructing a
-    *   [[AST.PathIdentifier]]
+    *   Each matching definition paired with the parents of the container it was found in, suitable
+    *   for constructing a [[AST.PathIdentifier]]
     */
   def findInParents[T <: RiddlValue: ClassTag](
     parents: Parents

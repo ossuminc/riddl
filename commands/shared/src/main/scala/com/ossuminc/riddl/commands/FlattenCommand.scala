@@ -31,7 +31,8 @@ object FlattenCommand {
 
 /** A Command for Parsing RIDDL input
   */
-class FlattenCommand(using pc: PlatformContext) extends Command[FlattenCommand.Options](FlattenCommand.cmdName) {
+class FlattenCommand(using pc: PlatformContext)
+    extends Command[FlattenCommand.Options](FlattenCommand.cmdName) {
 
   import FlattenCommand.Options
 
@@ -59,7 +60,8 @@ class FlattenCommand(using pc: PlatformContext) extends Command[FlattenCommand.O
           case Left(errors) => return Left(errors)
           case Right(root) =>
             val input = PassInput(root)
-            val passes: Seq[PassCreator] = Pass.standardPasses.appended(FlattenPass.creator(options))
+            val passes: Seq[PassCreator] =
+              Pass.standardPasses.appended(FlattenPass.creator(options))
             Right(Pass.runThesePasses(input, passes))
         end match
       }

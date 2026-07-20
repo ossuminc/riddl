@@ -89,10 +89,13 @@ object PathUtils {
     }
   }
 
-  private def fromPaths(basis: String, path: String, purpose: String = "")(using PlatformContext): URL =
+  private def fromPaths(basis: String, path: String, purpose: String = "")(using
+    PlatformContext
+  ): URL =
     URL("file", "", basis.dropWhile(_ == '/'), path.dropWhile(_ == '/'))
 
-  /** Set up a parser input for parsing directly from a local file based on the current working directory
+  /** Set up a parser input for parsing directly from a local file based on the current working
+    * directory
     *
     * @param path
     *   The path that will be added to the current working directory

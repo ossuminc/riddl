@@ -16,20 +16,24 @@ import com.ossuminc.riddl.utils.{URL, PlatformContext}
   * from offsets. This allows At locations to work correctly even without source text.
   *
   * Strategy:
-  * - Each line is assumed to be CHARS_PER_LINE characters wide (default 10000)
-  * - Line L starts at offset (L-1) * CHARS_PER_LINE
-  * - For location at line=L, col=C, offset = (L-1)*CHARS_PER_LINE + (C-1)
-  * - At.line and At.col calculations then produce correct values
+  *   - Each line is assumed to be CHARS_PER_LINE characters wide (default 10000)
+  *   - Line L starts at offset (L-1) * CHARS_PER_LINE
+  *   - For location at line=L, col=C, offset = (L-1)*CHARS_PER_LINE + (C-1)
+  *   - At.line and At.col calculations then produce correct values
   *
-  * @param root The URL of the original source file
-  * @param originPath The origin path (for origin string) - should be root.path
-  * @param maxLine Maximum line number expected (used to size lineNumberLookup)
+  * @param root
+  *   The URL of the original source file
+  * @param originPath
+  *   The origin path (for origin string) - should be root.path
+  * @param maxLine
+  *   Maximum line number expected (used to size lineNumberLookup)
   */
 private[bast] class BASTParserInput(
   val root: URL,
   originPath: String,
   maxLine: Int = 10000
-)(using pc: PlatformContext) extends RiddlParserInput {
+)(using pc: PlatformContext)
+    extends RiddlParserInput {
 
   // Override origin to return just the path, not the full URL
   override val origin: String = originPath
@@ -65,10 +69,11 @@ private[bast] class BASTParserInput(
 
   /** Create an At location with explicit line/col values.
     *
-    * Calculates synthetic offset: (line-1) * CHARS_PER_LINE + (col-1)
-    * This offset will produce correct line/col when At.line and At.col are called.
+    * Calculates synthetic offset: (line-1) * CHARS_PER_LINE + (col-1) This offset will produce
+    * correct line/col when At.line and At.col are called.
     *
-    * @deprecated Use createAtFromOffsets instead - line/col are no longer stored in BAST
+    * @deprecated
+    *   Use createAtFromOffsets instead - line/col are no longer stored in BAST
     */
   def createAt(line: Int, col: Int): At = {
     val offset = (line - 1) * CHARS_PER_LINE + (col - 1)
@@ -77,13 +82,16 @@ private[bast] class BASTParserInput(
 
   /** Create an At location directly from offset values.
     *
-    * This is the preferred method for BAST v1.1+ where we store offsets directly
-    * instead of line/col. The At.line and At.col properties will compute
-    * approximate values based on the synthetic line scheme (10000 chars per line).
+    * This is the preferred method for BAST v1.1+ where we store offsets directly instead of
+    * line/col. The At.line and At.col properties will compute approximate values based on the
+    * synthetic line scheme (10000 chars per line).
     *
-    * @param offset The start offset in the source
-    * @param endOffset The end offset in the source
-    * @return An At location with the given offsets
+    * @param offset
+    *   The start offset in the source
+    * @param endOffset
+    *   The end offset in the source
+    * @return
+    *   An At location with the given offsets
     */
   def createAtFromOffsets(offset: Int, endOffset: Int): At = {
     // Ensure endOffset >= offset to satisfy At's requirement
@@ -96,17 +104,22 @@ private[bast] class BASTParserInput(
 object BASTParserInput {
 
   /** Create a BASTParserInput from a URL
-    * @param url The URL of the original source file
-    * @param maxLine Maximum line number expected (default 10000)
+    * @param url
+    *   The URL of the original source file
+    * @param maxLine
+    *   Maximum line number expected (default 10000)
     */
   def apply(url: URL, maxLine: Int = 10000)(using PlatformContext): BASTParserInput = {
     new BASTParserInput(url, url.path, maxLine)
   }
 
   /** Create a BASTParserInput with explicit origin string
-    * @param url The URL of the original source file
-    * @param origin The origin string for error messages
-    * @param maxLine Maximum line number expected
+    * @param url
+    *   The URL of the original source file
+    * @param origin
+    *   The origin string for error messages
+    * @param maxLine
+    *   Maximum line number expected
     */
   def apply(url: URL, origin: String, maxLine: Int)(using PlatformContext): BASTParserInput = {
     new BASTParserInput(url, origin, maxLine)

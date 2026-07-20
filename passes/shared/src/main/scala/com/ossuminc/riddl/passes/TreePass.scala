@@ -16,8 +16,8 @@ object TreePass extends PassInfo[PassOptions] {
   val name: String = "Tree"
   def creator(
     options: PassOptions = PassOptions.empty
-  )(using PlatformContext): PassCreator = {
-    (in: PassInput, out: PassesOutput) => TreePass(in, out)
+  )(using PlatformContext): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    TreePass(in, out)
   }
 }
 

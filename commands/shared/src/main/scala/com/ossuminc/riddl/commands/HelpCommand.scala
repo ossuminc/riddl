@@ -18,8 +18,7 @@ import java.nio.file.Path
 
 /** Unit Tests For FromCommand */
 object HelpCommand {
-  case class Options(command: String = "help")
-      extends CommandOptions {
+  case class Options(command: String = "help") extends CommandOptions {
     def inputFile: Option[Path] = None
   }
 }
@@ -36,7 +35,6 @@ class HelpCommand(using val pc: PlatformContext) extends Command[HelpCommand.Opt
   override def interpretConfig(config: Config): Options =
     Options(commandName)
   end interpretConfig
-  
 
   override def run(
     options: HelpCommand.Options,

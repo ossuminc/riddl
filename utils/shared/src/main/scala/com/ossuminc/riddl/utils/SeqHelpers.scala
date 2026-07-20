@@ -12,7 +12,7 @@ import scala.scalajs.js.annotation._
 @JSExportTopLevel("SeqHelpers")
 object SeqHelpers {
 
-  extension[T] (seq: Seq[T])
+  extension [T](seq: Seq[T])
     def dropUntil(f: T => Boolean): Seq[T] = {
       val index = seq.indexWhere(f)
       if index < 0 then { Seq.empty[T] }
@@ -21,10 +21,10 @@ object SeqHelpers {
 
     def dropBefore(f: T => Boolean): Seq[T] = {
       val index = seq.indexWhere(f)
-      if index < 0 then {Seq.empty[T]}
+      if index < 0 then { Seq.empty[T] }
       else if index == 0 then {
         seq
-      } else {seq.drop(index - 1)}
+      } else { seq.drop(index - 1) }
     }
 
     def allUnique: Boolean = {
@@ -50,8 +50,8 @@ object SeqHelpers {
         }
       }
     }
-  
-  extension[T](stack: mutable.Stack[T])
+
+  extension [T](stack: mutable.Stack[T])
     def popUntil(f: T => Boolean): mutable.Stack[T] = {
       // Pop elements from the top until we find one that matches the predicate
       // or until the stack is empty
@@ -60,5 +60,5 @@ object SeqHelpers {
       }
       stack
     }
-  
+
 }

@@ -31,8 +31,9 @@ trait RootParser { this: ModuleParser & CommonParser & ParsingContext =>
     P(rootContent).rep(1)
 
   def root[u: P]: P[Root] = {
-    P(Start ~ Index ~ rootContents ~ Index ~ End).map { case (start, contents: Seq[RootContents], end) =>
-      Root(at(start, end), contents.toContents)
+    P(Start ~ Index ~ rootContents ~ Index ~ End).map {
+      case (start, contents: Seq[RootContents], end) =>
+        Root(at(start, end), contents.toContents)
     }
   }
 }

@@ -21,8 +21,7 @@ import scala.scalajs.js.annotation.*
 enum FlowMechanism:
   case Tell, Send, AdaptorBridge, ConnectorPipe
 
-/** An edge in the message flow graph representing a message sent from a
-  * producer to a consumer
+/** An edge in the message flow graph representing a message sent from a producer to a consumer
   *
   * @param producer
   *   The definition that produces/sends the message
@@ -41,8 +40,8 @@ case class MessageFlowEdge(
   mechanism: FlowMechanism
 )
 
-/** Output of the MessageFlowPass containing the directed graph of message
-  * flows across the entire model
+/** Output of the MessageFlowPass containing the directed graph of message flows across the entire
+  * model
   *
   * @param root
   *   The root of the model
@@ -88,14 +87,14 @@ object MessageFlowPass extends PassInfo[PassOptions] {
   val name: String = "MessageFlow"
   def creator(
     options: PassOptions = PassOptions.empty
-  )(using PlatformContext): PassCreator = {
-    (in: PassInput, out: PassesOutput) => MessageFlowPass(in, out)
+  )(using PlatformContext): PassCreator = { (in: PassInput, out: PassesOutput) =>
+    MessageFlowPass(in, out)
   }
 }
 
-/** A pass that builds a directed graph of message producers and consumers
-  * across the entire model. This is the core data structure both the
-  * simulator and generator need for understanding message routing.
+/** A pass that builds a directed graph of message producers and consumers across the entire model.
+  * This is the core data structure both the simulator and generator need for understanding message
+  * routing.
   */
 @JSExportTopLevel("MessageFlowPass")
 case class MessageFlowPass(
@@ -123,8 +122,8 @@ case class MessageFlowPass(
     val parentsSeq = parents.toParents
     definition match
       case handler: Handler =>
-        val processorParent = parentsSeq.headOption.collect {
-          case p: Processor[?] => p
+        val processorParent = parentsSeq.headOption.collect { case p: Processor[?] =>
+          p
         }
         processorParent.foreach { processor =>
           handler.clauses.foreach {
@@ -184,8 +183,8 @@ case class MessageFlowPass(
       val maybeType = refMap.definitionOf[Type](send.msg, omc)
       (maybePortlet, maybeType) match
         case (Some(portlet), Some(msgType)) =>
-          val portletParent = symTab.parentOf(portlet).collect {
-            case p: Processor[?] => p
+          val portletParent = symTab.parentOf(portlet).collect { case p: Processor[?] =>
+            p
           }
           portletParent.foreach { target =>
             collectedEdges.addOne(
@@ -219,8 +218,8 @@ case class MessageFlowPass(
   ): Unit = {
     val maybeReferentContext =
       refMap.definitionOf[Context](adaptor.referent, adaptor)
-    val maybeSourceContext = parents.headOption.collect {
-      case c: Context => c
+    val maybeSourceContext = parents.headOption.collect { case c: Context =>
+      c
     }
     (maybeSourceContext, maybeReferentContext) match
       case (Some(source), Some(referent)) =>
@@ -272,9 +271,11 @@ case class MessageFlowPass(
   ): Unit = {
     if connector.nonEmpty then
       // Find the parent context/processor that contains the connector
-      val parentContainer = parents.headOption.collect {
-        case b: Branch[?] => b
-      }.getOrElse(Root.empty)
+      val parentContainer = parents.headOption
+        .collect { case b: Branch[?] =>
+          b
+        }
+        .getOrElse(Root.empty)
 
       val connParents = symTab.parentsOf(connector)
       val maybeOutlet =
@@ -285,30 +286,39 @@ case class MessageFlowPass(
       (maybeOutlet, maybeInlet) match
         case (Some(outlet), Some(inlet)) =>
           // Walk up from outlet/inlet to find their parent processor
-          val fromProcessor = symTab.parentOf(outlet).collect {
-            case s: Streamlet => s: Processor[?]
-          }.orElse(
-            symTab.parentOf(outlet).flatMap { p =>
-              symTab.parentOf(p).collect {
-                case proc: Processor[?] => proc
-              }
+          val fromProcessor = symTab
+            .parentOf(outlet)
+            .collect { case s: Streamlet =>
+              s: Processor[?]
             }
-          )
-          val toProcessor = symTab.parentOf(inlet).collect {
-            case s: Streamlet => s: Processor[?]
-          }.orElse(
-            symTab.parentOf(inlet).flatMap { p =>
-              symTab.parentOf(p).collect {
-                case proc: Processor[?] => proc
+            .orElse(
+              symTab.parentOf(outlet).flatMap { p =>
+                symTab.parentOf(p).collect { case proc: Processor[?] =>
+                  proc
+                }
               }
+            )
+          val toProcessor = symTab
+            .parentOf(inlet)
+            .collect { case s: Streamlet =>
+              s: Processor[?]
             }
-          )
+            .orElse(
+              symTab.parentOf(inlet).flatMap { p =>
+                symTab.parentOf(p).collect { case proc: Processor[?] =>
+                  proc
+                }
+              }
+            )
 
           // Resolve the outlet's type reference using
           // its parent as context
-          val outletParent = symTab.parentOf(outlet).collect {
-            case b: Branch[?] => b
-          }.getOrElse(parentContainer)
+          val outletParent = symTab
+            .parentOf(outlet)
+            .collect { case b: Branch[?] =>
+              b
+            }
+            .getOrElse(parentContainer)
           val outletType =
             refMap.definitionOf[Type](outlet.type_, outletParent)
 
@@ -334,9 +344,11 @@ case class MessageFlowPass(
       edges = edges,
       producerIndex = edges.groupBy(_.producer),
       consumerIndex = edges.groupBy(_.consumer),
-      messageIndex = edges.collect {
-        case e if e.messageType.isDefined => e
-      }.groupBy(_.messageType.get)
+      messageIndex = edges
+        .collect {
+          case e if e.messageType.isDefined => e
+        }
+        .groupBy(_.messageType.get)
     )
   }
 }

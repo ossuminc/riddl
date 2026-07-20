@@ -12,7 +12,12 @@ import com.ossuminc.riddl.utils.{PlatformContext, URL}
 import scala.collection.mutable
 import scala.scalajs.js.annotation.JSExport
 
-case class PrettifyState(flatten: Boolean = false, topFile: String = "prettify-output.riddl", outDir: String = ".", inputDir: String)(using PlatformContext):
+case class PrettifyState(
+  flatten: Boolean = false,
+  topFile: String = "prettify-output.riddl",
+  outDir: String = ".",
+  inputDir: String
+)(using PlatformContext):
 
   // Strip leading/trailing '/' from outDir for URL basis field, which
   // already gets '/' separators in URL format (scheme://authority/basis/path)
@@ -60,7 +65,8 @@ case class PrettifyState(flatten: Boolean = false, topFile: String = "prettify-o
     closeStack()
     files.foreach(f)
 
-  private val files: mutable.ListBuffer[RiddlFileEmitter] = mutable.ListBuffer.empty[RiddlFileEmitter]
+  private val files: mutable.ListBuffer[RiddlFileEmitter] =
+    mutable.ListBuffer.empty[RiddlFileEmitter]
 
   private val fileStack: mutable.Stack[RiddlFileEmitter] = mutable.Stack
     .empty[RiddlFileEmitter]

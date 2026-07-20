@@ -146,9 +146,9 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     *   files parsed.
     */
   def parseRootWithURLs: Either[(Messages, Seq[URL]), (Root, Seq[URL])] = {
-    doParse[Root]( (u: P[?])  => root(using u.asInstanceOf[P[Any]])) match {
+    doParse[Root]((u: P[?]) => root(using u.asInstanceOf[P[Any]])) match {
       case l @ Left(msgs) => Left(msgs -> this.getURLs)
-      case r @ Right(rt)    => Right(rt -> this.getURLs)
+      case r @ Right(rt)  => Right(rt -> this.getURLs)
     }
   }
 
@@ -174,23 +174,20 @@ trait ExtensibleTopLevelParser(using PlatformContext)
     }
   }
 
-  /** Parse the input as the contents of a Domain definition.
-    * Wraps the input in a synthetic `domain _scope_ is { ... }`
-    * and returns the resulting Domain.
+  /** Parse the input as the contents of a Domain definition. Wraps the input in a synthetic `domain
+    * _scope_ is { ... }` and returns the resulting Domain.
     */
   def parseDomainContents: Either[Messages, Domain] =
     doParse[Domain](p => domain(using p))
 
-  /** Parse the input as the contents of a Context definition.
-    * Wraps the input in a synthetic `context _scope_ is { ... }`
-    * and returns the resulting Context.
+  /** Parse the input as the contents of a Context definition. Wraps the input in a synthetic
+    * `context _scope_ is { ... }` and returns the resulting Context.
     */
   def parseContextContents: Either[Messages, Context] =
     doParse[Context](p => context(using p))
 
-  /** Parse the input as the contents of an Entity definition.
-    * Wraps the input in a synthetic `entity _scope_ is { ... }`
-    * and returns the resulting Entity.
+  /** Parse the input as the contents of an Entity definition. Wraps the input in a synthetic
+    * `entity _scope_ is { ... }` and returns the resulting Entity.
     */
   def parseEntityContents: Either[Messages, Entity] =
     doParse[Entity](p => entity(using p))
@@ -211,28 +208,29 @@ trait ExtensibleTopLevelParser(using PlatformContext)
   def parseRepositoryContents: Either[Messages, Repository] =
     doParse[Repository](p => repository(using p))
 
-  /** Parse the input as epic body content (use cases, types,
-    * etc.) and return a raw sequence of EpicContents.
+  /** Parse the input as epic body content (use cases, types, etc.) and return a raw sequence of
+    * EpicContents.
     */
   def parseEpicDefinitions: Either[Messages, Seq[EpicContents]] =
     doContentsParse[EpicContents](p => epicDefinitions(using p))
       .map(_.toSeq)
 
-  /** Parse the input as saga body content (saga steps,
-    * inlets, outlets, functions) and return a raw sequence.
+  /** Parse the input as saga body content (saga steps, inlets, outlets, functions) and return a raw
+    * sequence.
     */
   def parseSagaDefinitions: Either[Messages, Seq[SagaContents]] =
     doContentsParse[SagaContents](p => sagaDefinitions(using p))
       .map(_.toSeq)
 
-  /** Parse the input as streamlet processor content (handlers,
-    * types, functions, etc.) and return a raw sequence.
+  /** Parse the input as streamlet processor content (handlers, types, functions, etc.) and return a
+    * raw sequence.
     */
   def parseStreamletDefinitions: Either[Messages, Seq[StreamletContents]] =
     doContentsParse[StreamletContents] { (p: P[?]) =>
       given P[Any] = p.asInstanceOf[P[Any]]
       processorDefinitionContents(StatementsSet.StreamStatements)
-        .asInstanceOf[P[StreamletContents]].rep(1)
+        .asInstanceOf[P[StreamletContents]]
+        .rep(1)
     }.map(_.toSeq)
 
   def parseTokens: Either[Messages, List[Token]] = {

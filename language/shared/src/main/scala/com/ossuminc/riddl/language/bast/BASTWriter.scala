@@ -14,18 +14,20 @@ import wvlet.airframe.ulid.ULID
 
 /** BAST serialization utility class
   *
-  * Contains all the serialization methods for AST nodes. This class does NOT
-  * perform traversal - it only knows HOW to serialize individual nodes. The
-  * actual traversal is performed by BASTWriterPass in the passes module,
-  * which uses the Pass framework to ensure correct node ordering.
+  * Contains all the serialization methods for AST nodes. This class does NOT perform traversal - it
+  * only knows HOW to serialize individual nodes. The actual traversal is performed by
+  * BASTWriterPass in the passes module, which uses the Pass framework to ensure correct node
+  * ordering.
   *
   * This separation allows:
-  * - Serialization logic to live in the language module (no circular dependency)
-  * - Traversal to use the battle-tested Pass framework
-  * - Independent testing of serialization methods
+  *   - Serialization logic to live in the language module (no circular dependency)
+  *   - Traversal to use the battle-tested Pass framework
+  *   - Independent testing of serialization methods
   *
-  * @param writer The byte buffer to write to
-  * @param stringTable The string interning table
+  * @param writer
+  *   The byte buffer to write to
+  * @param stringTable
+  *   The string interning table
   */
 class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
@@ -52,18 +54,19 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   /** Write a node tag with optional metadata flag
     *
-    * Phase 7 optimization: Uses high bit of tag to indicate metadata presence.
-    * If hasMetadata is true, sets bit 7 (0x80) to indicate metadata follows.
+    * Phase 7 optimization: Uses high bit of tag to indicate metadata presence. If hasMetadata is
+    * true, sets bit 7 (0x80) to indicate metadata follows.
     *
-    * @param tag The base node type tag (0-127)
-    * @param hasMetadata Whether this node has non-empty metadata
+    * @param tag
+    *   The base node type tag (0-127)
+    * @param hasMetadata
+    *   Whether this node has non-empty metadata
     */
   def writeNodeTag(tag: Byte, hasMetadata: Boolean): Unit = {
     if hasMetadata then
       // Use & 0xFF to treat bytes as unsigned, avoiding negative values
-      writer.writeU8((tag & 0xFF) | 0x80)
-    else
-      writer.writeU8(tag & 0xFF)
+      writer.writeU8((tag & 0xff) | 0x80)
+    else writer.writeU8(tag & 0xff)
   }
 
   /** Reset location tracking (called at start of serialization) */
@@ -73,9 +76,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     currentSourcePath = ""
   }
 
-  /** Write a FILE_CHANGE_MARKER if the source file changed.
-    * Call this before writing any node to handle source file transitions.
-    * @param loc The location of the node being written
+  /** Write a FILE_CHANGE_MARKER if the source file changed. Call this before writing any node to
+    * handle source file transitions.
+    * @param loc
+    *   The location of the node being written
     */
   private def writeSourceChangeIfNeeded(loc: At): Unit = {
     val origin = loc.source.origin
@@ -92,7 +96,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       firstLocationWritten = false
     else if origin != "empty" && origin != currentSourcePath then
       // Source changed - write marker
-      debugLog(f"[WRITER] FILE_CHANGE_MARKER at pos ${writer.position}: source changed from '$currentSourcePath' to '$origin'")
+      debugLog(
+        f"[WRITER] FILE_CHANGE_MARKER at pos ${writer.position}: source changed from '$currentSourcePath' to '$origin'"
+      )
       writer.writeU8(FILE_CHANGE_MARKER)
       writeString(origin)
       currentSourcePath = origin
@@ -111,7 +117,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     *
     * Phase 8: Path table is written immediately after string table.
     *
-    * @return The offset where the string table was written
+    * @return
+    *   The offset where the string table was written
     */
   def writeStringTable(): Int = {
     val offset = writer.position
@@ -122,8 +129,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   /** Finalize the BAST output by writing the header
-    * @param stringTableOffset The offset of the string table
-    * @return The final bytes including header
+    * @param stringTableOffset
+    *   The offset of the string table
+    * @return
+    *   The final bytes including header
     */
   def finalize(stringTableOffset: Int): Array[Byte] = {
     val bytes = writer.toByteArray
@@ -151,7 +160,8 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // ========== Main Dispatch Method ==========
 
   /** Write a single AST node (dispatches to appropriate write method)
-    * @param value The node to write
+    * @param value
+    *   The node to write
     */
   def writeNode(value: RiddlValue): Unit = {
     val posBeforeNode = writer.position
@@ -160,147 +170,149 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     val posAfterMarker = writer.position
     nodeCount += 1
     val nodeTypeName = value.getClass.getSimpleName
-    debugLog(f"[WRITER] writeNode at pos $posAfterMarker: $nodeTypeName (source: ${value.loc.source.origin})")
+    debugLog(
+      f"[WRITER] writeNode at pos $posAfterMarker: $nodeTypeName (source: ${value.loc.source.origin})"
+    )
     value match {
       // Root containers
-      case n: Nebula => writeNebula(n)
-      case r: Root => writeRoot(r)
-      case i: Include[?] => writeInclude(i)
+      case n: Nebula      => writeNebula(n)
+      case r: Root        => writeRoot(r)
+      case i: Include[?]  => writeInclude(i)
       case bi: BASTImport => writeBASTImport(bi)
 
       // Vital definitions
-      case d: Domain => writeDomain(d)
+      case d: Domain  => writeDomain(d)
       case c: Context => writeContext(c)
-      case e: Entity => writeEntity(e)
-      case m: Module => writeModule(m)
+      case e: Entity  => writeEntity(e)
+      case m: Module  => writeModule(m)
       case epic: Epic => writeEpic(epic)
 
       // Types
-      case t: Type => writeType(t)
-      case f: Field => writeField(f)
+      case t: Type                => writeType(t)
+      case f: Field               => writeField(f)
       case enumerator: Enumerator => writeEnumerator(enumerator)
-      case method: Method => writeMethod(method)
-      case arg: MethodArgument => writeMethodArgument(arg)
+      case method: Method         => writeMethod(method)
+      case arg: MethodArgument    => writeMethodArgument(arg)
 
       // Processors
-      case a: Adaptor => writeAdaptor(a)
-      case fn: Function => writeFunction(fn)
-      case proj: Projector => writeProjector(proj)
+      case a: Adaptor       => writeAdaptor(a)
+      case fn: Function     => writeFunction(fn)
+      case proj: Projector  => writeProjector(proj)
       case repo: Repository => writeRepository(repo)
-      case s: Streamlet => writeStreamlet(s)
-      case saga: Saga => writeSaga(saga)
+      case s: Streamlet     => writeStreamlet(s)
+      case saga: Saga       => writeSaga(saga)
 
       // Handler components
-      case h: Handler => writeHandler(h)
-      case st: State => writeState(st)
+      case h: Handler     => writeHandler(h)
+      case st: State      => writeState(st)
       case inv: Invariant => writeInvariant(inv)
 
       // OnClauses
       case oc: OnInitializationClause => writeOnInitializationClause(oc)
-      case oc: OnTerminationClause => writeOnTerminationClause(oc)
-      case oc: OnMessageClause => writeOnMessageClause(oc)
-      case oc: OnOtherClause => writeOnOtherClause(oc)
+      case oc: OnTerminationClause    => writeOnTerminationClause(oc)
+      case oc: OnMessageClause        => writeOnMessageClause(oc)
+      case oc: OnOtherClause          => writeOnOtherClause(oc)
 
       // Streamlet components
-      case inlet: Inlet => writeInlet(inlet)
-      case outlet: Outlet => writeOutlet(outlet)
+      case inlet: Inlet    => writeInlet(inlet)
+      case outlet: Outlet  => writeOutlet(outlet)
       case conn: Connector => writeConnector(conn)
 
       // Repository components
       case schema: Schema => writeSchema(schema)
 
       // Epic/UseCase components
-      case uc: UseCase => writeUseCase(uc)
-      case us: UserStory => writeUserStory(us)
+      case uc: UseCase    => writeUseCase(uc)
+      case us: UserStory  => writeUserStory(us)
       case shown: ShownBy => writeShownBy(shown)
       case step: SagaStep => writeSagaStep(step)
 
       // Interactions
-      case i: ParallelInteractions => writeParallelInteractions(i)
-      case i: SequentialInteractions => writeSequentialInteractions(i)
-      case i: OptionalInteractions => writeOptionalInteractions(i)
-      case i: VagueInteraction => writeVagueInteraction(i)
-      case i: SendMessageInteraction => writeSendMessageInteraction(i)
-      case i: ArbitraryInteraction => writeArbitraryInteraction(i)
-      case i: SelfInteraction => writeSelfInteraction(i)
-      case i: FocusOnGroupInteraction => writeFocusOnGroupInteraction(i)
+      case i: ParallelInteractions       => writeParallelInteractions(i)
+      case i: SequentialInteractions     => writeSequentialInteractions(i)
+      case i: OptionalInteractions       => writeOptionalInteractions(i)
+      case i: VagueInteraction           => writeVagueInteraction(i)
+      case i: SendMessageInteraction     => writeSendMessageInteraction(i)
+      case i: ArbitraryInteraction       => writeArbitraryInteraction(i)
+      case i: SelfInteraction            => writeSelfInteraction(i)
+      case i: FocusOnGroupInteraction    => writeFocusOnGroupInteraction(i)
       case i: DirectUserToURLInteraction => writeDirectUserToURLInteraction(i)
-      case i: ShowOutputInteraction => writeShowOutputInteraction(i)
-      case i: SelectInputInteraction => writeSelectInputInteraction(i)
-      case i: TakeInputInteraction => writeTakeInputInteraction(i)
+      case i: ShowOutputInteraction      => writeShowOutputInteraction(i)
+      case i: SelectInputInteraction     => writeSelectInputInteraction(i)
+      case i: TakeInputInteraction       => writeTakeInputInteraction(i)
 
       // UI Components
-      case g: Group => writeGroup(g)
+      case g: Group           => writeGroup(g)
       case cg: ContainedGroup => writeContainedGroup(cg)
-      case input: Input => writeInput(input)
-      case output: Output => writeOutput(output)
+      case input: Input       => writeInput(input)
+      case output: Output     => writeOutput(output)
 
       // Statements (11 declarative statements)
-      case s: PromptStatement => writePromptStatement(s)
-      case s: ErrorStatement => writeErrorStatement(s)
+      case s: PromptStatement  => writePromptStatement(s)
+      case s: ErrorStatement   => writeErrorStatement(s)
       case s: RequireStatement => writeRequireStatement(s)
-      case s: ReplyStatement => writeReplyStatement(s)
-      case s: SetStatement => writeSetStatement(s)
-      case s: SendStatement => writeSendStatement(s)
-      case s: MorphStatement => writeMorphStatement(s)
-      case s: BecomeStatement => writeBecomeStatement(s)
-      case s: TellStatement => writeTellStatement(s)
-      case s: WhenStatement => writeWhenStatement(s)
-      case s: MatchStatement => writeMatchStatement(s)
-      case s: LetStatement => writeLetStatement(s)
-      case s: CodeStatement => writeCodeStatement(s)
+      case s: ReplyStatement   => writeReplyStatement(s)
+      case s: SetStatement     => writeSetStatement(s)
+      case s: SendStatement    => writeSendStatement(s)
+      case s: MorphStatement   => writeMorphStatement(s)
+      case s: BecomeStatement  => writeBecomeStatement(s)
+      case s: TellStatement    => writeTellStatement(s)
+      case s: WhenStatement    => writeWhenStatement(s)
+      case s: MatchStatement   => writeMatchStatement(s)
+      case s: LetStatement     => writeLetStatement(s)
+      case s: CodeStatement    => writeCodeStatement(s)
 
       // References
-      case r: AuthorRef => writeAuthorRef(r)
-      case r: TypeRef => writeTypeRef(r)
-      case r: FieldRef => writeFieldRef(r)
-      case r: ConstantRef => writeConstantRef(r)
-      case r: CommandRef => writeCommandRef(r)
-      case r: EventRef => writeEventRef(r)
-      case r: QueryRef => writeQueryRef(r)
-      case r: ResultRef => writeResultRef(r)
-      case r: RecordRef => writeRecordRef(r)
-      case r: AdaptorRef => writeAdaptorRef(r)
-      case r: FunctionRef => writeFunctionRef(r)
-      case r: HandlerRef => writeHandlerRef(r)
-      case r: StateRef => writeStateRef(r)
-      case r: EntityRef => writeEntityRef(r)
+      case r: AuthorRef     => writeAuthorRef(r)
+      case r: TypeRef       => writeTypeRef(r)
+      case r: FieldRef      => writeFieldRef(r)
+      case r: ConstantRef   => writeConstantRef(r)
+      case r: CommandRef    => writeCommandRef(r)
+      case r: EventRef      => writeEventRef(r)
+      case r: QueryRef      => writeQueryRef(r)
+      case r: ResultRef     => writeResultRef(r)
+      case r: RecordRef     => writeRecordRef(r)
+      case r: AdaptorRef    => writeAdaptorRef(r)
+      case r: FunctionRef   => writeFunctionRef(r)
+      case r: HandlerRef    => writeHandlerRef(r)
+      case r: StateRef      => writeStateRef(r)
+      case r: EntityRef     => writeEntityRef(r)
       case r: RepositoryRef => writeRepositoryRef(r)
-      case r: ProjectorRef => writeProjectorRef(r)
-      case r: ContextRef => writeContextRef(r)
-      case r: StreamletRef => writeStreamletRef(r)
-      case r: InletRef => writeInletRef(r)
-      case r: OutletRef => writeOutletRef(r)
-      case r: SagaRef => writeSagaRef(r)
-      case r: UserRef => writeUserRef(r)
-      case r: EpicRef => writeEpicRef(r)
-      case r: GroupRef => writeGroupRef(r)
-      case r: InputRef => writeInputRef(r)
-      case r: OutputRef => writeOutputRef(r)
-      case r: DomainRef => writeDomainRef(r)
+      case r: ProjectorRef  => writeProjectorRef(r)
+      case r: ContextRef    => writeContextRef(r)
+      case r: StreamletRef  => writeStreamletRef(r)
+      case r: InletRef      => writeInletRef(r)
+      case r: OutletRef     => writeOutletRef(r)
+      case r: SagaRef       => writeSagaRef(r)
+      case r: UserRef       => writeUserRef(r)
+      case r: EpicRef       => writeEpicRef(r)
+      case r: GroupRef      => writeGroupRef(r)
+      case r: InputRef      => writeInputRef(r)
+      case r: OutputRef     => writeOutputRef(r)
+      case r: DomainRef     => writeDomainRef(r)
 
       // Metadata & Documentation
       case bd: BriefDescription => writeBriefDescription(bd)
       case bd: BlockDescription => writeBlockDescription(bd)
-      case ud: URLDescription => writeURLDescription(ud)
-      case c: LineComment => writeLineComment(c)
-      case c: InlineComment => writeInlineComment(c)
-      case opt: OptionValue => writeOptionValue(opt)
-      case term: Term => writeTerm(term)
+      case ud: URLDescription   => writeURLDescription(ud)
+      case c: LineComment       => writeLineComment(c)
+      case c: InlineComment     => writeInlineComment(c)
+      case opt: OptionValue     => writeOptionValue(opt)
+      case term: Term           => writeTerm(term)
 
       // Attachments
-      case a: FileAttachment => writeFileAttachment(a)
+      case a: FileAttachment   => writeFileAttachment(a)
       case a: StringAttachment => writeStringAttachment(a)
-      case a: ULIDAttachment => writeULIDAttachment(a)
+      case a: ULIDAttachment   => writeULIDAttachment(a)
 
       // Simple values
-      case id: Identifier => writeIdentifier(id)
+      case id: Identifier      => writeIdentifier(id)
       case pid: PathIdentifier => writePathIdentifier(pid)
-      case ls: LiteralString => writeLiteralString(ls)
+      case ls: LiteralString   => writeLiteralString(ls)
 
       // Authors and Users
       case a: Author => writeAuthor(a)
-      case u: User => writeUser(u)
+      case u: User   => writeUser(u)
 
       // Constants
       case c: Constant => writeConstant(c)
@@ -312,16 +324,16 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       case te: TypeExpression => writeTypeExpression(te)
 
       // Streamlet shapes
-      case s: Void => writeVoid(s)
+      case s: Void   => writeVoid(s)
       case s: Source => writeSource(s)
-      case s: Sink => writeSink(s)
-      case s: Flow => writeFlow(s)
-      case s: Merge => writeMerge(s)
-      case s: Split => writeSplit(s)
+      case s: Sink   => writeSink(s)
+      case s: Flow   => writeFlow(s)
+      case s: Merge  => writeMerge(s)
+      case s: Split  => writeSplit(s)
       case s: Router => writeRouter(s)
 
       // Adaptor directions
-      case d: InboundAdaptor => writeInboundAdaptor(d)
+      case d: InboundAdaptor  => writeInboundAdaptor(d)
       case d: OutboundAdaptor => writeOutboundAdaptor(d)
 
       // Containers (should generally not appear standalone)
@@ -329,7 +341,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
       case _ =>
         // Log unhandled types for debugging
-        println(s"Unhandled node type in BASTWriter: ${value.getClass.getSimpleName} at ${value.loc}")
+        println(
+          s"Unhandled node type in BASTWriter: ${value.getClass.getSimpleName} at ${value.loc}"
+        )
     }
   }
 
@@ -351,12 +365,16 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   }
 
   def writeInclude[T <: RiddlValue](i: Include[T]): Unit = {
-    debugLog(f"[WRITER] writeInclude: writing NODE_INCLUDE (${NODE_INCLUDE}) at pos ${writer.position}")
+    debugLog(
+      f"[WRITER] writeInclude: writing NODE_INCLUDE (${NODE_INCLUDE}) at pos ${writer.position}"
+    )
     writer.writeU8(NODE_INCLUDE)
     writeLocation(i.loc)
     writeURL(i.origin)
     writeContents(i.contents)
-    debugLog(f"[WRITER] writeInclude: finished at pos ${writer.position}, contents count=${i.contents.length}")
+    debugLog(
+      f"[WRITER] writeInclude: finished at pos ${writer.position}, contents count=${i.contents.length}"
+    )
   }
 
   def writeBASTImport(bi: BASTImport): Unit = {
@@ -376,7 +394,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeDomain(d: Domain): Unit = {
     writeNodeTag(NODE_DOMAIN, d.metadata.nonEmpty)
     writeLocation(d.loc)
-    writeIdentifierInline(d.id)  // Inline - no tag needed
+    writeIdentifierInline(d.id) // Inline - no tag needed
     writeContents(d.contents)
     // Metadata written by traverse() if flag is set
   }
@@ -384,37 +402,41 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeContext(c: Context): Unit = {
     writeNodeTag(NODE_CONTEXT, c.metadata.nonEmpty)
     writeLocation(c.loc)
-    writeIdentifierInline(c.id)  // Inline - no tag needed
+    writeIdentifierInline(c.id) // Inline - no tag needed
     writeContents(c.contents)
   }
 
   def writeEntity(e: Entity): Unit = {
-    debugLog(f"[WRITER] writeEntity: writing NODE_ENTITY (${NODE_ENTITY}) at pos ${writer.position}")
+    debugLog(
+      f"[WRITER] writeEntity: writing NODE_ENTITY (${NODE_ENTITY}) at pos ${writer.position}"
+    )
     writeNodeTag(NODE_ENTITY, e.metadata.nonEmpty)
     writeLocation(e.loc)
-    writeIdentifierInline(e.id)  // Inline - no tag needed
+    writeIdentifierInline(e.id) // Inline - no tag needed
     writeContents(e.contents)
-    debugLog(f"[WRITER] writeEntity: finished at pos ${writer.position}, contents count=${e.contents.length}")
+    debugLog(
+      f"[WRITER] writeEntity: finished at pos ${writer.position}, contents count=${e.contents.length}"
+    )
   }
 
   def writeModule(m: Module): Unit = {
     writeNodeTag(NODE_MODULE, m.metadata.nonEmpty)
     writeLocation(m.loc)
-    writeIdentifierInline(m.id)  // Inline - no tag needed
+    writeIdentifierInline(m.id) // Inline - no tag needed
     writeContents(m.contents)
   }
 
   def writeType(t: Type): Unit = {
     writeNodeTag(NODE_TYPE, t.metadata.nonEmpty)
     writeLocation(t.loc)
-    writeIdentifierInline(t.id)  // Inline - no tag needed
+    writeIdentifierInline(t.id) // Inline - no tag needed
     writeTypeExpression(t.typEx)
   }
 
   def writeFunction(f: Function): Unit = {
     writeNodeTag(NODE_FUNCTION, f.metadata.nonEmpty)
     writeLocation(f.loc)
-    writeIdentifierInline(f.id)  // Inline - no tag needed
+    writeIdentifierInline(f.id) // Inline - no tag needed
     writeOption(f.input)((agg: Aggregation) => writeTypeExpression(agg))
     writeOption(f.output)((agg: Aggregation) => writeTypeExpression(agg))
     writeContents(f.contents)
@@ -423,9 +445,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeAdaptor(a: Adaptor): Unit = {
     writeNodeTag(NODE_ADAPTOR, a.metadata.nonEmpty)
     writeLocation(a.loc)
-    writeIdentifierInline(a.id)  // Inline - no tag needed
+    writeIdentifierInline(a.id) // Inline - no tag needed
     a.direction match {
-      case _: InboundAdaptor => writer.writeU8(ADAPTOR_INBOUND)
+      case _: InboundAdaptor  => writer.writeU8(ADAPTOR_INBOUND)
       case _: OutboundAdaptor => writer.writeU8(ADAPTOR_OUTBOUND)
     }
     writeContextRef(a.referent)
@@ -435,7 +457,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeSaga(s: Saga): Unit = {
     writeNodeTag(NODE_SAGA, s.metadata.nonEmpty)
     writeLocation(s.loc)
-    writeIdentifierInline(s.id)  // Inline - no tag needed
+    writeIdentifierInline(s.id) // Inline - no tag needed
     writeOption(s.input)((agg: Aggregation) => writeTypeExpression(agg))
     writeOption(s.output)((agg: Aggregation) => writeTypeExpression(agg))
     writeContents(s.contents)
@@ -444,29 +466,29 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeProjector(p: Projector): Unit = {
     writeNodeTag(NODE_PROJECTOR, p.metadata.nonEmpty)
     writeLocation(p.loc)
-    writeIdentifierInline(p.id)  // Inline - no tag needed
+    writeIdentifierInline(p.id) // Inline - no tag needed
     writeContents(p.contents)
   }
 
   def writeRepository(r: Repository): Unit = {
     writeNodeTag(NODE_REPOSITORY, r.metadata.nonEmpty)
     writeLocation(r.loc)
-    writeIdentifierInline(r.id)  // Inline - no tag needed
+    writeIdentifierInline(r.id) // Inline - no tag needed
     writeContents(r.contents)
   }
 
   def writeStreamlet(s: Streamlet): Unit = {
     writeNodeTag(NODE_STREAMLET, s.metadata.nonEmpty)
     writeLocation(s.loc)
-    writeIdentifierInline(s.id)  // Inline - no tag needed
+    writeIdentifierInline(s.id) // Inline - no tag needed
     // Write shape tag
     s.shape match {
-      case _: Void => writer.writeU8(STREAMLET_VOID)
+      case _: Void   => writer.writeU8(STREAMLET_VOID)
       case _: Source => writer.writeU8(STREAMLET_SOURCE)
-      case _: Sink => writer.writeU8(STREAMLET_SINK)
-      case _: Flow => writer.writeU8(STREAMLET_FLOW)
-      case _: Merge => writer.writeU8(STREAMLET_MERGE)
-      case _: Split => writer.writeU8(STREAMLET_SPLIT)
+      case _: Sink   => writer.writeU8(STREAMLET_SINK)
+      case _: Flow   => writer.writeU8(STREAMLET_FLOW)
+      case _: Merge  => writer.writeU8(STREAMLET_MERGE)
+      case _: Split  => writer.writeU8(STREAMLET_SPLIT)
       case _: Router => writer.writeU8(STREAMLET_VOID) // Router not in tags
     }
     writeContents(s.contents)
@@ -476,7 +498,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_EPIC, e.metadata.nonEmpty)
     writer.writeU8(0) // Subtype: 0 = Epic, 1 = UseCase
     writeLocation(e.loc)
-    writeIdentifierInline(e.id)  // Inline - no tag needed
+    writeIdentifierInline(e.id) // Inline - no tag needed
     writeUserStory(e.userStory)
     writeContents(e.contents)
   }
@@ -486,7 +508,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeAuthor(a: Author): Unit = {
     writeNodeTag(NODE_AUTHOR, a.metadata.nonEmpty)
     writeLocation(a.loc)
-    writeIdentifierInline(a.id)  // Inline - no tag needed
+    writeIdentifierInline(a.id) // Inline - no tag needed
     writeLiteralString(a.name)
     writeLiteralString(a.email)
     writeOption(a.organization)(writeLiteralString)
@@ -497,7 +519,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeUser(u: User): Unit = {
     writeNodeTag(NODE_USER, u.metadata.nonEmpty)
     writeLocation(u.loc)
-    writeIdentifier(u.id)  // Keep tag to distinguish from UserRef/UserStory
+    writeIdentifier(u.id) // Keep tag to distinguish from UserRef/UserStory
     writeLiteralString(u.is_a)
   }
 
@@ -505,14 +527,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     // Term has no metadata field, use simple tag
     writer.writeU8(NODE_TERM)
     writeLocation(t.loc)
-    writeIdentifierInline(t.id)  // Inline - no tag needed
+    writeIdentifierInline(t.id) // Inline - no tag needed
     writeSeq(t.definition)(writeLiteralString)
   }
 
   def writeRelationship(r: Relationship): Unit = {
     writeNodeTag(NODE_PIPE, r.metadata.nonEmpty) // Reusing PIPE tag for relationship
     writeLocation(r.loc)
-    writeIdentifierInline(r.id)  // Inline - no tag needed
+    writeIdentifierInline(r.id) // Inline - no tag needed
     writeProcessorRef(r.withProcessor)
     writer.writeU8(r.cardinality.ordinal.toByte)
     writeOption(r.label)(writeLiteralString)
@@ -521,7 +543,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeConstant(c: Constant): Unit = {
     writeNodeTag(NODE_FIELD, c.metadata.nonEmpty) // Constants similar to fields
     writeLocation(c.loc)
-    writeIdentifierInline(c.id)  // Inline - no tag needed
+    writeIdentifierInline(c.id) // Inline - no tag needed
     writeTypeExpression(c.typeEx)
     writeLiteralString(c.value)
   }
@@ -531,21 +553,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeField(f: Field): Unit = {
     writeNodeTag(NODE_FIELD, f.metadata.nonEmpty)
     writeLocation(f.loc)
-    writeIdentifier(f.id)  // Keep tag to distinguish from MethodArgument
+    writeIdentifier(f.id) // Keep tag to distinguish from MethodArgument
     writeTypeExpression(f.typeEx)
   }
 
   def writeEnumerator(e: Enumerator): Unit = {
     writeNodeTag(NODE_ENUMERATOR, e.metadata.nonEmpty)
     writeLocation(e.loc)
-    writeIdentifierInline(e.id)  // Inline - no tag needed
+    writeIdentifierInline(e.id) // Inline - no tag needed
     writeOption(e.enumVal)((v: Long) => writer.writeVarLong(v))
   }
 
   def writeMethod(m: Method): Unit = {
     writeNodeTag(NODE_FIELD, m.metadata.nonEmpty) // Methods similar to fields
     writeLocation(m.loc)
-    writeIdentifierInline(m.id)  // Inline - no tag needed
+    writeIdentifierInline(m.id) // Inline - no tag needed
     writeTypeExpression(m.typeEx)
     writeSeq(m.args)(writeMethodArgument)
   }
@@ -562,22 +584,22 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeHandler(h: Handler): Unit = {
     writeNodeTag(NODE_HANDLER, h.metadata.nonEmpty)
     writeLocation(h.loc)
-    writeIdentifierInline(h.id)  // Inline - no tag needed
+    writeIdentifierInline(h.id) // Inline - no tag needed
     writeContents(h.contents)
   }
 
   def writeState(s: State): Unit = {
     writeNodeTag(NODE_STATE, s.metadata.nonEmpty)
     writeLocation(s.loc)
-    writeIdentifierInline(s.id)  // Inline - no tag needed
-    writeTypeRefInline(s.typ)    // Inline - position known
+    writeIdentifierInline(s.id) // Inline - no tag needed
+    writeTypeRefInline(s.typ) // Inline - position known
     writeContents(s.contents)
   }
 
   def writeInvariant(i: Invariant): Unit = {
     writeNodeTag(NODE_INVARIANT, i.metadata.nonEmpty)
     writeLocation(i.loc)
-    writeIdentifierInline(i.id)  // Inline - no tag needed
+    writeIdentifierInline(i.id) // Inline - no tag needed
     writeOption(i.condition)(writeLiteralString)
   }
 
@@ -622,21 +644,21 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeInlet(i: Inlet): Unit = {
     writeNodeTag(NODE_INLET, i.metadata.nonEmpty)
     writeLocation(i.loc)
-    writeIdentifierInline(i.id)  // Inline - no tag needed
-    writeTypeRefInline(i.type_)  // Inline - position known
+    writeIdentifierInline(i.id) // Inline - no tag needed
+    writeTypeRefInline(i.type_) // Inline - position known
   }
 
   def writeOutlet(o: Outlet): Unit = {
     writeNodeTag(NODE_OUTLET, o.metadata.nonEmpty)
     writeLocation(o.loc)
-    writeIdentifier(o.id)  // Keep tag to distinguish from ShownBy
-    writeTypeRefInline(o.type_)  // Inline - position known
+    writeIdentifier(o.id) // Keep tag to distinguish from ShownBy
+    writeTypeRefInline(o.type_) // Inline - position known
   }
 
   def writeConnector(c: Connector): Unit = {
     writeNodeTag(NODE_CONNECTOR, c.metadata.nonEmpty)
     writeLocation(c.loc)
-    writeIdentifierInline(c.id)  // Inline - no tag needed
+    writeIdentifierInline(c.id) // Inline - no tag needed
     writeOutletRef(c.from)
     writeInletRef(c.to)
   }
@@ -647,7 +669,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_SCHEMA, s.metadata.nonEmpty)
     writer.writeU8(s.schemaKind.ordinal) // Subtype: 0=Relational, 1=Document, 2=Graphical
     writeLocation(s.loc)
-    writeIdentifierInline(s.id)  // Inline - no tag needed
+    writeIdentifierInline(s.id) // Inline - no tag needed
     // Write data map
     writer.writeVarInt(s.data.size)
     s.data.foreach { case (id, tref) =>
@@ -671,7 +693,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_EPIC, uc.metadata.nonEmpty)
     writer.writeU8(1) // Subtype: 0 = Epic, 1 = UseCase
     writeLocation(uc.loc)
-    writeIdentifierInline(uc.id)  // Inline - no tag needed
+    writeIdentifierInline(uc.id) // Inline - no tag needed
     writeUserStory(uc.userStory)
     writeContents(uc.contents)
   }
@@ -695,7 +717,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   def writeSagaStep(ss: SagaStep): Unit = {
     writeNodeTag(NODE_SAGA_STEP, ss.metadata.nonEmpty)
     writeLocation(ss.loc)
-    writeIdentifierInline(ss.id)  // Inline - no tag needed
+    writeIdentifierInline(ss.id) // Inline - no tag needed
     // NOTE: doStatements and undoStatements are written by the Pass's traverse() override
     // to properly interleave count-items, count-items
   }
@@ -805,14 +827,14 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_GROUP, g.metadata.nonEmpty)
     writeLocation(g.loc)
     writeString(g.alias)
-    writeIdentifier(g.id)  // Keep tag to distinguish from ContainedGroup
+    writeIdentifier(g.id) // Keep tag to distinguish from ContainedGroup
     writeContents(g.contents)
   }
 
   def writeContainedGroup(cg: ContainedGroup): Unit = {
     writeNodeTag(NODE_GROUP, cg.metadata.nonEmpty)
     writeLocation(cg.loc)
-    writeIdentifier(cg.id)  // Keep tag to distinguish from Group
+    writeIdentifier(cg.id) // Keep tag to distinguish from Group
     writeGroupRef(cg.group)
   }
 
@@ -820,9 +842,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_INPUT, i.metadata.nonEmpty)
     writeLocation(i.loc)
     writeString(i.nounAlias)
-    writeIdentifierInline(i.id)  // Inline - no tag needed
+    writeIdentifierInline(i.id) // Inline - no tag needed
     writeString(i.verbAlias)
-    writeTypeRefInline(i.takeIn)  // Inline - position known
+    writeTypeRefInline(i.takeIn) // Inline - position known
     writeContents(i.contents)
   }
 
@@ -830,13 +852,13 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeNodeTag(NODE_OUTPUT, o.metadata.nonEmpty)
     writeLocation(o.loc)
     writeString(o.nounAlias)
-    writeIdentifierInline(o.id)  // Inline - no tag needed
+    writeIdentifierInline(o.id) // Inline - no tag needed
     writeString(o.verbAlias)
     // Handle union type: TypeRef | ConstantRef | LiteralString
     o.putOut match {
       case tr: TypeRef =>
         writer.writeU8(0)
-        writeTypeRefInline(tr)  // Inline - discriminator identifies type
+        writeTypeRefInline(tr) // Inline - discriminator identifies type
       case cr: ConstantRef =>
         writer.writeU8(1)
         writeConstantRef(cr)
@@ -1167,33 +1189,33 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
   // Generic reference writer for polymorphic cases
   def writeReference(r: Reference[?]): Unit = {
     r match {
-      case ar: AuthorRef => writeAuthorRef(ar)
-      case tr: TypeRef => writeTypeRef(tr)
-      case fr: FieldRef => writeFieldRef(fr)
-      case cr: ConstantRef => writeConstantRef(cr)
-      case cmdr: CommandRef => writeCommandRef(cmdr)
-      case er: EventRef => writeEventRef(er)
-      case qr: QueryRef => writeQueryRef(qr)
-      case rr: ResultRef => writeResultRef(rr)
-      case recr: RecordRef => writeRecordRef(recr)
-      case adr: AdaptorRef => writeAdaptorRef(adr)
-      case fnr: FunctionRef => writeFunctionRef(fnr)
-      case hr: HandlerRef => writeHandlerRef(hr)
-      case sr: StateRef => writeStateRef(sr)
-      case entr: EntityRef => writeEntityRef(entr)
+      case ar: AuthorRef       => writeAuthorRef(ar)
+      case tr: TypeRef         => writeTypeRef(tr)
+      case fr: FieldRef        => writeFieldRef(fr)
+      case cr: ConstantRef     => writeConstantRef(cr)
+      case cmdr: CommandRef    => writeCommandRef(cmdr)
+      case er: EventRef        => writeEventRef(er)
+      case qr: QueryRef        => writeQueryRef(qr)
+      case rr: ResultRef       => writeResultRef(rr)
+      case recr: RecordRef     => writeRecordRef(recr)
+      case adr: AdaptorRef     => writeAdaptorRef(adr)
+      case fnr: FunctionRef    => writeFunctionRef(fnr)
+      case hr: HandlerRef      => writeHandlerRef(hr)
+      case sr: StateRef        => writeStateRef(sr)
+      case entr: EntityRef     => writeEntityRef(entr)
       case repr: RepositoryRef => writeRepositoryRef(repr)
-      case pr: ProjectorRef => writeProjectorRef(pr)
-      case cr: ContextRef => writeContextRef(cr)
-      case slr: StreamletRef => writeStreamletRef(slr)
-      case ir: InletRef => writeInletRef(ir)
-      case or: OutletRef => writeOutletRef(or)
-      case sgr: SagaRef => writeSagaRef(sgr)
-      case ur: UserRef => writeUserRef(ur)
-      case epr: EpicRef => writeEpicRef(epr)
-      case gr: GroupRef => writeGroupRef(gr)
-      case inr: InputRef => writeInputRef(inr)
-      case outr: OutputRef => writeOutputRef(outr)
-      case dr: DomainRef => writeDomainRef(dr)
+      case pr: ProjectorRef    => writeProjectorRef(pr)
+      case cr: ContextRef      => writeContextRef(cr)
+      case slr: StreamletRef   => writeStreamletRef(slr)
+      case ir: InletRef        => writeInletRef(ir)
+      case or: OutletRef       => writeOutletRef(or)
+      case sgr: SagaRef        => writeSagaRef(sgr)
+      case ur: UserRef         => writeUserRef(ur)
+      case epr: EpicRef        => writeEpicRef(epr)
+      case gr: GroupRef        => writeGroupRef(gr)
+      case inr: InputRef       => writeInputRef(inr)
+      case outr: OutputRef     => writeOutputRef(outr)
+      case dr: DomainRef       => writeDomainRef(dr)
       case _ =>
         println(s"Unhandled reference type: ${r.getClass.getSimpleName} at ${r.loc}")
     }
@@ -1201,10 +1223,10 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   def writeMessageRef(r: MessageRef): Unit = {
     r match {
-      case cr: CommandRef => writeCommandRef(cr)
-      case er: EventRef => writeEventRef(er)
-      case qr: QueryRef => writeQueryRef(qr)
-      case rr: ResultRef => writeResultRef(rr)
+      case cr: CommandRef  => writeCommandRef(cr)
+      case er: EventRef    => writeEventRef(er)
+      case qr: QueryRef    => writeQueryRef(qr)
+      case rr: ResultRef   => writeResultRef(rr)
       case recr: RecordRef => writeRecordRef(recr)
       case _ =>
         println(s"Unhandled message ref type: ${r.getClass.getSimpleName} at ${r.loc}")
@@ -1213,18 +1235,18 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   def writeProcessorRef(r: ProcessorRef[?]): Unit = {
     r match {
-      case ar: AdaptorRef => writeAdaptorRef(ar)
-      case er: EntityRef => writeEntityRef(er)
+      case ar: AdaptorRef    => writeAdaptorRef(ar)
+      case er: EntityRef     => writeEntityRef(er)
       case rr: RepositoryRef => writeRepositoryRef(rr)
-      case pr: ProjectorRef => writeProjectorRef(pr)
-      case cr: ContextRef => writeContextRef(cr)
-      case sr: StreamletRef => writeStreamletRef(sr)
+      case pr: ProjectorRef  => writeProjectorRef(pr)
+      case cr: ContextRef    => writeContextRef(cr)
+      case sr: StreamletRef  => writeStreamletRef(sr)
     }
   }
 
   def writePortletRef(r: PortletRef[?]): Unit = {
     r match {
-      case ir: InletRef => writeInletRef(ir)
+      case ir: InletRef  => writeInletRef(ir)
       case or: OutletRef => writeOutletRef(or)
     }
   }
@@ -1372,7 +1394,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       // Aggregate types
       case a: Aggregation =>
         writer.writeU8(TYPE_AGGREGATION)
-        writer.writeU8(255) // Subtype marker for plain Aggregation (vs AggregateUseCaseTypeExpression)
+        writer.writeU8(
+          255
+        ) // Subtype marker for plain Aggregation (vs AggregateUseCaseTypeExpression)
         writeLocation(a.loc)
         // Write count and items inline (TypeExpressions are not traversed)
         writer.writeVarInt(a.contents.length)
@@ -1381,7 +1405,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
           // Phase 7: Only write metadata if non-empty (flag was set in tag)
           item match {
             case wm: WithMetaData if wm.metadata.nonEmpty => writeMetadataCount(wm.metadata)
-            case _ => ()
+            case _                                        => ()
           }
         }
 
@@ -1396,7 +1420,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
           // Phase 7: Only write metadata if non-empty (flag was set in tag)
           item match {
             case wm: WithMetaData if wm.metadata.nonEmpty => writeMetadataCount(wm.metadata)
-            case _ => ()
+            case _                                        => ()
           }
         }
 
@@ -1490,7 +1514,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
       // Aliased type
       case ate: AliasedTypeExpression =>
         writer.writeU8(TYPE_REF)
-        writer.writeU8(0) // AliasedTypeExpression subtype (0 = aliased, 10 = entity ref, 99 = abstract, 100 = nothing)
+        writer.writeU8(
+          0
+        ) // AliasedTypeExpression subtype (0 = aliased, 10 = entity ref, 99 = abstract, 100 = nothing)
         writeLocation(ate.loc)
         writeString(ate.keyword)
         writePathIdentifierInline(ate.pathId)
@@ -1708,7 +1734,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     writeString(id.value)
   }
 
-  /** Write identifier without tag - used when identifier position is known (e.g., after definition tag) */
+  /** Write identifier without tag - used when identifier position is known (e.g., after definition
+    * tag)
+    */
   def writeIdentifierInline(id: Identifier): Unit = {
     writeLocation(id.loc)
     writeString(id.value)
@@ -1722,10 +1750,9 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
   /** Write PathIdentifier without tag - position is always known within references
     *
-    * Phase 8 optimization: Uses path table interning for repeated paths.
-    * Encoding:
-    * - If count > 0: inline path (count + N string indices)
-    * - If count == 0: next varint is path table index
+    * Phase 8 optimization: Uses path table interning for repeated paths. Encoding:
+    *   - If count > 0: inline path (count + N string indices)
+    *   - If count == 0: next varint is path table index
     */
   def writePathIdentifierInline(pid: PathIdentifier): Unit = {
     writeLocation(pid.loc)
@@ -1761,8 +1788,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
     if opt.isDefined then
       writer.writeBoolean(true)
       writeValue(opt.get)
-    else
-      writer.writeBoolean(false)
+    else writer.writeBoolean(false)
     end if
   }
 
@@ -1788,6 +1814,7 @@ class BASTWriter(val writer: ByteBufferWriter, val stringTable: StringTable) {
 
 /** Companion object for BASTWriter */
 object BASTWriter {
+
   /** Create a new BASTWriter with fresh buffers */
   def apply(): BASTWriter = {
     new BASTWriter(new ByteBufferWriter(), StringTable())

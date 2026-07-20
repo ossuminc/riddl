@@ -10,8 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 
 /** Platform-agnostic byte buffer writer for building BAST binary data
   *
-  * Provides methods for writing primitive types, strings, and varints
-  * to a growing byte buffer.
+  * Provides methods for writing primitive types, strings, and varints to a growing byte buffer.
   */
 class ByteBufferWriter {
   private val buffer = ArrayBuffer[Byte]()
@@ -32,28 +31,28 @@ class ByteBufferWriter {
 
   /** Write a 16-bit short (big-endian) */
   def writeShort(value: Short): Unit = {
-    buffer += ((value >> 8) & 0xFF).toByte
-    buffer += (value & 0xFF).toByte
+    buffer += ((value >> 8) & 0xff).toByte
+    buffer += (value & 0xff).toByte
   }
 
   /** Write a 32-bit integer (big-endian) */
   def writeInt(value: Int): Unit = {
-    buffer += ((value >> 24) & 0xFF).toByte
-    buffer += ((value >> 16) & 0xFF).toByte
-    buffer += ((value >> 8) & 0xFF).toByte
-    buffer += (value & 0xFF).toByte
+    buffer += ((value >> 24) & 0xff).toByte
+    buffer += ((value >> 16) & 0xff).toByte
+    buffer += ((value >> 8) & 0xff).toByte
+    buffer += (value & 0xff).toByte
   }
 
   /** Write a 64-bit long (big-endian) */
   def writeLong(value: Long): Unit = {
-    buffer += ((value >> 56) & 0xFF).toByte
-    buffer += ((value >> 48) & 0xFF).toByte
-    buffer += ((value >> 40) & 0xFF).toByte
-    buffer += ((value >> 32) & 0xFF).toByte
-    buffer += ((value >> 24) & 0xFF).toByte
-    buffer += ((value >> 16) & 0xFF).toByte
-    buffer += ((value >> 8) & 0xFF).toByte
-    buffer += (value & 0xFF).toByte
+    buffer += ((value >> 56) & 0xff).toByte
+    buffer += ((value >> 48) & 0xff).toByte
+    buffer += ((value >> 40) & 0xff).toByte
+    buffer += ((value >> 32) & 0xff).toByte
+    buffer += ((value >> 24) & 0xff).toByte
+    buffer += ((value >> 16) & 0xff).toByte
+    buffer += ((value >> 8) & 0xff).toByte
+    buffer += (value & 0xff).toByte
   }
 
   /** Write a variable-length integer */
@@ -68,8 +67,8 @@ class ByteBufferWriter {
     buffer ++= bytes
   }
 
-  /** Write a signed integer using zigzag encoding
-    * More efficient than adding large offsets for signed deltas
+  /** Write a signed integer using zigzag encoding More efficient than adding large offsets for
+    * signed deltas
     */
   def writeZigzagInt(value: Int): Unit = {
     val bytes = VarIntCodec.encodeZigzag(value)
@@ -112,30 +111,34 @@ class ByteBufferWriter {
     buffer.clear()
   }
 
-  /** Update a previously written integer at a specific position
-    * Useful for backpatching offsets after writing data
+  /** Update a previously written integer at a specific position Useful for backpatching offsets
+    * after writing data
     */
   def updateInt(position: Int, value: Int): Unit = {
-    require(position >= 0 && position + 3 < buffer.length,
-      s"Invalid position for updateInt: $position (buffer size: ${buffer.length})")
+    require(
+      position >= 0 && position + 3 < buffer.length,
+      s"Invalid position for updateInt: $position (buffer size: ${buffer.length})"
+    )
 
-    buffer(position) = ((value >> 24) & 0xFF).toByte
-    buffer(position + 1) = ((value >> 16) & 0xFF).toByte
-    buffer(position + 2) = ((value >> 8) & 0xFF).toByte
-    buffer(position + 3) = (value & 0xFF).toByte
+    buffer(position) = ((value >> 24) & 0xff).toByte
+    buffer(position + 1) = ((value >> 16) & 0xff).toByte
+    buffer(position + 2) = ((value >> 8) & 0xff).toByte
+    buffer(position + 3) = (value & 0xff).toByte
   }
 
   /** Update a previously written short at a specific position */
   def updateShort(position: Int, value: Short): Unit = {
-    require(position >= 0 && position + 1 < buffer.length,
-      s"Invalid position for updateShort: $position (buffer size: ${buffer.length})")
+    require(
+      position >= 0 && position + 1 < buffer.length,
+      s"Invalid position for updateShort: $position (buffer size: ${buffer.length})"
+    )
 
-    buffer(position) = ((value >> 8) & 0xFF).toByte
-    buffer(position + 1) = (value & 0xFF).toByte
+    buffer(position) = ((value >> 8) & 0xff).toByte
+    buffer(position + 1) = (value & 0xff).toByte
   }
 
-  /** Reserve space for an integer and return the position
-    * Used for forward references that will be backpatched later
+  /** Reserve space for an integer and return the position Used for forward references that will be
+    * backpatched later
     */
   def reserveInt(): Int = {
     val pos = position

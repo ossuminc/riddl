@@ -13,8 +13,8 @@ import scala.scalajs.js.annotation.*
 @JSExportTopLevel("Timer")
 object Timer {
 
-  /** Runs a code block and returns its result, while recording its execution time, according to the passed clock.
-    * Execution time is written to `out`, if `show` is set to `true`.
+  /** Runs a code block and returns its result, while recording its execution time, according to the
+    * passed clock. Execution time is written to `out`, if `show` is set to `true`.
     *
     * e.g.
     *

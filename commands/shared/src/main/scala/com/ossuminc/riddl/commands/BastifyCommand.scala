@@ -26,12 +26,10 @@ object BastifyCommand {
     def outputDir: Option[Path] = inputFile.map(_.getParent).orElse(Some(Path.of(".")))
 
     override def check: Messages = {
-      if inputFile.isEmpty then
-        Messages.errors("A .riddl input file is required.")
+      if inputFile.isEmpty then Messages.errors("A .riddl input file is required.")
       else if !inputFile.get.toString.endsWith(".riddl") then
         Messages.errors("Input file must have .riddl extension.")
-      else
-        Messages.empty
+      else Messages.empty
     }
   }
 }
@@ -40,10 +38,10 @@ object BastifyCommand {
   *
   * The output .bast file is placed next to the input .riddl file.
   *
-  * Usage:
-  *   riddlc bastify <input.riddl>
+  * Usage: riddlc bastify <input.riddl>
   */
-class BastifyCommand(using pc: PlatformContext) extends PassCommand[BastifyCommand.Options](BastifyCommand.cmdName) {
+class BastifyCommand(using pc: PlatformContext)
+    extends PassCommand[BastifyCommand.Options](BastifyCommand.cmdName) {
   import BastifyCommand.Options
 
   override def getOptionsParser: (OParser[Unit, Options], Options) = {
@@ -87,12 +85,13 @@ class BastifyCommand(using pc: PlatformContext) extends PassCommand[BastifyComma
             val outputPath = determineOutputPath(options)
             try {
               val parent = outputPath.getParent
-              if parent != null && !Files.exists(parent) then
-                Files.createDirectories(parent)
+              if parent != null && !Files.exists(parent) then Files.createDirectories(parent)
               end if
 
               Files.write(outputPath, bastOutput.bytes)
-              pc.log.info(s"Generated: $outputPath (${bastOutput.bytes.length} bytes, ${bastOutput.nodeCount} nodes)")
+              pc.log.info(
+                s"Generated: $outputPath (${bastOutput.bytes.length} bytes, ${bastOutput.nodeCount} nodes)"
+              )
               Right(result)
             } catch {
               case ex: Exception =>
@@ -108,7 +107,7 @@ class BastifyCommand(using pc: PlatformContext) extends PassCommand[BastifyComma
     val bastName = inputName.replaceAll("\\.riddl$", ".bast")
     val dir = inputPath.getParent match {
       case null => Path.of(".")
-      case p => p
+      case p    => p
     }
     dir.resolve(bastName)
   }

@@ -38,8 +38,9 @@ trait PassCommandOptions extends CommandOptions {
   * @tparam OPT
   *   The option type for the command
   */
-abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(using pc: PlatformContext)
-    extends Command[OPT](name) {
+abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(using
+  pc: PlatformContext
+) extends Command[OPT](name) {
 
   /** Get the passes to run given basic input for pass creation
     *
@@ -85,8 +86,8 @@ abstract class PassCommand[OPT <: PassCommandOptions: ClassTag](name: String)(us
     }
   }
 
-  /** The basic implementation of the command. This should be called with `super.run(...)` from the subclass
-    * implementation.
+  /** The basic implementation of the command. This should be called with `super.run(...)` from the
+    * subclass implementation.
     * @param originalOptions
     *   The original options to the command
     * @param commonOptions

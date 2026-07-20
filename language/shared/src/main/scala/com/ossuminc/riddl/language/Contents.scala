@@ -6,15 +6,26 @@
 
 package com.ossuminc.riddl.language
 
-import com.ossuminc.riddl.language.AST.{BASTImport, Branch, Container, Definition, Definitions, Include, Processor, RiddlValue, VitalDefinition, WithIdentifier}
+import com.ossuminc.riddl.language.AST.{
+  BASTImport,
+  Branch,
+  Container,
+  Definition,
+  Definitions,
+  Include,
+  Processor,
+  RiddlValue,
+  VitalDefinition,
+  WithIdentifier
+}
 
 import scala.collection.{SeqFactory, immutable, mutable}
 import scala.reflect.{ClassTag, classTag}
 
 /** A representation of the editable contents of a definition
- * @tparam CV
- *   The upper bound of the values that can be contained (RiddlValue)
- */
+  * @tparam CV
+  *   The upper bound of the values that can be contained (RiddlValue)
+  */
 opaque type Contents[CV <: RiddlValue] = mutable.ArrayBuffer[CV]
 
 /** Companion object for Contents opaque type. */
@@ -28,8 +39,7 @@ object Contents:
   def unapply[T <: RiddlValue](contents: Contents[T]): SeqFactory.UnapplySeqWrapper[T] =
     mutable.ArrayBuffer.unapplySeq[T](contents)
 
-  extension [CV <: RiddlValue](container: Contents[CV])
-    def apply(n: Int): CV = container.apply(n)
+  extension [CV <: RiddlValue](container: Contents[CV]) def apply(n: Int): CV = container.apply(n)
 end Contents
 
 extension [CV <: RiddlValue](sequence: Seq[CV])
@@ -101,9 +111,8 @@ extension [CV <: RiddlValue, CV2 <: RiddlValue](container: Contents[CV])
 end extension
 
 extension [CV <: RiddlValue](container: Container[CV])
-  /** Recursively flatten Include and BASTImport nodes, promoting
-    * their children to the parent container. This is a one-way,
-    * irreversible, in-place operation.
+  /** Recursively flatten Include and BASTImport nodes, promoting their children to the parent
+    * container. This is a one-way, irreversible, in-place operation.
     */
   def flatten(): Unit =
     val items = container.contents

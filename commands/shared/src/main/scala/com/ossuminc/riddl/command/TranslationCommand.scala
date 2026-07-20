@@ -14,7 +14,6 @@ import java.nio.file.Path
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
-
 object TranslationCommand {
   trait Options extends TranslatingOptions with PassCommandOptions {
     def inputFile: Option[Path]
@@ -25,13 +24,14 @@ object TranslationCommand {
   }
 }
 
-/** An abstract base class for translation style commands. That is, they translate an input file into an output
-  * directory of files.
+/** An abstract base class for translation style commands. That is, they translate an input file
+  * into an output directory of files.
   *
   * @param name
   *   The name of the command to pass to [[Command]]
   * @tparam OPT
   *   The option type for the command
   */
-abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](name: String)(using io: PlatformContext)
-    extends PassCommand[OPT](name) {}
+abstract class TranslationCommand[OPT <: TranslationCommand.Options: ClassTag](name: String)(using
+  io: PlatformContext
+) extends PassCommand[OPT](name) {}

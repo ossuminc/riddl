@@ -21,8 +21,8 @@ object Folding {
     *   The container node of CV which must be its direct container
     * @param empty
     *   The initial empty state of the result. this is a "fold" after all :)
-   * @foldIt
-   *    The function that folds eacy entry in `container`
+    * @foldIt
+    *   The function that folds eacy entry in `container`
     * @param f
     *   The folding function which takes 3 arguments and returns an `S` (list the initial `state`)
     * @tparam S
@@ -47,7 +47,8 @@ object Folding {
     * @param top
     *   The containing top node of `value`
     * @param f
-    *   The folder function which is passed the state [S], the node or its container, and the list of parents
+    *   The folder function which is passed the state [S], the node or its container, and the list
+    *   of parents
     * @tparam S
     *   The type of the state
     * @tparam CT
@@ -65,7 +66,7 @@ object Folding {
     val initial = f(zeroValue, top, parents.toParents)
     top match
       case p: Branch[?] => parents.push(p)
-      case _         => ()
+      case _            => ()
     end match
     val value =
       try {
@@ -78,7 +79,7 @@ object Folding {
       } finally {
         top match
           case p: Branch[?] => parents.pop()
-          case _         => ()
+          case _            => ()
         end match
       }
     value

@@ -180,24 +180,24 @@ object PassesResult {
   *   - Include is pushed onto the parent stack
   *   - Include appears in the parent hierarchy
   *
-  *   When false (default), Include nodes are transparent:
+  * When false (default), Include nodes are transparent:
   *   - Include contents are traversed directly
   *   - Include does NOT appear in parent stack
   *   - Include is semantically invisible to the pass
   *
-  *   WARNING: Setting this to true breaks semantic transparency of Include nodes.
-  *   Only use when you need to preserve Include structure (e.g., serialization, AST transformation).
-  *   DO NOT use for passes that perform path resolution or reference lookup - these depend on
-  *   Include being transparent to maintain correct naming hierarchy.
+  * WARNING: Setting this to true breaks semantic transparency of Include nodes. Only use when you
+  * need to preserve Include structure (e.g., serialization, AST transformation). DO NOT use for
+  * passes that perform path resolution or reference lookup - these depend on Include being
+  * transparent to maintain correct naming hierarchy.
   *
-  *   Example usage:
-  *   {{{
+  * Example usage:
+  * {{{
   *   // For serialization that must preserve Include nodes:
   *   case class BASTWriter(...) extends Pass(input, outputs, withIncludes = true)
   *
   *   // For normal passes (default - Include is transparent):
   *   case class ValidationPass(...) extends Pass(input, outputs)
-  *   }}}
+  * }}}
   */
 abstract class Pass(
   @unused val in: PassInput,
@@ -438,11 +438,10 @@ abstract class HierarchyPass(
     * @param parents
     *   The definition parents of the value
     */
-  /** Controls whether BASTImport contents are traversed.
-    * Override in subclasses to suppress content traversal
-    * (e.g., when emitting an import directive instead of
-    * inlining the imported content).
-    * @return true to traverse BASTImport contents, false to skip
+  /** Controls whether BASTImport contents are traversed. Override in subclasses to suppress content
+    * traversal (e.g., when emitting an import directive instead of inlining the imported content).
+    * @return
+    *   true to traverse BASTImport contents, false to skip
     */
   protected def traverseBASTImportContents(bi: BASTImport): Boolean = true
 
@@ -592,8 +591,8 @@ abstract class VisitingPass[VT <: PassVisitor](
       case _: Root                => () // ignore
       case _: Enumerator          => () // not a container
       case _: Field | _: Method | _: Term | _: Author | _: Constant | _: Invariant | _: SagaStep |
-          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema |
-          _: GenericInteraction | _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
+          _: Inlet | _: Outlet | _: Connector | _: User | _: Schema | _: GenericInteraction |
+          _: SelfInteraction | _: VagueInteraction | _: ContainedGroup |
           _: Definition => // not containers
         () // not  containers
     end match
@@ -758,10 +757,9 @@ object Pass {
   def standardPasses(using PlatformContext): PassCreators =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.creator())
 
-  /** Like standardPasses but uses Quick validation mode, skipping
-    * expensive streaming analysis and handler classification.
-    * Suitable for interactive/LSP use where speed matters more
-    * than exhaustive checks.
+  /** Like standardPasses but uses Quick validation mode, skipping expensive streaming analysis and
+    * handler classification. Suitable for interactive/LSP use where speed matters more than
+    * exhaustive checks.
     */
   def quickValidationPasses(using PlatformContext): PassCreators =
     Seq(SymbolsPass.creator(), ResolutionPass.creator(), ValidationPass.quickCreator())
