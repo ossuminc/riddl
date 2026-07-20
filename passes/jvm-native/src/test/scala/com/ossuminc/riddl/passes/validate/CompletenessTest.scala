@@ -1059,6 +1059,49 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept confluence options on domains" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type T is String
+          |  }
+          |} with {
+          |  option confluence_space("DOCS")
+          |  option confluence_parent("Systems")
+          |}
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        msgs.exists(m =>
+          m.message.contains("confluence_") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
+      }
+    }
+
+    "flag confluence options on non-domain definitions" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    type T is String
+          |  } with { option confluence_space("DOCS") }
+          |}
+          |""".stripMargin,
+        td
+      )
+      pc.withOptions(CommonOptions.default) { _ =>
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          // recognized, but the generator only reads it from a domain
+          msgs.exists(m =>
+            m.message.contains("confluence_space") &&
+              m.message.contains("not typically used")
+          ) mustBe true
+        }
+      }
+    }
+
     "reject auto-id option on non-entity definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

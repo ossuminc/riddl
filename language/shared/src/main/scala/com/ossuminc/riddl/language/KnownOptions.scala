@@ -62,7 +62,9 @@ object KnownOptions {
     KnownOption.sql_dialect,
     KnownOption.backstage_owner,
     KnownOption.backstage_lifecycle,
-    KnownOption.backstage_type
+    KnownOption.backstage_type,
+    KnownOption.confluence_space,
+    KnownOption.confluence_parent
   )
 
   final val entity: Seq[String] = Seq(
@@ -140,6 +142,8 @@ object KnownOption {
   final val backstage_owner = "backstage_owner"
   final val backstage_type = "backstage_type"
   final val concept = "concept"
+  final val confluence_parent = "confluence_parent"
+  final val confluence_space = "confluence_space"
   final val consistent = "consistent"
   final val css = "css"
   final val device = "device"

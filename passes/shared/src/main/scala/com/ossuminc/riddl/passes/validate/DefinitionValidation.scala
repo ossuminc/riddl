@@ -130,7 +130,11 @@ object RecognizedOptions:
     // the parent chain, so all are valid on any definition
     "backstage_owner" -> OptionSpec(Seq.empty, 1, 1),
     "backstage_lifecycle" -> OptionSpec(Seq.empty, 1, 1),
-    "backstage_type" -> OptionSpec(Seq.empty, 1, 1)
+    "backstage_type" -> OptionSpec(Seq.empty, 1, 1),
+    // Confluence publishing options; the generator reads these from the
+    // domain only, so a misplaced one is worth flagging
+    "confluence_space" -> OptionSpec(Seq("Domain"), 1, 1),
+    "confluence_parent" -> OptionSpec(Seq("Domain"), 1, 1)
   )
 end RecognizedOptions
 
