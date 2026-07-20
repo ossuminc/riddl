@@ -379,8 +379,8 @@ class JsonInputTest extends AnyWordSpec with Matchers {
     }
   }
 
-  /** parseJson -> root2Json -> parseJson preserves the validation error profile
-    * and root2Json is stable (idempotent) under a second round-trip.
+  /** parseJson -> root2Json -> parseJson preserves the validation error profile and root2Json is
+    * stable (idempotent) under a second round-trip.
     */
   private def profileOf(vr: RiddlLib.ValidateResult): Set[String] =
     (vr.errors ++ vr.warnings).map(_.format).toSet
@@ -397,7 +397,9 @@ class JsonInputTest extends AnyWordSpec with Matchers {
               RiddlLib.root2Json(root2) mustBe json2 // stable / idempotent
             }
           case RiddlResult.Failure(errors) =>
-            fail(s"root2Json output did not re-parse:\n$json2\n" + errors.map(_.format).mkString("\n"))
+            fail(
+              s"root2Json output did not re-parse:\n$json2\n" + errors.map(_.format).mkString("\n")
+            )
         end match
       case RiddlResult.Failure(errors) =>
         fail("parseJson failed: " + errors.map(_.format).mkString("\n"))
@@ -495,7 +497,11 @@ class JsonInputTest extends AnyWordSpec with Matchers {
         case RiddlResult.Success(root) =>
           RiddlLib.validateRoot(root).errors must not be empty
         case RiddlResult.Failure(errors) =>
-          fail("parseJson should succeed (unknown kind -> alias): " + errors.map(_.format).mkString("\n"))
+          fail(
+            "parseJson should succeed (unknown kind -> alias): " + errors
+              .map(_.format)
+              .mkString("\n")
+          )
       end match
     }
 

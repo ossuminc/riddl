@@ -258,7 +258,7 @@ abstract class HandlerTest(using PlatformContext) extends AbstractParsingTest {
           requires.size must be(1)
           requires.head.condition match {
             case ls: LiteralString => ls.s must be("balance >= amount")
-            case _ => fail("Expected LiteralString condition")
+            case _                 => fail("Expected LiteralString condition")
           }
           // Second clause has two requires
           val clause2 = handler.clauses(1)

@@ -35,33 +35,31 @@ class MessageFlowPassTest extends AbstractValidatingTest {
   end runMessageFlowPass
 
   "MessageFlowPass" should {
-    "detect adaptor bridge edge from declaration with ??? body" in {
-      (td: TestData) =>
-        runMessageFlowPass(
-          """domain D is {
+    "detect adaptor bridge edge from declaration with ??? body" in { (td: TestData) =>
+      runMessageFlowPass(
+        """domain D is {
             |  context Source is {
             |    adaptor ToTarget to context D.Target is { ??? }
             |  }
             |  context Target is { ??? }
             |}
             |""".stripMargin
-        ) { (mfo, _) =>
-          mfo.edges must not be empty
-          val bridges = mfo.edges.filter(
-            _.mechanism == FlowMechanism.AdaptorBridge
-          )
-          bridges must not be empty
-          // Outbound adaptor: producer=Source, consumer=Target
-          bridges.head.producer.id.value mustBe "Source"
-          bridges.head.consumer.id.value mustBe "Target"
-          bridges.head.messageType mustBe None
-        }
+      ) { (mfo, _) =>
+        mfo.edges must not be empty
+        val bridges = mfo.edges.filter(
+          _.mechanism == FlowMechanism.AdaptorBridge
+        )
+        bridges must not be empty
+        // Outbound adaptor: producer=Source, consumer=Target
+        bridges.head.producer.id.value mustBe "Source"
+        bridges.head.consumer.id.value mustBe "Target"
+        bridges.head.messageType mustBe None
+      }
     }
 
-    "detect adaptor bridge edge with prompt-only handler" in {
-      (td: TestData) =>
-        runMessageFlowPass(
-          """domain D is {
+    "detect adaptor bridge edge with prompt-only handler" in { (td: TestData) =>
+      runMessageFlowPass(
+        """domain D is {
             |  context Source is {
             |    adaptor ToTarget to context D.Target is {
             |      handler Routing is {
@@ -77,56 +75,54 @@ class MessageFlowPassTest extends AbstractValidatingTest {
             |  }
             |}
             |""".stripMargin
-        ) { (mfo, _) =>
-          val bridges = mfo.edges.filter(
-            _.mechanism == FlowMechanism.AdaptorBridge
-          )
-          // At minimum, the declaration-level edge exists
-          bridges must not be empty
-          bridges.exists(_.messageType.isEmpty) mustBe true
-        }
+      ) { (mfo, _) =>
+        val bridges = mfo.edges.filter(
+          _.mechanism == FlowMechanism.AdaptorBridge
+        )
+        // At minimum, the declaration-level edge exists
+        bridges must not be empty
+        bridges.exists(_.messageType.isEmpty) mustBe true
+      }
     }
 
-    "set correct direction for inbound adaptor" in {
-      (td: TestData) =>
-        runMessageFlowPass(
-          """domain D is {
+    "set correct direction for inbound adaptor" in { (td: TestData) =>
+      runMessageFlowPass(
+        """domain D is {
             |  context Receiver is {
             |    adaptor FromSender from context D.Sender is { ??? }
             |  }
             |  context Sender is { ??? }
             |}
             |""".stripMargin
-        ) { (mfo, _) =>
-          val bridges = mfo.edges.filter(
-            _.mechanism == FlowMechanism.AdaptorBridge
-          )
-          bridges must not be empty
-          // Inbound adaptor: producer=Sender(referent), consumer=Receiver(source)
-          bridges.head.producer.id.value mustBe "Sender"
-          bridges.head.consumer.id.value mustBe "Receiver"
-        }
+      ) { (mfo, _) =>
+        val bridges = mfo.edges.filter(
+          _.mechanism == FlowMechanism.AdaptorBridge
+        )
+        bridges must not be empty
+        // Inbound adaptor: producer=Sender(referent), consumer=Receiver(source)
+        bridges.head.producer.id.value mustBe "Sender"
+        bridges.head.consumer.id.value mustBe "Receiver"
+      }
     }
 
-    "set correct direction for outbound adaptor" in {
-      (td: TestData) =>
-        runMessageFlowPass(
-          """domain D is {
+    "set correct direction for outbound adaptor" in { (td: TestData) =>
+      runMessageFlowPass(
+        """domain D is {
             |  context Source is {
             |    adaptor ToTarget to context D.Target is { ??? }
             |  }
             |  context Target is { ??? }
             |}
             |""".stripMargin
-        ) { (mfo, _) =>
-          val bridges = mfo.edges.filter(
-            _.mechanism == FlowMechanism.AdaptorBridge
-          )
-          bridges must not be empty
-          // Outbound adaptor: producer=Source, consumer=Target(referent)
-          bridges.head.producer.id.value mustBe "Source"
-          bridges.head.consumer.id.value mustBe "Target"
-        }
+      ) { (mfo, _) =>
+        val bridges = mfo.edges.filter(
+          _.mechanism == FlowMechanism.AdaptorBridge
+        )
+        bridges must not be empty
+        // Outbound adaptor: producer=Source, consumer=Target(referent)
+        bridges.head.producer.id.value mustBe "Source"
+        bridges.head.consumer.id.value mustBe "Target"
+      }
     }
 
     "detect tell statement edges" in { (td: TestData) =>

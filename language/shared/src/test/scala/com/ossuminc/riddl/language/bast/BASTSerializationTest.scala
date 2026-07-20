@@ -14,14 +14,14 @@ import org.scalatest.TestData
 
 /** Unit tests for BAST serialization at the language module level.
   *
-  * These tests verify BASTWriter and BASTReader work correctly without
-  * depending on the Pass framework. They use a simple manual traversal
-  * to serialize AST nodes, then verify BASTReader can deserialize them.
+  * These tests verify BASTWriter and BASTReader work correctly without depending on the Pass
+  * framework. They use a simple manual traversal to serialize AST nodes, then verify BASTReader can
+  * deserialize them.
   */
 class BASTSerializationTest extends AbstractTestingBasis {
 
-  /** Simple manual serialization that mirrors what BASTWriterPass does,
-    * but without depending on the passes module.
+  /** Simple manual serialization that mirrors what BASTWriterPass does, but without depending on
+    * the passes module.
     */
   private def serializeToBASTBytes(root: Root): Array[Byte] = {
     val bw = BASTWriter()
@@ -39,37 +39,31 @@ class BASTSerializationTest extends AbstractTestingBasis {
         case domain: Domain =>
           bw.writeNode(domain)
           domain.contents.foreach(traverseAndWrite)
-          if domain.metadata.nonEmpty then
-            bw.writeMetadataCount(domain.metadata)
+          if domain.metadata.nonEmpty then bw.writeMetadataCount(domain.metadata)
 
         case context: Context =>
           bw.writeNode(context)
           context.contents.foreach(traverseAndWrite)
-          if context.metadata.nonEmpty then
-            bw.writeMetadataCount(context.metadata)
+          if context.metadata.nonEmpty then bw.writeMetadataCount(context.metadata)
 
         case entity: Entity =>
           bw.writeNode(entity)
           entity.contents.foreach(traverseAndWrite)
-          if entity.metadata.nonEmpty then
-            bw.writeMetadataCount(entity.metadata)
+          if entity.metadata.nonEmpty then bw.writeMetadataCount(entity.metadata)
 
         case handler: Handler =>
           bw.writeNode(handler)
           handler.contents.foreach(traverseAndWrite)
-          if handler.metadata.nonEmpty then
-            bw.writeMetadataCount(handler.metadata)
+          if handler.metadata.nonEmpty then bw.writeMetadataCount(handler.metadata)
 
         case state: State =>
           bw.writeNode(state)
           state.contents.foreach(traverseAndWrite)
-          if state.metadata.nonEmpty then
-            bw.writeMetadataCount(state.metadata)
+          if state.metadata.nonEmpty then bw.writeMetadataCount(state.metadata)
 
         case t: Type =>
           bw.writeNode(t)
-          if t.metadata.nonEmpty then
-            bw.writeMetadataCount(t.metadata)
+          if t.metadata.nonEmpty then bw.writeMetadataCount(t.metadata)
 
         case other =>
           bw.writeNode(other)
@@ -86,8 +80,7 @@ class BASTSerializationTest extends AbstractTestingBasis {
 
     "round-trip a simple domain with a type" in { (_: TestData) =>
       val typeDef = Type(At(), Identifier(At(), "Foo"), String_(At()))
-      val domain = Domain(At(), Identifier(At(), "Simple"),
-        Contents(typeDef))
+      val domain = Domain(At(), Identifier(At(), "Simple"), Contents(typeDef))
       val root = Root(At(), Contents(domain))
 
       val bytes = serializeToBASTBytes(root)
@@ -103,12 +96,9 @@ class BASTSerializationTest extends AbstractTestingBasis {
 
     "round-trip domain with context and entity" in { (_: TestData) =>
       val handler = Handler(At(), Identifier(At(), "TestHandler"))
-      val entity = Entity(At(), Identifier(At(), "TestEntity"),
-        Contents(handler))
-      val context = Context(At(), Identifier(At(), "TestCtx"),
-        Contents(entity))
-      val domain = Domain(At(), Identifier(At(), "TestDomain"),
-        Contents(context))
+      val entity = Entity(At(), Identifier(At(), "TestEntity"), Contents(handler))
+      val context = Context(At(), Identifier(At(), "TestCtx"), Contents(entity))
+      val domain = Domain(At(), Identifier(At(), "TestDomain"), Contents(context))
       val root = Root(At(), Contents(domain))
 
       val bytes = serializeToBASTBytes(root)
@@ -121,30 +111,23 @@ class BASTSerializationTest extends AbstractTestingBasis {
       }
     }
 
-    "round-trip entity with state containing handlers" in {
-      (_: TestData) =>
-        val stateHandler = Handler(At(),
-          Identifier(At(), "StateHandler"))
-        val typRef = TypeRef(At(),
-          "type", PathIdentifier(At(), Seq("MyFields")))
-        val state = State(At(), Identifier(At(), "Active"),
-          typRef, Contents(stateHandler))
-        val entity = Entity(At(), Identifier(At(), "MyEntity"),
-          Contents(state))
-        val context = Context(At(), Identifier(At(), "MyCtx"),
-          Contents(entity))
-        val domain = Domain(At(), Identifier(At(), "MyDomain"),
-          Contents(context))
-        val root = Root(At(), Contents(domain))
+    "round-trip entity with state containing handlers" in { (_: TestData) =>
+      val stateHandler = Handler(At(), Identifier(At(), "StateHandler"))
+      val typRef = TypeRef(At(), "type", PathIdentifier(At(), Seq("MyFields")))
+      val state = State(At(), Identifier(At(), "Active"), typRef, Contents(stateHandler))
+      val entity = Entity(At(), Identifier(At(), "MyEntity"), Contents(state))
+      val context = Context(At(), Identifier(At(), "MyCtx"), Contents(entity))
+      val domain = Domain(At(), Identifier(At(), "MyDomain"), Contents(context))
+      val root = Root(At(), Contents(domain))
 
-        val bytes = serializeToBASTBytes(root)
+      val bytes = serializeToBASTBytes(root)
 
-        BASTReader.read(bytes) match {
-          case Right(nebula: Nebula) =>
-            nebula.contents.toSeq.size mustBe 1
-          case Left(errors) =>
-            fail(s"BAST read failed: ${errors.format}")
-        }
+      BASTReader.read(bytes) match {
+        case Right(nebula: Nebula) =>
+          nebula.contents.toSeq.size mustBe 1
+        case Left(errors) =>
+          fail(s"BAST read failed: ${errors.format}")
+      }
     }
 
     "round-trip various type expressions" in { (_: TestData) =>
@@ -152,15 +135,11 @@ class BASTSerializationTest extends AbstractTestingBasis {
         Type(At(), Identifier(At(), "AString"), String_(At())),
         Type(At(), Identifier(At(), "ANumber"), Number(At())),
         Type(At(), Identifier(At(), "ABool"), Bool(At())),
-        Type(At(), Identifier(At(), "AnOptional"),
-          Optional(At(), String_(At()))),
-        Type(At(), Identifier(At(), "AList"),
-          OneOrMore(At(), String_(At()))),
-        Type(At(), Identifier(At(), "AMapping"),
-          Mapping(At(), String_(At()), Number(At())))
+        Type(At(), Identifier(At(), "AnOptional"), Optional(At(), String_(At()))),
+        Type(At(), Identifier(At(), "AList"), OneOrMore(At(), String_(At()))),
+        Type(At(), Identifier(At(), "AMapping"), Mapping(At(), String_(At()), Number(At())))
       )
-      val domain = Domain(At(), Identifier(At(), "TypesDomain"),
-        Contents(types*))
+      val domain = Domain(At(), Identifier(At(), "TypesDomain"), Contents(types*))
       val root = Root(At(), Contents(domain))
 
       val bytes = serializeToBASTBytes(root)
@@ -174,12 +153,21 @@ class BASTSerializationTest extends AbstractTestingBasis {
     }
 
     "round-trip multiple domains" in { (_: TestData) =>
-      val d1 = Domain(At(), Identifier(At(), "First"),
-        Contents(Type(At(), Identifier(At(), "A"), String_(At()))))
-      val d2 = Domain(At(), Identifier(At(), "Second"),
-        Contents(Type(At(), Identifier(At(), "B"), Number(At()))))
-      val d3 = Domain(At(), Identifier(At(), "Third"),
-        Contents(Type(At(), Identifier(At(), "C"), Bool(At()))))
+      val d1 = Domain(
+        At(),
+        Identifier(At(), "First"),
+        Contents(Type(At(), Identifier(At(), "A"), String_(At())))
+      )
+      val d2 = Domain(
+        At(),
+        Identifier(At(), "Second"),
+        Contents(Type(At(), Identifier(At(), "B"), Number(At())))
+      )
+      val d3 = Domain(
+        At(),
+        Identifier(At(), "Third"),
+        Contents(Type(At(), Identifier(At(), "C"), Bool(At())))
+      )
       val root = Root(At(), Contents(d1, d2, d3))
 
       val bytes = serializeToBASTBytes(root)
@@ -193,8 +181,11 @@ class BASTSerializationTest extends AbstractTestingBasis {
     }
 
     "reject BAST with stale format revision" in { (_: TestData) =>
-      val domain = Domain(At(), Identifier(At(), "RevTest"),
-        Contents(Type(At(), Identifier(At(), "X"), String_(At()))))
+      val domain = Domain(
+        At(),
+        Identifier(At(), "RevTest"),
+        Contents(Type(At(), Identifier(At(), "X"), String_(At())))
+      )
       val root = Root(At(), Contents(domain))
       val bytes = serializeToBASTBytes(root).clone()
 
@@ -213,8 +204,11 @@ class BASTSerializationTest extends AbstractTestingBasis {
     }
 
     "reject BAST with future format revision" in { (_: TestData) =>
-      val domain = Domain(At(), Identifier(At(), "RevTest"),
-        Contents(Type(At(), Identifier(At(), "X"), String_(At()))))
+      val domain = Domain(
+        At(),
+        Identifier(At(), "RevTest"),
+        Contents(Type(At(), Identifier(At(), "X"), String_(At())))
+      )
       val root = Root(At(), Contents(domain))
       val bytes = serializeToBASTBytes(root).clone()
 
@@ -231,24 +225,29 @@ class BASTSerializationTest extends AbstractTestingBasis {
       }
     }
 
-    "accept BAST with current format revision" in {
-      (_: TestData) =>
-        val domain = Domain(At(), Identifier(At(), "RevOK"),
-          Contents(Type(At(), Identifier(At(), "Y"), Bool(At()))))
-        val root = Root(At(), Contents(domain))
-        val bytes = serializeToBASTBytes(root)
+    "accept BAST with current format revision" in { (_: TestData) =>
+      val domain = Domain(
+        At(),
+        Identifier(At(), "RevOK"),
+        Contents(Type(At(), Identifier(At(), "Y"), Bool(At())))
+      )
+      val root = Root(At(), Contents(domain))
+      val bytes = serializeToBASTBytes(root)
 
-        BASTReader.read(bytes) match {
-          case Right(nebula: Nebula) =>
-            nebula.contents.toSeq.size mustBe 1
-          case Left(errors) =>
-            fail(s"Should accept current revision: ${errors.format}")
-        }
+      BASTReader.read(bytes) match {
+        case Right(nebula: Nebula) =>
+          nebula.contents.toSeq.size mustBe 1
+        case Left(errors) =>
+          fail(s"Should accept current revision: ${errors.format}")
+      }
     }
 
     "reject invalid magic bytes" in { (_: TestData) =>
-      val domain = Domain(At(), Identifier(At(), "MagicTest"),
-        Contents(Type(At(), Identifier(At(), "X"), String_(At()))))
+      val domain = Domain(
+        At(),
+        Identifier(At(), "MagicTest"),
+        Contents(Type(At(), Identifier(At(), "X"), String_(At())))
+      )
       val root = Root(At(), Contents(domain))
       val bytes = serializeToBASTBytes(root).clone()
 

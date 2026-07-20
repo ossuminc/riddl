@@ -98,7 +98,11 @@ class RegressionTests extends AbstractValidatingTest {
           val expected: Type = Type(
             At(rpi, 15, 38),
             Identifier(At(rpi, 20, 23), "Bug"),
-            AliasedTypeExpression(At(rpi, 25, 38), "type", PathIdentifier(At(rpi, 25, 37), List("IntegerRange")))
+            AliasedTypeExpression(
+              At(rpi, 25, 38),
+              "type",
+              PathIdentifier(At(rpi, 25, 37), List("IntegerRange"))
+            )
           )
           typ.mustBe(expected)
       }

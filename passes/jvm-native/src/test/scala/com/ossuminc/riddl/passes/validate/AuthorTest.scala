@@ -33,7 +33,10 @@ class AuthorTest extends AbstractValidatingTest {
       }
     }
     "not supported in contexts" in { (td: TestData) =>
-      val input = RiddlParserInput("""domain foo is { context bar is { author FooBar is { ??? } } }""".stripMargin, td)
+      val input = RiddlParserInput(
+        """domain foo is { context bar is { author FooBar is { ??? } } }""".stripMargin,
+        td
+      )
       parseDomainDefinition(input, identity) match {
         case Left(msgs) =>
           msgs.isOnlyIgnorable must be(false)

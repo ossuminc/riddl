@@ -14,11 +14,11 @@ import org.scalatest.TestData
 /** IDE integration tests
   *
   * Tests IDE-specific scenarios:
-  * - Incremental parsing (simulating user typing)
-  * - Location tracking accuracy
-  * - Error recovery for partial/invalid input
-  * - Performance under IDE-like load
-  * - Multi-file project handling
+  *   - Incremental parsing (simulating user typing)
+  *   - Location tracking accuracy
+  *   - Error recovery for partial/invalid input
+  *   - Performance under IDE-like load
+  *   - Multi-file project handling
   *
   * Priority 8: IDE-Specific Tests from test-coverage-analysis.md
   */
@@ -486,7 +486,8 @@ class IDEIntegrationTest(using PlatformContext) extends ParsingTest {
 
     "handle project with few large files" in { (_: TestData) =>
       val files = (1 to 5).map { fileNum =>
-        val types = (1 to TYPES_PER_SMALL_FILE).map(i => s"  type T${fileNum}_$i is String").mkString("\n")
+        val types =
+          (1 to TYPES_PER_SMALL_FILE).map(i => s"  type T${fileNum}_$i is String").mkString("\n")
         s"domain Large$fileNum is {\n$types\n}"
       }
 

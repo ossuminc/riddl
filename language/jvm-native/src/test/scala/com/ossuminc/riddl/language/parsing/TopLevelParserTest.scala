@@ -155,31 +155,30 @@ class TopLevelParserTest extends ParsingTest {
     // offending file/line. Fixture files are at
     // `language/input/riddl-bad/{badDomain,badEntity}.riddl` and
     // intentionally have 3 opens / 2 closes.
-    "report a normal Error (not Severe) when closing brace is missing at EOF" in {
-      (_: TestData) =>
-        val url: URL = PathUtils.urlFromCwdPath(
-          Path.of(testInput + "/riddl-bad/badDomain.riddl")
-        )
-        val future = TopLevelParser.parseURL(url)
-        Await.result(future, 10.seconds) match
-          case Right(_) =>
-            fail("Expected the malformed input to fail parsing")
-          case Left(messages: Messages) =>
-            // No Severe / "Exception Thrown" — the error reporter
-            // must not crash on the EOF boundary condition.
-            val severes = messages.filter(_.kind == SevereError)
-            withClue(s"Got severe messages: ${severes.map(_.format).mkString(", ")}\n") {
-              severes mustBe empty
-            }
-            // We do expect an Error from fastparse listing `}` as one
-            // of the expected tokens, located in badEntity.riddl.
-            val errors = messages.filter(_.kind == Error)
-            errors mustNot be(empty)
-            val combined = errors.map(_.format).mkString("\n")
-            combined must include("badEntity.riddl")
-            combined must include("Expected")
-            combined must include("}")
-        end match
+    "report a normal Error (not Severe) when closing brace is missing at EOF" in { (_: TestData) =>
+      val url: URL = PathUtils.urlFromCwdPath(
+        Path.of(testInput + "/riddl-bad/badDomain.riddl")
+      )
+      val future = TopLevelParser.parseURL(url)
+      Await.result(future, 10.seconds) match
+        case Right(_) =>
+          fail("Expected the malformed input to fail parsing")
+        case Left(messages: Messages) =>
+          // No Severe / "Exception Thrown" — the error reporter
+          // must not crash on the EOF boundary condition.
+          val severes = messages.filter(_.kind == SevereError)
+          withClue(s"Got severe messages: ${severes.map(_.format).mkString(", ")}\n") {
+            severes mustBe empty
+          }
+          // We do expect an Error from fastparse listing `}` as one
+          // of the expected tokens, located in badEntity.riddl.
+          val errors = messages.filter(_.kind == Error)
+          errors mustNot be(empty)
+          val combined = errors.map(_.format).mkString("\n")
+          combined must include("badEntity.riddl")
+          combined must include("Expected")
+          combined must include("}")
+      end match
     }
   }
 }

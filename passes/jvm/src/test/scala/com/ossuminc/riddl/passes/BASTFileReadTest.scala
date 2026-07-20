@@ -24,16 +24,19 @@ class BASTFileReadTest extends AnyWordSpec {
       val url = URL.fromCwdPath("language/input/everything.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "test")
 
-      val inMemoryBytes = Await.result(inputFuture.map { input =>
-        TopLevelParser.parseInput(input, true) match {
-          case Right(originalRoot: Root) =>
-            val passInput = PassInput(originalRoot)
-            val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
-            writerResult.outputOf[BASTOutput](BASTWriterPass.name).get.bytes
-          case Left(msgs) =>
-            fail(s"Parse failed: ${msgs.format}")
-        }
-      }, 30.seconds)
+      val inMemoryBytes = Await.result(
+        inputFuture.map { input =>
+          TopLevelParser.parseInput(input, true) match {
+            case Right(originalRoot: Root) =>
+              val passInput = PassInput(originalRoot)
+              val writerResult = Pass.runThesePasses(passInput, Seq(BASTWriterPass.creator()))
+              writerResult.outputOf[BASTOutput](BASTWriterPass.name).get.bytes
+            case Left(msgs) =>
+              fail(s"Parse failed: ${msgs.format}")
+          }
+        },
+        30.seconds
+      )
 
       println(s"BAST serialization complete: ${inMemoryBytes.length} bytes")
 

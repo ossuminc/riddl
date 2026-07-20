@@ -13,7 +13,9 @@ import com.ossuminc.riddl.passes.{Pass, PassInput, PassesOutput}
 import com.ossuminc.riddl.utils.{CommonOptions, PlatformContext}
 import org.scalatest.*
 
-/** A base class for test cases involved in resolving [[com.ossuminc.riddl.language.AST.PathIdentifier]]s */
+/** A base class for test cases involved in resolving
+  * [[com.ossuminc.riddl.language.AST.PathIdentifier]]s
+  */
 abstract class SharedResolvingTest(using pc: PlatformContext) extends AbstractParsingTest {
 
   def resolve(

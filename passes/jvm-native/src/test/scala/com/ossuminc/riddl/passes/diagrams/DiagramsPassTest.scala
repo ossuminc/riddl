@@ -21,13 +21,19 @@ class DiagramsPassTest extends SharedDiagramsPassTest {
     val url = URL.fromCwdPath("language/input/everything.riddl")
     val future = RiddlParserInput.fromURL(url, td).map { rpi =>
       parseValidateAndThen(rpi) {
-        (passesResult: PassesResult, root: Root, rpi: RiddlParserInput, messages: Messages.Messages) =>
+        (
+          passesResult: PassesResult,
+          root: Root,
+          rpi: RiddlParserInput,
+          messages: Messages.Messages
+        ) =>
           val pass = new DiagramsPass(passesResult.input, passesResult.outputs)
-          val output = Pass.runPass[DiagramsPassOutput](passesResult.input, passesResult.outputs, pass)
+          val output =
+            Pass.runPass[DiagramsPassOutput](passesResult.input, passesResult.outputs, pass)
           output.messages.justErrors must be(empty)
           output.contextDiagrams must not be (empty)
           output.useCaseDiagrams must not be (empty)
-          output.dataFlowDiagrams must not be(empty)
+          output.dataFlowDiagrams must not be (empty)
       }
     }
     Await.result(future, 10.seconds)

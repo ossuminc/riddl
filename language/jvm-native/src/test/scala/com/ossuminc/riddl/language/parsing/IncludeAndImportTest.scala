@@ -20,7 +20,8 @@ class IncludeAndImportTest extends ParsingTest {
   import com.ossuminc.riddl.language.parsing.RiddlParserInput.*
   "Include" should {
     "handle missing files" in { (td: TestData) =>
-      val rpi = RiddlParserInput("domain foo is { include \"unexisting\" } explained as \"foo\"", td)
+      val rpi =
+        RiddlParserInput("domain foo is { include \"unexisting\" } explained as \"foo\"", td)
       parseDomainDefinition(rpi, identity) match {
         case Right(result) =>
           fail(s"Should have gotten 'FileNotFoundException' but succeeded with: ${result._1}")
@@ -30,7 +31,8 @@ class IncludeAndImportTest extends ParsingTest {
       }
     }
     "handle bad URL" in { (td: TestData) =>
-      val rip = RiddlParserInput("include \"https://incredible.lightness.of.being:8900000/@@@\"", td)
+      val rip =
+        RiddlParserInput("include \"https://incredible.lightness.of.being:8900000/@@@\"", td)
       parseDomainDefinition(rip, identity) match {
         case Right(_) =>
           fail("Should have gotten 'port out of range' error")

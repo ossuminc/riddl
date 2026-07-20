@@ -14,8 +14,8 @@ import com.ossuminc.riddl.passes.resolve.{ReferenceMap, ResolutionOutput, Usages
 import com.ossuminc.riddl.passes.symbols.SymbolsOutput
 import com.ossuminc.riddl.passes.validate.ValidationOutput
 import com.ossuminc.riddl.passes.*
-import com.ossuminc.riddl.utils.{PathUtils, PlatformContext,AbstractTestingBasisWithTestData}
-import com.ossuminc.riddl.utils.{pc,ec, Await}
+import com.ossuminc.riddl.utils.{PathUtils, PlatformContext, AbstractTestingBasisWithTestData}
+import com.ossuminc.riddl.utils.{pc, ec, Await}
 
 import scala.collection.mutable
 import java.nio.file.Path
@@ -57,8 +57,8 @@ class PassTest extends AbstractTestingBasisWithTestData {
   object TestPass extends PassInfo[PassOptions] {
     val name: String = "TestPass"
 
-    override def creator(options: PassOptions)(using PlatformContext): PassCreator = (input, output) =>
-      new TestPass(input, output)
+    override def creator(options: PassOptions)(using PlatformContext): PassCreator =
+      (input, output) => new TestPass(input, output)
   }
 
   class TestPass2(input: PassInput, output: PassesOutput) extends Pass(input, output) {
@@ -76,8 +76,8 @@ class PassTest extends AbstractTestingBasisWithTestData {
   object TestPass2 extends PassInfo[PassOptions] {
     val name: String = "TestPass2"
 
-    override def creator(options: PassOptions)(using PlatformContext): PassCreator = (input, output) =>
-      new TestPass2(input, output)
+    override def creator(options: PassOptions)(using PlatformContext): PassCreator =
+      (input, output) => new TestPass2(input, output)
   }
 
   "Pass" must {
@@ -123,7 +123,8 @@ class PassTest extends AbstractTestingBasisWithTestData {
     }
   }
 
-  case class TestHierarchyPass(input: PassInput, outputs: PassesOutput) extends HierarchyPass(input, outputs) {
+  case class TestHierarchyPass(input: PassInput, outputs: PassesOutput)
+      extends HierarchyPass(input, outputs) {
     def processForTest(node: RiddlValue, parents: ParentStack): (Int, Int, Int, Int) = {
       super.process(node, parents)
       (opens, closes, leaves, values)
@@ -131,13 +132,17 @@ class PassTest extends AbstractTestingBasisWithTestData {
 
     var (opens, closes, leaves, values) = (0, 0, 0, 0)
 
-    override protected def openContainer(definition: Definition, parents: Parents): Unit = opens = opens + 1
+    override protected def openContainer(definition: Definition, parents: Parents): Unit = opens =
+      opens + 1
 
-    override protected def processLeaf(definition: Leaf, parents: Parents): Unit = leaves = leaves + 1
+    override protected def processLeaf(definition: Leaf, parents: Parents): Unit = leaves =
+      leaves + 1
 
-    override protected def closeContainer(definition: Definition, parents: Parents): Unit = closes = closes + 1
+    override protected def closeContainer(definition: Definition, parents: Parents): Unit = closes =
+      closes + 1
 
-    override protected def processValue(value: RiddlValue, parents: Parents): Unit = values = values + 1
+    override protected def processValue(value: RiddlValue, parents: Parents): Unit = values =
+      values + 1
 
     override def name: String = "TestHierarchyPass"
 

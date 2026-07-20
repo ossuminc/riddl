@@ -20,9 +20,9 @@ class FlattenPassTest extends AbstractTestingBasis {
   private def mkEntity(name: String): Entity =
     Entity(At(), mkId(name))
 
-  /** Build a Root whose contents include Includes and/or BASTImports.
-    * We build via an empty buffer and append with asInstanceOf because
-    * Include[T] is not a member of the RootContents union type directly.
+  /** Build a Root whose contents include Includes and/or BASTImports. We build via an empty buffer
+    * and append with asInstanceOf because Include[T] is not a member of the RootContents union type
+    * directly.
     */
   private def mkRoot(items: RiddlValue*): Root =
     val buf = Contents.empty[RootContents]()
@@ -66,8 +66,11 @@ class FlattenPassTest extends AbstractTestingBasis {
     "flatten nested includes (include within include)" in {
       val ctx = mkContext("Inner")
       val innerInclude = Include[Context](At(), contents = Contents(ctx))
-      val domain = Domain(At(), mkId("Outer"),
-        Contents[DomainContents](innerInclude.asInstanceOf[DomainContents]))
+      val domain = Domain(
+        At(),
+        mkId("Outer"),
+        Contents[DomainContents](innerInclude.asInstanceOf[DomainContents])
+      )
       val root = mkRoot(domain)
 
       root.flatten()
@@ -118,11 +121,17 @@ class FlattenPassTest extends AbstractTestingBasis {
     "flatten deep nesting: Domain > Include > Context > Include > Entity" in {
       val entity = mkEntity("DeepEntity")
       val innerInclude = Include[Entity](At(), contents = Contents(entity))
-      val ctx = Context(At(), mkId("Mid"),
-        Contents[ContextContents](innerInclude.asInstanceOf[ContextContents]))
+      val ctx = Context(
+        At(),
+        mkId("Mid"),
+        Contents[ContextContents](innerInclude.asInstanceOf[ContextContents])
+      )
       val outerInclude = Include[Context](At(), contents = Contents(ctx))
-      val domain = Domain(At(), mkId("Top"),
-        Contents[DomainContents](outerInclude.asInstanceOf[DomainContents]))
+      val domain = Domain(
+        At(),
+        mkId("Top"),
+        Contents[DomainContents](outerInclude.asInstanceOf[DomainContents])
+      )
       val root = mkRoot(domain)
 
       root.flatten()
@@ -155,11 +164,14 @@ class FlattenPassTest extends AbstractTestingBasis {
       val c1 = mkContext("DirectCtx")
       val c2 = mkContext("IncludedCtx")
       val include = Include[Context](At(), contents = Contents(c2))
-      val domain = Domain(At(), mkId("D"),
+      val domain = Domain(
+        At(),
+        mkId("D"),
         Contents[DomainContents](
           c1.asInstanceOf[DomainContents],
           include.asInstanceOf[DomainContents]
-        ))
+        )
+      )
 
       // Before flattening, only direct child is visible
       assert(domain.contexts.size == 1)
@@ -177,8 +189,11 @@ class FlattenPassTest extends AbstractTestingBasis {
       // inside a Domain to verify recursion through Nebula
       val ctx = mkContext("NebCtx")
       val include = Include[Context](At(), contents = Contents(ctx))
-      val domain = Domain(At(), mkId("NebDomain"),
-        Contents[DomainContents](include.asInstanceOf[DomainContents]))
+      val domain = Domain(
+        At(),
+        mkId("NebDomain"),
+        Contents[DomainContents](include.asInstanceOf[DomainContents])
+      )
       val nebula = Nebula(At(), Contents[NebulaContents](domain))
 
       nebula.flatten()

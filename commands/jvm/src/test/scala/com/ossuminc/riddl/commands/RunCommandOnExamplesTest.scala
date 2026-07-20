@@ -20,9 +20,10 @@ import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 /** Test Setup for running a command on the riddl-examples repos.
   *
-  * This testkit helper allows you to create a test that runs a command on all the examples in the riddl-examples repo.
-  * It will download the riddl-examples repo, unzip it, and run the command on each example. The command is run in a
-  * temporary directory, and the output is compared to the expected output in the example.
+  * This testkit helper allows you to create a test that runs a command on all the examples in the
+  * riddl-examples repo. It will download the riddl-examples repo, unzip it, and run the command on
+  * each example. The command is run in a temporary directory, and the output is compared to the
+  * expected output in the example.
   *
   * @param shouldDelete
   *   Whether to delete the temporary files needed to run the test

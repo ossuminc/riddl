@@ -67,13 +67,19 @@ class UnbastifyCommandTest extends AnyWordSpec with Matchers {
             // Step 4: Verify output directory contains .riddl file(s)
             assert(Files.exists(outputDir), s"Output directory $outputDir was not created")
 
-            val riddlFiles = Files.list(outputDir).toArray.map(_.asInstanceOf[Path])
+            val riddlFiles = Files
+              .list(outputDir)
+              .toArray
+              .map(_.asInstanceOf[Path])
               .filter(_.toString.endsWith(".riddl"))
             assert(riddlFiles.nonEmpty, "No .riddl files generated in output directory")
 
             // Step 5: Verify output content contains expected domain definition
             val outputContent = riddlFiles.map(p => Files.readString(p)).mkString("\n")
-            assert(outputContent.contains("TestDomain"), s"Output does not contain 'TestDomain': $outputContent")
+            assert(
+              outputContent.contains("TestDomain"),
+              s"Output does not contain 'TestDomain': $outputContent"
+            )
         }
       } finally {
         // Clean up

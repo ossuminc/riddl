@@ -86,7 +86,6 @@ class CommonOptionsTest extends AbstractTestingBasis {
       }
     }
 
-
     "options at top level do not override in common object" in {
       val optionFile = Path.of("riddlc/input/common-overrides.conf")
       CommonOptionsHelper.loadCommonOptions(optionFile) match {

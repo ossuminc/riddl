@@ -16,12 +16,12 @@ import scala.concurrent.duration.DurationInt
 /** File I/O error handling tests
   *
   * Tests error handling for file system operations:
-  * - Non-existent files
-  * - Unreadable files (permission errors)
-  * - Invalid file paths
-  * - Network errors (for URL-based loading)
-  * - Empty files
-  * - Binary files
+  *   - Non-existent files
+  *   - Unreadable files (permission errors)
+  *   - Invalid file paths
+  *   - Network errors (for URL-based loading)
+  *   - Empty files
+  *   - Binary files
   *
   * Priority 6: Error Path Tests from test-coverage-analysis.md
   */
@@ -145,9 +145,26 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
       try {
         // Write invalid UTF-8 sequence
         val invalidUtf8 = Array[Byte](
-          'd', 'o', 'm', 'a', 'i', 'n', ' ',
-          0xC0.toByte, 0x80.toByte, // Invalid UTF-8
-          ' ', 'i', 's', ' ', '{', ' ', '?', '?', '?', ' ', '}'
+          'd',
+          'o',
+          'm',
+          'a',
+          'i',
+          'n',
+          ' ',
+          0xc0.toByte,
+          0x80.toByte, // Invalid UTF-8
+          ' ',
+          'i',
+          's',
+          ' ',
+          '{',
+          ' ',
+          '?',
+          '?',
+          '?',
+          ' ',
+          '}'
         )
         Files.write(tempFile, invalidUtf8)
 
@@ -189,7 +206,7 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
     "reject null path" in { (_: TestData) =>
       try {
         parsePath(null) match {
-          case Left(_) => succeed
+          case Left(_)  => succeed
           case Right(_) => fail("Should reject null path")
         }
       } catch {
@@ -234,13 +251,15 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
             root.domains.nonEmpty mustBe true
         }
       } finally {
-        try { Files.deleteIfExists(specialPath) } catch { case _: Exception => () }
+        try { Files.deleteIfExists(specialPath) }
+        catch { case _: Exception => () }
       }
     }
 
     "handle very long file path" in { (_: TestData) =>
       // Create a path with many nested directories
-      val longPath = (1 to 10).foldLeft(Path.of("/tmp"))((p, i) => p.resolve(s"dir$i"))
+      val longPath = (1 to 10)
+        .foldLeft(Path.of("/tmp"))((p, i) => p.resolve(s"dir$i"))
         .resolve("test.riddl")
 
       parsePath(longPath) match {
@@ -281,12 +300,18 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
       val file2 = Files.createTempFile("riddl-test-circular2", ".riddl")
 
       try {
-        Files.writeString(file1, s"""domain Test1 is {
+        Files.writeString(
+          file1,
+          s"""domain Test1 is {
                                     |  include "${file2.toAbsolutePath}"
-                                    |}""".stripMargin)
-        Files.writeString(file2, s"""domain Test2 is {
+                                    |}""".stripMargin
+        )
+        Files.writeString(
+          file2,
+          s"""domain Test2 is {
                                     |  include "${file1.toAbsolutePath}"
-                                    |}""".stripMargin)
+                                    |}""".stripMargin
+        )
 
         parsePath(file1) match {
           case Left(messages) =>
@@ -310,9 +335,12 @@ class FileIOErrorTest(using PlatformContext) extends ParsingTest {
         files.zipWithIndex.foreach { case (file, index) =>
           if index < files.length - 1 then {
             val nextFile = files(index + 1)
-            Files.writeString(file, s"""domain Level$index is {
+            Files.writeString(
+              file,
+              s"""domain Level$index is {
                                        |  include "${nextFile.toAbsolutePath}"
-                                       |}""".stripMargin)
+                                       |}""".stripMargin
+            )
           } else {
             Files.writeString(file, s"domain Level$index is { ??? }")
           }

@@ -45,10 +45,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("no 'on init' clause")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("no 'on init' clause")) mustBe true
       }
     }
 
@@ -81,10 +80,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("no 'set' statement")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("no 'set' statement")) mustBe true
       }
     }
 
@@ -117,10 +115,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("on init")) mustBe false
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("on init")) mustBe false
       }
     }
 
@@ -149,12 +146,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "should result in sending an event"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -181,12 +179,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "should result in a reply or sending a result"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -208,12 +207,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "does not reference any repository to persist its projection"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -246,12 +246,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "does not persist its projection"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -272,12 +273,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "has no executable statements"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -300,12 +302,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "contains only prompt statements"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -332,12 +335,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "no 'on query' clause"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -366,12 +370,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "no outlet streamlet to publish events on"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -401,12 +406,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(
+          _.message.contains(
             "no Sink streamlet to receive and dispatch"
-          )) mustBe true
+          )
+        ) mustBe true
       }
     }
 
@@ -422,10 +428,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("is not connected")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("is not connected")) mustBe true
       }
     }
 
@@ -457,10 +462,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("does not define an Id type")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("does not define an Id type")) mustBe true
       }
     }
 
@@ -485,16 +489,13 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          val idWarnings = cw.filter(m =>
-            m.message.contains("Id type") || m.message.contains("Id(")
-          )
-          if idWarnings.nonEmpty then {
-            info(s"Unexpected Id warnings:\n${idWarnings.map(_.format).mkString("\n")}")
-          }
-          idWarnings mustBe empty
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        val idWarnings = cw.filter(m => m.message.contains("Id type") || m.message.contains("Id("))
+        if idWarnings.nonEmpty then {
+          info(s"Unexpected Id warnings:\n${idWarnings.map(_.format).mkString("\n")}")
+        }
+        idWarnings mustBe empty
       }
     }
 
@@ -503,16 +504,13 @@ class CompletenessTest extends AbstractValidatingTest {
       val data = java.nio.file.Files.readString(path)
       val url = com.ossuminc.riddl.utils.URL.fromFullPath(path.toString)
       val rpi = RiddlParserInput(data, url, td.name)
-      parseAndValidateInput(rpi, shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          val idWarnings = cw.filter(m =>
-            m.message.contains("Id type") || m.message.contains("Id(")
-          )
-          if idWarnings.nonEmpty then {
-            info(s"Unexpected Id warnings:\n${idWarnings.map(_.format).mkString("\n")}")
-          }
-          idWarnings mustBe empty
+      parseAndValidateInput(rpi, shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        val idWarnings = cw.filter(m => m.message.contains("Id type") || m.message.contains("Id("))
+        if idWarnings.nonEmpty then {
+          info(s"Unexpected Id warnings:\n${idWarnings.map(_.format).mkString("\n")}")
+        }
+        idWarnings mustBe empty
       }
     }
 
@@ -537,10 +535,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("move it to the containing context")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("move it to the containing context")) mustBe true
       }
     }
 
@@ -565,10 +562,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("outside the containing context")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("outside the containing context")) mustBe true
       }
     }
 
@@ -601,10 +597,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("event-sourced")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("event-sourced")) mustBe true
       }
     }
 
@@ -632,10 +627,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("no 'tell command'")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("no 'tell command'")) mustBe true
       }
     }
 
@@ -659,10 +653,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("on other")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("on other")) mustBe true
       }
     }
 
@@ -686,10 +679,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("do not send any messages to its outlets")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("do not send any messages to its outlets")) mustBe true
       }
     }
 
@@ -712,10 +704,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("no 'on init' or 'on other'")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("no 'on init' or 'on other'")) mustBe true
       }
     }
 
@@ -749,10 +740,11 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(m => m.message.contains("OrphanEvent") && m.message.contains("no handler produces it")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(m =>
+          m.message.contains("OrphanEvent") && m.message.contains("no handler produces it")
+        ) mustBe true
       }
     }
 
@@ -766,10 +758,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("defines queries but no result types")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("defines queries but no result types")) mustBe true
       }
     }
 
@@ -783,10 +774,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("defines results but no query types")) mustBe true
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("defines results but no query types")) mustBe true
       }
     }
 
@@ -837,13 +827,12 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          if cw.nonEmpty then {
-            info(s"Unexpected completeness warnings:\n${cw.map(_.format).mkString("\n")}")
-          }
-          cw mustBe empty
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        if cw.nonEmpty then {
+          info(s"Unexpected completeness warnings:\n${cw.map(_.format).mkString("\n")}")
+        }
+        cw mustBe empty
       }
     }
 
@@ -869,10 +858,9 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          val cw = completenessWarnings(msgs)
-          cw.exists(_.message.contains("reply or sending a result")) mustBe false
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        val cw = completenessWarnings(msgs)
+        cw.exists(_.message.contains("reply or sending a result")) mustBe false
       }
     }
 
@@ -902,11 +890,12 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          msgs.hasErrors mustBe false
-          // The invariant should be referenced, no usage warning
-          msgs.filter(_.isUsage).exists(
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        msgs.hasErrors mustBe false
+        // The invariant should be referenced, no usage warning
+        msgs
+          .filter(_.isUsage)
+          .exists(
             _.message.contains("BalanceNonNegative")
           ) mustBe false
       }
@@ -934,12 +923,11 @@ class CompletenessTest extends AbstractValidatingTest {
         td
       )
       pc.withOptions(CommonOptions.default) { _ =>
-        parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-          (_, _, msgs) =>
-            val usageWarnings = msgs.filter(_.isUsage)
-            usageWarnings.exists(
-              _.message.contains("DataNotEmpty")
-            ) mustBe true
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          val usageWarnings = msgs.filter(_.isUsage)
+          usageWarnings.exists(
+            _.message.contains("DataNotEmpty")
+          ) mustBe true
         }
       }
     }
@@ -965,12 +953,11 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          // auto-id should be accepted without "not recognized" warning
-          msgs.exists(m =>
-            m.message.contains("auto-id") && m.message.contains("not a recognized")
-          ) mustBe false
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // auto-id should be accepted without "not recognized" warning
+        msgs.exists(m =>
+          m.message.contains("auto-id") && m.message.contains("not a recognized")
+        ) mustBe false
       }
     }
 
@@ -984,15 +971,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          // protocol should be accepted without "not recognized" or
-          // "not typically used" style warnings
-          msgs.exists(m =>
-            m.message.contains("protocol") &&
-              (m.message.contains("not a recognized") ||
-                m.message.contains("not typically used"))
-          ) mustBe false
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // protocol should be accepted without "not recognized" or
+        // "not typically used" style warnings
+        msgs.exists(m =>
+          m.message.contains("protocol") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
       }
     }
 
@@ -1008,15 +994,14 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          // event_catalog_version should be accepted on all three without
-          // "not recognized" or "not typically used" style warnings
-          msgs.exists(m =>
-            m.message.contains("event_catalog_version") &&
-              (m.message.contains("not a recognized") ||
-                m.message.contains("not typically used"))
-          ) mustBe false
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // event_catalog_version should be accepted on all three without
+        // "not recognized" or "not typically used" style warnings
+        msgs.exists(m =>
+          m.message.contains("event_catalog_version") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
       }
     }
 
@@ -1035,16 +1020,15 @@ class CompletenessTest extends AbstractValidatingTest {
           |""".stripMargin,
         td
       )
-      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-        (_, _, msgs) =>
-          // both options should be accepted without "not recognized" or
-          // "not typically used" style warnings
-          msgs.exists(m =>
-            (m.message.contains("sql_dialect") ||
-              m.message.contains("sql_table")) &&
-              (m.message.contains("not a recognized") ||
-                m.message.contains("not typically used"))
-          ) mustBe false
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // both options should be accepted without "not recognized" or
+        // "not typically used" style warnings
+        msgs.exists(m =>
+          (m.message.contains("sql_dialect") ||
+            m.message.contains("sql_table")) &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
       }
     }
 
@@ -1059,11 +1043,10 @@ class CompletenessTest extends AbstractValidatingTest {
         td
       )
       pc.withOptions(CommonOptions.default) { _ =>
-        parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
-          (_, _, msgs) =>
-            msgs.exists(m =>
-              m.message.contains("auto-id") && m.message.contains("not typically used")
-            ) mustBe true
+        parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+          msgs.exists(m =>
+            m.message.contains("auto-id") && m.message.contains("not typically used")
+          ) mustBe true
         }
       }
     }

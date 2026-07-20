@@ -13,9 +13,8 @@ import com.ossuminc.riddl.language.At
 import com.ossuminc.riddl.utils.{AbstractTestingBasisWithTestData, PlatformContext}
 import org.scalatest.TestData
 
-/** Tests for the scope-based parsing API (parseAsDomain,
-  * parseAsContext, parseAsEntity, parseAsEpic,
-  * parseAsStreamlet).
+/** Tests for the scope-based parsing API (parseAsDomain, parseAsContext, parseAsEntity,
+  * parseAsEpic, parseAsStreamlet).
   */
 trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithTestData {
 
@@ -191,7 +190,9 @@ trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithT
         PathIdentifier(At.empty, Seq("OtherContext"))
       )
       TopLevelParser.parseAsAdaptor(
-        input, direction, ctxRef
+        input,
+        direction,
+        ctxRef
       ) match {
         case Left(errors) => fail(errors.format)
         case Right(adaptor) =>
@@ -307,7 +308,10 @@ trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithT
         td
       )
       TopLevelParser.parseAsStreamlet(
-        input, shape, inlets, outlets
+        input,
+        shape,
+        inlets,
+        outlets
       ) match {
         case Left(errors) => fail(errors.format)
         case Right(streamlet) =>
@@ -327,7 +331,10 @@ trait ScopedParsingTest(using PlatformContext) extends AbstractTestingBasisWithT
         td
       )
       TopLevelParser.parseAsStreamlet(
-        input, shape, Seq.empty, Seq.empty
+        input,
+        shape,
+        Seq.empty,
+        Seq.empty
       ) match {
         case Left(errors) => fail(errors.format)
         case Right(streamlet) =>

@@ -11,8 +11,8 @@ import org.scalatest.wordspec.AnyWordSpec
 
 /** Test suite for StringHelpers extension methods and utilities
   *
-  * Tests all edge cases including: - Empty strings - Single character strings - No matches - All matches - Boundary
-  * conditions - Special characters - Unicode
+  * Tests all edge cases including: - Empty strings - Single character strings - No matches - All
+  * matches - Boundary conditions - Special characters - Unicode
   */
 class StringHelpersTest extends AnyWordSpec with Matchers {
 

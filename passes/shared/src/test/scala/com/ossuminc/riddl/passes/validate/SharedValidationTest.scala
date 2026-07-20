@@ -9,7 +9,11 @@ package com.ossuminc.riddl.passes.validate
 import com.ossuminc.riddl.language.AST.*
 import com.ossuminc.riddl.language.{At, Contents, *}
 import com.ossuminc.riddl.language.Messages.*
-import com.ossuminc.riddl.language.parsing.{AbstractParsingTest, RiddlParserInput, StringParserInput}
+import com.ossuminc.riddl.language.parsing.{
+  AbstractParsingTest,
+  RiddlParserInput,
+  StringParserInput
+}
 import com.ossuminc.riddl.passes.{Pass, PassesOutput, PassInput, Riddl}
 import com.ossuminc.riddl.passes.PassRoot
 import com.ossuminc.riddl.utils.{pc, CommonOptions, PlatformContext}
@@ -24,13 +28,14 @@ abstract class SharedValidationTest(using PlatformContext) extends AbstractParsi
       val rpi = RiddlParserInput("abcdefg", td)
       val at = At(rpi, 0, 6)
       val msg = Message(at, "the_message", Warning)
-      pc.withOptions[org.scalatest.Assertion](CommonOptions.default.copy(noANSIMessages = true)) { _ =>
-        val content = msg.format
-        val expected =
-          s"""empty(1:1->7):
+      pc.withOptions[org.scalatest.Assertion](CommonOptions.default.copy(noANSIMessages = true)) {
+        _ =>
+          val content = msg.format
+          val expected =
+            s"""empty(1:1->7):
             |the_message:
             |abcdefg""".stripMargin
-        content must be(expected)
+          content must be(expected)
       }
     }
     "compare based on locations" in { (td: TestData) =>

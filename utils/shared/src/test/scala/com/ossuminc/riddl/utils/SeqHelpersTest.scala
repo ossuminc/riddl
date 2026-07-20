@@ -13,8 +13,8 @@ import scala.collection.mutable
 
 /** Test suite for SeqHelpers extension methods
   *
-  * Tests all edge cases including: - Empty sequences - Single element sequences - No matches - All matches - Boundary
-  * conditions - Large sequences (performance)
+  * Tests all edge cases including: - Empty sequences - Single element sequences - No matches - All
+  * matches - Boundary conditions - Large sequences (performance)
   */
 class SeqHelpersTest extends AnyWordSpec with Matchers {
 

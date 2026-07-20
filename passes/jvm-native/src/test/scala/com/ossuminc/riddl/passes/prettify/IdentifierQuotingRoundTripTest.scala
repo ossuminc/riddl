@@ -15,9 +15,8 @@ import com.ossuminc.riddl.utils.pc
 
 import org.scalatest.*
 
-/** Verifies that special-character identifiers survive a
-  * parse -> prettify -> parse round-trip now that `Identifier.format` /
-  * `PathIdentifier.format` single-quote non-bare names.
+/** Verifies that special-character identifiers survive a parse -> prettify -> parse round-trip now
+  * that `Identifier.format` / `PathIdentifier.format` single-quote non-bare names.
   */
 class IdentifierQuotingRoundTripTest extends AbstractValidatingTest {
 
@@ -40,18 +39,17 @@ class IdentifierQuotingRoundTripTest extends AbstractValidatingTest {
 
   "Identifier quoting" should {
 
-    "round-trip a user whose name has special characters (the repro)" in {
-      (td: TestData) =>
-        val src = """domain D is { user 'CI/CD Pipeline' is "an operator" }"""
-        val root1 = parse(src, "src")
-        Finder(root1).recursiveFindByType[User].head.id.value mustBe "CI/CD Pipeline"
+    "round-trip a user whose name has special characters (the repro)" in { (td: TestData) =>
+      val src = """domain D is { user 'CI/CD Pipeline' is "an operator" }"""
+      val root1 = parse(src, "src")
+      Finder(root1).recursiveFindByType[User].head.id.value mustBe "CI/CD Pipeline"
 
-        val pretty = prettify(root1)
-        pretty must include("user 'CI/CD Pipeline'")
+      val pretty = prettify(root1)
+      pretty must include("user 'CI/CD Pipeline'")
 
-        // The prettified output must re-parse to the same identifier value.
-        val root2 = parse(pretty, "regen")
-        Finder(root2).recursiveFindByType[User].head.id.value mustBe "CI/CD Pipeline"
+      // The prettified output must re-parse to the same identifier value.
+      val root2 = parse(pretty, "regen")
+      Finder(root2).recursiveFindByType[User].head.id.value mustBe "CI/CD Pipeline"
     }
 
     "round-trip a type whose name has special characters" in { (td: TestData) =>
@@ -62,28 +60,27 @@ class IdentifierQuotingRoundTripTest extends AbstractValidatingTest {
       types.map(_.id.value) must contain("CI/CD Pipeline")
     }
 
-    "round-trip a path reference with a special-character component" in {
-      (td: TestData) =>
-        // A path whose middle component has a space: emitted as one quoted
-        // whole path 'D.Weird Name', parsed back to the same components.
-        val src =
-          """domain D is {
+    "round-trip a path reference with a special-character component" in { (td: TestData) =>
+      // A path whose middle component has a space: emitted as one quoted
+      // whole path 'D.Weird Name', parsed back to the same components.
+      val src =
+        """domain D is {
             |  type 'Weird Name' is String
             |  type Alias is 'D.Weird Name'
             |}
             |""".stripMargin
-        def aliasPath(root: Root): Seq[String] =
-          Finder(root).recursiveFindByType[Type].find(_.id.value == "Alias").get.typEx match
-            case ate: AliasedTypeExpression => ate.pathId.value
-            case other                      => fail(s"expected AliasedTypeExpression, got $other")
+      def aliasPath(root: Root): Seq[String] =
+        Finder(root).recursiveFindByType[Type].find(_.id.value == "Alias").get.typEx match
+          case ate: AliasedTypeExpression => ate.pathId.value
+          case other                      => fail(s"expected AliasedTypeExpression, got $other")
 
-        val root1 = parse(src, "src")
-        aliasPath(root1) mustBe Seq("D", "Weird Name")
+      val root1 = parse(src, "src")
+      aliasPath(root1) mustBe Seq("D", "Weird Name")
 
-        val pretty = prettify(root1)
-        pretty must include("'D.Weird Name'")
+      val pretty = prettify(root1)
+      pretty must include("'D.Weird Name'")
 
-        aliasPath(parse(pretty, "regen")) mustBe Seq("D", "Weird Name")
+      aliasPath(parse(pretty, "regen")) mustBe Seq("D", "Weird Name")
     }
   }
 }

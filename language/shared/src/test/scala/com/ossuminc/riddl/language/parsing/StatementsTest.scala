@@ -12,7 +12,7 @@ import com.ossuminc.riddl.language.{AST, At}
 import com.ossuminc.riddl.utils.PlatformContext
 import org.scalatest.{Assertion, TestData}
 
-abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest{
+abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest {
 
   def checkStatement(s: Statement): Assertion = {
     s.loc must be(empty)
@@ -128,11 +128,14 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           |      }
           |    }
           |  }
-          |}""".stripMargin, td)
+          |}""".stripMargin,
+        td
+      )
       TopLevelParser.parseInput(input) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
-          val clause = AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+          val clause =
+            AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
           val s: Statement = clause.contents.filter[Statement].head
           s.isInstanceOf[LetStatement] must be(true)
           val letStmt = s.asInstanceOf[LetStatement]
@@ -151,11 +154,14 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           |      }
           |    }
           |  }
-          |}""".stripMargin, td)
+          |}""".stripMargin,
+        td
+      )
       TopLevelParser.parseInput(input) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
-          val clause = AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+          val clause =
+            AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
           val s: Statement = clause.contents.filter[Statement].head
           s.isInstanceOf[LetStatement] must be(true)
           val letStmt = s.asInstanceOf[LetStatement]
@@ -172,7 +178,7 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
       checkStatement(s)
     }
 
-    "include Code Statement" in { (td:TestData) =>
+    "include Code Statement" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain CodeStatements is {
           |  context CodeStatements is {
@@ -184,11 +190,14 @@ abstract class StatementsTest(using PlatformContext) extends AbstractParsingTest
           |      }
           |    }
           |  }
-          |}""".stripMargin,td)
+          |}""".stripMargin,
+        td
+      )
       TopLevelParser.parseInput(input) match
         case Left(messages) => fail(messages.justErrors.format)
         case Right(root) =>
-          val clause = AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
+          val clause =
+            AST.getContexts(AST.getTopLevelDomains(root).head).head.handlers.head.clauses.head
           val s: Statement = clause.contents.filter[Statement].head
           s.isInstanceOf[CodeStatement] must be(true)
           val codeStatement = s.asInstanceOf[CodeStatement]

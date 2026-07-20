@@ -12,8 +12,8 @@ import scala.io.AnsiColor.*
 /** Unit Tests For SysLogger */
 class SysLoggerTest extends AbstractTestingBasis with SequentialNestedSuiteExecution {
 
-  /** Executes a function while capturing system's stdout, return the result of the function and the captured output.
-    * Switches stdout back once code block finishes or throws exception e.g.
+  /** Executes a function while capturing system's stdout, return the result of the function and the
+    * captured output. Switches stdout back once code block finishes or throws exception e.g.
     * {{{
     *   val result = capturingStdErr { () =>
     *     System.out.println("hi there!")

@@ -17,17 +17,14 @@ import org.scalatest.matchers.must.Matchers
 
 import scala.concurrent.duration.*
 
-/** Tests that FlattenPass removes all Include and BASTImport wrapper
-  * nodes from the AST, making accessor methods like domain.contexts
-  * return all definitions regardless of file organization.
+/** Tests that FlattenPass removes all Include and BASTImport wrapper nodes from the AST, making
+  * accessor methods like domain.contexts return all definitions regardless of file organization.
   *
-  * Uses language/input/everything.riddl which contains include
-  * statements across multiple files.
+  * Uses language/input/everything.riddl which contains include statements across multiple files.
   */
 class FlattenPassTest extends AnyWordSpec with Matchers {
 
-  /** Recursively walk the AST and fail if any Include or BASTImport
-    * node is found at any level.
+  /** Recursively walk the AST and fail if any Include or BASTImport node is found at any level.
     */
   private def assertNoWrapperNodes(
     value: RiddlValue,
@@ -53,8 +50,8 @@ class FlattenPassTest extends AnyWordSpec with Matchers {
   /** Count Include and BASTImport nodes at all levels. */
   private def countWrapperNodes(value: RiddlValue): Int = {
     value match {
-      case _: Include[?]  => 1
-      case _: BASTImport  => 1
+      case _: Include[?] => 1
+      case _: BASTImport => 1
       case c: Container[?] =>
         c.contents.toSeq.map(countWrapperNodes).sum
       case _ => 0

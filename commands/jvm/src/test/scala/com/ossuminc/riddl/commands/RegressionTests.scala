@@ -25,7 +25,7 @@ class RegressionTests extends ParsingTest {
       )
       Commands.runMainForTest(args) match {
         case Left(messages) => fail(messages.format)
-        case Right(pr) => succeed
+        case Right(pr)      => succeed
       }
     }
   }

@@ -62,13 +62,29 @@ class UsageTest extends ParsingTest {
           val D_T = domain.types.find(_.id.value == "T").get
           val context = domain.contexts.head
           val DoIt = context.types.find(_.id.value == "DoIt").get
-          val ref = DoIt.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "ref").get
-          val f1 = DoIt.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f1").get
+          val ref = DoIt.typEx
+            .asInstanceOf[AggregateUseCaseTypeExpression]
+            .fields
+            .find(_.id.value == "ref")
+            .get
+          val f1 = DoIt.typEx
+            .asInstanceOf[AggregateUseCaseTypeExpression]
+            .fields
+            .find(_.id.value == "f1")
+            .get
           val C_T = context.types.find(_.id.value == "DT").get
           val entityE = context.entities.head
           val SFields = entityE.types.head
-          val f2 = SFields.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f2").get
-          val f3 = SFields.typEx.asInstanceOf[AggregateUseCaseTypeExpression].fields.find(_.id.value == "f3").get
+          val f2 = SFields.typEx
+            .asInstanceOf[AggregateUseCaseTypeExpression]
+            .fields
+            .find(_.id.value == "f2")
+            .get
+          val f3 = SFields.typEx
+            .asInstanceOf[AggregateUseCaseTypeExpression]
+            .fields
+            .find(_.id.value == "f3")
+            .get
           val S = entityE.states.head
           val omc = entityE.handlers.head.clauses.head
 
@@ -306,7 +322,7 @@ class UsageTest extends ParsingTest {
       )
       Riddl.parseAndValidate(input, shouldFailOnError = false) match {
         case Left(messages) => fail(messages.format)
-        case Right(result) =>
+        case Right(result)  =>
           // No "only referenced in path identifiers" warning for E (or any
           // non-Type definition).
           result.messages.exists(m =>
