@@ -1032,6 +1032,33 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept backstage options on domains, contexts and entities" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    entity E is {
+          |      type Id is Id(E)
+          |    } with {
+          |      option backstage_owner("sales-team")
+          |      option backstage_lifecycle("production")
+          |      option backstage_type("service")
+          |    }
+          |  } with { option backstage_owner("platform-team") }
+          |} with { option backstage_lifecycle("experimental") }
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) { (_, _, msgs) =>
+        // all three should be accepted without "not recognized" or
+        // "not typically used" style warnings
+        msgs.exists(m =>
+          m.message.contains("backstage_") &&
+            (m.message.contains("not a recognized") ||
+              m.message.contains("not typically used"))
+        ) mustBe false
+      }
+    }
+
     "reject auto-id option on non-entity definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

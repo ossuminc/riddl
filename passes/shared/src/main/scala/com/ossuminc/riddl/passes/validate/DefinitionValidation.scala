@@ -125,7 +125,12 @@ object RecognizedOptions:
     // the parent chain, so it is valid on entities, repositories,
     // contexts and domains alike, hence no validParents
     "sql_dialect" -> OptionSpec(Seq.empty, 1, 1),
-    "sql_table" -> OptionSpec(Seq.empty, 1, 1)
+    "sql_table" -> OptionSpec(Seq.empty, 1, 1),
+    // Backstage catalog generation options; each is resolved by walking up
+    // the parent chain, so all are valid on any definition
+    "backstage_owner" -> OptionSpec(Seq.empty, 1, 1),
+    "backstage_lifecycle" -> OptionSpec(Seq.empty, 1, 1),
+    "backstage_type" -> OptionSpec(Seq.empty, 1, 1)
   )
 end RecognizedOptions
 

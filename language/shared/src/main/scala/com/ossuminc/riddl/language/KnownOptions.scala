@@ -44,7 +44,10 @@ object KnownOptions {
     KnownOption.faicon,
     KnownOption.protocol,
     KnownOption.event_catalog_version,
-    KnownOption.sql_dialect
+    KnownOption.sql_dialect,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val domain: Seq[String] = Seq(
@@ -56,7 +59,10 @@ object KnownOptions {
     KnownOption.kind,
     KnownOption.faicon,
     KnownOption.event_catalog_version,
-    KnownOption.sql_dialect
+    KnownOption.sql_dialect,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val entity: Seq[String] = Seq(
@@ -73,7 +79,10 @@ object KnownOptions {
     KnownOption.css,
     KnownOption.faicon,
     KnownOption.sql_dialect,
-    KnownOption.sql_table
+    KnownOption.sql_table,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val epic: Seq[String] = Seq(
@@ -88,7 +97,10 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.faicon,
-    KnownOption.kind
+    KnownOption.kind,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val repository: Seq[String] = Seq(
@@ -97,7 +109,10 @@ object KnownOptions {
     KnownOption.css,
     KnownOption.faicon,
     KnownOption.sql_dialect,
-    KnownOption.sql_table
+    KnownOption.sql_table,
+    KnownOption.backstage_owner,
+    KnownOption.backstage_lifecycle,
+    KnownOption.backstage_type
   )
 
   final val saga: Seq[String] = Seq(
@@ -121,6 +136,9 @@ object KnownOption {
   final val aggregate = "aggregate"
   final val async = "async"
   final val available = "available"
+  final val backstage_lifecycle = "backstage_lifecycle"
+  final val backstage_owner = "backstage_owner"
+  final val backstage_type = "backstage_type"
   final val concept = "concept"
   final val consistent = "consistent"
   final val css = "css"
