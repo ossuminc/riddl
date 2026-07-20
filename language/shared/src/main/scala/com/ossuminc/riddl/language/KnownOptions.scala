@@ -42,7 +42,8 @@ object KnownOptions {
     KnownOption.css,
     KnownOption.kind,
     KnownOption.faicon,
-    KnownOption.protocol
+    KnownOption.protocol,
+    KnownOption.event_catalog_version
   )
 
   final val domain: Seq[String] = Seq(
@@ -52,7 +53,8 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.css,
     KnownOption.kind,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.event_catalog_version
   )
 
   final val entity: Seq[String] = Seq(
@@ -118,6 +120,7 @@ object KnownOption {
   final val css = "css"
   final val device = "device"
   final val external = "external"
+  final val event_catalog_version = "event_catalog_version"
   final val event_sourced = "event-sourced"
   final val faicon = "faicon"
   final val finite_state_machine = "finite-state-machine"

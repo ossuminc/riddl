@@ -996,6 +996,30 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept event_catalog_version option on domains, contexts and messages" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    command PlaceOrder is { id: String } with {
+          |      option event_catalog_version("2.1.0")
+          |    }
+          |  } with { option event_catalog_version("1.4.0") }
+          |} with { option event_catalog_version("3.0.0") }
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          // event_catalog_version should be accepted on all three without
+          // "not recognized" or "not typically used" style warnings
+          msgs.exists(m =>
+            m.message.contains("event_catalog_version") &&
+              (m.message.contains("not a recognized") ||
+                m.message.contains("not typically used"))
+          ) mustBe false
+      }
+    }
+
     "reject auto-id option on non-entity definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

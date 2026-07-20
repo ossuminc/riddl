@@ -103,6 +103,9 @@ object RecognizedOptions:
     "package" -> OptionSpec(Seq("Domain", "Context"), 1, 1),
     // Transport/protocol option (used by AsyncAPI generation)
     "protocol" -> OptionSpec(Seq("Context", "Streamlet"), 1, 1),
+    // Version pinning for EventCatalog generation; valid on domains,
+    // contexts and message types alike, hence no validParents
+    "event_catalog_version" -> OptionSpec(Seq.empty, 1, 1),
   )
 end RecognizedOptions
 
