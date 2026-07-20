@@ -43,7 +43,8 @@ object KnownOptions {
     KnownOption.kind,
     KnownOption.faicon,
     KnownOption.protocol,
-    KnownOption.event_catalog_version
+    KnownOption.event_catalog_version,
+    KnownOption.sql_dialect
   )
 
   final val domain: Seq[String] = Seq(
@@ -54,7 +55,8 @@ object KnownOptions {
     KnownOption.css,
     KnownOption.kind,
     KnownOption.faicon,
-    KnownOption.event_catalog_version
+    KnownOption.event_catalog_version,
+    KnownOption.sql_dialect
   )
 
   final val entity: Seq[String] = Seq(
@@ -69,7 +71,9 @@ object KnownOptions {
     KnownOption.message_queue,
     KnownOption.technology,
     KnownOption.css,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.sql_dialect,
+    KnownOption.sql_table
   )
 
   final val epic: Seq[String] = Seq(
@@ -91,7 +95,9 @@ object KnownOptions {
     KnownOption.technology,
     KnownOption.kind,
     KnownOption.css,
-    KnownOption.faicon
+    KnownOption.faicon,
+    KnownOption.sql_dialect,
+    KnownOption.sql_table
   )
 
   final val saga: Seq[String] = Seq(
@@ -135,6 +141,8 @@ object KnownOption {
   final val reply = "reply"
   final val sequential = "sequential"
   final val service = "service"
+  final val sql_dialect = "sql_dialect"
+  final val sql_table = "sql_table"
   final val sync = "sync"
   final val tail_recursive = "tail-recursive"
   final val value = "final value"

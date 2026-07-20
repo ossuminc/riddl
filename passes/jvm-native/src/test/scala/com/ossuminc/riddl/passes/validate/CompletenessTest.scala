@@ -1020,6 +1020,34 @@ class CompletenessTest extends AbstractValidatingTest {
       }
     }
 
+    "accept sql_dialect and sql_table options on entities and their parents" in { (td: TestData) =>
+      val input = RiddlParserInput(
+        """domain D is {
+          |  context C is {
+          |    entity Order is {
+          |      type OrderId is Id(Order)
+          |    } with {
+          |      option sql_dialect("mysql")
+          |      option sql_table("orders")
+          |    }
+          |  } with { option sql_dialect("postgres") }
+          |} with { option sql_dialect("ansi") }
+          |""".stripMargin,
+        td
+      )
+      parseAndValidate(input.data, "test", shouldFailOnErrors = false) {
+        (_, _, msgs) =>
+          // both options should be accepted without "not recognized" or
+          // "not typically used" style warnings
+          msgs.exists(m =>
+            (m.message.contains("sql_dialect") ||
+              m.message.contains("sql_table")) &&
+              (m.message.contains("not a recognized") ||
+                m.message.contains("not typically used"))
+          ) mustBe false
+      }
+    }
+
     "reject auto-id option on non-entity definitions" in { (td: TestData) =>
       val input = RiddlParserInput(
         """domain D is {

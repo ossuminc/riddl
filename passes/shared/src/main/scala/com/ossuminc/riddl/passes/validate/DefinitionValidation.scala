@@ -106,6 +106,11 @@ object RecognizedOptions:
     // Version pinning for EventCatalog generation; valid on domains,
     // contexts and message types alike, hence no validParents
     "event_catalog_version" -> OptionSpec(Seq.empty, 1, 1),
+    // SQL DDL generation options; sql_dialect is resolved by walking up
+    // the parent chain, so it is valid on entities, repositories,
+    // contexts and domains alike, hence no validParents
+    "sql_dialect" -> OptionSpec(Seq.empty, 1, 1),
+    "sql_table" -> OptionSpec(Seq.empty, 1, 1),
   )
 end RecognizedOptions
 
