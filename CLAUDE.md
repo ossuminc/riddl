@@ -393,9 +393,21 @@ Co-Authored-By: Claude <model-name> <noreply@anthropic.com>
 ```
 
 ### Branch Strategy
-- **main**: Production releases
-- **development**: Active development (current work)
-- Always push to `development` unless releasing
+- **main** is both the working branch and the release branch —
+  commit directly to it. There is **no GitFlow** and no permanent
+  `development` branch (see `../CLAUDE.md` "Git Workflow").
+- Cut releases by tagging `main`; CI builds from the tag.
+- Reach for a short-lived branch only when you want isolation (a
+  throwaway experiment, or work you'd like to review as a diff),
+  then merge and delete it.
+- The `development` and `old-development` branches linger from the
+  GitFlow era. As of 1.31.0 `development` is fully contained in
+  `main` (0 commits ahead) and is a deletion candidate.
+- **Note:** `.claude/skills/ship/SKILL.md` still prescribes
+  GitFlow steps — fast-forwarding `main` from `development`
+  pre-release, and merging back to `development` post-release.
+  Both are no-ops or contrary to current policy. Skip them and
+  fix the skill when convenient.
 
 ## Quick Reference Commands
 
@@ -624,6 +636,33 @@ to the right group rather than appending to a list.
   FNV-1a fingerprints. `validator.reset()` forces a full recheck.
 - **RecognizedOptions registry** — validates option names,
   argument counts, parent types. Unrecognized → StyleWarning.
+  **This registry is the ONLY thing validation consults.** The
+  `KnownOptions.*` lists in `language/.../KnownOptions.scala`
+  (`adaptor`, `context`, `domain`, …) have **no consumers
+  anywhere in the codebase** — they are advisory/reference data
+  exported to JS via `@JSExportTopLevel`. Adding a name there
+  does NOT clear a warning; adding it to
+  `RecognizedOptions.registry` does. Keep both in sync anyway,
+  since `KnownOptions` is public API.
+- **Generator-metadata options** (1.30.0, 1.31.0) — riddl-gen
+  and friends drive output from RIDDL metadata, with option
+  names prefixed for their target so they are self-describing:
+  `protocol` (AsyncAPI), `event_catalog_version` (EventCatalog),
+  `sql_dialect` / `sql_table` (SQL DDL), `backstage_owner` /
+  `backstage_lifecycle` / `backstage_type` (Backstage catalog),
+  `confluence_space` / `confluence_parent` (Confluence). These
+  parse fine without registration but draw a spurious "not a
+  recognized RIDDL option" StyleWarning until registered.
+  **Choosing `validParents`:** use `Seq.empty` when the
+  generator resolves the value by walking up the parent chain
+  (so it is legitimately settable at any level) — this is the
+  common case. Use a specific list (e.g. `Seq("Domain")` for the
+  `confluence_*` pair) when the generator reads it from exactly
+  one kind of definition, so a misplaced option gets a "not
+  typically used on X (expected: Y)" nudge instead of passing
+  silently. Registering a new one is ~3 edits: `KnownOption`
+  constant, `KnownOptions.*` list membership, registry entry,
+  plus a `CompletenessTest` case.
 - **RiddlLib analysis API** — `getHandlerCompleteness()`,
   `getMessageFlow()`, `getEntityLifecycles()` on the shared
   RiddlLib trait and JS facade. JS facade returns `""` for the
