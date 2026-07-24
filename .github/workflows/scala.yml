@@ -18,7 +18,7 @@ jobs:
       packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RIDDLC_PATH: riddlc/target/native-3/riddlc
+      RIDDLC_PATH: target/out/native0.5/scala-3.8.4/riddlc/riddlc
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -57,11 +57,9 @@ jobs:
       uses: actions/cache@v5
       with:
         path: |
-          **/target/jvm-3
-          **/target/js-3
-          **/target/native-3
-          !**/target/*-3/src_managed
-          !**/target/*-3/resource_managed
+          target/out
+          !target/out/**/src_managed
+          !target/out/**/resource_managed
         key: ${{ runner.os }}-sbt-build-${{ matrix.platform }}-${{ hashFiles('**/*.sbt', 'project/**') }}
         restore-keys: |
           ${{ runner.os }}-sbt-build-${{ matrix.platform }}-
@@ -97,7 +95,7 @@ jobs:
     - name: Publish JVM RIDDL Libs & Test sbt-riddl plugin
       if: matrix.platform == 'JVM'
       env:
-        RIDDLC_PATH: riddlc/target/jvm-3/universal/stage/bin/riddlc
+        RIDDLC_PATH: target/out/jvm/scala-3.8.4/riddlc/universal/stage/bin/riddlc
       run: |
         sbt \
           utils/publishLocal \
@@ -130,8 +128,8 @@ jobs:
         name: collect-release-artifacts-jvm
         retention-days: 30
         path: |
-          riddlc/target/jvm-3/universal/riddlc.zip
-          riddlLib/target/jvm-3/universal/riddlLib.zip
+          target/out/jvm/scala-3.8.4/riddlc/universal/*.zip
+          target/out/jvm/scala-3.8.4/riddl-lib/universal/*.zip
 
     - name: Collect Release Artifacts (Native)
       if: matrix.platform == 'Native'
@@ -140,8 +138,8 @@ jobs:
         name: collect-release-artifacts-native
         retention-days: 30
         path: |
-          riddlc/target/native-3/riddlc
-          riddlLib/target/native-3/libriddl-lib.a
+          target/out/native0.5/scala-3.8.4/riddlc/riddlc
+          target/out/native0.5/scala-3.8.4/riddl-lib/libriddl-lib.a
 
     - name: Collect Release Artifacts (JS)
       if: matrix.platform == 'JS'
@@ -150,7 +148,7 @@ jobs:
         name: collect-release-artifacts-js
         retention-days: 30
         path: |
-          riddlLib/target/js-3/riddl-lib-opt/main.js
+          target/out/sjs1/scala-3.8.4/riddl-lib/riddl-lib-opt/main.js
           riddlLib/js/types/index.d.ts
 
     - name: Cleanup Before Caching
