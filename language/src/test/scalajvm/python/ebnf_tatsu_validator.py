@@ -29,9 +29,9 @@ from ebnf_preprocessor import preprocess_for_tatsu
 
 # Paths relative to this script
 SCRIPT_DIR = Path(__file__).parent
-# Go up from python/ -> test/ -> src/ -> jvm/ -> language/ to find shared/src/...
+# Go up from python/ -> test/ -> test/ -> src/ -> language/ to find src/main/resources/...
 LANGUAGE_DIR = SCRIPT_DIR.parent.parent.parent.parent
-EBNF_FILE = LANGUAGE_DIR / "shared" / "src" / "main" / "resources" / "riddl" / "grammar" / "ebnf-grammar.ebnf"
+EBNF_FILE = LANGUAGE_DIR / "src" / "main" / "resources" / "riddl" / "grammar" / "ebnf-grammar.ebnf"
 # Go up one more to find riddl root
 RIDDL_ROOT = LANGUAGE_DIR.parent
 

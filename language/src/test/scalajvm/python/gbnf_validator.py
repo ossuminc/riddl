@@ -29,11 +29,11 @@ SCRIPT_DIR = Path(__file__).parent
 LANGUAGE_DIR = SCRIPT_DIR.parent.parent.parent.parent
 GBNF_FILE = (
     LANGUAGE_DIR
-    / "shared/src/main/resources/riddl/grammar/riddl-grammar.gbnf"
+    / "src/main/resources/riddl/grammar/riddl-grammar.gbnf"
 )
 EBNF_FILE = (
     LANGUAGE_DIR
-    / "shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf"
+    / "src/main/resources/riddl/grammar/ebnf-grammar.ebnf"
 )
 OVERRIDES_FILE = SCRIPT_DIR / "gbnf_overrides.gbnf"
 

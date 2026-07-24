@@ -35,7 +35,7 @@ from ebnf_preprocessor import preprocess_for_tatsu
 # Paths relative to this script
 SCRIPT_DIR = Path(__file__).parent
 LANGUAGE_DIR = SCRIPT_DIR.parent.parent.parent.parent
-EBNF_FILE = LANGUAGE_DIR / "shared" / "src" / "main" / "resources" / "riddl" / "grammar" / "ebnf-grammar.ebnf"
+EBNF_FILE = LANGUAGE_DIR / "src" / "main" / "resources" / "riddl" / "grammar" / "ebnf-grammar.ebnf"
 RIDDL_ROOT = LANGUAGE_DIR.parent
 
 # Default external repository path (riddl-examples)

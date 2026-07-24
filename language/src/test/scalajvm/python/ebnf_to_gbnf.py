@@ -27,7 +27,7 @@ SCRIPT_DIR = Path(__file__).parent
 LANGUAGE_DIR = SCRIPT_DIR.parent.parent.parent.parent
 DEFAULT_EBNF = (
     LANGUAGE_DIR
-    / "shared/src/main/resources/riddl/grammar/ebnf-grammar.ebnf"
+    / "src/main/resources/riddl/grammar/ebnf-grammar.ebnf"
 )
 DEFAULT_OUTPUT = DEFAULT_EBNF.parent / "riddl-grammar.gbnf"
 DEFAULT_OVERRIDES = SCRIPT_DIR / "gbnf_overrides.gbnf"
