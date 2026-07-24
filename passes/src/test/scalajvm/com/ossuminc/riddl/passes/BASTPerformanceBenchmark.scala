@@ -31,7 +31,7 @@ class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
   "BAST Performance" should {
 
     "compare parse vs load times for comprehensive test file" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td.name)
 
       val result = Await.result(inputFuture.map { input =>
@@ -91,7 +91,7 @@ class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
     }
 
     "benchmark multiple iterations for accurate timing" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td.name)
 
       val result = Await.result(inputFuture.map { input =>
@@ -179,7 +179,7 @@ class BASTPerformanceBenchmark extends AnyWordSpec with Matchers {
     }
 
     "measure throughput for write and read operations" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td.name)
 
       val result = Await.result(inputFuture.map { input =>

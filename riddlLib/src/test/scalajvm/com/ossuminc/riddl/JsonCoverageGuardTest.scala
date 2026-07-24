@@ -42,7 +42,7 @@ class JsonCoverageGuardTest extends AnyWordSpec with Matchers {
   "JSON_COVERAGE.md" should {
     "list every AST definition, type expression, statement, and interaction" in {
       val ledgerOpt = readFile("JSON_COVERAGE.md")
-      val astOpt = readFile("language/shared/src/main/scala/com/ossuminc/riddl/language/AST.scala")
+      val astOpt = readFile("language/src/main/scala/com/ossuminc/riddl/language/AST.scala")
 
       (ledgerOpt, astOpt) match
         case (Some(ledger), Some(ast)) =>

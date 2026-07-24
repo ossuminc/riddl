@@ -22,7 +22,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
 
   "BASTWriter" should {
     "serialize comprehensive test file" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
       inputFuture.map { input =>
@@ -65,7 +65,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
     }
 
     "validate BAST header structure" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
       inputFuture.map { input =>
@@ -114,7 +114,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
     }
 
     "serialize and validate string table" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
       inputFuture.map { input =>
@@ -158,7 +158,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
     }
 
     "measure serialization performance" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
       inputFuture.map { input =>
@@ -215,7 +215,7 @@ class BASTWriterSpec extends AbstractRunPassTest {
     }
 
     "serialize all node types without errors" in { (td: TestData) =>
-      val url = URL.fromCwdPath("passes/jvm/src/test/resources/comprehensive-test.riddl")
+      val url = URL.fromCwdPath("passes/src/test/resources/comprehensive-test.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, td)
 
       inputFuture.map { input =>

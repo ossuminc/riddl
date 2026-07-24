@@ -30,9 +30,9 @@ object BASTBenchmarkRunner {
   case class TestFile(name: String, path: String, description: String)
 
   val testFiles: Seq[TestFile] = Seq(
-    TestFile("small", "testkit/jvm/src/test/resources/performance/small.riddl", "~60 lines, 2 contexts"),
-    TestFile("medium", "testkit/jvm/src/test/resources/performance/medium.riddl", "~370 lines, 7 contexts"),
-    TestFile("large", "testkit/jvm/src/test/resources/performance/large.riddl", "~1450 lines, 10 contexts")
+    TestFile("small", "testkit/src/test/resources/performance/small.riddl", "~60 lines, 2 contexts"),
+    TestFile("medium", "testkit/src/test/resources/performance/medium.riddl", "~370 lines, 7 contexts"),
+    TestFile("large", "testkit/src/test/resources/performance/large.riddl", "~1450 lines, 10 contexts")
   )
 
   /** Benchmark results for a single file */
