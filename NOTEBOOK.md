@@ -15,71 +15,78 @@ to the task file and note the disposition below.
 
 ---
 
-## In-Flight: sbt 2.0 / sbt-ossuminc 2.0 migration
+## sbt 2.0 / sbt-ossuminc 3.0 migration — VERIFIED, ready for review
 
-**Branch**: `feature/sbt2-migration` (off `development`).
-**Started**: 2026-07-17. **Status**: code changes done through
-Phase 5 + docs; **local build NOT yet verified** (Phase 6) —
-blocked on sbt-ossuminc **2.0.1**.
+**Branch**: `feature/sbt2-migration` (off `development`). This branch
+is intended to become **riddl 2.0**. **Status (2026-07-24): locally
+verified end-to-end.** A full `sbt "; clean; tJVM; tJS; tNative"`
+passes from scratch — all modules compile and **1542 tests pass on
+JVM/JS/Native, 0 failures**. Publishing, the sbt-riddl scripted test,
+and the EBNF/GBNF validators all pass. Not yet merged.
 
-### What's done (committed on the branch)
-1. **Source restructure** — all 7 cross modules moved from the
-   sbtcrossproject `shared/jvm/js/native/jvm-native` tree to the
-   projectMatrix flat layout (`src/{main,test}/scala`, `scalajvm`,
-   `scalajs`, `scalanative`, `scala-jvm-native`). Pure `git mv`.
-   Python EBNF/GBNF validators now at
-   `language/src/test/scalajvm/python`.
-2. **Meta-build** — sbt 1.12.3→**2.0.2**; plugin 1.4.0→**2.0.1**;
-   dropped scala-xml scheme, jsdom dep, bloop, tracked `metals.sbt`;
-   `Dependencies.scala` lost the portable-scala import, `V.scala`
-   is 3.8.4, `%%%`→`%%`.
-3. **build.sbt** — projectMatrix `CrossModule(…, V.scala)`; new
-   `pDep(Project)` per-row deps; `jvmNativeSrc(dir)` helper wires
-   the `scala-jvm-native` dir onto JVM+Native rows (utils, language,
-   passes); removed all tasty-mima blocks + coveralls; fixed the
-   `commandsNative = riddlLib_cp.native` bug.
-4. **sbt-riddl plugin** — Scala 3 / sbt 2 (`Setting[?]`,
-   `PathFinder.get()`; dropped With.Scala2 + `scalaVersion:=2.12.20`).
-5. **CI/tooling** — target paths → `<mod>/target/{jvm,js,native}-3`;
-   `~/.sbt/1.0`→`~/.sbt/2`; dropped coveralls; release.yml checkouts
-   get `fetch-depth:0`+`fetch-tags:true`; sonar/Dockerfile updated.
+### What shipped (committed on the branch)
+1. **Source restructure** — all 7 cross modules moved (pure `git mv`)
+   from `shared/jvm/js/native/jvm-native` to the projectMatrix flat
+   layout: `src/{main,test}/{scala,scalajvm,scalajs,scalanative,
+   scala-jvm-native}`. Python validators → `language/src/test/scalajvm/python`.
+2. **Meta-build** — sbt 1.12.3→**2.0.2**; sbt-ossuminc 1.4.0→**3.0.3**;
+   dropped scala-xml scheme / jsdom / bloop / tracked `metals.sbt`;
+   `Dependencies.scala`: no portable-scala import, `V.scala=3.8.4`,
+   `%%%`→`%%`.
+3. **build.sbt** — projectMatrix `CrossModule(…, V.scala)`; `pDep`
+   per-row deps; `jvmNativeSrc(dir)` wires `scala-jvm-native` onto the
+   JVM+Native rows (utils/language/passes); removed tasty-mima +
+   coveralls; fixed the `commandsNative = riddlLib_cp.native` bug.
+4. **sbt-riddl plugin** — Scala 3 / sbt 2: `Setting[?]`,
+   `PathFinder.get()`, **`Def.uncached`** on the File-/CompileAnalysis-
+   returning tasks (`riddlcDownload`, `riddlcBinary`, the
+   validateOnCompile hook — required, else the plugin won't compile);
+   dropped With.Scala2 + `scalaVersion:=2.12.20`.
+5. **CI/tooling** — corrected to the real sbt-2 `target/out/…` layout
+   (see CLAUDE.md "Target-path layout"); `~/.sbt/1.0`→`~/.sbt/2`;
+   dropped coveralls; release.yml checkouts get `fetch-depth:0` +
+   `fetch-tags:true`; sonar/Dockerfile updated.
+6. **Test/validator path fixes** — several tests + the python
+   validators hardcoded old `…/jvm/src/test/resources` /
+   `…/shared/src/main/…` paths; updated to the new layout.
 
-### BLOCKER — Phase 0 (separate repo)
-sbt-ossuminc `CrossModule` needs `.defaultAxes(VirtualAxis.jvm,
-VirtualAxis.scalaABIVersion(scalaVersion))` so project IDs stay
-clean (`utils`, not `utils3`). Handed off in
-`../sbt-ossuminc/task/crossmodule-defaultaxes.md`; needs a
-**2.0.1** publishLocal/release. riddl's `plugins.sbt` already pins
-2.0.1. **Do this first**, then run Phase 6.
+### Key facts learned in verification
+- **Run sbt with `sbt --server …`, not the default.** The sbt 2 CLI
+  uses the `sbtn` native thin client, which talks to a **detached**
+  server (`--detach-stdio`) — piped stdout comes back **empty** and the
+  build looks hung. `sbt --server <cmds>` runs in the foreground with
+  attached stdout. Don't trust `--server`'s exit code; grep the log.
+- **Project IDs are clean** (`utils`, `utilsJS`, `utilsNative`, …) —
+  the sbt-ossuminc `defaultAxes` fix (shipped 3.0.1) works.
+- **scalajs-stubs** is JVM-only (`_3`); sbt-ossuminc **3.0.3** auto-adds
+  it (`% provided`) to the JVM+Native rows of JS-targeting modules, so
+  no consumer dep is needed. (3.0.0/3.0.1 did not — an interim manual
+  workaround was removed once 3.0.3 landed.)
+- **`riddlLib/js/{package.json.template,types}` did NOT need moving** —
+  `riddlLibJS/npmPrepare`/`fullLinkJS` published the npm tgz fine.
+- **DocSite / dropped `import scala.collection.Seq`** — load-time issue
+  from 3.0.0 already fixed on the branch; build loads clean.
 
-### Phase 6 watch-items (verify empirically once 2.0.1 lands)
-- **Project IDs**: `sbt projects` must show clean names (no `3`
-  suffix) — confirms the Phase-0 fix took.
-- **Per-row target sub-paths** for JS `fullLinkJS`
-  (`riddlLib/target/js-3/riddl-lib-opt/main.js`) and Native
-  binaries — the plan flagged these as needing a first-build
-  confirmation before the CI paths are trustworthy.
-- **npm packaging**: `riddlLib/js/package.json.template` and
-  `riddlLib/js/types/index.d.ts` were NOT moved. Under projectMatrix
-  the JS row base is the module dir (`riddlLib/`), not `riddlLib/js/`,
-  so `With.Packaging.npm` may look for these at `riddlLib/…`. Verify
-  `riddlLibJS/npmPrepare` and relocate if needed.
-- **build.sbt**: dropped `import sbt.Append.{appendSeqImplicit,
-  appendSet}` — if a `++=`/`+=` fails to resolve on first reload,
-  restore it (name may differ in sbt 2).
-- **DocSite / `docsite`** — kept as-is; sbt-paradox has no stable
-  sbt 2 build, so DocSite may fail at load. Not aggregated by root.
-- **sbt-riddl plugin source** — otherwise-unchanged task API per the
-  README; drive any residual sbt.io/Command API errors to zero at
-  compile time.
-- **Dockerfile** — still installs the sbt 1.10.7 launcher; it should
-  honor `build.properties` (2.0.2), but confirm the image builds.
+### Known non-blockers (deferred)
+- **scalafmt**: `scalafmtCheck` flags ~327 files. This is **pre-existing
+  drift** — the branch is based on `development`, which is *behind*
+  `main`'s "Rectify code format style" commits (unrelated to the
+  migration). Formatting will be fixed before the 2.0 release; do NOT
+  reformat now.
+- **scaladoc**: `Compile/doc` fails on `@JSExport*`-annotated modules
+  (`provided` scalajs-stubs isn't on the doc classpath). Non-fatal —
+  `publishLocal` published every artifact anyway, and the release CI
+  already disables doc (`set every Compile/doc/sources := Seq.empty`).
+  Pre-existing category, not a migration regression.
+- **Degradations accepted on sbt 2**: coveralls, TASTy-MiMa,
+  sbt-idea-plugin, stable sbt-paradox. Regular binary MiMa + scoverage
+  retained. A Scala-3/sbt-2 `sbt-riddl` requires sbt-2 consumers.
 
-### Known degradations on sbt 2 (accepted)
-Coveralls upload, TASTy-MiMa, `sbt-idea-plugin`, and stable
-sbt-paradox docs have no sbt 2 builds yet. Regular binary MiMa and
-scoverage are retained. Downstream: an sbt-2 `sbt-riddl` requires
-consumers to be on sbt 2.
+### CI caveat
+CI path edits match the locally-observed `target/out/…` layout but are
+only truly confirmable in a real CI run. The Dockerfile still installs
+the sbt 1.10.7 launcher (honors `build.properties`; confirm on first
+image build).
 
 ### Local dev note
 Move `~/.sbt/1.0/github.sbt` → `~/.sbt/2/github.sbt` before building.

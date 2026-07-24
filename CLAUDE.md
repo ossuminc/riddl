@@ -61,7 +61,7 @@ When in doubt, **add, don't change**.
 
 ### sbt-ossuminc Plugin
 
-**Current version: 2.0.1** (sbt 2.0.2, projectMatrix-based
+**Current version: 3.0.3** (sbt 2.0.2, projectMatrix-based
 CrossModule). Requires sbt **2.0.2+** — pinned in
 `project/build.properties`. sbt 2 credentials live in `~/.sbt/2/`.
 
@@ -74,8 +74,17 @@ CrossModule). Requires sbt **2.0.2+** — pinned in
   `<mod>/src/{main,test}/scala` (shared), `.../scalajvm`,
   `.../scalajs`, `.../scalanative`, and `.../scala-jvm-native`
   (JVM+Native shared, wired via `unmanagedSourceDirectories`).
-- **Per-row targets**: `<mod>/target/{jvm,js,native}-3` (NOT
-  `target/scala-3.8.x`).
+- **Build outputs** live under a central virtual-FS tree
+  (`sbt.io.virtual=true`, the default): `target/out/<platform>/
+  scala-<fullVersion>/<artifactName>/…` — e.g.
+  `target/out/jvm/scala-3.8.4/riddl-utils/`,
+  `target/out/sjs1/scala-3.8.4/riddl-lib/`,
+  `target/out/native0.5/scala-3.8.4/riddlc/`. NOT per-module
+  `<mod>/target/…`. Platform dirs are `jvm`/`sjs1`/`native0.5`;
+  the path carries the **full** Scala version, not a `-3` binary tag.
+- 3.0.3's CrossModule auto-adds `scalajs-stubs % provided` to the
+  JVM/Native rows of any module that also targets JS (so shared
+  `@JSExport*` code compiles) — no consumer dep needed.
 - Cross-platform deps use plain `%%` (the `%%%` operator is gone).
 
 #### Common Configurations:
@@ -268,30 +277,42 @@ class MyPass extends HierarchyPass {
 
 **All workflows use JDK 25** (standardized)
 
-### CRITICAL: Target-path layout (projectMatrix)
+### CRITICAL: Target-path layout (sbt 2 virtual FS)
 
-Since the sbt 2 upgrade, per-row target dirs are
-`<mod>/target/{jvm,js,native}-3` — the Scala **binary** version (`3`),
-NOT the full `scala-3.8.x`. This means CI/tooling paths are stable
-across 3.8.x → 3.9.x patch bumps (only a full binary-version change,
-e.g. Scala 3 → 4, would move them). Files that hardcode these paths:
+Since the sbt 2 upgrade, build outputs live under a **central**
+virtual-FS tree at the repo root (verified empirically — sbt runs with
+`sbt.io.virtual=true`):
 
-- **scala.yml**: `RIDDLC_PATH` (`riddlc/target/native-3/riddlc`), cache
-  paths (`**/target/{jvm,js,native}-3`), and the JVM/Native/JS artifact
-  upload paths.
-- **coverage.yml** / **.sonarcloud.properties**: scoverage report paths
-  (`**/target/jvm-3/scoverage-report/`).
-- **release.yml**: native binary (`riddlc/target/native-3/riddlc`) and
-  the JVM stage zip (`riddlc/target/jvm-3/universal/stage`).
-- **Dockerfile**: staged copy (`/app/riddlc/target/jvm-3/universal/stage`).
+```
+target/out/<platform>/scala-<fullVersion>/<artifactName>/…
+```
 
-**Quick search:** `grep -rn "target/\(jvm\|js\|native\)-3" .github/ Dockerfile .sonarcloud.properties`
+- `<platform>` ∈ `jvm`, `sjs1`, `native0.5` (NOT `js`/`native`).
+- `<fullVersion>` is the **full** Scala version (`scala-3.8.4`), NOT a
+  `-3` binary tag — so a Scala patch bump (3.8.4 → 3.8.5 / 3.9.x) DOES
+  move every hardcoded path.
+- `<artifactName>` is the `moduleName` (`riddl-utils`, `riddl-lib`,
+  `riddlc`, …).
+
+Verified real paths:
+- native riddlc: `target/out/native0.5/scala-3.8.4/riddlc/riddlc`
+- native lib: `target/out/native0.5/scala-3.8.4/riddl-lib/libriddl-lib.a`
+- JS opt: `target/out/sjs1/scala-3.8.4/riddl-lib/riddl-lib-opt/main.js`
+- JVM stage: `target/out/jvm/scala-3.8.4/riddlc/universal/stage/bin/riddlc`
+- scoverage: `target/out/jvm/scala-3.8.4/<artifact>/scoverage-report/scoverage.xml`
+
+Files that hardcode these (update on any full-Scala-version bump):
+**scala.yml** (`RIDDLC_PATH`, cache `target/out`, artifact upload paths),
+**coverage.yml** + **.sonarcloud.properties** (scoverage), **release.yml**
+(native cp + JVM stage zip), **Dockerfile** (stage copy).
+
+**Quick search:** `grep -rn "target/out/.*scala-3\." .github/ Dockerfile .sonarcloud.properties`
 
 **sbt-ossuminc Version Policy**:
-- sbt-ossuminc 2.0 defaults to Scala **3.8.4** (Scala Next); riddl pins
+- sbt-ossuminc 3.0.x defaults to Scala **3.8.4** (Scala Next); riddl pins
   `V.scala = 3.8.4`. Override via the `CrossModule(...)` scalaVersion arg.
-- When bumping Scala within the 3.x line, the target paths above do
-  **not** change (they use the `3` binary version).
+- A Scala version bump changes the `scala-<fullVersion>` path segment
+  everywhere above — grep and update.
 
 ## Testing Patterns
 
