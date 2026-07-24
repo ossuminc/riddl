@@ -73,10 +73,7 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     coverageExcludedFiles := """<empty>;$anon;.*RiddlBuildInfo.scala""",
-    // Shared code uses @JSExport* (for the JS row); the JVM row needs the
-    // scalajs-stubs to compile those annotations. sbt-ossuminc 1.x's CrossModule
-    // auto-added this; the 3.0 projectMatrix rewrite dropped it, so add it here.
-    libraryDependencies ++= Seq(Dep.compress, Dep.lang3, Dep.scalajs_stubs) ++ Dep.testing
+    libraryDependencies ++= Seq(Dep.compress, Dep.lang3) ++ Dep.testing
   )
   .jsConfigure(With.ScalaJS("RIDDL: utils", withCommonJSModule = true))
   .jsConfigure(With.noMiMa)
@@ -112,7 +109,6 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
-      Dep.scalajs_stubs_native, // shared code's @JSExport* annotations (see jvmSettings note)
       Dep.sttp_nojvm.value,
       Dep.java_net_url_stubs.value,
       Dep.scala_java_time.value,
@@ -143,7 +139,6 @@ lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, J
       Dep.fastparse,
       Dep.airframe_ulid,
       Dep.airframe_json,
-      Dep.scalajs_stubs, // shared code's @JSExport* annotations (see utils note)
       Dep.commons_io % Test
     )
   )
@@ -167,7 +162,6 @@ lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, J
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
-      Dep.scalajs_stubs_native, // shared code's @JSExport* annotations (see utils note)
       Dep.fastparse_nojvm.value,
       Dep.airframe_ulid_nojvm.value,
       Dep.scalatest_nojvm.value,
@@ -193,7 +187,6 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Nat
   .jvmConfigure(With.MiMa(V.previous))
   .jvmSettings(
     coverageExcludedPackages := "<empty>;$anon",
-    libraryDependencies += Dep.scalajs_stubs, // shared @JSExport* annotations (see utils note)
     mimaBinaryIssueFilters ++= Seq(
       ProblemFilters.exclude[ReversedMissingMethodProblem](
         "com.ossuminc.riddl.passes.PassVisitor.doRelationship"
@@ -209,10 +202,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Nat
   // crashes intermittently when multiple `doc` tasks run concurrently under
   // `publish`. Disabling Native scaladoc avoids the race; Native consumers
   // rarely consult the docs jar.
-  .nativeSettings(
-    Compile / doc / sources := Seq.empty,
-    libraryDependencies += Dep.scalajs_stubs_native // shared @JSExport* annotations (see utils note)
-  )
+  .nativeSettings(Compile / doc / sources := Seq.empty)
 val passes = passes_cp.jvm.dependsOn(pDep(utils), pDep(language))
 val passesJS = passes_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS))
 val passesNative = passes_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative))
