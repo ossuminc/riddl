@@ -112,7 +112,7 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
     buildInfoPackage := "com.ossuminc.riddl.utils",
     buildInfoObject := "RiddlBuildInfo",
     libraryDependencies ++= Seq(
-      Dep.scalajs_stubs, // shared code's @JSExport* annotations (see jvmSettings note)
+      Dep.scalajs_stubs_native, // shared code's @JSExport* annotations (see jvmSettings note)
       Dep.sttp_nojvm.value,
       Dep.java_net_url_stubs.value,
       Dep.scala_java_time.value,
@@ -167,7 +167,7 @@ lazy val language_cp = CrossModule("language", "riddl-language", V.scala)(JVM, J
   .nativeConfigure(With.noMiMa)
   .nativeSettings(
     libraryDependencies ++= Seq(
-      Dep.scalajs_stubs, // shared code's @JSExport* annotations (see utils note)
+      Dep.scalajs_stubs_native, // shared code's @JSExport* annotations (see utils note)
       Dep.fastparse_nojvm.value,
       Dep.airframe_ulid_nojvm.value,
       Dep.scalatest_nojvm.value,
@@ -211,7 +211,7 @@ lazy val passes_cp = CrossModule("passes", "riddl-passes", V.scala)(JVM, JS, Nat
   // rarely consult the docs jar.
   .nativeSettings(
     Compile / doc / sources := Seq.empty,
-    libraryDependencies += Dep.scalajs_stubs // shared @JSExport* annotations (see utils note)
+    libraryDependencies += Dep.scalajs_stubs_native // shared @JSExport* annotations (see utils note)
   )
 val passes = passes_cp.jvm.dependsOn(pDep(utils), pDep(language))
 val passesJS = passes_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS))

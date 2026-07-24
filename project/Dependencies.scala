@@ -54,6 +54,11 @@ object Dep {
   val scalacheck_nojvm = Def.setting { "org.scalacheck" %% "scalacheck" % V.scalacheck }
 
   val scalajs_stubs = "org.scala-js" %% "scalajs-stubs" % "1.1.0" % "provided"
+  // scalajs-stubs is only published for the JVM (_3). Under projectMatrix, %%
+  // on a Native row would ask for the nonexistent _native0.5_3, so force the
+  // JVM artifact explicitly. It's compile-only (provided) and never linked —
+  // it just supplies the @JSExport* annotation symbols for shared code.
+  val scalajs_stubs_native = "org.scala-js" % "scalajs-stubs_3" % "1.1.0" % "provided"
 
   val sconfig = "org.ekrich" %% "sconfig" % V.sconfig
   val sconfig_nojvm = Def.setting { "org.ekrich" %% "sconfig" % V.sconfig }
