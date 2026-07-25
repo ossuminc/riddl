@@ -15,14 +15,35 @@ to the task file and note the disposition below.
 
 ---
 
-## sbt 2.0 / sbt-ossuminc 3.0 migration — VERIFIED, ready for review
+## sbt 2.0 / sbt-ossuminc 3.0 / Scala 3.9 — the riddl 2.0 baseline
 
-**Branch**: `feature/sbt2-migration` (off `development`). This branch
-is intended to become **riddl 2.0**. **Status (2026-07-24): locally
-verified end-to-end.** A full `sbt "; clean; tJVM; tJS; tNative"`
-passes from scratch — all modules compile and **1542 tests pass on
-JVM/JS/Native, 0 failures**. Publishing, the sbt-riddl scripted test,
-and the EBNF/GBNF validators all pass. Not yet merged.
+**Branch**: `release/2` (created from `feature/sbt2-migration`, which
+was off `development`). This is the **riddl 2.0** baseline. **Status
+(2026-07-24): locally verified end-to-end.** A full
+`sbt "; clean; tJVM; tJS; tNative"` passes from scratch — all modules
+compile and all tests pass on JVM/JS/Native, 0 failures. Publishing,
+the sbt-riddl scripted test, and the EBNF/GBNF validators all pass.
+`main` has been merged in (format rectification + 1.30/1.31 option
+registrations). Not yet merged back to `main`.
+
+### Scala 3.9.0-RC1 (adopted 2026-07-24)
+riddl 2.0 now targets **Scala 3.9.0-RC1** (was 3.8.4). Verified: all
+three platforms compile and **2127 tests pass, 0 failures** on the RC —
+scala-js and scala-native both publish 3.9.0-RC1 toolchains. Findings:
+- **The lever is `With.Scala3.configure(version = Some(V.scala))` per
+  module**, NOT `V.scala` / `scalaVersion :=` alone (sbt-ossuminc's
+  `With.typical` pins its 3.8.4 default and is applied *after* the
+  module `scalaVersion` setting, so that setting is a no-op). The
+  README's `With.Scala3(version=…)` shorthand does not exist.
+- **One code change needed**: `DefinitionValidatorTest` passed a
+  `Seq[Message]` where `Messages` (= `List[Message]`) is required;
+  3.9.0-RC1's stricter implicit search (scala/scala3#25910/#26210) no
+  longer accepts it (3.9 is *correct* — Seq ⊅ List; 3.8.4 was lenient).
+  Fixed with `.toList` (valid on both versions) — **not** a Scala bug,
+  so no Scala Center report warranted.
+- **When 3.9.0 final ships**: bump `V.scala` 3.9.0-RC1 → 3.9.0 and
+  re-grep the `scala-3.9.0-RC1` path segments in CI/sonar/Dockerfile/
+  CLAUDE.md.
 
 ### What shipped (committed on the branch)
 1. **Source restructure** — all 7 cross modules moved (pure `git mv`)

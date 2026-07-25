@@ -47,10 +47,13 @@ When in doubt, **add, don't change**.
 ## Critical Build Information
 
 ### Scala Version & Syntax
-- **Scala 3.8.4** (not Scala 2!) — matches sbt-ossuminc 2.0's
-  default (3.8.4). RIDDL originally pinned ahead of LTS to dodge a
-  3.3.x compiler infinite loop on opaque + intersection types;
-  the override has been kept while we ride ahead of LTS.
+- **Scala 3.9.0-RC1** (not Scala 2!) — RIDDL 2.0 rides ahead of LTS
+  on Scala Next. Pinned via `V.scala` + `With.Scala3.configure(version
+  = Some(V.scala))` on every CrossModule (sbt-ossuminc's `With.typical`
+  otherwise pins its default 3.8.4, applied after `scalaVersion :=`, so
+  the plain setting is a no-op — the `With.Scala3.configure` override is
+  the real lever). Bump to `3.9.0` when the final release ships (and
+  re-grep the `scala-3.9.0-RC1` CI/target paths).
 - **Build files are Scala 3 too** — since the sbt 2 upgrade,
   `build.sbt` and `project/*.scala` compile with Scala 3 (no more
   Scala 2.12 build-def rule).
@@ -77,9 +80,9 @@ CrossModule). Requires sbt **2.0.2+** — pinned in
 - **Build outputs** live under a central virtual-FS tree
   (`sbt.io.virtual=true`, the default): `target/out/<platform>/
   scala-<fullVersion>/<artifactName>/…` — e.g.
-  `target/out/jvm/scala-3.8.4/riddl-utils/`,
-  `target/out/sjs1/scala-3.8.4/riddl-lib/`,
-  `target/out/native0.5/scala-3.8.4/riddlc/`. NOT per-module
+  `target/out/jvm/scala-3.9.0-RC1/riddl-utils/`,
+  `target/out/sjs1/scala-3.9.0-RC1/riddl-lib/`,
+  `target/out/native0.5/scala-3.9.0-RC1/riddlc/`. NOT per-module
   `<mod>/target/…`. Platform dirs are `jvm`/`sjs1`/`native0.5`;
   the path carries the **full** Scala version, not a `-3` binary tag.
 - 3.0.3's CrossModule auto-adds `scalajs-stubs % provided` to the
@@ -89,9 +92,9 @@ CrossModule). Requires sbt **2.0.2+** — pinned in
 
 #### Common Configurations:
 ```scala
-// Scala 3.8.4 (matches sbt-ossuminc 2.0's default)
-.configure(With.Scala3)
-// CrossModule sets the axis to V.scala (3.8.4); scalaVersion := V.scala
+// Scala 3.9.0-RC1 — override sbt-ossuminc's 3.8.4 default per module:
+.configure(With.typical, With.GithubPublishing, With.Scala3.configure(version = Some(V.scala)))
+// (plain `scalaVersion := V.scala` is a no-op — With.typical wins over it)
 
 // Scala.js configuration
 .jsConfigure(With.ScalaJS(
@@ -288,18 +291,18 @@ target/out/<platform>/scala-<fullVersion>/<artifactName>/…
 ```
 
 - `<platform>` ∈ `jvm`, `sjs1`, `native0.5` (NOT `js`/`native`).
-- `<fullVersion>` is the **full** Scala version (`scala-3.8.4`), NOT a
+- `<fullVersion>` is the **full** Scala version (`scala-3.9.0-RC1`), NOT a
   `-3` binary tag — so a Scala patch bump (3.8.4 → 3.8.5 / 3.9.x) DOES
   move every hardcoded path.
 - `<artifactName>` is the `moduleName` (`riddl-utils`, `riddl-lib`,
   `riddlc`, …).
 
 Verified real paths:
-- native riddlc: `target/out/native0.5/scala-3.8.4/riddlc/riddlc`
-- native lib: `target/out/native0.5/scala-3.8.4/riddl-lib/libriddl-lib.a`
-- JS opt: `target/out/sjs1/scala-3.8.4/riddl-lib/riddl-lib-opt/main.js`
-- JVM stage: `target/out/jvm/scala-3.8.4/riddlc/universal/stage/bin/riddlc`
-- scoverage: `target/out/jvm/scala-3.8.4/<artifact>/scoverage-report/scoverage.xml`
+- native riddlc: `target/out/native0.5/scala-3.9.0-RC1/riddlc/riddlc`
+- native lib: `target/out/native0.5/scala-3.9.0-RC1/riddl-lib/libriddl-lib.a`
+- JS opt: `target/out/sjs1/scala-3.9.0-RC1/riddl-lib/riddl-lib-opt/main.js`
+- JVM stage: `target/out/jvm/scala-3.9.0-RC1/riddlc/universal/stage/bin/riddlc`
+- scoverage: `target/out/jvm/scala-3.9.0-RC1/<artifact>/scoverage-report/scoverage.xml`
 
 Files that hardcode these (update on any full-Scala-version bump):
 **scala.yml** (`RIDDLC_PATH`, cache `target/out`, artifact upload paths),
@@ -309,8 +312,10 @@ Files that hardcode these (update on any full-Scala-version bump):
 **Quick search:** `grep -rn "target/out/.*scala-3\." .github/ Dockerfile .sonarcloud.properties`
 
 **sbt-ossuminc Version Policy**:
-- sbt-ossuminc 3.0.x defaults to Scala **3.8.4** (Scala Next); riddl pins
-  `V.scala = 3.8.4`. Override via the `CrossModule(...)` scalaVersion arg.
+- sbt-ossuminc 3.0.x defaults to Scala **3.8.4**; riddl 2.0 overrides to
+  **3.9.0-RC1** via `V.scala` + `With.Scala3.configure(version = Some(V.scala))`
+  per module (the `CrossModule(...)` axis arg alone does NOT change the
+  effective scalaVersion — With.typical overrides it).
 - A Scala version bump changes the `scala-<fullVersion>` path segment
   everywhere above — grep and update.
 
