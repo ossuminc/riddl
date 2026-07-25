@@ -70,6 +70,55 @@ class BASTRoundTripTest extends AnyWordSpec {
       }
     }
 
+    "serialize and deserialize a domain-scoped repository" in {
+      // RIDDL is reflective across BAST too: a repository defined directly in a
+      // domain must survive AST -> BAST -> AST at the same scope.
+      val riddlSource = """domain d is {
+                          |  context a is { event AEvent is { x: String } }
+                          |  context b is { event BEvent is { y: String } }
+                          |  repository synth is {
+                          |    handler h is {
+                          |      on event a.AEvent { prompt "record from a" }
+                          |      on event b.BEvent { prompt "record from b" }
+                          |    }
+                          |  }
+                          |}
+                          |""".stripMargin
+      val input = RiddlParserInput(riddlSource, "test-domain-repo")
+      TopLevelParser.parseInput(input, true) match {
+        case Right(originalRoot: Root) =>
+          val writerResult =
+            Pass.runThesePasses(PassInput(originalRoot), Seq(BASTWriterPass.creator()))
+          val output = writerResult.outputOf[BASTOutput](BASTWriterPass.name).get
+          BASTReader.read(output.bytes) match {
+            case Right(nebula) =>
+              // Full structural round-trip.
+              assert(
+                compareRoots(originalRoot, nebula),
+                "domain-scoped repository round trip failed: ASTs are not equivalent"
+              )
+              // And specifically: the repository is a direct child of the domain,
+              // not dropped and not relocated into a context.
+              val domain =
+                nebula.domains
+                  .find(_.id.value == "d")
+                  .getOrElse(fail("domain d missing after BAST read"))
+              assert(
+                domain.repositories.map(_.id.value) == Seq("synth"),
+                "repository is not at domain scope after BAST round trip"
+              )
+              assert(
+                domain.contexts.forall(_.repositories.isEmpty),
+                "repository leaked into a context after BAST round trip"
+              )
+            case Left(errors) =>
+              fail(s"Deserialization failed: ${errors.format}")
+          }
+        case Left(messages) =>
+          fail(s"Parse failed: ${messages.format}")
+      }
+    }
+
     "serialize and deserialize dokn.riddl" in {
       val url = URL.fromCwdPath("language/input/dokn.riddl")
       val inputFuture = RiddlParserInput.fromURL(url, "dokn-test")
