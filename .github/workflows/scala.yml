@@ -53,6 +53,20 @@ jobs:
         )
         EOF
 
+    - name: DIAGNOSE GitHub Packages auth (temporary)
+      run: |
+        echo "== token presence =="
+        echo "GITHUB_TOKEN set: ${GITHUB_TOKEN:+yes}; length=${#GITHUB_TOKEN}; prefix=${GITHUB_TOKEN:0:4}"
+        echo "== credentials file (contents are literal Scala, not the token) =="
+        cat ~/.sbt/2/github.sbt || echo "MISSING"
+        POM="https://maven.pkg.github.com/ossuminc/sbt-ossuminc/com/ossuminc/sbt-ossuminc_sbt2_3/3.0.3/sbt-ossuminc_sbt2_3-3.0.3.pom"
+        echo "== curl no-auth (baseline, expect 401) =="
+        curl -s -o /dev/null -w "  HTTP %{http_code}\n" "$POM"
+        echo "== curl Bearer GITHUB_TOKEN =="
+        curl -s -o /dev/null -w "  HTTP %{http_code}\n" -H "Authorization: Bearer $GITHUB_TOKEN" "$POM"
+        echo "== curl Basic x-access-token:GITHUB_TOKEN (exactly how sbt sends it) =="
+        curl -s -o /dev/null -w "  HTTP %{http_code}\n" -u "x-access-token:$GITHUB_TOKEN" "$POM"
+
     - name: Cache SBT Build Outputs
       uses: actions/cache@v5
       with:
