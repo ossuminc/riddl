@@ -75,6 +75,39 @@ class InitialMarkerTest extends AbstractValidatingTest {
       }
     }
 
+    "default the first entity-scope handler to initial when the entity has exactly one state" in {
+      (td: TestData) =>
+        entity(
+          """domain d is { context c is { entity e is {
+            |  type Data is { x: Integer }
+            |  state Only of type d.c.e.Data is { handler S is { on other is { prompt "s" } } }
+            |  handler E1 is { on other is { prompt "a" } }
+            |  handler E2 is { on other is { prompt "b" } }
+            |}}}""".stripMargin,
+          td
+        ) { (e, _) =>
+          e.handlers.find(_.id.value == "E1").get.isInitial mustBe true
+          e.handlers.find(_.id.value == "E2").get.isInitial mustBe false
+        }
+    }
+
+    "NOT default any entity-scope handler when the entity has multiple states" in { (td: TestData) =>
+      // With >1 state the entity-scope handlers are common parts merged into each state's
+      // handler set, so none of them is the entity's initial handler.
+      entity(
+        """domain d is { context c is { entity e is {
+          |  type Data is { x: Integer }
+          |  state First of type d.c.e.Data is { handler S1 is { on other is { prompt "a" } } }
+          |  state Second of type d.c.e.Data is { handler S2 is { on other is { prompt "b" } } }
+          |  handler E1 is { on other is { prompt "c" } }
+          |  handler E2 is { on other is { prompt "d" } }
+          |}}}""".stripMargin,
+        td
+      ) { (e, _) =>
+        e.handlers.forall(_.isInitial == false) mustBe true
+      }
+    }
+
     "error when more than one handler in a state is marked initial" in { (td: TestData) =>
       entity(
         """domain d is { context c is { entity e is {
