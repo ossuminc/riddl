@@ -102,14 +102,17 @@ object RiddlSbtPlugin extends AutoPlugin {
       )
       // sbt 2 caches task results; a task returning CompileAnalysis (which
       // isn't JSON-serializable) must opt out via Def.uncached.
-      val hook = if (validateOnCompile) Seq(
-        Compile / compile := Def.uncached(Def.taskDyn {
-          Def.task {
-            riddlcValidate.value
-            (Compile / compile).value
-          }
-        }.value)
-      ) else Seq.empty
+      val hook =
+        if (validateOnCompile)
+          Seq(
+            Compile / compile := Def.uncached(Def.taskDyn {
+              Def.task {
+                riddlcValidate.value
+                (Compile / compile).value
+              }
+            }.value)
+          )
+        else Seq.empty
       project.settings(base ++ hook)
     }
   }
@@ -508,7 +511,6 @@ object RiddlSbtPlugin extends AutoPlugin {
       val cache = riddlcCacheDir.value
       downloadRiddlc(cache, ver, log)
     },
-
     riddlcBinary := Def.uncached {
       val log = streams.value.log
       val binary = riddlcPath.value match {

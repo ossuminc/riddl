@@ -3,7 +3,6 @@ import com.typesafe.tools.mima.core.{ProblemFilters, ReversedMissingMethodProble
 import sbt.Keys.{description, libraryDependencies, scalacOptions}
 import sbtbuildinfo.BuildInfoPlugin.autoImport.buildInfoPackage
 
-
 Global / onChangedBuildSource := ReloadOnSourceChanges
 (Global / excludeLintKeys) ++= Set(mainClass, maintainer)
 
@@ -93,12 +92,14 @@ lazy val utils_cp = CrossModule("utils", "riddl-utils", V.scala)(JVM, JS, Native
     )
   )
   .nativeConfigure(jvmNativeSrc("utils"))
-  .nativeConfigure(With.Native(
-    linkOptions = Seq(
-      "-I/usr/include",
-      "-I/usr/local/opt/curl/include",
-      "-I/opt/homebrew/opt/curl/include"
-    ))
+  .nativeConfigure(
+    With.Native(
+      linkOptions = Seq(
+        "-I/usr/include",
+        "-I/usr/local/opt/curl/include",
+        "-I/opt/homebrew/opt/curl/include"
+      )
+    )
   )
   .nativeConfigure(
     With.BuildInfo.withKeys(
@@ -239,7 +240,8 @@ lazy val testkit_cp = CrossModule("testkit", "riddl-testkit", V.scala)(JVM, JS, 
   )
 val testkit = testkit_cp.jvm.dependsOn(pDep(utils), pDep(language), pDep(passes))
 val testkitJS = testkit_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS), pDep(passesJS))
-val testkitNative = testkit_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
+val testkitNative =
+  testkit_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
 
 lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Native)
   .configure(With.typical, With.GithubPublishing)
@@ -269,16 +271,20 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
     },
     libraryDependencies += Dep.upickle_nojvm.value
   )
-  .jsConfigure(With.Packaging.npm(
-    scope = "@ossuminc",
-    pkgName = "riddl-lib",
-    pkgDescription = "RIDDL Language Library - JavaScript/TypeScript bindings",
-    keywords = Seq("riddl", "ddd", "domain-driven-design", "parser", "ast", "typescript"),
-    esModule = true
-  ))
-  .jsConfigure(With.Publishing.npm(
-    registries = Seq("github")
-  ))
+  .jsConfigure(
+    With.Packaging.npm(
+      scope = "@ossuminc",
+      pkgName = "riddl-lib",
+      pkgDescription = "RIDDL Language Library - JavaScript/TypeScript bindings",
+      keywords = Seq("riddl", "ddd", "domain-driven-design", "parser", "ast", "typescript"),
+      esModule = true
+    )
+  )
+  .jsConfigure(
+    With.Publishing.npm(
+      registries = Seq("github")
+    )
+  )
   .nativeConfigure(With.Native(mode = "fast", buildTarget = "static"))
   .nativeConfigure(With.noMiMa)
   // See note on passes_cp re: Scala 3.8.x scaladoc race condition.
@@ -288,7 +294,8 @@ lazy val riddlLib_cp = CrossModule("riddlLib", "riddl-lib", V.scala)(JS, JVM, Na
   )
 val riddlLib = riddlLib_cp.jvm.dependsOn(pDep(utils), pDep(language), pDep(passes))
 val riddlLibJS = riddlLib_cp.js.dependsOn(pDep(utilsJS), pDep(languageJS), pDep(passesJS))
-val riddlLibNative = riddlLib_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
+val riddlLibNative =
+  riddlLib_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
 
 val Commands = config("commands")
 lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, Native)
@@ -312,7 +319,8 @@ lazy val commands_cp = CrossModule("commands", "riddl-commands", V.scala)(JVM, N
     libraryDependencies ++= Seq(Dep.scopt_nojvm.value, Dep.sconfig_nojvm.value)
   )
 val commands: Project = commands_cp.jvm.dependsOn(pDep(utils), pDep(language), pDep(passes))
-val commandsNative = commands_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
+val commandsNative =
+  commands_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative))
 
 val Riddlc = config("riddlc")
 lazy val riddlc_cp = CrossModule("riddlc", "riddlc", V.scala)(JVM, Native)
@@ -352,7 +360,12 @@ lazy val riddlc_cp = CrossModule("riddlc", "riddlc", V.scala)(JVM, Native)
   )
 val riddlc = riddlc_cp.jvm.dependsOn(pDep(utils), pDep(language), pDep(passes), pDep(commands))
 val riddlcNative =
-  riddlc_cp.native.dependsOn(pDep(utilsNative), pDep(languageNative), pDep(passesNative), pDep(commandsNative))
+  riddlc_cp.native.dependsOn(
+    pDep(utilsNative),
+    pDep(languageNative),
+    pDep(passesNative),
+    pDep(commandsNative)
+  )
 
 lazy val docProjects = List(
   (utils, Utils),
@@ -381,7 +394,8 @@ lazy val docsite = DocSite(
   )
 
 // Plugin(...) auto-configures GitHub Packages publishing and scripted testing.
-lazy val plugin = OssumIncPlugin.autoImport.Plugin("sbt-riddl")
+lazy val plugin = OssumIncPlugin.autoImport
+  .Plugin("sbt-riddl")
   .configure(With.BuildInfo, With.noMiMa)
   .settings(
     description := "An sbt plugin to embellish a project with riddlc usage",
