@@ -27,6 +27,9 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v6
+      with:
+        fetch-depth: 0      # full history + tags so sbt-dynver can `git describe`
+        fetch-tags: true
 
     - name: Set Up JDK 25
       uses: actions/setup-java@v5
@@ -82,7 +85,7 @@ jobs:
 
     - name: Build And Test ${{ matrix.platform }} Versions
       run: |
-        sbt clean c${{ matrix.platform }} t${{ matrix.platform }} 
+        sbt "; clean; c${{ matrix.platform }}; t${{ matrix.platform }}"
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@12fa20e14d449d310778f2d0af1e3b2f57dde2a7 # v2
@@ -97,24 +100,17 @@ jobs:
       env:
         RIDDLC_PATH: target/out/jvm/scala-3.9.0-RC4/riddlc/universal/stage/bin/riddlc
       run: |
-        sbt \
-          utils/publishLocal \
-          language/publishLocal \
-          passes/publishLocal \
-          commands/publishLocal \
-          riddlLib/publishLocal \
-          riddlc/stage \
-          sbt-riddl/scripted
+        sbt "; utils/publishLocal; language/publishLocal; passes/publishLocal; commands/publishLocal; riddlLib/publishLocal; riddlc/stage; sbt-riddl/scripted"
 
     - name: Package JVM Release Artifacts
       if: matrix.platform == 'JVM'
       run: |
-        sbt "set every Compile/doc/sources := Seq.empty" "riddlc/Universal/packageBin" "riddlLib/Universal/packageBin"
+        sbt "; set every Compile/doc/sources := Seq.empty; riddlc/Universal/packageBin; riddlLib/Universal/packageBin"
 
     - name: Package Native Release Artifacts
       if: matrix.platform == 'Native'
       run: |
-        sbt riddlcNative/nativeLink riddlLibNative/nativeLink
+        sbt "; riddlcNative/nativeLink; riddlLibNative/nativeLink"
 
     - name: Package JS Release Artifacts
       if: matrix.platform == 'JS'

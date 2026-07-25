@@ -47,11 +47,7 @@ jobs:
 
       - name: Coverage For JVM projects only
         run: |
-          sbt clean coverage \
-            utils/Test/compile language/Test/compile passes/Test/compile \
-            commands/Test/compile riddlc/Test/compile \
-            utils/test language/test passes/test commands/test riddlc/test \
-            coverageAggregate
+          sbt "; clean; coverage; utils/Test/compile; language/Test/compile; passes/Test/compile; commands/Test/compile; riddlc/Test/compile; utils/test; language/test; passes/test; commands/test; riddlc/test; coverageAggregate"
 
       - name: Coverage Results Collection
         uses: actions/upload-artifact@v4
